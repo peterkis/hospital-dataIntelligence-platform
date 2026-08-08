@@ -1,0 +1,42 @@
+{
+  "name": "hospital-data-intelligence-platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Phase 01 executable architecture baseline for hospital foundational-data governance.",
+  "packageManager": "npm@11.9.0",
+  "engines": {
+    "node": "24.18.0",
+    "npm": "11.9.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tests/*",
+    "tooling/*"
+  ],
+  "scripts": {
+    "check:runtime": "node tooling/verification/src/check-runtime.mjs",
+    "check:repo:layout": "node tooling/verification/src/check-repo-layout.mjs",
+    "check:module-boundaries": "node tooling/verification/src/check-module-boundaries.mjs",
+    "verify:phase-01:live": "node tooling/verification/src/verify-phase-01-live.mjs",
+    "check": "npm run check:runtime && npm run check:repo:layout && npm run check:module-boundaries",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspace @hospital-data-intelligence/generated-api-client && npm run build --workspace @hospital-data-intelligence/admin-web && npm run build --workspace @hospital-data-intelligence/governance-api && npm run build --workspace @hospital-data-intelligence/sim-consumer",
+    "contract:generate": "npm run contract:generate --workspace @hospital-data-intelligence/governance-api",
+    "contract:generate-client": "npm run contract:generate --workspace @hospital-data-intelligence/generated-api-client",
+    "contract:lint": "redocly lint contracts/openapi/phase-01.openapi.json --extends=minimal --skip-rule=operation-2xx-response",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.46.0",
+    "@types/node": "24.13.3",
+    "@vitest/coverage-v8": "4.1.6",
+    "tsx": "4.23.11",
+    "typescript": "7.0.2",
+    "vitest": "4.1.6"
+  },
+  "overrides": {
+    "glob": "10.5.0",
+    "js-yaml": "4.3.1"
+  }
+}

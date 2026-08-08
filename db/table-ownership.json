@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "schemas": {
+    "audit": "audit",
+    "access_control": "authorization",
+    "charge_catalog": "charge-catalog",
+    "platform": "composition-root",
+    "price_list": "price-list",
+    "price_resolution": "price-resolution",
+    "release_distribution": "release-distribution",
+    "workflow": "workflow"
+  },
+  "rules": [
+    "Only versioned native SQL migrations own physical schema changes.",
+    "A module may issue DML only against its owned schema.",
+    "Cross-module reads and commands use public module interfaces, never direct SQL.",
+    "Foreign keys may cross schemas to enforce frozen references without granting DML ownership."
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "package_name": "三甲医院数据治理平台详细建设蓝图_五乙_EMR六级_V1.0",
+  "version": "V1.0",
+  "generated_on": "2026-07-15",
+  "content_file_count": 35,
+  "expected_total_file_count_including_metadata": 37,
+  "scope": {
+    "data_domains": 15,
+    "platform_modules": 19,
+    "physical_tables": 58,
+    "fields": 931,
+    "five_b_mapping_items": 41,
+    "emr_level6_roles": 10,
+    "closed_loop_scenarios": 15,
+    "api_operations": 18,
+    "event_examples": 6,
+    "fhir_mappings": 18,
+    "wbs_tasks": 139,
+    "acceptance_cases": 15,
+    "risks": 16,
+    "normalized_attachment_terms": 121
+  },
+  "files": [
+    {
+      "path": "00_阅读说明/README.md",
+      "size_bytes": 3038,
+      "sha256": "52b178d461045f7b550676b9b097ddac6faa73eb95110328b60e4b7ad95cd677"
+    },
+    {
+      "path": "00_阅读说明/交付物校验报告.md",
+      "size_bytes": 2204,
+      "sha256": "a30c86bb7d2639bc413cdd8a74c9f4688fc54c4e9f9a9e8fa0f2bf1f4713a9bc"
+    },
+    {
+      "path": "01_总体设计/三甲医院数据治理平台详细建设蓝图.docx",
+      "size_bytes": 635623,
+      "sha256": "979ba35726d77de62cbb12a3113cae2e6023016f431ff01ec13957abd14fa648"
+    },
+    {
+      "path": "01_总体设计/三甲医院数据治理平台详细建设蓝图.pdf",
+      "size_bytes": 2697687,
+      "sha256": "fb7ac4c1df0dc160dfac485d481f4b7a69e6afeb4521abd6196476a56e48d69f"
+    },
+    {
+      "path": "01_总体设计/架构图/MDM_CDR数据流.dot",
+      "size_bytes": 1073,
+      "sha256": "ae5454b021829d6d9b5ce0be6cb238a57ab51f4768930411a5f19cbe81f63d2d"
+    },
+    {
+      "path": "01_总体设计/架构图/MDM_CDR数据流.png",
+      "size_bytes": 137077,
+      "sha256": "47c8c201952eb2e23a03bf3e4a2f262021e6b628c77737518faf728de811585f"
+    },
+    {
+      "path": "01_总体设计/架构图/MDM_CDR数据流.svg",
+      "size_bytes": 8850,
+      "sha256": "fab8c4260061e1274c010469dc1c56176e872ad17fa702d838b69682e3e2639b"
+    },
+    {
+      "path": "01_总体设计/架构图/总体目标架构.dot",
+      "size_bytes": 1215,
+      "sha256": "4475fc297c0d0ddbcfb3091806f3fce0f5e0d8bafda7dc243adbcd3d2a037acb"
+    },
+    {
+      "path": "01_总体设计/架构图/总体目标架构.png",
+      "size_bytes": 173232,
+      "sha256": "4180d9903ef036d1006c72d524013201256977c31931a7c485d2221c7cf2ff69"
+    },
+    {
+      "path": "01_总体设计/架构图/总体目标架构.svg",
+      "size_bytes": 7335,
+      "sha256": "3172e65df42550898262cb9f47a2f164d65820c5a6815a1abe450d322c265dc7"
+    },
+    {
+      "path": "01_总体设计/架构图/治理生命周期.dot",
+      "size_bytes": 663,
+      "sha256": "7da50dbfc60b5a35645bf759186338128450e29f487946df7304e6e230cedca0"
+    },
+    {
+      "path": "01_总体设计/架构图/治理生命周期.png",
+      "size_bytes": 84519,
+      "sha256": "50a9e667e649de9670c4d97be2d99ae5acaa02ef04e4cfd6f169bc61b817f5e2"
+    },
+    {
+      "path": "01_总体设计/架构图/治理生命周期.svg",
+      "size_bytes": 8266,
+      "sha256": "ef0ddd242b2fe8929a66c93d27739c786f1e05ef1d8bf588989ba79477bab8a4"
+    },
+    {
+      "path": "01_总体设计/架构图/治理组织架构.dot",
+      "size_bytes": 1011,
+      "sha256": "366d4084a9f333b54e586d36696c124d144487241d680d8cc180439e1138c40b"
+    },
+    {
+      "path": "01_总体设计/架构图/治理组织架构.png",
+      "size_bytes": 146591,
+      "sha256": "4643e5ee949c44769d53be39070b3ed86fa69220a378f6bd8624fdabaa6da1e6"
+    },
+    {
+      "path": "01_总体设计/架构图/治理组织架构.svg",
+      "size_bytes": 10153,
+      "sha256": "c906b662e0aa5fe14166e61e7686af53fa3f204a00d63087d8ca23268490a2d9"
+    },
+    {
+      "path": "02_评测映射与验收/五乙_EMR六级_能力交付物证据矩阵.xlsx",
+      "size_bytes": 41824,
+      "sha256": "61e637f34bb0de3b6f5183898a2c78922ab355a59e00de265ccaaadcf76cb276"
+    },
+    {
+      "path": "03_数据域与数据模型/postgresql_核心表DDL.sql",
+      "size_bytes": 206657,
+      "sha256": "4836625b25186906929c51cf91091f6ae67bb06310b16e3bcb41b69a3e5383b7"
+    },
+    {
+      "path": "03_数据域与数据模型/医院数据域_MDM_CDR_逻辑物理模型.xlsx",
+      "size_bytes": 90464,
+      "sha256": "d1992eb3051091fe5c771f120ce2bf8d92eccb2894c2591edbf78755b602f804"
+    },
+    {
+      "path": "03_数据域与数据模型/数据模型说明.md",
+      "size_bytes": 11121,
+      "sha256": "5fe5b9508de4e2b3e8255d0e9947bf1bea66a91d8760ab8b71253e76b1885e50"
+    },
+    {
+      "path": "04_接口与数据服务/FHIR与院内模型映射.xlsx",
+      "size_bytes": 22570,
+      "sha256": "2a8414419139c05f1fe711596894dd03a77ea7a858850ed320f24efb5778d361"
+    },
+    {
+      "path": "04_接口与数据服务/openapi_医院数据治理服务.yaml",
+      "size_bytes": 32447,
+      "sha256": "d7f2b0fdbc954022b9099c0dfd1e862e6183fc145b5c7ef10d743e1f5a846bc3"
+    },
+    {
+      "path": "04_接口与数据服务/事件示例/cdr.critical.result.v1.json",
+      "size_bytes": 576,
+      "sha256": "4c81202d781e1b37db3491bdebaf28c7792c3ab854c7a7e1e879315469e848fc"
+    },
+    {
+      "path": "04_接口与数据服务/事件示例/gov.quality.issue.v1.json",
+      "size_bytes": 417,
+      "sha256": "13a6d065aa35eaeb1a4b4fcb96380c4492e7b7570ce4298cfc2d53c19fdbedcf"
+    },
+    {
+      "path": "04_接口与数据服务/事件示例/gov.terminology.published.v1.json",
+      "size_bytes": 423,
+      "sha256": "ba56e694ccba76cee886453d06250cfeb1fb70dd9b03c2aa69623a63887820a5"
+    },
+    {
+      "path": "04_接口与数据服务/事件示例/mdm.department.changed.v1.json",
+      "size_bytes": 406,
+      "sha256": "fff8d68e3e6118839aa317f7589890ec675f54b4161c13f16909101fd469ec0b"
+    },
+    {
+      "path": "04_接口与数据服务/事件示例/mdm.patient.changed.v1.json",
+      "size_bytes": 441,
+      "sha256": "e7a32495266197560062bc4777530de70f2050de1226f142f5e3bcfef94c727b"
+    },
+    {
+      "path": "04_接口与数据服务/事件示例/sec.export.status.v1.json",
+      "size_bytes": 417,
+      "sha256": "933300f12f3942a347a4fb88a6bf530bbfc39da69fa20f8141a7f1458c9ee4fa"
+    },
+    {
+      "path": "05_实施路线与项目管理/上线切换与回退手册.md",
+      "size_bytes": 2871,
+      "sha256": "56014531b116b2da18bf651ba931404e0f43ea01de095d991d26d3cdf589a8d2"
+    },
+    {
+      "path": "05_实施路线与项目管理/实施WBS_RACI_里程碑_风险_验收.xlsx",
+      "size_bytes": 45506,
+      "sha256": "a375c34afa3bda337181170c40398461d208c0ef12b5ea2f09ca5fb4c56af444"
+    },
+    {
+      "path": "06_治理制度与可编辑模板/治理制度与流程模板.docx",
+      "size_bytes": 51754,
+      "sha256": "69155bf468e7fa7451e8e6d0297dde9e4f71543c29a9e7bbbd31e1314e7c6350"
+    },
+    {
+      "path": "06_治理制度与可编辑模板/治理表单模板集.xlsx",
+      "size_bytes": 39031,
+      "sha256": "3a70ec23ba31a3c027cef928634f88d5733d02c557ba3e596b82a26e42cc6409"
+    },
+    {
+      "path": "07_附件融合/原始附件_数据治理分工表V1.0-20260711.xls",
+      "size_bytes": 114176,
+      "sha256": "3f8a53fd7590646f402d8fcfb3853e7d51acbce5b6c461a8e69bc75cfb7e1025"
+    },
+    {
+      "path": "07_附件融合/附件治理分工规范化清单.xlsx",
+      "size_bytes": 47008,
+      "sha256": "d32b44578727ea118c18401fd01c440330fe736650f3d94fe4d23b168fa19671"
+    },
+    {
+      "path": "08_参考资料/参考资料与版本说明.md",
+      "size_bytes": 3393,
+      "sha256": "b93b65459cca8537289bc7192696db1c59901a09f18dd5787e7a8605ab201dc0"
+    }
+  ],
+  "note": "SHA256SUMS.txt includes manifest.json and all content files; it intentionally excludes itself."
+}

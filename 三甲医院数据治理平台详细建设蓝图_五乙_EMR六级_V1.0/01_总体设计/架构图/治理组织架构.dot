@@ -1,0 +1,7 @@
+digraph G { graph [rankdir=TB,bgcolor="white",pad="0.2",nodesep="0.22",ranksep="0.35",fontname="Noto Sans CJK SC"]; node [shape=box,style="rounded,filled",fontname="Noto Sans CJK SC",fontsize=9.5,color="#315B7D",fillcolor="#EAF2F8"]; edge [color="#567A96"];
+com[label="数据治理委员会\n院长/分管院领导｜重大决策与争议裁决",fillcolor="#FCE4D6"];
+off[label="数据治理办公室/评级办公室\n制度、路线、组合管理、版本和证据",fillcolor="#FFF2CC"];
+std[label="标准术语组"];mdm[label="MDM与数据架构组"];plat[label="平台/CDR/接口组"];qual[label="资产元数据质量组"];sec[label="安全隐私与审计组"];app[label="闭环/CDSS/应用组"];
+owner[label="业务数据Owner\n医务｜护理｜质评/病案｜药学｜检验｜检查｜输血｜HR｜财务医保｜设备"];
+steward[label="领域数据管家\n定义、质量、变更、证据、运营"];
+com->off; off->{std mdm plat qual sec app}; {std mdm plat qual sec app}->owner; owner->steward;}

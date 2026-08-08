@@ -1,0 +1,12 @@
+{
+  "eventId": "af89b542-a9bf-4475-b481-a9332151ee3d",
+  "eventType": "EXPORT_EXPIRED",
+  "occurredAt": "2026-07-15T14:00:00+08:00",
+  "requestId": "e63aa82b-7c60-49e4-8b42-0fd6e24444ef",
+  "applicant": "researcher-021",
+  "purpose": "IRB-2026-018",
+  "dataset": "肺结节回顾性研究队列V1",
+  "status": "EXPIRED",
+  "expiresAt": "2026-07-15T14:00:00+08:00",
+  "destroyEvidenceId": "evd-destroy-20260715-003"
+}

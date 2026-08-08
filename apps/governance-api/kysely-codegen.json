@@ -1,0 +1,11 @@
+{
+  "dialect": "postgres",
+  "defaultSchemas": ["__qualified_schema_only__"],
+  "dateParser": "string",
+  "numericParser": "string",
+  "typeMapping": {
+    "timestamp": "string"
+  },
+  "outFile": "src/platform/database/database-types.generated.ts",
+  "typeOnlyImports": true
+}

@@ -1,0 +1,21 @@
+import createClient from 'openapi-fetch';
+import type { paths } from './schema.generated.js';
+
+export type GovernanceApiPaths = paths;
+
+export function createGovernanceApiClient(options: {
+  readonly baseUrl: string;
+  readonly accessToken?: string;
+  readonly csrfToken?: string;
+  readonly fetch?: typeof globalThis.fetch;
+}) {
+  const headers: Record<string, string> = {};
+  if (options.accessToken) headers['authorization'] = `Bearer ${options.accessToken}`;
+  if (options.csrfToken) headers['x-csrf-token'] = options.csrfToken;
+  return createClient<paths>({
+    baseUrl: options.baseUrl,
+    credentials: 'include',
+    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+  });
+}

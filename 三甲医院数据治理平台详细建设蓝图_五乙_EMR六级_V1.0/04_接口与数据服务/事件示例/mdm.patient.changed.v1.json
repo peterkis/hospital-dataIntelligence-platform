@@ -1,0 +1,17 @@
+{
+  "eventId": "9af6e12b-1fa1-4b44-90e7-98648b3dcd19",
+  "eventType": "PATIENT_MERGED",
+  "occurredAt": "2026-07-15T09:30:00+08:00",
+  "enterprisePatientId": "e1468eb7-a80f-4af6-8571-14ac26b4b64e",
+  "version": 18,
+  "changedFields": [
+    "links",
+    "identifiers"
+  ],
+  "replacedPatientIds": [
+    "dfb31b42-57ad-4090-aedb-76193b5b31a8"
+  ],
+  "source": "MDM",
+  "traceId": "TRC-20260715-000001",
+  "classification": "HIGHLY_SENSITIVE"
+}

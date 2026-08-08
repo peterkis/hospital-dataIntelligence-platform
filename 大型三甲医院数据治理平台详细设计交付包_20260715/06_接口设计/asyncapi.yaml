@@ -1,0 +1,112 @@
+asyncapi: 2.6.0
+info:
+  title: Hospital Data Governance Event API
+  version: 1.0.0
+  description: 主数据、标准、质量和治理事件参考契约。
+servers:
+  production:
+    url: kafka-prod.hospital.example.cn:9093
+    protocol: kafka-secure
+    security:
+      - saslSsl: []
+channels:
+  mdm.patient.changed.v1:
+    parameters: {}
+    publish:
+      operationId: publishPatientChanged
+      message: {$ref: '#/components/messages/PatientChanged'}
+  mdm.patient.merged.v1:
+    publish:
+      operationId: publishPatientMerged
+      message: {$ref: '#/components/messages/PatientMerged'}
+  mdm.organization.changed.v1:
+    publish:
+      operationId: publishOrganizationChanged
+      message: {$ref: '#/components/messages/OrganizationChanged'}
+  ref.valueset.published.v1:
+    publish:
+      operationId: publishValueSetPublished
+      message: {$ref: '#/components/messages/ValueSetPublished'}
+  dq.issue.created.v1:
+    publish:
+      operationId: publishDataQualityIssue
+      message: {$ref: '#/components/messages/DataQualityIssue'}
+components:
+  securitySchemes:
+    saslSsl:
+      type: userPassword
+      description: 生产采用TLS、SASL/OAUTHBEARER或SCRAM及Topic ACL。
+  schemas:
+    EventEnvelope:
+      type: object
+      required: [eventId, eventType, eventTime, aggregateId, aggregateVersion, producer, traceId, data]
+      properties:
+        eventId: {type: string, format: uuid}
+        eventType: {type: string}
+        eventTime: {type: string, format: date-time}
+        aggregateId: {type: string, format: uuid}
+        aggregateVersion: {type: integer, format: int64}
+        producer: {type: string}
+        traceId: {type: string}
+        schemaVersion: {type: string, default: '1.0'}
+        purposeCode: {type: string, nullable: true}
+        data: {type: object}
+  messages:
+    PatientChanged:
+      name: PatientChanged
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          key: {type: string, description: patientMdmId}
+          sensitivity: {type: string, enum: [HIGH]}
+      payload:
+        allOf:
+          - {$ref: '#/components/schemas/EventEnvelope'}
+          - type: object
+            properties:
+              data:
+                type: object
+                required: [empiNo, changedFields, status]
+                properties:
+                  empiNo: {type: string}
+                  changedFields: {type: array, items: {type: string}}
+                  status: {type: string}
+                  snapshotUri: {type: string, description: 受控快照地址；事件中不放证件明文}
+    PatientMerged:
+      name: PatientMerged
+      payload:
+        allOf:
+          - {$ref: '#/components/schemas/EventEnvelope'}
+          - type: object
+            properties:
+              data:
+                type: object
+                required: [sourcePatientMdmId, targetPatientMdmId, rollbackToken]
+                properties:
+                  sourcePatientMdmId: {type: string, format: uuid}
+                  targetPatientMdmId: {type: string, format: uuid}
+                  effectiveAt: {type: string, format: date-time}
+                  rollbackToken: {type: string, format: uuid}
+                  consumerAcknowledgementRequired: {type: boolean, default: true}
+    OrganizationChanged:
+      name: OrganizationChanged
+      payload: {$ref: '#/components/schemas/EventEnvelope'}
+    ValueSetPublished:
+      name: ValueSetPublished
+      payload: {$ref: '#/components/schemas/EventEnvelope'}
+    DataQualityIssue:
+      name: DataQualityIssue
+      payload:
+        allOf:
+          - {$ref: '#/components/schemas/EventEnvelope'}
+          - type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  issueNo: {type: string}
+                  ruleCode: {type: string}
+                  severity: {type: string}
+                  owner: {type: string}
+                  evidenceUri: {type: string}

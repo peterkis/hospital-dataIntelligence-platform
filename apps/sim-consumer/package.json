@@ -1,0 +1,14 @@
+{
+  "name": "@hospital-data-intelligence/sim-consumer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "run-once": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hospital-data-intelligence/generated-api-client": "0.0.0"
+  }
+}

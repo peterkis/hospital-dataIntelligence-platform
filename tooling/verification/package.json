@@ -1,0 +1,10 @@
+{
+  "name": "@hospital-data-intelligence/verification-tooling",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hospital-data-intelligence/generated-api-client": "0.0.0",
+    "pg": "8.22.0"
+  }
+}

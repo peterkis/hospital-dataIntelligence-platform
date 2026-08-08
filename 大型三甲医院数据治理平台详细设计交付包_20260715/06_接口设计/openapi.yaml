@@ -1,0 +1,278 @@
+openapi: 3.0.3
+info:
+  title: Hospital Data Governance Platform API
+  version: 1.0.0
+  description: 大型三甲医院主数据、标准、治理与可信数据服务参考接口。
+servers:
+  - url: https://api.hospital.example.cn
+security:
+  - oauth2: []
+tags:
+  - name: PatientMaster
+  - name: OrganizationMaster
+  - name: ReferenceData
+  - name: Governance
+paths:
+  /api/v1/master-data/patients/{empiNo}:
+    get:
+      tags: [PatientMaster]
+      summary: 查询患者金记录
+      operationId: getPatientMaster
+      parameters:
+        - name: empiNo
+          in: path
+          required: true
+          schema: {type: string, maxLength: 64}
+        - name: X-Purpose-Code
+          in: header
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: 成功
+          headers:
+            ETag: {schema: {type: string}}
+            X-Data-Version: {schema: {type: integer, format: int64}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PatientMaster'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/master-data/patients:match:
+    post:
+      tags: [PatientMaster]
+      summary: 患者候选匹配；只返回候选和证据，不直接自动合并
+      operationId: matchPatient
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: X-Purpose-Code
+          in: header
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PatientMatchRequest'}
+      responses:
+        '200':
+          description: 候选结果
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/PatientMatchCandidate'}
+        '202': {description: 进入异步人工审核}
+  /api/v1/master-data/patients/{patientMdmId}:merge-requests:
+    post:
+      tags: [PatientMaster, Governance]
+      summary: 创建患者合并审批申请
+      operationId: createPatientMergeRequest
+      parameters:
+        - name: patientMdmId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MergeRequest'}
+      responses:
+        '202':
+          description: 已创建审批工单
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ChangeRequestReceipt'}
+  /api/v1/master-data/organizations:
+    get:
+      tags: [OrganizationMaster]
+      summary: 查询当前或指定时间有效的组织树
+      parameters:
+        - name: asOf
+          in: query
+          schema: {type: string, format: date-time}
+        - name: campusCode
+          in: query
+          schema: {type: string}
+        - name: changedSince
+          in: query
+          schema: {type: string, format: date-time}
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/OrganizationMaster'}
+  /api/v1/reference/value-sets/{code}:
+    get:
+      tags: [ReferenceData]
+      summary: 获取指定值域和版本
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: {type: string}
+        - name: version
+          in: query
+          schema: {type: string}
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ValueSetPackage'}
+  /api/v1/reference/concept-maps/{code}:translate:
+    post:
+      tags: [ReferenceData]
+      summary: 本地码与标准码转换
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: {type: string}
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceCode]
+              properties:
+                sourceCode: {type: string}
+                context: {type: object, additionalProperties: true}
+      responses:
+        '200':
+          description: 转换结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  targetCode: {type: string, nullable: true}
+                  equivalence: {type: string}
+                  confidence: {type: number, minimum: 0, maximum: 1}
+                  humanVerificationRequired: {type: boolean}
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://iam.hospital.example.cn/realms/hdgp/protocol/openid-connect/token
+          scopes:
+            mdm.read: 读取授权主数据字段
+            mdm.match: 执行患者候选匹配
+            mdm.merge.request: 提交合并审批
+            reference.read: 读取参考数据
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, minLength: 16, maxLength: 128}
+  responses:
+    Forbidden:
+      description: 主体、用途或数据范围未授权
+    NotFound:
+      description: 资源不存在或不可见
+  schemas:
+    PatientMaster:
+      type: object
+      required: [patientMdmId, empiNo, displayName, status, version]
+      properties:
+        patientMdmId: {type: string, format: uuid}
+        empiNo: {type: string}
+        displayName: {type: string}
+        genderCode: {type: string, nullable: true}
+        birthDate: {type: string, format: date, nullable: true}
+        status: {type: string, enum: [ACTIVE, INACTIVE, MERGED, RETIRED]}
+        version: {type: integer, format: int64}
+        identifiers:
+          type: array
+          description: 按授权返回脱敏值，默认不返回原始证件明文
+          items:
+            type: object
+            properties:
+              type: {type: string}
+              maskedValue: {type: string}
+              issuer: {type: string}
+              verified: {type: boolean}
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              linkType: {type: string}
+              targetEmpiNo: {type: string}
+    PatientMatchRequest:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string}
+        genderCode: {type: string}
+        birthDate: {type: string, format: date}
+        identifierType: {type: string}
+        identifierValue: {type: string, writeOnly: true}
+        mobile: {type: string, writeOnly: true}
+        sourceSystemCode: {type: string}
+        sourceRecordKey: {type: string}
+    PatientMatchCandidate:
+      type: object
+      properties:
+        patientMdmId: {type: string, format: uuid}
+        empiNo: {type: string}
+        score: {type: number}
+        decisionBand: {type: string, enum: [MATCH, REVIEW, NO_MATCH]}
+        evidence:
+          type: array
+          items:
+            type: object
+            properties:
+              field: {type: string}
+              result: {type: string}
+              contribution: {type: number}
+    MergeRequest:
+      type: object
+      required: [sourcePatientMdmId, reasonCode, evidence]
+      properties:
+        sourcePatientMdmId: {type: string, format: uuid}
+        reasonCode: {type: string}
+        evidence: {type: object, additionalProperties: true}
+        requestedEffectiveAt: {type: string, format: date-time}
+    ChangeRequestReceipt:
+      type: object
+      properties:
+        requestNo: {type: string}
+        status: {type: string}
+        approvalUrl: {type: string, format: uri}
+    OrganizationMaster:
+      type: object
+      properties:
+        organizationMdmId: {type: string, format: uuid}
+        organizationCode: {type: string}
+        organizationName: {type: string}
+        organizationType: {type: string}
+        parentOrganizationMdmId: {type: string, format: uuid, nullable: true}
+        status: {type: string}
+        validFrom: {type: string, format: date-time}
+        validTo: {type: string, format: date-time}
+    ValueSetPackage:
+      type: object
+      properties:
+        code: {type: string}
+        version: {type: string}
+        effectiveFrom: {type: string, format: date-time}
+        checksum: {type: string}
+        concepts:
+          type: array
+          items:
+            type: object
+            properties:
+              code: {type: string}
+              display: {type: string}
+              status: {type: string}

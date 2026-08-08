@@ -1,0 +1,14 @@
+{
+  "eventId": "3a88a14c-9a21-4baa-8e65-e9ef1ead918c",
+  "eventType": "DEPARTMENT_REORGANIZED",
+  "occurredAt": "2026-07-15T10:00:00+08:00",
+  "departmentId": "dcc5a102-e4f9-40bf-ae5a-cfd60cbf2afe",
+  "departmentCode": "CARD-001",
+  "name": "心血管内科",
+  "status": "ACTIVE",
+  "effectivePeriod": {
+    "start": "2026-08-01"
+  },
+  "parentId": "c4cd8aa6-86fc-49e8-8834-094e56432689",
+  "version": 5
+}

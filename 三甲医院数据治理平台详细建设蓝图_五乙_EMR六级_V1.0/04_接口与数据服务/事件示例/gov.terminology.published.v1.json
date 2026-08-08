@@ -1,0 +1,18 @@
+{
+  "eventId": "bb4c9d19-acde-45ca-907b-1f1f66e5c3f1",
+  "eventType": "VALUESET_VERSION_PUBLISHED",
+  "occurredAt": "2026-07-15T11:00:00+08:00",
+  "valueSetCode": "VS-ORDER-STATUS",
+  "version": "2026.07",
+  "effectiveAt": "2026-08-01T00:00:00+08:00",
+  "changeSummary": {
+    "added": 2,
+    "updated": 1,
+    "retired": 1
+  },
+  "impactAssetIds": [
+    "API-ORD-001",
+    "CDR-ORDER"
+  ],
+  "rollbackVersion": "2026.06"
+}

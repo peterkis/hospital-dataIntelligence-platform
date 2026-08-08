@@ -1,0 +1,13 @@
+{
+  "eventId": "f59f1cca-1776-4805-bfdb-99f6dd40731b",
+  "eventType": "QUALITY_ISSUE_CREATED",
+  "occurredAt": "2026-07-15T11:30:00+08:00",
+  "issueId": "78a97c7e-ab35-416b-86cb-e3c454360274",
+  "ruleCode": "DQ-PAT-002",
+  "severity": "P0",
+  "asset": "mdm_master_patient",
+  "failedCount": 24,
+  "sampleReference": "secure://quality/samples/78a97c7e",
+  "owner": "质评部",
+  "dueAt": "2026-07-15T15:30:00+08:00"
+}

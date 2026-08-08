@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "ENV-WSL2-ANOLIS-8.9-20260808-01",
+  "capturedLocalDateTime": "2026-08-08 13:18:29",
+  "interpretationTimeZone": "Asia/Shanghai",
+  "scope": "LOCAL_WSL2_CAPACITY_SIMULATION",
+  "status": "INITIALIZED_AND_VERIFIED",
+  "source": {
+    "distribution": "Anolis OS 8.9 x86_64",
+    "archiveName": "AnolisOS-8.9-x86_64-docker.tar",
+    "officialUrl": "https://mirrors.openanolis.cn/anolis/8.9/isos/GA/x86_64/AnolisOS-8.9-x86_64-docker.tar",
+    "sha256": "fc56aadc23ede60dcee23d81a6204334cde0c140a79b5aa23a83d40fe6517960",
+    "dockerLayersApplied": 2,
+    "transientRootfsPackageSha256": "de2da4f027f9697ea9c25f1dc28618aafae1e5176a5439b70d0617e094e0f4bc"
+  },
+  "host": {
+    "windowsBuild": "10.0.26200.8875",
+    "logicalProcessors": 16,
+    "totalPhysicalMemoryBytes": 16874135552,
+    "wslVersion": "2.6.3.0",
+    "wslKernel": "6.6.87.2-microsoft-standard-WSL2",
+    "wslConfigPath": "C:\\Users\\zqpet\\.wslconfig",
+    "wslConfigSha256": "1b3e3aaa99535b1108e80fb6dc54892b26d2daf79e13706d02a7d64dd994bdd3",
+    "previousWslConfigBackupPath": "C:\\Users\\zqpet\\.wslconfig.before-anolis-8.9-hdi-poc-20260808.bak",
+    "previousWslConfigSha256": "aa6ff14f182c3c8589e0735463d28f4af3fb671c8afe575d18d5ad11fa8f28f4",
+    "targetDriveObservation": {
+      "observedLocalDateTime": "2026-08-08 13:40:35",
+      "driveLetter": "D",
+      "totalBytes": 350806597632,
+      "freeBytes": 15989956608,
+      "diskNumber": 0,
+      "friendlyName": "UMIS RPJYJ512MKN1QWY",
+      "busType": "NVMe",
+      "healthStatus": "Healthy",
+      "operationalStatus": "Online",
+      "partitionStyle": "GPT",
+      "freeSpaceIsPointInTimeObservation": true
+    }
+  },
+  "sharedWsl2VmConfiguration": {
+    "scope": "GLOBAL_TO_ALL_WSL2_DISTRIBUTIONS",
+    "networkingMode": "mirrored",
+    "memory": "4GB",
+    "processors": 8,
+    "swap": 0,
+    "guiApplications": false,
+    "autoMemoryReclaim": "gradual"
+  },
+  "distribution": {
+    "name": "Anolis-8.9-HDI-POC",
+    "installPath": "D:\\WSL\\Anolis-8.9-HDI-POC",
+    "wslGeneration": 2,
+    "id": "anolis",
+    "versionId": "8.9",
+    "architecture": "x86_64",
+    "defaultUid": 0,
+    "pid1": "systemd",
+    "systemdSystemState": "running",
+    "failedSystemUnitCount": 0,
+    "timeZone": "Asia/Shanghai",
+    "wslConfSha256": "ba83d197121edf71d6bd9af3674dbd45139eca03fe93d422d7339849fa0c0881",
+    "wslDistributionConfSha256": "6a88e886d6563e53a44b676c24b8cb2fd08b68ad3738d4f8383b20cd147e6917"
+  },
+  "initialResourceObservation": {
+    "observedLogicalProcessors": 8,
+    "observedMemTotalKiB": 4010204,
+    "observedSwapDeviceCount": 0,
+    "rootBlockDeviceBytes": 10737418240,
+    "rootFilesystemBytes": 10464022528,
+    "rootFilesystemUsedBytes": 234385408,
+    "hostVhdxPhysicalBytesAfterStop": 278921216,
+    "onlyTargetDistributionWasRunning": true
+  },
+  "cleanup": {
+    "temporaryBuilderDistributionRemoved": true,
+    "temporaryRootfsPackageRemoved": true,
+    "finalDistributionStoppedAfterVerification": true,
+    "preExistingDistributionsUnregisteredOrDeleted": false,
+    "defaultDistributionChanged": false
+  },
+  "limitations": [
+    "WSL2 CPU, memory and swap settings are global and shared; evidence is eligible only when this is the sole running WSL2 distribution.",
+    "The kernel is the Microsoft WSL2 kernel, not an Anolis native server kernel.",
+    "The 10 GiB limit is the guest VHD logical capacity, not an exact Windows host-directory quota.",
+    "The D drive had 15989956608 free bytes at the recorded observation; capacity runs must recheck host free space because the dynamic VHDX and evidence outputs share this drive.",
+    "This constrained local POC environment is not production capacity, an SLA, a whole-hospital initialization limit, a deployment specification or a tender baseline.",
+    "Application services, PostgreSQL 18.4, Keycloak and the simulated consumer are not yet installed by this initialization receipt."
+  ]
+}

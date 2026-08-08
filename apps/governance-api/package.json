@@ -1,0 +1,33 @@
+{
+  "name": "@hospital-data-intelligence/governance-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "contract:generate": "tsx scripts/generate-openapi.ts",
+    "db:types:generate": "kysely-codegen --config-file kysely-codegen.json",
+    "db:types:verify": "kysely-codegen --config-file kysely-codegen.json --verify",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.3",
+    "@fastify/swagger": "9.8.1",
+    "@fastify/type-provider-typebox": "6.1.0",
+    "decimal.js": "10.6.0",
+    "fastify": "5.11.2",
+    "jose": "6.2.8",
+    "json-canonicalize": "2.0.0",
+    "kysely": "0.29.4",
+    "pg": "8.22.0",
+    "typebox": "1.3.11"
+  },
+  "devDependencies": {
+    "@types/pg": "8.21.0",
+    "kysely-codegen": "0.20.0",
+    "testcontainers": "12.1.0"
+  }
+}

@@ -1,0 +1,3 @@
+digraph G { graph [rankdir=LR,bgcolor="white",pad="0.2",nodesep="0.25",ranksep="0.35",fontname="Noto Sans CJK SC"]; node [shape=box,style="rounded,filled",fontname="Noto Sans CJK SC",fontsize=10,color="#315B7D",fillcolor="#EAF2F8"]; edge [color="#567A96",penwidth=1.0,arrowsize=0.7];
+A[label="识别与盘点"];B[label="定义与分类"];C[label="Owner评审"];D[label="标准/模型/契约"];E[label="采集与标准化"];F[label="质量门禁"];G[label="发布与订阅"];H[label="使用与监测"];I[label="问题/变更/影响分析"];J[label="版本升级/停用/销毁"];
+A->B->C->D->E->F->G->H->I->J; I->D [label="闭环优化"]; J->A [label="再盘点"];}

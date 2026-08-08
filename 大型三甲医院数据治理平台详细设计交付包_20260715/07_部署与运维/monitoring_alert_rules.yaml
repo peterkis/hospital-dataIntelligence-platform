@@ -1,0 +1,53 @@
+groups:
+  - name: hdgp-api-slo
+    rules:
+      - alert: HDGPApiHighErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{service=~"mdm-api|fhir-server",status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{service=~"mdm-api|fhir-server"}[5m])) > 0.01
+        for: 5m
+        labels: {severity: critical, owner: platform-sre}
+        annotations: {summary: '核心API 5xx比例超过1%'}
+      - alert: HDGPApiLatencyP95High
+        expr: histogram_quantile(0.95, sum by(le,service)(rate(http_server_requests_seconds_bucket{service=~"mdm-api|fhir-server"}[5m]))) > 0.5
+        for: 10m
+        labels: {severity: warning, owner: platform-sre}
+        annotations: {summary: '核心API P95超过500ms'}
+  - name: hdgp-kafka
+    rules:
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_server_replicamanager_underreplicatedpartitions > 0
+        for: 5m
+        labels: {severity: critical, owner: event-platform}
+      - alert: KafkaConsumerLagCritical
+        expr: max by(consumergroup,topic)(kafka_consumergroup_lag) > 100000
+        for: 10m
+        labels: {severity: critical, owner: event-platform}
+  - name: hdgp-postgresql
+    rules:
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag_seconds > 60
+        for: 5m
+        labels: {severity: critical, owner: dba}
+      - alert: PostgreSQLNoWritablePrimary
+        expr: sum(pg_is_in_recovery == 0) != 1
+        for: 1m
+        labels: {severity: critical, owner: dba}
+  - name: hdgp-storage
+    rules:
+      - alert: HDGPFilesystemCapacityWarning
+        expr: 100 * (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes) > 75
+        for: 15m
+        labels: {severity: warning, owner: infrastructure}
+      - alert: HDGPFilesystemCapacityCritical
+        expr: 100 * (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes) > 85
+        for: 5m
+        labels: {severity: critical, owner: infrastructure}
+  - name: hdgp-quality-audit
+    rules:
+      - alert: CriticalDataQualityRuleFailed
+        expr: hdgp_dq_rule_result{severity="CRITICAL",result="FAIL"} > 0
+        for: 1m
+        labels: {severity: critical, owner: data-governance}
+      - alert: AuditPipelineMissingHeartbeat
+        expr: time() - hdgp_audit_pipeline_last_heartbeat_seconds > 300
+        for: 1m
+        labels: {severity: critical, owner: security-audit}

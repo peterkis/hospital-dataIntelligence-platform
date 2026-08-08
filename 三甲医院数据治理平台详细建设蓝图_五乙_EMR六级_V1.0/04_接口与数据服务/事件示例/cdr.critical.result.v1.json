@@ -1,0 +1,17 @@
+{
+  "eventId": "862e4d3e-1cdc-4a7a-99d2-7a92c908392a",
+  "eventType": "CRITICAL_RESULT_VERIFIED",
+  "occurredAt": "2026-07-15T12:00:00+08:00",
+  "enterprisePatientId": "e1468eb7-a80f-4af6-8571-14ac26b4b64e",
+  "enterpriseEncounterId": "03cb19cf-1543-4969-95a6-f49388bd0d45",
+  "observationId": "847bc504-23a2-4ea5-b095-f2cb4f74d378",
+  "observationCode": "K",
+  "value": {
+    "number": 2.4,
+    "unit": "mmol/L"
+  },
+  "criticalRuleId": "CRIT-K-LOW",
+  "verifiedBy": "staff-0001",
+  "workflowInstanceId": "wf-crit-20260715-001",
+  "ackDeadline": "2026-07-15T12:05:00+08:00"
+}

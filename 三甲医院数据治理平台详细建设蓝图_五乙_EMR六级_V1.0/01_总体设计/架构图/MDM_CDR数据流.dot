@@ -1,0 +1,10 @@
+digraph G { graph [rankdir=LR,bgcolor="white",pad="0.2",nodesep="0.25",ranksep="0.4",fontname="Noto Sans CJK SC"]; node [shape=box,style="rounded,filled",fontname="Noto Sans CJK SC",fontsize=10,color="#315B7D",fillcolor="#EAF2F8"]; edge [fontname="Noto Sans CJK SC",fontsize=9,color="#567A96"];
+source [label="HIS/EMR/LIS/PACS/HR/药学/设备"];
+stage [label="采集与隔离\nCDC/API/消息/文件\n校验、重试、死信"];
+std [label="标准化\n数据元、值域、术语映射"];
+mdm [label="MDM\n匹配、黄金记录、XREF\n版本、审核、回滚",fillcolor="#FCE4D6"];
+cdr [label="CDR\n患者-就诊-临床事件\n原始事实与来源追溯",fillcolor="#E4DFEC"];
+quality [label="质量与血缘\n门禁、工单、根因、证据",fillcolor="#FFF2CC"];
+svc [label="服务发布\nFHIR/REST/文档/事件/数据产品",fillcolor="#D5E8D4"];
+use [label="闭环/CDSS/五乙/六级/科研/运营"];
+source->stage->std; std->mdm; std->cdr; mdm->cdr [label="统一ID/资源引用"]; mdm->svc; cdr->svc; quality->mdm [dir=both]; quality->cdr [dir=both]; svc->use;}

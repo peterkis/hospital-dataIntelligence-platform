@@ -1,0 +1,8 @@
+digraph G { graph [rankdir=TB,bgcolor="white",pad="0.2",nodesep="0.25",ranksep="0.35",fontname="Noto Sans CJK SC"]; node [shape=box,style="rounded,filled",fontname="Noto Sans CJK SC",fontsize=10,color="#315B7D",fillcolor="#EAF2F8",margin="0.12,0.08"]; edge [color="#567A96",penwidth=1.1,arrowsize=0.7];
+app [label="应用与评测价值层\n互联互通五乙｜EMR六级｜智慧服务｜运营｜科研AI",fillcolor="#D5E8D4"];
+service [label="数据服务与互操作层\nAPI网关｜FHIR/共享文档｜事件总线｜指标/数据产品｜外部协同",fillcolor="#FFF2CC"];
+gov [label="一体化治理控制面\n标准/术语｜MDM｜元数据/血缘｜质量｜分类分级｜证据中心",fillcolor="#FCE4D6"];
+data [label="数据资产与计算层\nODS/实时流｜CDR｜湖仓｜科研沙箱｜知识库/Feature Store",fillcolor="#E4DFEC"];
+source [label="业务与设备源系统\nHIS｜EMR｜LIS｜PACS/RIS｜手麻｜输血｜护理｜病案｜HRP｜互联网医院"];
+ops [label="安全与平台工程底座\nIAM｜KMS｜审计｜可观测｜容灾｜DevSecOps｜配置/版本",fillcolor="#D9EAD3"];
+app->service->gov->data->source; ops->service [dir=both]; ops->gov [dir=both]; ops->data [dir=both];}
