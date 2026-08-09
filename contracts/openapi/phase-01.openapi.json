@@ -934,6 +934,10 @@
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
                     },
+                    "recordedAt": {
+                      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                      "type": "string"
+                    },
                     "releaseId": {
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
@@ -956,7 +960,8 @@
                     "versionId",
                     "releaseId",
                     "snapshotId",
-                    "eventId"
+                    "eventId",
+                    "recordedAt"
                   ],
                   "type": "object"
                 }
@@ -2956,6 +2961,10 @@
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
                     },
+                    "recordedAt": {
+                      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                      "type": "string"
+                    },
                     "releaseId": {
                       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
@@ -2978,7 +2987,8 @@
                     "versionId",
                     "releaseId",
                     "snapshotId",
-                    "eventId"
+                    "eventId",
+                    "recordedAt"
                   ],
                   "type": "object"
                 }

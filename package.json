@@ -25,6 +25,8 @@
     "contract:generate": "npm run contract:generate --workspace @hospital-data-intelligence/governance-api",
     "contract:generate-client": "npm run contract:generate --workspace @hospital-data-intelligence/generated-api-client",
     "contract:lint": "redocly lint contracts/openapi/phase-01.openapi.json --extends=minimal --skip-rule=operation-2xx-response",
+    "test:e2e": "node tests/e2e/run-playwright.ts",
+    "test:e2e:list": "node tests/e2e/run-playwright.ts --list",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

@@ -60,6 +60,7 @@ const PublicationResponseSchema = Type.Object(
     releaseId: UuidSchema,
     snapshotId: UuidSchema,
     eventId: UuidSchema,
+    recordedAt: LocalDateTimeSchema,
   },
   { additionalProperties: false },
 );
@@ -357,6 +358,7 @@ export async function registerPhase01Routes(
         releaseId: result.releaseId,
         snapshotId: result.snapshotId,
         eventId: result.eventId,
+        recordedAt: result.recordedAt,
       });
     },
   );
@@ -390,6 +392,7 @@ export async function registerPhase01Routes(
         releaseId: result.releaseId,
         snapshotId: result.snapshotId,
         eventId: result.eventId,
+        recordedAt: result.recordedAt,
       });
     },
   );

@@ -574,6 +574,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         eventId: string;
+                        recordedAt: string;
                         releaseId: string;
                         snapshotId: string;
                         stableId: string;
@@ -1343,6 +1344,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         eventId: string;
+                        recordedAt: string;
                         releaseId: string;
                         snapshotId: string;
                         stableId: string;

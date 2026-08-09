@@ -34,6 +34,7 @@ export interface Phase01VerticalSlice {
     readonly releaseId: string;
     readonly snapshotId: string;
     readonly eventId: string;
+    readonly recordedAt: string;
   }>;
   publishPriceList(
     context: RequestContext,
@@ -65,6 +66,7 @@ export interface Phase01VerticalSlice {
     readonly releaseId: string;
     readonly snapshotId: string;
     readonly eventId: string;
+    readonly recordedAt: string;
   }>;
   resolvePrice(
     context: RequestContext,
@@ -150,6 +152,7 @@ export function createPhase01VerticalSlice(
           releaseId: publication.releaseId,
           snapshotId: publication.snapshotId,
           eventId: publication.eventId,
+          recordedAt: context.occurredAt,
         };
       });
       signalPublicationCommitted(options?.onPublicationCommitted);
@@ -218,6 +221,7 @@ export function createPhase01VerticalSlice(
           releaseId: publication.releaseId,
           snapshotId: publication.snapshotId,
           eventId: publication.eventId,
+          recordedAt: context.occurredAt,
         };
       });
       signalPublicationCommitted(options?.onPublicationCommitted);

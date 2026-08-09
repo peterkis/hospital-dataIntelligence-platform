@@ -6,6 +6,8 @@ import { createGovernanceApiClient } from '@hospital-data-intelligence/generated
 let api = createGovernanceApiClient({ baseUrl: '' });
 let browserCsrfToken = '';
 const DEFAULT_BUSINESS_TIME = '2026-08-08T00:00:00';
+const DEFAULT_SERVICE_OCCURRED_AT = '2026-08-08T09:15:00';
+const DEFAULT_PRICE_LIST_CODE = 'HOSPITAL-DEFAULT-PRICE';
 
 interface PublishedReference {
   readonly stableId: string;
@@ -13,6 +15,13 @@ interface PublishedReference {
   readonly releaseId: string;
   readonly snapshotId: string;
   readonly eventId: string;
+  readonly recordedAt: string;
+}
+
+interface ResolutionReference {
+  readonly priceResolutionId: string;
+  readonly finalAmount: string | null;
+  readonly resultDigest: string | null;
 }
 
 export function configureBrowserApi(csrfToken: string): void {
@@ -79,10 +88,12 @@ export function VerticalSlicePage() {
   const [chargeObjectId, setChargeObjectId] = useState('');
   const [priceObjectId, setPriceObjectId] = useState('');
   const [campusId, setCampusId] = useState('');
+  const [chargeInternalCode, setChargeInternalCode] = useState('');
+  const [recordAsOf, setRecordAsOf] = useState('');
   const [charge, setCharge] = useState<PublishedReference | null>(null);
   const [price, setPrice] = useState<PublishedReference | null>(null);
   const [priceListId, setPriceListId] = useState('');
-  const [resolution, setResolution] = useState<{ finalAmount: string | null; resultDigest: string | null } | null>(null);
+  const [resolution, setResolution] = useState<ResolutionReference | null>(null);
 
   const chargeMutation = useMutation({
     mutationFn: async () => {
@@ -91,7 +102,7 @@ export function VerticalSlicePage() {
         body: {
           governanceObjectId: chargeObjectId,
           catalogCode: 'HOSPITAL-CHARGE-CATALOG',
-          internalCode: 'POC-FEE-001',
+          internalCode: chargeInternalCode,
           formalName: 'POC诊查费',
           serviceDefinition: '合成POC收费项目，仅用于验证治理闭环。',
           billingUnitCode: 'TIMES',
@@ -114,7 +125,7 @@ export function VerticalSlicePage() {
         params: { header: { 'x-csrf-token': browserCsrfToken } },
         body: {
           governanceObjectId: priceObjectId,
-          priceListCode: 'HOSPITAL-DEFAULT-PRICE',
+          priceListCode: DEFAULT_PRICE_LIST_CODE,
           displayName: 'POC全院默认价表',
           currencyCode: 'CNY',
           businessValidFrom: DEFAULT_BUSINESS_TIME,
@@ -138,7 +149,11 @@ export function VerticalSlicePage() {
       if (response.error) throw new Error(response.error.code);
       return response.data;
     },
-    onSuccess(data) { setPrice(data); setPriceListId(data.stableId); },
+    onSuccess(data) {
+      setPrice(data);
+      setPriceListId(data.stableId);
+      setRecordAsOf(data.recordedAt);
+    },
   });
 
   const resolutionMutation = useMutation({
@@ -154,18 +169,32 @@ export function VerticalSlicePage() {
           priceListId,
           campusId,
           encounterType: 'OUTPATIENT',
-          serviceOccurredAt: '2026-08-08T09:15:00',
-          recordAsOf: '2026-08-08T09:20:00',
+          serviceOccurredAt: DEFAULT_SERVICE_OCCURRED_AT,
+          recordAsOf,
           quantity: '2',
         },
       });
       if (response.error) throw new Error(response.error.code);
       return response.data;
     },
-    onSuccess: setResolution,
+    onSuccess(data) {
+      setResolution({
+        priceResolutionId: data.priceResolutionId,
+        finalAmount: data.finalAmount,
+        resultDigest: data.resultDigest,
+      });
+    },
   });
 
-  const ready = useMemo(() => Boolean(chargeObjectId && priceObjectId && campusId), [chargeObjectId, priceObjectId, campusId]);
+  const ready = useMemo(
+    () => Boolean(
+      chargeObjectId &&
+      priceObjectId &&
+      campusId &&
+      chargeInternalCode
+    ),
+    [chargeInternalCode, chargeObjectId, campusId, priceObjectId],
+  );
   const submit = (action: () => void) => (event: FormEvent) => { event.preventDefault(); action(); };
 
   return (
@@ -177,31 +206,33 @@ export function VerticalSlicePage() {
           <Field label="收费目录治理对象 ID" value={chargeObjectId} onChange={setChargeObjectId} />
           <Field label="价表治理对象 ID" value={priceObjectId} onChange={setPriceObjectId} />
           <Field label="当前院区 ID" value={campusId} onChange={setCampusId} />
+          <Field label="收费项目代码" value={chargeInternalCode} onChange={setChargeInternalCode} placeholder="E2E-FEE-001" />
+          <Field label="记录时点" value={recordAsOf} onChange={setRecordAsOf} placeholder="YYYY-MM-DDTHH:mm:ss" />
         </div>
       </article>
       <div className="step-grid">
-        <StepCard number="01" title="发布收费项目" state={charge ? 'done' : 'ready'} onSubmit={submit(() => chargeMutation.mutate())} disabled={!ready || chargeMutation.isPending} error={chargeMutation.error} reference={charge} />
-        <StepCard number="02" title="发布完整价表" state={price ? 'done' : charge ? 'ready' : 'locked'} onSubmit={submit(() => priceMutation.mutate())} disabled={!charge || priceMutation.isPending} error={priceMutation.error} reference={price} />
-        <StepCard number="03" title="执行价格解析" state={resolution ? 'done' : price ? 'ready' : 'locked'} onSubmit={submit(() => resolutionMutation.mutate())} disabled={!price || resolutionMutation.isPending} error={resolutionMutation.error} result={resolution ? `CNY ${resolution.finalAmount ?? '未命中'}` : undefined} />
+        <StepCard number="01" title="发布收费项目" state={charge ? 'done' : 'ready'} onSubmit={submit(() => chargeMutation.mutate())} disabled={!ready || chargeMutation.isPending} error={chargeMutation.error} reference={charge} referencePrefix="charge" />
+        <StepCard number="02" title="发布完整价表" state={price ? 'done' : charge ? 'ready' : 'locked'} onSubmit={submit(() => priceMutation.mutate())} disabled={!charge || priceMutation.isPending} error={priceMutation.error} reference={price} referencePrefix="price" />
+        <StepCard number="03" title="价格解析" state={resolution ? 'done' : price ? 'ready' : 'locked'} onSubmit={submit(() => resolutionMutation.mutate())} disabled={!price || !recordAsOf || resolutionMutation.isPending} error={resolutionMutation.error} resolution={resolution} />
       </div>
     </section>
   );
 }
 
-function Field({ label, value, onChange }: { readonly label: string; readonly value: string; readonly onChange: (value: string) => void }) {
-  return <label className="field"><span>{label}</span><input required value={value} onChange={(event) => onChange(event.target.value)} placeholder="00000000-0000-0000-0000-000000000000" /></label>;
+function Field({ label, value, onChange, placeholder = '00000000-0000-0000-0000-000000000000' }: { readonly label: string; readonly value: string; readonly onChange: (value: string) => void; readonly placeholder?: string }) {
+  return <label className="field"><span>{label}</span><input required value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} /></label>;
 }
 
-function StepCard(props: { readonly number: string; readonly title: string; readonly state: 'locked' | 'ready' | 'done'; readonly onSubmit: (event: FormEvent) => void; readonly disabled: boolean; readonly error: Error | null; readonly reference?: PublishedReference | null; readonly result?: string | undefined }) {
+function StepCard(props: { readonly number: string; readonly title: string; readonly state: 'locked' | 'ready' | 'done'; readonly onSubmit: (event: FormEvent) => void; readonly disabled: boolean; readonly error: Error | null; readonly reference?: PublishedReference | null; readonly referencePrefix?: 'charge' | 'price'; readonly resolution?: ResolutionReference | null }) {
   return (
     <article className={`panel step-card ${props.state}`}>
       <form onSubmit={props.onSubmit}>
         <div className="panel-heading"><span className="step-number">{props.number}</span><span className="state">{props.state === 'done' ? '已完成' : props.state === 'locked' ? '等待前序' : '可执行'}</span></div>
         <h2>{props.title}</h2>
         <p>{props.state === 'locked' ? '完成前序步骤后自动解锁。' : '调用冻结契约，并以服务端事务结果作为唯一成功依据。'}</p>
-        <button disabled={props.disabled} type="submit">{props.state === 'done' ? '重新执行' : '执行步骤'}</button>
-        {props.reference ? <dl className="evidence"><dt>发布 ID</dt><dd>{props.reference.releaseId}</dd><dt>快照 ID</dt><dd>{props.reference.snapshotId}</dd></dl> : null}
-        {props.result ? <div className="result"><span>解析金额</span><strong>{props.result}</strong></div> : null}
+        <button disabled={props.disabled} type="submit">{props.state === 'done' ? `重新执行${props.title}` : `执行${props.title}`}</button>
+        {props.reference && props.referencePrefix ? <dl className="evidence"><dt>发布 ID</dt><dd data-testid={`${props.referencePrefix}-release-id`}>{props.reference.releaseId}</dd><dt>快照 ID</dt><dd data-testid={`${props.referencePrefix}-snapshot-id`}>{props.reference.snapshotId}</dd></dl> : null}
+        {props.resolution ? <dl className="evidence"><dt>解析金额</dt><dd data-testid="resolution-amount">CNY {props.resolution.finalAmount ?? '未命中'}</dd><dt>解析 ID</dt><dd data-testid="resolution-id">{props.resolution.priceResolutionId}</dd><dt>结果摘要</dt><dd data-testid="resolution-digest">{props.resolution.resultDigest ?? '无'}</dd></dl> : null}
         {props.error ? <div className="error" role="alert">{props.error.message}</div> : null}
       </form>
     </article>
