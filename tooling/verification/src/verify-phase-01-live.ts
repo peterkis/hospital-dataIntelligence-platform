@@ -21,7 +21,9 @@ const API_BASE_URL = requireEnvironment('GOVERNANCE_API_BASE_URL').replace(/\/$/
 const KEYCLOAK_ISSUER_URL = requireEnvironment('KEYCLOAK_ISSUER_URL').replace(/\/$/u, '');
 const REALM_IMPORT_PATH = resolve(requireEnvironment('KEYCLOAK_REALM_IMPORT_PATH'));
 const REALM_IMPORT = JSON.parse(await readFile(REALM_IMPORT_PATH, 'utf8'));
-const OWNER = requireRealmOwner(REALM_IMPORT);
+const OWNER = requireRealmUser(REALM_IMPORT, 'phase01-owner');
+const REVIEWER = requireRealmUser(REALM_IMPORT, 'phase01-reviewer');
+const FINAL_OWNER = requireRealmUser(REALM_IMPORT, 'phase01-final-owner');
 const CONSUMER_A_SECRET = requireRealmClientSecret(REALM_IMPORT, 'hdi-sim-consumer-a');
 const CONSUMER_B_SECRET = requireRealmClientSecret(REALM_IMPORT, 'hdi-sim-consumer-b');
 const NOTIFICATION_TARGETS = parseNotificationTargets(
@@ -48,7 +50,9 @@ const consumerProcesses = [];
 let verification;
 let failure;
 try {
-  const browserIdentity = await establishOwnerSession();
+  const browserIdentity = await establishPersonSession(OWNER);
+  const reviewerIdentity = await establishPersonSession(REVIEWER);
+  const finalOwnerIdentity = await establishPersonSession(FINAL_OWNER);
   const ownerFetch = createCookieFetch(browserIdentity.cookieHeader);
   const ownerClient = createGovernanceApiClient({
     baseUrl: API_BASE_URL,
@@ -60,9 +64,19 @@ try {
     csrfToken: 'invalid-csrf-token-that-is-long-enough',
     fetch: ownerFetch,
   });
-  const negativeCsrf = await invalidCsrfClient.POST('/v1/phase-01/charge-item-publications', {
+  const reviewerClient = createGovernanceApiClient({
+    baseUrl: API_BASE_URL,
+    csrfToken: reviewerIdentity.session.csrfToken,
+    fetch: createCookieFetch(reviewerIdentity.cookieHeader),
+  });
+  const finalOwnerClient = createGovernanceApiClient({
+    baseUrl: API_BASE_URL,
+    csrfToken: finalOwnerIdentity.session.csrfToken,
+    fetch: createCookieFetch(finalOwnerIdentity.cookieHeader),
+  });
+  const negativeCsrf = await invalidCsrfClient.POST('/v1/phase-01/charge-item-drafts', {
     params: { header: { 'x-csrf-token': 'invalid-csrf-token-that-is-long-enough' } },
-    body: chargeBody(`CSRF-${runSuffix}`),
+    body: chargeDraftBody(`CSRF-${runSuffix}`),
   });
   assert.equal(negativeCsrf.response.status, 403);
   assert.equal(negativeCsrf.error?.code, 'BROWSER_CSRF_FORBIDDEN');
@@ -117,15 +131,58 @@ try {
     }),
   );
 
-  const charge = unwrap(
-    await ownerClient.POST('/v1/phase-01/charge-item-publications', {
+  const chargeDraft = unwrap(
+    await ownerClient.POST('/v1/phase-01/charge-item-drafts', {
       params: { header: { 'x-csrf-token': browserIdentity.session.csrfToken } },
-      body: chargeBody(`FEE-${runSuffix}`),
+      body: chargeDraftBody(`FEE-${runSuffix}`),
     }),
     201,
   );
-  const price = unwrap(
-    await ownerClient.POST('/v1/phase-01/price-list-publications', {
+  const chargeChange = unwrap(
+    await ownerClient.POST('/v1/phase-01/change-requests', {
+      params: { header: { 'x-csrf-token': browserIdentity.session.csrfToken } },
+      body: {
+        governanceObjectId: CHARGE_OBJECT_ID,
+        entityType: 'CHARGE_ITEM_VERSION',
+        stableEntityId: chargeDraft.chargeItemId,
+        entityVersionId: chargeDraft.chargeItemVersionId,
+        changeKind: 'INITIAL_PUBLICATION',
+        riskClassification: 'NORMAL',
+        submittedContentDigest: chargeDraft.contentDigest,
+        changeReason: '真实Anolis运行环境收费项目初始发布审批',
+        campusId: null,
+        frozenEvidence: { scenarioId: `LIVE-${runSuffix}` },
+      },
+    }),
+    201,
+  );
+  await approveChange(
+    reviewerClient,
+    reviewerIdentity.session.csrfToken,
+    chargeChange.changeRequestId,
+    chargeDraft.contentDigest,
+    'PROFESSIONAL_REVIEW',
+  );
+  await approveChange(
+    finalOwnerClient,
+    finalOwnerIdentity.session.csrfToken,
+    chargeChange.changeRequestId,
+    chargeDraft.contentDigest,
+    'OWNER_FINAL_APPROVAL',
+  );
+  const charge = unwrap(
+    await ownerClient.GET('/v1/phase-01/charge-items/{chargeItemId}/versions/{chargeItemVersionId}', {
+      params: {
+        path: { chargeItemId: chargeDraft.chargeItemId, chargeItemVersionId: chargeDraft.chargeItemVersionId },
+        query: { governanceObjectId: CHARGE_OBJECT_ID },
+      },
+    }),
+    200,
+  );
+  assert.equal(charge.governanceStatus, 'PUBLISHED');
+
+  const priceDraft = unwrap(
+    await ownerClient.POST('/v1/phase-01/price-list-drafts', {
       params: { header: { 'x-csrf-token': browserIdentity.session.csrfToken } },
       body: {
         governanceObjectId: PRICE_OBJECT_ID,
@@ -134,11 +191,10 @@ try {
         currencyCode: 'CNY',
         businessValidFrom: '2026-08-08T00:00:00',
         businessValidTo: null,
-        changeReason: '真实Anolis运行环境纵向切片核验',
         entries: [
           {
-            chargeItemId: charge.stableId,
-            chargeItemVersionId: charge.versionId,
+            chargeItemId: charge.chargeItemId,
+            chargeItemVersionId: charge.chargeItemVersionId,
             scopeLevel: 'HOSPITAL',
             campusId: null,
             encounterMode: 'GENERAL',
@@ -154,8 +210,60 @@ try {
     }),
     201,
   );
+  const priceChange = unwrap(
+    await ownerClient.POST('/v1/phase-01/change-requests', {
+      params: { header: { 'x-csrf-token': browserIdentity.session.csrfToken } },
+      body: {
+        governanceObjectId: PRICE_OBJECT_ID,
+        entityType: 'PRICE_LIST_RELEASE',
+        stableEntityId: priceDraft.priceListId,
+        entityVersionId: priceDraft.priceListReleaseId,
+        changeKind: 'INITIAL_PUBLICATION',
+        riskClassification: 'HIGH',
+        submittedContentDigest: priceDraft.contentDigest,
+        changeReason: '真实Anolis运行环境价表初始发布审批',
+        campusId: null,
+        frozenEvidence: { scenarioId: `LIVE-${runSuffix}` },
+      },
+    }),
+    201,
+  );
+  await approveChange(
+    reviewerClient,
+    reviewerIdentity.session.csrfToken,
+    priceChange.changeRequestId,
+    priceDraft.contentDigest,
+    'PROFESSIONAL_REVIEW',
+  );
+  await approveChange(
+    finalOwnerClient,
+    finalOwnerIdentity.session.csrfToken,
+    priceChange.changeRequestId,
+    priceDraft.contentDigest,
+    'OWNER_FINAL_APPROVAL',
+  );
+  const price = unwrap(
+    await ownerClient.GET('/v1/phase-01/price-lists/{priceListId}/releases/{priceListReleaseId}', {
+      params: {
+        path: { priceListId: priceDraft.priceListId, priceListReleaseId: priceDraft.priceListReleaseId },
+        query: { governanceObjectId: PRICE_OBJECT_ID },
+      },
+    }),
+    200,
+  );
+  assert.equal(price.governanceStatus, 'PUBLISHED');
 
-  const consumerAState = await waitForClosedState(consumerAStatePath, price.eventId);
+  const serviceAClient = createGovernanceApiClient({
+    baseUrl: API_BASE_URL,
+    accessToken: await obtainServiceToken('hdi-sim-consumer-a', CONSUMER_A_SECRET),
+  });
+  const serviceBClient = createGovernanceApiClient({
+    baseUrl: API_BASE_URL,
+    accessToken: await obtainServiceToken('hdi-sim-consumer-b', CONSUMER_B_SECRET),
+  });
+  const priceEvent = await waitForSubscriptionEvent(serviceAClient, subscriptionA.subscriptionId);
+
+  const consumerAState = await waitForClosedState(consumerAStatePath, priceEvent.eventId);
   assert.equal(await fileExists(consumerBStatePath), false, 'Legacy consumer must remain blocked.');
 
   const resolutionRecordAsOf = nowInAsiaShanghai();
@@ -165,9 +273,9 @@ try {
       body: {
         governanceObjectId: PRICE_OBJECT_ID,
         requestId: `LIVE-${runSuffix}`,
-        chargeItemId: charge.stableId,
-        chargeItemVersionId: charge.versionId,
-        priceListId: price.stableId,
+        chargeItemId: charge.chargeItemId,
+        chargeItemVersionId: charge.chargeItemVersionId,
+        priceListId: price.priceListId,
         campusId: CAMPUS_ID,
         encounterType: 'OUTPATIENT',
         serviceOccurredAt: '2026-08-08T09:15:00',
@@ -203,25 +311,16 @@ try {
         header: { 'x-csrf-token': browserIdentity.session.csrfToken },
         path: { subscriptionId: subscriptionB.subscriptionId },
       },
-      body: { governanceObjectId: PRICE_OBJECT_ID, eventId: price.eventId },
+      body: { governanceObjectId: PRICE_OBJECT_ID, eventId: priceEvent.eventId },
     }),
     201,
   );
-  const consumerBState = await waitForClosedState(consumerBStatePath, price.eventId);
+  const consumerBState = await waitForClosedState(consumerBStatePath, priceEvent.eventId);
   assert.deepEqual(consumerBState.lastAppliedPayload, consumerAState.lastAppliedPayload);
   assert.equal(
-    consumerBState.appliedEvents[price.eventId].snapshotDigest,
-    consumerAState.appliedEvents[price.eventId].snapshotDigest,
+    consumerBState.appliedEvents[priceEvent.eventId].snapshotDigest,
+    consumerAState.appliedEvents[priceEvent.eventId].snapshotDigest,
   );
-
-  const serviceAClient = createGovernanceApiClient({
-    baseUrl: API_BASE_URL,
-    accessToken: await obtainServiceToken('hdi-sim-consumer-a', CONSUMER_A_SECRET),
-  });
-  const serviceBClient = createGovernanceApiClient({
-    baseUrl: API_BASE_URL,
-    accessToken: await obtainServiceToken('hdi-sim-consumer-b', CONSUMER_B_SECRET),
-  });
   const consumerAAfterCheckpoint = unwrap(
     await serviceAClient.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/events', {
       params: {
@@ -243,8 +342,8 @@ try {
   assert.deepEqual(consumerAAfterCheckpoint.events, []);
   assert.deepEqual(consumerBAfterCheckpoint.events, []);
   const databaseVerification = await verifyDatabaseClosure({
-    priceEventId: price.eventId,
-    priceReleaseId: price.versionId,
+    priceEventId: priceEvent.eventId,
+    priceReleaseId: price.priceListReleaseId,
     subscriptionAId: subscriptionA.subscriptionId,
     subscriptionBId: subscriptionB.subscriptionId,
     aggregateVersion: consumerAState.appliedAggregateVersion,
@@ -276,11 +375,11 @@ try {
     price,
     resolution,
     consumption: {
-      consumerA: summarizeConsumerState(consumerAState, price.eventId),
-      consumerB: summarizeConsumerState(consumerBState, price.eventId),
+      consumerA: summarizeConsumerState(consumerAState, priceEvent.eventId),
+      consumerB: summarizeConsumerState(consumerBState, priceEvent.eventId),
       identicalCanonicalSnapshotDigest:
-        consumerAState.appliedEvents[price.eventId].snapshotDigest ===
-        consumerBState.appliedEvents[price.eventId].snapshotDigest,
+        consumerAState.appliedEvents[priceEvent.eventId].snapshotDigest ===
+        consumerBState.appliedEvents[priceEvent.eventId].snapshotDigest,
       checkpointsClosed: true,
     },
     databaseVerification,
@@ -310,10 +409,9 @@ process.stdout.write(
 );
 if (failure) throw failure;
 
-function chargeBody(internalCode) {
+function chargeDraftBody(internalCode: string) {
   return {
     governanceObjectId: CHARGE_OBJECT_ID,
-    catalogCode: 'HOSPITAL-CHARGE-CATALOG',
     internalCode,
     formalName: `POC诊查费 ${runSuffix}`,
     serviceDefinition: '真实Anolis运行环境合成POC收费项目，仅用于验证治理闭环。',
@@ -321,11 +419,10 @@ function chargeBody(internalCode) {
     chargingMethodCode: 'COUNT',
     businessValidFrom: '2026-08-08T00:00:00',
     businessValidTo: null,
-    changeReason: '真实Anolis运行环境纵向切片核验',
   };
 }
 
-async function establishOwnerSession() {
+async function establishPersonSession(identity: { readonly username: string; readonly password: string }) {
   const login = await fetch(`${API_BASE_URL}/auth/login?returnTo=%2Fadmin%2F`, {
     redirect: 'manual',
   });
@@ -345,8 +442,8 @@ async function establishOwnerSession() {
       'content-type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      username: OWNER.username,
-      password: OWNER.password,
+      username: identity.username,
+      password: identity.password,
       credentialId: '',
     }),
     redirect: 'manual',
@@ -389,8 +486,8 @@ async function establishOwnerSession() {
   return { cookieHeader: opaqueCookie, session };
 }
 
-function createCookieFetch(cookie) {
-  return async (input, init) => {
+function createCookieFetch(cookie: string): typeof fetch {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const headers = new Headers(request.headers);
     headers.set('cookie', cookie);
@@ -398,7 +495,14 @@ function createCookieFetch(cookie) {
   };
 }
 
-async function startConsumer(options) {
+async function startConsumer(options: {
+  readonly label: string;
+  readonly port: number;
+  readonly clientId: string;
+  readonly clientSecret: string;
+  readonly notificationAuthorization: string;
+  readonly stateDirectory: string;
+}) {
   const stdoutPath = join(OUTPUT_DIR, `${options.label}.stdout.log`);
   const stderrPath = join(OUTPUT_DIR, `${options.label}.stderr.log`);
   const stdout = createWriteStream(stdoutPath, { flags: 'wx', mode: 0o600 });
@@ -426,7 +530,7 @@ async function startConsumer(options) {
   return consumer;
 }
 
-async function stopConsumer(consumer) {
+async function stopConsumer(consumer: any) {
   if (consumer.child.exitCode === null && consumer.child.signalCode === null) {
     consumer.child.kill('SIGTERM');
     await Promise.race([
@@ -439,7 +543,7 @@ async function stopConsumer(consumer) {
   await delay(50);
 }
 
-async function waitForPort(port, child) {
+async function waitForPort(port: number, child: any): Promise<void> {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) throw new Error(`SIM_CONSUMER_${port}_EXITED_${child.exitCode}`);
@@ -457,7 +561,7 @@ async function waitForPort(port, child) {
   throw new Error(`SIM_CONSUMER_${port}_START_TIMEOUT`);
 }
 
-async function waitForClosedState(path, eventId) {
+async function waitForClosedState(path: string, eventId: string): Promise<any> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
@@ -471,7 +575,7 @@ async function waitForClosedState(path, eventId) {
   throw new Error(`SIM_CONSUMER_CLOSURE_TIMEOUT:${basename(path)}`);
 }
 
-async function obtainServiceToken(clientId, clientSecret) {
+async function obtainServiceToken(clientId: string, clientSecret: string): Promise<string> {
   const response = await fetch(`${KEYCLOAK_ISSUER_URL}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
@@ -486,7 +590,13 @@ async function obtainServiceToken(clientId, clientSecret) {
   return tokenSet.access_token;
 }
 
-async function verifyDatabaseClosure(options) {
+async function verifyDatabaseClosure(options: {
+  readonly priceEventId: string;
+  readonly priceReleaseId: string;
+  readonly subscriptionAId: string;
+  readonly subscriptionBId: string;
+  readonly aggregateVersion: string;
+}) {
   const pool = new pg.Pool({
     connectionString: requireEnvironment('DATABASE_URL'),
     application_name: 'hdi-phase01-live-verification',
@@ -503,14 +613,22 @@ async function verifyDatabaseClosure(options) {
         '0001_phase_01_vertical_slice',
         '0002_price_list_version_publication',
         '0003_price_list_recording_closure_guard',
+        '0004_charge_item_draft_mutation_guards',
+        '0005_charge_item_version_bitemporal_guards',
+        '0006_price_list_draft_mutation_guards',
+        '0007_object_and_campus_authorization',
+        '0008_versioned_approval_workflow',
+        '0009_batch_import_jobs',
+        '0010_emergency_suspension_and_recovery',
+        '0011_charge_item_governance_object_scope',
       ],
     );
     const timezoneColumns = await client.query(`
       select count(*)::integer as count
       from information_schema.columns
       where table_schema in (
-        'access_control', 'audit', 'charge_catalog', 'platform', 'price_list',
-        'price_resolution', 'release_distribution', 'workflow'
+        'access_control', 'audit', 'batch_import', 'charge_catalog', 'emergency_control',
+        'platform', 'price_list', 'price_resolution', 'release_distribution', 'workflow'
       )
       and data_type in ('timestamp with time zone', 'time with time zone')
     `);
@@ -575,7 +693,7 @@ async function verifyDatabaseClosure(options) {
   }
 }
 
-async function loadConsumerClosure(client, subscriptionId, eventId) {
+async function loadConsumerClosure(client: any, subscriptionId: string, eventId: string) {
   const result = await client.query(
     `
       select
@@ -609,7 +727,7 @@ async function loadConsumerClosure(client, subscriptionId, eventId) {
   };
 }
 
-async function verifyAuditChain(client, auditStreamId) {
+async function verifyAuditChain(client: any, auditStreamId: string): Promise<boolean> {
   const result = await client.query(
     `
       select audit_sequence, event_payload_hash, previous_hash, current_hash
@@ -640,13 +758,53 @@ async function verifyAuditChain(client, auditStreamId) {
   return result.rowCount > 0;
 }
 
-function unwrap(result, expectedStatus) {
+function unwrap(result: any, expectedStatus: number): any {
   assert.equal(result.response.status, expectedStatus, JSON.stringify(result.error));
   assert.equal(result.error, undefined, JSON.stringify(result.error));
   return result.data;
 }
 
-function summarizeConsumerState(state, eventId) {
+async function approveChange(
+  client: any,
+  csrfToken: string,
+  changeRequestId: string,
+  contentDigest: string,
+  stageType: 'PROFESSIONAL_REVIEW' | 'OWNER_FINAL_APPROVAL',
+): Promise<any> {
+  return unwrap(
+    await client.POST('/v1/phase-01/change-requests/{changeRequestId}/actions', {
+      params: {
+        header: { 'x-csrf-token': csrfToken },
+        path: { changeRequestId },
+      },
+      body: {
+        stageType,
+        actionResult: 'APPROVED',
+        reason: `Phase 01正式核验：${stageType}`,
+        seenContentDigest: contentDigest,
+        campusId: null,
+      },
+    }),
+    200,
+  );
+}
+
+async function waitForSubscriptionEvent(client: any, subscriptionId: string): Promise<any> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const result = unwrap(
+      await client.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/events', {
+        params: { path: { subscriptionId }, query: {} },
+      }),
+      200,
+    );
+    if (result.events.length > 0) return result.events[0];
+    await delay(200);
+  }
+  throw new Error(`PUBLISHED_EVENT_DISCOVERY_TIMEOUT:${subscriptionId}`);
+}
+
+function summarizeConsumerState(state: any, eventId: string) {
   return {
     subscriptionId: state.subscriptionId,
     appliedAggregateVersion: state.appliedAggregateVersion,
@@ -657,7 +815,7 @@ function summarizeConsumerState(state, eventId) {
   };
 }
 
-function mergeCookieJar(jar, setCookies) {
+function mergeCookieJar(jar: Map<string, string>, setCookies: readonly string[]): void {
   for (const setCookie of setCookies) {
     const pair = setCookie.split(';', 1)[0];
     const separator = pair.indexOf('=');
@@ -667,21 +825,21 @@ function mergeCookieJar(jar, setCookies) {
   assert.ok(jar.size > 0, 'Expected Keycloak authorization cookies.');
 }
 
-function serializeCookieJar(jar) {
+function serializeCookieJar(jar: ReadonlyMap<string, string>): string {
   return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
 }
 
-function requireLocation(response) {
+function requireLocation(response: Response): string {
   const location = response.headers.get('location');
   assert.ok(location, `HTTP ${response.status} response did not contain Location.`);
   return location;
 }
 
-function decodeHtmlAttribute(value) {
+function decodeHtmlAttribute(value: string): string {
   return value.replaceAll('&amp;', '&').replaceAll('&#x3D;', '=').replaceAll('&#61;', '=');
 }
 
-async function assertDirectoryAbsent(path) {
+async function assertDirectoryAbsent(path: string): Promise<void> {
   try {
     await access(path);
   } catch (error) {
@@ -691,7 +849,7 @@ async function assertDirectoryAbsent(path) {
   throw new Error(`EVIDENCE_OUTPUT_ALREADY_EXISTS:${path}`);
 }
 
-async function fileExists(path) {
+async function fileExists(path: string): Promise<boolean> {
   try {
     await access(path);
     return true;
@@ -701,7 +859,7 @@ async function fileExists(path) {
   }
 }
 
-async function writeManifest(directory) {
+async function writeManifest(directory: string): Promise<void> {
   const files = await listEvidenceFiles(directory);
   const lines = [];
   for (const relativePath of files) {
@@ -715,7 +873,7 @@ async function writeManifest(directory) {
   });
 }
 
-async function listEvidenceFiles(directory, relativeDirectory = '') {
+async function listEvidenceFiles(directory: string, relativeDirectory = ''): Promise<readonly string[]> {
   const entries = await readdir(join(directory, relativeDirectory), { withFileTypes: true });
   const files = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
@@ -727,7 +885,7 @@ async function listEvidenceFiles(directory, relativeDirectory = '') {
   return files;
 }
 
-function sha256(bytes) {
+function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
@@ -746,20 +904,20 @@ function nowInAsiaShanghai() {
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}`;
 }
 
-function isMissingFile(error) {
+function isMissingFile(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
 
-function requireRealmOwner(realm) {
-  const owner = realm.users?.find((candidate) => candidate.username === 'phase01-owner');
-  const password = owner?.credentials?.find((candidate) => candidate.type === 'password')?.value;
-  if (typeof owner?.username !== 'string' || typeof password !== 'string') {
-    throw new Error('KEYCLOAK_REALM_OWNER_CREDENTIAL_MISSING');
+function requireRealmUser(realm: any, username: string): { readonly username: string; readonly password: string } {
+  const user = realm.users?.find((candidate) => candidate.username === username);
+  const password = user?.credentials?.find((candidate) => candidate.type === 'password')?.value;
+  if (typeof user?.username !== 'string' || typeof password !== 'string') {
+    throw new Error(`KEYCLOAK_REALM_USER_CREDENTIAL_MISSING:${username}`);
   }
-  return { username: owner.username, password };
+  return { username: user.username, password };
 }
 
-function requireRealmClientSecret(realm, clientId) {
+function requireRealmClientSecret(realm: any, clientId: string): string {
   const secret = realm.clients?.find((candidate) => candidate.clientId === clientId)?.secret;
   if (typeof secret !== 'string' || secret.length === 0) {
     throw new Error(`KEYCLOAK_REALM_CLIENT_SECRET_MISSING:${clientId}`);
@@ -767,13 +925,13 @@ function requireRealmClientSecret(realm, clientId) {
   return secret;
 }
 
-function parseNotificationTargets(value) {
+function parseNotificationTargets(value: string): readonly any[] {
   const targets = JSON.parse(value);
   if (!Array.isArray(targets)) throw new Error('NOTIFICATION_TARGETS_INVALID');
   return targets;
 }
 
-function requireNotificationAuthorization(servicePrincipalId) {
+function requireNotificationAuthorization(servicePrincipalId: string): string {
   const authorization = NOTIFICATION_TARGETS.find(
     (candidate) => candidate.servicePrincipalId === servicePrincipalId,
   )?.authorizationHeader;
@@ -783,7 +941,7 @@ function requireNotificationAuthorization(servicePrincipalId) {
   return authorization;
 }
 
-function requireEnvironment(name) {
+function requireEnvironment(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`);
   return value;

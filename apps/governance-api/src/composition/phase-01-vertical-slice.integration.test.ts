@@ -87,9 +87,11 @@ afterAll(async () => {
 describe('Phase 01 executable vertical slice', () => {
   it('publishes, resolves, audits, snapshots, and closes simulated consumption', async () => {
     if (!databaseHandle) throw new Error('Integration database was not initialized');
+    const rootDatabase = databaseHandle.database;
     const runner = createTransactionRunner<ScopedModules>(
-      databaseHandle.database,
-      createScopedModules,
+      rootDatabase,
+      (transaction, context) =>
+        createScopedModules(transaction, context, rootDatabase),
     );
     const slice = createPhase01VerticalSlice(runner);
     let dispatcherNow = '2026-08-08T09:10:30';

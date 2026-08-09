@@ -4,7 +4,7 @@
 
 **Blocked by:** 07 — 普通内容变更的版本化审批.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 请求冻结旧/新契约身份、Schema摘要、TypeBox/OpenAPI差异、领域内容及成员等价证据、兼容矩阵和仿真消费证据。
 - [ ] 领域Owner完成语义确认，平台契约Owner完成结构与证据终审；消费者Owner没有批准或否决权。
@@ -15,4 +15,4 @@
 
 ## Comments
 
-No comments yet.
+- 2026-08-10：已认领并完成本 Ticket 的领域模块、REST TypeBox源定义、管理界面接缝、数据库约束与审计链开发。按用户指示未运行测试、真实依赖验证或正式证据生成，验收项保持未勾选。

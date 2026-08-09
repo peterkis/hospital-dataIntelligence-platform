@@ -3,6 +3,7 @@ import type { TSchema } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/database-types.generated.js';
 import type { RequestContext } from '../../platform/transaction/transaction-runner.js';
+import { hitControlledPublicationFault } from '../../platform/fault-injection/controlled-faults.js';
 import {
   canonicalJson,
   canonicalSha256,
@@ -55,6 +56,11 @@ export type ReleaseMember =
 export interface RegisterPublicationCommand<Payload = unknown> {
   readonly governanceObjectId: string;
   readonly aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST';
+  readonly releaseKind?:
+    | 'NORMAL'
+    | 'COMPENSATION'
+    | 'HISTORICAL_REPUBLICATION'
+    | 'CONTRACT_SCHEMA_UPGRADE';
   readonly businessValidFrom: string;
   readonly businessValidTo: string | null;
   readonly recordedFrom: string;
@@ -103,6 +109,13 @@ export interface ReleaseDistributionModule {
   registerPublication<Payload>(
     command: RegisterPublicationCommand<Payload>,
   ): Promise<RegisteredPublication>;
+  linkReleaseRelationship(command: {
+    readonly sourceReleaseId: string;
+    readonly targetReleaseId: string;
+    readonly relationshipType: 'COMPENSATES' | 'REPLACES' | 'REPACKAGES_CONTRACT';
+    readonly reason: string;
+  }): Promise<void>;
+  hasAppliedReceipt(releaseId: string): Promise<boolean>;
   createSubscription(command: {
     readonly subscriptionCode: string;
     readonly servicePrincipalId: string;
@@ -172,6 +185,31 @@ export function createReleaseDistributionModule(
   }
 
   return {
+    async linkReleaseRelationship(command) {
+      await sql`
+        insert into release_distribution.release_relationship (
+          source_release_id, target_release_id, relationship_type, reason, created_at
+        ) values (
+          ${command.sourceReleaseId}::uuid, ${command.targetReleaseId}::uuid,
+          ${command.relationshipType}, ${command.reason}, ${context.occurredAt}::timestamp
+        )
+      `.execute(database);
+    },
+
+    async hasAppliedReceipt(releaseId) {
+      const result = await sql<{ readonly found: boolean }>`
+        select exists (
+          select 1
+          from release_distribution.outbox_event event
+          join release_distribution.consumer_receipt receipt on receipt.event_id = event.event_id
+          where event.release_id = ${releaseId}::uuid
+            and receipt.validation_result = 'VALID'
+            and receipt.apply_result = 'APPLIED'
+        ) as found
+      `.execute(database);
+      return result.rows[0]?.found ?? false;
+    },
+
     async registerPublication(command) {
       const contract = requireContract(
         contracts,
@@ -197,31 +235,15 @@ export function createReleaseDistributionModule(
 
       const payloadBytes = Buffer.from(canonicalJson(command.projection.payload), 'utf8');
       const projectionPayloadDigest = sha256Bytes(payloadBytes);
-      const release = await database
-        .insertInto('release_distribution.governance_release')
-        .values({
-          governance_object_id: command.governanceObjectId,
-          release_no: releaseNo,
-          release_kind: 'NORMAL',
-          business_valid_from: command.businessValidFrom,
-          business_valid_to: command.businessValidTo,
-          recorded_from: command.recordedFrom,
-          submitted_by: command.submittedBy,
-          approved_by: command.approvedBy,
-          approved_at: command.approvedAt,
-          change_reason: command.changeReason,
-          content_hash: projectionPayloadDigest,
-        })
-        .returning('release_id')
-        .executeTakeFirstOrThrow();
-
+      const releaseId = await nextUuid(database);
       const artifactEnvelope = {
         envelopeContractVersion: 'phase-01.v1',
         release: {
           aggregateType: command.aggregateType,
           governanceObjectId: command.governanceObjectId,
-          releaseId: release.release_id,
+          releaseId,
           releaseNo,
+          releaseKind: command.releaseKind ?? 'NORMAL',
           businessValidFrom: command.businessValidFrom,
           businessValidTo: command.businessValidTo,
         },
@@ -239,6 +261,25 @@ export function createReleaseDistributionModule(
         throw new Error('SNAPSHOT_ARTIFACT_TOO_LARGE');
       }
       const snapshotArtifactDigest = sha256Bytes(artifactBytes);
+      await database
+        .insertInto('release_distribution.governance_release')
+        .values({
+          release_id: releaseId,
+          governance_object_id: command.governanceObjectId,
+          release_no: releaseNo,
+          release_kind: command.releaseKind ?? 'NORMAL',
+          business_valid_from: command.businessValidFrom,
+          business_valid_to: command.businessValidTo,
+          recorded_from: command.recordedFrom,
+          submitted_by: command.submittedBy,
+          approved_by: command.approvedBy,
+          approved_at: command.approvedAt,
+          change_reason: command.changeReason,
+          content_hash: projectionPayloadDigest,
+        })
+        .execute();
+      hitControlledPublicationFault('RELEASE_ENVELOPE_WRITTEN');
+      const release = { release_id: releaseId };
 
       const snapshot = await database
         .insertInto('release_distribution.release_snapshot')
@@ -257,6 +298,7 @@ export function createReleaseDistributionModule(
         })
         .returning('release_snapshot_id')
         .executeTakeFirstOrThrow();
+      hitControlledPublicationFault('SNAPSHOT_ARTIFACT_WRITTEN');
 
       if (command.member.kind === 'CHARGE_ITEM') {
         await database
@@ -281,6 +323,7 @@ export function createReleaseDistributionModule(
           })
           .execute();
       }
+      hitControlledPublicationFault('RELEASE_MEMBER_WRITTEN');
 
       const event = await database
         .insertInto('release_distribution.outbox_event')
@@ -299,6 +342,7 @@ export function createReleaseDistributionModule(
         })
         .returning('event_id')
         .executeTakeFirstOrThrow();
+      hitControlledPublicationFault('OUTBOX_EVENT_WRITTEN');
 
       const activeSubscriptions = await sql<{
         subscription_id: string;
@@ -356,6 +400,7 @@ export function createReleaseDistributionModule(
           })
           .returning('release_consumer_compatibility_id')
           .executeTakeFirstOrThrow();
+        hitControlledPublicationFault('COMPATIBILITY_PRECHECK_WRITTEN');
         const delivery = await database
           .insertInto('release_distribution.outbox_delivery')
           .values({
@@ -376,6 +421,7 @@ export function createReleaseDistributionModule(
               compatibilityResult === 'SUPPORTED' ? 'PENDING' : 'BLOCKED_INCOMPATIBLE',
           })
           .execute();
+        hitControlledPublicationFault('DELIVERY_REGISTERED');
         if (compatibilityResult === 'UNSUPPORTED') {
           const issue = await database
             .insertInto('release_distribution.consumer_compatibility_issue')
@@ -928,6 +974,13 @@ function requireContract(
   const contract = contracts.get(contractKey(type, version));
   if (!contract) throw new Error('PROJECTION_CONTRACT_UNKNOWN');
   return contract;
+}
+
+async function nextUuid(database: Kysely<DB>): Promise<string> {
+  const result = await database
+    .selectNoFrom((expression) => expression.fn<string>('uuidv7', []).as('id'))
+    .executeTakeFirstOrThrow();
+  return result.id;
 }
 
 async function requireServiceSubscription(

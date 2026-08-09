@@ -1,5 +1,9 @@
 import { sql, type Kysely, type Transaction } from 'kysely';
 import type { DB } from '../../platform/database/database-types.generated.js';
+import {
+  hitControlledPublicationFault,
+  isControlledFaultActive,
+} from '../../platform/fault-injection/controlled-faults.js';
 
 export interface ReleaseNotification {
   readonly subscriptionId: string;
@@ -85,6 +89,7 @@ export function createReleaseDistributionDispatcher(
       claimNextDelivery(transaction, occurredAt, options.workerId, options.leaseSeconds),
     );
     if (!claimed) return { claimed: false };
+    hitControlledPublicationFault('OUTBOX_AFTER_CLAIM');
 
     let outcome:
       | {
@@ -112,6 +117,7 @@ export function createReleaseDistributionDispatcher(
         responseDigest: classified.responseDigest,
       };
     }
+    hitControlledPublicationFault('OUTBOX_AFTER_NOTIFICATION');
 
     await database.transaction().execute((transaction) =>
       recordDeliveryOutcome(
@@ -159,6 +165,7 @@ export function createReleaseDistributionDispatcher(
     },
     wake() {
       if (stopped) return;
+      if (isControlledFaultActive('OUTBOX_DROP_WAKE')) return;
       wakeRequested = true;
       if (timer) {
         clearTimeout(timer);

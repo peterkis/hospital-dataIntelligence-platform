@@ -10,6 +10,7 @@ import type {
   PriceListModule,
   PublishedPriceCandidate,
 } from '../price-list/index.js';
+import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
 
 export const PRICE_RESOLUTION_MODULE_ID = 'price-resolution' as const;
 
@@ -45,6 +46,7 @@ export interface PriceResolutionOutcome {
 
 export interface PriceResolutionModule {
   resolve(command: {
+    readonly governanceObjectId: string;
     readonly requestId: string;
     readonly chargeItemId: string;
     readonly chargeItemVersionId: string;
@@ -64,12 +66,16 @@ export function createPriceResolutionModule(
 ): PriceResolutionModule {
   return {
     async resolve(command) {
+      parseLocalDateTime(command.serviceOccurredAt);
+      parseLocalDateTime(command.recordAsOf);
+      parseLocalDateTime(command.resolvedAt);
       const normalizedQuantity = normalizeQuantity(command.quantity);
       const requestHash = canonicalSha256({
         campusId: command.campusId,
         chargeItemId: command.chargeItemId,
         chargeItemVersionId: command.chargeItemVersionId,
         encounterType: command.encounterType,
+        governanceObjectId: command.governanceObjectId,
         priceListId: command.priceListId,
         quantity: normalizedQuantity,
         recordAsOf: command.recordAsOf,
@@ -87,8 +93,10 @@ export function createPriceResolutionModule(
       }
 
       const view = await priceList.getPublishedView({
+        governanceObjectId: command.governanceObjectId,
         priceListId: command.priceListId,
         pricedObjectId: command.chargeItemId,
+        campusId: command.campusId,
         serviceOccurredAt: command.serviceOccurredAt,
         recordAsOf: command.recordAsOf,
       });
@@ -103,6 +111,7 @@ export function createPriceResolutionModule(
         chargeItemId: command.chargeItemId,
         chargeItemVersionId: command.chargeItemVersionId,
         encounterType: command.encounterType,
+        governanceObjectId: command.governanceObjectId,
         quantity: normalizedQuantity,
       });
 

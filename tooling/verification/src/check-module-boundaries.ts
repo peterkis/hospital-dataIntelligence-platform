@@ -11,7 +11,9 @@ const MODULES_ROOT = join(API_SOURCE, 'modules');
 const EXPECTED_MODULES = [
   'audit',
   'authorization',
+  'batch-import',
   'charge-catalog',
+  'emergency-control',
   'price-list',
   'price-resolution',
   'release-distribution',

@@ -14,6 +14,7 @@ export type Int8 = ColumnType<string, bigint | number | string, bigint | number 
 export type Numeric = ColumnType<string, number | string, number | string>;
 
 export interface AccessControlObjectPermissionGrant {
+  campus_id: string | null;
   created_at: Generated<string>;
   governance_object_id: string;
   grant_effect: string;
@@ -23,8 +24,23 @@ export interface AccessControlObjectPermissionGrant {
   permission_code: string;
   reason: string;
   security_principal_id: string;
+  scope_level: Generated<string>;
   valid_from: string;
   valid_to: string | null;
+}
+
+export interface AccessControlAuthorizationDecision {
+  authorization_decision_id: Generated<string>;
+  correlation_id: string;
+  decided_at: string;
+  decision: string;
+  explanation_code: string;
+  governance_object_id: string;
+  permission_code: string;
+  request_id: string;
+  requested_campus_id: string | null;
+  requested_scope_level: string;
+  security_principal_id: string;
 }
 
 export interface AuditAuditEvent {
@@ -48,10 +64,56 @@ export interface AuditAuditEvent {
   stable_entity_id: string;
 }
 
+export interface BatchImportImportJob {
+  completed_at: string | null;
+  created_at: string;
+  failed_count: Generated<number>;
+  governance_object_id: string;
+  import_job_id: Generated<string>;
+  import_type: string;
+  job_status: string;
+  normalized_content_digest: Buffer;
+  raw_content_digest: Buffer;
+  row_count: number;
+  schema_version: string;
+  source_kind: string;
+  submitted_by: string;
+  succeeded_count: Generated<number>;
+}
+
+export interface BatchImportImportRow {
+  business_key: string;
+  current_error_code: string | null;
+  entity_version_id: string | null;
+  import_job_id: string;
+  import_row_id: Generated<string>;
+  normalized_payload: unknown;
+  normalized_payload_digest: Buffer;
+  result_kind: string | null;
+  retryable: Generated<boolean>;
+  row_no: Int8;
+  row_status: string;
+  source_row_id: string;
+  stable_entity_id: string | null;
+}
+
+export interface BatchImportImportRowAttempt {
+  attempt_result: string;
+  attempt_sequence: Int8;
+  attempted_at: string;
+  attempted_by: string;
+  error_code: string | null;
+  evidence: unknown;
+  import_row_attempt_id: Generated<string>;
+  import_row_id: string;
+  rule_version: string;
+}
+
 export interface ChargeCatalogChargeItem {
   charge_item_id: string;
   created_at: Generated<string>;
   created_by: string;
+  governance_object_id: string;
   internal_code: string;
   origin_campus_id: string | null;
   origin_scope: string;
@@ -84,6 +146,45 @@ export interface ChargeCatalogPricedObject {
   created_by: string;
   object_kind: string;
   priced_object_id: Generated<string>;
+}
+
+export interface EmergencyControlImpactCase {
+  case_status: string;
+  closed_at: string | null;
+  created_at: string;
+  emergency_actor_principal_id: string;
+  impact_case_id: Generated<string>;
+  priority: string;
+  recovery_release_id: string | null;
+  suspension_event_id: string;
+}
+
+export interface EmergencyControlImpactCaseAction {
+  action_sequence: Int8;
+  action_type: string;
+  actor_principal_id: string;
+  evidence: unknown;
+  impact_case_action_id: Generated<string>;
+  impact_case_id: string;
+  occurred_at: string;
+  reason: string;
+}
+
+export interface EmergencyControlSuspensionEvent {
+  actor_principal_id: string;
+  campus_id: string | null;
+  correlation_id: string;
+  effective_from: string;
+  event_sequence: Int8;
+  evidence: unknown;
+  governance_object_id: string;
+  price_list_id: string;
+  price_list_release_id: string;
+  reason: string;
+  recorded_at: string;
+  request_id: string;
+  scope_level: string;
+  suspension_event_id: Generated<string>;
 }
 
 export interface PlatformBrowserSession {
@@ -487,6 +588,14 @@ export interface WorkflowApprovalTemplateVersion {
   version_no: Int8;
 }
 
+export interface WorkflowApprovalTemplateStage {
+  approval_template_version_id: string;
+  campus_scope_required: Generated<boolean>;
+  permission_code: string;
+  stage_sequence: Int8;
+  stage_type: string;
+}
+
 export interface WorkflowChangeRequest {
   approval_template_version_id: string;
   change_kind: string;
@@ -496,18 +605,38 @@ export interface WorkflowChangeRequest {
   decided_at: string | null;
   entity_version_id: string;
   governance_object_id: string;
+  frozen_evidence: Generated<unknown>;
+  next_action_sequence: Generated<Int8>;
+  required_stage_count: Generated<number>;
   request_status: string;
+  risk_classification: Generated<string>;
   stable_entity_id: string;
   submitted_by: string;
   submitted_content_hash: Buffer;
 }
 
+export interface ReleaseDistributionReleaseRelationship {
+  created_at: string;
+  reason: string;
+  relationship_type: string;
+  release_relationship_id: Generated<string>;
+  source_release_id: string;
+  target_release_id: string;
+}
+
 export interface DB {
+  "access_control.authorization_decision": AccessControlAuthorizationDecision;
   "access_control.object_permission_grant": AccessControlObjectPermissionGrant;
   "audit.audit_event": AuditAuditEvent;
+  "batch_import.import_job": BatchImportImportJob;
+  "batch_import.import_row": BatchImportImportRow;
+  "batch_import.import_row_attempt": BatchImportImportRowAttempt;
   "charge_catalog.charge_item": ChargeCatalogChargeItem;
   "charge_catalog.charge_item_version": ChargeCatalogChargeItemVersion;
   "charge_catalog.priced_object": ChargeCatalogPricedObject;
+  "emergency_control.impact_case": EmergencyControlImpactCase;
+  "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
+  "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
   "platform.browser_session": PlatformBrowserSession;
   "platform.campus": PlatformCampus;
   "platform.external_identity_binding": PlatformExternalIdentityBinding;
@@ -540,9 +669,11 @@ export interface DB {
   "release_distribution.release_consumer_compatibility": ReleaseDistributionReleaseConsumerCompatibility;
   "release_distribution.release_member_charge_item": ReleaseDistributionReleaseMemberChargeItem;
   "release_distribution.release_member_price_list": ReleaseDistributionReleaseMemberPriceList;
+  "release_distribution.release_relationship": ReleaseDistributionReleaseRelationship;
   "release_distribution.release_snapshot": ReleaseDistributionReleaseSnapshot;
   "workflow.approval_action": WorkflowApprovalAction;
   "workflow.approval_template": WorkflowApprovalTemplate;
   "workflow.approval_template_version": WorkflowApprovalTemplateVersion;
+  "workflow.approval_template_stage": WorkflowApprovalTemplateStage;
   "workflow.change_request": WorkflowChangeRequest;
 }

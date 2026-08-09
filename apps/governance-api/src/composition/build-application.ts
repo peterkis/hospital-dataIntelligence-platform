@@ -131,17 +131,29 @@ function mapError(error: unknown): {
     return { statusCode: 401, code: candidate.message };
   }
   if (candidate.message.endsWith('_FORBIDDEN')) return { statusCode: 403, code: candidate.message };
+  if (candidate.message.endsWith('_APPROVAL_WORKFLOW_REQUIRED')) {
+    return { statusCode: 409, code: candidate.message };
+  }
   if (candidate.message.includes('NOT_FOUND') || candidate.message.includes('NOT_AVAILABLE')) {
     return { statusCode: 404, code: candidate.message };
   }
   if (
     candidate.code === '23505' ||
     candidate.code === '23P01' ||
+    candidate.code === '55000' ||
     candidate.message.includes('CONFLICT') ||
     candidate.message.includes('GAP') ||
     candidate.message.includes('IMMUTABLE')
   ) {
-    return { statusCode: 409, code: candidate.code === '23505' ? 'UNIQUE_CONSTRAINT_CONFLICT' : candidate.message };
+    return {
+      statusCode: 409,
+      code:
+        candidate.code === '23505'
+          ? 'UNIQUE_CONSTRAINT_CONFLICT'
+          : candidate.code === '55000'
+            ? 'IMMUTABLE_RECORD_CONFLICT'
+            : candidate.message,
+    };
   }
   if (
     candidate.code === '23514' ||

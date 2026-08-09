@@ -27,7 +27,7 @@ encoded_postgres_password="$(node -e "process.stdout.write(encodeURIComponent(pr
 export DATABASE_URL="postgresql://hdi_phase01:${encoded_postgres_password}@127.0.0.1:55432/hdi_phase01"
 export KEYCLOAK_ISSUER_URL="http://127.0.0.1:18080/realms/hdi-phase01"
 
-node "${REPO_ROOT}/tooling/runtime/render-keycloak-realm.mjs" "${REALM_IMPORT}"
+node "${REPO_ROOT}/tooling/runtime/render-keycloak-realm.ts" "${REALM_IMPORT}"
 docker compose --file "${COMPOSE_FILE}" up --detach
 
 for _ in $(seq 1 90); do
@@ -45,7 +45,7 @@ curl --fail --silent http://127.0.0.1:19000/health/ready >/dev/null
 
 node "${REPO_ROOT}/tooling/runtime/apply-migrations.mjs" "${MIGRATION_DIRECTORY}"
 
-node "${REPO_ROOT}/tooling/runtime/seed-phase-01.mjs"
+node "${REPO_ROOT}/tooling/runtime/seed-phase-01.ts"
 docker compose --file "${COMPOSE_FILE}" exec --no-TTY postgres \
   psql --username hdi_phase01 --dbname hdi_phase01 --tuples-only --no-align \
   --command "select migration_id from platform.schema_migration order by migration_id;"

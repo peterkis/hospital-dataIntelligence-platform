@@ -10,8 +10,16 @@ import {
   createHttpReleaseNotificationTransport,
   createReleaseDistributionDispatcher,
 } from './modules/release-distribution/index.js';
+import {
+  assertNoProductionFaultConfiguration,
+  configureControlledPublicationFault,
+} from './platform/fault-injection/controlled-faults.js';
 
 process.env['TZ'] = 'Asia/Shanghai';
+assertNoProductionFaultConfiguration(process.env);
+if (process.env['NODE_ENV'] === 'test') {
+  configureControlledPublicationFault(process.env['HDI_PUBLICATION_FAULT_POINT'] ?? null);
+}
 
 const databaseHandle = createDatabase({
   connectionString: requireEnvironment('DATABASE_URL'),
@@ -43,7 +51,7 @@ const dispatcher = createReleaseDistributionDispatcher(
 );
 const transactionRunner = createTransactionRunner<ScopedModules>(
   databaseHandle.database,
-  createScopedModules,
+  (transaction, context) => createScopedModules(transaction, context, databaseHandle.database),
 );
 const verticalSlice = createPhase01VerticalSlice(transactionRunner, {
   onPublicationCommitted: () => dispatcher.wake(),

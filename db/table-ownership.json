@@ -3,7 +3,9 @@
   "schemas": {
     "audit": "audit",
     "access_control": "authorization",
+    "batch_import": "batch-import",
     "charge_catalog": "charge-catalog",
+    "emergency_control": "emergency-control",
     "platform": "composition-root",
     "price_list": "price-list",
     "price_resolution": "price-resolution",

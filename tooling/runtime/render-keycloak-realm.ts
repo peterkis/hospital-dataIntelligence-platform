@@ -7,7 +7,7 @@ const browserClientSecret = requireEnvironment('HDI_BROWSER_CLIENT_SECRET');
 const consumerASecret = requireEnvironment('HDI_SIM_CONSUMER_A_CLIENT_SECRET');
 const consumerBSecret = requireEnvironment('HDI_SIM_CONSUMER_B_CLIENT_SECRET');
 
-const audienceMapper = (id) => ({
+const audienceMapper = (id: string) => ({
   id,
   name: 'hdi-governance-api-audience',
   protocol: 'openid-connect',
@@ -102,6 +102,50 @@ const realm = {
       requiredActions: [],
       credentials: [{ type: 'password', value: ownerPassword, temporary: false }],
     },
+    {
+      id: '10000000-0000-7000-8000-000000000002',
+      username: 'phase01-reviewer',
+      firstName: 'Phase 01',
+      lastName: 'Reviewer',
+      email: 'phase01-reviewer@poc.invalid',
+      enabled: true,
+      emailVerified: true,
+      requiredActions: [],
+      credentials: [{ type: 'password', value: ownerPassword, temporary: false }],
+    },
+    {
+      id: '10000000-0000-7000-8000-000000000003',
+      username: 'phase01-final-owner',
+      firstName: 'Phase 01',
+      lastName: 'Final Owner',
+      email: 'phase01-final-owner@poc.invalid',
+      enabled: true,
+      emailVerified: true,
+      requiredActions: [],
+      credentials: [{ type: 'password', value: ownerPassword, temporary: false }],
+    },
+    {
+      id: '10000000-0000-7000-8000-000000000004',
+      username: 'phase01-campus-steward',
+      firstName: 'Phase 01',
+      lastName: 'Campus Steward',
+      email: 'phase01-campus-steward@poc.invalid',
+      enabled: true,
+      emailVerified: true,
+      requiredActions: [],
+      credentials: [{ type: 'password', value: ownerPassword, temporary: false }],
+    },
+    {
+      id: '10000000-0000-7000-8000-000000000005',
+      username: 'phase01-owner-alias',
+      firstName: 'Phase 01',
+      lastName: 'Owner Alias',
+      email: 'phase01-owner-alias@poc.invalid',
+      enabled: true,
+      emailVerified: true,
+      requiredActions: [],
+      credentials: [{ type: 'password', value: ownerPassword, temporary: false }],
+    },
   ],
 };
 
@@ -109,7 +153,7 @@ await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(realm, null, 2)}\n`, { mode: 0o600 });
 process.stdout.write(`${outputPath}\n`);
 
-function requireEnvironment(name) {
+function requireEnvironment(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`);
   return value;

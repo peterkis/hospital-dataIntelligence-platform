@@ -4,7 +4,7 @@
 
 **Blocked by:** 11 — 原批次幂等重试与新批次版本候选; 12 — 价表条目批量导入与发布前校验; 14 — 补偿发布与暂停恢复; 17 — Outbox与消费者故障恢复.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 所有治理日期时间API、CSV、JSON和界面字段拒绝`Z`、UTC偏移及不符合冻结格式的值。
 - [ ] 治理Schema只含`timestamp without time zone`和`tsrange`，驱动结果不转换为JavaScript `Date`。
@@ -15,4 +15,4 @@
 
 ## Comments
 
-No comments yet.
+- 2026-08-10：已认领并完成新增治理时间输入、人员/服务身份边界和独立合成审批身份开发；所有治理时间继续使用Asia/Shanghai无时区字符串。按用户指示未执行时区变体、Keycloak或Cookie安全验证。

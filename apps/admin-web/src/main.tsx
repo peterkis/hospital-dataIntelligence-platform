@@ -4,8 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import {
   AppLayout,
+  ChargeItemDraftPage,
   configureBrowserApi,
+  GovernanceOperationsPage,
   OverviewPage,
+  PriceListDraftPage,
   VerticalSlicePage,
 } from './pages.js';
 import './styles.css';
@@ -25,6 +28,9 @@ const router = createBrowserRouter(
       children: [
         { index: true, Component: OverviewPage },
         { path: 'vertical-slice', Component: VerticalSlicePage },
+        { path: 'charge-items', Component: ChargeItemDraftPage },
+        { path: 'price-lists', Component: PriceListDraftPage },
+        { path: 'operations', Component: GovernanceOperationsPage },
       ],
     },
   ],
