@@ -77,10 +77,11 @@ for (const entry of readdirSync(MODULES, { withFileTypes: true })) {
   }
 }
 
-const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmCli = process.env['npm_execpath'];
+assert.ok(npmCli, 'npm_execpath is required for database type verification.');
 const generatedTypeVerification = spawnSync(
-  npmExecutable,
-  ['run', 'db:types:verify', '--workspace', '@hospital-data-intelligence/governance-api'],
+  process.execPath,
+  [npmCli, 'run', 'db:types:verify', '--workspace', '@hospital-data-intelligence/governance-api'],
   { cwd: ROOT, encoding: 'utf8', env: process.env },
 );
 assert.equal(

@@ -89,7 +89,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/phase-01/charge-item-publications": {
+    "/v1/phase-01/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 按对象、身份、版本、请求、动作、主体和显式序号查询审计事件 */
+        get: operations["queryPhase01AuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/audit-streams/{auditStreamId}/integrity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 只读重算审计哈希链并定位首个不一致序号 */
+        get: operations["verifyPhase01AuditStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/change-requests": {
         parameters: {
             query?: never;
             header?: never;
@@ -98,9 +132,180 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 发布 Phase 01 收费项目版本和规范快照 */
-        post: operations["publishPhase01ChargeItem"];
+        /** 按冻结审批模板提交领域版本变更 */
+        post: operations["submitPhase01ChangeRequest"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/change-requests/{changeRequestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询冻结模板、当前阶段和只追加审批历史 */
+        get: operations["getPhase01ChangeRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/change-requests/{changeRequestId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 按冻结顺序执行前置确认、复核或终审并在终审后原子发布 */
+        post: operations["actOnPhase01ChangeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/change-requests/{changeRequestId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 由提交人撤回未终结的变更请求并保留历史 */
+        post: operations["withdrawPhase01ChangeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-item-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新建收费项目稳定身份及初始草稿版本 */
+        post: operations["createPhase01ChargeItemDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-items/{chargeItemId}/as-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 按业务时点和平台记录时点查询收费项目版本 */
+        get: operations["getPhase01ChargeItemVersionAsOf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-items/{chargeItemId}/version-diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 比较两个收费项目版本的内容、业务时间和生命周期差异 */
+        get: operations["comparePhase01ChargeItemVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-items/{chargeItemId}/version-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 在收费项目稳定身份下建立下一版本草稿候选 */
+        post: operations["createPhase01ChargeItemVersionDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-items/{chargeItemId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 按显式版本序号查询收费项目完整版本历史 */
+        get: operations["listPhase01ChargeItemVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-items/{chargeItemId}/versions/{chargeItemVersionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询收费项目草稿或不可变历史版本 */
+        get: operations["getPhase01ChargeItemVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/charge-items/{chargeItemId}/versions/{chargeItemVersionId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 修改尚未提交的收费项目草稿 */
+        put: operations["updatePhase01ChargeItemDraft"];
+        post?: never;
+        /** 物理删除尚未提交的收费项目草稿 */
+        delete: operations["deletePhase01ChargeItemDraft"];
         options?: never;
         head?: never;
         patch?: never;
@@ -181,7 +386,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 下载完整且不可分段的规范快照字节 */
+        /**
+         * 下载完整且不可分段的规范快照字节
+         * @description 正式第三方消费入口。返回完整、未压缩、不可分段的规范制品；16,777,216字节仅是合成Phase 01 POC护栏，不代表全院初始化、生产容量、SLA或采购上限。
+         */
         get: operations["downloadPhase01CanonicalSnapshot"];
         put?: never;
         post?: never;
@@ -208,7 +416,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/phase-01/price-list-publications": {
+    "/v1/phase-01/impact-cases/{impactCaseId}/closure": {
         parameters: {
             query?: never;
             header?: never;
@@ -217,8 +425,179 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 发布 Phase 01 完整价表版本和规范快照 */
-        post: operations["publishPhase01PriceList"];
+        /** 在补偿发布回执与复核证据完整后关闭影响事项 */
+        post: operations["closePhase01ImpactCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/impact-cases/{impactCaseId}/post-incident-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 由非紧急操作者完成高优先级事后复核 */
+        post: operations["reviewPhase01ImpactCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/import-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 冻结UTF-8 CSV或等价JSON导入批次并执行全批次预扫描 */
+        post: operations["createPhase01ImportJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/import-jobs/{importJobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询导入进度、行级结果和稳定错误 */
+        get: operations["getPhase01ImportJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/import-jobs/{importJobId}/process-next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 在独立行事务边界处理下一待执行导入行 */
+        post: operations["processNextPhase01ImportRow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/import-jobs/{importJobId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 复用冻结输入重试失败行并跳过已成功行 */
+        post: operations["retryPhase01ImportJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/price-list-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新建完整价表草稿并冻结收费项目版本引用 */
+        post: operations["createPhase01PriceListDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/price-lists/{priceListId}/releases/{priceListReleaseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询价表草稿或不可变历史发布版本 */
+        get: operations["getPhase01PriceListRelease"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/price-lists/{priceListId}/releases/{priceListReleaseId}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 比较价表草稿与上一已发布完整快照 */
+        get: operations["diffPhase01PriceListDraft"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/price-lists/{priceListId}/releases/{priceListReleaseId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 整体替换尚未提交的完整价表草稿 */
+        put: operations["updatePhase01PriceListDraft"];
+        post?: never;
+        /** 物理删除尚未提交的价表草稿 */
+        delete: operations["deletePhase01PriceListDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/price-lists/{priceListId}/releases/{priceListReleaseId}/emergency-suspensions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 以独立紧急权限追加暂停事件并创建影响事项 */
+        post: operations["suspendPhase01PriceListRelease"];
         delete?: never;
         options?: never;
         head?: never;
@@ -266,8 +645,30 @@ export interface components {
                 versionNo: string;
             }[];
         };
-        /** PriceListProjectionV0 */
+        /** ChargeCatalogProjectionV2 */
         "def-1": {
+            catalogCode: string;
+            /** @enum {string} */
+            contractRevision: "2";
+            items: {
+                billingUnitCode: string;
+                /** @enum {string} */
+                businessStatus: "ACTIVE";
+                businessValidFrom: string;
+                businessValidTo: string | null;
+                chargeItemId: string;
+                chargeItemVersionId: string;
+                chargingMethodCode: string;
+                contentHash: string;
+                formalName: string;
+                internalCode: string;
+                recordedFrom: string;
+                serviceDefinition: string;
+                versionNo: string;
+            }[];
+        };
+        /** PriceListProjectionV0 */
+        "def-2": {
             legacyEntries: {
                 itemCode: string;
                 unitPrice: string;
@@ -276,10 +677,44 @@ export interface components {
             priceListId: string;
         };
         /** PriceListProjectionV1 */
-        "def-2": {
+        "def-3": {
             businessValidFrom: string;
             businessValidTo: string | null;
             contentHash: string;
+            currencyCode: string;
+            displayName: string;
+            entries: {
+                billingUnitCode: string;
+                businessValidFrom: string;
+                businessValidTo: string | null;
+                campusId: string | null;
+                chargeItemId: string;
+                chargeItemInternalCode: string;
+                chargeItemVersionId: string;
+                contentHash: string;
+                currencyCode: string;
+                encounterMode: "GENERAL" | "SPECIFIC";
+                encounterType: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP" | null;
+                entryNo: string;
+                fixedUnitPrice: string;
+                priceEntryId: string;
+                priceNature: "HOSPITAL_DEFAULT" | "CAMPUS_DIFFERENCE";
+                scopeLevel: "HOSPITAL" | "CAMPUS";
+                zeroPriceReason: string | null;
+            }[];
+            priceListCode: string;
+            priceListId: string;
+            priceListReleaseId: string;
+            recordedFrom: string;
+            releaseNo: string;
+        };
+        /** PriceListProjectionV2 */
+        "def-4": {
+            businessValidFrom: string;
+            businessValidTo: string | null;
+            contentHash: string;
+            /** @enum {string} */
+            contractRevision: "2";
             currencyCode: string;
             displayName: string;
             entries: {
@@ -540,7 +975,606 @@ export interface operations {
             };
         };
     };
-    publishPhase01ChargeItem: {
+    queryPhase01AuditEvents: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+                stableEntityId?: string;
+                entityVersionId?: string;
+                requestId?: string;
+                action?: string;
+                actorPrincipalId?: string;
+                sequenceFrom?: string;
+                sequenceTo?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: {
+                            action: string;
+                            actorPrincipalId: string;
+                            auditEventId: string;
+                            auditSequence: string;
+                            auditStreamId: string;
+                            correlationId: string;
+                            currentDigest: string;
+                            entityType: string;
+                            entityVersionId: string | null;
+                            occurredAt: string;
+                            previousDigest: string;
+                            requestId: string;
+                            stableEntityId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    verifyPhase01AuditStream: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header?: never;
+            path: {
+                auditStreamId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        errorType: "SEQUENCE" | "PAYLOAD_HASH" | "PREVIOUS_HASH" | "CURRENT_HASH" | null;
+                        eventCount: number;
+                        firstMismatchSequence: string | null;
+                        valid: boolean;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    submitPhase01ChangeRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    campusId: string | null;
+                    changeKind: "INITIAL_PUBLICATION" | "VERSION_CHANGE" | "RETROACTIVE_CORRECTION" | "CAMPUS_DIFFERENCE_PRICE" | "PROJECTION_SCHEMA_UPGRADE" | "RECOVERY_PUBLICATION";
+                    changeReason: string;
+                    entityType: "CHARGE_ITEM_VERSION" | "PRICE_LIST_RELEASE";
+                    entityVersionId: string;
+                    frozenEvidence: {
+                        [key: string]: unknown;
+                    };
+                    governanceObjectId: string;
+                    riskClassification: "NORMAL" | "HIGH" | "PURE_SCHEMA_UPGRADE" | "RECOVERY";
+                    stableEntityId: string;
+                    submittedContentDigest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvalTemplateVersionId: string;
+                        changeKind: string;
+                        changeRequestId: string;
+                        entityVersionId: string;
+                        governanceObjectId: string;
+                        nextActionSequence: string;
+                        requestStatus: string;
+                        requiredStageCount: number;
+                        riskClassification: string;
+                        stableEntityId: string;
+                        submittedBy: string;
+                        submittedContentDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    getPhase01ChangeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeRequestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        actions: {
+                            actionResult: string;
+                            actionSequence: string;
+                            actorPrincipalId: string;
+                            approvalActionId: string;
+                            occurredAt: string;
+                            reason: string;
+                            stageType: string;
+                        }[];
+                        request: {
+                            approvalTemplateVersionId: string;
+                            changeKind: string;
+                            changeRequestId: string;
+                            entityVersionId: string;
+                            governanceObjectId: string;
+                            nextActionSequence: string;
+                            requestStatus: string;
+                            requiredStageCount: number;
+                            riskClassification: string;
+                            stableEntityId: string;
+                            submittedBy: string;
+                            submittedContentDigest: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    actOnPhase01ChangeRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                changeRequestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    actionResult: "APPROVED" | "REJECTED";
+                    campusId: string | null;
+                    reason: string;
+                    seenContentDigest: string;
+                    stageType: "CAMPUS_PRE_CONFIRMATION" | "PROFESSIONAL_REVIEW" | "DOMAIN_SEMANTIC_CONFIRMATION" | "OWNER_FINAL_APPROVAL" | "CONTRACT_FINAL_APPROVAL";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvalTemplateVersionId: string;
+                        changeKind: string;
+                        changeRequestId: string;
+                        entityVersionId: string;
+                        governanceObjectId: string;
+                        nextActionSequence: string;
+                        requestStatus: string;
+                        requiredStageCount: number;
+                        riskClassification: string;
+                        stableEntityId: string;
+                        submittedBy: string;
+                        submittedContentDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawPhase01ChangeRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                changeRequestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvalTemplateVersionId: string;
+                        changeKind: string;
+                        changeRequestId: string;
+                        entityVersionId: string;
+                        governanceObjectId: string;
+                        nextActionSequence: string;
+                        requestStatus: string;
+                        requiredStageCount: number;
+                        riskClassification: string;
+                        stableEntityId: string;
+                        submittedBy: string;
+                        submittedContentDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    createPhase01ChargeItemDraft: {
         parameters: {
             query?: never;
             header: {
@@ -555,8 +1589,6 @@ export interface operations {
                     billingUnitCode: string;
                     businessValidFrom: string;
                     businessValidTo: string | null;
-                    catalogCode: string;
-                    changeReason: string;
                     chargingMethodCode: string;
                     formalName: string;
                     governanceObjectId: string;
@@ -573,12 +1605,22 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        eventId: string;
-                        recordedAt: string;
-                        releaseId: string;
-                        snapshotId: string;
-                        stableId: string;
-                        versionId: string;
+                        billingUnitCode: string;
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED" | "SUPERSEDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        chargingMethodCode: string;
+                        contentDigest: string;
+                        formalName: string;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        internalCode: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseId: string | null;
+                        serviceDefinition: string;
+                        versionNo: string;
                     };
                 };
             };
@@ -644,6 +1686,694 @@ export interface operations {
             };
         };
     };
+    getPhase01ChargeItemVersionAsOf: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+                businessAt: string;
+                recordAsOf: string;
+            };
+            header?: never;
+            path: {
+                chargeItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        billingUnitCode: string;
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED" | "SUPERSEDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        chargingMethodCode: string;
+                        contentDigest: string;
+                        formalName: string;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        internalCode: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseId: string | null;
+                        serviceDefinition: string;
+                        versionNo: string;
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    comparePhase01ChargeItemVersions: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+                leftVersionId: string;
+                rightVersionId: string;
+            };
+            header?: never;
+            path: {
+                chargeItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        differences: {
+                            field: string;
+                            leftValue: string | null;
+                            rightValue: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    createPhase01ChargeItemVersionDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                chargeItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    billingUnitCode: string;
+                    businessValidFrom: string;
+                    businessValidTo: string | null;
+                    chargingMethodCode: string;
+                    formalName: string;
+                    governanceObjectId: string;
+                    serviceDefinition: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        billingUnitCode: string;
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED" | "SUPERSEDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        chargingMethodCode: string;
+                        contentDigest: string;
+                        formalName: string;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        internalCode: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseId: string | null;
+                        serviceDefinition: string;
+                        versionNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    listPhase01ChargeItemVersions: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header?: never;
+            path: {
+                chargeItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        versions: {
+                            billingUnitCode: string;
+                            businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED" | "SUPERSEDED";
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            chargeItemId: string;
+                            chargeItemVersionId: string;
+                            chargingMethodCode: string;
+                            contentDigest: string;
+                            formalName: string;
+                            governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                            internalCode: string;
+                            recordedFrom: string;
+                            recordedTo: string | null;
+                            releaseId: string | null;
+                            serviceDefinition: string;
+                            versionNo: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    getPhase01ChargeItemVersion: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header?: never;
+            path: {
+                chargeItemId: string;
+                chargeItemVersionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        billingUnitCode: string;
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED" | "SUPERSEDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        chargingMethodCode: string;
+                        contentDigest: string;
+                        formalName: string;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        internalCode: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseId: string | null;
+                        serviceDefinition: string;
+                        versionNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    updatePhase01ChargeItemDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                chargeItemId: string;
+                chargeItemVersionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    billingUnitCode: string;
+                    businessValidFrom: string;
+                    businessValidTo: string | null;
+                    chargingMethodCode: string;
+                    formalName: string;
+                    governanceObjectId: string;
+                    serviceDefinition: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        billingUnitCode: string;
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED" | "SUPERSEDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        chargingMethodCode: string;
+                        contentDigest: string;
+                        formalName: string;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        internalCode: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseId: string | null;
+                        serviceDefinition: string;
+                        versionNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    deletePhase01ChargeItemDraft: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                chargeItemId: string;
+                chargeItemVersionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
     createPhase01ConsumerSubscription: {
         parameters: {
             query?: never;
@@ -657,7 +2387,7 @@ export interface operations {
             content: {
                 "application/json": {
                     governanceObjectId: string;
-                    projectionSchemaVersion: "0" | "1";
+                    projectionSchemaVersion: "0" | "1" | "2";
                     /** @enum {string} */
                     projectionType: "hdi.price-list";
                     servicePrincipalId: string;
@@ -1095,7 +2825,7 @@ export interface operations {
                     } | {
                         /** @enum {string} */
                         envelopeContractVersion: "phase-01.v1";
-                        payload: components["schemas"]["def-1"];
+                        payload: components["schemas"]["def-2"];
                         projectionContract: {
                             projectionType: string;
                             schemaDigest: string;
@@ -1118,7 +2848,7 @@ export interface operations {
                     } | {
                         /** @enum {string} */
                         envelopeContractVersion: "phase-01.v1";
-                        payload: components["schemas"]["def-2"];
+                        payload: components["schemas"]["def-3"];
                         projectionContract: {
                             projectionType: string;
                             schemaDigest: string;
@@ -1206,7 +2936,7 @@ export interface operations {
             content: {
                 "application/json": {
                     governanceObjectId: string;
-                    projectionSchemaVersion: "0" | "1";
+                    projectionSchemaVersion: "0" | "1" | "2";
                     /** @enum {string} */
                     projectionType: "hdi.price-list";
                 };
@@ -1300,7 +3030,215 @@ export interface operations {
             };
         };
     };
-    publishPhase01PriceList: {
+    closePhase01ImpactCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                impactCaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    evidence: {
+                        [key: string]: unknown;
+                    };
+                    governanceObjectId: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    reviewPhase01ImpactCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                impactCaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    evidence: {
+                        [key: string]: unknown;
+                    };
+                    governanceObjectId: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    createPhase01ImportJob: {
         parameters: {
             query?: never;
             header: {
@@ -1312,26 +3250,12 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    businessValidFrom: string;
-                    businessValidTo: string | null;
-                    changeReason: string;
-                    currencyCode: string;
-                    displayName: string;
-                    entries: {
-                        billingUnitCode: string;
-                        businessValidFrom: string;
-                        businessValidTo: string | null;
-                        campusId: string | null;
-                        chargeItemId: string;
-                        chargeItemVersionId: string;
-                        encounterMode: "GENERAL" | "SPECIFIC";
-                        encounterType: ("OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP") | null;
-                        fixedUnitPrice: string;
-                        scopeLevel: "HOSPITAL" | "CAMPUS";
-                        zeroPriceReason: string | null;
-                    }[];
                     governanceObjectId: string;
-                    priceListCode: string;
+                    importType: "CHARGE_ITEM" | "PRICE_ENTRY";
+                    rawContent: string;
+                    /** @enum {string} */
+                    schemaVersion: "phase-01.import.v1";
+                    sourceKind: "CSV" | "JSON";
                 };
             };
         };
@@ -1343,12 +3267,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        eventId: string;
-                        recordedAt: string;
-                        releaseId: string;
-                        snapshotId: string;
-                        stableId: string;
-                        versionId: string;
+                        failedCount: number;
+                        governanceObjectId: string;
+                        importJobId: string;
+                        importType: "CHARGE_ITEM" | "PRICE_ENTRY";
+                        jobStatus: string;
+                        normalizedContentDigest: string;
+                        rawContentDigest: string;
+                        rowCount: number;
+                        rows: {
+                            businessKey: string;
+                            currentErrorCode: string | null;
+                            entityVersionId: string | null;
+                            importRowId: string;
+                            resultKind: string | null;
+                            retryable: boolean;
+                            rowNo: string;
+                            rowStatus: "PENDING" | "SUCCEEDED" | "FAILED";
+                            sourceRowId: string;
+                            stableEntityId: string | null;
+                        }[];
+                        schemaVersion: string;
+                        sourceKind: "CSV" | "JSON";
+                        succeededCount: number;
                     };
                 };
             };
@@ -1378,6 +3319,1026 @@ export interface operations {
             };
             /** @description Default Response */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    getPhase01ImportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importJobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        failedCount: number;
+                        governanceObjectId: string;
+                        importJobId: string;
+                        importType: "CHARGE_ITEM" | "PRICE_ENTRY";
+                        jobStatus: string;
+                        normalizedContentDigest: string;
+                        rawContentDigest: string;
+                        rowCount: number;
+                        rows: {
+                            businessKey: string;
+                            currentErrorCode: string | null;
+                            entityVersionId: string | null;
+                            importRowId: string;
+                            resultKind: string | null;
+                            retryable: boolean;
+                            rowNo: string;
+                            rowStatus: "PENDING" | "SUCCEEDED" | "FAILED";
+                            sourceRowId: string;
+                            stableEntityId: string | null;
+                        }[];
+                        schemaVersion: string;
+                        sourceKind: "CSV" | "JSON";
+                        succeededCount: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    processNextPhase01ImportRow: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                importJobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        failedCount: number;
+                        governanceObjectId: string;
+                        importJobId: string;
+                        importType: "CHARGE_ITEM" | "PRICE_ENTRY";
+                        jobStatus: string;
+                        normalizedContentDigest: string;
+                        rawContentDigest: string;
+                        rowCount: number;
+                        rows: {
+                            businessKey: string;
+                            currentErrorCode: string | null;
+                            entityVersionId: string | null;
+                            importRowId: string;
+                            resultKind: string | null;
+                            retryable: boolean;
+                            rowNo: string;
+                            rowStatus: "PENDING" | "SUCCEEDED" | "FAILED";
+                            sourceRowId: string;
+                            stableEntityId: string | null;
+                        }[];
+                        schemaVersion: string;
+                        sourceKind: "CSV" | "JSON";
+                        succeededCount: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    retryPhase01ImportJob: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                importJobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    rawContentDigest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        failedCount: number;
+                        governanceObjectId: string;
+                        importJobId: string;
+                        importType: "CHARGE_ITEM" | "PRICE_ENTRY";
+                        jobStatus: string;
+                        normalizedContentDigest: string;
+                        rawContentDigest: string;
+                        rowCount: number;
+                        rows: {
+                            businessKey: string;
+                            currentErrorCode: string | null;
+                            entityVersionId: string | null;
+                            importRowId: string;
+                            resultKind: string | null;
+                            retryable: boolean;
+                            rowNo: string;
+                            rowStatus: "PENDING" | "SUCCEEDED" | "FAILED";
+                            sourceRowId: string;
+                            stableEntityId: string | null;
+                        }[];
+                        schemaVersion: string;
+                        sourceKind: "CSV" | "JSON";
+                        succeededCount: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    createPhase01PriceListDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    businessValidFrom: string;
+                    businessValidTo: string | null;
+                    currencyCode: string;
+                    displayName: string;
+                    entries: {
+                        billingUnitCode: string;
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        campusId: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        encounterMode: "GENERAL" | "SPECIFIC";
+                        encounterType: ("OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP") | null;
+                        fixedUnitPrice: string;
+                        scopeLevel: "HOSPITAL" | "CAMPUS";
+                        zeroPriceReason: string | null;
+                    }[];
+                    governanceObjectId: string;
+                    priceListCode: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        contentDigest: string;
+                        currencyCode: string;
+                        displayName: string;
+                        entries: {
+                            billingUnitCode: string;
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            campusId: string | null;
+                            chargeItemId: string;
+                            chargeItemInternalCode: string;
+                            chargeItemVersionId: string;
+                            contentHash: string;
+                            encounterMode: "GENERAL" | "SPECIFIC";
+                            encounterType: ("OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP") | null;
+                            entryNo: string;
+                            fixedUnitPrice: string;
+                            priceEntryId: string;
+                            priceNature: "HOSPITAL_DEFAULT" | "CAMPUS_DIFFERENCE";
+                            scopeLevel: "HOSPITAL" | "CAMPUS";
+                            zeroPriceReason: string | null;
+                        }[];
+                        governanceObjectId: string;
+                        governanceReleaseId: string | null;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        priceListCode: string;
+                        priceListId: string;
+                        priceListReleaseId: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    getPhase01PriceListRelease: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header?: never;
+            path: {
+                priceListId: string;
+                priceListReleaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        contentDigest: string;
+                        currencyCode: string;
+                        displayName: string;
+                        entries: {
+                            billingUnitCode: string;
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            campusId: string | null;
+                            chargeItemId: string;
+                            chargeItemInternalCode: string;
+                            chargeItemVersionId: string;
+                            contentHash: string;
+                            encounterMode: "GENERAL" | "SPECIFIC";
+                            encounterType: ("OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP") | null;
+                            entryNo: string;
+                            fixedUnitPrice: string;
+                            priceEntryId: string;
+                            priceNature: "HOSPITAL_DEFAULT" | "CAMPUS_DIFFERENCE";
+                            scopeLevel: "HOSPITAL" | "CAMPUS";
+                            zeroPriceReason: string | null;
+                        }[];
+                        governanceObjectId: string;
+                        governanceReleaseId: string | null;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        priceListCode: string;
+                        priceListId: string;
+                        priceListReleaseId: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    diffPhase01PriceListDraft: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header?: never;
+            path: {
+                priceListId: string;
+                priceListReleaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        differences: {
+                            businessKey: string;
+                            currentEntryId: string | null;
+                            kind: "ADDED" | "REMOVED" | "PRICE_CHANGED" | "APPLICABILITY_CHANGED";
+                            previousEntryId: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    updatePhase01PriceListDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                priceListId: string;
+                priceListReleaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    businessValidFrom: string;
+                    businessValidTo: string | null;
+                    currencyCode: string;
+                    displayName: string;
+                    entries: {
+                        billingUnitCode: string;
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        campusId: string | null;
+                        chargeItemId: string;
+                        chargeItemVersionId: string;
+                        encounterMode: "GENERAL" | "SPECIFIC";
+                        encounterType: ("OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP") | null;
+                        fixedUnitPrice: string;
+                        scopeLevel: "HOSPITAL" | "CAMPUS";
+                        zeroPriceReason: string | null;
+                    }[];
+                    governanceObjectId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        businessStatus: "PLANNED" | "ACTIVE" | "SUSPENDED" | "ENDED";
+                        businessValidFrom: string;
+                        businessValidTo: string | null;
+                        contentDigest: string;
+                        currencyCode: string;
+                        displayName: string;
+                        entries: {
+                            billingUnitCode: string;
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            campusId: string | null;
+                            chargeItemId: string;
+                            chargeItemInternalCode: string;
+                            chargeItemVersionId: string;
+                            contentHash: string;
+                            encounterMode: "GENERAL" | "SPECIFIC";
+                            encounterType: ("OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "CHECKUP") | null;
+                            entryNo: string;
+                            fixedUnitPrice: string;
+                            priceEntryId: string;
+                            priceNature: "HOSPITAL_DEFAULT" | "CAMPUS_DIFFERENCE";
+                            scopeLevel: "HOSPITAL" | "CAMPUS";
+                            zeroPriceReason: string | null;
+                        }[];
+                        governanceObjectId: string;
+                        governanceReleaseId: string | null;
+                        governanceStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED";
+                        priceListCode: string;
+                        priceListId: string;
+                        priceListReleaseId: string;
+                        recordedFrom: string;
+                        recordedTo: string | null;
+                        releaseNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    deletePhase01PriceListDraft: {
+        parameters: {
+            query: {
+                governanceObjectId: string;
+            };
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                priceListId: string;
+                priceListReleaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    suspendPhase01PriceListRelease: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                priceListId: string;
+                priceListReleaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    campusId: string | null;
+                    effectiveFrom: string;
+                    evidence: {
+                        [key: string]: unknown;
+                    };
+                    governanceObjectId: string;
+                    reason: string;
+                    scopeLevel: "HOSPITAL" | "CAMPUS";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        eventSequence: string;
+                        impactCaseId: string;
+                        suspensionEventId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1454,6 +4415,16 @@ export interface operations {
                         requestId: string;
                         resultDigest: string | null;
                         status: "SUCCEEDED" | "NO_PRICE" | "CONFLICT" | "SUSPENDED";
+                        steps: {
+                            candidateCount: number;
+                            candidateSetDigest: string;
+                            decision: "MATCHED" | "NO_CANDIDATE" | "CONFLICT" | "SUSPENDED";
+                            encounterModeChecked: "SPECIFIC" | "GENERAL";
+                            explanationCode: string;
+                            priceEntryId: string | null;
+                            scopeChecked: "CAMPUS" | "HOSPITAL";
+                            stepNo: string;
+                        }[];
                     };
                 };
             };

@@ -191,14 +191,6 @@ async function obtainServiceSubject(clientId: string, clientSecret: string): Pro
   return payload['sub'];
 }
 
-function decodeJwt(token: string): Readonly<Record<string, unknown>> {
-  const payload = token.split('.')[1];
-  if (!payload) throw new Error('KEYCLOAK_SERVICE_TOKEN_PAYLOAD_MISSING');
-  const parsed: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-  if (!isRecord(parsed)) throw new Error('KEYCLOAK_SERVICE_TOKEN_PAYLOAD_INVALID');
-  return parsed;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

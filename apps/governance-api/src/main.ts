@@ -10,6 +10,7 @@ import {
   createHttpReleaseNotificationTransport,
   createReleaseDistributionDispatcher,
 } from './modules/release-distribution/index.js';
+import { createWorkflowApplication } from './modules/workflow/index.js';
 import {
   assertNoProductionFaultConfiguration,
   configureControlledPublicationFault,
@@ -53,9 +54,11 @@ const transactionRunner = createTransactionRunner<ScopedModules>(
   databaseHandle.database,
   (transaction, context) => createScopedModules(transaction, context, databaseHandle.database),
 );
-const verticalSlice = createPhase01VerticalSlice(transactionRunner, {
-  onPublicationCommitted: () => dispatcher.wake(),
-});
+const verticalSlice = createPhase01VerticalSlice(transactionRunner);
+const workflowApplication = createWorkflowApplication(
+  transactionRunner,
+  () => dispatcher.wake(),
+);
 const adminStaticRoot =
   process.env['ADMIN_STATIC_ROOT'] ?? resolve(import.meta.dirname, '../../admin-web/dist');
 const application = await buildApplication({
@@ -64,6 +67,7 @@ const application = await buildApplication({
   phase01: {
     verticalSlice,
     transactionRunner,
+    workflowApplication,
     resolvePrincipal: (request) => authentication.resolvePrincipal(request),
     now: nowInAsiaShanghai,
   },

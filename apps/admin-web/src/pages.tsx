@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { NavLink, Outlet } from 'react-router';
 import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
@@ -8,15 +8,6 @@ let browserCsrfToken = '';
 const DEFAULT_BUSINESS_TIME = '2026-08-08T00:00:00';
 const DEFAULT_SERVICE_OCCURRED_AT = '2026-08-08T09:15:00';
 const DEFAULT_PRICE_LIST_CODE = 'HOSPITAL-DEFAULT-PRICE';
-
-interface PublishedReference {
-  readonly stableId: string;
-  readonly versionId: string;
-  readonly releaseId: string;
-  readonly snapshotId: string;
-  readonly eventId: string;
-  readonly recordedAt: string;
-}
 
 interface ResolutionReference {
   readonly priceResolutionId: string;
@@ -547,6 +538,10 @@ export function GovernanceOperationsPage() {
   const [stageType, setStageType] = useState<'PROFESSIONAL_REVIEW' | 'OWNER_FINAL_APPROVAL' | 'CAMPUS_PRE_CONFIRMATION' | 'DOMAIN_SEMANTIC_CONFIRMATION' | 'CONTRACT_FINAL_APPROVAL'>('PROFESSIONAL_REVIEW');
   const [priceListId, setPriceListId] = useState('');
   const [priceListReleaseId, setPriceListReleaseId] = useState('');
+  const [resolutionChargeItemId, setResolutionChargeItemId] = useState('');
+  const [resolutionChargeItemVersionId, setResolutionChargeItemVersionId] = useState('');
+  const [resolutionRecordAsOf, setResolutionRecordAsOf] = useState('');
+  const [resolution, setResolution] = useState<ResolutionReference | null>(null);
   const [impactCaseId, setImpactCaseId] = useState('');
   const [auditStreamId, setAuditStreamId] = useState('');
   const [auditEvents, setAuditEvents] = useState<readonly { readonly auditEventId: string; readonly auditSequence: string; readonly action: string }[]>([]);
@@ -771,151 +766,6 @@ export function VerticalSlicePage() {
   );
 }
 
-function LegacyVerticalSlicePage() {
-  const [chargeObjectId, setChargeObjectId] = useState('');
-  const [priceObjectId, setPriceObjectId] = useState('');
-  const [campusId, setCampusId] = useState('');
-  const [chargeInternalCode, setChargeInternalCode] = useState('');
-  const [recordAsOf, setRecordAsOf] = useState('');
-  const [charge, setCharge] = useState<PublishedReference | null>(null);
-  const [price, setPrice] = useState<PublishedReference | null>(null);
-  const [priceListId, setPriceListId] = useState('');
-  const [resolution, setResolution] = useState<ResolutionReference | null>(null);
-
-  const chargeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await api.POST('/v1/phase-01/charge-item-publications', {
-        params: { header: { 'x-csrf-token': browserCsrfToken } },
-        body: {
-          governanceObjectId: chargeObjectId,
-          catalogCode: 'HOSPITAL-CHARGE-CATALOG',
-          internalCode: chargeInternalCode,
-          formalName: 'POC诊查费',
-          serviceDefinition: '合成POC收费项目，仅用于验证治理闭环。',
-          billingUnitCode: 'TIMES',
-          chargingMethodCode: 'COUNT',
-          businessValidFrom: DEFAULT_BUSINESS_TIME,
-          businessValidTo: null,
-          changeReason: '管理界面建立收费项目初始版本',
-        },
-      });
-      if (response.error) throw new Error(response.error.code);
-      return response.data;
-    },
-    onSuccess: setCharge,
-  });
-
-  const priceMutation = useMutation({
-    mutationFn: async () => {
-      if (!charge) throw new Error('请先发布收费项目');
-      const response = await api.POST('/v1/phase-01/price-list-publications', {
-        params: { header: { 'x-csrf-token': browserCsrfToken } },
-        body: {
-          governanceObjectId: priceObjectId,
-          priceListCode: DEFAULT_PRICE_LIST_CODE,
-          displayName: 'POC全院默认价表',
-          currencyCode: 'CNY',
-          businessValidFrom: DEFAULT_BUSINESS_TIME,
-          businessValidTo: null,
-          changeReason: '管理界面建立价表初始完整快照',
-          entries: [{
-            chargeItemId: charge.stableId,
-            chargeItemVersionId: charge.versionId,
-            scopeLevel: 'HOSPITAL',
-            campusId: null,
-            encounterMode: 'GENERAL',
-            encounterType: null,
-            fixedUnitPrice: '12.34',
-            billingUnitCode: 'TIMES',
-            businessValidFrom: DEFAULT_BUSINESS_TIME,
-            businessValidTo: null,
-            zeroPriceReason: null,
-          }],
-        },
-      });
-      if (response.error) throw new Error(response.error.code);
-      return response.data;
-    },
-    onSuccess(data) {
-      setPrice(data);
-      setPriceListId(data.stableId);
-      setRecordAsOf(data.recordedAt);
-    },
-  });
-
-  const resolutionMutation = useMutation({
-    mutationFn: async () => {
-      if (!charge || !priceListId) throw new Error('请先发布收费项目和价表');
-      const response = await api.POST('/v1/phase-01/price-resolutions', {
-        params: { header: { 'x-csrf-token': browserCsrfToken } },
-        body: {
-          governanceObjectId: priceObjectId,
-          requestId: `UI-POC-${crypto.randomUUID()}`,
-          chargeItemId: charge.stableId,
-          chargeItemVersionId: charge.versionId,
-          priceListId,
-          campusId,
-          encounterType: 'OUTPATIENT',
-          serviceOccurredAt: DEFAULT_SERVICE_OCCURRED_AT,
-          recordAsOf,
-          quantity: '2',
-        },
-      });
-      if (response.error) throw new Error(response.error.code);
-      return response.data;
-    },
-    onSuccess: setResolution,
-  });
-
-  const ready = useMemo(
-    () => Boolean(
-      chargeObjectId &&
-      priceObjectId &&
-      campusId &&
-      chargeInternalCode
-    ),
-    [chargeInternalCode, chargeObjectId, campusId, priceObjectId],
-  );
-  const submit = (action: () => void) => (event: FormEvent) => { event.preventDefault(); action(); };
-
-  return (
-    <section>
-      <header className="page-header"><div><span className="eyebrow">END-TO-END CONTROL</span><h1>收费项目—价表—解析</h1><p>所有写操作均提交至治理 API；浏览器只显示服务端确认结果。</p></div></header>
-      <article className="panel config-panel">
-        <div className="panel-heading"><div><span className="step-label">准备</span><h2>合成治理上下文</h2></div></div>
-        <div className="form-grid">
-          <Field label="收费目录治理对象 ID" value={chargeObjectId} onChange={setChargeObjectId} />
-          <Field label="价表治理对象 ID" value={priceObjectId} onChange={setPriceObjectId} />
-          <Field label="当前院区 ID" value={campusId} onChange={setCampusId} />
-          <Field label="收费项目代码" value={chargeInternalCode} onChange={setChargeInternalCode} placeholder="E2E-FEE-001" />
-          <Field label="记录时点" value={recordAsOf} onChange={setRecordAsOf} placeholder="YYYY-MM-DDTHH:mm:ss" />
-        </div>
-      </article>
-      <div className="step-grid">
-        <StepCard number="01" title="发布收费项目" state={charge ? 'done' : 'ready'} onSubmit={submit(() => chargeMutation.mutate())} disabled={!ready || chargeMutation.isPending} error={chargeMutation.error} reference={charge} referencePrefix="charge" />
-        <StepCard number="02" title="发布完整价表" state={price ? 'done' : charge ? 'ready' : 'locked'} onSubmit={submit(() => priceMutation.mutate())} disabled={!charge || priceMutation.isPending} error={priceMutation.error} reference={price} referencePrefix="price" />
-        <StepCard number="03" title="价格解析" state={resolution ? 'done' : price ? 'ready' : 'locked'} onSubmit={submit(() => resolutionMutation.mutate())} disabled={!price || !recordAsOf || resolutionMutation.isPending} error={resolutionMutation.error} resolution={resolution} />
-      </div>
-    </section>
-  );
-}
-
 function Field({ label, value, onChange, placeholder = '00000000-0000-0000-0000-000000000000' }: { readonly label: string; readonly value: string; readonly onChange: (value: string) => void; readonly placeholder?: string }) {
   return <label className="field"><span>{label}</span><input required value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} /></label>;
-}
-
-function StepCard(props: { readonly number: string; readonly title: string; readonly state: 'locked' | 'ready' | 'done'; readonly onSubmit: (event: FormEvent) => void; readonly disabled: boolean; readonly error: Error | null; readonly reference?: PublishedReference | null; readonly referencePrefix?: 'charge' | 'price'; readonly resolution?: ResolutionReference | null }) {
-  return (
-    <article className={`panel step-card ${props.state}`}>
-      <form onSubmit={props.onSubmit}>
-        <div className="panel-heading"><span className="step-number">{props.number}</span><span className="state">{props.state === 'done' ? '已完成' : props.state === 'locked' ? '等待前序' : '可执行'}</span></div>
-        <h2>{props.title}</h2>
-        <p>{props.state === 'locked' ? '完成前序步骤后自动解锁。' : '调用冻结契约，并以服务端事务结果作为唯一成功依据。'}</p>
-        <button disabled={props.disabled} type="submit">{props.state === 'done' ? `重新执行${props.title}` : `执行${props.title}`}</button>
-        {props.reference && props.referencePrefix ? <dl className="evidence"><dt>发布 ID</dt><dd data-testid={`${props.referencePrefix}-release-id`}>{props.reference.releaseId}</dd><dt>快照 ID</dt><dd data-testid={`${props.referencePrefix}-snapshot-id`}>{props.reference.snapshotId}</dd></dl> : null}
-        {props.resolution ? <><dl className="evidence"><dt>解析状态</dt><dd>{props.resolution.status}</dd><dt>解析金额</dt><dd data-testid="resolution-amount">CNY {props.resolution.finalAmount ?? '未命中'}</dd><dt>解析 ID</dt><dd data-testid="resolution-id">{props.resolution.priceResolutionId}</dd><dt>结果摘要</dt><dd data-testid="resolution-digest">{props.resolution.resultDigest ?? '无'}</dd></dl><ol className="flow-line" data-testid="resolution-steps">{props.resolution.steps.map((step) => <li key={step.stepNo}><span>{step.stepNo}</span><strong>{step.scopeChecked} / {step.encounterModeChecked} · {step.decision} ({step.candidateCount}) · {step.explanationCode}</strong></li>)}</ol></> : null}
-        {props.error ? <div className="error" role="alert">{props.error.message}</div> : null}
-      </form>
-    </article>
-  );
 }

@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "npm run test:publication-atomic && npm run test:capacity-boundary",
+    "test:publication-atomic": "npm run test:publication-atomic --workspace @hospital-data-intelligence/governance-api",
+    "test:capacity-boundary": "npm run test:capacity-boundary --workspace @hospital-data-intelligence/governance-api",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

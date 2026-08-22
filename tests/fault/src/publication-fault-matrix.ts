@@ -23,7 +23,10 @@ export interface FaultMatrixResult {
   readonly snapshotCountDelta: number;
   readonly memberCountDelta: number;
   readonly outboxCountDelta: number;
+  readonly compatibilityCountDelta: number;
+  readonly deliveryCountDelta: number;
   readonly auditCountDelta: number;
   readonly checkpointCountDelta: number;
+  readonly approvalActionCountDelta: number;
   readonly evidenceDigest: string;
 }

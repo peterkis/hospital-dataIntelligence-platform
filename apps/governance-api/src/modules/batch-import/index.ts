@@ -349,12 +349,12 @@ function normalizeRecord(
   const unknownKeys = Object.keys(source).filter((key) => !headers.includes(key as never));
   if (unknownKeys.length > 0) throw new Error('IMPORT_ROW_UNKNOWN_FIELD');
   const payload = Object.fromEntries(headers.map((key) => [key, normalizeCell(source[key])])) as Record<string, string | null>;
-  const sourceRowId = requireText(payload.rowId, 'IMPORT_ROW_ID_REQUIRED');
+  const sourceRowId = requireText(payload['rowId'], 'IMPORT_ROW_ID_REQUIRED');
   const businessKey = importType === 'CHARGE_ITEM'
-    ? requireText(payload.internalCode, 'IMPORT_BUSINESS_KEY_REQUIRED')
+    ? requireText(payload['internalCode'], 'IMPORT_BUSINESS_KEY_REQUIRED')
     : [
-        payload.priceListCode, payload.chargeItemId, payload.chargeItemVersionId,
-        payload.scopeLevel, payload.campusId, payload.encounterMode, payload.encounterType,
+        payload['priceListCode'], payload['chargeItemId'], payload['chargeItemVersionId'],
+        payload['scopeLevel'], payload['campusId'], payload['encounterMode'], payload['encounterType'],
       ].map((value) => value ?? '').join('|');
   return { rowNo, sourceRowId, businessKey, payload };
 }
@@ -412,18 +412,18 @@ function priceRowsConflict(
     (key) => left[key] === right[key],
   );
   if (!sameScope || !periodsOverlap(left, right)) return false;
-  if (left.encounterMode === 'GENERAL' || right.encounterMode === 'GENERAL') return true;
-  return left.encounterType === right.encounterType;
+  if (left['encounterMode'] === 'GENERAL' || right['encounterMode'] === 'GENERAL') return true;
+  return left['encounterType'] === right['encounterType'];
 }
 
 function periodsOverlap(
   left: Readonly<Record<string, unknown>>,
   right: Readonly<Record<string, unknown>>,
 ): boolean {
-  const leftStart = String(left.businessValidFrom ?? '');
-  const rightStart = String(right.businessValidFrom ?? '');
-  const leftEnd = left.businessValidTo ? String(left.businessValidTo) : null;
-  const rightEnd = right.businessValidTo ? String(right.businessValidTo) : null;
+  const leftStart = String(left['businessValidFrom'] ?? '');
+  const rightStart = String(right['businessValidFrom'] ?? '');
+  const leftEnd = left['businessValidTo'] ? String(left['businessValidTo']) : null;
+  const rightEnd = right['businessValidTo'] ? String(right['businessValidTo']) : null;
   return (!leftEnd || rightStart < leftEnd) && (!rightEnd || leftStart < rightEnd);
 }
 

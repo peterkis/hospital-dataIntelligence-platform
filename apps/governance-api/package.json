@@ -11,6 +11,8 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "test": "vitest run",
+    "test:publication-atomic": "vitest run src/composition/phase-01-vertical-slice.integration.test.ts -t \"rolls back the complete publication transaction\"",
+    "test:capacity-boundary": "vitest run src/composition/phase-01-vertical-slice.integration.test.ts -t \"accepts exactly 16 MiB\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

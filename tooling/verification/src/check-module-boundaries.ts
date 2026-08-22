@@ -41,7 +41,7 @@ const FORBIDDEN_MODULES = [
   'version',
 ];
 
-function collectTypeScriptFiles(directory) {
+function collectTypeScriptFiles(directory: string): readonly string[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);

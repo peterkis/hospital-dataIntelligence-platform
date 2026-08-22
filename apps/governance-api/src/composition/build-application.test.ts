@@ -35,8 +35,9 @@ describe('governance API composition root', () => {
     expect(document.openapi).toBe('3.1.0');
     expect(document.paths?.['/health']?.get?.operationId).toBe('getHealth');
     expect(
-      document.paths?.['/v1/phase-01/price-list-publications']?.post?.operationId,
-    ).toBe('publishPhase01PriceList');
+      document.paths?.['/v1/phase-01/change-requests/{changeRequestId}/actions']?.post
+        ?.operationId,
+    ).toBe('actOnPhase01ChangeRequest');
     expect(
       document.paths?.[
         '/v1/phase-01/consumer-subscriptions/{subscriptionId}/snapshots/{snapshotId}/content'

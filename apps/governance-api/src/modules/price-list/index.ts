@@ -185,18 +185,20 @@ export interface PublishedPriceView {
   readonly candidates: readonly PublishedPriceCandidate[];
 }
 
+export interface CreatePriceListDraftCommand {
+  readonly governanceObjectId: string;
+  readonly priceListCode: string;
+  readonly displayName: string;
+  readonly currencyCode: string;
+  readonly businessValidFrom: string;
+  readonly businessValidTo: string | null;
+  readonly recordedFrom: string;
+  readonly actorPrincipalId: string;
+  readonly entries: readonly PriceEntryInput[];
+}
+
 export interface PriceListModule {
-  createDraft(command: {
-    readonly governanceObjectId: string;
-    readonly priceListCode: string;
-    readonly displayName: string;
-    readonly currencyCode: string;
-    readonly businessValidFrom: string;
-    readonly businessValidTo: string | null;
-    readonly recordedFrom: string;
-    readonly actorPrincipalId: string;
-    readonly entries: readonly PriceEntryInput[];
-  }): Promise<PriceListReleaseView>;
+  createDraft(command: CreatePriceListDraftCommand): Promise<PriceListReleaseView>;
   getRelease(command: {
     readonly governanceObjectId: string;
     readonly priceListId: string;
@@ -248,17 +250,6 @@ export interface PriceListModule {
     readonly priceListId: string;
     readonly priceListReleaseId: string;
   }): Promise<PreparedPriceListPublication>;
-  preparePublication(command: {
-    readonly governanceObjectId: string;
-    readonly priceListCode: string;
-    readonly displayName: string;
-    readonly currencyCode: string;
-    readonly businessValidFrom: string;
-    readonly businessValidTo: string | null;
-    readonly recordedFrom: string;
-    readonly actorPrincipalId: string;
-    readonly entries: readonly PriceEntryInput[];
-  }): Promise<PreparedPriceListPublication>;
   confirmPublication(command: {
     readonly priceListReleaseId: string;
     readonly governanceReleaseId: string;
@@ -280,7 +271,7 @@ export function createPriceListModule(
 ): PriceListModule {
   const module: PriceListModule = {
     async createDraft(command) {
-      const prepared = await module.preparePublication(command);
+      const prepared = await insertPriceListDraft(database, chargeCatalog, command);
       return loadReleaseView(database, chargeCatalog, prepared.priceListId, prepared.priceListReleaseId, false).then(
         requireRelease,
       );
@@ -571,93 +562,6 @@ export function createPriceListModule(
       return preparedPublicationFromRelease(command.governanceObjectId, release);
     },
 
-    async preparePublication(command) {
-      validatePriceListTimes(command);
-      if (command.entries.length === 0) throw new Error('PRICE_LIST_ENTRIES_REQUIRED');
-      if (!/^[A-Z]{3}$/u.test(command.currencyCode)) throw new Error('CURRENCY_CODE_INVALID');
-
-      let priceList = await database
-        .selectFrom('price_list.price_list')
-        .select(['price_list_id', 'price_list_code'])
-        .where('governance_object_id', '=', command.governanceObjectId)
-        .executeTakeFirst();
-      let releaseNo = '1';
-      if (priceList) {
-        if (priceList.price_list_code !== command.priceListCode) {
-          throw new Error('PRICE_LIST_STABLE_CODE_IMMUTABLE');
-        }
-        const latestRelease = await database
-          .selectFrom('price_list.price_list_release')
-          .select('release_no')
-          .where('price_list_id', '=', priceList.price_list_id)
-          .orderBy('release_no', 'desc')
-          .limit(1)
-          .executeTakeFirst();
-        releaseNo = (BigInt(latestRelease?.release_no ?? '0') + 1n).toString();
-      } else {
-        priceList = await database
-          .insertInto('price_list.price_list')
-          .values({
-            governance_object_id: command.governanceObjectId,
-            price_list_code: command.priceListCode,
-            created_by: command.actorPrincipalId,
-          })
-          .returning(['price_list_id', 'price_list_code'])
-          .executeTakeFirstOrThrow();
-      }
-      const priceListReleaseId = await nextUuid(database);
-
-      const projectionEntries = await buildProjectionEntries(
-        database,
-        chargeCatalog,
-        command.currencyCode,
-        command.entries,
-      );
-
-      const releaseContent = {
-        businessValidFrom: command.businessValidFrom,
-        businessValidTo: command.businessValidTo,
-        currencyCode: command.currencyCode,
-        displayName: command.displayName,
-        entries: projectionEntries,
-        priceListCode: priceList.price_list_code,
-        priceListId: priceList.price_list_id,
-        priceListReleaseId,
-        recordedFrom: command.recordedFrom,
-        releaseNo,
-      };
-      const contentHash = canonicalSha256(releaseContent);
-      await database
-        .insertInto('price_list.price_list_release')
-        .values({
-          price_list_release_id: priceListReleaseId,
-          price_list_id: priceList.price_list_id,
-          release_no: releaseNo,
-          display_name: command.displayName,
-          currency_code: command.currencyCode,
-          business_valid_from: command.businessValidFrom,
-          business_valid_to: command.businessValidTo,
-          recorded_from: command.recordedFrom,
-          recorded_to: null,
-          governance_status: 'DRAFT',
-          business_status: command.businessValidFrom > command.recordedFrom ? 'PLANNED' : 'ACTIVE',
-          governance_release_id: null,
-          content_hash: contentHash,
-          created_by: command.actorPrincipalId,
-        })
-        .execute();
-
-      await insertProjectionEntries(database, priceListReleaseId, projectionEntries);
-
-      return {
-        governanceObjectId: command.governanceObjectId,
-        priceListId: priceList.price_list_id,
-        priceListReleaseId,
-        contentHash,
-        projection: { ...releaseContent, contentHash: digestHex(contentHash) },
-      };
-    },
-
     async confirmPublication(command) {
       const draft = await database
         .selectFrom('price_list.price_list_release')
@@ -789,6 +693,93 @@ export function createPriceListModule(
     },
   };
   return module;
+}
+
+async function insertPriceListDraft(
+  database: Kysely<DB>,
+  chargeCatalog: ChargeCatalogModule,
+  command: CreatePriceListDraftCommand,
+): Promise<PreparedPriceListPublication> {
+  validatePriceListTimes(command);
+  if (command.entries.length === 0) throw new Error('PRICE_LIST_ENTRIES_REQUIRED');
+  if (!/^[A-Z]{3}$/u.test(command.currencyCode)) throw new Error('CURRENCY_CODE_INVALID');
+
+  let priceList = await database
+    .selectFrom('price_list.price_list')
+    .select(['price_list_id', 'price_list_code'])
+    .where('governance_object_id', '=', command.governanceObjectId)
+    .executeTakeFirst();
+  let releaseNo = '1';
+  if (priceList) {
+    if (priceList.price_list_code !== command.priceListCode) {
+      throw new Error('PRICE_LIST_STABLE_CODE_IMMUTABLE');
+    }
+    const latestRelease = await database
+      .selectFrom('price_list.price_list_release')
+      .select('release_no')
+      .where('price_list_id', '=', priceList.price_list_id)
+      .orderBy('release_no', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+    releaseNo = (BigInt(latestRelease?.release_no ?? '0') + 1n).toString();
+  } else {
+    priceList = await database
+      .insertInto('price_list.price_list')
+      .values({
+        governance_object_id: command.governanceObjectId,
+        price_list_code: command.priceListCode,
+        created_by: command.actorPrincipalId,
+      })
+      .returning(['price_list_id', 'price_list_code'])
+      .executeTakeFirstOrThrow();
+  }
+  const priceListReleaseId = await nextUuid(database);
+  const projectionEntries = await buildProjectionEntries(
+    database,
+    chargeCatalog,
+    command.currencyCode,
+    command.entries,
+  );
+  const releaseContent = {
+    businessValidFrom: command.businessValidFrom,
+    businessValidTo: command.businessValidTo,
+    currencyCode: command.currencyCode,
+    displayName: command.displayName,
+    entries: projectionEntries,
+    priceListCode: priceList.price_list_code,
+    priceListId: priceList.price_list_id,
+    priceListReleaseId,
+    recordedFrom: command.recordedFrom,
+    releaseNo,
+  };
+  const contentHash = canonicalSha256(releaseContent);
+  await database
+    .insertInto('price_list.price_list_release')
+    .values({
+      price_list_release_id: priceListReleaseId,
+      price_list_id: priceList.price_list_id,
+      release_no: releaseNo,
+      display_name: command.displayName,
+      currency_code: command.currencyCode,
+      business_valid_from: command.businessValidFrom,
+      business_valid_to: command.businessValidTo,
+      recorded_from: command.recordedFrom,
+      recorded_to: null,
+      governance_status: 'DRAFT',
+      business_status: command.businessValidFrom > command.recordedFrom ? 'PLANNED' : 'ACTIVE',
+      governance_release_id: null,
+      content_hash: contentHash,
+      created_by: command.actorPrincipalId,
+    })
+    .execute();
+  await insertProjectionEntries(database, priceListReleaseId, projectionEntries);
+  return {
+    governanceObjectId: command.governanceObjectId,
+    priceListId: priceList.price_list_id,
+    priceListReleaseId,
+    contentHash,
+    projection: { ...releaseContent, contentHash: digestHex(contentHash) },
+  };
 }
 
 async function buildProjectionEntries(

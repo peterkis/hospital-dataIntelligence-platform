@@ -181,13 +181,6 @@ export interface ChargeCatalogModule {
     readonly chargeItemId: string;
     readonly chargeItemVersionId: string;
   }): Promise<void>;
-  prepareInitialPublication(command: ChargeItemContentInput & {
-    readonly governanceObjectId: string;
-    readonly catalogCode: string;
-    readonly internalCode: string;
-    readonly recordedFrom: string;
-    readonly actorPrincipalId: string;
-  }): Promise<PreparedChargeItemPublication>;
   prepareDraftPublication(command: {
     readonly governanceObjectId: string;
     readonly catalogCode: string;
@@ -451,11 +444,6 @@ export function createChargeCatalogModule(database: Kysely<DB>): ChargeCatalogMo
         .deleteFrom('charge_catalog.priced_object')
         .where('priced_object_id', '=', command.chargeItemId)
         .executeTakeFirstOrThrow();
-    },
-
-    async prepareInitialPublication(command) {
-      const draft = await insertInitialDraft(database, command);
-      return preparedPublicationFromDraft(command.governanceObjectId, command.catalogCode, draft);
     },
 
     async prepareDraftPublication(command) {

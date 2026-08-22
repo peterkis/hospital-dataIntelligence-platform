@@ -83,6 +83,52 @@ export interface RegisteredPublication {
   readonly artifactByteLength: number;
 }
 
+export interface CanonicalSnapshotArtifactInput<Payload = unknown> {
+  readonly aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST';
+  readonly governanceObjectId: string;
+  readonly releaseId: string;
+  readonly releaseNo: string;
+  readonly releaseKind:
+    | 'NORMAL'
+    | 'COMPENSATION'
+    | 'HISTORICAL_REPUBLICATION'
+    | 'CONTRACT_SCHEMA_UPGRADE';
+  readonly businessValidFrom: string;
+  readonly businessValidTo: string | null;
+  readonly projectionType: string;
+  readonly projectionSchemaVersion: string;
+  readonly projectionSchemaDigest: Buffer;
+  readonly payload: Payload;
+}
+
+export function buildCanonicalSnapshotArtifact<Payload>(
+  input: CanonicalSnapshotArtifactInput<Payload>,
+): Buffer {
+  return Buffer.from(
+    canonicalJson({
+      envelopeContractVersion: 'phase-01.v1',
+      release: {
+        aggregateType: input.aggregateType,
+        governanceObjectId: input.governanceObjectId,
+        releaseId: input.releaseId,
+        releaseNo: input.releaseNo,
+        releaseKind: input.releaseKind,
+        businessValidFrom: input.businessValidFrom,
+        businessValidTo: input.businessValidTo,
+      },
+      projectionContract: {
+        projectionType: input.projectionType,
+        schemaVersion: input.projectionSchemaVersion,
+        schemaDigestAlgorithm: 'SHA-256',
+        schemaDigest: digestHex(input.projectionSchemaDigest),
+      },
+      serializationProfileVersion: 'canonical-json.v1',
+      payload: input.payload,
+    }),
+    'utf8',
+  );
+}
+
 export interface SnapshotArtifact {
   readonly snapshotId: string;
   readonly releaseId: string;
@@ -236,27 +282,19 @@ export function createReleaseDistributionModule(
       const payloadBytes = Buffer.from(canonicalJson(command.projection.payload), 'utf8');
       const projectionPayloadDigest = sha256Bytes(payloadBytes);
       const releaseId = await nextUuid(database);
-      const artifactEnvelope = {
-        envelopeContractVersion: 'phase-01.v1',
-        release: {
-          aggregateType: command.aggregateType,
-          governanceObjectId: command.governanceObjectId,
-          releaseId,
-          releaseNo,
-          releaseKind: command.releaseKind ?? 'NORMAL',
-          businessValidFrom: command.businessValidFrom,
-          businessValidTo: command.businessValidTo,
-        },
-        projectionContract: {
-          projectionType: contract.projectionType,
-          schemaVersion: contract.schemaVersion,
-          schemaDigestAlgorithm: 'SHA-256',
-          schemaDigest: digestHex(contract.schemaDigest),
-        },
-        serializationProfileVersion: 'canonical-json.v1',
+      const artifactBytes = buildCanonicalSnapshotArtifact({
+        aggregateType: command.aggregateType,
+        governanceObjectId: command.governanceObjectId,
+        releaseId,
+        releaseNo,
+        releaseKind: command.releaseKind ?? 'NORMAL',
+        businessValidFrom: command.businessValidFrom,
+        businessValidTo: command.businessValidTo,
+        projectionType: contract.projectionType,
+        projectionSchemaVersion: contract.schemaVersion,
+        projectionSchemaDigest: contract.schemaDigest,
         payload: command.projection.payload,
-      };
-      const artifactBytes = Buffer.from(canonicalJson(artifactEnvelope), 'utf8');
+      });
       if (artifactBytes.byteLength > SNAPSHOT_LIMIT_BYTES) {
         throw new Error('SNAPSHOT_ARTIFACT_TOO_LARGE');
       }

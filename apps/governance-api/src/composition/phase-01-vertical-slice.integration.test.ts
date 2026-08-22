@@ -9,18 +9,38 @@ import {
 } from 'testcontainers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, type DatabaseHandle } from '../platform/database/create-database.js';
-import { sha256Bytes } from '../platform/hashing/canonical-hash.js';
+import {
+  configureControlledPublicationFault,
+  PUBLICATION_TRANSACTION_FAULT_POINTS,
+  type ControlledPublicationFaultPoint,
+} from '../platform/fault-injection/controlled-faults.js';
+import { canonicalSha256, sha256Bytes } from '../platform/hashing/canonical-hash.js';
 import { createTransactionRunner } from '../platform/transaction/transaction-runner.js';
+import {
+  CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
+  CHARGE_CATALOG_PROJECTION_TYPE,
+  ChargeCatalogProjectionSchema,
+  type ChargeCatalogProjection,
+} from '../modules/charge-catalog/index.js';
 import {
   PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION,
   PRICE_LIST_PROJECTION_SCHEMA_VERSION,
   PRICE_LIST_PROJECTION_TYPE,
 } from '../modules/price-list/index.js';
 import {
+  buildCanonicalSnapshotArtifact,
   createReleaseDistributionDispatcher,
   ReleaseNotificationError,
   type ReleaseNotification,
+  type RegisteredPublication,
 } from '../modules/release-distribution/index.js';
+import {
+  type ChangeKind,
+  createWorkflowApplication,
+  type GovernedEntityType,
+  type RiskClassification,
+  type WorkflowApplication,
+} from '../modules/workflow/index.js';
 import { createScopedModules, type ScopedModules } from './create-scoped-modules.js';
 import { createPhase01VerticalSlice } from './phase-01-vertical-slice.js';
 import { buildApplication } from './build-application.js';
@@ -34,6 +54,8 @@ const MIGRATION_DIRECTORY = resolve(
 
 interface FoundationIds {
   readonly actorId: string;
+  readonly reviewerId: string;
+  readonly approverId: string;
   readonly servicePrincipalId: string;
   readonly incompatibleServicePrincipalId: string;
   readonly campusId: string;
@@ -94,6 +116,7 @@ describe('Phase 01 executable vertical slice', () => {
         createScopedModules(transaction, context, rootDatabase),
     );
     const slice = createPhase01VerticalSlice(runner);
+    const workflowApplication = createWorkflowApplication(runner);
     let dispatcherNow = '2026-08-08T09:10:30';
     const notifications: ReleaseNotification[] = [];
     const notificationAttemptCount = new Map<string, number>();
@@ -171,10 +194,9 @@ describe('Phase 01 executable vertical slice', () => {
         now: () => dispatcherNow,
       },
     );
-    const chargeContext = requestContext(foundation.actorId, 'charge-publish', '2026-08-08T09:00:00');
-    const charge = await slice.publishChargeItem(chargeContext, {
+    const chargeContext = requestContext(foundation.actorId, 'charge-draft', '2026-08-08T09:00:00');
+    const chargeDraft = await slice.createChargeItemDraft(chargeContext, {
       governanceObjectId: foundation.chargeCatalogObjectId,
-      catalogCode: 'HOSPITAL-CHARGE-CATALOG',
       internalCode: 'POC-FEE-001',
       formalName: 'POC诊查费',
       serviceDefinition: '合成POC收费项目，仅用于验证治理闭环。',
@@ -182,8 +204,27 @@ describe('Phase 01 executable vertical slice', () => {
       chargingMethodCode: 'COUNT',
       businessValidFrom: '2026-08-08T00:00:00',
       businessValidTo: null,
-      changeReason: '建立纵向切片收费项目初始版本',
     });
+    const chargePublication = await approveDraft(workflowApplication, {
+      suffix: 'charge-initial',
+      governanceObjectId: foundation.chargeCatalogObjectId,
+      entityType: 'CHARGE_ITEM_VERSION',
+      stableEntityId: chargeDraft.chargeItemId,
+      entityVersionId: chargeDraft.chargeItemVersionId,
+      contentHash: chargeDraft.contentHash,
+      riskClassification: 'NORMAL',
+      changeKind: 'INITIAL_PUBLICATION',
+      changeReason: '建立纵向切片收费项目初始版本',
+      frozenEvidence: { catalogCode: 'HOSPITAL-CHARGE-CATALOG' },
+      submittedAt: '2026-08-08T09:01:00',
+      reviewedAt: '2026-08-08T09:02:00',
+      approvedAt: '2026-08-08T09:03:00',
+    });
+    const charge = {
+      chargeItemId: chargeDraft.chargeItemId,
+      chargeItemVersionId: chargeDraft.chargeItemVersionId,
+      ...chargePublication,
+    };
 
     const consumer = await runner.run(
       requestContext(foundation.actorId, 'subscription-create', '2026-08-08T09:05:00'),
@@ -218,15 +259,14 @@ describe('Phase 01 executable vertical slice', () => {
       },
     );
 
-    const priceContext = requestContext(foundation.actorId, 'price-publish', '2026-08-08T09:10:00');
-    const price = await slice.publishPriceList(priceContext, {
+    const priceContext = requestContext(foundation.actorId, 'price-draft', '2026-08-08T09:07:00');
+    const priceDraft = await slice.createPriceListDraft(priceContext, {
       governanceObjectId: foundation.priceListObjectId,
       priceListCode: 'HOSPITAL-DEFAULT-PRICE',
       displayName: 'POC全院默认价表',
       currencyCode: 'CNY',
       businessValidFrom: '2026-08-08T00:00:00',
       businessValidTo: null,
-      changeReason: '建立纵向切片价表初始完整快照',
       entries: [
         {
           chargeItemId: charge.chargeItemId,
@@ -243,6 +283,26 @@ describe('Phase 01 executable vertical slice', () => {
         },
       ],
     });
+    const pricePublication = await approveDraft(workflowApplication, {
+      suffix: 'price-initial',
+      governanceObjectId: foundation.priceListObjectId,
+      entityType: 'PRICE_LIST_RELEASE',
+      stableEntityId: priceDraft.priceListId,
+      entityVersionId: priceDraft.priceListReleaseId,
+      contentHash: priceDraft.contentHash,
+      riskClassification: 'HIGH',
+      changeKind: 'INITIAL_PUBLICATION',
+      changeReason: '建立纵向切片价表初始完整快照',
+      frozenEvidence: {},
+      submittedAt: '2026-08-08T09:08:00',
+      reviewedAt: '2026-08-08T09:09:00',
+      approvedAt: '2026-08-08T09:10:00',
+    });
+    const price = {
+      priceListId: priceDraft.priceListId,
+      priceListReleaseId: priceDraft.priceListReleaseId,
+      ...pricePublication,
+    };
     expect(await dispatcher.dispatchOnce()).toMatchObject({
       claimed: true,
       eventId: price.eventId,
@@ -433,6 +493,7 @@ describe('Phase 01 executable vertical slice', () => {
       phase01: {
         verticalSlice: slice,
         transactionRunner: runner,
+        workflowApplication,
         async resolvePrincipal(request) {
           if (request.headers.authorization === 'Bearer simulated-service') {
             return {
@@ -490,8 +551,8 @@ describe('Phase 01 executable vertical slice', () => {
         });
       },
     );
-    const secondPrice = await slice.publishPriceList(
-      requestContext(foundation.actorId, 'price-publish-version-2', '2026-08-08T09:50:00'),
+    const secondPriceDraft = await slice.createPriceListDraft(
+      requestContext(foundation.actorId, 'price-draft-version-2', '2026-08-08T09:47:00'),
       {
         governanceObjectId: foundation.priceListObjectId,
         priceListCode: 'HOSPITAL-DEFAULT-PRICE',
@@ -499,7 +560,6 @@ describe('Phase 01 executable vertical slice', () => {
         currencyCode: 'CNY',
         businessValidFrom: '2026-08-08T00:00:00',
         businessValidTo: null,
-        changeReason: '验证稳定价表身份下的显式新版本发布',
         entries: [
           {
             chargeItemId: charge.chargeItemId,
@@ -517,6 +577,26 @@ describe('Phase 01 executable vertical slice', () => {
         ],
       },
     );
+    const secondPricePublication = await approveDraft(workflowApplication, {
+      suffix: 'price-version-2',
+      governanceObjectId: foundation.priceListObjectId,
+      entityType: 'PRICE_LIST_RELEASE',
+      stableEntityId: secondPriceDraft.priceListId,
+      entityVersionId: secondPriceDraft.priceListReleaseId,
+      contentHash: secondPriceDraft.contentHash,
+      riskClassification: 'HIGH',
+      changeKind: 'VERSION_CHANGE',
+      changeReason: '验证稳定价表身份下的显式新版本发布',
+      frozenEvidence: {},
+      submittedAt: '2026-08-08T09:48:00',
+      reviewedAt: '2026-08-08T09:49:00',
+      approvedAt: '2026-08-08T09:50:00',
+    });
+    const secondPrice = {
+      priceListId: secondPriceDraft.priceListId,
+      priceListReleaseId: secondPriceDraft.priceListReleaseId,
+      ...secondPricePublication,
+    };
     expect(secondPrice.priceListId).toBe(price.priceListId);
     expect(secondPrice.priceListReleaseId).not.toBe(price.priceListReleaseId);
     const secondSnapshot = await runner.run(
@@ -651,12 +731,496 @@ describe('Phase 01 executable vertical slice', () => {
     `.execute(databaseHandle.database);
     expect(timeZoneTypes.rows[0]?.count).toBe('0');
   }, 120_000);
+
+  it('rolls back the complete publication transaction at every durable write point', async () => {
+    if (!databaseHandle) throw new Error('Integration database was not initialized');
+    const runner = createTransactionRunner<ScopedModules>(
+      databaseHandle.database,
+      (transaction, context) =>
+        createScopedModules(transaction, context, databaseHandle?.database),
+    );
+    const slice = createPhase01VerticalSlice(runner);
+    const workflowApplication = createWorkflowApplication(runner);
+    const chargeDraft = await slice.createChargeItemDraft(
+      requestContext(foundation.actorId, 'fault-charge-draft', '2026-08-08T10:00:00'),
+      {
+        governanceObjectId: foundation.chargeCatalogObjectId,
+        internalCode: 'POC-FAULT-FEE-001',
+        formalName: '故障矩阵收费项目',
+        serviceDefinition: '合成POC故障矩阵使用的收费项目。',
+        billingUnitCode: 'TIMES',
+        chargingMethodCode: 'COUNT',
+        businessValidFrom: '2026-08-08T00:00:00',
+        businessValidTo: null,
+      },
+    );
+    await approveDraft(workflowApplication, {
+      suffix: 'fault-charge',
+      governanceObjectId: foundation.chargeCatalogObjectId,
+      entityType: 'CHARGE_ITEM_VERSION',
+      stableEntityId: chargeDraft.chargeItemId,
+      entityVersionId: chargeDraft.chargeItemVersionId,
+      contentHash: chargeDraft.contentHash,
+      riskClassification: 'NORMAL',
+      changeKind: 'INITIAL_PUBLICATION',
+      changeReason: '建立故障矩阵引用收费项目',
+      frozenEvidence: { catalogCode: 'HOSPITAL-CHARGE-CATALOG' },
+      submittedAt: '2026-08-08T10:01:00',
+      reviewedAt: '2026-08-08T10:02:00',
+      approvedAt: '2026-08-08T10:03:00',
+    });
+    await runner.run(
+      requestContext(foundation.actorId, 'fault-subscription', '2026-08-08T10:04:00'),
+      (modules) =>
+        modules.releaseDistribution.createSubscription({
+          subscriptionCode: 'SIM-CONSUMER-FAULT-MATRIX',
+          servicePrincipalId: foundation.servicePrincipalId,
+          governanceObjectId: foundation.priceListObjectId,
+          projectionType: PRICE_LIST_PROJECTION_TYPE,
+          projectionSchemaVersion: PRICE_LIST_PROJECTION_SCHEMA_VERSION,
+        }),
+    );
+    const priceDraft = await slice.createPriceListDraft(
+      requestContext(foundation.actorId, 'fault-price-draft', '2026-08-08T10:05:00'),
+      {
+        governanceObjectId: foundation.priceListObjectId,
+        priceListCode: 'FAULT-MATRIX-PRICE',
+        displayName: '故障矩阵价表',
+        currencyCode: 'CNY',
+        businessValidFrom: '2026-08-08T00:00:00',
+        businessValidTo: null,
+        entries: [{
+          chargeItemId: chargeDraft.chargeItemId,
+          chargeItemVersionId: chargeDraft.chargeItemVersionId,
+          scopeLevel: 'HOSPITAL',
+          campusId: null,
+          encounterMode: 'GENERAL',
+          encounterType: null,
+          fixedUnitPrice: '18.00',
+          billingUnitCode: 'TIMES',
+          businessValidFrom: '2026-08-08T00:00:00',
+          businessValidTo: null,
+          zeroPriceReason: null,
+        }],
+      },
+    );
+    const submitted = await workflowApplication.submit(
+      requestContext(foundation.actorId, 'fault-price-submit', '2026-08-08T10:06:00'),
+      {
+        governanceObjectId: foundation.priceListObjectId,
+        entityType: 'PRICE_LIST_RELEASE',
+        stableEntityId: priceDraft.priceListId,
+        entityVersionId: priceDraft.priceListReleaseId,
+        changeKind: 'INITIAL_PUBLICATION',
+        riskClassification: 'HIGH',
+        submittedContentDigest: priceDraft.contentHash.toString('hex'),
+        changeReason: '验证发布事务逐写点回滚',
+        campusId: null,
+        frozenEvidence: {},
+      },
+    );
+    await workflowApplication.act(
+      requestContext(foundation.reviewerId, 'fault-price-review', '2026-08-08T10:07:00'),
+      {
+        changeRequestId: submitted.changeRequestId,
+        stageType: 'PROFESSIONAL_REVIEW',
+        actionResult: 'APPROVED',
+        reason: '故障矩阵专业复核通过',
+        seenContentDigest: priceDraft.contentHash.toString('hex'),
+        campusId: null,
+      },
+    );
+
+    const baseline = await publicationSideEffectCounts(databaseHandle.database);
+    const results: {
+      readonly faultPoint: ControlledPublicationFaultPoint;
+      readonly rolledBack: boolean;
+    }[] = [];
+    for (const faultPoint of PUBLICATION_TRANSACTION_FAULT_POINTS) {
+      configureControlledPublicationFault(faultPoint);
+      try {
+        await expect(
+          workflowApplication.act(
+            requestContext(
+              foundation.approverId,
+              `fault-price-approve-${faultPoint}`,
+              '2026-08-08T10:08:00',
+            ),
+            {
+              changeRequestId: submitted.changeRequestId,
+              stageType: 'OWNER_FINAL_APPROVAL',
+              actionResult: 'APPROVED',
+              reason: `故障矩阵终审 ${faultPoint}`,
+              seenContentDigest: priceDraft.contentHash.toString('hex'),
+              campusId: null,
+            },
+          ),
+        ).rejects.toThrow(`CONTROLLED_PUBLICATION_FAULT:${faultPoint}`);
+      } finally {
+        configureControlledPublicationFault(null);
+      }
+      const afterFault = await publicationSideEffectCounts(databaseHandle.database);
+      expect(afterFault).toEqual(baseline);
+      const unchangedDraft = await slice.getPriceListRelease(
+        requestContext(
+          foundation.actorId,
+          `fault-price-read-${faultPoint}`,
+          '2026-08-08T10:08:01',
+        ),
+        {
+          governanceObjectId: foundation.priceListObjectId,
+          priceListId: priceDraft.priceListId,
+          priceListReleaseId: priceDraft.priceListReleaseId,
+        },
+      );
+      expect(unchangedDraft.governanceStatus).toBe('DRAFT');
+      results.push({ faultPoint, rolledBack: true });
+    }
+    expect(results).toEqual(
+      PUBLICATION_TRANSACTION_FAULT_POINTS.map((faultPoint) => ({
+        faultPoint,
+        rolledBack: true,
+      })),
+    );
+    const successful = await workflowApplication.act(
+      requestContext(foundation.approverId, 'fault-price-approve-success', '2026-08-08T10:09:00'),
+      {
+        changeRequestId: submitted.changeRequestId,
+        stageType: 'OWNER_FINAL_APPROVAL',
+        actionResult: 'APPROVED',
+        reason: '故障矩阵成功对照终审',
+        seenContentDigest: priceDraft.contentHash.toString('hex'),
+        campusId: null,
+      },
+    );
+    expect(successful.request.requestStatus).toBe('APPROVED');
+    expect(successful.publication).not.toBeNull();
+  }, 120_000);
+
+  it('accepts exactly 16 MiB and rejects 16 MiB plus one before publication writes', async () => {
+    if (!databaseHandle) throw new Error('Integration database was not initialized');
+    const runner = createTransactionRunner<ScopedModules>(
+      databaseHandle.database,
+      (transaction, context) =>
+        createScopedModules(transaction, context, databaseHandle?.database),
+    );
+    const slice = createPhase01VerticalSlice(runner);
+    const draft = await slice.createChargeItemDraft(
+      requestContext(foundation.actorId, 'capacity-draft', '2026-08-08T11:00:00'),
+      {
+        governanceObjectId: foundation.chargeCatalogObjectId,
+        internalCode: 'POC-CAPACITY-FEE-001',
+        formalName: '容量边界收费项目',
+        serviceDefinition: '用于精确规范快照容量边界验证。',
+        billingUnitCode: 'TIMES',
+        chargingMethodCode: 'COUNT',
+        businessValidFrom: '2026-08-08T00:00:00',
+        businessValidTo: null,
+      },
+    );
+    const schemaDigest = canonicalSha256(ChargeCatalogProjectionSchema);
+    const nextReleaseNo = await loadNextReleaseNo(
+      databaseHandle.database,
+      foundation.chargeCatalogObjectId,
+    );
+    const exactProjection = buildExactChargeCatalogProjection({
+      targetByteLength: 16_777_216,
+      governanceObjectId: foundation.chargeCatalogObjectId,
+      releaseNo: nextReleaseNo,
+      releaseId: '00000000-0000-7000-8000-000000000001',
+      schemaDigest,
+      draft,
+    });
+    const exactPublication = await runner.run(
+      requestContext(foundation.approverId, 'capacity-exact', '2026-08-08T11:01:00'),
+      async (modules) => {
+        const publication = await modules.releaseDistribution.registerPublication({
+          governanceObjectId: foundation.chargeCatalogObjectId,
+          aggregateType: 'CHARGE_CATALOG',
+          businessValidFrom: draft.businessValidFrom,
+          businessValidTo: draft.businessValidTo,
+          recordedFrom: '2026-08-08T11:01:00',
+          submittedBy: foundation.actorId,
+          approvedBy: foundation.approverId,
+          approvedAt: '2026-08-08T11:01:00',
+          changeReason: '精确16 MiB规范快照容量边界',
+          projection: {
+            projectionType: CHARGE_CATALOG_PROJECTION_TYPE,
+            schemaVersion: CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
+            payload: exactProjection,
+            itemCount: exactProjection.items.length,
+          },
+          member: {
+            kind: 'CHARGE_ITEM',
+            stableId: draft.chargeItemId,
+            versionId: draft.chargeItemVersionId,
+            snapshotName: draft.formalName,
+            memberHash: draft.contentHash,
+          },
+        });
+        await modules.chargeCatalog.confirmPublication({
+          chargeItemVersionId: draft.chargeItemVersionId,
+          releaseId: publication.releaseId,
+        });
+        await modules.audit.append({
+          auditStreamId: foundation.chargeCatalogObjectId,
+          governanceObjectId: foundation.chargeCatalogObjectId,
+          entityType: 'CHARGE_ITEM_VERSION',
+          stableEntityId: draft.chargeItemId,
+          entityVersionId: draft.chargeItemVersionId,
+          action: 'PUBLISHED',
+          afterHash: draft.contentHash,
+          authorityScope: 'CAPACITY_BOUNDARY_TEST',
+        });
+        return publication;
+      },
+    );
+    expect(exactPublication.artifactByteLength).toBe(16_777_216);
+    const stored = await runner.run(
+      requestContext(foundation.actorId, 'capacity-download', '2026-08-08T11:01:01'),
+      (modules) => modules.releaseDistribution.getSnapshot(exactPublication.snapshotId),
+    );
+    expect(stored.bytes.byteLength).toBe(16_777_216);
+    expect(sha256Bytes(stored.bytes).equals(stored.digest)).toBe(true);
+
+    const oversizedReleaseNo = await loadNextReleaseNo(
+      databaseHandle.database,
+      foundation.chargeCatalogObjectId,
+    );
+    const oversizedProjection = buildExactChargeCatalogProjection({
+      targetByteLength: 16_777_217,
+      governanceObjectId: foundation.chargeCatalogObjectId,
+      releaseNo: oversizedReleaseNo,
+      releaseId: '00000000-0000-7000-8000-000000000001',
+      schemaDigest,
+      draft,
+    });
+    const beforeOversized = await publicationSideEffectCounts(databaseHandle.database);
+    await expect(
+      runner.run(
+        requestContext(foundation.approverId, 'capacity-oversized', '2026-08-08T11:02:00'),
+        (modules) =>
+          modules.releaseDistribution.registerPublication({
+            governanceObjectId: foundation.chargeCatalogObjectId,
+            aggregateType: 'CHARGE_CATALOG',
+            businessValidFrom: draft.businessValidFrom,
+            businessValidTo: draft.businessValidTo,
+            recordedFrom: '2026-08-08T11:02:00',
+            submittedBy: foundation.actorId,
+            approvedBy: foundation.approverId,
+            approvedAt: '2026-08-08T11:02:00',
+            changeReason: '精确16 MiB加一拒绝边界',
+            projection: {
+              projectionType: CHARGE_CATALOG_PROJECTION_TYPE,
+              schemaVersion: CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
+              payload: oversizedProjection,
+              itemCount: oversizedProjection.items.length,
+            },
+            member: {
+              kind: 'CHARGE_ITEM',
+              stableId: draft.chargeItemId,
+              versionId: draft.chargeItemVersionId,
+              snapshotName: draft.formalName,
+              memberHash: draft.contentHash,
+            },
+          }),
+      ),
+    ).rejects.toThrow('SNAPSHOT_ARTIFACT_TOO_LARGE');
+    expect(await publicationSideEffectCounts(databaseHandle.database)).toEqual(beforeOversized);
+  }, 180_000);
 });
+
+async function publicationSideEffectCounts(database: DatabaseHandle['database']) {
+  const result = await sql<{
+    readonly release_count: string;
+    readonly snapshot_count: string;
+    readonly member_count: string;
+    readonly outbox_count: string;
+    readonly compatibility_count: string;
+    readonly delivery_count: string;
+    readonly audit_count: string;
+    readonly checkpoint_count: string;
+    readonly approval_action_count: string;
+  }>`
+    select
+      (select count(*)::bigint from release_distribution.governance_release) as release_count,
+      (select count(*)::bigint from release_distribution.release_snapshot) as snapshot_count,
+      (
+        (select count(*) from release_distribution.release_member_charge_item) +
+        (select count(*) from release_distribution.release_member_price_list)
+      )::bigint as member_count,
+      (select count(*)::bigint from release_distribution.outbox_event) as outbox_count,
+      (select count(*)::bigint from release_distribution.release_consumer_compatibility) as compatibility_count,
+      (select count(*)::bigint from release_distribution.outbox_delivery_state) as delivery_count,
+      (select count(*)::bigint from audit.audit_event) as audit_count,
+      (select count(*)::bigint from release_distribution.consumer_checkpoint) as checkpoint_count,
+      (select count(*)::bigint from workflow.approval_action) as approval_action_count
+  `.execute(database);
+  return result.rows[0];
+}
+
+async function loadNextReleaseNo(
+  database: DatabaseHandle['database'],
+  governanceObjectId: string,
+): Promise<string> {
+  const result = await database
+    .selectFrom('release_distribution.governance_release')
+    .select((expression) => expression.fn.max('release_no').as('last_release_no'))
+    .where('governance_object_id', '=', governanceObjectId)
+    .executeTakeFirstOrThrow();
+  return (BigInt(result.last_release_no ?? '0') + 1n).toString();
+}
+
+function buildExactChargeCatalogProjection(command: {
+  readonly targetByteLength: number;
+  readonly governanceObjectId: string;
+  readonly releaseId: string;
+  readonly releaseNo: string;
+  readonly schemaDigest: Buffer;
+  readonly draft: {
+    readonly chargeItemId: string;
+    readonly chargeItemVersionId: string;
+    readonly versionNo: string;
+    readonly internalCode: string;
+    readonly formalName: string;
+    readonly billingUnitCode: string;
+    readonly chargingMethodCode: string;
+    readonly businessValidFrom: string;
+    readonly businessValidTo: string | null;
+    readonly recordedFrom: string;
+    readonly contentHash: Buffer;
+  };
+}): ChargeCatalogProjection {
+  const makeItem = (serviceDefinition: string): ChargeCatalogProjection['items'][number] => ({
+    chargeItemId: command.draft.chargeItemId,
+    chargeItemVersionId: command.draft.chargeItemVersionId,
+    versionNo: command.draft.versionNo,
+    internalCode: command.draft.internalCode,
+    formalName: command.draft.formalName,
+    serviceDefinition,
+    billingUnitCode: command.draft.billingUnitCode,
+    chargingMethodCode: command.draft.chargingMethodCode,
+    businessStatus: 'ACTIVE',
+    businessValidFrom: command.draft.businessValidFrom,
+    businessValidTo: command.draft.businessValidTo,
+    recordedFrom: command.draft.recordedFrom,
+    contentHash: command.draft.contentHash.toString('hex'),
+  });
+  const measure = (items: ChargeCatalogProjection['items']): number =>
+    buildCanonicalSnapshotArtifact({
+      aggregateType: 'CHARGE_CATALOG',
+      governanceObjectId: command.governanceObjectId,
+      releaseId: command.releaseId,
+      releaseNo: command.releaseNo,
+      releaseKind: 'NORMAL',
+      businessValidFrom: command.draft.businessValidFrom,
+      businessValidTo: command.draft.businessValidTo,
+      projectionType: CHARGE_CATALOG_PROJECTION_TYPE,
+      projectionSchemaVersion: CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
+      projectionSchemaDigest: command.schemaDigest,
+      payload: { catalogCode: 'CAPACITY-BOUNDARY', items },
+    }).byteLength;
+  const oneMinimum = measure([makeItem('x')]);
+  const twoMinimum = measure([makeItem('x'), makeItem('x')]);
+  const minimumItemIncrement = twoMinimum - oneMinimum;
+  let itemCount = Math.max(
+    1,
+    Math.ceil(
+      (command.targetByteLength - (oneMinimum - minimumItemIncrement)) /
+        (minimumItemIncrement + 1_999),
+    ),
+  );
+  const minimumSize = (count: number) =>
+    oneMinimum + (count - 1) * minimumItemIncrement;
+  while (minimumSize(itemCount) > command.targetByteLength) itemCount -= 1;
+  while (minimumSize(itemCount) + itemCount * 1_999 < command.targetByteLength) {
+    itemCount += 1;
+  }
+  let remainingPadding = command.targetByteLength - minimumSize(itemCount);
+  const items = Array.from({ length: itemCount }, () => {
+    const padding = Math.min(1_999, remainingPadding);
+    remainingPadding -= padding;
+    return makeItem('x'.repeat(1 + padding));
+  });
+  if (remainingPadding !== 0 || measure(items) !== command.targetByteLength) {
+    throw new Error('CAPACITY_VECTOR_EXACT_LENGTH_FAILED');
+  }
+  return { catalogCode: 'CAPACITY-BOUNDARY', items };
+}
+
+async function approveDraft(
+  workflowApplication: WorkflowApplication,
+  command: {
+    readonly suffix: string;
+    readonly governanceObjectId: string;
+    readonly entityType: GovernedEntityType;
+    readonly stableEntityId: string;
+    readonly entityVersionId: string;
+    readonly contentHash: Buffer;
+    readonly riskClassification: RiskClassification;
+    readonly changeKind: ChangeKind;
+    readonly changeReason: string;
+    readonly frozenEvidence: Readonly<Record<string, unknown>>;
+    readonly submittedAt: string;
+    readonly reviewedAt: string;
+    readonly approvedAt: string;
+  },
+): Promise<RegisteredPublication> {
+  const submitted = await workflowApplication.submit(
+    requestContext(foundation.actorId, `${command.suffix}-submit`, command.submittedAt),
+    {
+      governanceObjectId: command.governanceObjectId,
+      entityType: command.entityType,
+      stableEntityId: command.stableEntityId,
+      entityVersionId: command.entityVersionId,
+      changeKind: command.changeKind,
+      riskClassification: command.riskClassification,
+      submittedContentDigest: command.contentHash.toString('hex'),
+      changeReason: command.changeReason,
+      campusId: null,
+      frozenEvidence: command.frozenEvidence,
+    },
+  );
+  await workflowApplication.act(
+    requestContext(foundation.reviewerId, `${command.suffix}-review`, command.reviewedAt),
+    {
+      changeRequestId: submitted.changeRequestId,
+      stageType: 'PROFESSIONAL_REVIEW',
+      actionResult: 'APPROVED',
+      reason: '合成专业复核通过',
+      seenContentDigest: command.contentHash.toString('hex'),
+      campusId: null,
+    },
+  );
+  const approved = await workflowApplication.act(
+    requestContext(foundation.approverId, `${command.suffix}-approve`, command.approvedAt),
+    {
+      changeRequestId: submitted.changeRequestId,
+      stageType: 'OWNER_FINAL_APPROVAL',
+      actionResult: 'APPROVED',
+      reason: '合成Owner终审通过',
+      seenContentDigest: command.contentHash.toString('hex'),
+      campusId: null,
+    },
+  );
+  if (!approved.publication) throw new Error('APPROVED_PUBLICATION_MISSING');
+  return approved.publication;
+}
 
 async function seedFoundation(database: DatabaseHandle): Promise<FoundationIds> {
   const actor = await database.database
     .insertInto('platform.security_principal')
     .values({ principal_code: 'poc-governance-owner', principal_kind: 'PERSON' })
+    .returning('security_principal_id')
+    .executeTakeFirstOrThrow();
+  const reviewer = await database.database
+    .insertInto('platform.security_principal')
+    .values({ principal_code: 'poc-professional-reviewer', principal_kind: 'PERSON' })
+    .returning('security_principal_id')
+    .executeTakeFirstOrThrow();
+  const approver = await database.database
+    .insertInto('platform.security_principal')
+    .values({ principal_code: 'poc-governance-approver', principal_kind: 'PERSON' })
     .returning('security_principal_id')
     .executeTakeFirstOrThrow();
   const service = await database.database
@@ -700,7 +1264,18 @@ async function seedFoundation(database: DatabaseHandle): Promise<FoundationIds> 
       {
         governance_object_id: chargeObject.governance_object_id,
         security_principal_id: actor.security_principal_id,
-        permission_code: 'CHARGE_CATALOG_PUBLISH',
+        permission_code: 'CHARGE_CATALOG_DRAFT_WRITE',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: chargeObject.governance_object_id,
+        security_principal_id: actor.security_principal_id,
+        permission_code: 'CHARGE_CATALOG_SUBMIT',
         grant_effect: 'ALLOW',
         valid_from: '2026-08-08T00:00:00',
         valid_to: null,
@@ -711,7 +1286,73 @@ async function seedFoundation(database: DatabaseHandle): Promise<FoundationIds> 
       {
         governance_object_id: priceObject.governance_object_id,
         security_principal_id: actor.security_principal_id,
-        permission_code: 'PRICE_LIST_PUBLISH',
+        permission_code: 'PRICE_LIST_DRAFT_WRITE',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: priceObject.governance_object_id,
+        security_principal_id: actor.security_principal_id,
+        permission_code: 'PRICE_LIST_DRAFT_READ',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: priceObject.governance_object_id,
+        security_principal_id: actor.security_principal_id,
+        permission_code: 'PRICE_LIST_SUBMIT',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: chargeObject.governance_object_id,
+        security_principal_id: reviewer.security_principal_id,
+        permission_code: 'CHARGE_CATALOG_REVIEW',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: priceObject.governance_object_id,
+        security_principal_id: reviewer.security_principal_id,
+        permission_code: 'PRICE_LIST_REVIEW',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: chargeObject.governance_object_id,
+        security_principal_id: approver.security_principal_id,
+        permission_code: 'CHARGE_CATALOG_APPROVE',
+        grant_effect: 'ALLOW',
+        valid_from: '2026-08-08T00:00:00',
+        valid_to: null,
+        grant_sequence: '1',
+        granted_by: actor.security_principal_id,
+        reason: 'Phase 01合成授权',
+      },
+      {
+        governance_object_id: priceObject.governance_object_id,
+        security_principal_id: approver.security_principal_id,
+        permission_code: 'PRICE_LIST_APPROVE',
         grant_effect: 'ALLOW',
         valid_from: '2026-08-08T00:00:00',
         valid_to: null,
@@ -745,6 +1386,8 @@ async function seedFoundation(database: DatabaseHandle): Promise<FoundationIds> 
     .execute();
   return {
     actorId: actor.security_principal_id,
+    reviewerId: reviewer.security_principal_id,
+    approverId: approver.security_principal_id,
     servicePrincipalId: service.security_principal_id,
     incompatibleServicePrincipalId: incompatibleService.security_principal_id,
     campusId: campus.campus_id,

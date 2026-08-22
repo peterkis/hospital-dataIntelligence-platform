@@ -15,7 +15,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
 import pg from 'pg';
 
-process.env.TZ = 'Asia/Shanghai';
+process.env['TZ'] = 'Asia/Shanghai';
 
 const API_BASE_URL = requireEnvironment('GOVERNANCE_API_BASE_URL').replace(/\/$/u, '');
 const KEYCLOAK_ISSUER_URL = requireEnvironment('KEYCLOAK_ISSUER_URL').replace(/\/$/u, '');
@@ -35,7 +35,7 @@ const PRICE_OBJECT_ID = '60000000-0000-7000-8000-000000000002';
 const CAMPUS_ID = '50000000-0000-7000-8000-000000000001';
 const CONSUMER_A_PRINCIPAL_ID = '40000000-0000-7000-8000-000000000002';
 const CONSUMER_B_PRINCIPAL_ID = '40000000-0000-7000-8000-000000000003';
-const PRICE_LIST_CODE = process.env.PHASE01_PRICE_LIST_CODE ?? 'HOSPITAL-DEFAULT-PRICE';
+const PRICE_LIST_CODE = process.env['PHASE01_PRICE_LIST_CODE'] ?? 'HOSPITAL-DEFAULT-PRICE';
 const CONSUMER_MAIN = resolve('apps/sim-consumer/dist/main.js');
 const OPENAPI_PATH = resolve('contracts/openapi/phase-01.openapi.json');
 const runId = randomUUID();
@@ -383,6 +383,7 @@ try {
       checkpointsClosed: true,
     },
     databaseVerification,
+    governanceObjectIds: [CHARGE_OBJECT_ID, PRICE_OBJECT_ID],
     openapiSha256: sha256(await readFile(OPENAPI_PATH)),
   };
 } catch (error) {
@@ -422,7 +423,20 @@ function chargeDraftBody(internalCode: string) {
   };
 }
 
-async function establishPersonSession(identity: { readonly username: string; readonly password: string }) {
+interface PersonSession {
+  readonly principalId: string;
+  readonly principalKind: 'PERSON';
+  readonly csrfToken: string;
+}
+
+interface PersonIdentity {
+  readonly cookieHeader: string;
+  readonly session: PersonSession;
+}
+
+async function establishPersonSession(
+  identity: { readonly username: string; readonly password: string },
+): Promise<PersonIdentity> {
   const login = await fetch(`${API_BASE_URL}/auth/login?returnTo=%2Fadmin%2F`, {
     redirect: 'manual',
   });
@@ -476,18 +490,35 @@ async function establishPersonSession(identity: { readonly username: string; rea
     .find((candidate) => candidate.startsWith('__Host-hdi-session='));
   assert.ok(sessionCookie, 'Opaque governance session cookie was not issued.');
   const opaqueCookie = sessionCookie.split(';', 1)[0];
+  assert.ok(opaqueCookie, 'Opaque governance session cookie value was empty.');
   const sessionResponse = await fetch(`${API_BASE_URL}/auth/session`, {
     headers: { cookie: opaqueCookie },
   });
   assert.equal(sessionResponse.status, 200);
-  const session = await sessionResponse.json();
-  assert.equal(session.principalKind, 'PERSON');
-  assert.equal(typeof session.csrfToken, 'string');
-  return { cookieHeader: opaqueCookie, session };
+  const sessionCandidate: unknown = await sessionResponse.json();
+  if (
+    !isRecord(sessionCandidate) ||
+    typeof sessionCandidate['principalId'] !== 'string' ||
+    sessionCandidate['principalKind'] !== 'PERSON' ||
+    typeof sessionCandidate['csrfToken'] !== 'string'
+  ) {
+    throw new Error('GOVERNANCE_PERSON_SESSION_INVALID');
+  }
+  return {
+    cookieHeader: opaqueCookie,
+    session: {
+      principalId: sessionCandidate['principalId'],
+      principalKind: sessionCandidate['principalKind'],
+      csrfToken: sessionCandidate['csrfToken'],
+    },
+  };
 }
 
 function createCookieFetch(cookie: string): typeof fetch {
-  return async (input: RequestInfo | URL, init?: RequestInit) => {
+  return async (
+    input: Parameters<typeof fetch>[0],
+    init?: Parameters<typeof fetch>[1],
+  ) => {
     const request = new Request(input, init);
     const headers = new Headers(request.headers);
     headers.set('cookie', cookie);
@@ -585,9 +616,11 @@ async function obtainServiceToken(clientId: string, clientSecret: string): Promi
     body: new URLSearchParams({ grant_type: 'client_credentials' }),
   });
   assert.equal(response.status, 200);
-  const tokenSet = await response.json();
-  assert.equal(typeof tokenSet.access_token, 'string');
-  return tokenSet.access_token;
+  const tokenSet: unknown = await response.json();
+  if (!isRecord(tokenSet) || typeof tokenSet['access_token'] !== 'string') {
+    throw new Error('KEYCLOAK_SERVICE_ACCESS_TOKEN_MISSING');
+  }
+  return tokenSet['access_token'];
 }
 
 async function verifyDatabaseClosure(options: {
@@ -818,6 +851,7 @@ function summarizeConsumerState(state: any, eventId: string) {
 function mergeCookieJar(jar: Map<string, string>, setCookies: readonly string[]): void {
   for (const setCookie of setCookies) {
     const pair = setCookie.split(';', 1)[0];
+    if (!pair) continue;
     const separator = pair.indexOf('=');
     if (separator <= 0) continue;
     jar.set(pair.slice(0, separator), pair.slice(separator + 1));
@@ -889,7 +923,7 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function nowInAsiaShanghai() {
+function nowInAsiaShanghai(): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Shanghai',
     year: 'numeric',
@@ -900,7 +934,8 @@ function nowInAsiaShanghai() {
     second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(new Date());
-  const part = (type) => parts.find((candidate) => candidate.type === type)?.value;
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((candidate) => candidate.type === type)?.value;
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}`;
 }
 
@@ -909,8 +944,8 @@ function isMissingFile(error: unknown): error is NodeJS.ErrnoException {
 }
 
 function requireRealmUser(realm: any, username: string): { readonly username: string; readonly password: string } {
-  const user = realm.users?.find((candidate) => candidate.username === username);
-  const password = user?.credentials?.find((candidate) => candidate.type === 'password')?.value;
+  const user = realm.users?.find((candidate: any) => candidate.username === username);
+  const password = user?.credentials?.find((candidate: any) => candidate.type === 'password')?.value;
   if (typeof user?.username !== 'string' || typeof password !== 'string') {
     throw new Error(`KEYCLOAK_REALM_USER_CREDENTIAL_MISSING:${username}`);
   }
@@ -918,7 +953,7 @@ function requireRealmUser(realm: any, username: string): { readonly username: st
 }
 
 function requireRealmClientSecret(realm: any, clientId: string): string {
-  const secret = realm.clients?.find((candidate) => candidate.clientId === clientId)?.secret;
+  const secret = realm.clients?.find((candidate: any) => candidate.clientId === clientId)?.secret;
   if (typeof secret !== 'string' || secret.length === 0) {
     throw new Error(`KEYCLOAK_REALM_CLIENT_SECRET_MISSING:${clientId}`);
   }
@@ -929,6 +964,10 @@ function parseNotificationTargets(value: string): readonly any[] {
   const targets = JSON.parse(value);
   if (!Array.isArray(targets)) throw new Error('NOTIFICATION_TARGETS_INVALID');
   return targets;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function requireNotificationAuthorization(servicePrincipalId: string): string {

@@ -5,7 +5,7 @@ import {
 } from '@fastify/type-provider-typebox';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Static } from 'typebox';
-import type { RequestContext, TransactionRunner } from '../transaction/transaction-runner.js';
+import type { TransactionRunner } from '../transaction/transaction-runner.js';
 import {
   LOCAL_DATE_TIME_JSON_PATTERN,
   parseLocalDateTime,
@@ -14,12 +14,13 @@ import type { ScopedModules } from '../../composition/create-scoped-modules.js';
 import type { Phase01VerticalSlice } from '../../composition/phase-01-vertical-slice.js';
 import type { ObjectPermissionCode } from '../../modules/authorization/index.js';
 import type { ImportJobView } from '../../modules/batch-import/index.js';
-import type { ChangeRequestView, WorkflowStageType } from '../../modules/workflow/index.js';
+import type {
+  ChangeRequestView,
+  WorkflowApplication,
+} from '../../modules/workflow/index.js';
 import {
   CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
   CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
-  CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION_V2,
-  CHARGE_CATALOG_PROJECTION_TYPE,
 } from '../../modules/charge-catalog/index.js';
 import {
   PRICE_LIST_LEGACY_PROJECTION_SCHEMA_ID,
@@ -28,6 +29,7 @@ import {
   PRICE_LIST_PROJECTION_SCHEMA_VERSION,
   PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2,
   PRICE_LIST_PROJECTION_TYPE,
+  type PriceEntryInput,
 } from '../../modules/price-list/index.js';
 
 const UuidSchema = Type.String({
@@ -113,7 +115,6 @@ const ChargeItemVersionResponseSchema = Type.Object(
       Type.Literal('APPROVED'),
       Type.Literal('PUBLISHED'),
     ]),
-    governanceReleaseId: Type.Union([UuidSchema, Type.Null()]),
     businessStatus: Type.Union([
       Type.Literal('PLANNED'),
       Type.Literal('ACTIVE'),
@@ -125,22 +126,6 @@ const ChargeItemVersionResponseSchema = Type.Object(
     recordedTo: Type.Union([LocalDateTimeSchema, Type.Null()]),
     releaseId: Type.Union([UuidSchema, Type.Null()]),
     contentDigest: DigestHexSchema,
-  },
-  { additionalProperties: false },
-);
-
-const PublishChargeItemBodySchema = Type.Object(
-  {
-    governanceObjectId: UuidSchema,
-    catalogCode: Type.String({ minLength: 1, maxLength: 128 }),
-    internalCode: Type.String({ minLength: 1, maxLength: 64 }),
-    formalName: Type.String({ minLength: 1, maxLength: 256 }),
-    serviceDefinition: Type.String({ minLength: 1, maxLength: 2000 }),
-    billingUnitCode: Type.String({ minLength: 1, maxLength: 64 }),
-    chargingMethodCode: Type.String({ minLength: 1, maxLength: 32 }),
-    businessValidFrom: LocalDateTimeSchema,
-    businessValidTo: Type.Union([LocalDateTimeSchema, Type.Null()]),
-    changeReason: Type.String({ minLength: 1, maxLength: 1000 }),
   },
   { additionalProperties: false },
 );
@@ -168,20 +153,6 @@ const PriceEntryBodySchema = Type.Object(
       Type.String({ minLength: 1, maxLength: 500 }),
       Type.Null(),
     ]),
-  },
-  { additionalProperties: false },
-);
-
-const PublishPriceListBodySchema = Type.Object(
-  {
-    governanceObjectId: UuidSchema,
-    priceListCode: Type.String({ minLength: 1, maxLength: 64 }),
-    displayName: Type.String({ minLength: 1, maxLength: 256 }),
-    currencyCode: Type.String({ pattern: '^[A-Z]{3}$' }),
-    businessValidFrom: LocalDateTimeSchema,
-    businessValidTo: Type.Union([LocalDateTimeSchema, Type.Null()]),
-    changeReason: Type.String({ minLength: 1, maxLength: 1000 }),
-    entries: Type.Array(PriceEntryBodySchema, { minItems: 1 }),
   },
   { additionalProperties: false },
 );
@@ -671,6 +642,7 @@ export interface ResolvedPrincipal {
 export interface Phase01HttpDependencies {
   readonly verticalSlice: Phase01VerticalSlice;
   readonly transactionRunner: TransactionRunner<ScopedModules>;
+  readonly workflowApplication: WorkflowApplication;
   resolvePrincipal(request: FastifyRequest): Promise<ResolvedPrincipal>;
   now(): string;
 }
@@ -796,7 +768,7 @@ export async function registerPhase01Routes(
         ...request.params,
         governanceObjectId: request.query.governanceObjectId,
       });
-      return reply.code(204).send();
+      return reply.code(204).send(null);
     },
   );
 
@@ -923,33 +895,7 @@ export async function registerPhase01Routes(
         chargeItemId: request.params.chargeItemId,
         ...request.query,
       });
-      return { differences };
-    },
-  );
-
-  typed.post(
-    '/v1/phase-01/charge-item-publications',
-    {
-      schema: {
-        operationId: 'publishPhase01ChargeItem',
-        summary: '已停用：收费项目必须通过版本化审批发布',
-        deprecated: true,
-        security: [{ browserSession: [] }],
-        headers: BrowserMutationHeadersSchema,
-        body: PublishChargeItemBodySchema,
-        response: {
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          409: ErrorResponseSchema,
-          503: ErrorResponseSchema,
-        },
-      },
-    },
-    async (request) => {
-      const runtime = requireRuntime(dependencies);
-      await createRequestContext(request, runtime, 'PERSON');
-      throw new Error('CHARGE_ITEM_APPROVAL_WORKFLOW_REQUIRED');
+      return { differences: [...differences] };
     },
   );
 
@@ -1068,7 +1014,7 @@ export async function registerPhase01Routes(
         ...request.params,
         governanceObjectId: request.query.governanceObjectId,
       });
-      return reply.code(204).send();
+      return reply.code(204).send(null);
     },
   );
 
@@ -1131,7 +1077,7 @@ export async function registerPhase01Routes(
     async (request) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'PERSON');
-      return runtime.transactionRunner.run(context, async (modules) => {
+      const result = await runtime.transactionRunner.run(context, async (modules) => {
         await modules.authorization.requireObjectPermission({
           governanceObjectId: request.query.governanceObjectId,
           permissionCode: 'AUDIT_READ',
@@ -1296,7 +1242,7 @@ export async function registerPhase01Routes(
           evidence: request.body.evidence,
         });
       });
-      return reply.code(204).send();
+      return reply.code(204).send(null);
     },
   );
 
@@ -1347,7 +1293,7 @@ export async function registerPhase01Routes(
             : false,
         });
       });
-      return reply.code(204).send();
+      return reply.code(204).send(null);
     },
   );
 
@@ -1380,7 +1326,7 @@ export async function registerPhase01Routes(
         const created = await modules.batchImport.createJob(request.body);
         const scopes = request.body.importType === 'PRICE_ENTRY'
           ? new Set(created.rows.map((row) =>
-              row.payload.scopeLevel === 'CAMPUS' ? payloadNullableText(row.payload, 'campusId') : null,
+              row.payload['scopeLevel'] === 'CAMPUS' ? payloadNullableText(row.payload, 'campusId') : null,
             ))
           : new Set<string | null>([null]);
         for (const campusId of scopes) {
@@ -1468,7 +1414,7 @@ export async function registerPhase01Routes(
         if (!job) throw new Error('IMPORT_JOB_NOT_FOUND');
         const row = await modules.batchImport.lockNextPendingRow(job.importJobId);
         if (!row) return job;
-        const campusId = job.importType === 'PRICE_ENTRY' && row.payload.scopeLevel === 'CAMPUS'
+        const campusId = job.importType === 'PRICE_ENTRY' && row.payload['scopeLevel'] === 'CAMPUS'
           ? payloadText(row.payload, 'campusId')
           : null;
         await modules.authorization.requireObjectPermission({
@@ -1659,43 +1605,7 @@ export async function registerPhase01Routes(
     async (request, reply) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'PERSON');
-      const changeRequest = await runtime.transactionRunner.run(context, async (modules) => {
-        const actualHash = await loadGovernedEntityHash(modules, request.body);
-        if (actualHash.toString('hex') !== request.body.submittedContentDigest) {
-          throw new Error('APPROVAL_CONTENT_DRIFT');
-        }
-        validateChangeRequestClassification(request.body, actualHash);
-        const permissionCode: ObjectPermissionCode =
-          request.body.entityType === 'CHARGE_ITEM_VERSION'
-            ? 'CHARGE_CATALOG_SUBMIT'
-            : 'PRICE_LIST_SUBMIT';
-        await modules.authorization.requireObjectPermission({
-          governanceObjectId: request.body.governanceObjectId,
-          permissionCode,
-          campusId: request.body.campusId,
-        });
-        const submitted = await modules.workflow.submitChange({
-          ...request.body,
-          governedEntityType: request.body.entityType,
-          submittedContentHash: actualHash,
-          frozenEvidence: {
-            ...request.body.frozenEvidence,
-            entityType: request.body.entityType,
-            campusId: request.body.campusId,
-          },
-        });
-        await modules.audit.append({
-          auditStreamId: request.body.governanceObjectId,
-          governanceObjectId: request.body.governanceObjectId,
-          entityType: 'CHANGE_REQUEST',
-          stableEntityId: submitted.changeRequestId,
-          entityVersionId: request.body.entityVersionId,
-          action: 'CHANGE_SUBMITTED',
-          afterHash: actualHash,
-          authorityScope: 'VERSIONED_APPROVAL',
-        });
-        return submitted;
-      });
+      const changeRequest = await runtime.workflowApplication.submit(context, request.body);
       return reply.code(201).send(toChangeRequestResponse(changeRequest));
     },
   );
@@ -1733,30 +1643,14 @@ export async function registerPhase01Routes(
     async (request) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'PERSON');
-      return runtime.transactionRunner.run(context, async (modules) => {
-        const current = await modules.workflow.getChangeRequest(request.params.changeRequestId);
-        if (!current) throw new Error('CHANGE_REQUEST_NOT_FOUND');
-        const expectedPermission = !['APPROVED', 'REJECTED', 'WITHDRAWN'].includes(current.requestStatus)
-          ? (await modules.workflow.getExpectedStage(current.changeRequestId)).permissionCode as ObjectPermissionCode
-          : null;
-        const stageDecision = expectedPermission
-          ? await modules.authorization.evaluateObjectPermission({
-              governanceObjectId: current.governanceObjectId,
-              permissionCode: expectedPermission,
-              campusId: current.campusId,
-            })
-          : null;
-        if (!stageDecision?.allowed) {
-          await modules.authorization.requireObjectPermission({
-            governanceObjectId: current.governanceObjectId,
-            permissionCode: 'AUDIT_READ',
-          });
-        }
-        return {
-          request: toChangeRequestResponse(current),
-          actions: await modules.workflow.listActions(request.params.changeRequestId),
-        };
-      });
+      const result = await runtime.workflowApplication.get(
+        context,
+        request.params.changeRequestId,
+      );
+      return {
+        request: toChangeRequestResponse(result.request),
+        actions: [...result.actions],
+      };
     },
   );
 
@@ -1784,57 +1678,11 @@ export async function registerPhase01Routes(
     async (request) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'PERSON');
-      return runtime.transactionRunner.run(context, async (modules) => {
-        const expected = await modules.workflow.getExpectedStage(request.params.changeRequestId);
-        if (expected.stageType !== request.body.stageType) {
-          throw new Error('APPROVAL_STAGE_ORDER_CONFLICT');
-        }
-        if (expected.campusScopeRequired && !request.body.campusId) {
-          throw new Error('APPROVAL_CAMPUS_CONFIRMATION_REQUIRED');
-        }
-        await modules.authorization.requireObjectPermission({
-          governanceObjectId: expected.changeRequest.governanceObjectId,
-          permissionCode: expected.permissionCode as ObjectPermissionCode,
-          campusId: expected.campusScopeRequired ? request.body.campusId : null,
-        });
-        const entityType = expected.changeRequest.frozenEvidence.entityType;
-        if (entityType !== 'CHARGE_ITEM_VERSION' && entityType !== 'PRICE_LIST_RELEASE') {
-          throw new Error('APPROVAL_ENTITY_TYPE_EVIDENCE_MISSING');
-        }
-        const actualHash = await loadGovernedEntityHash(modules, {
-          governanceObjectId: expected.changeRequest.governanceObjectId,
-          entityType,
-          stableEntityId: expected.changeRequest.stableEntityId,
-          entityVersionId: expected.changeRequest.entityVersionId,
-        });
-        if (
-          actualHash.toString('hex') !== request.body.seenContentDigest ||
-          !actualHash.equals(expected.changeRequest.submittedContentHash)
-        ) {
-          throw new Error('APPROVAL_CONTENT_DRIFT');
-        }
-        const decided = await modules.workflow.actOnChange({
-          changeRequestId: request.params.changeRequestId,
-          stageType: request.body.stageType as WorkflowStageType,
-          actionResult: request.body.actionResult,
-          reason: request.body.reason,
-          seenContentHash: actualHash,
-        });
-        await modules.audit.append({
-          auditStreamId: decided.governanceObjectId,
-          governanceObjectId: decided.governanceObjectId,
-          entityType: 'CHANGE_REQUEST',
-          stableEntityId: decided.changeRequestId,
-          entityVersionId: decided.entityVersionId,
-          action: 'APPROVAL_ACTIONED',
-          afterHash: actualHash,
-          authorityScope: request.body.stageType,
-        });
-        if (decided.requestStatus === 'APPROVED') {
-          await publishApprovedDraft(modules, context, decided, entityType);
-        }
-        return toChangeRequestResponse(decided);
+      const result = await runtime.workflowApplication.act(context, {
+        changeRequestId: request.params.changeRequestId,
+        ...request.body,
       });
+      return toChangeRequestResponse(result.request);
     },
   );
 
@@ -1862,50 +1710,11 @@ export async function registerPhase01Routes(
     async (request) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'PERSON');
-      const result = await runtime.transactionRunner.run(context, async (modules) => {
-        const withdrawn = await modules.workflow.withdrawChange({
-          changeRequestId: request.params.changeRequestId,
-          reason: request.body.reason,
-        });
-        await modules.audit.append({
-          auditStreamId: withdrawn.governanceObjectId,
-          governanceObjectId: withdrawn.governanceObjectId,
-          entityType: 'CHANGE_REQUEST',
-          stableEntityId: withdrawn.changeRequestId,
-          entityVersionId: withdrawn.entityVersionId,
-          action: 'CHANGE_WITHDRAWN',
-          afterHash: withdrawn.submittedContentHash,
-          authorityScope: 'VERSIONED_APPROVAL',
-        });
-        return withdrawn;
+      const result = await runtime.workflowApplication.withdraw(context, {
+        changeRequestId: request.params.changeRequestId,
+        reason: request.body.reason,
       });
       return toChangeRequestResponse(result);
-    },
-  );
-
-  typed.post(
-    '/v1/phase-01/price-list-publications',
-    {
-      schema: {
-        operationId: 'publishPhase01PriceList',
-        summary: '已停用：价表必须通过高风险版本化审批发布',
-        deprecated: true,
-        security: [{ browserSession: [] }],
-        headers: BrowserMutationHeadersSchema,
-        body: PublishPriceListBodySchema,
-        response: {
-          400: ErrorResponseSchema,
-          401: ErrorResponseSchema,
-          403: ErrorResponseSchema,
-          409: ErrorResponseSchema,
-          503: ErrorResponseSchema,
-        },
-      },
-    },
-    async (request) => {
-      const runtime = requireRuntime(dependencies);
-      await createRequestContext(request, runtime, 'PERSON');
-      throw new Error('PRICE_LIST_APPROVAL_WORKFLOW_REQUIRED');
     },
   );
 
@@ -2207,8 +2016,6 @@ function headerValue(request: FastifyRequest, name: string): string | undefined 
   return Array.isArray(value) ? value[0] : value;
 }
 
-export type PublishChargeItemBody = Static<typeof PublishChargeItemBodySchema>;
-export type PublishPriceListBody = Static<typeof PublishPriceListBodySchema>;
 export type ResolvePriceBody = Static<typeof ResolvePriceBodySchema>;
 
 function toChargeItemVersionResponse(version: Awaited<ReturnType<Phase01VerticalSlice['getChargeItemVersion']>>) {
@@ -2303,7 +2110,7 @@ function chargeItemContentFromImport(payload: Readonly<Record<string, unknown>>)
   };
 }
 
-function priceEntryFromImport(payload: Readonly<Record<string, unknown>>) {
+function priceEntryFromImport(payload: Readonly<Record<string, unknown>>): PriceEntryInput {
   const scopeLevel = payloadText(payload, 'scopeLevel');
   const encounterMode = payloadText(payload, 'encounterMode');
   const encounterType = payloadNullableText(payload, 'encounterType');
@@ -2349,320 +2156,4 @@ function isRetryableImportError(error: Error): boolean {
     'PRICE_LIST_CURRENT_RELEASE_CLOSE_CONFLICT',
     'IMPORT_ROW_APPLY_FAILED',
   ].includes(stableErrorCode(error));
-}
-
-async function loadGovernedEntityHash(
-  modules: ScopedModules,
-  command: {
-    readonly governanceObjectId: string;
-    readonly entityType: 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE';
-    readonly stableEntityId: string;
-    readonly entityVersionId: string;
-  },
-): Promise<Buffer> {
-  if (command.entityType === 'CHARGE_ITEM_VERSION') {
-    const version = await modules.chargeCatalog.getVersion({
-      governanceObjectId: command.governanceObjectId,
-      chargeItemId: command.stableEntityId,
-      chargeItemVersionId: command.entityVersionId,
-    });
-    return version.contentHash;
-  }
-  const release = await modules.priceList.getRelease({
-    governanceObjectId: command.governanceObjectId,
-    priceListId: command.stableEntityId,
-    priceListReleaseId: command.entityVersionId,
-  });
-  if (!release) throw new Error('PRICE_LIST_RELEASE_NOT_FOUND');
-  return release.contentHash;
-}
-
-function validateChangeRequestClassification(
-  command: Static<typeof ChangeRequestBodySchema>,
-  actualHash: Buffer,
-): void {
-  if (command.changeKind === 'PROJECTION_SCHEMA_UPGRADE') {
-    if (command.riskClassification !== 'PURE_SCHEMA_UPGRADE') {
-      throw new Error('SCHEMA_UPGRADE_RISK_CLASSIFICATION_REQUIRED');
-    }
-    const evidence = command.frozenEvidence;
-    const requiredDigests = [
-      'oldSchemaDigest',
-      'newSchemaDigest',
-      'openApiDiffDigest',
-      'memberSetDigest',
-      'compatibilityMatrixDigest',
-      'simulationEvidenceDigest',
-    ];
-    for (const key of requiredDigests) {
-      if (typeof evidence[key] !== 'string' || !/^[0-9a-f]{64}$/u.test(evidence[key])) {
-        throw new Error('SCHEMA_UPGRADE_EVIDENCE_INCOMPLETE');
-      }
-    }
-    if (evidence.domainContentDigest !== actualHash.toString('hex')) {
-      throw new Error('SCHEMA_UPGRADE_DOMAIN_EQUIVALENCE_MISMATCH');
-    }
-    if (evidence.oldSchemaVersion !== '1' || evidence.newSchemaVersion !== '2') {
-      throw new Error('SCHEMA_UPGRADE_CONTRACT_IDENTITY_INVALID');
-    }
-    if (
-      evidence.domainChanged !== false ||
-      evidence.membersChanged !== false ||
-      evidence.rulesChanged !== false ||
-      evidence.lifecycleChanged !== false
-    ) {
-      throw new Error('SCHEMA_UPGRADE_SCOPE_MISMATCH');
-    }
-    return;
-  }
-  if (command.riskClassification === 'PURE_SCHEMA_UPGRADE') {
-    throw new Error('SCHEMA_UPGRADE_SCOPE_MISMATCH');
-  }
-  if (command.changeKind === 'RECOVERY_PUBLICATION') {
-    if (
-      command.entityType !== 'PRICE_LIST_RELEASE' ||
-      command.riskClassification !== 'RECOVERY'
-    ) {
-      throw new Error('RECOVERY_PUBLICATION_CLASSIFICATION_REQUIRED');
-    }
-    return;
-  }
-  if (
-    command.entityType === 'PRICE_LIST_RELEASE' &&
-    command.riskClassification !== 'HIGH'
-  ) {
-    throw new Error('PRICE_LIST_HIGH_RISK_CLASSIFICATION_REQUIRED');
-  }
-  if (
-    command.changeKind === 'CAMPUS_DIFFERENCE_PRICE' &&
-    (!command.campusId || command.entityType !== 'PRICE_LIST_RELEASE')
-  ) {
-    throw new Error('CAMPUS_PRICE_SCOPE_REQUIRED');
-  }
-}
-
-async function publishApprovedDraft(
-  modules: ScopedModules,
-  context: RequestContext,
-  request: ChangeRequestView,
-  entityType: 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE',
-): Promise<void> {
-  if (request.changeKind === 'PROJECTION_SCHEMA_UPGRADE') {
-    const catalogCode =
-      typeof request.frozenEvidence.catalogCode === 'string'
-        ? request.frozenEvidence.catalogCode
-        : 'PHASE01-CHARGE-CATALOG';
-    if (entityType === 'CHARGE_ITEM_VERSION') {
-      const prepared = await modules.chargeCatalog.prepareVersionProjection({
-        governanceObjectId: request.governanceObjectId,
-        catalogCode,
-        chargeItemId: request.stableEntityId,
-        chargeItemVersionId: request.entityVersionId,
-      });
-      const item = prepared.projection.items[0];
-      if (!item) throw new Error('CHARGE_ITEM_PROJECTION_EMPTY');
-      await modules.releaseDistribution.registerPublication({
-        governanceObjectId: request.governanceObjectId,
-        aggregateType: 'CHARGE_CATALOG',
-        releaseKind: 'CONTRACT_SCHEMA_UPGRADE',
-        businessValidFrom: item.businessValidFrom,
-        businessValidTo: item.businessValidTo,
-        recordedFrom: context.occurredAt,
-        submittedBy: request.submittedBy,
-        approvedBy: context.actorPrincipalId,
-        approvedAt: context.occurredAt,
-        changeReason: request.changeReason,
-        projection: {
-          projectionType: CHARGE_CATALOG_PROJECTION_TYPE,
-          schemaVersion: CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION_V2,
-          payload: { ...prepared.projection, contractRevision: '2' as const },
-          itemCount: prepared.projection.items.length,
-        },
-        member: {
-          kind: 'CHARGE_ITEM',
-          stableId: prepared.chargeItemId,
-          versionId: prepared.chargeItemVersionId,
-          snapshotName: item.formalName,
-          memberHash: prepared.contentHash,
-        },
-      });
-      await modules.audit.append({
-        auditStreamId: request.governanceObjectId,
-        governanceObjectId: request.governanceObjectId,
-        entityType: 'CHANGE_REQUEST',
-        stableEntityId: request.changeRequestId,
-        entityVersionId: request.entityVersionId,
-        action: 'SCHEMA_UPGRADE_PUBLISHED',
-        afterHash: prepared.contentHash,
-        authorityScope: 'PROJECTION_CONTRACT',
-      });
-      return;
-    }
-    const prepared = await modules.priceList.prepareReleaseProjection({
-      governanceObjectId: request.governanceObjectId,
-      priceListId: request.stableEntityId,
-      priceListReleaseId: request.entityVersionId,
-    });
-    await modules.releaseDistribution.registerPublication({
-      governanceObjectId: request.governanceObjectId,
-      aggregateType: 'PRICE_LIST',
-      releaseKind: 'CONTRACT_SCHEMA_UPGRADE',
-      businessValidFrom: prepared.projection.businessValidFrom,
-      businessValidTo: prepared.projection.businessValidTo,
-      recordedFrom: context.occurredAt,
-      submittedBy: request.submittedBy,
-      approvedBy: context.actorPrincipalId,
-      approvedAt: context.occurredAt,
-      changeReason: request.changeReason,
-      projection: {
-        projectionType: PRICE_LIST_PROJECTION_TYPE,
-        schemaVersion: PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2,
-        payload: { ...prepared.projection, contractRevision: '2' as const },
-        itemCount: prepared.projection.entries.length,
-      },
-      member: {
-        kind: 'PRICE_LIST',
-        stableId: prepared.priceListId,
-        versionId: prepared.priceListReleaseId,
-        snapshotName: prepared.projection.displayName,
-        memberHash: prepared.contentHash,
-      },
-    });
-    await modules.audit.append({
-      auditStreamId: request.governanceObjectId,
-      governanceObjectId: request.governanceObjectId,
-      entityType: 'CHANGE_REQUEST',
-      stableEntityId: request.changeRequestId,
-      entityVersionId: request.entityVersionId,
-      action: 'SCHEMA_UPGRADE_PUBLISHED',
-      afterHash: prepared.contentHash,
-      authorityScope: 'PROJECTION_CONTRACT',
-    });
-    return;
-  }
-  if (entityType === 'CHARGE_ITEM_VERSION') {
-    const catalogCode =
-      typeof request.frozenEvidence.catalogCode === 'string'
-        ? request.frozenEvidence.catalogCode
-        : 'PHASE01-CHARGE-CATALOG';
-    const prepared = await modules.chargeCatalog.prepareDraftPublication({
-      governanceObjectId: request.governanceObjectId,
-      catalogCode,
-      chargeItemId: request.stableEntityId,
-      chargeItemVersionId: request.entityVersionId,
-    });
-    const item = prepared.projection.items[0];
-    if (!item) throw new Error('CHARGE_ITEM_PROJECTION_EMPTY');
-    const publication = await modules.releaseDistribution.registerPublication({
-      governanceObjectId: request.governanceObjectId,
-      aggregateType: 'CHARGE_CATALOG',
-      releaseKind: request.changeKind === 'RECOVERY_PUBLICATION' ? 'COMPENSATION' : 'NORMAL',
-      businessValidFrom: item.businessValidFrom,
-      businessValidTo: item.businessValidTo,
-      recordedFrom: context.occurredAt,
-      submittedBy: request.submittedBy,
-      approvedBy: context.actorPrincipalId,
-      approvedAt: context.occurredAt,
-      changeReason: request.changeReason,
-      projection: {
-        projectionType: CHARGE_CATALOG_PROJECTION_TYPE,
-        schemaVersion: CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
-        payload: prepared.projection,
-        itemCount: prepared.projection.items.length,
-      },
-      member: {
-        kind: 'CHARGE_ITEM',
-        stableId: prepared.chargeItemId,
-        versionId: prepared.chargeItemVersionId,
-        snapshotName: item.formalName,
-        memberHash: prepared.contentHash,
-      },
-    });
-    await modules.chargeCatalog.confirmPublication({
-      chargeItemVersionId: prepared.chargeItemVersionId,
-      releaseId: publication.releaseId,
-    });
-    await modules.audit.append({
-      auditStreamId: request.governanceObjectId,
-      governanceObjectId: request.governanceObjectId,
-      entityType: 'CHARGE_ITEM_VERSION',
-      stableEntityId: prepared.chargeItemId,
-      entityVersionId: prepared.chargeItemVersionId,
-      action: 'PUBLISHED',
-      afterHash: prepared.contentHash,
-      authorityScope: 'APPROVED_CHANGE_REQUEST',
-    });
-    return;
-  }
-
-  const prepared = await modules.priceList.prepareDraftPublication({
-    governanceObjectId: request.governanceObjectId,
-    priceListId: request.stableEntityId,
-    priceListReleaseId: request.entityVersionId,
-  });
-  const publication = await modules.releaseDistribution.registerPublication({
-    governanceObjectId: request.governanceObjectId,
-    aggregateType: 'PRICE_LIST',
-    releaseKind: request.changeKind === 'RECOVERY_PUBLICATION' ? 'COMPENSATION' : 'NORMAL',
-    businessValidFrom: prepared.projection.businessValidFrom,
-    businessValidTo: prepared.projection.businessValidTo,
-    recordedFrom: context.occurredAt,
-    submittedBy: request.submittedBy,
-    approvedBy: context.actorPrincipalId,
-    approvedAt: context.occurredAt,
-    changeReason: request.changeReason,
-    projection: {
-      projectionType: PRICE_LIST_PROJECTION_TYPE,
-      schemaVersion: PRICE_LIST_PROJECTION_SCHEMA_VERSION,
-      payload: prepared.projection,
-      itemCount: prepared.projection.entries.length,
-    },
-    member: {
-      kind: 'PRICE_LIST',
-      stableId: prepared.priceListId,
-      versionId: prepared.priceListReleaseId,
-      snapshotName: prepared.projection.displayName,
-      memberHash: prepared.contentHash,
-    },
-  });
-  await modules.priceList.confirmPublication({
-    priceListReleaseId: prepared.priceListReleaseId,
-    governanceReleaseId: publication.releaseId,
-  });
-  if (request.changeKind === 'RECOVERY_PUBLICATION') {
-    const impactCaseId = request.frozenEvidence.impactCaseId;
-    if (typeof impactCaseId !== 'string') throw new Error('RECOVERY_IMPACT_CASE_REQUIRED');
-    const source = await modules.emergencyControl.prepareRecoveryLink({
-      impactCaseId,
-    });
-    const sourceRelease = await modules.priceList.getRelease({
-      governanceObjectId: request.governanceObjectId,
-      priceListId: prepared.priceListId,
-      priceListReleaseId: source.suspendedPriceListReleaseId,
-    });
-    if (!sourceRelease?.governanceReleaseId) {
-      throw new Error('SUSPENDED_GOVERNANCE_RELEASE_MISSING');
-    }
-    await modules.releaseDistribution.linkReleaseRelationship({
-      sourceReleaseId: sourceRelease.governanceReleaseId,
-      targetReleaseId: publication.releaseId,
-      relationshipType: 'COMPENSATES',
-      reason: request.changeReason,
-    });
-    await modules.emergencyControl.confirmRecoveryPublication({
-      impactCaseId,
-      recoveryReleaseId: publication.releaseId,
-      reason: request.changeReason,
-    });
-  }
-  await modules.audit.append({
-    auditStreamId: request.governanceObjectId,
-    governanceObjectId: request.governanceObjectId,
-    entityType: 'PRICE_LIST_RELEASE',
-    stableEntityId: prepared.priceListId,
-    entityVersionId: prepared.priceListReleaseId,
-    action: 'PUBLISHED',
-    afterHash: prepared.contentHash,
-    authorityScope: 'APPROVED_CHANGE_REQUEST',
-  });
 }

@@ -2,7 +2,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { ABG_GATES, type AbgGateDefinition } from './abg-catalog.ts';
+import { ABG_GATES, type AbgGateDefinition } from './abg-catalog.js';
+import {
+  buildAuthoritativeRunPlan,
+  readFrozenInputs,
+} from './authoritative-abg-plan.js';
 
 type GateStatus = 'PASSED' | 'FAILED';
 
@@ -15,14 +19,6 @@ interface CommandSpec {
 
 interface GateCommandSpec extends CommandSpec {
   readonly gateId: string;
-}
-
-interface FrozenRunPlan {
-  readonly schemaVersion: 'phase-01.abg-run-plan.v1';
-  readonly runSequence: number;
-  readonly frozenInputs: Readonly<Record<string, string>>;
-  readonly setupCommands: readonly CommandSpec[];
-  readonly gates: readonly GateCommandSpec[];
 }
 
 interface EvidenceReference {
@@ -59,15 +55,17 @@ interface ProducerResult {
   readonly evidenceRefs: readonly EvidenceReference[];
 }
 
-process.env.TZ = 'Asia/Shanghai';
+process.env['TZ'] = 'Asia/Shanghai';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
-const planPath = resolve(requireEnvironment('ABG_RUN_PLAN'));
 const outputDirectory = resolve(requireEnvironment('EVIDENCE_OUTPUT_DIR'));
-const plan = parsePlan(JSON.parse(await readFile(planPath, 'utf8')) as unknown);
+const plan = await buildAuthoritativeRunPlan(
+  repositoryRoot,
+  parsePositiveInteger(requireEnvironment('ABG_RUN_SEQUENCE'), 'ABG_RUN_SEQUENCE_INVALID'),
+);
 const runId = randomUUID();
 const startedAt = localNow();
-const planBytes = await readFile(planPath);
+const planBytes = Buffer.from(`${JSON.stringify(plan, null, 2)}\n`, 'utf8');
 const planDigest = sha256(planBytes);
 const frozenInputsDigest = sha256(Buffer.from(canonicalJson(plan.frozenInputs), 'utf8'));
 
@@ -83,6 +81,7 @@ for (const [index, command] of plan.setupCommands.entries()) {
     ABG_RUN_ID: runId,
     ABG_RUN_SEQUENCE: String(plan.runSequence),
     ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
+    ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
   });
   setupResults.push({
     ordinal: index + 1,
@@ -93,6 +92,14 @@ for (const [index, command] of plan.setupCommands.entries()) {
   if (result.exitCode !== 0) {
     setupFailure = `SETUP_COMMAND_FAILED:${index + 1}`;
     break;
+  }
+}
+
+if (!setupFailure) {
+  try {
+    assertFrozenInputsEqual(plan.frozenInputs, await readFrozenInputs(repositoryRoot));
+  } catch (error) {
+    setupFailure = error instanceof Error ? error.message : 'FROZEN_INPUT_DRIFT_AFTER_SETUP';
   }
 }
 
@@ -118,6 +125,7 @@ for (const [gateIndex, gate] of ABG_GATES.entries()) {
     ABG_GATE_RESULT_PATH: resultPath,
     ABG_GATE_EVIDENCE_DIR: producerDirectory,
     ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
+    ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
   });
   try {
     if (execution.exitCode !== 0) throw new Error(`PRODUCER_EXIT_${execution.exitCode ?? 'SIGNAL'}`);
@@ -156,7 +164,13 @@ for (const [gateIndex, gate] of ABG_GATES.entries()) {
   }
 }
 
-const passed = results.every((result) => result.status === 'PASSED');
+let frozenInputsStable = true;
+try {
+  assertFrozenInputsEqual(plan.frozenInputs, await readFrozenInputs(repositoryRoot));
+} catch {
+  frozenInputsStable = false;
+}
+const passed = frozenInputsStable && results.every((result) => result.status === 'PASSED');
 const summary = {
   schemaVersion: 'phase-01.abg-run.v2',
   runId,
@@ -164,6 +178,7 @@ const summary = {
   planDigest,
   frozenInputs: plan.frozenInputs,
   frozenInputsDigest,
+  frozenInputsStable,
   status: passed ? 'PASSED' : 'FAILED',
   startedAt,
   completedAt: localNow(),
@@ -179,38 +194,6 @@ await writeExclusive(join(outputDirectory, 'abg-results.json'), summary);
 await writeManifest(outputDirectory);
 process.stdout.write(`${JSON.stringify({ runId, runSequence: plan.runSequence, status: summary.status, evidenceDirectory: outputDirectory })}\n`);
 if (!passed) throw new Error('FORMAL_ABG_RUN_FAILED');
-
-function parsePlan(value: unknown): FrozenRunPlan {
-  if (!isRecord(value) || value['schemaVersion'] !== 'phase-01.abg-run-plan.v1') {
-    throw new Error('ABG_RUN_PLAN_SCHEMA_INVALID');
-  }
-  if (
-    typeof value['runSequence'] !== 'number' ||
-    !Number.isSafeInteger(value['runSequence']) ||
-    value['runSequence'] <= 0
-  ) {
-    throw new Error('ABG_RUN_SEQUENCE_INVALID');
-  }
-  if (!isStringRecord(value['frozenInputs']) || Object.keys(value['frozenInputs']).length === 0) {
-    throw new Error('ABG_FROZEN_INPUTS_REQUIRED');
-  }
-  const requiredInputs = [
-    'gitCommitSha', 'lockfileSha256', 'openapiSha256', 'migrationManifestSha256',
-    'fixtureIdentity', 'nodeVersion', 'postgresImage', 'keycloakImage', 'browserVersion',
-  ];
-  for (const key of requiredInputs) {
-    if (!value['frozenInputs'][key]) throw new Error(`ABG_FROZEN_INPUT_MISSING:${key}`);
-  }
-  if (!Array.isArray(value['setupCommands']) || !value['setupCommands'].every(isCommandSpec)) {
-    throw new Error('ABG_SETUP_COMMANDS_INVALID');
-  }
-  if (!Array.isArray(value['gates']) || value['gates'].length !== ABG_GATES.length || !value['gates'].every(isGateCommandSpec)) {
-    throw new Error('ABG_GATE_COMMANDS_INVALID');
-  }
-  const gateIds = value['gates'].map((gate) => gate.gateId);
-  if (new Set(gateIds).size !== ABG_GATES.length) throw new Error('ABG_GATE_COMMAND_DUPLICATE');
-  return value as unknown as FrozenRunPlan;
-}
 
 async function executeCommand(
   command: CommandSpec,
@@ -389,12 +372,19 @@ function canonicalJson(value: unknown): string {
 
 function sha256(value: Uint8Array): string { return createHash('sha256').update(value).digest('hex'); }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
-function isStringRecord(value: unknown): value is Record<string, string> { return isRecord(value) && Object.values(value).every((item) => typeof item === 'string' && item.length > 0); }
-function isCommandSpec(value: unknown): value is CommandSpec {
-  return isRecord(value) && typeof value['executable'] === 'string' && value['executable'].length > 0 &&
-    Array.isArray(value['args']) && value['args'].every((argument) => typeof argument === 'string') &&
-    (value['workingDirectory'] === undefined || typeof value['workingDirectory'] === 'string') &&
-    (value['environment'] === undefined || isStringRecord(value['environment']));
-}
-function isGateCommandSpec(value: unknown): value is GateCommandSpec { return isCommandSpec(value) && typeof value['gateId'] === 'string'; }
 function requireEnvironment(name: string): string { const value = process.env[name]; if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`); return value; }
+
+function parsePositiveInteger(value: string, errorCode: string): number {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new Error(errorCode);
+  return parsed;
+}
+
+function assertFrozenInputsEqual(
+  expected: Readonly<Record<string, string>>,
+  actual: Readonly<Record<string, string>>,
+): void {
+  if (canonicalJson(expected) !== canonicalJson(actual)) {
+    throw new Error('ABG_FROZEN_INPUT_DRIFT');
+  }
+}
