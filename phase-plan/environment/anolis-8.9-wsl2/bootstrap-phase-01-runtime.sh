@@ -6,9 +6,20 @@ readonly REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../../.." && pwd)"
 readonly COMPOSE_FILE="${SCRIPT_DIR}/compose.phase-01.yml"
 if [[ -n "${ABG_RUN_ID:-}" ]]; then
   [[ "${ABG_RUN_ID}" =~ ^[A-Za-z0-9-]+$ ]] || { echo "ABG_RUN_ID is invalid" >&2; exit 1; }
-  export COMPOSE_PROJECT_NAME="hdi_phase01_abg_${ABG_RUN_SEQUENCE:?ABG_RUN_SEQUENCE is required}"
+  readonly RUN_SEQUENCE="${ABG_RUN_SEQUENCE:?ABG_RUN_SEQUENCE is required}"
+  [[ "${RUN_SEQUENCE}" =~ ^[1-9][0-9]*$ ]] || { echo "ABG_RUN_SEQUENCE is invalid" >&2; exit 1; }
+  readonly SAFE_RUN_ID="$(printf '%s' "${ABG_RUN_ID}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | cut -c1-12)"
+  (( ${#SAFE_RUN_ID} >= 8 )) || { echo "ABG_RUN_ID safe short identifier is invalid" >&2; exit 1; }
+  readonly EXPECTED_COMPOSE_PROJECT_NAME="hdi_phase01_abg_${RUN_SEQUENCE}_${SAFE_RUN_ID}"
+  if [[ "${ABG_COMPOSE_PROJECT_NAME:-}" != "${EXPECTED_COMPOSE_PROJECT_NAME}" ]]; then
+    echo "ABG_COMPOSE_PROJECT_NAME does not match the current run identity" >&2
+    exit 1
+  fi
+  export COMPOSE_PROJECT_NAME="${EXPECTED_COMPOSE_PROJECT_NAME}"
+  export ABG_MANAGED_BY="formal-abg"
   readonly RUNTIME_ROOT="${REPO_ROOT}/.runtime/abg-runtime/${ABG_RUN_ID}"
 else
+  export ABG_MANAGED_BY="${ABG_MANAGED_BY:-phase-01-bootstrap}"
   readonly RUNTIME_ROOT="${REPO_ROOT}/.runtime"
 fi
 readonly REALM_IMPORT_DIR="${RUNTIME_ROOT}/keycloak-import"
@@ -35,7 +46,7 @@ export DATABASE_URL="postgresql://hdi_phase01:${encoded_postgres_password}@127.0
 export KEYCLOAK_ISSUER_URL="http://127.0.0.1:18080/realms/hdi-phase01"
 
 node "${REPO_ROOT}/tooling/runtime/render-keycloak-realm.ts" "${REALM_IMPORT}"
-docker compose --file "${COMPOSE_FILE}" up --detach
+docker compose --file "${COMPOSE_FILE}" up --detach --pull never
 
 for _ in $(seq 1 90); do
   if docker compose --file "${COMPOSE_FILE}" exec --no-TTY postgres \

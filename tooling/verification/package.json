@@ -6,7 +6,10 @@
   "scripts": {
     "report:abg-coverage": "tsx src/report-abg-coverage.ts --write",
     "test": "vitest run",
+    "test:lifecycle": "vitest run src/runtime src/evidence/recorder.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify:phase-01:preflight": "node src/runtime/formal-preflight.ts",
+    "verify:phase-01:teardown": "node src/runtime/formal-teardown.ts",
     "verify:abg-coverage": "tsx src/report-abg-coverage.ts --check"
   },
   "dependencies": {

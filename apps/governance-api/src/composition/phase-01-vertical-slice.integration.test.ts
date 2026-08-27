@@ -46,6 +46,7 @@ import { buildApplication } from './build-application.js';
 
 const POSTGRES_IMAGE =
   'postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382';
+const TESTCONTAINER_LABELS = formalTestcontainerLabels();
 const MIGRATION_DIRECTORY = resolve(
   import.meta.dirname,
   '../../../../db/migrations',
@@ -86,6 +87,7 @@ process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 
 beforeAll(async () => {
   container = await new GenericContainer(POSTGRES_IMAGE)
+    .withLabels(TESTCONTAINER_LABELS)
     .withEnvironment({
       POSTGRES_HOST_AUTH_METHOD: 'trust',
       TZ: 'Asia/Shanghai',
@@ -94,6 +96,7 @@ beforeAll(async () => {
     .withExposedPorts(5432)
     .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/u, 2))
     .start();
+  await writeTestcontainerRuntimeEvent('STARTED', container);
 
   const poolConfig = {
     host: container.getHost(),
@@ -120,8 +123,14 @@ afterAll(async () => {
   try {
     await writeIntegrationEvidenceObservations();
   } finally {
-    await databaseHandle?.close();
-    await container?.stop();
+    try {
+      await databaseHandle?.close();
+    } finally {
+      if (container !== undefined) {
+        await container.stop();
+        await writeTestcontainerRuntimeEvent('STOPPED', container);
+      }
+    }
   }
 }, 30_000);
 
@@ -1603,4 +1612,61 @@ function requestContext(
     correlationId: `correlation-${suffix}`,
     occurredAt,
   };
+}
+
+function formalTestcontainerLabels(): Readonly<Record<string, string>> {
+  const runId = process.env['ABG_RUN_ID'];
+  const runSequence = process.env['ABG_RUN_SEQUENCE'];
+  const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
+  if (runId !== undefined && (runSequence === undefined || composeProjectName === undefined)) {
+    throw new Error('FORMAL_TESTCONTAINER_RUN_IDENTITY_INCOMPLETE');
+  }
+  return {
+    'hdi.repository': 'hospital-data-intelligence-platform',
+    'hdi.phase': '01',
+    'hdi.run-id': runId ?? `integration-${process.pid}`,
+    'hdi.run-sequence': runSequence ?? '0',
+    'hdi.managed-by': runId === undefined ? 'integration-test' : 'formal-abg',
+  };
+}
+
+async function writeTestcontainerRuntimeEvent(
+  event: 'STARTED' | 'STOPPED',
+  startedContainer: StartedTestContainer,
+): Promise<void> {
+  const eventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
+  if (eventDirectory === undefined) return;
+  const runId = process.env['ABG_RUN_ID'];
+  const runSequence = process.env['ABG_RUN_SEQUENCE'];
+  const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
+  if (runId === undefined || runSequence === undefined || composeProjectName === undefined) {
+    throw new Error('FORMAL_TESTCONTAINER_EVENT_IDENTITY_INCOMPLETE');
+  }
+  const id = startedContainer.getId();
+  await mkdir(eventDirectory, { recursive: true, mode: 0o700 });
+  await writeFile(
+    resolve(eventDirectory, `container-integration-postgres-${id}-${event.toLowerCase()}.json`),
+    JSON.stringify({
+      schemaVersion: 'phase-01.formal-runtime-event.v1',
+      runId,
+      runSequence: Number(runSequence),
+      composeProjectName,
+      event,
+      resourceType: 'container',
+      id,
+      name: 'phase-01-integration-postgres',
+      role: 'testcontainers-postgres',
+      labels: TESTCONTAINER_LABELS,
+      occurredAt: new Date().toISOString(),
+      imageReference: POSTGRES_IMAGE,
+      imageDigest: POSTGRES_IMAGE.split('@')[1] ?? null,
+      ports: [{
+        containerPort: '5432/tcp',
+        hostIp: startedContainer.getHost(),
+        hostPort: startedContainer.getMappedPort(5432),
+      }],
+      ...(event === 'STOPPED' ? { exitStatus: 'STOPPED_BY_TESTCONTAINERS' } : {}),
+    }, null, 2) + '\n',
+    { encoding: 'utf8', flag: 'wx', mode: 0o600 },
+  );
 }

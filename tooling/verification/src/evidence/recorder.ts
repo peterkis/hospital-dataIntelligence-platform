@@ -27,6 +27,7 @@ import {
   assertStrictJsonPointer,
   isSensitiveEnvironmentName,
 } from './schema.js';
+import { FORMAL_REQUIRED_SECRET_NAMES } from '../runtime/formal-runtime-contract.js';
 import { validateProducerEvidence } from './validate-producer-evidence.js';
 
 const REDACTED = '[REDACTED]';
@@ -186,10 +187,17 @@ export async function writeRedactedJsonArtifact(
 }
 
 export function redactSensitiveText(value: string): string {
-  return SENSITIVE_VALUE_PATTERNS.reduce(
+  let redacted = SENSITIVE_VALUE_PATTERNS.reduce(
     (result, pattern) => result.replace(pattern, REDACTED),
     value,
   );
+  // 正式运行只记录变量是否存在。原值即使未带 password/secret 前缀，也不得进入日志。
+  const configuredSecrets = FORMAL_REQUIRED_SECRET_NAMES
+    .map((name) => process.env[name])
+    .filter((secret): secret is string => secret !== undefined && secret.length > 0)
+    .sort((left, right) => right.length - left.length);
+  for (const secret of configuredSecrets) redacted = redacted.replaceAll(secret, REDACTED);
+  return redacted;
 }
 
 export function redactSensitiveValue(value: unknown): JsonValue {

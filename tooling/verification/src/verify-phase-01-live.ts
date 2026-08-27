@@ -24,6 +24,7 @@ import {
   writeRedactedJsonArtifact,
   writeRedactedTextArtifact,
 } from './evidence/recorder.js';
+import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
 
 process.env['TZ'] = 'Asia/Shanghai';
 
@@ -430,7 +431,21 @@ try {
     error: error instanceof Error ? error.message : String(error),
   };
 } finally {
-  await Promise.allSettled(consumerProcesses.map((consumer) => stopConsumer(consumer)));
+  const stopResults = await Promise.allSettled(
+    consumerProcesses.map((consumer) => stopConsumer(consumer)),
+  );
+  const rejected = stopResults.find((result) => result.status === 'rejected');
+  if (rejected?.status === 'rejected') {
+    failure ??= rejected.reason;
+    verification = {
+      ...verification,
+      status: 'FAILED',
+      completedAt: nowInAsiaShanghai(),
+      error: rejected.reason instanceof Error
+        ? rejected.reason.message
+        : String(rejected.reason),
+    };
+  }
 }
 
 await writeRedactedJsonArtifact(OUTPUT_DIR, 'live-verification.json', verification);
@@ -620,7 +635,13 @@ async function startConsumer(options: {
   child.stdout?.on('data', (chunk: Buffer) => stdout.push(chunk));
   child.stderr?.on('data', (chunk: Buffer) => stderr.push(chunk));
   const consumer: RunningConsumer = { child, stdout, stderr, label: options.label };
-  await waitForPort(options.port, child);
+  try {
+    await recordConsumerRuntimeEvent('STARTED', consumer, options.port);
+    await waitForPort(options.port, child);
+  } catch (error) {
+    await stopConsumer(consumer, options.port).catch(() => undefined);
+    throw error;
+  }
   return consumer;
 }
 
@@ -631,26 +652,76 @@ interface RunningConsumer {
   readonly label: string;
 }
 
-async function stopConsumer(consumer: RunningConsumer): Promise<void> {
-  if (consumer.child.exitCode === null && consumer.child.signalCode === null) {
-    consumer.child.kill('SIGTERM');
-    await Promise.race([
-      new Promise((resolveClose) => consumer.child.once('close', resolveClose)),
-      delay(5_000).then(() => consumer.child.kill('SIGKILL')),
+async function stopConsumer(consumer: RunningConsumer, port?: number): Promise<void> {
+  const failures: unknown[] = [];
+  try {
+    await Promise.all([
+      writeRedactedTextArtifact(
+        OUTPUT_DIR,
+        `${consumer.label}.stdout.log`,
+        Buffer.concat(consumer.stdout).toString('utf8'),
+      ),
+      writeRedactedTextArtifact(
+        OUTPUT_DIR,
+        `${consumer.label}.stderr.log`,
+        Buffer.concat(consumer.stderr).toString('utf8'),
+      ),
     ]);
+  } catch (error) {
+    failures.push(error);
   }
-  await Promise.all([
-    writeRedactedTextArtifact(
-      OUTPUT_DIR,
-      `${consumer.label}.stdout.log`,
-      Buffer.concat(consumer.stdout).toString('utf8'),
-    ),
-    writeRedactedTextArtifact(
-      OUTPUT_DIR,
-      `${consumer.label}.stderr.log`,
-      Buffer.concat(consumer.stderr).toString('utf8'),
-    ),
-  ]);
+  try {
+    if (consumer.child.exitCode === null && consumer.child.signalCode === null) {
+      consumer.child.kill('SIGTERM');
+      await Promise.race([
+        new Promise((resolveClose) => consumer.child.once('close', resolveClose)),
+        delay(5_000).then(() => consumer.child.kill('SIGKILL')),
+      ]);
+    }
+    await recordConsumerRuntimeEvent('STOPPED', consumer, port);
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length > 0) throw new AggregateError(failures, 'SIM_CONSUMER_STOP_FAILED');
+}
+
+async function recordConsumerRuntimeEvent(
+  event: 'STARTED' | 'STOPPED',
+  consumer: RunningConsumer,
+  port?: number,
+): Promise<void> {
+  const eventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
+  if (eventDirectory === undefined) return;
+  const formalRunId = process.env['ABG_RUN_ID'];
+  const formalRunSequence = process.env['ABG_RUN_SEQUENCE'];
+  const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
+  if (
+    formalRunId === undefined ||
+    formalRunSequence === undefined ||
+    composeProjectName === undefined
+  ) throw new Error('FORMAL_CONSUMER_RUN_IDENTITY_INCOMPLETE');
+  if (consumer.child.pid === undefined) throw new Error('FORMAL_CONSUMER_PID_MISSING');
+  await writeFormalRuntimeEvent(eventDirectory, {
+    identity: {
+      runId: formalRunId,
+      runSequence: parseRunSequence(formalRunSequence),
+      composeProjectName,
+    },
+    event,
+    resourceType: 'process',
+    id: String(consumer.child.pid),
+    name: consumer.label,
+    role: 'sim-' + consumer.label,
+    pid: consumer.child.pid,
+    ports: port === undefined ? [] : [{
+      containerPort: String(port),
+      hostIp: '127.0.0.1',
+      hostPort: port,
+    }],
+    exitStatus: event === 'STOPPED'
+      ? consumer.child.exitCode ?? consumer.child.signalCode
+      : null,
+  });
 }
 
 async function waitForPort(port: number, child: any): Promise<void> {

@@ -20,7 +20,9 @@
     "check:module-boundaries": "node tooling/verification/src/check-module-boundaries.ts",
     "check:database-authority": "node tooling/verification/src/check-database-authority.ts",
     "verify:phase-01:live": "node tooling/verification/src/verify-phase-01-live.ts",
-    "verify:phase-01:formal": "node tooling/verification/src/run-formal-abg.ts",
+    "verify:phase-01:formal": "node --loader ./tooling/verification/node-ts-loader.mjs tooling/verification/src/run-formal-abg.ts",
+    "verify:phase-01:preflight": "npm run verify:phase-01:preflight --workspace @hospital-data-intelligence/verification-tooling --",
+    "verify:phase-01:teardown": "npm run verify:phase-01:teardown --workspace @hospital-data-intelligence/verification-tooling --",
     "verify:phase-01:evidence": "tsx tooling/verification/src/review-formal-abg-evidence.ts",
     "verify:abg-coverage": "npm run verify:abg-coverage --workspace @hospital-data-intelligence/verification-tooling",
     "check": "npm run check:runtime && npm run check:repo:layout && npm run check:module-boundaries && npm run check:database-authority",
@@ -32,6 +34,7 @@
     "test:e2e": "node tests/e2e/run-playwright.ts",
     "test:e2e:list": "node tests/e2e/run-playwright.ts --list",
     "test:verification": "npm run test --workspace @hospital-data-intelligence/verification-tooling",
+    "test:verification:lifecycle": "npm run test:lifecycle --workspace @hospital-data-intelligence/verification-tooling",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

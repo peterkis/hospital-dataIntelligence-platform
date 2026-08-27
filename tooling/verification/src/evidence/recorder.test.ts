@@ -129,6 +129,21 @@ describe('producer evidence recorder', () => {
     expect(persisted).not.toContain('top-secret-token');
     expect(persisted).not.toContain('top-secret-value');
   });
+
+  it('redacts configured formal secret values even when a log omits a sensitive key name', () => {
+    const name = 'HDI_KEYCLOAK_ADMIN_USERNAME';
+    const previous = process.env[name];
+    const secret = 'low-entropy-formal-admin';
+    process.env[name] = secret;
+    try {
+      const redacted = redactSensitiveText(`login failed for ${secret}`);
+      expect(redacted).not.toContain(secret);
+      expect(redacted).toContain('[REDACTED]');
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
+  });
 });
 
 async function createRoot(): Promise<string> {

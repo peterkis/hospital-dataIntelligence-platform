@@ -34,6 +34,7 @@ import {
   PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
   type ProducerEvidenceItem,
 } from './evidence/protocol.js';
+import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
 
 interface SharedCommand {
   readonly id: string;
@@ -62,6 +63,8 @@ const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const sharedDirectory = resolve(requireEnvironment('ABG_SHARED_EVIDENCE_DIR'));
 const runId = process.env['ABG_RUN_ID'] ?? randomUUID();
 const runSequence = parsePositiveInteger(process.env['ABG_RUN_SEQUENCE'] ?? '1');
+const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
+const runtimeEventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
 const commands: readonly SharedCommand[] = [
   { id: 'runtime', producerIds: ['static'], executable: 'npm', args: ['run', 'check:runtime'] },
   { id: 'repo-layout', producerIds: ['static'], executable: 'npm', args: ['run', 'check:repo:layout'] },
@@ -142,8 +145,12 @@ try {
     if (command.id === 'live') {
       await preserveLiveAttachments(stagingDirectory);
     }
-    if (command.id === 'browser' && result.exitCode === 0) {
-      await preserveBrowserAttachments();
+    if (command.id === 'browser') {
+      try {
+        await preserveBrowserAttachments();
+      } catch (error) {
+        orchestrationFailure = 'BROWSER_EVIDENCE_PRESERVATION_FAILED:' + errorMessage(error);
+      }
     }
     if (result.exitCode !== 0) {
       orchestrationFailure = result.error ?? ('COMMAND_EXIT_' + (result.exitCode ?? 'SIGNAL'));
@@ -151,8 +158,16 @@ try {
     }
   }
 } finally {
-  await stopApplication(application);
-  await rm(stagingDirectory, { recursive: true, force: true });
+  try {
+    await stopApplication(application);
+  } catch (error) {
+    orchestrationFailure ??= 'APPLICATION_STOP_FAILED:' + errorMessage(error);
+  }
+  try {
+    await rm(stagingDirectory, { recursive: true, force: true });
+  } catch (error) {
+    orchestrationFailure ??= 'STAGING_CLEANUP_FAILED:' + errorMessage(error);
+  }
 }
 
 await writeRedactedJsonArtifact(sharedDirectory, 'raw/command-results.json', {
@@ -484,6 +499,7 @@ async function execute(command: SharedCommand, stagingDirectory: string): Promis
     shell: false,
     windowsHide: true,
   });
+  await recordRuntimeProcess('STARTED', child, 'producer-' + command.id);
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
   child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
@@ -506,6 +522,7 @@ async function execute(command: SharedCommand, stagingDirectory: string): Promis
       Buffer.concat(stderr).toString('utf8'),
     ),
   ]);
+  await recordRuntimeProcess('STOPPED', child, 'producer-' + command.id);
   return {
     id: command.id,
     producerIds: command.producerIds,
@@ -666,7 +683,19 @@ async function startApplication(): Promise<RunningApplication> {
   const stderr: Buffer[] = [];
   child.stdout?.on('data', (chunk: Buffer) => stdout.push(chunk));
   child.stderr?.on('data', (chunk: Buffer) => stderr.push(chunk));
-  await waitForPort(3000, child);
+  const running: RunningApplication = {
+    child,
+    stdout,
+    stderr,
+    startupMilliseconds: 0,
+  };
+  try {
+    await recordRuntimeProcess('STARTED', child, 'governance-api');
+    await waitForPort(3000, child);
+  } catch (error) {
+    await stopApplication(running).catch(() => undefined);
+    throw error;
+  }
   process.env['DATABASE_URL'] = 'postgresql://hdi_phase01:' + postgresPassword + '@127.0.0.1:55432/hdi_phase01';
   process.env['KEYCLOAK_ISSUER_URL'] = 'http://127.0.0.1:18080/realms/hdi-phase01';
   process.env['KEYCLOAK_REALM_IMPORT_PATH'] = realmImportPath;
@@ -675,34 +704,65 @@ async function startApplication(): Promise<RunningApplication> {
   process.env['PHASE01_E2E_PASSWORD'] = requireEnvironment('HDI_OWNER_PASSWORD');
   process.env['SIM_CONSUMER_NOTIFICATION_TARGETS_JSON'] = notificationTargets;
   return {
-    child,
-    stdout,
-    stderr,
+    ...running,
     startupMilliseconds: Math.round(performance.now() - started),
   };
 }
 
 async function stopApplication(application: RunningApplication | undefined): Promise<void> {
   if (!application) return;
-  if (application.child.exitCode === null && application.child.signalCode === null) {
-    application.child.kill('SIGTERM');
-    await Promise.race([
-      new Promise<void>((resolveClose) => application.child.once('close', () => resolveClose())),
-      delay(5_000).then(() => { application.child.kill('SIGKILL'); }),
+  const failures: unknown[] = [];
+  try {
+    await Promise.all([
+      writeRedactedTextArtifact(
+        sharedDirectory,
+        'raw/application.stdout.log',
+        Buffer.concat(application.stdout).toString('utf8'),
+      ),
+      writeRedactedTextArtifact(
+        sharedDirectory,
+        'raw/application.stderr.log',
+        Buffer.concat(application.stderr).toString('utf8'),
+      ),
     ]);
+  } catch (error) {
+    failures.push(error);
   }
-  await Promise.all([
-    writeRedactedTextArtifact(
-      sharedDirectory,
-      'raw/application.stdout.log',
-      Buffer.concat(application.stdout).toString('utf8'),
-    ),
-    writeRedactedTextArtifact(
-      sharedDirectory,
-      'raw/application.stderr.log',
-      Buffer.concat(application.stderr).toString('utf8'),
-    ),
-  ]);
+  try {
+    if (application.child.exitCode === null && application.child.signalCode === null) {
+      application.child.kill('SIGTERM');
+      await Promise.race([
+        new Promise<void>((resolveClose) => application.child.once('close', () => resolveClose())),
+        delay(5_000).then(() => { application.child.kill('SIGKILL'); }),
+      ]);
+    }
+    await recordRuntimeProcess('STOPPED', application.child, 'governance-api');
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length > 0) throw new AggregateError(failures, 'GOVERNANCE_APPLICATION_STOP_FAILED');
+}
+
+async function recordRuntimeProcess(
+  event: 'STARTED' | 'STOPPED',
+  child: ChildProcess,
+  role: string,
+): Promise<void> {
+  if (runtimeEventDirectory === undefined) return;
+  if (composeProjectName === undefined) {
+    throw new Error('FORMAL_RUNTIME_COMPOSE_PROJECT_NAME_MISSING');
+  }
+  if (child.pid === undefined) throw new Error('FORMAL_RUNTIME_PROCESS_PID_MISSING');
+  await writeFormalRuntimeEvent(runtimeEventDirectory, {
+    identity: { runId, runSequence, composeProjectName },
+    event,
+    resourceType: 'process',
+    id: String(child.pid),
+    name: role,
+    role,
+    pid: child.pid,
+    exitStatus: event === 'STOPPED' ? child.exitCode ?? child.signalCode : null,
+  });
 }
 
 async function waitForPort(port: number, child: ChildProcess): Promise<void> {
