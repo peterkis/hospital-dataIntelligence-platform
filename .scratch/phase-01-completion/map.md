@@ -77,7 +77,9 @@ flowchart TD
 
 ## Current frontier
 
-- `01-real-browser-baseline.md` — 已认领，开发完成；等待内存门禁允许真实浏览器与完整测试后验收。
+- 历史前沿说明已过期：后续基线提交 c4396be 已包含其所称开发资产；其“等待内存门禁”描述不再适用。
+- 真实 PostgreSQL、Keycloak、Chrome、故障、容量和 ABG-01 至 ABG-40 正式运行仍未执行或验收；不得将任何原 Ticket 标为 resolved。
+- 当前验收整改入口为 .scratch/phase-01-acceptance-readiness 的 01-abg-coverage-matrix Ticket。
 
 ## Decisions so far
 
