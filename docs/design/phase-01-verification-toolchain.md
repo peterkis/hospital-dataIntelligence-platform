@@ -218,6 +218,14 @@ Toxiproxy及Testcontainers生命周期负责验证：
 | 业务证据索引 | 请求ID、规则ID、对象及发布版本、审计、解析、Outbox、回执引用 |
 | 验证总结 | ABG或验收场景逐项结论、偏差、不在范围项和阻断项 |
 
+### 8.2.1 ABG 门禁结果协议迁移
+
+`phase-01.producer-evidence.v2` 和 `phase-01.producer-evidence-index.v2` 继续作为 producer 原始证据及其索引协议。门禁 producer 不再读取共享编排的总体 `PASSED`，也不再把共享、实时、Vitest 或 Playwright 完整文件复制到每个门禁目录。
+
+门禁结果升级为 `phase-01.abg-gate-result.v3`：每项必须记录其自身的场景和断言集合、直接关联的请求/主体/对象/版本/规则/冻结输入/制品摘要，以及每个选择器对应的相对路径、媒体类型、长度、SHA-256、producer、场景、断言、JSON Pointer 和选中 claim 摘要。结果还记录覆盖矩阵和所用 producer evidence index 的摘要。任一选择器、指针、身份引用、规则或摘要无法核验即失败关闭。
+
+正式运行总结升级为 `phase-01.abg-run.v3`。它拒绝旧版门禁结果，并在 setup 前后复核覆盖矩阵及 producer 协议身份；每个引用必须留在运行根内、非符号链接、字节长度/媒体类型/摘要一致，并解析到相同 gate、scenario、assertion 和 producer 的 `PASSED` claim。ABG-40 使用先完成的 39 项非自引用结论建立不可变 preconclusion，再由自身门禁证明引用，避免把共享总体状态或循环自证当作通过条件。
+
 ### 8.3 不可覆盖与完整性
 
 证据编排器在运行结束后生成规范化`manifest.json`，其中按稳定路径排序列出除清单自身及`manifest.sha256`外每个产物的媒体类型、字节数和SHA-256；再将规范化清单字节的SHA-256写入`manifest.sha256`，该值就是证据包身份。清单和包身份完成后运行进入终态，任何文件不得覆盖、补写或删除；需要纠正、补跑或重新取证时必须创建新的运行身份，并通过显式关系指向被取代或补充的运行。

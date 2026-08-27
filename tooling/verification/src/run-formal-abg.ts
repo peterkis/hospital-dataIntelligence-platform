@@ -1,13 +1,23 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import {
+  assertDistinctGateEvidenceSelectorSets,
+  getAbgCoverageMatrixDigest,
+  readProducerEvidenceIndex,
+  validateAbgGateResult,
+  type AbgGateResult,
+} from './abg-gate-proof.js';
 import { ABG_GATES, type AbgGateDefinition } from './abg-catalog.js';
-import { getAbgCoverageEntry } from './abg-coverage-matrix.js';
 import {
   buildAuthoritativeRunPlan,
   readFrozenInputs,
+  readVerificationAuthorityIdentity,
+  type AuthoritativeCommandSpec,
+  type VerificationAuthorityIdentity,
 } from './authoritative-abg-plan.js';
+import { getAbgCoverageEntry } from './abg-coverage-matrix.js';
 import {
   buildMatrixProducerEvidence,
   parseFrozenInputRefs,
@@ -16,65 +26,41 @@ import {
   createEvidenceItemFromFile,
   environmentReferenceDigest,
   redactSensitiveText,
+  sha256,
   writeProducerEvidence,
+  writeProducerEvidenceIndex,
   writeRedactedTextArtifact,
 } from './evidence/recorder.js';
+import { PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION } from './evidence/protocol.js';
 
 type GateStatus = 'PASSED' | 'FAILED';
 
-interface CommandSpec {
-  readonly executable: string;
-  readonly args: readonly string[];
-  readonly workingDirectory?: string;
-  readonly environment?: Readonly<Record<string, string>>;
-}
-
-interface GateCommandSpec extends CommandSpec {
-  readonly gateId: string;
-}
-
-interface EvidenceReference {
-  readonly path: string;
-  readonly sha256: string;
-}
-
-interface GateResult extends AbgGateDefinition {
+interface FormalGateResult extends AbgGateDefinition {
   readonly ordinal: number;
   readonly runId: string;
   readonly status: GateStatus;
   readonly producerExitCode: number | null;
   readonly producerCommandDigest: string;
   readonly elapsedMilliseconds: number;
+  readonly proofPath: string | null;
+  readonly proof: AbgGateResult | null;
   readonly failureCode?: string;
   readonly error?: string;
-  readonly scenarioId: string | null;
-  readonly requestIds: readonly string[];
-  readonly principalIds: readonly string[];
-  readonly governanceObjectIds: readonly string[];
-  readonly versionIds: readonly string[];
-  readonly ruleVersions: readonly string[];
-  readonly evidenceRefs: readonly EvidenceReference[];
 }
 
-interface ProducerResult {
-  readonly gateId: string;
-  readonly scenarioId: string;
-  readonly requestIds: readonly string[];
-  readonly principalIds: readonly string[];
-  readonly governanceObjectIds: readonly string[];
-  readonly versionIds: readonly string[];
-  readonly ruleVersions: readonly string[];
-  readonly evidenceRefs: readonly EvidenceReference[];
+interface SetupResult {
+  readonly ordinal: number;
+  readonly commandDigest: string;
+  readonly exitCode: number | null;
+  readonly elapsedMilliseconds: number;
 }
 
 process.env['TZ'] = 'Asia/Shanghai';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const outputDirectory = resolve(requireEnvironment('EVIDENCE_OUTPUT_DIR'));
-const plan = await buildAuthoritativeRunPlan(
-  repositoryRoot,
-  parsePositiveInteger(requireEnvironment('ABG_RUN_SEQUENCE'), 'ABG_RUN_SEQUENCE_INVALID'),
-);
+const runSequence = parsePositiveInteger(requireEnvironment('ABG_RUN_SEQUENCE'), 'ABG_RUN_SEQUENCE_INVALID');
+const plan = await buildAuthoritativeRunPlan(repositoryRoot, runSequence);
 const runId = randomUUID();
 const startedAt = localNow();
 const planBytes = Buffer.from(`${JSON.stringify(plan, null, 2)}\n`, 'utf8');
@@ -86,113 +72,152 @@ await mkdir(dirname(outputDirectory), { recursive: true });
 await mkdir(outputDirectory, { recursive: false });
 await writeExclusiveBytes(join(outputDirectory, 'run-plan.json'), planBytes);
 
-const setupResults = [];
+const setupResults: SetupResult[] = [];
 let setupFailure: string | null = null;
 for (const [index, command] of plan.setupCommands.entries()) {
-  const result = await executeCommand(command, join(outputDirectory, 'setup', String(index + 1).padStart(2, '0')), {
-    ABG_RUN_ID: runId,
-    ABG_RUN_SEQUENCE: String(plan.runSequence),
-    ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
-    ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
-    ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
-  });
+  const execution = await executeCommand(
+    command,
+    join(outputDirectory, 'setup', String(index + 1).padStart(2, '0')),
+    {
+      ABG_RUN_ID: runId,
+      ABG_RUN_SEQUENCE: String(plan.runSequence),
+      ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
+      ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
+      ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
+    },
+  );
   setupResults.push({
     ordinal: index + 1,
     commandDigest: commandDigest(command),
-    exitCode: result.exitCode,
-    elapsedMilliseconds: result.elapsedMilliseconds,
+    exitCode: execution.exitCode,
+    elapsedMilliseconds: execution.elapsedMilliseconds,
   });
-  if (result.exitCode !== 0) {
-    setupFailure = `SETUP_COMMAND_FAILED:${index + 1}`;
+  if (execution.exitCode !== 0) {
+    setupFailure = 'SETUP_COMMAND_FAILED:' + String(index + 1);
     break;
   }
 }
 
-if (!setupFailure) {
+if (setupFailure === null) {
   try {
     assertFrozenInputsEqual(plan.frozenInputs, await readFrozenInputs(repositoryRoot));
+    assertAuthorityIdentityEqual(
+      plan.authorityIdentity,
+      await readVerificationAuthorityIdentity(repositoryRoot),
+    );
   } catch (error) {
-    setupFailure = error instanceof Error ? error.message : 'FROZEN_INPUT_DRIFT_AFTER_SETUP';
+    setupFailure = errorMessage(error);
   }
 }
 
-const results: GateResult[] = [];
-for (const [gateIndex, gate] of ABG_GATES.entries()) {
-  const command = plan.gates[gateIndex];
-  if (!command || command.gateId !== gate.gateId) {
-    throw new Error(`ABG_PLAN_GATE_ORDER_INVALID:${gate.gateId}`);
-  }
-  const producerCommandDigest = commandDigest(command);
-  if (setupFailure) {
-    results.push(failedGate(gate, gateIndex + 1, runId, producerCommandDigest, setupFailure));
+const results: FormalGateResult[] = [];
+const nonFormalGates = ABG_GATES.filter((gate) => gate.gateId !== 'ABG-40');
+for (const gate of nonFormalGates) {
+  const ordinal = ordinalFor(gate);
+  if (setupFailure !== null) {
+    results.push(failedGate(gate, ordinal, runId, commandDigestForGate(gate), setupFailure));
     continue;
   }
-  const gateDirectory = join(outputDirectory, 'gates', gate.gateId);
-  const producerDirectory = join(gateDirectory, 'producer');
-  await mkdir(producerDirectory, { recursive: true });
-  const resultPath = join(producerDirectory, 'result.json');
-  const execution = await executeCommand(command, gateDirectory, {
-    ABG_RUN_ID: runId,
-    ABG_RUN_SEQUENCE: String(plan.runSequence),
-    ABG_GATE_ID: gate.gateId,
-    ABG_GATE_RESULT_PATH: resultPath,
-    ABG_GATE_EVIDENCE_DIR: producerDirectory,
-    ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
-    ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
-    ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
-  });
+  results.push(await executeGate({
+    gate,
+    ordinal,
+    runId,
+    runSequence: plan.runSequence,
+    producerEvidenceIndexRelativePath: 'shared/producer-evidence-index.json',
+    coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
+  }));
+}
+
+const formalGate = ABG_GATES.find((gate) => gate.gateId === 'ABG-40');
+if (formalGate === undefined) throw new Error('ABG_FORMAL_GATE_MISSING');
+if (setupFailure !== null) {
+  results.push(failedGate(
+    formalGate,
+    ordinalFor(formalGate),
+    runId,
+    commandDigestForGate(formalGate),
+    setupFailure,
+  ));
+} else if (results.some((result) => result.status !== 'PASSED')) {
+  results.push(failedGate(
+    formalGate,
+    ordinalFor(formalGate),
+    runId,
+    commandDigestForGate(formalGate),
+    'FORMAL_PRECONCLUSION_PREREQUISITE_FAILED',
+  ));
+} else {
   try {
-    if (execution.exitCode !== 0) throw new Error(`PRODUCER_EXIT_${execution.exitCode ?? 'SIGNAL'}`);
-    const producer = validateProducerResult(
-      gate,
-      JSON.parse(await readFile(resultPath, 'utf8')) as unknown,
-    );
-    const evidenceRefs = await validateEvidenceReferences(producer.evidenceRefs, producerDirectory);
-    results.push({
-      ...gate,
-      ordinal: gateIndex + 1,
+    await writeFormalProducerEvidence(results, plan.authorityIdentity);
+    results.push(await executeGate({
+      gate: formalGate,
+      ordinal: ordinalFor(formalGate),
       runId,
-      status: 'PASSED',
-      producerExitCode: execution.exitCode,
-      producerCommandDigest,
-      elapsedMilliseconds: execution.elapsedMilliseconds,
-      scenarioId: producer.scenarioId,
-      requestIds: producer.requestIds,
-      principalIds: producer.principalIds,
-      governanceObjectIds: producer.governanceObjectIds,
-      versionIds: producer.versionIds,
-      ruleVersions: producer.ruleVersions,
-      evidenceRefs,
-    });
+      runSequence: plan.runSequence,
+      producerEvidenceIndexRelativePath: 'producer-evidence-index.json',
+      coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
+    }));
   } catch (error) {
     results.push(failedGate(
-      gate,
-      gateIndex + 1,
+      formalGate,
+      ordinalFor(formalGate),
       runId,
-      producerCommandDigest,
-      'GATE_EXECUTION_FAILED',
+      commandDigestForGate(formalGate),
+      'FORMAL_PRECONCLUSION_EVIDENCE_FAILED',
       error,
-      execution.exitCode,
-      execution.elapsedMilliseconds,
     ));
   }
 }
+results.sort((left, right) => left.ordinal - right.ordinal);
 
 let frozenInputsStable = true;
+let authorityIdentityStable = true;
 try {
   assertFrozenInputsEqual(plan.frozenInputs, await readFrozenInputs(repositoryRoot));
 } catch {
   frozenInputsStable = false;
 }
-const passed = frozenInputsStable && results.every((result) => result.status === 'PASSED');
+try {
+  assertAuthorityIdentityEqual(
+    plan.authorityIdentity,
+    await readVerificationAuthorityIdentity(repositoryRoot),
+  );
+} catch {
+  authorityIdentityStable = false;
+}
+
+let selectorSetsDistinct = false;
+try {
+  const proofs = results.map((result) => result.proof).filter(
+    (proof): proof is AbgGateResult => proof !== null,
+  );
+  if (proofs.length === ABG_GATES.length) {
+    assertDistinctGateEvidenceSelectorSets(proofs);
+    selectorSetsDistinct = true;
+  }
+} catch {
+  selectorSetsDistinct = false;
+}
+
+const passed =
+  frozenInputsStable &&
+  authorityIdentityStable &&
+  selectorSetsDistinct &&
+  results.length === ABG_GATES.length &&
+  results.every((result) => result.status === 'PASSED');
 const summary = {
-  schemaVersion: 'phase-01.abg-run.v2',
+  schemaVersion: 'phase-01.abg-run.v3',
   runId,
   runSequence: plan.runSequence,
   planDigest,
   frozenInputs: plan.frozenInputs,
   frozenInputsDigest,
+  coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
+  producerProtocolIdentityDigest: plan.authorityIdentity.producerProtocolIdentityDigest,
+  authorityIdentity: plan.authorityIdentity,
   frozenInputsStable,
+  authorityIdentityStable,
+  selectorSetsDistinct,
   status: passed ? 'PASSED' : 'FAILED',
   startedAt,
   completedAt: localNow(),
@@ -205,59 +230,173 @@ const summary = {
   results,
 };
 await writeExclusive(join(outputDirectory, 'abg-results.json'), summary);
-const formalCoverage = getAbgCoverageEntry('ABG-40');
-const formalAssertionId = formalCoverage.assertionIds[0];
-const formalScenarioId = formalCoverage.scenarioIds[0];
-if (!formalAssertionId || !formalScenarioId) throw new Error('FORMAL_RUN_MATRIX_ENTRY_INVALID');
-const formalSummaryItem = await createEvidenceItemFromFile(outputDirectory, {
-  artifactId: 'phase-01-formal-abg-results',
-  relativePath: 'abg-results.json',
-  mediaType: 'application/json',
-  jsonPointer: '/status',
-  claim: { runId, status: summary.status },
-});
-const formalReferences = aggregateFormalReferences(results, formalSummaryItem.sha256);
-const formalEvidence = buildMatrixProducerEvidence({
-  producerId: 'formal-run',
+await writeManifest(outputDirectory);
+process.stdout.write(`${JSON.stringify({
   runId,
   runSequence: plan.runSequence,
-  startedAt,
-  completedAt: summary.completedAt,
-  processStatus: passed ? 'PASSED' : 'FAILED',
-  commandIdentity: {
-    executable: 'node',
-    arguments: ['tooling/verification/src/run-formal-abg.ts'],
-    workingDirectory: 'repository-root',
-    commandDigest: sha256(Buffer.from('tooling/verification/src/run-formal-abg.ts', 'utf8')),
-  },
-  environmentRefs: environmentReferenceDigest(process.env, ['CI', 'NODE_ENV', 'TZ']),
-  frozenInputRefs: parseFrozenInputRefs(plan.frozenInputs),
-  defaultEvidenceItems: [formalSummaryItem],
-  scenarioReferences: { [formalScenarioId]: formalReferences },
-  outcomes: {
-    [formalAssertionId]: passed
-      ? {
-        status: 'PASSED',
-        description: 'The frozen formal run completed with every ABG gate passing.',
-        expected: { status: 'PASSED' },
-        actual: { status: summary.status, gateCount: summary.gateCount },
-      }
-      : {
-        status: 'FAILED',
-        description: 'The frozen formal run did not produce a complete passing ABG conclusion.',
-        expected: { status: 'PASSED' },
-        actual: { status: summary.status, failedCount: summary.failedCount },
-        failureCode: 'FORMAL_ABG_RUN_FAILED',
-      },
-  },
-});
-await writeProducerEvidence(outputDirectory, 'formal-run/producer-evidence.json', formalEvidence);
-await writeManifest(outputDirectory);
-process.stdout.write(`${JSON.stringify({ runId, runSequence: plan.runSequence, status: summary.status, evidenceDirectory: outputDirectory })}\n`);
+  status: summary.status,
+  evidenceDirectory: outputDirectory,
+})}\n`);
 if (!passed) throw new Error('FORMAL_ABG_RUN_FAILED');
 
+async function executeGate(input: {
+  readonly gate: AbgGateDefinition;
+  readonly ordinal: number;
+  readonly runId: string;
+  readonly runSequence: number;
+  readonly producerEvidenceIndexRelativePath: string;
+  readonly coverageMatrixDigest: string;
+}): Promise<FormalGateResult> {
+  const command = commandForGate(input.gate);
+  const producerCommandDigest = commandDigest(command);
+  const gateDirectory = join(outputDirectory, 'gates', input.gate.gateId);
+  const resultRelativePath = 'gates/' + input.gate.gateId + '/producer/result.json';
+  const resultPath = join(outputDirectory, resultRelativePath);
+  const execution = await executeCommand(command, gateDirectory, {
+    ABG_RUN_ID: input.runId,
+    ABG_RUN_SEQUENCE: String(input.runSequence),
+    ABG_GATE_ID: input.gate.gateId,
+    ABG_GATE_RESULT_PATH: resultPath,
+    ABG_FORMAL_EVIDENCE_ROOT: outputDirectory,
+    ABG_PRODUCER_EVIDENCE_INDEX_PATH: input.producerEvidenceIndexRelativePath,
+  });
+  try {
+    if (execution.exitCode !== 0) {
+      throw new Error('PRODUCER_EXIT_' + String(execution.exitCode ?? 'SIGNAL'));
+    }
+    const proof = await validateAbgGateResult({
+      value: JSON.parse(await readFile(resultPath, 'utf8')) as unknown,
+      evidenceRoot: outputDirectory,
+      expectedGateId: input.gate.gateId,
+      expectedRunId: input.runId,
+      expectedRunSequence: input.runSequence,
+      expectedCoverageMatrixDigest: input.coverageMatrixDigest,
+    });
+    return {
+      ...input.gate,
+      ordinal: input.ordinal,
+      runId: input.runId,
+      status: 'PASSED',
+      producerExitCode: execution.exitCode,
+      producerCommandDigest,
+      elapsedMilliseconds: execution.elapsedMilliseconds,
+      proofPath: resultRelativePath,
+      proof,
+    };
+  } catch (error) {
+    return failedGate(
+      input.gate,
+      input.ordinal,
+      input.runId,
+      producerCommandDigest,
+      'GATE_EXECUTION_FAILED',
+      error,
+      execution.exitCode,
+      execution.elapsedMilliseconds,
+    );
+  }
+}
+
+async function writeFormalProducerEvidence(
+  priorResults: readonly FormalGateResult[],
+  authorityIdentity: VerificationAuthorityIdentity,
+): Promise<void> {
+  const formalEntry = getAbgCoverageEntry('ABG-40');
+  const scenarioId = formalEntry.scenarioIds[0];
+  const assertionId = formalEntry.assertionIds[0];
+  if (scenarioId === undefined || assertionId === undefined) {
+    throw new Error('FORMAL_PRECONCLUSION_MATRIX_INVALID');
+  }
+  const preliminary = {
+    schemaVersion: 'phase-01.abg-preconclusion.v1',
+    runId,
+    runSequence: plan.runSequence,
+    status: priorResults.every((result) => result.status === 'PASSED') ? 'PASSED' : 'FAILED',
+    coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
+    producerProtocolIdentityDigest: authorityIdentity.producerProtocolIdentityDigest,
+    gates: priorResults.map((result) => ({
+      gateId: result.gateId,
+      status: result.status,
+      proofPath: result.proofPath,
+      assertionIds: result.proof?.assertionIds ?? [],
+    })),
+  };
+  await writeExclusive(join(outputDirectory, 'formal-run/preliminary-conclusion.json'), preliminary);
+  const preliminaryItem = await createEvidenceItemFromFile(outputDirectory, {
+    artifactId: 'phase-01-formal-abg-preliminary-conclusion',
+    relativePath: 'formal-run/preliminary-conclusion.json',
+    mediaType: 'application/json',
+    jsonPointer: '/status',
+    claim: {
+      runId,
+      runSequence: plan.runSequence,
+      status: preliminary.status,
+      coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
+    },
+  });
+  const references = aggregateFormalReferences(priorResults, preliminaryItem.sha256);
+  const evidence = buildMatrixProducerEvidence({
+    producerId: 'formal-run',
+    runId,
+    runSequence: plan.runSequence,
+    startedAt,
+    completedAt: localNow(),
+    processStatus: preliminary.status === 'PASSED' ? 'PASSED' : 'FAILED',
+    commandIdentity: {
+      executable: 'node',
+      arguments: ['tooling/verification/src/run-formal-abg.ts'],
+      workingDirectory: 'repository-root',
+      commandDigest: sha256(Buffer.from('tooling/verification/src/run-formal-abg.ts', 'utf8')),
+    },
+    environmentRefs: environmentReferenceDigest(process.env, ['CI', 'NODE_ENV', 'TZ']),
+    frozenInputRefs: parseFrozenInputRefs(plan.frozenInputs),
+    defaultEvidenceItems: [preliminaryItem],
+    scenarioReferences: { [scenarioId]: references },
+    outcomes: {
+      [assertionId]: preliminary.status === 'PASSED'
+        ? {
+          status: 'PASSED',
+          description: 'The frozen run recorded every non-self ABG gate before the immutable ABG-40 proof.',
+          expected: { nonSelfGateStatus: 'PASSED' },
+          actual: { priorGateCount: priorResults.length, priorPassedCount: priorResults.length },
+        }
+        : {
+          status: 'FAILED',
+          description: 'The frozen run did not record a complete passing non-self ABG preconclusion.',
+          expected: { nonSelfGateStatus: 'PASSED' },
+          actual: { priorGateCount: priorResults.length },
+          failureCode: 'FORMAL_PRECONCLUSION_FAILED',
+        },
+    },
+  });
+  const formalIndexEntry = await writeProducerEvidence(
+    outputDirectory,
+    'formal-run/producer-evidence.json',
+    evidence,
+  );
+  const sharedIndex = await readProducerEvidenceIndex(
+    outputDirectory,
+    'shared/producer-evidence-index.json',
+  );
+  if (sharedIndex.index.runId !== runId || sharedIndex.index.runSequence !== plan.runSequence) {
+    throw new Error('FORMAL_PRECONCLUSION_SHARED_INDEX_RUN_MISMATCH');
+  }
+  await writeProducerEvidenceIndex(outputDirectory, 'producer-evidence-index.json', {
+    schemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
+    runId,
+    runSequence: plan.runSequence,
+    producers: [
+      ...sharedIndex.index.producers.map((entry) => ({
+        ...entry,
+        relativePath: 'shared/' + entry.relativePath,
+      })),
+      formalIndexEntry,
+    ],
+  });
+}
+
 async function executeCommand(
-  command: CommandSpec,
+  command: AuthoritativeCommandSpec,
   evidenceDirectory: string,
   injectedEnvironment: Readonly<Record<string, string>>,
 ): Promise<{ readonly exitCode: number | null; readonly elapsedMilliseconds: number }> {
@@ -279,91 +418,77 @@ async function executeCommand(
     child.once('close', resolveExit);
   });
   await Promise.all([
-    writeRedactedTextArtifact(
-      evidenceDirectory,
-      'stdout.log',
-      Buffer.concat(stdout).toString('utf8'),
-    ),
-    writeRedactedTextArtifact(
-      evidenceDirectory,
-      'stderr.log',
-      Buffer.concat(stderr).toString('utf8'),
-    ),
+    writeRedactedTextArtifact(evidenceDirectory, 'stdout.log', Buffer.concat(stdout).toString('utf8')),
+    writeRedactedTextArtifact(evidenceDirectory, 'stderr.log', Buffer.concat(stderr).toString('utf8')),
   ]);
   return { exitCode, elapsedMilliseconds: Math.round(performance.now() - started) };
 }
 
-function validateProducerResult(gate: AbgGateDefinition, value: unknown): ProducerResult {
-  if (!isRecord(value) || value['gateId'] !== gate.gateId) throw new Error('GATE_RESULT_ID_MISMATCH');
-  const requiredArrays = ['requestIds', 'principalIds', 'governanceObjectIds', 'versionIds', 'ruleVersions'];
-  for (const key of requiredArrays) {
-    const items = value[key];
-    if (!Array.isArray(items) || items.length === 0 || items.some((item) => typeof item !== 'string' || item.length === 0)) {
-      throw new Error(`GATE_RESULT_${key}_REQUIRED`);
-    }
-  }
-  if (typeof value['scenarioId'] !== 'string' || value['scenarioId'].length === 0) {
-    throw new Error('GATE_RESULT_SCENARIO_ID_REQUIRED');
-  }
-  if (!Array.isArray(value['evidenceRefs']) || value['evidenceRefs'].length === 0) {
-    throw new Error('GATE_RESULT_EVIDENCE_REQUIRED');
-  }
-  return value as unknown as ProducerResult;
+function commandForGate(gate: AbgGateDefinition): AuthoritativeCommandSpec {
+  const command = plan.gates.find((candidate) => candidate.gateId === gate.gateId);
+  if (command === undefined) throw new Error('ABG_PLAN_GATE_MISSING:' + gate.gateId);
+  return command;
 }
 
-async function validateEvidenceReferences(
-  references: readonly EvidenceReference[],
-  producerDirectory: string,
-): Promise<readonly EvidenceReference[]> {
-  const validated: EvidenceReference[] = [];
-  for (const reference of references) {
-    if (
-      !isRecord(reference) || typeof reference.path !== 'string' || isAbsolute(reference.path) ||
-      typeof reference.sha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(reference.sha256)
-    ) throw new Error('EVIDENCE_REFERENCE_INVALID');
-    const absolutePath = resolve(producerDirectory, reference.path);
-    const relativePath = relative(producerDirectory, absolutePath);
-    if (relativePath === '..' || relativePath.startsWith(`..${sep}`)) throw new Error('EVIDENCE_REFERENCE_OUTSIDE_GATE');
-    const actualDigest = sha256(await readFile(absolutePath));
-    if (actualDigest !== reference.sha256) throw new Error('EVIDENCE_REFERENCE_DIGEST_MISMATCH');
-    validated.push({ path: relative(outputDirectory, absolutePath).replaceAll('\\', '/'), sha256: actualDigest });
-  }
-  return validated;
+function commandDigestForGate(gate: AbgGateDefinition): string {
+  return commandDigest(commandForGate(gate));
+}
+
+function ordinalFor(gate: AbgGateDefinition): number {
+  const ordinal = ABG_GATES.findIndex((candidate) => candidate.gateId === gate.gateId);
+  if (ordinal === -1) throw new Error('ABG_CATALOG_GATE_MISSING:' + gate.gateId);
+  return ordinal + 1;
 }
 
 function failedGate(
   gate: AbgGateDefinition,
   ordinal: number,
-  runId: string,
+  failedRunId: string,
   producerCommandDigest: string,
   failureCode: string,
   error?: unknown,
   producerExitCode: number | null = null,
   elapsedMilliseconds = 0,
-): GateResult {
-  const errorMessage = error instanceof Error
-    ? error.message
-    : error === undefined
-      ? undefined
-      : String(error);
+): FormalGateResult {
+  const message = error === undefined ? undefined : redactSensitiveText(errorMessage(error));
   return {
-    ...gate, ordinal, runId, status: 'FAILED', producerExitCode, producerCommandDigest,
-    elapsedMilliseconds, failureCode,
-    ...(errorMessage === undefined ? {} : { error: redactSensitiveText(errorMessage) }),
-    scenarioId: null, requestIds: [], principalIds: [], governanceObjectIds: [], versionIds: [],
-    ruleVersions: [], evidenceRefs: [],
+    ...gate,
+    ordinal,
+    runId: failedRunId,
+    status: 'FAILED',
+    producerExitCode,
+    producerCommandDigest,
+    elapsedMilliseconds,
+    proofPath: null,
+    proof: null,
+    failureCode,
+    ...(message === undefined ? {} : { error: message }),
   };
 }
 
 async function writeManifest(directory: string): Promise<void> {
-  const names = (await collectFiles(directory)).filter((name) => !['manifest.json', 'manifest.sha256'].includes(name)).sort();
+  const names = (await collectFiles(directory))
+    .filter((name) => !['manifest.json', 'manifest.sha256'].includes(name))
+    .sort((left, right) => left.localeCompare(right));
   const files = await Promise.all(names.map(async (name) => {
     const bytes = await readFile(join(directory, name));
-    return { path: name.replaceAll('\\', '/'), mediaType: mediaType(name), byteLength: bytes.byteLength, sha256: sha256(bytes) };
+    return {
+      path: name.replaceAll('\\', '/'),
+      mediaType: mediaType(name),
+      byteLength: bytes.byteLength,
+      sha256: sha256(bytes),
+    };
   }));
-  await writeExclusive(join(directory, 'manifest.json'), { schemaVersion: 'phase-01.evidence-manifest.v1', files });
+  await writeExclusive(join(directory, 'manifest.json'), {
+    schemaVersion: 'phase-01.evidence-manifest.v1',
+    files,
+  });
   const digest = sha256(await readFile(join(directory, 'manifest.json')));
-  await writeFile(join(directory, 'manifest.sha256'), `${digest}  manifest.json\n`, { encoding: 'utf8', flag: 'wx', mode: 0o400 });
+  await writeFile(join(directory, 'manifest.sha256'), `${digest}  manifest.json\n`, {
+    encoding: 'utf8',
+    flag: 'wx',
+    mode: 0o400,
+  });
 }
 
 async function collectFiles(directory: string, prefix = ''): Promise<readonly string[]> {
@@ -371,14 +496,23 @@ async function collectFiles(directory: string, prefix = ''): Promise<readonly st
   const files: string[] = [];
   for (const entry of entries) {
     const relativePath = join(prefix, entry.name);
-    if (entry.isDirectory()) files.push(...await collectFiles(join(directory, entry.name), relativePath));
-    else files.push(relativePath);
+    if (entry.isSymbolicLink()) throw new Error('ABG_MANIFEST_SYMLINK_FORBIDDEN:' + relativePath);
+    if (entry.isDirectory()) {
+      files.push(...await collectFiles(join(directory, entry.name), relativePath));
+    } else if (entry.isFile()) {
+      files.push(relativePath);
+    }
   }
   return files;
 }
 
 async function writeExclusive(path: string, value: unknown): Promise<void> {
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, {
+    encoding: 'utf8',
+    flag: 'wx',
+    mode: 0o600,
+  });
 }
 
 async function writeExclusiveBytes(path: string, value: Uint8Array): Promise<void> {
@@ -387,21 +521,25 @@ async function writeExclusiveBytes(path: string, value: Uint8Array): Promise<voi
 }
 
 async function assertDirectoryAbsent(path: string): Promise<void> {
-  try { await access(path); } catch (error) {
-    if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') return;
+  try {
+    await access(path);
+  } catch (error) {
+    if (isMissing(error)) return;
     throw error;
   }
   throw new Error('EVIDENCE_OUTPUT_ALREADY_EXISTS');
 }
 
-function commandDigest(command: CommandSpec): string {
+function commandDigest(command: AuthoritativeCommandSpec): string {
   return sha256(Buffer.from(canonicalJson(command), 'utf8'));
 }
 
 function resolveInsideRepository(path: string): string {
   const resolved = resolve(repositoryRoot, path);
   const relativePath = relative(repositoryRoot, resolved);
-  if (relativePath === '..' || relativePath.startsWith(`..${sep}`)) throw new Error('ABG_COMMAND_WORKDIR_OUTSIDE_REPOSITORY');
+  if (relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+    throw new Error('ABG_COMMAND_WORKDIR_OUTSIDE_REPOSITORY');
+  }
   return resolved;
 }
 
@@ -418,10 +556,17 @@ function mediaType(path: string): string {
 
 function localNow(): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
   }).formatToParts(new Date());
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((candidate) => candidate.type === type)?.value;
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((candidate) => candidate.type === type)?.value;
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}`;
 }
 
@@ -434,18 +579,16 @@ function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(',')}}`;
+    return `{${Object.keys(record).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalJson(record[key])}`,
+    ).join(',')}}`;
   }
   throw new Error('CANONICAL_JSON_VALUE_UNSUPPORTED');
 }
 
-function sha256(value: Uint8Array): string { return createHash('sha256').update(value).digest('hex'); }
-function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
-function requireEnvironment(name: string): string { const value = process.env[name]; if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`); return value; }
-
-function parsePositiveInteger(value: string, errorCode: string): number {
+function parsePositiveInteger(value: string, code: string): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new Error(errorCode);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new Error(code);
   return parsed;
 }
 
@@ -453,13 +596,23 @@ function assertFrozenInputsEqual(
   expected: Readonly<Record<string, string>>,
   actual: Readonly<Record<string, string>>,
 ): void {
+  if (canonicalJson(expected) !== canonicalJson(actual)) throw new Error('ABG_FROZEN_INPUT_DRIFT');
+}
+
+function assertAuthorityIdentityEqual(
+  expected: VerificationAuthorityIdentity,
+  actual: VerificationAuthorityIdentity,
+): void {
   if (canonicalJson(expected) !== canonicalJson(actual)) {
-    throw new Error('ABG_FROZEN_INPUT_DRIFT');
+    throw new Error('ABG_AUTHORITY_IDENTITY_DRIFT');
+  }
+  if (actual.coverageMatrixDigest !== getAbgCoverageMatrixDigest()) {
+    throw new Error('ABG_COVERAGE_MATRIX_RUNTIME_DIGEST_DRIFT');
   }
 }
 
 function aggregateFormalReferences(
-  results: readonly GateResult[],
+  results: readonly FormalGateResult[],
   artifactDigest: string,
 ): {
   readonly requestIds: readonly string[];
@@ -469,16 +622,33 @@ function aggregateFormalReferences(
   readonly ruleVersions: readonly string[];
   readonly artifactDigests: readonly string[];
 } {
+  const proofs = results.map((result) => result.proof).filter(
+    (proof): proof is AbgGateResult => proof !== null,
+  );
   return {
-    requestIds: unique(results.flatMap((result) => result.requestIds)),
-    principalIds: unique(results.flatMap((result) => result.principalIds)),
-    governanceObjectIds: unique(results.flatMap((result) => result.governanceObjectIds)),
-    versionIds: unique(results.flatMap((result) => result.versionIds)),
-    ruleVersions: unique(results.flatMap((result) => result.ruleVersions)),
+    requestIds: unique(proofs.flatMap((proof) => proof.requestIds)),
+    principalIds: unique(proofs.flatMap((proof) => proof.principalIds)),
+    governanceObjectIds: unique(proofs.flatMap((proof) => proof.governanceObjectIds)),
+    versionIds: unique(proofs.flatMap((proof) => proof.versionIds)),
+    ruleVersions: unique(proofs.flatMap((proof) => proof.ruleVersions)),
     artifactDigests: [artifactDigest],
   };
 }
 
 function unique(values: readonly string[]): readonly string[] {
   return [...new Set(values)];
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isMissing(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+
+function requireEnvironment(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`);
+  return value;
 }

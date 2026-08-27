@@ -1,6 +1,6 @@
 # 01 — ABG-01 至 ABG-40 权威覆盖矩阵
 
-Status: claimed
+Status: resolved
 
 Blocked by: none
 
@@ -19,3 +19,4 @@ Blocked by: none
 ## Comments
 
 - 2026-08-27：AR-01 已认领。
+- 2026-08-27：AR-01 已完成；权威矩阵、派生报告和定向校验已通过，提交为 `cf1a78e` 并已推送到 `origin/phase-01-acceptance-readiness`。未执行正式 ABG。

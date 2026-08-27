@@ -4,6 +4,10 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { ABG_GATES } from './abg-catalog.js';
+import {
+  getAbgCoverageMatrixDigest,
+  getAbgProducerProtocolIdentityDigest,
+} from './abg-gate-proof.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -19,12 +23,21 @@ export interface AuthoritativeGateCommandSpec extends AuthoritativeCommandSpec {
 }
 
 export interface FrozenRunPlan {
-  readonly schemaVersion: 'phase-01.abg-run-plan.v2';
-  readonly authorityId: 'phase-01.repository-authoritative-plan.v1';
+  readonly schemaVersion: 'phase-01.abg-run-plan.v3';
+  readonly authorityId: 'phase-01.repository-authoritative-plan.v2';
   readonly runSequence: number;
   readonly frozenInputs: Readonly<Record<string, string>>;
+  readonly authorityIdentity: VerificationAuthorityIdentity;
   readonly setupCommands: readonly AuthoritativeCommandSpec[];
   readonly gates: readonly AuthoritativeGateCommandSpec[];
+}
+
+export interface VerificationAuthorityIdentity {
+  readonly coverageMatrixDigest: string;
+  readonly coverageMatrixSourceSha256: string;
+  readonly producerProtocolIdentityDigest: string;
+  readonly producerProtocolSourceSha256: string;
+  readonly gateProofSourceSha256: string;
 }
 
 export async function buildAuthoritativeRunPlan(
@@ -32,10 +45,11 @@ export async function buildAuthoritativeRunPlan(
   runSequence: number,
 ): Promise<FrozenRunPlan> {
   return {
-    schemaVersion: 'phase-01.abg-run-plan.v2',
-    authorityId: 'phase-01.repository-authoritative-plan.v1',
+    schemaVersion: 'phase-01.abg-run-plan.v3',
+    authorityId: 'phase-01.repository-authoritative-plan.v2',
     runSequence,
     frozenInputs: await readFrozenInputs(repositoryRoot),
+    authorityIdentity: await readVerificationAuthorityIdentity(repositoryRoot),
     setupCommands: [
       {
         executable: 'npm',
@@ -55,6 +69,24 @@ export async function buildAuthoritativeRunPlan(
       executable: 'node',
       args: ['tooling/verification/src/produce-abg-gate.ts'],
     })),
+  };
+}
+
+export async function readVerificationAuthorityIdentity(
+  repositoryRoot: string,
+): Promise<VerificationAuthorityIdentity> {
+  return {
+    coverageMatrixDigest: getAbgCoverageMatrixDigest(),
+    coverageMatrixSourceSha256: await fileSha256(
+      join(repositoryRoot, 'tooling/verification/src/abg-coverage-matrix.ts'),
+    ),
+    producerProtocolIdentityDigest: getAbgProducerProtocolIdentityDigest(),
+    producerProtocolSourceSha256: await fileSha256(
+      join(repositoryRoot, 'tooling/verification/src/evidence/protocol.ts'),
+    ),
+    gateProofSourceSha256: await fileSha256(
+      join(repositoryRoot, 'tooling/verification/src/abg-gate-proof.ts'),
+    ),
   };
 }
 
