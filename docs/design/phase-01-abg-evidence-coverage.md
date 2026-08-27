@@ -7,10 +7,10 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 ## Summary
 
 - Gates: 40
-- Gate-scoped assertions: 40
-- Distinct scenarios: 42
+- Gate-scoped assertions: 49
+- Distinct scenarios: 45
 - Distinct producers: 9
-- Required evidence selectors: 63
+- Required evidence selectors: 84
 
 ## Producer coverage
 
@@ -23,7 +23,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 | fault | 4 |
 | formal-run | 1 |
 | integration | 32 |
-| live | 5 |
+| live | 8 |
 | static | 3 |
 
 ## Gate coverage
@@ -64,8 +64,8 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN` / `ABG-03:asia-shanghai-no-timezone-contract` / `/scenarios/INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN/assertions/ABG-03:asia-shanghai-no-timezone-contract/status` / expected `PASSED`
-  - `integration` / `phase-01-integration-evidence` / `LIVE-ASIA-SHANGHAI-TIME-CONTRACT` / `ABG-03:asia-shanghai-no-timezone-contract` / `/scenarios/LIVE-ASIA-SHANGHAI-TIME-CONTRACT/assertions/ABG-03:asia-shanghai-no-timezone-contract/status` / expected `PASSED`
-  - `live` / `phase-01-live-evidence` / `INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN` / `ABG-03:asia-shanghai-no-timezone-contract` / `/scenarios/INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN/assertions/ABG-03:asia-shanghai-no-timezone-contract/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN` / `ABG-03:asia-shanghai-no-timezone-contract` / `/scenarios/INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN/assertions/ABG-03:asia-shanghai-no-timezone-contract/status` / expected `PASSED`
+  - `live` / `phase-01-live-evidence` / `LIVE-ASIA-SHANGHAI-TIME-CONTRACT` / `ABG-03:asia-shanghai-no-timezone-contract` / `/scenarios/LIVE-ASIA-SHANGHAI-TIME-CONTRACT/assertions/ABG-03:asia-shanghai-no-timezone-contract/status` / expected `PASSED`
 
 ### ABG-04 — Keycloak人员、服务身份与本地主体绑定
 
@@ -115,8 +115,8 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
-  - `integration` / `phase-01-integration-evidence` / `BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF` / `ABG-07:charge-item-draft-crud-and-csrf-rejection` / `/scenarios/BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF/assertions/ABG-07:charge-item-draft-crud-and-csrf-rejection/status` / expected `PASSED`
-  - `browser` / `phase-01-browser-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-07:charge-item-draft-crud-and-csrf-rejection` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-07:charge-item-draft-crud-and-csrf-rejection/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-07:charge-item-draft-crud-and-csrf-rejection` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-07:charge-item-draft-crud-and-csrf-rejection/status` / expected `PASSED`
+  - `browser` / `phase-01-browser-evidence` / `BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF` / `ABG-07:charge-item-draft-crud-and-csrf-rejection` / `/scenarios/BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF/assertions/ABG-07:charge-item-draft-crud-and-csrf-rejection/status` / expected `PASSED`
 
 ### ABG-08 — 收费项目稳定身份、新版本候选与不可变发布
 
@@ -153,8 +153,8 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
-  - `integration` / `phase-01-integration-evidence` / `BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION` / `ABG-10:price-list-draft-entry-change-complete-snapshot` / `/scenarios/BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION/assertions/ABG-10:price-list-draft-entry-change-complete-snapshot/status` / expected `PASSED`
-  - `browser` / `phase-01-browser-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-10:price-list-draft-entry-change-complete-snapshot` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-10:price-list-draft-entry-change-complete-snapshot/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-10:price-list-draft-entry-change-complete-snapshot` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-10:price-list-draft-entry-change-complete-snapshot/status` / expected `PASSED`
+  - `browser` / `phase-01-browser-evidence` / `BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION` / `ABG-10:price-list-draft-entry-change-complete-snapshot` / `/scenarios/BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION/assertions/ABG-10:price-list-draft-entry-change-complete-snapshot/status` / expected `PASSED`
 
 ### ABG-11 — 通用/专用互斥、院区范围与排他约束
 
@@ -172,14 +172,15 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 ### ABG-12 — 固定两级价格解析、失败关闭与证据
 
 - Evidence class: API
-- Scenarios: `INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED`, `INTEGRATION-VERTICAL-SLICE-PUBLICATION`
+- Scenarios: `INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED`, `LIVE-PRICE-RESOLUTION-PATH`
 - Gate-scoped assertions: `ABG-12:two-level-price-resolution-fail-closed-evidence`
-- Producers: `integration`
+- Producers: `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED` / `ABG-12:two-level-price-resolution-fail-closed-evidence` / `/scenarios/INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED/assertions/ABG-12:two-level-price-resolution-fail-closed-evidence/status` / expected `PASSED`
+  - `live` / `phase-01-live-evidence` / `LIVE-PRICE-RESOLUTION-PATH` / `ABG-12:two-level-price-resolution-fail-closed-evidence` / `/scenarios/LIVE-PRICE-RESOLUTION-PATH/assertions/ABG-12:two-level-price-resolution-fail-closed-evidence/status` / expected `PASSED`
 
 ### ABG-13 — CSV与JSON收费项目导入等价性
 
@@ -289,8 +290,8 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
-  - `integration` / `phase-01-integration-evidence` / `BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION` / `ABG-21:high-risk-price-review-owner-final-approval` / `/scenarios/BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION/assertions/ABG-21:high-risk-price-review-owner-final-approval/status` / expected `PASSED`
-  - `browser` / `phase-01-browser-evidence` / `INTEGRATION-HIGH-RISK-PRICE-APPROVAL` / `ABG-21:high-risk-price-review-owner-final-approval` / `/scenarios/INTEGRATION-HIGH-RISK-PRICE-APPROVAL/assertions/ABG-21:high-risk-price-review-owner-final-approval/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-HIGH-RISK-PRICE-APPROVAL` / `ABG-21:high-risk-price-review-owner-final-approval` / `/scenarios/INTEGRATION-HIGH-RISK-PRICE-APPROVAL/assertions/ABG-21:high-risk-price-review-owner-final-approval/status` / expected `PASSED`
+  - `browser` / `phase-01-browser-evidence` / `BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION` / `ABG-21:high-risk-price-review-owner-final-approval` / `/scenarios/BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION/assertions/ABG-21:high-risk-price-review-owner-final-approval/status` / expected `PASSED`
 
 ### ABG-22 — 院区差异价前置确认和单一Owner主权
 
@@ -319,7 +320,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 ### ABG-24 — 不兼容消费者隔离、订阅升级和原快照重放
 
 - Evidence class: CONSUMER
-- Scenarios: `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY`, `INTEGRATION-VERTICAL-SLICE-PUBLICATION`
+- Scenarios: `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY`
 - Gate-scoped assertions: `ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay`
 - Producers: `consumer`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
@@ -327,7 +328,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY` / `ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay` / `/scenarios/LIVE-CONSUMER-INCOMPATIBILITY-REPLAY/assertions/ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay/status` / expected `PASSED`
-  - `live` / `phase-01-live-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay/status` / expected `PASSED`
+  - `live` / `phase-01-live-evidence` / `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY` / `ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay` / `/scenarios/LIVE-CONSUMER-INCOMPATIBILITY-REPLAY/assertions/ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay/status` / expected `PASSED`
 
 ### ABG-25 — 紧急单人暂停追加事件和未来阻断
 
@@ -421,14 +422,30 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 
 - Evidence class: FAULT
 - Scenarios: `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX`
-- Gate-scoped assertions: `ABG-32:publication-durable-write-fault-matrix`
+- Gate-scoped assertions: `ABG-32:publication-workflow-decision-rollback`, `ABG-32:publication-release-envelope-rollback`, `ABG-32:publication-snapshot-artifact-rollback`, `ABG-32:publication-release-member-rollback`, `ABG-32:publication-outbox-event-rollback`, `ABG-32:publication-compatibility-precheck-rollback`, `ABG-32:publication-delivery-registration-rollback`, `ABG-32:publication-domain-candidate-confirmation-rollback`, `ABG-32:publication-audit-event-rollback`
 - Producers: `fault`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
 - Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
-  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-durable-write-fault-matrix` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-durable-write-fault-matrix/status` / expected `PASSED`
-  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-durable-write-fault-matrix` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-durable-write-fault-matrix/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-workflow-decision-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-workflow-decision-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-release-envelope-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-release-envelope-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-snapshot-artifact-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-snapshot-artifact-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-release-member-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-release-member-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-outbox-event-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-outbox-event-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-compatibility-precheck-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-compatibility-precheck-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-delivery-registration-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-delivery-registration-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-domain-candidate-confirmation-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-domain-candidate-confirmation-rollback/status` / expected `PASSED`
+  - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-audit-event-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-audit-event-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-workflow-decision-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-workflow-decision-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-release-envelope-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-release-envelope-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-snapshot-artifact-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-snapshot-artifact-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-release-member-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-release-member-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-outbox-event-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-outbox-event-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-compatibility-precheck-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-compatibility-precheck-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-delivery-registration-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-delivery-registration-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-domain-candidate-confirmation-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-domain-candidate-confirmation-rollback/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-audit-event-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-audit-event-rollback/status` / expected `PASSED`
 
 ### ABG-33 — Outbox丢唤醒和数据库轮询恢复
 
@@ -459,41 +476,45 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 ### ABG-35 — 双消费者隔离、严格下一版本和缺口阻断
 
 - Evidence class: CONSUMER
-- Scenarios: `CONSUMER-ISOLATION-GAP-BLOCKING`, `INTEGRATION-VERTICAL-SLICE-PUBLICATION`
+- Scenarios: `CONSUMER-ISOLATION-GAP-BLOCKING`, `INTEGRATION-VERTICAL-SLICE-PUBLICATION`, `LIVE-DUAL-CONSUMER-ISOLATION`
 - Gate-scoped assertions: `ABG-35:two-consumer-isolation-next-version-gap-block`
-- Producers: `consumer`, `integration`
+- Producers: `consumer`, `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
 - Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `CONSUMER-ISOLATION-GAP-BLOCKING` / `ABG-35:two-consumer-isolation-next-version-gap-block` / `/scenarios/CONSUMER-ISOLATION-GAP-BLOCKING/assertions/ABG-35:two-consumer-isolation-next-version-gap-block/status` / expected `PASSED`
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-35:two-consumer-isolation-next-version-gap-block` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-35:two-consumer-isolation-next-version-gap-block/status` / expected `PASSED`
+  - `live` / `phase-01-live-evidence` / `LIVE-DUAL-CONSUMER-ISOLATION` / `ABG-35:two-consumer-isolation-next-version-gap-block` / `/scenarios/LIVE-DUAL-CONSUMER-ISOLATION/assertions/ABG-35:two-consumer-isolation-next-version-gap-block/status` / expected `PASSED`
 
 ### ABG-36 — 完整未压缩快照下载、双摘要和流式客户端
 
 - Evidence class: CONSUMER
-- Scenarios: `CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST`, `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY`
+- Scenarios: `CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST`, `LIVE-CANONICAL-SNAPSHOT-RECEIPT-CHECKPOINT`
 - Gate-scoped assertions: `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client`
-- Producers: `consumer`, `integration`
+- Producers: `consumer`, `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
 - Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST` / `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client` / `/scenarios/CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST/assertions/ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client/status` / expected `PASSED`
-  - `integration` / `phase-01-integration-evidence` / `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY` / `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client` / `/scenarios/LIVE-CONSUMER-INCOMPATIBILITY-REPLAY/assertions/ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST` / `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client` / `/scenarios/CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST/assertions/ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client/status` / expected `PASSED`
+  - `live` / `phase-01-live-evidence` / `LIVE-CANONICAL-SNAPSHOT-RECEIPT-CHECKPOINT` / `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client` / `/scenarios/LIVE-CANONICAL-SNAPSHOT-RECEIPT-CHECKPOINT/assertions/ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client/status` / expected `PASSED`
 
 ### ABG-37 — 16 MiB与16 MiB加1精确规范制品边界
 
 - Evidence class: CAPACITY
 - Scenarios: `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY`
-- Gate-scoped assertions: `ABG-37:canonical-artifact-16mib-boundary`
+- Gate-scoped assertions: `ABG-37:canonical-artifact-16mib-exact-accepted`, `ABG-37:canonical-artifact-16mib-plus-one-rejected`
 - Producers: `capacity`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
 - Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
-  - `capacity` / `phase-01-capacity-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-boundary` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-boundary/status` / expected `PASSED`
-  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-boundary` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-boundary/status` / expected `PASSED`
+  - `capacity` / `phase-01-capacity-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-exact-accepted` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-exact-accepted/status` / expected `PASSED`
+  - `capacity` / `phase-01-capacity-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-plus-one-rejected` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-plus-one-rejected/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-exact-accepted` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-exact-accepted/status` / expected `PASSED`
+  - `integration` / `phase-01-integration-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-plus-one-rejected` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-plus-one-rejected/status` / expected `PASSED`
 
 ### ABG-38 — TypeBox、OpenAPI 3.1和生成客户端唯一权威
 

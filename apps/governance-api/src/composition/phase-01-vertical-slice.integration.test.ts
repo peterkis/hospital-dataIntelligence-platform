@@ -1,5 +1,5 @@
-import { readFile, readdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { Pool } from 'pg';
 import { sql } from 'kysely';
 import {
@@ -12,7 +12,6 @@ import { createDatabase, type DatabaseHandle } from '../platform/database/create
 import {
   configureControlledPublicationFault,
   PUBLICATION_TRANSACTION_FAULT_POINTS,
-  type ControlledPublicationFaultPoint,
 } from '../platform/fault-injection/controlled-faults.js';
 import { canonicalSha256, sha256Bytes } from '../platform/hashing/canonical-hash.js';
 import { createTransactionRunner } from '../platform/transaction/transaction-runner.js';
@@ -63,9 +62,25 @@ interface FoundationIds {
   readonly priceListObjectId: string;
 }
 
+interface IntegrationEvidenceObservation {
+  readonly producerId: 'database' | 'integration' | 'fault' | 'consumer' | 'capacity';
+  readonly scenarioId: string;
+  readonly assertionId: string;
+  readonly gateId: string;
+  readonly description: string;
+  readonly requestIds: readonly string[];
+  readonly principalIds: readonly string[];
+  readonly governanceObjectIds: readonly string[];
+  readonly versionIds: readonly string[];
+  readonly ruleVersions: readonly string[];
+}
+
+type PublicationTransactionFaultPoint = (typeof PUBLICATION_TRANSACTION_FAULT_POINTS)[number];
+
 let container: StartedTestContainer | undefined;
 let databaseHandle: DatabaseHandle | undefined;
 let foundation: FoundationIds;
+const integrationEvidenceObservations: IntegrationEvidenceObservation[] = [];
 
 process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 
@@ -102,8 +117,12 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
-  await databaseHandle?.close();
-  await container?.stop();
+  try {
+    await writeIntegrationEvidenceObservations();
+  } finally {
+    await databaseHandle?.close();
+    await container?.stop();
+  }
 }, 30_000);
 
 describe('Phase 01 executable vertical slice', () => {
@@ -730,6 +749,114 @@ describe('Phase 01 executable vertical slice', () => {
       and data_type in ('timestamp with time zone', 'time with time zone')
     `.execute(databaseHandle.database);
     expect(timeZoneTypes.rows[0]?.count).toBe('0');
+    recordIntegrationObservation({
+      producerId: 'database',
+      scenarioId: 'INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN',
+      assertionId: 'ABG-03:asia-shanghai-no-timezone-contract',
+      gateId: 'ABG-03',
+      description: 'The integrated PostgreSQL schema has no timezone-aware timestamp columns.',
+      requestIds: ['request-audit-verify'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId, foundation.priceListObjectId],
+      versionIds: [charge.chargeItemVersionId, price.priceListReleaseId],
+      ruleVersions: ['phase-01.timezone-contract.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-CHARGE-CATALOG-VERSION-PUBLICATION',
+      assertionId: 'ABG-08:charge-item-stable-identity-version-candidate-immutable-publication',
+      gateId: 'ABG-08',
+      description: 'Charge publication retained a stable identity and immutable version.',
+      requestIds: ['request-charge-draft', 'request-charge-initial-approve'],
+      principalIds: [foundation.actorId, foundation.reviewerId, foundation.approverId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId],
+      versionIds: [charge.chargeItemVersionId],
+      ruleVersions: ['phase-01.workflow-template.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-VERTICAL-SLICE-PUBLICATION',
+      assertionId: 'ABG-10:price-list-draft-entry-change-complete-snapshot',
+      gateId: 'ABG-10',
+      description: 'Price-list publication produced a complete immutable snapshot.',
+      requestIds: ['request-price-draft', 'request-price-initial-approve'],
+      principalIds: [foundation.actorId, foundation.reviewerId, foundation.approverId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: ['phase-01.price-list-projection.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED',
+      assertionId: 'ABG-12:two-level-price-resolution-fail-closed-evidence',
+      gateId: 'ABG-12',
+      description: 'The fixed two-level resolution path returned the expected amount and trace.',
+      requestIds: ['request-price-resolution'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [charge.chargeItemVersionId, price.priceListReleaseId],
+      ruleVersions: ['phase-01.fixed-two-level-price-resolution.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'consumer',
+      scenarioId: 'LIVE-CONSUMER-INCOMPATIBILITY-REPLAY',
+      assertionId: 'ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay',
+      gateId: 'ABG-24',
+      description: 'Incompatible consumer delivery remained isolated until explicit upgrade and replay.',
+      requestIds: ['request-legacy-consumer-poll-blocked', 'request-legacy-delivery-replay'],
+      principalIds: [foundation.incompatibleServicePrincipalId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: [PRICE_LIST_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'consumer',
+      scenarioId: 'CONSUMER-ISOLATION-GAP-BLOCKING',
+      assertionId: 'ABG-35:two-consumer-isolation-next-version-gap-block',
+      gateId: 'ABG-35',
+      description: 'Consumer checkpoints remain independent and compatible delivery resumes separately.',
+      requestIds: ['request-consumer-poll', 'request-legacy-consumer-poll-replayed'],
+      principalIds: [foundation.servicePrincipalId, foundation.incompatibleServicePrincipalId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: [PRICE_LIST_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'consumer',
+      scenarioId: 'CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST',
+      assertionId: 'ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client',
+      gateId: 'ABG-36',
+      description: 'Snapshot bytes and digest matched across subscription retrieval and API download.',
+      requestIds: ['request-snapshot-pull', 'request-legacy-snapshot-pull-replayed'],
+      principalIds: [foundation.servicePrincipalId, foundation.incompatibleServicePrincipalId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: [PRICE_LIST_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-CHARGE-CATALOG-BITEMPORAL-HISTORY',
+      assertionId: 'ABG-09:charge-item-bitemporal-history-and-difference',
+      gateId: 'ABG-09',
+      description: 'Historical and current price resolutions retained their distinct recorded-time results.',
+      requestIds: ['request-historical-price-resolution', 'request-current-price-resolution'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId, secondPrice.priceListReleaseId],
+      ruleVersions: ['phase-01.bitemporal-price-resolution.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'database',
+      scenarioId: 'INTEGRATION-AUDIT-HASH-CHAIN-TAMPER',
+      assertionId: 'ABG-30:audit-hash-chain-recompute-first-tamper-position',
+      gateId: 'ABG-30',
+      description: 'Audit chain verification and append-only release snapshot guard both succeeded.',
+      requestIds: ['request-audit-verify'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: ['phase-01.audit-chain.v1'],
+    });
   }, 120_000);
 
   it('rolls back the complete publication transaction at every durable write point', async () => {
@@ -833,7 +960,7 @@ describe('Phase 01 executable vertical slice', () => {
 
     const baseline = await publicationSideEffectCounts(databaseHandle.database);
     const results: {
-      readonly faultPoint: ControlledPublicationFaultPoint;
+      readonly faultPoint: PublicationTransactionFaultPoint;
       readonly rolledBack: boolean;
     }[] = [];
     for (const faultPoint of PUBLICATION_TRANSACTION_FAULT_POINTS) {
@@ -875,6 +1002,18 @@ describe('Phase 01 executable vertical slice', () => {
       );
       expect(unchangedDraft.governanceStatus).toBe('DRAFT');
       results.push({ faultPoint, rolledBack: true });
+      recordIntegrationObservation({
+        producerId: 'fault',
+        scenarioId: 'FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX',
+        assertionId: faultPointAssertionId(faultPoint),
+        gateId: 'ABG-32',
+        description: 'Publication transaction rolled back at controlled point ' + faultPoint + '.',
+        requestIds: ['request-fault-price-approve-' + faultPoint],
+        principalIds: [foundation.approverId],
+        governanceObjectIds: [foundation.priceListObjectId],
+        versionIds: [priceDraft.priceListReleaseId],
+        ruleVersions: ['phase-01.publication-atomicity.v1'],
+      });
     }
     expect(results).toEqual(
       PUBLICATION_TRANSACTION_FAULT_POINTS.map((faultPoint) => ({
@@ -1027,8 +1166,65 @@ describe('Phase 01 executable vertical slice', () => {
       ),
     ).rejects.toThrow('SNAPSHOT_ARTIFACT_TOO_LARGE');
     expect(await publicationSideEffectCounts(databaseHandle.database)).toEqual(beforeOversized);
+    recordIntegrationObservation({
+      producerId: 'capacity',
+      scenarioId: 'INTEGRATION-SNAPSHOT-16MIB-BOUNDARY',
+      assertionId: 'ABG-37:canonical-artifact-16mib-exact-accepted',
+      gateId: 'ABG-37',
+      description: 'Canonical snapshot exactly 16 MiB was accepted and downloaded with matching digest.',
+      requestIds: ['request-capacity-exact', 'request-capacity-download'],
+      principalIds: [foundation.approverId, foundation.actorId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId],
+      versionIds: [draft.chargeItemVersionId, exactPublication.releaseId],
+      ruleVersions: [CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'capacity',
+      scenarioId: 'INTEGRATION-SNAPSHOT-16MIB-BOUNDARY',
+      assertionId: 'ABG-37:canonical-artifact-16mib-plus-one-rejected',
+      gateId: 'ABG-37',
+      description: 'Canonical snapshot of 16 MiB plus one byte was rejected before publication writes.',
+      requestIds: ['request-capacity-oversized'],
+      principalIds: [foundation.approverId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId],
+      versionIds: [draft.chargeItemVersionId],
+      ruleVersions: [CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION],
+    });
   }, 180_000);
 });
+
+function recordIntegrationObservation(observation: IntegrationEvidenceObservation): void {
+  integrationEvidenceObservations.push(observation);
+}
+
+function faultPointAssertionId(faultPoint: PublicationTransactionFaultPoint): string {
+  const assertionByFaultPoint: Readonly<Record<PublicationTransactionFaultPoint, string>> = {
+    WORKFLOW_DECISION_WRITTEN: 'ABG-32:publication-workflow-decision-rollback',
+    RELEASE_ENVELOPE_WRITTEN: 'ABG-32:publication-release-envelope-rollback',
+    SNAPSHOT_ARTIFACT_WRITTEN: 'ABG-32:publication-snapshot-artifact-rollback',
+    RELEASE_MEMBER_WRITTEN: 'ABG-32:publication-release-member-rollback',
+    OUTBOX_EVENT_WRITTEN: 'ABG-32:publication-outbox-event-rollback',
+    COMPATIBILITY_PRECHECK_WRITTEN: 'ABG-32:publication-compatibility-precheck-rollback',
+    DELIVERY_REGISTERED: 'ABG-32:publication-delivery-registration-rollback',
+    DOMAIN_CANDIDATE_CONFIRMED: 'ABG-32:publication-domain-candidate-confirmation-rollback',
+    AUDIT_EVENT_WRITTEN: 'ABG-32:publication-audit-event-rollback',
+  };
+  return assertionByFaultPoint[faultPoint];
+}
+
+async function writeIntegrationEvidenceObservations(): Promise<void> {
+  const path = process.env['PHASE01_INTEGRATION_EVIDENCE_PATH'];
+  if (!path) return;
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(
+    path,
+    JSON.stringify({
+      schemaVersion: 'phase-01.integration-observations.v1',
+      observations: integrationEvidenceObservations,
+    }, null, 2) + '\n',
+    { encoding: 'utf8', flag: 'wx', mode: 0o600 },
+  );
+}
 
 async function publicationSideEffectCounts(database: DatabaseHandle['database']) {
   const result = await sql<{

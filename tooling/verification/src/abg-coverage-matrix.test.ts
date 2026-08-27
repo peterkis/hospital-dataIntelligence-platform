@@ -25,6 +25,7 @@ describe('ABG coverage matrix', () => {
     expect(ABG_COVERAGE_MATRIX.map((entry) => entry.evidenceClass)).toEqual(
       ABG_GATES.map((gate) => gate.evidenceClass),
     );
+    expect(ABG_COVERAGE_MATRIX.flatMap((entry) => entry.assertionIds)).toHaveLength(49);
   });
 
   it('has meaningful scenarios, gate-scoped assertions, controlled producers, and strict selectors', () => {
@@ -41,6 +42,12 @@ describe('ABG coverage matrix', () => {
         expect(assertionId.startsWith(entry.gateId + ':')).toBe(true);
         expect(assertionOwners.has(assertionId)).toBe(false);
         assertionOwners.set(assertionId, entry.gateId);
+        const assertionSelectors = entry.evidenceSelectors.filter(
+          (selector) => selector.assertionId === assertionId,
+        );
+        expect(assertionSelectors.length).toBeGreaterThan(0);
+        expect(assertionSelectors.every((selector) => entry.producerIds.includes(selector.producerId)))
+          .toBe(true);
       }
       for (const producerId of entry.producerIds) {
         expect(ABG_PRODUCER_IDS).toContain(producerId);

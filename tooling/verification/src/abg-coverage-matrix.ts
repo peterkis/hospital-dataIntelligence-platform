@@ -91,8 +91,9 @@ export interface AbgCoverageMatrixEntry {
 
 interface CoverageDefinition {
   readonly gateId: string;
-  readonly assertionSlug: string;
+  readonly assertionSlugs: readonly string[];
   readonly scenarioIds: readonly string[];
+  readonly scenarioByProducer: Readonly<Partial<Record<AbgProducerId, string>>>;
   readonly producerIds: readonly AbgProducerId[];
 }
 
@@ -174,6 +175,11 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
     'asia-shanghai-no-timezone-contract',
     ['INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN', 'LIVE-ASIA-SHANGHAI-TIME-CONTRACT'],
     ['database', 'integration', 'live'],
+    {
+      database: 'INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN',
+      integration: 'INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN',
+      live: 'LIVE-ASIA-SHANGHAI-TIME-CONTRACT',
+    },
   ),
   defineCoverage(
     'ABG-04',
@@ -198,6 +204,10 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
     'charge-item-draft-crud-and-csrf-rejection',
     ['BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF', 'INTEGRATION-VERTICAL-SLICE-PUBLICATION'],
     ['integration', 'browser'],
+    {
+      integration: 'INTEGRATION-VERTICAL-SLICE-PUBLICATION',
+      browser: 'BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF',
+    },
   ),
   defineCoverage(
     'ABG-08',
@@ -216,6 +226,10 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
     'price-list-draft-entry-change-complete-snapshot',
     ['BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION', 'INTEGRATION-VERTICAL-SLICE-PUBLICATION'],
     ['integration', 'browser'],
+    {
+      integration: 'INTEGRATION-VERTICAL-SLICE-PUBLICATION',
+      browser: 'BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION',
+    },
   ),
   defineCoverage(
     'ABG-11',
@@ -226,8 +240,12 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
   defineCoverage(
     'ABG-12',
     'two-level-price-resolution-fail-closed-evidence',
-    ['INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED', 'INTEGRATION-VERTICAL-SLICE-PUBLICATION'],
-    ['integration'],
+    ['INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED', 'LIVE-PRICE-RESOLUTION-PATH'],
+    ['integration', 'live'],
+    {
+      integration: 'INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED',
+      live: 'LIVE-PRICE-RESOLUTION-PATH',
+    },
   ),
   defineCoverage(
     'ABG-13',
@@ -282,6 +300,10 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
     'high-risk-price-review-owner-final-approval',
     ['BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION', 'INTEGRATION-HIGH-RISK-PRICE-APPROVAL'],
     ['integration', 'browser'],
+    {
+      integration: 'INTEGRATION-HIGH-RISK-PRICE-APPROVAL',
+      browser: 'BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION',
+    },
   ),
   defineCoverage(
     'ABG-22',
@@ -298,8 +320,12 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
   defineCoverage(
     'ABG-24',
     'consumer-incompatibility-isolation-subscription-upgrade-replay',
-    ['LIVE-CONSUMER-INCOMPATIBILITY-REPLAY', 'INTEGRATION-VERTICAL-SLICE-PUBLICATION'],
+    ['LIVE-CONSUMER-INCOMPATIBILITY-REPLAY'],
     ['consumer', 'live'],
+    {
+      consumer: 'LIVE-CONSUMER-INCOMPATIBILITY-REPLAY',
+      live: 'LIVE-CONSUMER-INCOMPATIBILITY-REPLAY',
+    },
   ),
   defineCoverage(
     'ABG-25',
@@ -345,7 +371,17 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
   ),
   defineCoverage(
     'ABG-32',
-    'publication-durable-write-fault-matrix',
+    [
+      'publication-workflow-decision-rollback',
+      'publication-release-envelope-rollback',
+      'publication-snapshot-artifact-rollback',
+      'publication-release-member-rollback',
+      'publication-outbox-event-rollback',
+      'publication-compatibility-precheck-rollback',
+      'publication-delivery-registration-rollback',
+      'publication-domain-candidate-confirmation-rollback',
+      'publication-audit-event-rollback',
+    ],
     ['FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX'],
     ['fault', 'integration'],
   ),
@@ -364,18 +400,35 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
   defineCoverage(
     'ABG-35',
     'two-consumer-isolation-next-version-gap-block',
-    ['CONSUMER-ISOLATION-GAP-BLOCKING', 'INTEGRATION-VERTICAL-SLICE-PUBLICATION'],
-    ['consumer', 'integration'],
+    [
+      'CONSUMER-ISOLATION-GAP-BLOCKING',
+      'INTEGRATION-VERTICAL-SLICE-PUBLICATION',
+      'LIVE-DUAL-CONSUMER-ISOLATION',
+    ],
+    ['consumer', 'integration', 'live'],
+    {
+      consumer: 'CONSUMER-ISOLATION-GAP-BLOCKING',
+      integration: 'INTEGRATION-VERTICAL-SLICE-PUBLICATION',
+      live: 'LIVE-DUAL-CONSUMER-ISOLATION',
+    },
   ),
   defineCoverage(
     'ABG-36',
     'uncompressed-canonical-snapshot-dual-digest-stream-client',
-    ['CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST', 'LIVE-CONSUMER-INCOMPATIBILITY-REPLAY'],
-    ['consumer', 'integration'],
+    ['CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST', 'LIVE-CANONICAL-SNAPSHOT-RECEIPT-CHECKPOINT'],
+    ['consumer', 'integration', 'live'],
+    {
+      consumer: 'CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST',
+      integration: 'CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST',
+      live: 'LIVE-CANONICAL-SNAPSHOT-RECEIPT-CHECKPOINT',
+    },
   ),
   defineCoverage(
     'ABG-37',
-    'canonical-artifact-16mib-boundary',
+    [
+      'canonical-artifact-16mib-exact-accepted',
+      'canonical-artifact-16mib-plus-one-rejected',
+    ],
     ['INTEGRATION-SNAPSHOT-16MIB-BOUNDARY'],
     ['capacity', 'integration'],
   ),
@@ -407,18 +460,23 @@ export const ABG_COVERAGE_MATRIX: readonly AbgCoverageMatrixEntry[] = Object.fre
   ABG_GATES.map((gate) => {
     const definition = definitionsByGateId.get(gate.gateId);
     if (!definition) throw new Error('ABG_COVERAGE_DEFINITION_MISSING:' + gate.gateId);
-    const assertionId = gate.gateId + ':' + definition.assertionSlug;
+    const assertionIds = definition.assertionSlugs.map(
+      (assertionSlug) => gate.gateId + ':' + assertionSlug,
+    );
     return {
       gateId: gate.gateId,
       evidenceClass: gate.evidenceClass,
       scenarioIds: definition.scenarioIds,
-      assertionIds: [assertionId],
+      assertionIds,
       producerIds: definition.producerIds,
-      evidenceSelectors: definition.producerIds.map((producerId, index) =>
-        createEvidenceSelector(
-          producerId,
-          definition.scenarioIds[index % definition.scenarioIds.length] as string,
-          assertionId,
+      evidenceSelectors: definition.producerIds.flatMap((producerId) =>
+        assertionIds.map((assertionId) =>
+          createEvidenceSelector(
+            producerId,
+            definition.scenarioByProducer[producerId] ??
+              definition.scenarioIds[0] as string,
+            assertionId,
+          ),
         ),
       ),
       requiredReferenceKinds: requiredReferenceKindsFor(definition.producerIds),
@@ -539,11 +597,18 @@ export function assertValidAbgGateEvidence(envelope: AbgGateEvidenceEnvelope): v
 
 function defineCoverage(
   gateId: string,
-  assertionSlug: string,
+  assertionSlug: string | readonly string[],
   scenarioIds: readonly string[],
   producerIds: readonly AbgProducerId[],
+  scenarioByProducer: Readonly<Partial<Record<AbgProducerId, string>>> = {},
 ): CoverageDefinition {
-  return { gateId, assertionSlug, scenarioIds, producerIds };
+  return {
+    gateId,
+    assertionSlugs: typeof assertionSlug === 'string' ? [assertionSlug] : assertionSlug,
+    scenarioIds,
+    scenarioByProducer,
+    producerIds,
+  };
 }
 
 function createEvidenceSelector(
@@ -589,7 +654,12 @@ function validateEntry(entry: AbgCoverageMatrixEntry, assertions: Map<string, st
   assertFailurePolicy(entry.failurePolicy, entry.gateId);
 
   assertUnique(entry.scenarioIds, 'ABG_COVERAGE_SCENARIO_DUPLICATE:' + entry.gateId);
-  for (const scenarioId of entry.scenarioIds) assertScenarioId(scenarioId, entry.gateId);
+  for (const scenarioId of entry.scenarioIds) {
+    assertScenarioId(scenarioId, entry.gateId);
+    if (!entry.evidenceSelectors.some((selector) => selector.scenarioId === scenarioId)) {
+      fail('ABG_COVERAGE_SCENARIO_SELECTOR_MISSING:' + entry.gateId + ':' + scenarioId);
+    }
+  }
   assertUnique(entry.assertionIds, 'ABG_COVERAGE_ASSERTION_DUPLICATE:' + entry.gateId);
   for (const assertionId of entry.assertionIds) {
     assertMeaningful(assertionId, 'ABG_COVERAGE_ASSERTION_INVALID:' + entry.gateId);

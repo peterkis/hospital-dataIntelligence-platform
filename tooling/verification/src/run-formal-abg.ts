@@ -3,10 +3,22 @@ import { spawn } from 'node:child_process';
 import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { ABG_GATES, type AbgGateDefinition } from './abg-catalog.js';
+import { getAbgCoverageEntry } from './abg-coverage-matrix.js';
 import {
   buildAuthoritativeRunPlan,
   readFrozenInputs,
 } from './authoritative-abg-plan.js';
+import {
+  buildMatrixProducerEvidence,
+  parseFrozenInputRefs,
+} from './evidence/adapters.js';
+import {
+  createEvidenceItemFromFile,
+  environmentReferenceDigest,
+  redactSensitiveText,
+  writeProducerEvidence,
+  writeRedactedTextArtifact,
+} from './evidence/recorder.js';
 
 type GateStatus = 'PASSED' | 'FAILED';
 
@@ -81,6 +93,7 @@ for (const [index, command] of plan.setupCommands.entries()) {
     ABG_RUN_ID: runId,
     ABG_RUN_SEQUENCE: String(plan.runSequence),
     ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
+    ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
     ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
   });
   setupResults.push({
@@ -125,6 +138,7 @@ for (const [gateIndex, gate] of ABG_GATES.entries()) {
     ABG_GATE_RESULT_PATH: resultPath,
     ABG_GATE_EVIDENCE_DIR: producerDirectory,
     ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
+    ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
     ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
   });
   try {
@@ -191,6 +205,53 @@ const summary = {
   results,
 };
 await writeExclusive(join(outputDirectory, 'abg-results.json'), summary);
+const formalCoverage = getAbgCoverageEntry('ABG-40');
+const formalAssertionId = formalCoverage.assertionIds[0];
+const formalScenarioId = formalCoverage.scenarioIds[0];
+if (!formalAssertionId || !formalScenarioId) throw new Error('FORMAL_RUN_MATRIX_ENTRY_INVALID');
+const formalSummaryItem = await createEvidenceItemFromFile(outputDirectory, {
+  artifactId: 'phase-01-formal-abg-results',
+  relativePath: 'abg-results.json',
+  mediaType: 'application/json',
+  jsonPointer: '/status',
+  claim: { runId, status: summary.status },
+});
+const formalReferences = aggregateFormalReferences(results, formalSummaryItem.sha256);
+const formalEvidence = buildMatrixProducerEvidence({
+  producerId: 'formal-run',
+  runId,
+  runSequence: plan.runSequence,
+  startedAt,
+  completedAt: summary.completedAt,
+  processStatus: passed ? 'PASSED' : 'FAILED',
+  commandIdentity: {
+    executable: 'node',
+    arguments: ['tooling/verification/src/run-formal-abg.ts'],
+    workingDirectory: 'repository-root',
+    commandDigest: sha256(Buffer.from('tooling/verification/src/run-formal-abg.ts', 'utf8')),
+  },
+  environmentRefs: environmentReferenceDigest(process.env, ['CI', 'NODE_ENV', 'TZ']),
+  frozenInputRefs: parseFrozenInputRefs(plan.frozenInputs),
+  defaultEvidenceItems: [formalSummaryItem],
+  scenarioReferences: { [formalScenarioId]: formalReferences },
+  outcomes: {
+    [formalAssertionId]: passed
+      ? {
+        status: 'PASSED',
+        description: 'The frozen formal run completed with every ABG gate passing.',
+        expected: { status: 'PASSED' },
+        actual: { status: summary.status, gateCount: summary.gateCount },
+      }
+      : {
+        status: 'FAILED',
+        description: 'The frozen formal run did not produce a complete passing ABG conclusion.',
+        expected: { status: 'PASSED' },
+        actual: { status: summary.status, failedCount: summary.failedCount },
+        failureCode: 'FORMAL_ABG_RUN_FAILED',
+      },
+  },
+});
+await writeProducerEvidence(outputDirectory, 'formal-run/producer-evidence.json', formalEvidence);
 await writeManifest(outputDirectory);
 process.stdout.write(`${JSON.stringify({ runId, runSequence: plan.runSequence, status: summary.status, evidenceDirectory: outputDirectory })}\n`);
 if (!passed) throw new Error('FORMAL_ABG_RUN_FAILED');
@@ -218,8 +279,16 @@ async function executeCommand(
     child.once('close', resolveExit);
   });
   await Promise.all([
-    writeExclusiveBytes(join(evidenceDirectory, 'stdout.log'), Buffer.concat(stdout)),
-    writeExclusiveBytes(join(evidenceDirectory, 'stderr.log'), Buffer.concat(stderr)),
+    writeRedactedTextArtifact(
+      evidenceDirectory,
+      'stdout.log',
+      Buffer.concat(stdout).toString('utf8'),
+    ),
+    writeRedactedTextArtifact(
+      evidenceDirectory,
+      'stderr.log',
+      Buffer.concat(stderr).toString('utf8'),
+    ),
   ]);
   return { exitCode, elapsedMilliseconds: Math.round(performance.now() - started) };
 }
@@ -280,7 +349,7 @@ function failedGate(
   return {
     ...gate, ordinal, runId, status: 'FAILED', producerExitCode, producerCommandDigest,
     elapsedMilliseconds, failureCode,
-    ...(errorMessage === undefined ? {} : { error: errorMessage }),
+    ...(errorMessage === undefined ? {} : { error: redactSensitiveText(errorMessage) }),
     scenarioId: null, requestIds: [], principalIds: [], governanceObjectIds: [], versionIds: [],
     ruleVersions: [], evidenceRefs: [],
   };
@@ -387,4 +456,29 @@ function assertFrozenInputsEqual(
   if (canonicalJson(expected) !== canonicalJson(actual)) {
     throw new Error('ABG_FROZEN_INPUT_DRIFT');
   }
+}
+
+function aggregateFormalReferences(
+  results: readonly GateResult[],
+  artifactDigest: string,
+): {
+  readonly requestIds: readonly string[];
+  readonly principalIds: readonly string[];
+  readonly governanceObjectIds: readonly string[];
+  readonly versionIds: readonly string[];
+  readonly ruleVersions: readonly string[];
+  readonly artifactDigests: readonly string[];
+} {
+  return {
+    requestIds: unique(results.flatMap((result) => result.requestIds)),
+    principalIds: unique(results.flatMap((result) => result.principalIds)),
+    governanceObjectIds: unique(results.flatMap((result) => result.governanceObjectIds)),
+    versionIds: unique(results.flatMap((result) => result.versionIds)),
+    ruleVersions: unique(results.flatMap((result) => result.ruleVersions)),
+    artifactDigests: [artifactDigest],
+  };
+}
+
+function unique(values: readonly string[]): readonly string[] {
+  return [...new Set(values)];
 }
