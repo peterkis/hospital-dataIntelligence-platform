@@ -390,6 +390,30 @@ export function belongsToRun(
   return Object.entries(expected).every(([name, value]) => resource.labels[name] === value);
 }
 
+export function assertSafeFormalCleanupCommand(
+  executable: string,
+  args: readonly string[],
+): void {
+  if (executable !== 'docker') throw new Error('FORMAL_CLEANUP_COMMAND_SCOPE_INVALID');
+  if (args.some((argument) => argument.toLowerCase() === 'prune')) {
+    throw new Error('FORMAL_CLEANUP_DOCKER_PRUNE_FORBIDDEN');
+  }
+  const containerRemove = args.length === 5 &&
+    args[0] === 'container' && args[1] === 'rm' &&
+    args[2] === '--force' && args[3] === '--volumes' && meaningfulArgument(args[4]);
+  const volumeRemove = args.length === 3 &&
+    args[0] === 'volume' && args[1] === 'rm' && meaningfulArgument(args[2]);
+  const networkRemove = args.length === 3 &&
+    args[0] === 'network' && args[1] === 'rm' && meaningfulArgument(args[2]);
+  const composeDown = args.length === 9 &&
+    args[0] === 'compose' && args[1] === '--project-name' && meaningfulArgument(args[2]) &&
+    args[3] === '--file' && meaningfulArgument(args[4]) && args[5] === 'down' &&
+    args[6] === '--volumes' && args[7] === '--timeout' && args[8] === '10';
+  if (!containerRemove && !volumeRemove && !networkRemove && !composeDown) {
+    throw new Error('FORMAL_CLEANUP_COMMAND_SCOPE_INVALID');
+  }
+}
+
 class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
   private readonly runner: RuntimeCommandRunner;
 
@@ -789,12 +813,17 @@ async function requireSuccess(
   args: readonly string[],
   environment?: Readonly<Record<string, string>>,
 ): Promise<void> {
+  assertSafeFormalCleanupCommand(executable, args);
   const result = await runner.run({
     executable,
     args,
     ...(environment === undefined ? {} : { environment }),
   });
   if (result.exitCode !== 0) throw new Error('FORMAL_CLEANUP_COMMAND_FAILED:' + args.join(':'));
+}
+
+function meaningfulArgument(value: string | undefined): value is string {
+  return value !== undefined && value.trim().length > 0;
 }
 
 async function requireText(

@@ -6,6 +6,7 @@
   "scripts": {
     "report:abg-coverage": "tsx src/report-abg-coverage.ts --write",
     "test": "vitest run",
+    "test:adversarial": "vitest run src/testing/adversarial-verification.test.ts",
     "test:lifecycle": "vitest run src/runtime src/evidence/recorder.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify:phase-01:preflight": "node src/runtime/formal-preflight.ts",

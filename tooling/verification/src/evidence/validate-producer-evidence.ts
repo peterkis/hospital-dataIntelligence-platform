@@ -50,6 +50,12 @@ export function validateProducerEvidence(evidence: ProducerEvidence): void {
   for (const [scenarioKey, scenario] of scenarioEntries) {
     validateScenario(evidence, scenarioKey, scenario, scenarioIds, assertionIds);
   }
+  if (
+    evidence.status === 'PASSED' &&
+    scenarioEntries.some(([, scenario]) => scenario.status !== 'PASSED')
+  ) {
+    throw new Error('PRODUCER_EVIDENCE_PASSED_WITH_NON_PASSED_SCENARIO');
+  }
 }
 
 function validateCommandIdentity(evidence: ProducerEvidence): void {
@@ -117,6 +123,12 @@ function validateScenario(
   }
   for (const [assertionKey, assertion] of assertions) {
     validateAssertion(evidence, scenario, assertionKey, assertion, assertionIds);
+  }
+  if (
+    scenario.status === 'PASSED' &&
+    assertions.some(([, assertion]) => assertion.status !== 'PASSED')
+  ) {
+    throw new Error('PRODUCER_EVIDENCE_SCENARIO_PASSED_WITH_NON_PASSED_ASSERTION');
   }
 }
 

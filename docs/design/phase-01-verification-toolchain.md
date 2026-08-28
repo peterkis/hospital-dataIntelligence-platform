@@ -234,6 +234,33 @@ Toxiproxy及Testcontainers生命周期负责验证：
 
 证据不得包含密码、客户端密钥、访问或刷新令牌、完整Cookie、真实业务数据或规范快照正文。完整POC中只含合成数据的派生交付ZIP是经ADR-0105批准的唯一正文例外：它必须作为生命周期与整体处置前置证据原样入包，不得借此收入真实业务数据或把规范快照正文复制进证据包。截图、trace和录像只用于辅助定位，不能替代公开API、审计、版本、快照、Outbox和回执等机器可核验证据。
 
+### 8.4 验证器对抗性基线
+
+AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `phase-01.validator-test-fixture.v1`，并显式记录 `formalAcceptanceEligible: false` 和 `servicesStarted: false`。fixture 使用固定运行身份、序号、时间、冻结输入和合成引用；同一代码版本下重复生成时，运行计划、40 项 producer 门禁证明、总结、manifest 和包摘要必须逐字节一致。它不连接 PostgreSQL、Keycloak、网络或浏览器，也不得被复制到正式 evidence 路径或表述为正式 ABG 证据。
+
+合法 fixture 仍完整遵循生产协议链：
+
+1. 每个 producer 生成 `phase-01.producer-evidence.v2`，其场景、断言、命令身份、冻结输入和业务引用由 producer evidence validator 校验。
+2. 40 项门禁各自生成 `phase-01.abg-gate-result.v3`；每项必须使用覆盖矩阵登记的 scenarioId、assertionId 和 selector，不得借用共享总体状态。
+3. `phase-01.abg-run.v3` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、setup 结果、运行及权威摘要、producer 退出码、失败码一致性和 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
+4. 独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
+
+`npm run test:verification:adversarial` 运行 59 个互不依赖的 mutation，覆盖用户要求的 55 类缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup 越权和 secret 泄漏；其中 `placeholder`、`UNKNOWN`、`N/A` 与空字符串分别作为独立 mutation，另以 malformed JSON 中的裸配置 secret 证明解析失败也不会绕过泄漏扫描。每项都声明稳定 mutationId、检测层和期望错误码，并把实际结果写入被根 `.gitignore` 的 `.runtime/test-results/verification-adversarial-summary.json`。通过条件是 `mutationCount >= 55`、`detectedCount = mutationCount`、`survivedCount = 0`；不得通过更新 snapshot、吞掉异常或依赖测试执行顺序改变该结论。
+
+关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
+
+| 验证边界 | 关键错误码 |
+|---|---|
+| producer 总体与断言一致性 | `PRODUCER_EVIDENCE_SCENARIO_PASSED_WITH_NON_PASSED_ASSERTION`、`PRODUCER_EVIDENCE_PASSED_WITH_NON_PASSED_SCENARIO`、`PRODUCER_EVIDENCE_REFERENCE_INVALID` |
+| 正式总结的 40 项完整性 | `GATE_RESULT_COUNT_INVALID`、`GATE_ID_DUPLICATE`、`GATE_ORDER_OR_ID_MISMATCH`、`PASSED_COUNT_MISMATCH`、`RUN_STATUS_MISMATCH` |
+| gate-specific 证明 | `GATE_ASSERTIONS_MISMATCH`、`ABG_GATE_RESULT_EVIDENCE_SELECTOR_MISSING`、`SELECTED_CLAIM_DIGEST_MISMATCH` |
+| manifest 与终态字节 | `MANIFEST_UNLISTED_FILE`、`MANIFEST_SHA256_MISMATCH`、`MANIFEST_FILE_SHA256_MISMATCH` |
+| 路径与不可覆盖输出 | `ABG_GATE_RESULT_EVIDENCE_PATH_INVALID`、`EVIDENCE_SYMLINK_FORBIDDEN`、`REVIEW_OUTPUT_ALREADY_EXISTS`、`ABG_GATE_RESULT_ALREADY_EXISTS` |
+| cleanup 范围 | `FORMAL_CLEANUP_DOCKER_PRUNE_FORBIDDEN`、`FORMAL_CLEANUP_COMMAND_SCOPE_INVALID`、`FORMAL_CLEANUP_COMPOSE_OWNERSHIP_MISMATCH` |
+| secret 泄漏 | `EVIDENCE_STDOUT_SECRET_EXPOSED`、`EVIDENCE_STDERR_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_SCAN_INVALID` |
+
+失败证据遵循两类不同保留边界。正式运行或独立复核失败时，原 evidence 和 review findings 都必须保留，不得补写、覆盖或用后续成功结果替换；需要重跑时创建新运行身份。对抗性测试只操作操作系统临时目录中的 fixture 副本，测试结束后校验临时目录前缀再递归删除，绝不删除正式 evidence 路径；仓库内只保留忽略提交的机器汇总。无论该对抗测试是否全部通过，都只能说明验证器具有已列失败能力，不能表述为正式 ABG 通过、完整 POC 通过或生产就绪。
+
 ## 9. CI厂商中立执行
 
 仓库必须通过根npm脚本、npm原生workspace命令或仓库内TypeScript编排器提供可在开发机或任意CI执行的确定性命令边界，不引入Turborepo、Nx或CI厂商任务图。命令至少覆盖：

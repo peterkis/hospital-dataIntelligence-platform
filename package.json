@@ -34,6 +34,7 @@
     "test:e2e": "node tests/e2e/run-playwright.ts",
     "test:e2e:list": "node tests/e2e/run-playwright.ts --list",
     "test:verification": "npm run test --workspace @hospital-data-intelligence/verification-tooling",
+    "test:verification:adversarial": "npm run test:adversarial --workspace @hospital-data-intelligence/verification-tooling",
     "test:verification:lifecycle": "npm run test:lifecycle --workspace @hospital-data-intelligence/verification-tooling",
     "test": "npm run test --workspaces --if-present"
   },

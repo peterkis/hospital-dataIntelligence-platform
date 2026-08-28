@@ -35,6 +35,7 @@ import {
   PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
   PRODUCER_EVIDENCE_SCHEMA_VERSION,
 } from './evidence/protocol.js';
+import { FORMAL_REQUIRED_SECRET_NAMES } from './runtime/formal-runtime-contract.js';
 
 const REVIEW_SCHEMA_VERSION = 'phase-01.formal-abg-evidence-review.v1' as const;
 const REVIEW_FINDINGS_SCHEMA_VERSION =
@@ -225,6 +226,7 @@ export async function reviewFormalAbgEvidence(
   const checks = new ReviewChecks();
   const sourceEvidenceDigestBefore = await captureTreeIdentity(sourceDirectory);
   const snapshot = await scanEvidenceDirectory(sourceDirectory, checks);
+  await validateEvidenceSecretLeaks(snapshot, checks);
   const currentIdentity = await readCurrentAuthorityIdentity();
   const reviewerToolIdentity = await readReviewerToolIdentity();
   validateCurrentDefinitions(currentIdentity, checks);
@@ -1750,6 +1752,88 @@ function containsSensitiveData(value: unknown): boolean {
   return Object.entries(record).some(([key, item]) =>
     SENSITIVE_KEY_PATTERN.test(key) || containsSensitiveData(item),
   );
+}
+
+async function validateEvidenceSecretLeaks(
+  snapshot: EvidenceSnapshot,
+  checks: ReviewChecks,
+): Promise<void> {
+  const configuredSecretValues = FORMAL_REQUIRED_SECRET_NAMES
+    .flatMap((name) => name.endsWith('_USERNAME') ? [] : [process.env[name]])
+    .filter((value): value is string =>
+      value !== undefined && value.length > 0 && value !== '[REDACTED]',
+    )
+    .sort((left, right) => right.length - left.length);
+  for (const [path, file] of snapshot.files) {
+    const name = basename(path).toLowerCase();
+    if (name !== 'stdout.log' && name !== 'stderr.log' && extname(path).toLowerCase() !== '.json') {
+      continue;
+    }
+    let text: string;
+    try {
+      text = await readFile(file.absolutePath, 'utf8');
+    } catch {
+      checks.fail('EVIDENCE_SECRET_SCAN_UNREADABLE', path);
+      continue;
+    }
+    if (name === 'stdout.log') {
+      checks.check(
+        !containsSensitiveValue(text, configuredSecretValues),
+        'EVIDENCE_STDOUT_SECRET_EXPOSED',
+        path,
+      );
+      continue;
+    }
+    if (name === 'stderr.log') {
+      checks.check(
+        !containsSensitiveValue(text, configuredSecretValues),
+        'EVIDENCE_STDERR_SECRET_EXPOSED',
+        path,
+      );
+      continue;
+    }
+    const rawTextContainsSecret = containsSensitiveValue(text, configuredSecretValues);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        checks.check(!rawTextContainsSecret, 'EVIDENCE_JSON_SECRET_EXPOSED', path);
+        checks.fail('EVIDENCE_JSON_SECRET_SCAN_INVALID', path);
+        continue;
+      }
+      throw error;
+    }
+    checks.check(
+      !rawTextContainsSecret && !containsSensitiveValue(parsed, configuredSecretValues),
+      'EVIDENCE_JSON_SECRET_EXPOSED',
+      path,
+    );
+  }
+}
+
+function containsSensitiveValue(
+  value: unknown,
+  configuredSecretValues: readonly string[],
+): boolean {
+  if (typeof value === 'string') {
+    return configuredSecretValues.some((secret) => value.includes(secret)) ||
+      SENSITIVE_VALUE_PATTERNS.some((pattern) => pattern.test(value));
+  }
+  if (Array.isArray(value)) {
+    return value.some((item) => containsSensitiveValue(item, configuredSecretValues));
+  }
+  const record = asRecord(value);
+  return record !== null && Object.entries(record).some(([key, item]) =>
+    (SENSITIVE_KEY_PATTERN.test(key) && isUnredactedSensitiveKeyValue(item)) ||
+    containsSensitiveValue(item, configuredSecretValues)
+  );
+}
+
+function isUnredactedSensitiveKeyValue(value: unknown): boolean {
+  return typeof value === 'string' &&
+    value.trim().length > 0 &&
+    value !== '[REDACTED]';
 }
 
 function isLocalDateTime(value: string): boolean {

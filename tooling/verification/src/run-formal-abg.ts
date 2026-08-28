@@ -39,6 +39,7 @@ import {
   runFormalRuntimeLifecycle,
   type FormalRuntimeContext,
 } from './runtime/formal-runtime-controller.js';
+import { validateFormalAbgSummary } from './formal-summary-validator.js';
 
 type GateStatus = 'PASSED' | 'FAILED';
 
@@ -349,6 +350,17 @@ async function executeFormalAbg(
     conclusionScope: 'Phase 01 POC executable architecture baseline only; not full POC or production readiness.',
     results,
   };
+  if (passed) {
+    validateFormalAbgSummary(summary, {
+      runSequence: plan.runSequence,
+      planDigest,
+      frozenInputs: plan.frozenInputs,
+      frozenInputsDigest,
+      coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
+      producerProtocolIdentityDigest: plan.authorityIdentity.producerProtocolIdentityDigest,
+      setupCommandDigests: plan.setupCommands.map(commandDigest),
+    });
+  }
   return {
     passed,
     value: summary,
