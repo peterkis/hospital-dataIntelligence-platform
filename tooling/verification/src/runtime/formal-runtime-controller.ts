@@ -202,7 +202,6 @@ export async function runFormalRuntimeLifecycle<T>(
   input: {
     readonly repositoryRoot: string;
     readonly outputDirectory: string;
-    readonly composeFile: string;
     readonly run: FormalRunSeed;
   },
   callbacks: FormalRuntimeLifecycleCallbacks<T>,
@@ -361,7 +360,6 @@ export async function runFormalRuntimeLifecycle<T>(
       const teardown = await performFormalTeardown({
         identity: preflight.runIdentity,
         runtimeEventDirectory,
-        composeFile: input.composeFile,
       }, dependencies.teardownDependencies);
       cleanup = teardown.cleanup;
       finalResources = teardown.finalResources;
@@ -500,7 +498,7 @@ export async function writeFormalRuntimeEvent(
     schemaVersion: 'phase-01.formal-runtime-event.v1',
     runId: input.identity.runId,
     runSequence: input.identity.runSequence,
-    composeProjectName: input.identity.composeProjectName,
+    runtimeNamespace: input.identity.runtimeNamespace,
     event: input.event,
     resourceType: input.resourceType,
     id: input.id,
@@ -565,7 +563,7 @@ function unavailableCleanup(
     failedItems: [{
       resourceType: 'runtime',
       resourceId: identity.runId,
-      resourceName: identity.composeProjectName,
+      resourceName: identity.runtimeNamespace,
       errorCode: code,
     }],
     residualResources: [],

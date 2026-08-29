@@ -248,7 +248,6 @@ async function run<T>(
   return runFormalRuntimeLifecycle({
     repositoryRoot: join(harness.root, 'repository'),
     outputDirectory: harness.outputDirectory,
-    composeFile: join(harness.root, 'compose.phase-01.yml'),
     run: RUN,
   }, callbacks, harness.dependencies);
 }
@@ -328,10 +327,6 @@ class LifecycleTeardownAdapter implements FormalTeardownAdapter {
 
   async removeContainer(): Promise<void> {
     throw new Error('UNEXPECTED_CONTAINER_REMOVAL');
-  }
-
-  async composeDown(): Promise<void> {
-    throw new Error('UNEXPECTED_COMPOSE_DOWN');
   }
 
   async removeVolume(): Promise<void> {

@@ -14,7 +14,7 @@ import {
 const IDENTITY: FormalRunIdentity = {
   runId: '12345678-1234-1234-1234-123456789abc',
   runSequence: 7,
-  composeProjectName: 'hdi_phase01_abg_7_123456781234',
+  runtimeNamespace: 'hdi_phase01_abg_7_123456781234',
   gitCommitSha: 'a'.repeat(40),
 };
 
@@ -28,9 +28,9 @@ describe('formal ABG controlled teardown', () => {
       resource('process', '102', { role: 'sim-consumer-a', pid: 102 }),
       resource('process', '103', { role: 'producer-live', pid: 103 }),
       resource('container', 'testcontainer-postgres'),
-      resource('container', 'compose-postgres', { compose: true }),
-      resource('volume', 'compose-postgres-data', { compose: true }),
-      resource('network', 'compose-network', { compose: true }),
+      resource('container', 'runtime-postgres'),
+      resource('volume', 'runtime-postgres-data'),
+      resource('network', 'runtime-network'),
       unrelated,
     ]);
 
@@ -42,34 +42,35 @@ describe('formal ABG controlled teardown', () => {
       'stop-process:102',
       'stop-process:103',
       'remove-container:testcontainer-postgres',
-      'compose-down:' + IDENTITY.composeProjectName,
+      'remove-container:runtime-postgres',
+      'remove-volume:runtime-postgres-data',
+      'remove-network:runtime-network',
     ]);
     expect(adapter.current('unrelated')?.present).toBe(true);
     expect(adapter.calls.join(' ')).not.toMatch(/\bprune\b/u);
     expect(result.cleanup.pruneCommandsInvoked).toBe(false);
   });
 
-  it('makes cleanup failure authoritative even if later exact-resource removal succeeds', async () => {
+  it('makes a container cleanup failure authoritative while attempting later exact resources', async () => {
     const adapter = new FakeTeardownAdapter([
-      resource('container', 'compose-postgres', { compose: true }),
-      resource('volume', 'compose-postgres-data', { compose: true }),
-      resource('network', 'compose-network', { compose: true }),
-    ], new Set(['compose-down']));
+      resource('container', 'runtime-postgres'),
+      resource('volume', 'runtime-postgres-data'),
+      resource('network', 'runtime-network'),
+    ], new Set(['remove-container']));
 
     const result = await execute(adapter);
 
     expect(result.cleanup.status).toBe('FAILED');
     expect(result.cleanup.failedItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        resourceType: 'compose-project',
-        resourceId: IDENTITY.composeProjectName,
+        resourceType: 'container',
+        resourceId: 'runtime-postgres',
       }),
     ]));
     expect(adapter.calls).toEqual([
-      'compose-down:' + IDENTITY.composeProjectName,
-      'remove-container:compose-postgres',
-      'remove-volume:compose-postgres-data',
-      'remove-network:compose-network',
+      'remove-container:runtime-postgres',
+      'remove-volume:runtime-postgres-data',
+      'remove-network:runtime-network',
     ]);
   });
 
@@ -87,7 +88,6 @@ async function execute(adapter: FormalTeardownAdapter) {
   return performFormalTeardown({
     identity: IDENTITY,
     runtimeEventDirectory: 'D:/evidence/runtime/events',
-    composeFile: 'D:/repository/compose.phase-01.yml',
   }, {
     adapter,
     now: () => '2026-08-27T12:00:00',
@@ -125,16 +125,6 @@ class FakeTeardownAdapter implements FormalTeardownAdapter {
     this.markAbsent(candidate.id);
   }
 
-  async composeDown(identity: FormalRunIdentity): Promise<void> {
-    this.calls.push('compose-down:' + identity.composeProjectName);
-    this.maybeFail('compose-down');
-    for (const candidate of this.resources.values()) {
-      if (candidate.labels['com.docker.compose.project'] === identity.composeProjectName) {
-        this.markAbsent(candidate.id);
-      }
-    }
-  }
-
   async removeVolume(candidate: RuntimeResourceRecord): Promise<void> {
     this.calls.push('remove-volume:' + candidate.id);
     this.maybeFail('remove-volume');
@@ -169,12 +159,10 @@ function resource(
     readonly labels?: Readonly<Record<string, string>>;
     readonly role?: string;
     readonly pid?: number;
-    readonly compose?: boolean;
   } = {},
 ): RuntimeResourceRecord {
   const labels = {
     ...formalRuntimeLabels(IDENTITY),
-    ...(options.compose ? { 'com.docker.compose.project': IDENTITY.composeProjectName } : {}),
     ...options.labels,
   };
   return {
@@ -182,7 +170,7 @@ function resource(
     id,
     name: id,
     labels,
-    source: resourceType === 'process' ? 'runtime-event' : 'docker-inspect',
+    source: resourceType === 'process' ? 'runtime-event' : 'podman-inspect',
     present: true,
     active: resourceType === 'process' || resourceType === 'container',
     state: 'RUNNING',

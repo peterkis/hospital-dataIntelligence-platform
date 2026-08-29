@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 export LANG=C.UTF-8
+unset XDG_RUNTIME_DIR
 
 readonly EXPECTED_OS_ID="anolis"
 readonly EXPECTED_OS_VERSION="8.9"
@@ -9,10 +10,8 @@ readonly NODE_VERSION="24.18.0"
 readonly NODE_ARCHIVE="node-v${NODE_VERSION}-linux-x64.tar.xz"
 readonly NODE_SHA256="55aa7153f9d88f28d765fcdad5ae6945b5c0f98a36881703817e4c450fa76742"
 readonly NODE_INSTALL_DIR="/opt/node-v${NODE_VERSION}-linux-x64"
-readonly DOCKER_CE_VERSION="29.7.2-1.el8"
-readonly DOCKER_CLI_VERSION="29.7.2-1.el8"
-readonly CONTAINERD_VERSION="2.3.3-1.el8"
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly PODMAN_NEVRA="podman-4:4.9.4-34.0.1.module+an8.10.0+11435+30029c08.x86_64"
+readonly PODMAN_VERSION="4.9.4-rhel"
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Run this bootstrap as root." >&2
@@ -35,18 +34,14 @@ dnf install -y \
   unzip \
   xz
 
-if [[ ! -f /etc/yum.repos.d/docker-ce.repo ]]; then
-  dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+if command -v docker >/dev/null 2>&1; then
+  echo "Docker CLI is present; remove the superseded Docker runtime before bootstrapping Podman." >&2
+  exit 1
 fi
 
-dnf install -y \
-  "docker-ce-${DOCKER_CE_VERSION}" \
-  "docker-ce-cli-${DOCKER_CLI_VERSION}" \
-  "containerd.io-${CONTAINERD_VERSION}"
-
-install -d -m 0755 /etc/docker
-install -m 0644 "${SCRIPT_DIR}/docker-daemon.json" /etc/docker/daemon.json
-systemctl enable --now docker
+dnf module enable -y container-tools:an8
+dnf install -y "${PODMAN_NEVRA}"
+systemctl enable --now podman.socket
 
 if [[ ! -x "${NODE_INSTALL_DIR}/bin/node" ]]; then
   work_dir="$(mktemp -d)"
@@ -74,10 +69,21 @@ fi
 node --version
 npm --version
 git --version
-docker version --format '{{.Server.Version}}'
-docker info --format '{{.Driver}}'
+podman version --format '{{.Version}}'
+podman info --format '{{.Store.GraphDriverName}}'
 
 [[ "$(node --version)" == "v${NODE_VERSION}" ]]
 [[ "$(npm --version)" == "11.9.0" ]]
-[[ "$(docker version --format '{{.Server.Version}}')" == "29.7.2" ]]
-[[ "$(docker info --format '{{.Driver}}')" == "overlay2" ]]
+[[ "$(rpm -q --qf '%{NAME}-%{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}' podman)" == "${PODMAN_NEVRA}" ]]
+[[ "$(podman version --format '{{.Version}}')" == "${PODMAN_VERSION}" ]]
+podman info --format json | jq --exit-status '
+  .host.security.rootless == false and
+  .host.networkBackend == "cni" and
+  .host.logDriver == "k8s-file" and
+  .host.ociRuntime.name == "runc" and
+  .store.graphDriverName == "overlay" and
+  .store.graphRoot == "/var/lib/containers/storage"
+' >/dev/null
+systemctl is-active --quiet podman.socket
+[[ -S /run/podman/podman.sock ]]
+! command -v docker >/dev/null 2>&1

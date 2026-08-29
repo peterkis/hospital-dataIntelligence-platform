@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "receiptType": "phase-01.container-runtime-migration",
+  "capturedLocalDateTime": "2026-08-30 01:40:03",
+  "interpretationTimeZone": "Asia/Shanghai",
+  "distribution": "Anolis-8.9-HDI-POC",
+  "sourceRuntime": {
+    "name": "Docker Engine",
+    "executablePackagesRemoved": true,
+    "removedPackageFamilies": [
+      "docker-ce",
+      "docker-ce-cli",
+      "docker-buildx-plugin",
+      "docker-compose-plugin",
+      "containerd.io"
+    ],
+    "dataPath": "/var/lib/docker",
+    "dataPathRetained": true,
+    "repositoryOwnedContainersPresentBeforeRemoval": false,
+    "repositoryOwnedVolumesPresentBeforeRemoval": false,
+    "repositoryOwnedNetworksPresentBeforeRemoval": false
+  },
+  "recoveryArtifact": {
+    "path": ".runtime/podman-migration/frozen-phase-01-images.docker-archive.tar",
+    "sizeBytes": 927429632,
+    "sha256": "27a29f742d506a094101aaf7eb0f2ac79ec8383ecc5a7dafe00dee5bc77069b9",
+    "gitTracked": false
+  },
+  "targetRuntime": {
+    "name": "Podman",
+    "version": "4.9.4-rhel",
+    "nevra": "podman-4:4.9.4-34.0.1.module+an8.10.0+11435+30029c08.x86_64",
+    "rootless": false,
+    "socketPath": "/run/podman/podman.sock",
+    "socketEnabled": true,
+    "socketActive": true,
+    "storageDriver": "overlay",
+    "graphRoot": "/var/lib/containers/storage",
+    "networkBackendObserved": "cni",
+    "managedContainerNetworkMode": "host",
+    "logDriver": "k8s-file",
+    "ociRuntime": "runc",
+    "dockerCliPresent": false,
+    "composeProviderUsed": false
+  },
+  "images": [
+    {
+      "runtimeReference": "docker.io/library/postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382",
+      "imageId": "526573c93ea530a230b553cc513075ab9d70b63bfd2300ef5eb5ad1cafbbc595",
+      "sizeBytes": 447920702,
+      "presentByExactDigest": true
+    },
+    {
+      "runtimeReference": "quay.io/keycloak/keycloak@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13",
+      "imageId": "60e153026e8f53ee2c3877b23aa664a6fb24ea99c57085b40cbb77ca2be01e3d",
+      "sizeBytes": 479483731,
+      "presentByExactDigest": true
+    }
+  ],
+  "verification": {
+    "podmanBaselineScript": "PASSED",
+    "postgresqlVersionAndExtensions": "PASSED",
+    "keycloakReadiness": "PASSED",
+    "testcontainersPodmanSocketScenario": "PASSED",
+    "repositoryRuntimeLifecycleProbe": "PASSED",
+    "repositoryResourcesAfterProbe": 0,
+    "formalReadinessStarted": false,
+    "formalAbgStarted": false,
+    "chromeStarted": false,
+    "independentReviewStarted": false,
+    "runSequence": null
+  },
+  "historicalBoundary": {
+    "priorReceiptPreserved": "receipt-20260808.json",
+    "priorEvidenceRewritten": false,
+    "note": "The word docker in the historical WSL source archive name and OCI registry references does not grant Docker runtime authority."
+  }
+}

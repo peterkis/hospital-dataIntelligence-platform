@@ -5,7 +5,7 @@ export const FORMAL_REPOSITORY_LABEL = 'hospital-data-intelligence-platform';
 export const FORMAL_PHASE_LABEL = '01';
 export const FORMAL_MANAGED_BY_LABEL = 'formal-abg';
 
-export const FORMAL_RUNTIME_PORTS = [55432, 18080, 19000, 3000, 4101, 4102] as const;
+export const FORMAL_RUNTIME_PORTS = [55432, 55433, 18080, 19000, 3000, 4101, 4102] as const;
 
 export const FORMAL_REQUIRED_SECRET_NAMES = [
   'HDI_POSTGRES_PASSWORD',
@@ -24,7 +24,7 @@ export type FormalRequiredSecretName = (typeof FORMAL_REQUIRED_SECRET_NAMES)[num
 export interface FormalRunSeed {
   readonly runId: string;
   readonly runSequence: number;
-  readonly composeProjectName: string;
+  readonly runtimeNamespace: string;
 }
 
 export interface FormalRunIdentity extends FormalRunSeed {
@@ -114,7 +114,7 @@ export function createFormalRunSeed(
   return {
     runId,
     runSequence,
-    composeProjectName: `hdi_phase01_abg_${runSequence}_${safeShortId}`,
+    runtimeNamespace: `hdi_phase01_abg_${runSequence}_${safeShortId}`,
   };
 }
 

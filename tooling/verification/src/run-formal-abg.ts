@@ -64,14 +64,12 @@ interface SetupResult {
 }
 
 process.env['TZ'] = 'Asia/Shanghai';
+process.env['DOCKER_HOST'] = 'unix:///run/podman/podman.sock';
+process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const runSequence = parsePositiveInteger(requireEnvironment('ABG_RUN_SEQUENCE'), 'ABG_RUN_SEQUENCE_INVALID');
 const requestedOutputDirectory = resolve(requireEnvironment('EVIDENCE_OUTPUT_DIR'));
-const composeFile = join(
-  repositoryRoot,
-  'phase-plan/environment/anolis-8.9-wsl2/compose.phase-01.yml',
-);
 const run = createFormalRunSeed(runSequence);
 let outputDirectory = requestedOutputDirectory;
 let plan: FrozenRunPlan;
@@ -83,7 +81,6 @@ let activeContext: FormalRuntimeContext | undefined;
 const lifecycle = await runFormalRuntimeLifecycle<Record<string, unknown>>({
   repositoryRoot,
   outputDirectory: requestedOutputDirectory,
-  composeFile,
   run,
 }, {
   execute: executeFormalAbg,
@@ -147,7 +144,7 @@ const lifecycle = await runFormalRuntimeLifecycle<Record<string, unknown>>({
       runId: context.identity.runId,
       runSequence: context.identity.runSequence,
       gitCommitSha: context.identity.gitCommitSha,
-      composeProjectName: context.identity.composeProjectName,
+      runtimeNamespace: context.identity.runtimeNamespace,
       runtimeStatusBeforeManifest: outcome.status,
       runtimeFailureCodesBeforeManifest: outcome.failureCodes,
       cleanupStatus: outcome.cleanup.status,
@@ -163,7 +160,7 @@ process.stdout.write(`${JSON.stringify({
   runId: lifecycle.identity.runId,
   runSequence: lifecycle.identity.runSequence,
   gitCommitSha: lifecycle.identity.gitCommitSha,
-  composeProjectName: lifecycle.identity.composeProjectName,
+  runtimeNamespace: lifecycle.identity.runtimeNamespace,
   status: lifecycle.status,
   evidenceDirectory: lifecycle.outputDirectoryCreated ? requestedOutputDirectory : null,
 })}\n`);
@@ -199,7 +196,9 @@ async function executeFormalAbg(
       {
         ABG_RUN_ID: runId,
         ABG_RUN_SEQUENCE: String(plan.runSequence),
-        ABG_COMPOSE_PROJECT_NAME: context.identity.composeProjectName,
+        ABG_RUNTIME_NAMESPACE: context.identity.runtimeNamespace,
+        DOCKER_HOST: 'unix:///run/podman/podman.sock',
+        TESTCONTAINERS_RYUK_DISABLED: 'true',
         ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
         ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
         ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),

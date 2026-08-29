@@ -63,7 +63,7 @@ const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const sharedDirectory = resolve(requireEnvironment('ABG_SHARED_EVIDENCE_DIR'));
 const runId = process.env['ABG_RUN_ID'] ?? randomUUID();
 const runSequence = parsePositiveInteger(process.env['ABG_RUN_SEQUENCE'] ?? '1');
-const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
+const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
 const runtimeEventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
 const commands: readonly SharedCommand[] = [
   { id: 'runtime', producerIds: ['static'], executable: 'npm', args: ['run', 'check:runtime'] },
@@ -749,12 +749,12 @@ async function recordRuntimeProcess(
   role: string,
 ): Promise<void> {
   if (runtimeEventDirectory === undefined) return;
-  if (composeProjectName === undefined) {
-    throw new Error('FORMAL_RUNTIME_COMPOSE_PROJECT_NAME_MISSING');
+  if (runtimeNamespace === undefined) {
+    throw new Error('FORMAL_RUNTIME_NAMESPACE_MISSING');
   }
   if (child.pid === undefined) throw new Error('FORMAL_RUNTIME_PROCESS_PID_MISSING');
   await writeFormalRuntimeEvent(runtimeEventDirectory, {
-    identity: { runId, runSequence, composeProjectName },
+    identity: { runId, runSequence, runtimeNamespace },
     event,
     resourceType: 'process',
     id: String(child.pid),

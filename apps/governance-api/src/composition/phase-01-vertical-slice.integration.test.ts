@@ -45,7 +45,8 @@ import { createPhase01VerticalSlice } from './phase-01-vertical-slice.js';
 import { buildApplication } from './build-application.js';
 
 const POSTGRES_IMAGE =
-  'postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382';
+  'docker.io/library/postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382';
+const POSTGRES_HOST_PORT = 55_433;
 const TESTCONTAINER_LABELS = formalTestcontainerLabels();
 const MIGRATION_DIRECTORY = resolve(
   import.meta.dirname,
@@ -92,15 +93,19 @@ beforeAll(async () => {
       POSTGRES_HOST_AUTH_METHOD: 'trust',
       TZ: 'Asia/Shanghai',
     })
-    .withCommand(['-c', 'timezone=Asia/Shanghai'])
-    .withExposedPorts(5432)
+    .withCommand([
+      '-c', 'timezone=Asia/Shanghai',
+      '-c', 'listen_addresses=127.0.0.1',
+      '-p', String(POSTGRES_HOST_PORT),
+    ])
+    .withNetworkMode('host')
     .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/u, 2))
     .start();
   await writeTestcontainerRuntimeEvent('STARTED', container);
 
   const poolConfig = {
-    host: container.getHost(),
-    port: container.getMappedPort(5432),
+    host: '127.0.0.1',
+    port: POSTGRES_HOST_PORT,
     user: 'postgres',
     database: 'postgres',
   };
@@ -973,7 +978,7 @@ describe('Phase 01 executable vertical slice', () => {
         entityType: 'PRICE_LIST_RELEASE',
         stableEntityId: priceDraft.priceListId,
         entityVersionId: priceDraft.priceListReleaseId,
-        changeKind: 'INITIAL_PUBLICATION',
+        changeKind: priceDraft.releaseNo === '1' ? 'INITIAL_PUBLICATION' : 'VERSION_CHANGE',
         riskClassification: 'HIGH',
         submittedContentDigest: priceDraft.contentHash.toString('hex'),
         changeReason: '验证发布事务逐写点回滚',
@@ -994,6 +999,10 @@ describe('Phase 01 executable vertical slice', () => {
     );
 
     const baseline = await publicationSideEffectCounts(databaseHandle.database);
+    const recordingPeriodBaseline = await publishedPriceListRecordingPeriods(
+      databaseHandle.database,
+      priceDraft.priceListId,
+    );
     const results: {
       readonly faultPoint: PublicationTransactionFaultPoint;
       readonly rolledBack: boolean;
@@ -1023,6 +1032,12 @@ describe('Phase 01 executable vertical slice', () => {
       }
       const afterFault = await publicationSideEffectCounts(databaseHandle.database);
       expect(afterFault).toEqual(baseline);
+      expect(
+        await publishedPriceListRecordingPeriods(
+          databaseHandle.database,
+          priceDraft.priceListId,
+        ),
+      ).toEqual(recordingPeriodBaseline);
       const unchangedDraft = await databaseHandle.database
         .selectFrom('price_list.price_list_release')
         .select(['governance_status', 'recorded_from', 'content_hash'])
@@ -1283,6 +1298,23 @@ async function publicationSideEffectCounts(database: DatabaseHandle['database'])
       (select count(*)::bigint from workflow.approval_action) as approval_action_count
   `.execute(database);
   return result.rows[0];
+}
+
+function publishedPriceListRecordingPeriods(
+  database: DatabaseHandle['database'],
+  priceListId: string,
+) {
+  return database
+    .selectFrom('price_list.price_list_release')
+    .select([
+      'price_list_release_id as priceListReleaseId',
+      'recorded_from as recordedFrom',
+      'recorded_to as recordedTo',
+    ])
+    .where('price_list_id', '=', priceListId)
+    .where('governance_status', '=', 'PUBLISHED')
+    .orderBy('release_no', 'asc')
+    .execute();
 }
 
 async function loadNextReleaseNo(
@@ -1638,8 +1670,8 @@ function requestContext(
 function formalTestcontainerLabels(): Readonly<Record<string, string>> {
   const runId = process.env['ABG_RUN_ID'];
   const runSequence = process.env['ABG_RUN_SEQUENCE'];
-  const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
-  if (runId !== undefined && (runSequence === undefined || composeProjectName === undefined)) {
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  if (runId !== undefined && (runSequence === undefined || runtimeNamespace === undefined)) {
     throw new Error('FORMAL_TESTCONTAINER_RUN_IDENTITY_INCOMPLETE');
   }
   return {
@@ -1659,8 +1691,8 @@ async function writeTestcontainerRuntimeEvent(
   if (eventDirectory === undefined) return;
   const runId = process.env['ABG_RUN_ID'];
   const runSequence = process.env['ABG_RUN_SEQUENCE'];
-  const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
-  if (runId === undefined || runSequence === undefined || composeProjectName === undefined) {
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  if (runId === undefined || runSequence === undefined || runtimeNamespace === undefined) {
     throw new Error('FORMAL_TESTCONTAINER_EVENT_IDENTITY_INCOMPLETE');
   }
   const id = startedContainer.getId();
@@ -1671,7 +1703,7 @@ async function writeTestcontainerRuntimeEvent(
       schemaVersion: 'phase-01.formal-runtime-event.v1',
       runId,
       runSequence: Number(runSequence),
-      composeProjectName,
+      runtimeNamespace,
       event,
       resourceType: 'container',
       id,
@@ -1682,9 +1714,9 @@ async function writeTestcontainerRuntimeEvent(
       imageReference: POSTGRES_IMAGE,
       imageDigest: POSTGRES_IMAGE.split('@')[1] ?? null,
       ports: [{
-        containerPort: '5432/tcp',
-        hostIp: startedContainer.getHost(),
-        hostPort: startedContainer.getMappedPort(5432),
+        containerPort: `${POSTGRES_HOST_PORT}/tcp`,
+        hostIp: '127.0.0.1',
+        hostPort: POSTGRES_HOST_PORT,
       }],
       ...(event === 'STOPPED' ? { exitStatus: 'STOPPED_BY_TESTCONTAINERS' } : {}),
     }, null, 2) + '\n',

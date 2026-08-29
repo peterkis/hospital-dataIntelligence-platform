@@ -21,3 +21,4 @@ Blocked by: none
 - 2026-08-27：受控 teardown 只停止当前运行已核验进程、Testcontainers 和 Compose project，并逐项处理当前运行卷/网络及复核端口；专用命令写不可覆盖 follow-up cleanup 记录。未使用任何 Docker prune，也未触碰无关 Docker/WSL/用户资源。
 - 2026-08-27：生命周期专项 35/35、verification-tooling 全量 85/85 通过；verification 与 governance-api typecheck、ABG coverage、仓库布局、模块边界、Compose config、bootstrap shell syntax 和 `git diff --check` 通过。真实 Anolis `--dry-run` 在实现期对脏工作区及既有 `anolis-89-wsl2` PostgreSQL/Keycloak/卷/网络和 55432/18080/19000 端口准确失败关闭；未自动清理这些无法证明属于当前 run 的旧资源。
 - 2026-08-27：未执行完整正式 ABG，未进入 AR-06。
+- 2026-08-30：上述Docker/Compose实现记录作为历史事实保留；ADR-0111已替代现行运行时语义。当前身份字段为`runtimeNamespace`，rootful Podman直接管理带五标签的容器与卷，受管容器统一使用host network并显式绑定回环端口；预检与teardown只通过Podman逐项发现、复核和清理，禁止prune/reset。迁移验证不等于readiness或正式ABG。

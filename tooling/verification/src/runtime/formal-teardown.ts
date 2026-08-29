@@ -34,7 +34,7 @@ export interface RuntimeResourceRecord {
   readonly id: string;
   readonly name: string;
   readonly labels: Readonly<Record<string, string>>;
-  readonly source: 'docker-inspect' | 'runtime-event';
+  readonly source: 'podman-inspect' | 'runtime-event';
   readonly present: boolean;
   readonly active: boolean;
   readonly state: string | null;
@@ -83,10 +83,10 @@ export interface RuntimeEnvironmentObservation {
 export interface CleanupAction {
   readonly ordinal: number;
   readonly occurredAt: string;
-  readonly action: 'STOP_PROCESS' | 'REMOVE_TESTCONTAINER' | 'COMPOSE_DOWN' |
-    'REMOVE_CONTAINER' | 'REMOVE_VOLUME' | 'REMOVE_NETWORK' | 'VERIFY_PORT' |
+  readonly action: 'DISCOVER_RESOURCES' | 'STOP_PROCESS' | 'REMOVE_CONTAINER' |
+    'REMOVE_VOLUME' | 'REMOVE_NETWORK' | 'VERIFY_PORT' |
     'VERIFY_ENVIRONMENT';
-  readonly resourceType: RuntimeResourceType | 'compose-project' | 'port' | 'runtime';
+  readonly resourceType: RuntimeResourceType | 'port' | 'runtime';
   readonly resourceId: string;
   readonly resourceName: string;
   readonly status: 'PASSED' | 'FAILED' | 'SKIPPED';
@@ -115,7 +115,6 @@ export interface FormalTeardownAdapter {
   listResources(identity: FormalRunIdentity, runtimeEventDirectory: string): Promise<readonly RuntimeResourceRecord[]>;
   stopProcess(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   removeContainer(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
-  composeDown(identity: FormalRunIdentity, composeFile: string): Promise<void>;
   removeVolume(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   removeNetwork(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   inspectPorts(ports: readonly number[]): Promise<RuntimeResourceSnapshot['ports']>;
@@ -129,7 +128,7 @@ export interface FormalTeardownDependencies {
 
 export function createDefaultFormalTeardownDependencies(): FormalTeardownDependencies {
   return {
-    adapter: new DockerCliFormalTeardownAdapter(new SpawnRuntimeCommandRunner()),
+    adapter: new PodmanCliFormalTeardownAdapter(new SpawnRuntimeCommandRunner()),
     now: localNowInAsiaShanghai,
   };
 }
@@ -169,7 +168,6 @@ export async function performFormalTeardown(
   input: {
     readonly identity: FormalRunIdentity;
     readonly runtimeEventDirectory: string;
-    readonly composeFile: string;
   },
   dependencies: FormalTeardownDependencies = createDefaultFormalTeardownDependencies(),
 ): Promise<{ readonly cleanup: FormalCleanupReport; readonly finalResources: RuntimeResourceSnapshot }> {
@@ -183,10 +181,10 @@ export async function performFormalTeardown(
     resources = await dependencies.adapter.listResources(input.identity, input.runtimeEventDirectory);
   } catch (error) {
     addAction({
-      action: 'COMPOSE_DOWN',
-      resourceType: 'compose-project',
-      resourceId: input.identity.composeProjectName,
-      resourceName: input.identity.composeProjectName,
+      action: 'DISCOVER_RESOURCES',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: input.identity.runtimeNamespace,
       status: 'FAILED',
       errorCode: 'FORMAL_CLEANUP_RESOURCE_DISCOVERY_FAILED:' + stableError(error),
     });
@@ -210,86 +208,48 @@ export async function performFormalTeardown(
   }
 
   for (const resource of exactResources.filter((candidate) =>
-    candidate.resourceType === 'container' &&
-    candidate.present &&
-    candidate.labels['com.docker.compose.project'] !== input.identity.composeProjectName,
+    candidate.resourceType === 'container' && candidate.present,
   )) {
     await attempt(addAction, {
-      action: 'REMOVE_TESTCONTAINER',
+      action: 'REMOVE_CONTAINER',
       resourceType: resource.resourceType,
       resourceId: resource.id,
       resourceName: resource.name,
     }, () => dependencies.adapter.removeContainer(resource, input.identity));
   }
 
-  const composeProjectResources = resources.filter((resource) =>
-    resource.labels['com.docker.compose.project'] === input.identity.composeProjectName,
-  );
-  if (composeProjectResources.some((resource) => !belongsToRun(resource, input.identity))) {
-    addAction({
-      action: 'COMPOSE_DOWN',
-      resourceType: 'compose-project',
-      resourceId: input.identity.composeProjectName,
-      resourceName: input.identity.composeProjectName,
-      status: 'FAILED',
-      errorCode: 'FORMAL_CLEANUP_COMPOSE_OWNERSHIP_MISMATCH',
-    });
-  } else if (composeProjectResources.length > 0) {
-    await attempt(addAction, {
-      action: 'COMPOSE_DOWN',
-      resourceType: 'compose-project',
-      resourceId: input.identity.composeProjectName,
-      resourceName: input.identity.composeProjectName,
-    }, () => dependencies.adapter.composeDown(input.identity, input.composeFile));
-  } else {
-    addAction({
-      action: 'COMPOSE_DOWN',
-      resourceType: 'compose-project',
-      resourceId: input.identity.composeProjectName,
-      resourceName: input.identity.composeProjectName,
-      status: 'SKIPPED',
-      errorCode: null,
-    });
-  }
-
-  let afterCompose = resources;
+  let afterContainers = resources;
   try {
-    afterCompose = await dependencies.adapter.listResources(input.identity, input.runtimeEventDirectory);
+    afterContainers = await dependencies.adapter.listResources(input.identity, input.runtimeEventDirectory);
   } catch (error) {
     addAction({
-      action: 'COMPOSE_DOWN',
-      resourceType: 'compose-project',
-      resourceId: input.identity.composeProjectName,
-      resourceName: input.identity.composeProjectName,
+      action: 'DISCOVER_RESOURCES',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: input.identity.runtimeNamespace,
       status: 'FAILED',
-      errorCode: 'FORMAL_CLEANUP_POST_COMPOSE_DISCOVERY_FAILED:' + stableError(error),
+      errorCode: 'FORMAL_CLEANUP_POST_CONTAINER_DISCOVERY_FAILED:' + stableError(error),
     });
   }
-  for (const resource of afterCompose.filter((candidate) =>
-    belongsToRun(candidate, input.identity) && candidate.present,
+  for (const resource of afterContainers.filter((candidate) =>
+    belongsToRun(candidate, input.identity) && candidate.present && candidate.resourceType === 'volume',
   )) {
-    if (resource.resourceType === 'container') {
-      await attempt(addAction, {
-        action: 'REMOVE_CONTAINER',
-        resourceType: resource.resourceType,
-        resourceId: resource.id,
-        resourceName: resource.name,
-      }, () => dependencies.adapter.removeContainer(resource, input.identity));
-    } else if (resource.resourceType === 'volume') {
-      await attempt(addAction, {
-        action: 'REMOVE_VOLUME',
-        resourceType: resource.resourceType,
-        resourceId: resource.id,
-        resourceName: resource.name,
-      }, () => dependencies.adapter.removeVolume(resource, input.identity));
-    } else if (resource.resourceType === 'network') {
-      await attempt(addAction, {
-        action: 'REMOVE_NETWORK',
-        resourceType: resource.resourceType,
-        resourceId: resource.id,
-        resourceName: resource.name,
-      }, () => dependencies.adapter.removeNetwork(resource, input.identity));
-    }
+    await attempt(addAction, {
+      action: 'REMOVE_VOLUME',
+      resourceType: resource.resourceType,
+      resourceId: resource.id,
+      resourceName: resource.name,
+    }, () => dependencies.adapter.removeVolume(resource, input.identity));
+  }
+  for (const resource of afterContainers.filter((candidate) =>
+    belongsToRun(candidate, input.identity) && candidate.present && candidate.resourceType === 'network',
+  )) {
+    await attempt(addAction, {
+      action: 'REMOVE_NETWORK',
+      resourceType: resource.resourceType,
+      resourceId: resource.id,
+      resourceName: resource.name,
+    }, () => dependencies.adapter.removeNetwork(resource, input.identity));
   }
 
   let finalResources: RuntimeResourceSnapshot;
@@ -300,10 +260,10 @@ export async function performFormalTeardown(
     }, dependencies);
   } catch (error) {
     addAction({
-      action: 'COMPOSE_DOWN',
-      resourceType: 'compose-project',
-      resourceId: input.identity.composeProjectName,
-      resourceName: input.identity.composeProjectName,
+      action: 'DISCOVER_RESOURCES',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: input.identity.runtimeNamespace,
       status: 'FAILED',
       errorCode: 'FORMAL_CLEANUP_FINAL_SNAPSHOT_FAILED:' + stableError(error),
     });
@@ -390,13 +350,22 @@ export function belongsToRun(
   return Object.entries(expected).every(([name, value]) => resource.labels[name] === value);
 }
 
+export function assertFormalRuntimeResourceOwned(
+  resource: RuntimeResourceRecord,
+  identity: FormalRunIdentity,
+): void {
+  if (!belongsToRun(resource, identity)) {
+    throw new Error('FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH');
+  }
+}
+
 export function assertSafeFormalCleanupCommand(
   executable: string,
   args: readonly string[],
 ): void {
-  if (executable !== 'docker') throw new Error('FORMAL_CLEANUP_COMMAND_SCOPE_INVALID');
+  if (executable !== 'podman') throw new Error('FORMAL_CLEANUP_COMMAND_SCOPE_INVALID');
   if (args.some((argument) => argument.toLowerCase() === 'prune')) {
-    throw new Error('FORMAL_CLEANUP_DOCKER_PRUNE_FORBIDDEN');
+    throw new Error('FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN');
   }
   const containerRemove = args.length === 5 &&
     args[0] === 'container' && args[1] === 'rm' &&
@@ -405,16 +374,12 @@ export function assertSafeFormalCleanupCommand(
     args[0] === 'volume' && args[1] === 'rm' && meaningfulArgument(args[2]);
   const networkRemove = args.length === 3 &&
     args[0] === 'network' && args[1] === 'rm' && meaningfulArgument(args[2]);
-  const composeDown = args.length === 9 &&
-    args[0] === 'compose' && args[1] === '--project-name' && meaningfulArgument(args[2]) &&
-    args[3] === '--file' && meaningfulArgument(args[4]) && args[5] === 'down' &&
-    args[6] === '--volumes' && args[7] === '--timeout' && args[8] === '10';
-  if (!containerRemove && !volumeRemove && !networkRemove && !composeDown) {
+  if (!containerRemove && !volumeRemove && !networkRemove) {
     throw new Error('FORMAL_CLEANUP_COMMAND_SCOPE_INVALID');
   }
 }
 
-class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
+class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
   private readonly runner: RuntimeCommandRunner;
 
   constructor(runner: RuntimeCommandRunner) {
@@ -425,13 +390,13 @@ class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
     identity: FormalRunIdentity,
     runtimeEventDirectory: string,
   ): Promise<readonly RuntimeResourceRecord[]> {
-    const docker = [
-      ...await this.listDockerContainers(),
-      ...await this.listDockerVolumes(),
-      ...await this.listDockerNetworks(),
+    const podman = [
+      ...await this.listPodmanContainers(),
+      ...await this.listPodmanVolumes(),
+      ...await this.listPodmanNetworks(),
     ];
     const events = await readRuntimeEvents(runtimeEventDirectory, identity);
-    return mergeDockerAndEventResources(docker, events);
+    return mergePodmanAndEventResources(podman, events);
   }
 
   async stopProcess(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
@@ -454,50 +419,18 @@ class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
   }
 
   async removeContainer(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertDockerResourceOwned('container', resource.id, identity);
-    await requireSuccess(this.runner, 'docker', ['container', 'rm', '--force', '--volumes', resource.id]);
-  }
-
-  async composeDown(identity: FormalRunIdentity, composeFile: string): Promise<void> {
-    const currentProjectResources = [
-      ...await this.listDockerContainers(),
-      ...await this.listDockerVolumes(),
-      ...await this.listDockerNetworks(),
-    ].filter((resource) =>
-      resource.labels['com.docker.compose.project'] === identity.composeProjectName,
-    );
-    if (
-      currentProjectResources.length === 0 ||
-      currentProjectResources.some((resource) => !belongsToRun(resource, identity))
-    ) throw new Error('FORMAL_CLEANUP_COMPOSE_OWNERSHIP_MISMATCH');
-    await requireSuccess(this.runner, 'docker', [
-      'compose',
-      '--project-name', identity.composeProjectName,
-      '--file', composeFile,
-      'down',
-      '--volumes',
-      '--timeout', '10',
-    ], {
-      ABG_RUN_ID: identity.runId,
-      ABG_RUN_SEQUENCE: String(identity.runSequence),
-      ABG_COMPOSE_PROJECT_NAME: identity.composeProjectName,
-      ABG_MANAGED_BY: 'formal-abg',
-      COMPOSE_PROJECT_NAME: identity.composeProjectName,
-      HDI_POSTGRES_PASSWORD: 'controlled-cleanup-placeholder',
-      HDI_KEYCLOAK_ADMIN_USERNAME: 'controlled-cleanup-placeholder',
-      HDI_KEYCLOAK_ADMIN_PASSWORD: 'controlled-cleanup-placeholder',
-      HDI_KEYCLOAK_REALM_IMPORT_DIR: resolve('.runtime/controlled-cleanup-placeholder'),
-    });
+    await this.assertPodmanResourceOwned('container', resource.id, identity);
+    await requireSuccess(this.runner, 'podman', ['container', 'rm', '--force', '--volumes', resource.id]);
   }
 
   async removeVolume(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertDockerResourceOwned('volume', resource.name, identity);
-    await requireSuccess(this.runner, 'docker', ['volume', 'rm', resource.name]);
+    await this.assertPodmanResourceOwned('volume', resource.name, identity);
+    await requireSuccess(this.runner, 'podman', ['volume', 'rm', resource.name]);
   }
 
   async removeNetwork(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertDockerResourceOwned('network', resource.id, identity);
-    await requireSuccess(this.runner, 'docker', ['network', 'rm', resource.id]);
+    await this.assertPodmanResourceOwned('network', resource.id, identity);
+    await requireSuccess(this.runner, 'podman', ['network', 'rm', resource.id]);
   }
 
   async inspectPorts(ports: readonly number[]): Promise<RuntimeResourceSnapshot['ports']> {
@@ -563,7 +496,7 @@ class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
     };
   }
 
-  private async listDockerContainers(): Promise<readonly RuntimeResourceRecord[]> {
+  private async listPodmanContainers(): Promise<readonly RuntimeResourceRecord[]> {
     const ids = await listIds(this.runner, ['container', 'ls', '--all', '--quiet']);
     return Promise.all(ids.map(async (id) => {
       const inspected = await inspectOne(this.runner, ['container', 'inspect', id]);
@@ -573,13 +506,13 @@ class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
       const labels = stringRecord(config['Labels']);
       const imageReference = stringOrNull(config['Image']);
       const ports = parsePortBindings(network['Ports']);
-      const metrics = state['Running'] === true ? await readDockerStats(this.runner, id) : null;
+      const metrics = state['Running'] === true ? await readPodmanStats(this.runner, id) : null;
       return {
         resourceType: 'container' as const,
         id: stringOrEmpty(inspected['Id']),
         name: stringOrEmpty(inspected['Name']).replace(/^\//u, ''),
         labels,
-        source: 'docker-inspect' as const,
+        source: 'podman-inspect' as const,
         present: true,
         active: state['Running'] === true,
         state: stringOrNull(state['Status']),
@@ -587,33 +520,33 @@ class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
         imageId: stringOrNull(inspected['Image']),
         imageDigest: imageReference?.split('@')[1] ?? null,
         ports,
-        startedAt: normalizeDockerTimestamp(state['StartedAt']),
-        stoppedAt: normalizeDockerTimestamp(state['FinishedAt']),
+        startedAt: normalizePodmanTimestamp(state['StartedAt']),
+        stoppedAt: normalizePodmanTimestamp(state['FinishedAt']),
         exitStatus: typeof state['ExitCode'] === 'number' ? state['ExitCode'] : null,
         metrics,
       };
     }));
   }
 
-  private async listDockerVolumes(): Promise<readonly RuntimeResourceRecord[]> {
+  private async listPodmanVolumes(): Promise<readonly RuntimeResourceRecord[]> {
     const names = await listIds(this.runner, ['volume', 'ls', '--quiet']);
     return Promise.all(names.map(async (name) => {
       const inspected = await inspectOne(this.runner, ['volume', 'inspect', name]);
-      return baseDockerResource('volume', stringOrEmpty(inspected['Name']), stringOrEmpty(inspected['Name']),
-        stringRecord(inspected['Labels']), normalizeDockerTimestamp(inspected['CreatedAt']));
+      return basePodmanResource('volume', stringOrEmpty(inspected['Name']), stringOrEmpty(inspected['Name']),
+        stringRecord(inspected['Labels']), normalizePodmanTimestamp(inspected['CreatedAt']));
     }));
   }
 
-  private async listDockerNetworks(): Promise<readonly RuntimeResourceRecord[]> {
+  private async listPodmanNetworks(): Promise<readonly RuntimeResourceRecord[]> {
     const ids = await listIds(this.runner, ['network', 'ls', '--quiet']);
     return Promise.all(ids.map(async (id) => {
       const inspected = await inspectOne(this.runner, ['network', 'inspect', id]);
-      return baseDockerResource('network', stringOrEmpty(inspected['Id']), stringOrEmpty(inspected['Name']),
-        stringRecord(inspected['Labels']), normalizeDockerTimestamp(inspected['Created']));
+      return basePodmanResource('network', stringOrEmpty(inspected['id']), stringOrEmpty(inspected['name']),
+        stringRecord(inspected['labels']), normalizePodmanTimestamp(inspected['created']));
     }));
   }
 
-  private async assertDockerResourceOwned(
+  private async assertPodmanResourceOwned(
     type: 'container' | 'volume' | 'network',
     id: string,
     identity: FormalRunIdentity,
@@ -621,9 +554,9 @@ class DockerCliFormalTeardownAdapter implements FormalTeardownAdapter {
     const inspected = await inspectOne(this.runner, [type, 'inspect', id]);
     const labels = type === 'container'
       ? stringRecord(recordField(inspected, 'Config')['Labels'])
-      : stringRecord(inspected['Labels']);
-    const resource = baseDockerResource(type, id, id, labels, null);
-    if (!belongsToRun(resource, identity)) throw new Error('FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH');
+      : stringRecord(inspected[type === 'network' ? 'labels' : 'Labels']);
+    const resource = basePodmanResource(type, id, id, labels, null);
+    assertFormalRuntimeResourceOwned(resource, identity);
   }
 }
 
@@ -685,7 +618,7 @@ function mergeEventValues(
         name: typeof value['name'] === 'string' ? value['name'] : id,
         labels,
         source: 'runtime-event',
-        // Docker resources are authoritative for current presence. 事件仅证明资源曾启动；
+        // Podman resources are authoritative for current presence. 事件仅证明资源曾启动；
         // 若当前 inspect 未找到它，则不能把已自行退出的容器伪报为残留。
         present: processIsAlive,
         active: processIsAlive,
@@ -717,12 +650,12 @@ function mergeEventValues(
   return [...resources.values()];
 }
 
-function mergeDockerAndEventResources(
-  docker: readonly RuntimeResourceRecord[],
+function mergePodmanAndEventResources(
+  podman: readonly RuntimeResourceRecord[],
   events: readonly RuntimeResourceRecord[],
 ): readonly RuntimeResourceRecord[] {
   const merged = new Map(events.map((resource) => [resource.resourceType + ':' + resource.id, resource]));
-  for (const resource of docker) {
+  for (const resource of podman) {
     const key = resource.resourceType + ':' + resource.id;
     const event = merged.get(key);
     merged.set(key, event === undefined ? resource : {
@@ -735,7 +668,7 @@ function mergeDockerAndEventResources(
   return [...merged.values()];
 }
 
-function baseDockerResource(
+function basePodmanResource(
   resourceType: 'container' | 'volume' | 'network',
   id: string,
   name: string,
@@ -747,7 +680,7 @@ function baseDockerResource(
     id,
     name,
     labels,
-    source: 'docker-inspect',
+    source: 'podman-inspect',
     present: true,
     active: true,
     state: 'PRESENT',
@@ -770,8 +703,8 @@ function stableResources(resources: readonly RuntimeResourceRecord[]): readonly 
 }
 
 async function listIds(runner: RuntimeCommandRunner, args: readonly string[]): Promise<readonly string[]> {
-  const result = await runner.run({ executable: 'docker', args });
-  if (result.exitCode !== 0) throw new Error('FORMAL_DOCKER_LIST_FAILED:' + args[0]);
+  const result = await runner.run({ executable: 'podman', args });
+  if (result.exitCode !== 0) throw new Error('FORMAL_PODMAN_LIST_FAILED:' + args[0]);
   return result.stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
 }
 
@@ -779,21 +712,21 @@ async function inspectOne(
   runner: RuntimeCommandRunner,
   args: readonly string[],
 ): Promise<Readonly<Record<string, unknown>>> {
-  const result = await runner.run({ executable: 'docker', args });
-  if (result.exitCode !== 0) throw new Error('FORMAL_DOCKER_INSPECT_FAILED:' + args[0]);
+  const result = await runner.run({ executable: 'podman', args });
+  if (result.exitCode !== 0) throw new Error('FORMAL_PODMAN_INSPECT_FAILED:' + args[0]);
   const value = JSON.parse(result.stdout) as unknown;
   const first = Array.isArray(value) ? value[0] : undefined;
-  if (!isRecord(first)) throw new Error('FORMAL_DOCKER_INSPECT_INVALID:' + args[0]);
+  if (!isRecord(first)) throw new Error('FORMAL_PODMAN_INSPECT_INVALID:' + args[0]);
   return first;
 }
 
-async function readDockerStats(
+async function readPodmanStats(
   runner: RuntimeCommandRunner,
   id: string,
 ): Promise<Readonly<Record<string, string>> | null> {
   try {
     const result = await runner.run({
-      executable: 'docker',
+      executable: 'podman',
       args: ['stats', '--no-stream', '--format', '{{json .}}', id],
     });
     if (result.exitCode !== 0) return null;
@@ -909,7 +842,7 @@ function parseEventPorts(value: unknown): readonly RuntimePortBinding[] {
   });
 }
 
-function normalizeDockerTimestamp(value: unknown): string | null {
+function normalizePodmanTimestamp(value: unknown): string | null {
   return typeof value === 'string' && !value.startsWith('0001-01-01', 0) ? value : null;
 }
 
@@ -962,28 +895,23 @@ async function runControlledTeardownCli(): Promise<void> {
   if (!isRecord(rawIdentity)) throw new Error('FORMAL_TEARDOWN_RUN_IDENTITY_INVALID');
   const runId = rawIdentity['runId'];
   const runSequence = rawIdentity['runSequence'];
-  const composeProjectName = rawIdentity['composeProjectName'];
+  const runtimeNamespace = rawIdentity['runtimeNamespace'];
   const gitCommitSha = rawIdentity['gitCommitSha'];
   if (
     typeof runId !== 'string' ||
     typeof runSequence !== 'number' ||
-    typeof composeProjectName !== 'string' ||
+    typeof runtimeNamespace !== 'string' ||
     typeof gitCommitSha !== 'string' ||
     !/^[0-9a-f]{40}$/u.test(gitCommitSha)
   ) throw new Error('FORMAL_TEARDOWN_RUN_IDENTITY_INVALID');
   const derived = createFormalRunSeed(runSequence, () => runId);
-  if (derived.composeProjectName !== composeProjectName) {
-    throw new Error('FORMAL_TEARDOWN_COMPOSE_PROJECT_IDENTITY_MISMATCH');
+  if (derived.runtimeNamespace !== runtimeNamespace) {
+    throw new Error('FORMAL_TEARDOWN_RUNTIME_NAMESPACE_IDENTITY_MISMATCH');
   }
   const identity: FormalRunIdentity = { ...derived, gitCommitSha };
-  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
   const result = await performFormalTeardown({
     identity,
     runtimeEventDirectory: join(evidenceDirectory, 'runtime', 'events'),
-    composeFile: join(
-      repositoryRoot,
-      'phase-plan/environment/anolis-8.9-wsl2/compose.phase-01.yml',
-    ),
   });
   const runtimeDirectory = join(evidenceDirectory, 'runtime');
   const followupName = 'cleanup-followup-' +

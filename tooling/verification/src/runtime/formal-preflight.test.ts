@@ -8,6 +8,7 @@ import {
   type RuntimeCommandSpec,
 } from './formal-runtime-contract.js';
 import {
+  isRepositoryPodmanResource,
   runFormalPreflight,
   type FormalPreflightDependencies,
 } from './formal-preflight.js';
@@ -125,10 +126,10 @@ describe('formal ABG preflight', () => {
     const dependencies = passingDependencies();
     await expectFailure({
       ...dependencies,
-      docker: {
+      containerRuntime: {
         async inspect() {
           return {
-            ...(await dependencies.docker.inspect()),
+            ...(await dependencies.containerRuntime.inspect()),
             repositoryResources: [{
               type: 'container',
               id: 'residual-container',
@@ -142,7 +143,16 @@ describe('formal ABG preflight', () => {
           };
         },
       },
-    }, 'FORMAL_PREFLIGHT_DOCKER_REPOSITORY_RESIDUE');
+    }, 'FORMAL_PREFLIGHT_PODMAN_REPOSITORY_RESIDUE');
+  });
+
+  it('recognizes an HDI runtime namespace even when labels are damaged', () => {
+    expect(isRepositoryPodmanResource({
+      type: 'volume',
+      id: 'hdi_phase01_manual_probe_postgres_data',
+      name: 'hdi_phase01_manual_probe_postgres_data',
+      labels: {},
+    })).toBe(true);
   });
 });
 
@@ -196,11 +206,18 @@ function passingDependencies(): FormalPreflightDependencies {
   return {
     commandRunner: commandRunner(),
     fileSystem,
-    docker: {
+    containerRuntime: {
       async inspect() {
         return {
-          dockerVersion: '29.7.2',
-          composeVersion: '5.0.0',
+          podmanVersion: '4.9.4-rhel',
+          graphDriverName: 'overlay',
+          graphRoot: '/var/lib/containers/storage',
+          networkBackend: 'cni',
+          logDriver: 'k8s-file',
+          ociRuntimeName: 'runc',
+          socketPath: '/run/podman/podman.sock',
+          socketActive: true,
+          rootless: false,
           images: [
             {
               reference: 'postgres@sha256:' + '1'.repeat(64),
@@ -269,4 +286,4 @@ function memInfo(swapKilobytes: number): string {
   return `MemTotal:       4194304 kB\nSwapTotal:      ${swapKilobytes} kB\n`;
 }
 
-expect(FORMAL_RUNTIME_PORTS).toEqual([55432, 18080, 19000, 3000, 4101, 4102]);
+expect(FORMAL_RUNTIME_PORTS).toEqual([55432, 55433, 18080, 19000, 3000, 4101, 4102]);

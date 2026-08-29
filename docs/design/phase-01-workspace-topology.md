@@ -4,7 +4,9 @@
 
 容量环境补充状态：ADR-0110环境配置与回执只进入`phase-plan/environment`证据说明区，不成为应用、workspace或运行时依赖。
 
-更新日期：2026-08-08
+容器运行时补充状态：ADR-0111把直接Podman运行模块、机器可读基线和迁移回执限定在`phase-plan/environment`，Testcontainers继续只是既有验证workspace的Podman API客户端，不新增应用或workspace。
+
+更新日期：2026-08-30
 
 ## 1. 目标与适用范围
 
@@ -216,7 +218,7 @@ Git必须跟踪权威源码、文档、ADR、原生迁移、冻结契约、工�
 
 把逐字段分布规则拆成业务配置、数据库实体、公共契约、独立生成器、应用、workspace或共享包；在Phase 01预建任何字段分布资产；改变普通画像70%/30%非空、适用文本70%/25%/5%及20%/50%/85%目标长度、`W50` 100%/90%或`E50`五类各20%；按字段名称或随机决定分布；允许非法LF、无合法字段时静默跳过或类别重分配；或者混同Unicode码点长度与最终ZIP字节容量计量，也属于核心拓扑、容量证据或阶段隔离变更。
 
-改变ADR-0110冻结的WSL发行版身份、Anolis用户空间版本、8 vCPU、4 GiB、无swap、10 GiB根磁盘或独占运行门禁；让其他WSL/Docker Desktop后端并发；把WSL环境内置为应用或workspace依赖；或者把本机WSL证据冒充生产/内网实机证据，也属于核心容量证据环境变更，必须重新确认并重做受影响的两阶段证据。
+改变ADR-0110冻结的WSL发行版身份、Anolis用户空间版本、8 vCPU、4 GiB、无swap、10 GiB根磁盘或独占运行门禁；让其他WSL、Docker Desktop、Podman Machine或其他容器后端并发；把WSL环境内置为应用或workspace依赖；或者把本机WSL证据冒充生产/内网实机证据，也属于核心容量证据环境变更，必须重新确认并重做受影响的两阶段证据。
 
 改变Phase 01最终规范制品16 MiB计量边界、超限失败关闭或禁止规避规则，建立独立容量模块，或者未经代表性容量验证把该数值写成全院初始化、生产容量、性能SLA或招标上限，也属于核心架构变更。
 
@@ -249,4 +251,5 @@ Git必须跟踪权威源码、文档、ADR、原生迁移、冻结契约、工�
 - [ADR-0108：冻结受控导出容量专用负载画像矩阵](../adr/0108-freeze-managed-export-capacity-workload-profile-matrix.md)
 - [ADR-0109：冻结受控导出容量画像字段分布规则](../adr/0109-freeze-managed-export-capacity-field-distribution-rules.md)
 - [ADR-0110：采用本机WSL2 Anolis OS 8.9作为受限容量实验环境](../adr/0110-use-local-wsl2-anolis-8-9-for-capacity-simulation.md)
+- [ADR-0111：Phase 01采用Podman作为唯一容器运行时](../adr/0111-use-podman-as-the-phase-01-container-runtime.md)
 - [Phase 01 governance-api深模块结构](phase-01-governance-api-module-structure.md)

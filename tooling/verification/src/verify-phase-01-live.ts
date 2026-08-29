@@ -694,18 +694,18 @@ async function recordConsumerRuntimeEvent(
   if (eventDirectory === undefined) return;
   const formalRunId = process.env['ABG_RUN_ID'];
   const formalRunSequence = process.env['ABG_RUN_SEQUENCE'];
-  const composeProjectName = process.env['ABG_COMPOSE_PROJECT_NAME'];
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
   if (
     formalRunId === undefined ||
     formalRunSequence === undefined ||
-    composeProjectName === undefined
+    runtimeNamespace === undefined
   ) throw new Error('FORMAL_CONSUMER_RUN_IDENTITY_INCOMPLETE');
   if (consumer.child.pid === undefined) throw new Error('FORMAL_CONSUMER_PID_MISSING');
   await writeFormalRuntimeEvent(eventDirectory, {
     identity: {
       runId: formalRunId,
       runSequence: parseRunSequence(formalRunSequence),
-      composeProjectName,
+      runtimeNamespace,
     },
     event,
     resourceType: 'process',

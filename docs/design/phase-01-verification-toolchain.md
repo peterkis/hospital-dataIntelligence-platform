@@ -4,7 +4,9 @@
 
 容量环境补充状态：ADR-0110已确认本机WSL2 Anolis OS 8.9独占运行环境及环境门禁；当前初始化回执不是容量证据运行。
 
-更新日期：2026-08-08
+容器运行时补充状态：ADR-0111已确认rootful Podman为唯一现行容器运行时；受管容器只用host network和冻结回环端口，Docker/Compose不再进入执行路径。
+
+更新日期：2026-08-30
 
 ## 1. 目标与适用范围
 
@@ -68,7 +70,7 @@ flowchart LR
 19. 完整POC容量证据必须成对保存前置可行性实验与集成后真实链路核验；两者使用完全相同的画像身份及版本、环境、方法和阈值并记录差异。前置装置不是业务API、正式DDL、运行时依赖或最终验收权威；集成后阶段必须调用实际`release-distribution`和冻结公共下载API。核验失败不得换画像、择优或静默放宽，任何上限调整须有新证据和新ADR。
 20. 容量画像生成器及矩阵编排只属于既有TypeScript验证工具链中的确定性fixture资产，不是业务领域、数据库实体、公共契约、管理界面能力、独立应用、workspace或共享包。矩阵固定包含`F00`、`N10`、`N30`、`N50`、`N100`、`W50`和`E50`，最终CSV数据行数分别为24、10,000、30,000、50,000、100,000、50,000和50,000且不含表头；`F00`不参与上限推断，四个`N`画像仅改变行数，`W50`隔离行宽压力，`E50`隔离中文多字节和合法CSV转义压力。容量fixture与业务验收fixture隔离，记录必须有效、唯一、引用完整、有稳定全序且可确定转换；画像必须冻结身份/版本、投影Schema、交付配置/格式、生成器/代码摘要、种子、行数、分布及字符规则，且每个外部变长字符串必须有有限可执行最大长度。Phase 01不得预建或运行该生成器；集成后阶段必须让生成结果进入真实`release-distribution`及公共下载路径，不能保留平行容量实现。
 21. 同一容量fixture资产必须按精确输出列身份和稳定记录顺序执行ADR-0109，不得以运行时随机近似：四个`N`画像逐可选字段精确70%有值/30%冻结空值，适用非空文本精确70%/25%/5%达到冻结合法最大Unicode码点长度的20%/50%/85%；普通画像只用安全单字节基线字符，身份/代码/枚举/引用/摘要/严格模式字符串使用合法确定性生成器且排除出长度分布。`W50`全部可选字段有值，字符串目标90%且唯一后缀计入预算，非字符串采用最长合法表示，字符串保持单字节。`E50`复用`N50`逐字段非空与码点长度分布，每个适用文本字段内按稳定顺序形成纯中文、中文+ASCII、含逗号、含双引号、含逗号/双引号/LF五组各20%；适用/排除列由身份清单冻结，LF只进入多行字段，身份/代码/枚举/引用/摘要/金额/数值/日期/日期时间/布尔/不兼容模式字段排除。无合法字段、映射与Schema不一致、静默跳过或重分配必须失败关闭。字符串长度使用Unicode码点，容量只使用最终ZIP字节。该规则不形成第二生成器、业务配置或Phase 01资产。
-22. 两阶段容量证据运行前必须执行ADR-0110环境门禁：先`wsl --shutdown`，再只启动`Anolis-8.9-HDI-POC`；保存WSL版本/内核、`.wslconfig`摘要、唯一运行发行版、Anolis用户空间身份、`nproc=8`、约4 GiB `MemTotal`、空swap列表、10 GiB根块设备、systemd状态和`Asia/Shanghai`。任一其他WSL或Docker Desktop后端并发、资源配置漂移、根磁盘扩容或环境清单缺失均使该轮证据失格；不得把通过结果描述为Anolis原生内核、生产实机或内网服务器验收。
+22. 两阶段容量证据运行前必须执行ADR-0110环境门禁：先`wsl --shutdown`，再只启动`Anolis-8.9-HDI-POC`；保存WSL版本/内核、`.wslconfig`摘要、唯一运行发行版、Anolis用户空间身份、`nproc=8`、约4 GiB `MemTotal`、空swap列表、10 GiB根块设备、systemd状态和`Asia/Shanghai`。任一其他WSL、Docker Desktop、Podman Machine或其他容器后端并发，或者资源配置漂移、根磁盘扩容、环境清单缺失，均使该轮证据失格；不得把通过结果描述为Anolis原生内核、生产实机或内网服务器验收。
 
 `E50`适用字段必须同时合法容纳全部五类；不允许LF的单行文本列整体排除在五组压力清单之外并保持普通内容，不能只跳过第五组或把其20%转移给其他类别。
 
@@ -77,6 +79,7 @@ flowchart LR
 | 能力 | Phase 01基线 | 版本与冻结要求 |
 |---|---|---|
 | 包管理与工作区 | npm workspaces | Node.js精确`24.18.0`、npm精确`11.9.0`、一个根`package-lock.json`，正式安装使用`npm ci` |
+| 容器运行时 | rootful Podman | 精确`4.9.4-rhel`；唯一API为`/run/podman/podman.sock`；受管容器只用host network并在进程层绑定冻结回环端口；Docker CLI、Compose provider、桥接网络和端口发布均不进入现行执行路径 |
 | 通用TypeScript测试 | Vitest | 首个证据基线精确固定`4.1.6`；`@vitest/coverage-v8`保持同版 |
 | Fastify模块和路由测试 | Vitest＋Fastify `inject()` | 使用实际应用构建入口，不另建测试专用业务实现 |
 | REST API场景 | Vitest＋冻结OpenAPI生成客户端 | 客户端来源摘要进入证据包 |
@@ -97,7 +100,7 @@ flowchart LR
 
 每次正式验证从受控、隔离的环境启动，并至少满足：
 
-1. PostgreSQL从空数据库执行全部权威原生SQL迁移，再生成及校验数据库派生类型；不得从预制业务数据库或人工快照起步。
+1. PostgreSQL从空数据库执行全部权威原生SQL迁移，再生成及校验数据库派生类型；不得从预制业务数据库或人工快照起步。运行时PostgreSQL绑定`127.0.0.1:55432`，Testcontainers集成PostgreSQL通过同一Podman socket以host network绑定`127.0.0.1:55433`，不得用端口NAT或第二容器后端。
 2. Keycloak使用正式版本镜像、与治理数据库分离的持久化厂商数据库和合成Realm配置，真实执行人员Authorization Code＋PKCE S256及服务Client Credentials；重启测试不得依赖内置临时数据库，不得通过测试请求头、伪造令牌或应用内假身份提供方绕过。
 3. Toxiproxy和容器生命周期只用于构造依赖延迟、超时、断连、恢复和重启，不改变平台领域结果。
 4. fixture使用固定生成版本、种子和稳定标识；不得导入真实患者、人员、费用、医嘱或消费系统数据。
@@ -256,7 +259,7 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 | gate-specific 证明 | `GATE_ASSERTIONS_MISMATCH`、`ABG_GATE_RESULT_EVIDENCE_SELECTOR_MISSING`、`SELECTED_CLAIM_DIGEST_MISMATCH` |
 | manifest 与终态字节 | `MANIFEST_UNLISTED_FILE`、`MANIFEST_SHA256_MISMATCH`、`MANIFEST_FILE_SHA256_MISMATCH` |
 | 路径与不可覆盖输出 | `ABG_GATE_RESULT_EVIDENCE_PATH_INVALID`、`EVIDENCE_SYMLINK_FORBIDDEN`、`REVIEW_OUTPUT_ALREADY_EXISTS`、`ABG_GATE_RESULT_ALREADY_EXISTS` |
-| cleanup 范围 | `FORMAL_CLEANUP_DOCKER_PRUNE_FORBIDDEN`、`FORMAL_CLEANUP_COMMAND_SCOPE_INVALID`、`FORMAL_CLEANUP_COMPOSE_OWNERSHIP_MISMATCH` |
+| cleanup 范围 | `FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN`、`FORMAL_CLEANUP_COMMAND_SCOPE_INVALID`、`FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH` |
 | secret 泄漏 | `EVIDENCE_STDOUT_SECRET_EXPOSED`、`EVIDENCE_STDERR_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_SCAN_INVALID` |
 
 失败证据遵循两类不同保留边界。正式运行或独立复核失败时，原 evidence 和 review findings 都必须保留，不得补写、覆盖或用后续成功结果替换；需要重跑时创建新运行身份。对抗性测试只操作操作系统临时目录中的 fixture 副本，测试结束后校验临时目录前缀再递归删除，绝不删除正式 evidence 路径；仓库内只保留忽略提交的机器汇总。无论该对抗测试是否全部通过，都只能说明验证器具有已列失败能力，不能表述为正式 ABG 通过、完整 POC 通过或生产就绪。
@@ -362,5 +365,6 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 - [ADR-0108：冻结受控导出容量专用负载画像矩阵](../adr/0108-freeze-managed-export-capacity-workload-profile-matrix.md)
 - [ADR-0109：冻结受控导出容量画像字段分布规则](../adr/0109-freeze-managed-export-capacity-field-distribution-rules.md)
 - [ADR-0110：采用本机WSL2 Anolis OS 8.9作为受限容量实验环境](../adr/0110-use-local-wsl2-anolis-8-9-for-capacity-simulation.md)
+- [ADR-0111：Phase 01采用Podman作为唯一容器运行时](../adr/0111-use-podman-as-the-phase-01-container-runtime.md)
 - [Phase 01单仓库工作区拓扑](phase-01-workspace-topology.md)
 - [Phase 01 governance-api深模块结构](phase-01-governance-api-module-structure.md)

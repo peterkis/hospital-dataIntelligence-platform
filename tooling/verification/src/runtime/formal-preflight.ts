@@ -24,15 +24,18 @@ import {
 import { FROZEN_WSL_ENVELOPE } from './formal-wsl-envelope.ts';
 
 const EXPECTED_IMAGE_REFERENCES = [
-  'postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382',
+  'docker.io/library/postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382',
   'quay.io/keycloak/keycloak@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13',
 ] as const;
+const EXPECTED_PODMAN_VERSION = '4.9.4-rhel';
+const EXPECTED_PODMAN_SOCKET = '/run/podman/podman.sock';
+const EXPECTED_PODMAN_GRAPH_ROOT = '/var/lib/containers/storage';
 
 type PreflightStatus = 'PASSED' | 'FAILED';
 
 export interface FormalPreflightCheck {
   readonly id: string;
-  readonly category: 'git' | 'node-npm' | 'wsl' | 'docker' | 'port' | 'secrets';
+  readonly category: 'git' | 'node-npm' | 'wsl' | 'podman' | 'port' | 'secrets';
   readonly status: PreflightStatus;
   readonly errorCode: string | null;
   readonly observed: unknown;
@@ -44,7 +47,7 @@ export interface SecretPresenceObservation {
   readonly safeLengthRange?: '<16' | '16-31' | '32-63' | '64+';
 }
 
-export interface DockerResourceObservation {
+export interface PodmanResourceObservation {
   readonly type: 'container' | 'volume' | 'network';
   readonly id: string;
   readonly name: string;
@@ -54,18 +57,25 @@ export interface DockerResourceObservation {
   readonly ports?: string;
 }
 
-export interface DockerImageObservation {
+export interface PodmanImageObservation {
   readonly reference: string;
   readonly present: boolean;
   readonly imageId: string | null;
   readonly repoDigests: readonly string[];
 }
 
-export interface DockerPreflightObservation {
-  readonly dockerVersion: string;
-  readonly composeVersion: string;
-  readonly images: readonly DockerImageObservation[];
-  readonly repositoryResources: readonly DockerResourceObservation[];
+export interface PodmanPreflightObservation {
+  readonly podmanVersion: string;
+  readonly graphDriverName: string;
+  readonly graphRoot: string;
+  readonly networkBackend: string;
+  readonly logDriver: string;
+  readonly ociRuntimeName: string;
+  readonly socketPath: string;
+  readonly socketActive: boolean;
+  readonly rootless: boolean;
+  readonly images: readonly PodmanImageObservation[];
+  readonly repositoryResources: readonly PodmanResourceObservation[];
 }
 
 export interface PortObservation {
@@ -97,8 +107,8 @@ export interface FormalPreflightFileSystem {
   disk(path: string): Promise<DiskObservation>;
 }
 
-export interface FormalPreflightDockerAdapter {
-  inspect(): Promise<DockerPreflightObservation>;
+export interface FormalPreflightContainerRuntimeAdapter {
+  inspect(): Promise<PodmanPreflightObservation>;
 }
 
 export interface FormalPreflightPortAdapter {
@@ -112,7 +122,7 @@ export interface FormalPreflightHostAdapter {
 export interface FormalPreflightDependencies {
   readonly commandRunner: RuntimeCommandRunner;
   readonly fileSystem: FormalPreflightFileSystem;
-  readonly docker: FormalPreflightDockerAdapter;
+  readonly containerRuntime: FormalPreflightContainerRuntimeAdapter;
   readonly ports: FormalPreflightPortAdapter;
   readonly host: FormalPreflightHostAdapter;
   readonly environment: Readonly<NodeJS.ProcessEnv>;
@@ -126,7 +136,7 @@ export function createDefaultFormalPreflightDependencies(): FormalPreflightDepen
   return {
     commandRunner,
     fileSystem: new NodePreflightFileSystem(),
-    docker: new DockerCliPreflightAdapter(commandRunner),
+    containerRuntime: new PodmanCliPreflightAdapter(commandRunner),
     ports: new BindPreflightPortAdapter(),
     host: new WindowsWslHostAdapter(commandRunner),
     environment: process.env,
@@ -214,8 +224,8 @@ export async function runFormalPreflight(
 
   await appendNodeAndNpmChecks(input.repositoryRoot, checks, dependencies);
   await appendWslChecks(checks, dependencies);
-  const dockerObservation = await appendDockerChecks(checks, dependencies);
-  await appendPortChecks(checks, dependencies, dockerObservation?.repositoryResources ?? []);
+  const podmanObservation = await appendPodmanChecks(checks, dependencies);
+  await appendPortChecks(checks, dependencies, podmanObservation?.repositoryResources ?? []);
   const secrets = appendSecretChecks(checks, dependencies.environment);
 
   return {
@@ -400,37 +410,75 @@ async function appendWslChecks(
   }
 }
 
-async function appendDockerChecks(
+async function appendPodmanChecks(
   checks: FormalPreflightCheck[],
   dependencies: FormalPreflightDependencies,
-): Promise<DockerPreflightObservation | undefined> {
+): Promise<PodmanPreflightObservation | undefined> {
   try {
-    const observation = await dependencies.docker.inspect();
-    checks.push(passed('docker-daemon-compose', 'docker', {
-      dockerVersion: observation.dockerVersion,
-      composeVersion: observation.composeVersion,
-    }));
+    const observation = await dependencies.containerRuntime.inspect();
+    const baselineMatches =
+      observation.podmanVersion === EXPECTED_PODMAN_VERSION &&
+      observation.graphDriverName === 'overlay' &&
+      observation.graphRoot === EXPECTED_PODMAN_GRAPH_ROOT &&
+      observation.networkBackend === 'cni' &&
+      observation.logDriver === 'k8s-file' &&
+      observation.ociRuntimeName === 'runc' &&
+      observation.socketPath === EXPECTED_PODMAN_SOCKET &&
+      observation.socketActive &&
+      !observation.rootless;
+    checks.push(baselineMatches
+      ? passed('podman-runtime', 'podman', observation)
+      : failed('podman-runtime', 'podman', 'FORMAL_PREFLIGHT_PODMAN_BASELINE_MISMATCH', {
+        expected: {
+          podmanVersion: EXPECTED_PODMAN_VERSION,
+          graphDriverName: 'overlay',
+          graphRoot: EXPECTED_PODMAN_GRAPH_ROOT,
+          networkBackend: 'cni',
+          logDriver: 'k8s-file',
+          ociRuntimeName: 'runc',
+          socketPath: EXPECTED_PODMAN_SOCKET,
+          socketActive: true,
+          rootless: false,
+        },
+        actual: observation,
+      }));
     for (const image of observation.images) {
       checks.push(image.present
-        ? passed('docker-image-' + image.reference.split('@', 1)[0], 'docker', image)
+        ? passed('podman-image-' + image.reference.split('@', 1)[0], 'podman', image)
         : failed(
-          'docker-image-' + image.reference.split('@', 1)[0],
-          'docker',
-          'FORMAL_PREFLIGHT_DOCKER_IMAGE_MISSING',
+          'podman-image-' + image.reference.split('@', 1)[0],
+          'podman',
+          'FORMAL_PREFLIGHT_PODMAN_IMAGE_MISSING',
           image,
         ));
     }
     checks.push(observation.repositoryResources.length === 0
-      ? passed('docker-repository-residue', 'docker', { resources: [] })
+      ? passed('podman-repository-residue', 'podman', { resources: [] })
       : failed(
-        'docker-repository-residue',
-        'docker',
-        'FORMAL_PREFLIGHT_DOCKER_REPOSITORY_RESIDUE',
+        'podman-repository-residue',
+        'podman',
+        'FORMAL_PREFLIGHT_PODMAN_REPOSITORY_RESIDUE',
         { resources: observation.repositoryResources },
       ));
+    const dockerPaths = [
+      '/usr/bin/docker',
+      '/usr/local/bin/docker',
+      '/usr/sbin/docker',
+      '/bin/docker',
+      '/sbin/docker',
+    ];
+    const presentDockerPaths: string[] = [];
+    for (const path of dockerPaths) {
+      if (await dependencies.fileSystem.exists(path)) presentDockerPaths.push(path);
+    }
+    checks.push(presentDockerPaths.length === 0
+      ? passed('podman-docker-cli-absent', 'podman', { paths: [] })
+      : failed('podman-docker-cli-absent', 'podman', 'FORMAL_PREFLIGHT_DOCKER_CLI_PRESENT', {
+        paths: presentDockerPaths,
+      }));
     return observation;
   } catch (error) {
-    checks.push(failed('docker-daemon-compose', 'docker', 'FORMAL_PREFLIGHT_DOCKER_UNAVAILABLE', {
+    checks.push(failed('podman-runtime', 'podman', 'FORMAL_PREFLIGHT_PODMAN_UNAVAILABLE', {
       errorCode: stableObservedError(error),
     }));
     return undefined;
@@ -440,7 +488,7 @@ async function appendDockerChecks(
 async function appendPortChecks(
   checks: FormalPreflightCheck[],
   dependencies: FormalPreflightDependencies,
-  repositoryResources: readonly DockerResourceObservation[],
+  repositoryResources: readonly PodmanResourceObservation[],
 ): Promise<void> {
   try {
     const observations = await dependencies.ports.inspect(FORMAL_RUNTIME_PORTS);
@@ -520,22 +568,29 @@ class NodePreflightFileSystem implements FormalPreflightFileSystem {
   }
 }
 
-class DockerCliPreflightAdapter implements FormalPreflightDockerAdapter {
+class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapter {
   private readonly runner: RuntimeCommandRunner;
 
   constructor(runner: RuntimeCommandRunner) {
     this.runner = runner;
   }
 
-  async inspect(): Promise<DockerPreflightObservation> {
-    const dockerVersion = await requireCommandText(this.runner, 'docker', [
-      'version', '--format', '{{json .Server.Version}}',
-    ]);
-    const composeVersion = await requireCommandText(this.runner, 'docker', [
-      'compose', 'version', '--short',
+  async inspect(): Promise<PodmanPreflightObservation> {
+    const rawInfo = JSON.parse(await requireCommandText(this.runner, 'podman', [
+      'info', '--format', 'json',
+    ])) as unknown;
+    if (!isRecord(rawInfo)) throw new Error('FORMAL_PREFLIGHT_PODMAN_INFO_INVALID');
+    const version = isRecord(rawInfo['version']) ? rawInfo['version'] : {};
+    const store = isRecord(rawInfo['store']) ? rawInfo['store'] : {};
+    const host = isRecord(rawInfo['host']) ? rawInfo['host'] : {};
+    const ociRuntime = isRecord(host['ociRuntime']) ? host['ociRuntime'] : {};
+    const socket = isRecord(host['remoteSocket']) ? host['remoteSocket'] : {};
+    const security = isRecord(host['security']) ? host['security'] : {};
+    const socketState = await requireCommandText(this.runner, 'systemctl', [
+      'is-active', 'podman.socket',
     ]);
     const images = await Promise.all(EXPECTED_IMAGE_REFERENCES.map(async (reference) => {
-      const result = await this.runner.run({ executable: 'docker', args: ['image', 'inspect', reference] });
+      const result = await this.runner.run({ executable: 'podman', args: ['image', 'inspect', reference] });
       if (result.exitCode !== 0) {
         return { reference, present: false, imageId: null, repoDigests: [] };
       }
@@ -560,28 +615,39 @@ class DockerCliPreflightAdapter implements FormalPreflightDockerAdapter {
       ...await this.listResources('container', ['container', 'ls', '--all', '--format', '{{json .}}']),
       ...await this.listResources('volume', ['volume', 'ls', '--format', '{{json .}}']),
       ...await this.listResources('network', ['network', 'ls', '--format', '{{json .}}']),
-    ].filter((resource) => isRepositoryResource(resource.labels));
+    ].filter(isRepositoryPodmanResource);
     return {
-      dockerVersion: JSON.parse(dockerVersion.trim()) as string,
-      composeVersion: composeVersion.trim(),
+      podmanVersion: stringField(version, 'Version'),
+      graphDriverName: stringField(store, 'graphDriverName'),
+      graphRoot: stringField(store, 'graphRoot'),
+      networkBackend: stringField(host, 'networkBackend'),
+      logDriver: stringField(host, 'logDriver'),
+      ociRuntimeName: stringField(ociRuntime, 'name'),
+      socketPath: stringField(socket, 'path'),
+      socketActive: socketState.trim() === 'active' && socket['exists'] === true,
+      rootless: security['rootless'] === true,
       images,
       repositoryResources: resources,
     };
   }
 
   private async listResources(
-    type: DockerResourceObservation['type'],
+    type: PodmanResourceObservation['type'],
     args: readonly string[],
-  ): Promise<readonly DockerResourceObservation[]> {
-    const output = await requireCommandText(this.runner, 'docker', args);
+  ): Promise<readonly PodmanResourceObservation[]> {
+    const output = await requireCommandText(this.runner, 'podman', args);
     return output.split(/\r?\n/u).filter((line) => line.trim().length > 0).map((line) => {
       const value = JSON.parse(line) as unknown;
-      if (!isRecord(value)) throw new Error('FORMAL_PREFLIGHT_DOCKER_LIST_INVALID');
-      const labels = parseDockerLabels(typeof value['Labels'] === 'string' ? value['Labels'] : '');
+      if (!isRecord(value)) throw new Error('FORMAL_PREFLIGHT_PODMAN_LIST_INVALID');
+      const labels = parsePodmanLabels(value['Labels'] ?? value['labels']);
       return {
         type,
-        id: stringField(value, type === 'volume' ? 'Name' : 'ID'),
-        name: stringField(value, type === 'container' ? 'Names' : 'Name'),
+        id: type === 'volume'
+          ? stringField(value, 'Name')
+          : stringField(value, type === 'network' ? 'id' : 'ID'),
+        name: type === 'container'
+          ? stringField(value, 'Names')
+          : stringField(value, type === 'network' ? 'name' : 'Name'),
         labels,
         ...(typeof value['Image'] === 'string' ? { imageReference: value['Image'] } : {}),
         ...(typeof value['State'] === 'string' ? { state: value['State'] } : {}),
@@ -702,7 +768,13 @@ function parseMemInfo(value: string): { readonly memTotalBytes: number; readonly
   return { memTotalBytes: readKilobytes('MemTotal'), swapTotalBytes: readKilobytes('SwapTotal') };
 }
 
-function parseDockerLabels(value: string): Readonly<Record<string, string>> {
+function parsePodmanLabels(value: unknown): Readonly<Record<string, string>> {
+  if (isRecord(value)) {
+    return Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
+      typeof item === 'string' ? [[name, item]] : [],
+    ));
+  }
+  if (typeof value !== 'string') return {};
   return Object.fromEntries(value.split(',').flatMap((item) => {
     const separator = item.indexOf('=');
     if (separator <= 0) return [];
@@ -710,15 +782,9 @@ function parseDockerLabels(value: string): Readonly<Record<string, string>> {
   }));
 }
 
-function isRepositoryResource(labels: Readonly<Record<string, string>>): boolean {
-  const composeProject = labels['com.docker.compose.project'];
-  const composeFiles = labels['com.docker.compose.project.config_files']?.replaceAll('\\', '/').toLowerCase();
-  return labels['hdi.repository'] === FORMAL_REPOSITORY_LABEL ||
-    composeProject?.startsWith('hdi_phase01_abg_') === true ||
-    composeProject === 'anolis-89-wsl2' ||
-    composeFiles?.includes(
-      '/hospital-dataintelligence-platform/phase-plan/environment/anolis-8.9-wsl2/compose.phase-01.yml',
-    ) === true;
+export function isRepositoryPodmanResource(resource: PodmanResourceObservation): boolean {
+  return resource.labels['hdi.repository'] === FORMAL_REPOSITORY_LABEL ||
+    resource.name.startsWith('hdi_phase01_');
 }
 
 function stringField(value: Readonly<Record<string, unknown>>, key: string): string {

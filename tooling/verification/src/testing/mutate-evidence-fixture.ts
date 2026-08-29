@@ -21,9 +21,8 @@ import { validateProducerEvidence } from '../evidence/validate-producer-evidence
 import { validateFormalAbgSummary } from '../formal-summary-validator.js';
 import { reviewFormalAbgEvidence } from '../review-formal-abg-evidence.js';
 import {
+  assertFormalRuntimeResourceOwned,
   assertSafeFormalCleanupCommand,
-  performFormalTeardown,
-  type FormalTeardownAdapter,
   type RuntimeResourceRecord,
 } from '../runtime/formal-teardown.js';
 import {
@@ -119,8 +118,8 @@ export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   mutation('AR06-M043-RESULT-OVERWRITE', 'Attempt to overwrite result.json.', 'exclusive-output-guard', 'ABG_GATE_RESULT_ALREADY_EXISTS'),
   mutation('AR06-M044-SCREENSHOT-ONLY', 'Keep a screenshot but remove machine-readable assertions.', 'independent-reviewer', 'PRODUCER_INDEX_ASSERTION_COUNT_MISMATCH'),
   mutation('AR06-M045-PRODUCER-EVIDENCE-REMOVED', 'Remove original producer evidence and retain summaries.', 'independent-reviewer', 'PRODUCER_EVIDENCE_MISSING'),
-  mutation('AR06-M046-DOCKER-SYSTEM-PRUNE', 'Attempt docker system prune.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_DOCKER_PRUNE_FORBIDDEN'),
-  mutation('AR06-M047-UNRELATED-CONTAINER-IN-CLEANUP', 'Include an unrelated container in cleanup scope.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_COMPOSE_OWNERSHIP_MISMATCH'),
+  mutation('AR06-M046-PODMAN-SYSTEM-PRUNE', 'Attempt podman system prune.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN'),
+  mutation('AR06-M047-UNRELATED-CONTAINER-IN-CLEANUP', 'Attempt to remove an unrelated container.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH'),
   mutation('AR06-M048-SECRET-IN-STDOUT', 'Leak a secret value in stdout.', 'independent-reviewer', 'EVIDENCE_STDOUT_SECRET_EXPOSED'),
   mutation('AR06-M049-SECRET-IN-STDERR', 'Leak a secret value in stderr.', 'independent-reviewer', 'EVIDENCE_STDERR_SECRET_EXPOSED'),
   mutation('AR06-M050-SECRET-IN-EVIDENCE-JSON', 'Leak a secret value in evidence JSON.', 'independent-reviewer', 'EVIDENCE_JSON_SECRET_EXPOSED'),
@@ -370,9 +369,9 @@ async function executeMutation(
         await unlink(join(copy.evidenceDirectory, 'shared/fault/producer-evidence.json'));
         await rebuildFixtureManifest(copy.evidenceDirectory);
       });
-    case 'AR06-M046-DOCKER-SYSTEM-PRUNE':
+    case 'AR06-M046-PODMAN-SYSTEM-PRUNE':
       return captureErrorCodes(() => Promise.resolve(
-        assertSafeFormalCleanupCommand('docker', ['system', 'prune', '--all', '--force']),
+        assertSafeFormalCleanupCommand('podman', ['system', 'prune', '--all', '--force']),
       ));
     case 'AR06-M047-UNRELATED-CONTAINER-IN-CLEANUP':
       return unrelatedCleanupMutation();
@@ -639,7 +638,7 @@ async function unrelatedCleanupMutation(): Promise<readonly string[]> {
   const identity: FormalRunIdentity = {
     runId: 'validator-test-cleanup-run',
     runSequence: 17,
-    composeProjectName: 'hdi_phase01_abg_17_validatortes',
+    runtimeNamespace: 'hdi_phase01_abg_17_validatortes',
     gitCommitSha: '0123456789abcdef0123456789abcdef01234567',
   };
   const unrelated: RuntimeResourceRecord = {
@@ -649,9 +648,8 @@ async function unrelatedCleanupMutation(): Promise<readonly string[]> {
     labels: {
       ...formalRuntimeLabels(identity),
       'hdi.run-id': 'different-run-id',
-      'com.docker.compose.project': identity.composeProjectName,
     },
-    source: 'docker-inspect',
+    source: 'podman-inspect',
     present: true,
     active: true,
     state: 'running',
@@ -664,26 +662,9 @@ async function unrelatedCleanupMutation(): Promise<readonly string[]> {
     exitStatus: null,
     metrics: null,
   };
-  const adapter: FormalTeardownAdapter = {
-    async listResources() { return [unrelated]; },
-    async stopProcess() { throw new Error('UNEXPECTED_STOP_PROCESS'); },
-    async removeContainer() { throw new Error('UNEXPECTED_REMOVE_CONTAINER'); },
-    async composeDown() { throw new Error('UNEXPECTED_COMPOSE_DOWN'); },
-    async removeVolume() { throw new Error('UNEXPECTED_REMOVE_VOLUME'); },
-    async removeNetwork() { throw new Error('UNEXPECTED_REMOVE_NETWORK'); },
-    async inspectPorts(ports) {
-      return ports.map((port) => ({ port, occupied: false, verificationError: null }));
-    },
-  };
-  const result = await performFormalTeardown({
-    identity,
-    runtimeEventDirectory: 'validator-test-runtime-events',
-    composeFile: 'validator-test-compose.yml',
-  }, {
-    adapter,
-    now: () => '2026-08-28T10:00:00',
-  });
-  return result.cleanup.failedItems.map((item) => stableErrorCode(item.errorCode));
+  return captureErrorCodes(() => Promise.resolve(
+    assertFormalRuntimeResourceOwned(unrelated, identity),
+  ));
 }
 
 function coverageEntry(gateId: string) {

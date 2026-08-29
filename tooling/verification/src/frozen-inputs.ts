@@ -40,14 +40,15 @@ export async function readFrozenInputs(
     join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json'),
     'utf8',
   )) as unknown;
-  const compose = await readFile(
-    join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/compose.phase-01.yml'),
+  const runtimeModule = await readFile(
+    join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/podman-phase-01-runtime.sh'),
     'utf8',
   );
-  const postgresImage = requireImage(compose, 'postgres');
-  const keycloakImage = requireImage(compose, 'quay.io/keycloak/keycloak');
+  const postgresImage = requireShellReadonly(runtimeModule, 'POSTGRES_IMAGE');
+  const keycloakImage = requireShellReadonly(runtimeModule, 'KEYCLOAK_IMAGE');
   const fixtureIdentity = sha256(Buffer.from(canonicalJson({
     runtimeBaseline,
+    runtimeModuleSha256: sha256(Buffer.from(runtimeModule, 'utf8')),
     realmRendererSha256: await fileSha256(
       join(repositoryRoot, 'tooling/runtime/render-keycloak-realm.ts'),
     ),
@@ -86,12 +87,13 @@ async function fileSha256(path: string): Promise<string> {
   return sha256(await readFile(path));
 }
 
-function requireImage(compose: string, imageName: string): string {
-  const line = compose.split(/\r?\n/u).find((candidate) =>
-    candidate.trim().startsWith(`image: ${imageName}`),
-  );
-  if (!line) throw new Error(`ABG_IMAGE_IDENTITY_MISSING:${imageName}`);
-  return line.trim().slice('image: '.length);
+function requireShellReadonly(script: string, name: string): string {
+  const match = new RegExp(`^readonly ${name}="([^"]+)"$`, 'mu').exec(script);
+  const value = match?.[1];
+  if (value === undefined || !value.includes('@sha256:')) {
+    throw new Error(`ABG_IMAGE_IDENTITY_MISSING:${name}`);
+  }
+  return value;
 }
 
 function canonicalJson(value: unknown): string {
