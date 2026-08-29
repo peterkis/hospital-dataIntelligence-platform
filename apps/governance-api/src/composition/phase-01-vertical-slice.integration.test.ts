@@ -631,10 +631,36 @@ describe('Phase 01 executable vertical slice', () => {
       requestContext(foundation.actorId, 'price-version-2-snapshot', '2026-08-08T09:50:10'),
       (modules) => modules.releaseDistribution.getSnapshot(secondPrice.snapshotId),
     );
-    expect(
-      (JSON.parse(secondSnapshot.bytes.toString('utf8')) as { payload: { releaseNo: string } })
-        .payload.releaseNo,
-    ).toBe('2');
+    const secondSnapshotPayload = (
+      JSON.parse(secondSnapshot.bytes.toString('utf8')) as {
+        payload: { contentHash: string; recordedFrom: string; releaseNo: string };
+      }
+    ).payload;
+    expect(secondSnapshotPayload.releaseNo).toBe('2');
+    expect(secondSnapshotPayload.recordedFrom).toBe('2026-08-08T09:50:00');
+    const [firstPublishedRelease, secondPublishedRelease] = await Promise.all([
+      slice.getPriceListRelease(
+        requestContext(foundation.actorId, 'price-version-1-read', '2026-08-08T09:50:11'),
+        {
+          governanceObjectId: foundation.priceListObjectId,
+          priceListId: price.priceListId,
+          priceListReleaseId: price.priceListReleaseId,
+        },
+      ),
+      slice.getPriceListRelease(
+        requestContext(foundation.actorId, 'price-version-2-read', '2026-08-08T09:50:12'),
+        {
+          governanceObjectId: foundation.priceListObjectId,
+          priceListId: secondPrice.priceListId,
+          priceListReleaseId: secondPrice.priceListReleaseId,
+        },
+      ),
+    ]);
+    expect(firstPublishedRelease.recordedTo).toBe('2026-08-08T09:50:00');
+    expect(secondPublishedRelease.recordedFrom).toBe('2026-08-08T09:50:00');
+    expect(secondSnapshotPayload.contentHash).toBe(
+      secondPublishedRelease.contentHash.toString('hex'),
+    );
     const lateEvents = await runner.run(
       requestContext(foundation.servicePrincipalId, 'late-consumer-initial-pull', '2026-08-08T09:50:20'),
       (modules) =>
@@ -920,7 +946,7 @@ describe('Phase 01 executable vertical slice', () => {
       requestContext(foundation.actorId, 'fault-price-draft', '2026-08-08T10:05:00'),
       {
         governanceObjectId: foundation.priceListObjectId,
-        priceListCode: 'FAULT-MATRIX-PRICE',
+        priceListCode: 'HOSPITAL-DEFAULT-PRICE',
         displayName: '故障矩阵价表',
         currencyCode: 'CNY',
         businessValidFrom: '2026-08-08T00:00:00',
@@ -997,19 +1023,14 @@ describe('Phase 01 executable vertical slice', () => {
       }
       const afterFault = await publicationSideEffectCounts(databaseHandle.database);
       expect(afterFault).toEqual(baseline);
-      const unchangedDraft = await slice.getPriceListRelease(
-        requestContext(
-          foundation.actorId,
-          `fault-price-read-${faultPoint}`,
-          '2026-08-08T10:08:01',
-        ),
-        {
-          governanceObjectId: foundation.priceListObjectId,
-          priceListId: priceDraft.priceListId,
-          priceListReleaseId: priceDraft.priceListReleaseId,
-        },
-      );
-      expect(unchangedDraft.governanceStatus).toBe('DRAFT');
+      const unchangedDraft = await databaseHandle.database
+        .selectFrom('price_list.price_list_release')
+        .select(['governance_status', 'recorded_from', 'content_hash'])
+        .where('price_list_release_id', '=', priceDraft.priceListReleaseId)
+        .executeTakeFirstOrThrow();
+      expect(unchangedDraft.governance_status).toBe('DRAFT');
+      expect(unchangedDraft.recorded_from).toBe('2026-08-08T10:05:00');
+      expect(unchangedDraft.content_hash.equals(priceDraft.contentHash)).toBe(true);
       results.push({ faultPoint, rolledBack: true });
       recordIntegrationObservation({
         producerId: 'fault',

@@ -491,6 +491,7 @@ async function publishApprovedDraft(
     governanceObjectId: request.governanceObjectId,
     priceListId: request.stableEntityId,
     priceListReleaseId: request.entityVersionId,
+    recordedFrom: context.occurredAt,
   });
   const publication = await modules.releaseDistribution.registerPublication({
     governanceObjectId: request.governanceObjectId,
@@ -520,6 +521,8 @@ async function publishApprovedDraft(
   await modules.priceList.confirmPublication({
     priceListReleaseId: prepared.priceListReleaseId,
     governanceReleaseId: publication.releaseId,
+    recordedFrom: context.occurredAt,
+    contentHash: prepared.contentHash,
   });
   if (request.changeKind === 'RECOVERY_PUBLICATION') {
     const impactCaseId = request.frozenEvidence['impactCaseId'];
