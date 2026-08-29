@@ -15,3 +15,4 @@ Blocked by: 06 — 对抗验证测试；以及明确的正式执行授权
 ## Comments
 
 - 2026-08-27：本 Ticket 不授权当前 AR-01 执行正式 ABG。
+- 2026-08-29：Stage 1 空库启动在`0008_versioned_approval_workflow.sql`失败，PostgreSQL返回`SQLSTATE 22001`；`CAMPUS_CONFIRM_REVIEW_OWNER_FINAL`为33字符，而工作流持久列仅为`varchar(32)`。架构确认选择物理容量修复：在尚未进入正式证据包的`0008`中，将`approval_template_version.stage_type`、`approval_action.stage_type`和`approval_template_stage.stage_type`统一为`varchar(64)`，保留全部现有稳定阶段标识、CHECK集合、审批阶段顺序和职责分离语义不变。该修复服从ADR-0070的原生SQL Schema权威，不构成ADR-0091所治理的投影Schema契约升级；AR-07仍须以新候选提交从Stage 0完整重跑，本注记不代表readiness、正式ABG或独立复核通过。

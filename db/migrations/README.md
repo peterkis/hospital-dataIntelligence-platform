@@ -8,7 +8,7 @@
 - `0005_charge_item_version_bitemporal_guards.sql`：每个收费项目只允许一个开放版本候选，并只允许已发布版本执行一次平台记录有效期关闭。
 - `0006_price_list_draft_mutation_guards.sql`：每个价表只允许一个开放候选，且仅草稿可修改或删除价格条目；已提交和已发布内容保持不可变。
 - `0007_object_and_campus_authorization.sql`：将本地对象级授权扩展到全院/院区范围，补齐显式拒绝及授权判定只追加证据。
-- `0008_versioned_approval_workflow.sql`：冻结普通、高风险、院区差异价和纯Schema升级审批模板及阶段，并追加不可覆盖的审批动作历史。
+- `0008_versioned_approval_workflow.sql`：冻结普通、高风险、院区差异价和纯Schema升级审批模板及阶段，将所有持久化审批阶段标识统一保留为`varchar(64)`容量，并追加不可覆盖的审批动作历史。
 - `0009_batch_import_jobs.sql`：冻结CSV/JSON导入批次、不可变行身份、行级结果和只追加尝试证据，支持行边界恢复与原批次幂等重试。
 - `0010_emergency_suspension_and_recovery.sql`：追加紧急暂停事件、影响事项、事后复核及补偿发布关系，禁止原地恢复已暂停历史版本。
 - `0011_charge_item_governance_object_scope.sql`：把收费项目稳定身份显式绑定到唯一治理对象，按对象约束业务代码并阻断跨对象授权混淆。
