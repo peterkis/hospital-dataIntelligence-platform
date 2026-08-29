@@ -11,23 +11,19 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
 
-export type Numeric = ColumnType<string, number | string, number | string>;
+export type Json = JsonValue;
 
-export interface AccessControlObjectPermissionGrant {
-  campus_id: string | null;
-  created_at: Generated<string>;
-  governance_object_id: string;
-  grant_effect: string;
-  grant_sequence: Int8;
-  granted_by: string;
-  object_permission_grant_id: Generated<string>;
-  permission_code: string;
-  reason: string;
-  security_principal_id: string;
-  scope_level: Generated<string>;
-  valid_from: string;
-  valid_to: string | null;
-}
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [x: string]: JsonValue | undefined;
+};
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
+export type Numeric = ColumnType<string, number | string, number | string>;
 
 export interface AccessControlAuthorizationDecision {
   authorization_decision_id: Generated<string>;
@@ -41,6 +37,22 @@ export interface AccessControlAuthorizationDecision {
   requested_campus_id: string | null;
   requested_scope_level: string;
   security_principal_id: string;
+}
+
+export interface AccessControlObjectPermissionGrant {
+  campus_id: string | null;
+  created_at: Generated<string>;
+  governance_object_id: string;
+  grant_effect: string;
+  grant_sequence: Int8;
+  granted_by: string;
+  object_permission_grant_id: Generated<string>;
+  permission_code: string;
+  reason: string;
+  scope_level: Generated<string>;
+  security_principal_id: string;
+  valid_from: string;
+  valid_to: string | null;
 }
 
 export interface AuditAuditEvent {
@@ -87,7 +99,7 @@ export interface BatchImportImportRow {
   entity_version_id: string | null;
   import_job_id: string;
   import_row_id: Generated<string>;
-  normalized_payload: unknown;
+  normalized_payload: Json;
   normalized_payload_digest: Buffer;
   result_kind: string | null;
   retryable: Generated<boolean>;
@@ -103,7 +115,7 @@ export interface BatchImportImportRowAttempt {
   attempted_at: string;
   attempted_by: string;
   error_code: string | null;
-  evidence: unknown;
+  evidence: Json;
   import_row_attempt_id: Generated<string>;
   import_row_id: string;
   rule_version: string;
@@ -163,7 +175,7 @@ export interface EmergencyControlImpactCaseAction {
   action_sequence: Int8;
   action_type: string;
   actor_principal_id: string;
-  evidence: unknown;
+  evidence: Json;
   impact_case_action_id: Generated<string>;
   impact_case_id: string;
   occurred_at: string;
@@ -176,7 +188,7 @@ export interface EmergencyControlSuspensionEvent {
   correlation_id: string;
   effective_from: string;
   event_sequence: Int8;
-  evidence: unknown;
+  evidence: Json;
   governance_object_id: string;
   price_list_id: string;
   price_list_release_id: string;
@@ -539,6 +551,15 @@ export interface ReleaseDistributionReleaseMemberPriceList {
   snapshot_name: string;
 }
 
+export interface ReleaseDistributionReleaseRelationship {
+  created_at: string;
+  reason: string;
+  relationship_type: string;
+  release_relationship_id: Generated<string>;
+  source_release_id: string;
+  target_release_id: string;
+}
+
 export interface ReleaseDistributionReleaseSnapshot {
   artifact_byte_length: Generated<Int8 | null>;
   artifact_bytes: Buffer;
@@ -577,6 +598,14 @@ export interface WorkflowApprovalTemplate {
   template_code: string;
 }
 
+export interface WorkflowApprovalTemplateStage {
+  approval_template_version_id: string;
+  campus_scope_required: Generated<boolean>;
+  permission_code: string;
+  stage_sequence: Int8;
+  stage_type: string;
+}
+
 export interface WorkflowApprovalTemplateVersion {
   approval_template_id: string;
   approval_template_version_id: string;
@@ -588,14 +617,6 @@ export interface WorkflowApprovalTemplateVersion {
   version_no: Int8;
 }
 
-export interface WorkflowApprovalTemplateStage {
-  approval_template_version_id: string;
-  campus_scope_required: Generated<boolean>;
-  permission_code: string;
-  stage_sequence: Int8;
-  stage_type: string;
-}
-
 export interface WorkflowChangeRequest {
   approval_template_version_id: string;
   change_kind: string;
@@ -604,24 +625,15 @@ export interface WorkflowChangeRequest {
   created_at: Generated<string>;
   decided_at: string | null;
   entity_version_id: string;
+  frozen_evidence: Generated<Json>;
   governance_object_id: string;
-  frozen_evidence: Generated<unknown>;
   next_action_sequence: Generated<Int8>;
-  required_stage_count: Generated<number>;
   request_status: string;
+  required_stage_count: Generated<number>;
   risk_classification: Generated<string>;
   stable_entity_id: string;
   submitted_by: string;
   submitted_content_hash: Buffer;
-}
-
-export interface ReleaseDistributionReleaseRelationship {
-  created_at: string;
-  reason: string;
-  relationship_type: string;
-  release_relationship_id: Generated<string>;
-  source_release_id: string;
-  target_release_id: string;
 }
 
 export interface DB {
@@ -673,7 +685,7 @@ export interface DB {
   "release_distribution.release_snapshot": ReleaseDistributionReleaseSnapshot;
   "workflow.approval_action": WorkflowApprovalAction;
   "workflow.approval_template": WorkflowApprovalTemplate;
-  "workflow.approval_template_version": WorkflowApprovalTemplateVersion;
   "workflow.approval_template_stage": WorkflowApprovalTemplateStage;
+  "workflow.approval_template_version": WorkflowApprovalTemplateVersion;
   "workflow.change_request": WorkflowChangeRequest;
 }
