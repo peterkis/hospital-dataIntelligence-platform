@@ -6,7 +6,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Objective
 
-在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08 与 AR-09 已完成并转为 `resolved`；当前 frontier 为 AR-10，AR-07 必须等待 AR-10～AR-12 完成后再按新的正式授权执行。
+在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08～AR-10 已完成并转为 `resolved`；当前 frontier 为仍未认领的 AR-11，AR-07 必须等待 AR-11～AR-12 完成后再按新的正式授权执行。
 
 ## Status semantics
 
@@ -43,7 +43,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；当前只实施 AR-10 的 producer/evidence/reviewer provenance、contract compatibility 与 definition drift，不进入 AR-11、AR-12 或 AR-07。
+- 每次只执行获得授权的 current frontier；本轮授权的 AR-10 已完成并只把 ledger frontier 推进到 AR-11，未授权认领或实施 AR-11、AR-12 或 AR-07。
 
 ## AR-10 provenance contract
 
@@ -70,3 +70,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 2026-08-30：AR-08 完成复核并转为 `resolved`，当前活动任务改为 AR-09。Prompt 1～Prompt 6 仍须在 AR-12 基于最新终态协议和 Podman 权威重新验证；正式验收状态保持 `pending`。
 - 2026-08-30：AR-09 完成终态 lifecycle、ABG-40、summary v4、independent reviewer 和合成 fixture 整改并通过限定验收，转为 `resolved`；current frontier 推进到仍为 `ready-for-agent` 的 AR-10，但本次未实施 AR-10。AR-07 继续阻断于 AR-12 和另行正式执行授权，正式验收状态保持 `pending`。
 - 2026-08-30（AR-10 协议影响）：验收工作包新增 producer source manifest、evidence package 交叉绑定、reviewer source manifest、Git object provenance 核验及 `EXACT`/`COMPATIBLE`/`INCOMPATIBLE` 契约关系。Definition drift 即使结构可解析也不能形成正式 review `PASSED`；integrity failure、commit unavailable 和 manifest invalid 分别分类。独立 review output 由自身 Manifest 封存。本条只记录 AR-10 协议边界，不表示正式 ABG 已执行；AR-11 的 runtime authority 责任不变。
+- 2026-08-30（AR-10 完成）：AR-10 的统一 contract version authority、35 文件 producer/reviewer source manifest、evidence cross-binding、Git object provenance、compatibility registry、reviewer 双捕获稳定性和独立 review manifest 已通过规定的本地验证及双轴只读 review，转为 `resolved`。110 项 mutation 全部被检测且无 survived case；五条 standalone reviewer 路径均按契约通过或失败关闭。当前 frontier 推进到仍未认领的 AR-11；正式验收状态继续为 `pending`，未执行正式 ABG。
