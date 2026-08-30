@@ -7,10 +7,10 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 ## Summary
 
 - Gates: 40
-- Gate-scoped assertions: 49
+- Gate-scoped assertions: 50
 - Distinct scenarios: 45
 - Distinct producers: 9
-- Required evidence selectors: 84
+- Required evidence selectors: 85
 
 ## Producer coverage
 
@@ -540,14 +540,15 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Required selectors:
   - `static` / `phase-01-static-evidence` / `STATIC-DEEP-MODULE-TABLE-OWNERSHIP` / `ABG-39:deep-module-table-ownership-forbidden-bypass` / `/scenarios/STATIC-DEEP-MODULE-TABLE-OWNERSHIP/assertions/ABG-39:deep-module-table-ownership-forbidden-bypass/status` / expected `PASSED`
 
-### ABG-40 — 全新环境统一运行、不可覆盖证据和退出结论
+### ABG-40 — cleanup 后终态生命周期完整且 evidence 具备预封存资格
 
 - Evidence class: RUN
-- Scenarios: `RUN-FORMAL-ABG-EVIDENCE-MANIFEST`
-- Gate-scoped assertions: `ABG-40:fresh-environment-formal-run-immutable-evidence-conclusion`
+- Scenarios: `RUN-FORMAL-TERMINAL-LIFECYCLE`
+- Gate-scoped assertions: `ABG-40:formal-terminal-lifecycle-complete`, `ABG-40:formal-evidence-seal-eligible`
 - Producers: `formal-run`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
 - Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
-  - `formal-run` / `phase-01-formal-run-evidence` / `RUN-FORMAL-ABG-EVIDENCE-MANIFEST` / `ABG-40:fresh-environment-formal-run-immutable-evidence-conclusion` / `/scenarios/RUN-FORMAL-ABG-EVIDENCE-MANIFEST/assertions/ABG-40:fresh-environment-formal-run-immutable-evidence-conclusion/status` / expected `PASSED`
+  - `formal-run` / `phase-01-formal-run-evidence` / `RUN-FORMAL-TERMINAL-LIFECYCLE` / `ABG-40:formal-terminal-lifecycle-complete` / `/scenarios/RUN-FORMAL-TERMINAL-LIFECYCLE/assertions/ABG-40:formal-terminal-lifecycle-complete/status` / expected `PASSED`
+  - `formal-run` / `phase-01-formal-run-evidence` / `RUN-FORMAL-TERMINAL-LIFECYCLE` / `ABG-40:formal-evidence-seal-eligible` / `/scenarios/RUN-FORMAL-TERMINAL-LIFECYCLE/assertions/ABG-40:formal-evidence-seal-eligible/status` / expected `PASSED`

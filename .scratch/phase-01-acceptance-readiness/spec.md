@@ -6,7 +6,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Objective
 
-在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08 已完成并转为 `resolved`；当前活动任务和 frontier 为 AR-09，AR-07 必须等待 AR-09～AR-12 完成后再按新的正式授权执行。
+在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08 与 AR-09 已完成并转为 `resolved`；当前 frontier 为 AR-10，AR-07 必须等待 AR-10～AR-12 完成后再按新的正式授权执行。
 
 ## Status semantics
 
@@ -43,7 +43,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；AR-09 当前仅完成认领和状态跃迁，本次不执行 AR-09 整改。
+- 每次只执行获得授权的 current frontier；本次仅完成 AR-09 整改并把 frontier 推进到 AR-10，不认领或实施 AR-10。
 
 ## Completion Criteria
 
@@ -58,3 +58,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 2026-08-27：工作包创建。01 已认领；其余任务在明确依赖满足前保持阻断。
 - 2026-08-30：AR-08 统一状态语义和后续整改依赖。AR-01～AR-06 的 `resolved` 保留为本地实现与当时定向验证结论；正式候选尚未冻结，Podman 工作包仍待人工复核，AR-07 阻断于 AR-12 和另行正式执行授权。
 - 2026-08-30：AR-08 完成复核并转为 `resolved`，当前活动任务改为 AR-09。Prompt 1～Prompt 6 仍须在 AR-12 基于最新终态协议和 Podman 权威重新验证；正式验收状态保持 `pending`。
+- 2026-08-30：AR-09 完成终态 lifecycle、ABG-40、summary v4、independent reviewer 和合成 fixture 整改并通过限定验收，转为 `resolved`；current frontier 推进到仍为 `ready-for-agent` 的 AR-10，但本次未实施 AR-10。AR-07 继续阻断于 AR-12 和另行正式执行授权，正式验收状态保持 `pending`。

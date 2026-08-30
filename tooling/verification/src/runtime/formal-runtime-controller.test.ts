@@ -48,13 +48,15 @@ describe('formal runtime lifecycle', () => {
     };
 
     const result = await run(harness, {
-      async execute(context) {
+      async executeBeforeCleanup(context) {
         await mkdir(join(context.outputDirectory, 'producer'), { recursive: true });
         await writeFile(join(context.outputDirectory, 'producer', 'failure.txt'), failureCode, 'utf8');
         return { passed: false, value: { failureCode }, failureCode };
       },
       async persistEvidenceBeforeCleanup() {},
-      async writeFinalEvidence() {},
+      async finalizeAfterCleanup(_context, outcome) {
+        return terminalResult(outcome.status, outcome.failureCodes);
+      },
       async sealEvidence() {},
     });
 
@@ -74,13 +76,15 @@ describe('formal runtime lifecycle', () => {
     const controller = new FormalRuntimeController(processEvents);
     const harness = await createHarness({ controller });
     const result = await run(harness, {
-      async execute(context) {
+      async executeBeforeCleanup(context) {
         processEvents.emit(signal);
         context.throwIfAborted();
         return { passed: true, value: {} };
       },
       async persistEvidenceBeforeCleanup() {},
-      async writeFinalEvidence() {},
+      async finalizeAfterCleanup(_context, outcome) {
+        return terminalResult(outcome.status, outcome.failureCodes);
+      },
       async sealEvidence() {},
     });
 
@@ -96,13 +100,15 @@ describe('formal runtime lifecycle', () => {
     const controller = new FormalRuntimeController(processEvents);
     const harness = await createHarness({ controller });
     const result = await run(harness, {
-      async execute(context) {
+      async executeBeforeCleanup(context) {
         processEvents.emit('uncaughtException', new Error('sensitive detail'));
         context.throwIfAborted();
         return { passed: true, value: {} };
       },
       async persistEvidenceBeforeCleanup() {},
-      async writeFinalEvidence() {},
+      async finalizeAfterCleanup(_context, outcome) {
+        return terminalResult(outcome.status, outcome.failureCodes);
+      },
       async sealEvidence() {},
     });
 
@@ -182,6 +188,59 @@ describe('formal runtime lifecycle', () => {
 
     expect(result.status).toBe('PASSED');
     expect(harness.fileSystem.writes.indexOf('runtime/final-outcome.json')).toBeGreaterThan(-1);
+    const finalOutcome = await readJson(join(harness.outputDirectory, 'runtime', 'final-outcome.json'));
+    expect(finalOutcome).toMatchObject({
+      schemaVersion: 'phase-01.formal-runtime-outcome.v2',
+      status: 'PASSED',
+      cleanupStatus: 'PASSED',
+      terminalConclusionStatus: 'PASSED',
+      sealEligibilityStatus: 'PASSED',
+      failureCodes: [],
+      sealPendingAtWrite: true,
+    });
+  });
+
+  it('finalizes only after cleanup and exposes both resource snapshots plus output exclusivity', async () => {
+    const harness = await createHarness();
+    const calls: string[] = [];
+
+    const result = await run(harness, {
+      async executeBeforeCleanup() {
+        calls.push('execute-before-cleanup');
+        return { passed: true, value: {} };
+      },
+      async persistEvidenceBeforeCleanup() {
+        calls.push('persist-before-cleanup');
+      },
+      async finalizeAfterCleanup(_context, outcome) {
+        calls.push('finalize-after-cleanup');
+        expect(outcome.outputDirectoryExclusive).toBe(true);
+        expect(outcome.startedResources.resources).toEqual([
+          expect.objectContaining({ id: '501', present: true }),
+        ]);
+        expect(outcome.finalResources.resources).toEqual([
+          expect.objectContaining({ id: '501', present: false }),
+        ]);
+        expect(outcome.producerEvidencePersistedBeforeCleanup).toBe(true);
+        return terminalResult(outcome.status, outcome.failureCodes);
+      },
+      async sealEvidence() {
+        calls.push('seal-evidence');
+      },
+    });
+
+    expect(result.status).toBe('PASSED');
+    expect(result.finalResources?.resources).toEqual([
+      expect.objectContaining({ id: '501', present: false }),
+    ]);
+    expect(calls).toEqual([
+      'execute-before-cleanup',
+      'persist-before-cleanup',
+      'finalize-after-cleanup',
+      'seal-evidence',
+    ]);
+    expect(harness.fileSystem.writes.indexOf('runtime/cleanup.json'))
+      .toBeLessThan(harness.fileSystem.writes.indexOf('runtime/final-outcome.json'));
   });
 
   it('fails if package-lock.json changes after preflight', async () => {
@@ -256,14 +315,26 @@ function passingCallbacks(
   duringExecute: () => Promise<void> | void = () => {},
 ): FormalRuntimeLifecycleCallbacks<Record<string, never>> {
   return {
-    async execute() {
+    async executeBeforeCleanup() {
       await duringExecute();
       return { passed: true, value: {} };
     },
     async persistEvidenceBeforeCleanup() {},
-    async writeFinalEvidence() {},
+    async finalizeAfterCleanup(_context, outcome) {
+      return terminalResult(outcome.status, outcome.failureCodes);
+    },
     async sealEvidence() {},
   };
+}
+
+function terminalResult(status: 'PASSED' | 'FAILED', failureCodes: readonly string[]) {
+  return {
+    status,
+    terminalConclusionStatus: status,
+    sealEligibilityStatus: status,
+    failureCodes,
+    value: {},
+  } as const;
 }
 
 class RecordingFileSystem implements FormalRuntimeFileSystem {

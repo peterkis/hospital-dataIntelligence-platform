@@ -20,3 +20,4 @@ Blocked by: none
 - 2026-08-27：合成完整 40 门禁证据包通过；manifest、文件摘要/长度、缺失/额外文件、门禁/selector/claim、冻结摘要、汇总、runId、路径穿越、符号链接、已存在输出目录及原始制品篡改等用例失败。专项测试 27/27 通过，复核前后源证据逐字节摘要一致。
 - 2026-08-27：已通过 verification-tooling typecheck/test、ABG coverage、仓库布局、模块边界和 `git diff --check`；未执行正式 ABG，未进入 AR-05。
 - 2026-08-30（AR-08 状态复核）：Implementation 基线为 `384ad60fee7742fb452876173a7ec662b22c740f`。其后终态 lifecycle、对抗夹具、冻结输入和 Podman 权威均已改变，AR-10 还将明确 reviewer provenance 与契约漂移处理；旧 27/27 评论没有覆盖该最终组合。AR-12 必须重新验证，`resolved` 不构成独立正式复核已经通过的声明。
+- 2026-08-30（AR-09 历史影响）：independent reviewer 的通过条件扩展到 Manifest 中完整列出并逐字节验证 preflight、started/final resources、producer snapshot、failure summary、cleanup、terminal conclusion、final outcome、ABG-40 proof、formal-run producer evidence 和顶层 producer index；同时复核身份一致性、零残留/端口释放、终态断言、summary/final-outcome 一致性以及源 evidence 复核前后字节身份。Reviewer 仍只读、不启动服务、不自动修复；AR-10 的 provenance/contract drift 仍未实施，本评论不改变本 Ticket 的正式验收边界。

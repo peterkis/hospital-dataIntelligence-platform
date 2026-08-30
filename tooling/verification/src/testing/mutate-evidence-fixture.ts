@@ -129,6 +129,27 @@ export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   mutation('AR06-M053-NONZERO-PRODUCER-EXIT-BUT-PASSED', 'Keep a gate PASSED with nonzero producerExitCode.', 'formal-summary-validator', 'GATE_PRODUCER_EXIT_CODE_INVALID'),
   mutation('AR06-M054-FAILURE-CODE-CONTRADICTS-PASSED', 'Attach failureCode to a PASSED gate.', 'formal-summary-validator', 'GATE_PASSED_WITH_FAILURE_CODE'),
   mutation('AR06-M055-POST-MANIFEST-BYTE-TAMPER', 'Modify evidence bytes after manifest generation.', 'independent-reviewer', 'MANIFEST_FILE_SHA256_MISMATCH'),
+  mutation('CLEANUP_FAILED_BUT_RUN_PASSED', 'Keep the run PASSED while cleanup is FAILED.', 'independent-reviewer', 'FORMAL_CLEANUP_STATUS_NOT_PASSED'),
+  mutation('PREFLIGHT_FAILED_BUT_GATES_PASSED', 'Keep all gates PASSED while preflight is FAILED.', 'independent-reviewer', 'FORMAL_PREFLIGHT_STATUS_NOT_PASSED'),
+  mutation('TERMINAL_CONCLUSION_MISSING', 'Remove the terminal conclusion.', 'independent-reviewer', 'FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING'),
+  mutation('TERMINAL_CONCLUSION_FAILED', 'Change the terminal conclusion to FAILED.', 'independent-reviewer', 'FORMAL_TERMINAL_CONCLUSION_STATUS_NOT_PASSED'),
+  mutation('SEAL_ELIGIBLE_FALSE', 'Keep ABG-40 PASSED while sealEligible is false.', 'independent-reviewer', 'FORMAL_TERMINAL_SEAL_NOT_ELIGIBLE'),
+  mutation('RESIDUAL_CONTAINER_PRESENT', 'Leave a current-run container present after cleanup.', 'independent-reviewer', 'FORMAL_RESIDUAL_CONTAINER_PRESENT'),
+  mutation('RESIDUAL_VOLUME_PRESENT', 'Leave a current-run volume present after cleanup.', 'independent-reviewer', 'FORMAL_RESIDUAL_VOLUME_PRESENT'),
+  mutation('RESIDUAL_NETWORK_PRESENT', 'Leave a current-run network present after cleanup.', 'independent-reviewer', 'FORMAL_RESIDUAL_NETWORK_PRESENT'),
+  mutation('REQUIRED_PORT_OCCUPIED', 'Leave a required port occupied after cleanup.', 'independent-reviewer', 'FORMAL_REQUIRED_PORT_OCCUPIED'),
+  mutation('FINAL_OUTCOME_MISMATCH', 'Contradict abg-results from final-outcome.', 'independent-reviewer', 'FORMAL_FINAL_OUTCOME_STATUS_MISMATCH'),
+  mutation('ABG40_PRELIMINARY_CONCLUSION_SOURCE', 'Point ABG-40 at the retired preliminary conclusion.', 'independent-reviewer', 'ABG40_TERMINAL_EVIDENCE_REFERENCE_INVALID'),
+  mutation('ABG40_MISSING_SEAL_ASSERTION', 'Remove the ABG-40 seal assertion.', 'independent-reviewer', 'ABG40_SEAL_ASSERTION_MISSING'),
+  mutation('FROZEN_INPUT_DRIFT_AFTER_CLEANUP', 'Mark frozen inputs unstable after cleanup.', 'independent-reviewer', 'FORMAL_TERMINAL_FROZEN_INPUTS_DRIFT'),
+  mutation('AUTHORITY_DRIFT_AFTER_CLEANUP', 'Mark verification authority unstable after cleanup.', 'independent-reviewer', 'FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT'),
+  mutation('OUTPUT_DIRECTORY_NOT_EXCLUSIVE', 'Mark the evidence output directory non-exclusive.', 'independent-reviewer', 'FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE'),
+  mutation('CLEANUP_RESIDUALS_MALFORMED', 'Replace cleanup residualResources with a non-array.', 'independent-reviewer', 'FORMAL_CLEANUP_RESIDUAL_RESOURCES_INVALID'),
+  mutation('FINAL_RESOURCES_MALFORMED', 'Replace final resources with a non-array.', 'independent-reviewer', 'FORMAL_FINAL_RESOURCES_INVALID'),
+  mutation('PRODUCER_SNAPSHOT_IDENTITY_MISMATCH', 'Forge a pre-cleanup producer snapshot digest.', 'independent-reviewer', 'FORMAL_PRODUCER_SNAPSHOT_FILE_IDENTITY_MISMATCH'),
+  mutation('FINAL_OUTCOME_SEAL_STATUS_MISMATCH', 'Contradict seal eligibility in final-outcome.', 'independent-reviewer', 'FORMAL_FINAL_OUTCOME_SEAL_STATUS_MISMATCH'),
+  mutation('RUN_PLAN_GIT_IDENTITY_MISMATCH', 'Make summary Git identity differ from the frozen run plan.', 'independent-reviewer', 'FORMAL_SUMMARY_GIT_COMMIT_MISMATCH'),
+  mutation('TERMINAL_ASSERTION_BODY_MISMATCH', 'Forge the terminal lifecycle assertion actual body.', 'independent-reviewer', 'FORMAL_TERMINAL_LIFECYCLE_ASSERTION_INCONSISTENT'),
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -426,7 +447,9 @@ async function executeMutation(
         recordArray(summary['setupResults'])[0]!['exitCode'] = 1;
       });
     case 'AR06-M052-FROZEN-INPUTS-UNSTABLE-BUT-PASSED':
-      return summaryMutation(context.fixture, (summary) => { summary['frozenInputsStable'] = false; });
+      return summaryMutation(context.fixture, (summary) => {
+        summary['frozenInputsStableAfterCleanup'] = false;
+      });
     case 'AR06-M053-NONZERO-PRODUCER-EXIT-BUT-PASSED':
       return summaryMutation(context.fixture, (summary) => {
         summaryResults(summary)[15]!['producerExitCode'] = 1;
@@ -445,6 +468,147 @@ async function executeMutation(
         }
         await writeFile(path, after, { flag: 'w' });
       });
+    case 'CLEANUP_FAILED_BUT_RUN_PASSED':
+      return lifecycleReviewerMutation(mutationId, context, 'runtime/cleanup.json', (cleanup) => {
+        cleanup['status'] = 'FAILED';
+      });
+    case 'PREFLIGHT_FAILED_BUT_GATES_PASSED':
+      return lifecycleReviewerMutation(mutationId, context, 'runtime/preflight.json', (preflight) => {
+        preflight['status'] = 'FAILED';
+      });
+    case 'TERMINAL_CONCLUSION_MISSING':
+      return reviewerMutation(mutationId, context, async (copy) => {
+        await unlink(join(copy.evidenceDirectory, 'runtime/terminal-conclusion.json'));
+        await rebuildFixtureManifest(copy.evidenceDirectory);
+      });
+    case 'TERMINAL_CONCLUSION_FAILED':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['status'] = 'FAILED'; },
+      );
+    case 'SEAL_ELIGIBLE_FALSE':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['sealEligible'] = false; },
+      );
+    case 'RESIDUAL_CONTAINER_PRESENT':
+      return residualResourceMutation(mutationId, context, 'container');
+    case 'RESIDUAL_VOLUME_PRESENT':
+      return residualResourceMutation(mutationId, context, 'volume');
+    case 'RESIDUAL_NETWORK_PRESENT':
+      return residualResourceMutation(mutationId, context, 'network');
+    case 'REQUIRED_PORT_OCCUPIED':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/resources-final.json',
+        (snapshot) => { recordArray(snapshot['ports'])[0]!['occupied'] = true; },
+      );
+    case 'FINAL_OUTCOME_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/final-outcome.json',
+        (outcome) => { outcome['status'] = 'FAILED'; },
+      );
+    case 'ABG40_PRELIMINARY_CONCLUSION_SOURCE':
+      return reviewerMutation(mutationId, context, async (copy) => {
+        await writeJsonFile(copy.evidenceDirectory, 'formal-run/preliminary-conclusion.json', {
+          status: 'PASSED',
+        });
+        await mutateJsonFile(copy.evidenceDirectory, 'formal-run/producer-evidence.json', (evidence) => {
+          for (const scenario of Object.values(record(evidence['scenarios']))) {
+            for (const assertion of Object.values(record(record(scenario)['assertions']))) {
+              for (const item of recordArray(record(assertion)['evidenceItems'])) {
+                item['relativePath'] = 'formal-run/preliminary-conclusion.json';
+                item['jsonPointer'] = '/status';
+              }
+            }
+          }
+        });
+        await rebuildFixtureManifest(copy.evidenceDirectory);
+      });
+    case 'ABG40_MISSING_SEAL_ASSERTION':
+      return reviewerMutation(mutationId, context, async (copy) => {
+        await mutateJsonFile(copy.evidenceDirectory, 'formal-run/producer-evidence.json', (evidence) => {
+          for (const scenario of Object.values(record(evidence['scenarios']))) {
+            delete record(record(scenario)['assertions'])['ABG-40:formal-evidence-seal-eligible'];
+          }
+        });
+        await rebuildFixtureManifest(copy.evidenceDirectory);
+      });
+    case 'FROZEN_INPUT_DRIFT_AFTER_CLEANUP':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['frozenInputsStableAfterCleanup'] = false; },
+      );
+    case 'AUTHORITY_DRIFT_AFTER_CLEANUP':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['authorityIdentityStableAfterCleanup'] = false; },
+      );
+    case 'OUTPUT_DIRECTORY_NOT_EXCLUSIVE':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['outputDirectoryExclusive'] = false; },
+      );
+    case 'CLEANUP_RESIDUALS_MALFORMED':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/cleanup.json',
+        (cleanup) => { cleanup['residualResources'] = null; },
+      );
+    case 'FINAL_RESOURCES_MALFORMED':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/resources-final.json',
+        (snapshot) => { snapshot['resources'] = null; },
+      );
+    case 'PRODUCER_SNAPSHOT_IDENTITY_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/producer-evidence-snapshot.json',
+        (snapshot) => {
+          recordArray(snapshot['producerProtocolEvidence'])[0]!['sha256'] = 'f'.repeat(64);
+        },
+      );
+    case 'FINAL_OUTCOME_SEAL_STATUS_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/final-outcome.json',
+        (outcome) => { outcome['sealEligibilityStatus'] = 'FAILED'; },
+      );
+    case 'RUN_PLAN_GIT_IDENTITY_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'abg-results.json',
+        (summary) => { summary['gitCommitSha'] = 'f'.repeat(40); },
+      );
+    case 'TERMINAL_ASSERTION_BODY_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => {
+          const assertions = record(terminal['assertions']);
+          record(assertions['terminalLifecycle'])['actual'] = { cleanupStatus: 'FAILED' };
+        },
+      );
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
@@ -519,6 +683,50 @@ interface PhysicalFixtureCopy {
   readonly caseDirectory: string;
   readonly evidenceDirectory: string;
   readonly reviewOutputDirectory: string;
+}
+
+async function lifecycleReviewerMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  relativePath: string,
+  mutate: (value: Record<string, unknown>) => void,
+): Promise<readonly string[]> {
+  return reviewerMutation(mutationId, context, async (copy) => {
+    await mutateJsonFile(copy.evidenceDirectory, relativePath, mutate);
+    await rebuildFixtureManifest(copy.evidenceDirectory);
+  });
+}
+
+async function residualResourceMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  resourceType: 'container' | 'volume' | 'network',
+): Promise<readonly string[]> {
+  return lifecycleReviewerMutation(
+    mutationId,
+    context,
+    'runtime/resources-final.json',
+    (snapshot) => {
+      snapshot['resources'] = [{
+        resourceType,
+        id: `mutation-${resourceType}`,
+        name: `mutation-${resourceType}`,
+        labels: {},
+        source: 'podman-inspect',
+        present: true,
+        active: true,
+        state: 'PRESENT',
+        imageReference: null,
+        imageId: null,
+        imageDigest: null,
+        ports: [],
+        startedAt: null,
+        stoppedAt: null,
+        exitStatus: null,
+        metrics: null,
+      }];
+    },
+  );
 }
 
 async function reviewerMutation(

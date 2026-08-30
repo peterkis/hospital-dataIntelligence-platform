@@ -35,7 +35,11 @@ import {
   PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
   PRODUCER_EVIDENCE_SCHEMA_VERSION,
 } from './evidence/protocol.js';
-import { FORMAL_REQUIRED_SECRET_NAMES } from './runtime/formal-runtime-contract.js';
+import {
+  createFormalRunSeed,
+  FORMAL_REQUIRED_SECRET_NAMES,
+  FORMAL_RUNTIME_PORTS,
+} from './runtime/formal-runtime-contract.js';
 
 const REVIEW_SCHEMA_VERSION = 'phase-01.formal-abg-evidence-review.v1' as const;
 const REVIEW_FINDINGS_SCHEMA_VERSION =
@@ -44,7 +48,7 @@ const REVIEWER_TOOL_SCHEMA_VERSION =
   'phase-01.formal-abg-evidence-reviewer.v1' as const;
 const RUN_PLAN_SCHEMA_VERSION = 'phase-01.abg-run-plan.v3';
 const RUN_PLAN_AUTHORITY_ID = 'phase-01.repository-authoritative-plan.v2';
-const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v3';
+const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v4';
 const GATE_RESULT_SCHEMA_VERSION = 'phase-01.abg-gate-result.v3' as const;
 const MANIFEST_SCHEMA_VERSION = 'phase-01.evidence-manifest.v1';
 const CONCLUSION_SCOPE =
@@ -72,6 +76,8 @@ application, PostgreSQL, Keycloak, a browser, or any network client.
 export interface ReviewFormalAbgEvidenceInput {
   readonly evidenceDirectory: string;
   readonly reviewOutputDirectory: string;
+  /** Test seam for proving that concurrent source mutation fails closed. */
+  readonly beforeFinalSourceIdentityCapture?: () => Promise<void>;
 }
 
 export interface ReviewFinding {
@@ -112,6 +118,12 @@ interface CliArguments {
 
 interface FileRecord {
   readonly absolutePath: string;
+  readonly byteLength: number;
+  readonly sha256: string;
+}
+
+interface SnapshotFileIdentity {
+  readonly path: string;
   readonly byteLength: number;
   readonly sha256: string;
 }
@@ -240,9 +252,11 @@ export async function reviewFormalAbgEvidence(
     checks,
   );
   if (summary !== null) {
+    await validateFormalLifecycle(snapshot, manifest, summary, checks);
     await validateTopLevelRunIdentities(snapshot, manifest, summary, checks);
   }
 
+  await input.beforeFinalSourceIdentityCapture?.();
   const sourceEvidenceDigestAfter = await captureTreeIdentity(sourceDirectory);
   checks.check(
     sourceEvidenceDigestBefore === sourceEvidenceDigestAfter,
@@ -738,10 +752,35 @@ async function validateRunSummary(
   checks.check(runId !== null, 'RUN_ID_INVALID', 'abg-results.json#/runId');
   const runSequence = positiveIntegerField(raw, 'runSequence');
   checks.check(runSequence !== null, 'RUN_SEQUENCE_INVALID', 'abg-results.json#/runSequence');
+  const gitCommitSha = meaningfulStringField(raw, 'gitCommitSha');
+  checks.check(
+    gitCommitSha !== null && /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/u.test(gitCommitSha),
+    'FORMAL_SUMMARY_GIT_COMMIT_INVALID',
+    'abg-results.json#/gitCommitSha',
+  );
+  const runtimeNamespace = meaningfulStringField(raw, 'runtimeNamespace');
+  let derivedRuntimeNamespace: string | null = null;
+  if (runId !== null && runSequence !== null) {
+    try {
+      derivedRuntimeNamespace = createFormalRunSeed(runSequence, () => runId).runtimeNamespace;
+    } catch {
+      derivedRuntimeNamespace = null;
+    }
+  }
+  checks.check(
+    runtimeNamespace !== null && runtimeNamespace === derivedRuntimeNamespace,
+    'FORMAL_RUNTIME_NAMESPACE_MISMATCH',
+    'abg-results.json#/runtimeNamespace',
+  );
   if (plan !== null) {
     checks.check(runSequence === plan.runSequence, 'RUN_SEQUENCE_MISMATCH', 'abg-results.json#/runSequence');
     checks.check(raw['planDigest'] === plan.planDigest, 'RUN_PLAN_DIGEST_MISMATCH', 'abg-results.json#/planDigest');
     if (plan.frozenInputs !== null) {
+      checks.check(
+        gitCommitSha !== null && gitCommitSha === plan.frozenInputs['gitCommitSha'],
+        'FORMAL_SUMMARY_GIT_COMMIT_MISMATCH',
+        'abg-results.json#/gitCommitSha',
+      );
       checks.check(
         raw['frozenInputsDigest'] === digestJson(plan.frozenInputs),
         'FROZEN_INPUTS_DIGEST_MISMATCH',
@@ -763,8 +802,49 @@ async function validateRunSummary(
   }
   checks.check(raw['coverageMatrixDigest'] === currentIdentity.coverageMatrixDigest, 'COVERAGE_MATRIX_DIGEST_MISMATCH', 'abg-results.json#/coverageMatrixDigest');
   checks.check(raw['producerProtocolIdentityDigest'] === currentIdentity.producerProtocolIdentityDigest, 'PRODUCER_PROTOCOL_DIGEST_MISMATCH', 'abg-results.json#/producerProtocolIdentityDigest');
-  checks.check(raw['frozenInputsStable'] === true, 'FROZEN_INPUTS_NOT_STABLE', 'abg-results.json#/frozenInputsStable');
-  checks.check(raw['authorityIdentityStable'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE', 'abg-results.json#/authorityIdentityStable');
+  checks.check(raw['preflightStatus'] === 'PASSED', 'FORMAL_SUMMARY_PREFLIGHT_STATUS_NOT_PASSED', 'abg-results.json#/preflightStatus');
+  checks.check(raw['setupStatus'] === 'PASSED', 'FORMAL_SUMMARY_SETUP_STATUS_NOT_PASSED', 'abg-results.json#/setupStatus');
+  checks.check(raw['nonFormalGateStatus'] === 'PASSED', 'FORMAL_SUMMARY_NON_FORMAL_STATUS_NOT_PASSED', 'abg-results.json#/nonFormalGateStatus');
+  checks.check(raw['producerEvidenceStatus'] === 'PASSED', 'FORMAL_SUMMARY_PRODUCER_EVIDENCE_STATUS_NOT_PASSED', 'abg-results.json#/producerEvidenceStatus');
+  checks.check(raw['producerEvidencePersistedBeforeCleanup'] === true, 'FORMAL_SUMMARY_PRODUCER_EVIDENCE_NOT_PERSISTED', 'abg-results.json#/producerEvidencePersistedBeforeCleanup');
+  checks.check(positiveIntegerField(raw, 'producerProtocolEvidenceCount') !== null, 'FORMAL_SUMMARY_PRODUCER_EVIDENCE_EMPTY', 'abg-results.json#/producerProtocolEvidenceCount');
+  checks.check(raw['cleanupStatus'] === 'PASSED', 'FORMAL_SUMMARY_CLEANUP_STATUS_NOT_PASSED', 'abg-results.json#/cleanupStatus');
+  checks.check(raw['residualResourceCount'] === 0, 'FORMAL_SUMMARY_RESIDUAL_RESOURCES_PRESENT', 'abg-results.json#/residualResourceCount');
+  checks.check(raw['residualContainerCount'] === 0, 'FORMAL_SUMMARY_RESIDUAL_CONTAINER_PRESENT', 'abg-results.json#/residualContainerCount');
+  checks.check(raw['residualVolumeCount'] === 0, 'FORMAL_SUMMARY_RESIDUAL_VOLUME_PRESENT', 'abg-results.json#/residualVolumeCount');
+  checks.check(raw['residualNetworkCount'] === 0, 'FORMAL_SUMMARY_RESIDUAL_NETWORK_PRESENT', 'abg-results.json#/residualNetworkCount');
+  const occupiedRequiredPorts = parseNumberArray(
+    raw['occupiedRequiredPorts'],
+    checks,
+    'FORMAL_SUMMARY_OCCUPIED_REQUIRED_PORTS_INVALID',
+    'abg-results.json#/occupiedRequiredPorts',
+  );
+  checks.check(occupiedRequiredPorts.length === 0, 'FORMAL_SUMMARY_REQUIRED_PORT_OCCUPIED', 'abg-results.json#/occupiedRequiredPorts');
+  const requiredPortsObserved = parseNumberArray(
+    raw['requiredPortsObserved'],
+    checks,
+    'FORMAL_SUMMARY_REQUIRED_PORTS_OBSERVED_INVALID',
+    'abg-results.json#/requiredPortsObserved',
+  );
+  checks.check(
+    numberArrayEqual(requiredPortsObserved, FORMAL_RUNTIME_PORTS),
+    'FORMAL_SUMMARY_REQUIRED_PORT_OBSERVATION_MISSING',
+    'abg-results.json#/requiredPortsObserved',
+  );
+  checks.check(raw['pruneCommandsInvoked'] === false, 'FORMAL_SUMMARY_PRUNE_COMMAND_INVOKED', 'abg-results.json#/pruneCommandsInvoked');
+  checks.check(raw['frozenInputsStableAfterCleanup'] === true, 'FROZEN_INPUTS_NOT_STABLE', 'abg-results.json#/frozenInputsStableAfterCleanup');
+  checks.check(raw['authorityIdentityStableAfterCleanup'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE', 'abg-results.json#/authorityIdentityStableAfterCleanup');
+  checks.check(raw['outputDirectoryExclusive'] === true, 'FORMAL_SUMMARY_OUTPUT_DIRECTORY_NOT_EXCLUSIVE', 'abg-results.json#/outputDirectoryExclusive');
+  checks.check(raw['terminalConclusionStatus'] === 'PASSED', 'FORMAL_SUMMARY_TERMINAL_STATUS_NOT_PASSED', 'abg-results.json#/terminalConclusionStatus');
+  checks.check(raw['sealEligibilityStatus'] === 'PASSED', 'FORMAL_SUMMARY_SEAL_STATUS_NOT_PASSED', 'abg-results.json#/sealEligibilityStatus');
+  checks.check(raw['lifecycleStatus'] === 'PASSED', 'FORMAL_SUMMARY_LIFECYCLE_STATUS_NOT_PASSED', 'abg-results.json#/lifecycleStatus');
+  const summaryFailureCodes = parseStringArray(
+    raw['failureCodes'],
+    checks,
+    'FORMAL_SUMMARY_FAILURE_CODES_INVALID',
+    'abg-results.json#/failureCodes',
+  );
+  checks.check(summaryFailureCodes.length === 0, 'FORMAL_SUMMARY_PASSED_WITH_FAILURE_CODES', 'abg-results.json#/failureCodes');
   checks.check(raw['selectorSetsDistinct'] === true, 'SELECTOR_SETS_NOT_DECLARED_DISTINCT', 'abg-results.json#/selectorSetsDistinct');
   checks.check(raw['timezone'] === 'Asia/Shanghai', 'RUN_TIMEZONE_INVALID', 'abg-results.json#/timezone');
   checks.check(raw['conclusionScope'] === CONCLUSION_SCOPE, 'CONCLUSION_SCOPE_INVALID', 'abg-results.json#/conclusionScope');
@@ -825,7 +905,30 @@ async function validateRunSummary(
   const failedCount = results.filter((result) => result['status'] === 'FAILED').length;
   checks.check(raw['passedCount'] === passedCount, 'PASSED_COUNT_MISMATCH', 'abg-results.json#/passedCount');
   checks.check(raw['failedCount'] === failedCount, 'FAILED_COUNT_MISMATCH', 'abg-results.json#/failedCount');
-  const derivedStatus = results.length === ABG_GATES.length && failedCount === 0 ? 'PASSED' : 'FAILED';
+  const nonFormalStatus = results.slice(0, 39).length === 39 &&
+    results.slice(0, 39).every((result) => result['status'] === 'PASSED')
+    ? 'PASSED'
+    : 'FAILED';
+  checks.check(raw['nonFormalGateStatus'] === nonFormalStatus, 'FORMAL_SUMMARY_NON_FORMAL_STATUS_MISMATCH', 'abg-results.json#/nonFormalGateStatus');
+  const derivedLifecycleStatus = raw['preflightStatus'] === 'PASSED' &&
+    raw['setupStatus'] === 'PASSED' &&
+    nonFormalStatus === 'PASSED' &&
+    raw['producerEvidenceStatus'] === 'PASSED' &&
+    raw['cleanupStatus'] === 'PASSED' &&
+    raw['residualResourceCount'] === 0 &&
+    numberArrayValue(raw['occupiedRequiredPorts']).length === 0 &&
+    raw['frozenInputsStableAfterCleanup'] === true &&
+    raw['authorityIdentityStableAfterCleanup'] === true &&
+    raw['outputDirectoryExclusive'] === true &&
+    raw['terminalConclusionStatus'] === 'PASSED' &&
+    raw['sealEligibilityStatus'] === 'PASSED'
+    ? 'PASSED'
+    : 'FAILED';
+  checks.check(raw['lifecycleStatus'] === derivedLifecycleStatus, 'FORMAL_SUMMARY_LIFECYCLE_STATUS_MISMATCH', 'abg-results.json#/lifecycleStatus');
+  const derivedStatus = results.length === ABG_GATES.length && failedCount === 0 &&
+    derivedLifecycleStatus === 'PASSED'
+    ? 'PASSED'
+    : 'FAILED';
   checks.check(raw['status'] === derivedStatus, 'RUN_STATUS_MISMATCH', 'abg-results.json#/status');
   checks.check(
     raw['status'] !== 'PASSED' || results.every((result) => result['status'] === 'PASSED'),
@@ -1508,6 +1611,616 @@ function validateGateReferences(
   }
 }
 
+async function validateFormalLifecycle(
+  snapshot: EvidenceSnapshot,
+  manifest: ManifestState,
+  summary: SummaryState,
+  checks: ReviewChecks,
+): Promise<void> {
+  const requiredFiles = [
+    ['runtime/preflight.json', 'FORMAL_LIFECYCLE_PREFLIGHT_MISSING'],
+    ['runtime/resources-started.json', 'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING'],
+    ['runtime/producer-evidence-snapshot.json', 'FORMAL_LIFECYCLE_PRODUCER_EVIDENCE_SNAPSHOT_MISSING'],
+    ['runtime/failure-summary.json', 'FORMAL_LIFECYCLE_FAILURE_SUMMARY_MISSING'],
+    ['runtime/resources-final.json', 'FORMAL_LIFECYCLE_RESOURCES_FINAL_MISSING'],
+    ['runtime/cleanup.json', 'FORMAL_LIFECYCLE_CLEANUP_MISSING'],
+    ['runtime/terminal-conclusion.json', 'FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING'],
+    ['runtime/final-outcome.json', 'FORMAL_LIFECYCLE_FINAL_OUTCOME_MISSING'],
+    ['gates/ABG-40/producer/result.json', 'ABG40_GATE_PROOF_MISSING'],
+    ['formal-run/producer-evidence.json', 'ABG40_FORMAL_PRODUCER_EVIDENCE_MISSING'],
+    ['producer-evidence-index.json', 'FORMAL_TOP_LEVEL_PRODUCER_INDEX_MISSING'],
+  ] as const;
+  for (const [path, code] of requiredFiles) {
+    checks.check(manifest.entries.has(path), code, path);
+  }
+  for (const path of [
+    'runtime/manifest-failure.json',
+    'runtime/final-evidence-failure.json',
+    'runtime/pre-cleanup-evidence-failure.json',
+  ]) {
+    checks.check(!snapshot.files.has(path), 'FORMAL_FAILURE_ARTIFACT_PRESENT', path);
+  }
+  checks.check(
+    !snapshot.files.has('formal-run/preliminary-conclusion.json'),
+    'ABG40_PRELIMINARY_CONCLUSION_FORBIDDEN',
+    'formal-run/preliminary-conclusion.json',
+  );
+
+  const preflight = await readLifecycleRecord(snapshot, 'runtime/preflight.json', checks,
+    'FORMAL_LIFECYCLE_PREFLIGHT_MISSING');
+  const startedResources = await readLifecycleRecord(snapshot, 'runtime/resources-started.json', checks,
+    'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING');
+  const producerSnapshot = await readLifecycleRecord(
+    snapshot,
+    'runtime/producer-evidence-snapshot.json',
+    checks,
+    'FORMAL_LIFECYCLE_PRODUCER_EVIDENCE_SNAPSHOT_MISSING',
+  );
+  const failureSummary = await readLifecycleRecord(snapshot, 'runtime/failure-summary.json', checks,
+    'FORMAL_LIFECYCLE_FAILURE_SUMMARY_MISSING');
+  const finalResources = await readLifecycleRecord(snapshot, 'runtime/resources-final.json', checks,
+    'FORMAL_LIFECYCLE_RESOURCES_FINAL_MISSING');
+  const cleanup = await readLifecycleRecord(snapshot, 'runtime/cleanup.json', checks,
+    'FORMAL_LIFECYCLE_CLEANUP_MISSING');
+  const terminal = await readLifecycleRecord(snapshot, 'runtime/terminal-conclusion.json', checks,
+    'FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING');
+  const finalOutcome = await readLifecycleRecord(snapshot, 'runtime/final-outcome.json', checks,
+    'FORMAL_LIFECYCLE_FINAL_OUTCOME_MISSING');
+  const formalProducer = await readLifecycleRecord(snapshot, 'formal-run/producer-evidence.json', checks,
+    'ABG40_FORMAL_PRODUCER_EVIDENCE_MISSING');
+  const abg40Proof = await readLifecycleRecord(snapshot, 'gates/ABG-40/producer/result.json', checks,
+    'ABG40_GATE_PROOF_MISSING');
+
+  const expectedIdentity = {
+    runId: summary.runId,
+    runSequence: summary.runSequence,
+    gitCommitSha: stringField(summary.raw, 'gitCommitSha'),
+    runtimeNamespace: stringField(summary.raw, 'runtimeNamespace'),
+  };
+  checks.check(
+    expectedIdentity.runId !== null &&
+      expectedIdentity.runSequence !== null &&
+      expectedIdentity.gitCommitSha !== null &&
+      expectedIdentity.runtimeNamespace !== null,
+    'FORMAL_SUMMARY_RUN_IDENTITY_INCOMPLETE',
+    'abg-results.json',
+  );
+  for (const [path, record] of [
+    ['runtime/preflight.json', preflight],
+    ['runtime/resources-started.json', startedResources],
+    ['runtime/producer-evidence-snapshot.json', producerSnapshot],
+    ['runtime/failure-summary.json', failureSummary],
+    ['runtime/resources-final.json', finalResources],
+    ['runtime/cleanup.json', cleanup],
+    ['runtime/terminal-conclusion.json', terminal],
+    ['runtime/final-outcome.json', finalOutcome],
+  ] as const) {
+    if (record !== null) validateNestedRunIdentity(record, expectedIdentity, checks, path);
+  }
+
+  if (preflight !== null) {
+    checks.check(preflight['schemaVersion'] === 'phase-01.formal-preflight.v1', 'FORMAL_PREFLIGHT_SCHEMA_INVALID', 'runtime/preflight.json');
+    checks.check(preflight['status'] === 'PASSED', 'FORMAL_PREFLIGHT_STATUS_NOT_PASSED', 'runtime/preflight.json#/status');
+  }
+  if (startedResources !== null) {
+    checks.check(startedResources['schemaVersion'] === 'phase-01.formal-runtime-resources.v1', 'FORMAL_RESOURCES_STARTED_SCHEMA_INVALID', 'runtime/resources-started.json');
+    parseRuntimeResourceArray(
+      startedResources['resources'],
+      checks,
+      'FORMAL_STARTED_RESOURCES_INVALID',
+      'runtime/resources-started.json#/resources',
+    );
+    parseRuntimePortArray(
+      startedResources['ports'],
+      checks,
+      'FORMAL_STARTED_PORTS_INVALID',
+      'runtime/resources-started.json#/ports',
+    );
+  }
+  let producerProtocolEvidenceCount = 0;
+  if (producerSnapshot !== null) {
+    producerProtocolEvidenceCount = validateProducerEvidenceSnapshot(
+      producerSnapshot,
+      snapshot,
+      manifest,
+      checks,
+    );
+  }
+  let producerEvidencePersistedBeforeCleanup = false;
+  if (failureSummary !== null) {
+    checks.check(failureSummary['schemaVersion'] === 'phase-01.formal-failure-summary.v1', 'FORMAL_FAILURE_SUMMARY_SCHEMA_INVALID', 'runtime/failure-summary.json');
+    checks.check(failureSummary['statusBeforeCleanup'] === 'PASSED', 'FORMAL_FAILURE_SUMMARY_STATUS_NOT_PASSED', 'runtime/failure-summary.json#/statusBeforeCleanup');
+    producerEvidencePersistedBeforeCleanup = failureSummary['evidencePersistedBeforeCleanup'] === true;
+    checks.check(producerEvidencePersistedBeforeCleanup, 'FORMAL_FAILURE_SUMMARY_EVIDENCE_NOT_PERSISTED', 'runtime/failure-summary.json#/evidencePersistedBeforeCleanup');
+    const failureSummaryCodes = parseStringArray(
+      failureSummary['failureCodes'],
+      checks,
+      'FORMAL_FAILURE_SUMMARY_CODES_INVALID',
+      'runtime/failure-summary.json#/failureCodes',
+    );
+    checks.check(failureSummaryCodes.length === 0, 'FORMAL_FAILURE_SUMMARY_HAS_FAILURE_CODES', 'runtime/failure-summary.json#/failureCodes');
+  }
+  let cleanupResidualResources: readonly Readonly<Record<string, unknown>>[] = [];
+  let cleanupOccupiedPorts: readonly number[] = [];
+  if (cleanup !== null) {
+    checks.check(cleanup['schemaVersion'] === 'phase-01.formal-cleanup.v1', 'FORMAL_CLEANUP_SCHEMA_INVALID', 'runtime/cleanup.json');
+    checks.check(cleanup['status'] === 'PASSED', 'FORMAL_CLEANUP_STATUS_NOT_PASSED', 'runtime/cleanup.json#/status');
+    cleanupResidualResources = parseRuntimeResourceArray(
+      cleanup['residualResources'],
+      checks,
+      'FORMAL_CLEANUP_RESIDUAL_RESOURCES_INVALID',
+      'runtime/cleanup.json#/residualResources',
+    );
+    checks.check(cleanupResidualResources.length === 0, 'FORMAL_CLEANUP_RESIDUAL_RESOURCES_PRESENT', 'runtime/cleanup.json#/residualResources');
+    cleanupOccupiedPorts = parseNumberArray(
+      cleanup['occupiedPorts'],
+      checks,
+      'FORMAL_CLEANUP_OCCUPIED_PORTS_INVALID',
+      'runtime/cleanup.json#/occupiedPorts',
+    );
+    checks.check(cleanupOccupiedPorts.length === 0, 'FORMAL_CLEANUP_OCCUPIED_PORTS_PRESENT', 'runtime/cleanup.json#/occupiedPorts');
+    checks.check(cleanup['pruneCommandsInvoked'] === false, 'FORMAL_PRUNE_COMMAND_INVOKED', 'runtime/cleanup.json#/pruneCommandsInvoked');
+  }
+  let finalResourceRecords: readonly Readonly<Record<string, unknown>>[] = [];
+  let finalPortRecords: readonly Readonly<Record<string, unknown>>[] = [];
+  if (finalResources !== null) {
+    checks.check(finalResources['schemaVersion'] === 'phase-01.formal-runtime-resources.v1', 'FORMAL_RESOURCES_FINAL_SCHEMA_INVALID', 'runtime/resources-final.json');
+    finalResourceRecords = parseRuntimeResourceArray(
+      finalResources['resources'],
+      checks,
+      'FORMAL_FINAL_RESOURCES_INVALID',
+      'runtime/resources-final.json#/resources',
+    );
+    for (const resourceType of ['container', 'volume', 'network'] as const) {
+      checks.check(
+        !finalResourceRecords.some((resource) => resource['present'] === true && resource['resourceType'] === resourceType),
+        `FORMAL_RESIDUAL_${resourceType.toUpperCase()}_PRESENT`,
+        'runtime/resources-final.json#/resources',
+      );
+    }
+    checks.check(
+      !finalResourceRecords.some((resource) => resource['present'] === true),
+      'FORMAL_RESIDUAL_RESOURCE_PRESENT',
+      'runtime/resources-final.json#/resources',
+    );
+    finalPortRecords = parseRuntimePortArray(
+      finalResources['ports'],
+      checks,
+      'FORMAL_FINAL_PORTS_INVALID',
+      'runtime/resources-final.json#/ports',
+    );
+    for (const port of FORMAL_RUNTIME_PORTS) {
+      const matches = finalPortRecords.filter((record) => record['port'] === port);
+      checks.check(matches.length === 1, 'FORMAL_REQUIRED_PORT_OBSERVATION_MISSING', `runtime/resources-final.json#/ports/${port}`);
+      const observation = matches[0];
+      if (observation === undefined) continue;
+      checks.check(observation['occupied'] === false, 'FORMAL_REQUIRED_PORT_OCCUPIED', `runtime/resources-final.json#/ports/${port}`);
+      checks.check(observation['verificationError'] === null, 'FORMAL_REQUIRED_PORT_VERIFICATION_ERROR', `runtime/resources-final.json#/ports/${port}`);
+    }
+  }
+  const residualResources = uniqueLifecycleResources([
+    ...cleanupResidualResources,
+    ...finalResourceRecords.filter((resource) => resource['present'] === true),
+  ]);
+  const residualContainerCount = residualResources.filter((resource) =>
+    resource['resourceType'] === 'container').length;
+  const residualVolumeCount = residualResources.filter((resource) =>
+    resource['resourceType'] === 'volume').length;
+  const residualNetworkCount = residualResources.filter((resource) =>
+    resource['resourceType'] === 'network').length;
+  const occupiedPortSet = new Set([
+    ...cleanupOccupiedPorts,
+    ...finalPortRecords.filter((record) => record['occupied'] === true)
+      .map((record) => Number(record['port'])),
+  ]);
+  const occupiedRequiredPorts = FORMAL_RUNTIME_PORTS.filter((port) => occupiedPortSet.has(port));
+  const requiredPortsObserved = FORMAL_RUNTIME_PORTS.filter((port) =>
+    finalPortRecords.some((record) => record['port'] === port));
+  const requiredPortObservationFailures = finalPortRecords
+    .filter((record) =>
+      FORMAL_RUNTIME_PORTS.some((port) => port === record['port']) &&
+      record['verificationError'] !== null)
+    .map((record) => ({
+      port: record['port'],
+      verificationError: record['verificationError'],
+    }));
+  const summaryResults = parseRecordArray(
+    summary.raw['results'],
+    checks,
+    'FORMAL_SUMMARY_RESULTS_INVALID',
+    'abg-results.json#/results',
+  );
+  const nonFormalResults = summaryResults.slice(0, 39);
+  const nonFormalPassedCount = nonFormalResults.filter((result) => result['status'] === 'PASSED').length;
+  const nonFormalFailedCount = nonFormalResults.length - nonFormalPassedCount;
+  const terminalLifecycleExpected = {
+    preflightStatus: 'PASSED',
+    setupStatus: 'PASSED',
+    nonFormalPassedCount: 39,
+    cleanupStatus: 'PASSED',
+    residualResourceCount: 0,
+    occupiedRequiredPorts: [],
+    requiredPortsObserved: FORMAL_RUNTIME_PORTS,
+    pruneCommandsInvoked: false,
+  };
+  const terminalLifecycleActual = {
+    preflightStatus: preflight?.['status'] ?? null,
+    setupStatus: summary.raw['setupStatus'],
+    nonFormalGateCount: nonFormalResults.length,
+    nonFormalPassedCount,
+    nonFormalFailedCount,
+    cleanupStatus: cleanup?.['status'] ?? null,
+    residualResourceCount: residualResources.length,
+    occupiedRequiredPorts,
+    requiredPortsObserved,
+    requiredPortObservationFailures,
+    pruneCommandsInvoked: cleanup?.['pruneCommandsInvoked'] ?? null,
+  };
+  const sealEligibilityExpected = {
+    producerEvidencePersistedBeforeCleanup: true,
+    producerProtocolEvidenceCountMinimum: 1,
+    frozenInputsStableAfterCleanup: true,
+    authorityIdentityStableAfterCleanup: true,
+    outputDirectoryExclusive: true,
+  };
+  const sealEligibilityActual = {
+    producerEvidencePersistedBeforeCleanup,
+    producerProtocolEvidenceCount,
+    frozenInputsStableAfterCleanup: summary.raw['frozenInputsStableAfterCleanup'],
+    authorityIdentityStableAfterCleanup: summary.raw['authorityIdentityStableAfterCleanup'],
+    outputDirectoryExclusive: summary.raw['outputDirectoryExclusive'],
+  };
+  if (terminal !== null) {
+    checks.check(terminal['schemaVersion'] === 'phase-01.formal-terminal-conclusion.v1', 'FORMAL_TERMINAL_CONCLUSION_SCHEMA_INVALID', 'runtime/terminal-conclusion.json');
+    const terminalStartedAt = stringField(terminal, 'startedAt');
+    const terminalCompletedAt = stringField(terminal, 'completedAt');
+    checks.check(terminalStartedAt !== null && isLocalDateTime(terminalStartedAt), 'FORMAL_TERMINAL_STARTED_AT_INVALID', 'runtime/terminal-conclusion.json#/startedAt');
+    checks.check(terminalCompletedAt !== null && isLocalDateTime(terminalCompletedAt), 'FORMAL_TERMINAL_COMPLETED_AT_INVALID', 'runtime/terminal-conclusion.json#/completedAt');
+    if (terminalStartedAt !== null && terminalCompletedAt !== null) {
+      checks.check(terminalStartedAt <= terminalCompletedAt, 'FORMAL_TERMINAL_TIME_ORDER_INVALID', 'runtime/terminal-conclusion.json');
+      checks.check(terminalStartedAt === summary.raw['startedAt'], 'FORMAL_TERMINAL_STARTED_AT_MISMATCH', 'runtime/terminal-conclusion.json#/startedAt');
+      checks.check(terminalCompletedAt <= String(summary.raw['completedAt']), 'FORMAL_TERMINAL_COMPLETED_AT_MISMATCH', 'runtime/terminal-conclusion.json#/completedAt');
+    }
+    checks.check(terminal['status'] === 'PASSED', 'FORMAL_TERMINAL_CONCLUSION_STATUS_NOT_PASSED', 'runtime/terminal-conclusion.json#/status');
+    checks.check(terminal['sealEligible'] === true, 'FORMAL_TERMINAL_SEAL_NOT_ELIGIBLE', 'runtime/terminal-conclusion.json#/sealEligible');
+    checks.check(terminal['preflightStatus'] === terminalLifecycleActual.preflightStatus, 'FORMAL_TERMINAL_PREFLIGHT_STATUS_NOT_PASSED', 'runtime/terminal-conclusion.json#/preflightStatus');
+    checks.check(terminal['setupStatus'] === terminalLifecycleActual.setupStatus, 'FORMAL_TERMINAL_SETUP_STATUS_NOT_PASSED', 'runtime/terminal-conclusion.json#/setupStatus');
+    checks.check(
+      terminal['nonFormalGateCount'] === terminalLifecycleActual.nonFormalGateCount &&
+        terminal['nonFormalPassedCount'] === terminalLifecycleActual.nonFormalPassedCount &&
+        terminal['nonFormalFailedCount'] === terminalLifecycleActual.nonFormalFailedCount,
+      'FORMAL_TERMINAL_NON_FORMAL_GATES_INCOMPLETE',
+      'runtime/terminal-conclusion.json',
+    );
+    checks.check(terminal['producerEvidencePersistedBeforeCleanup'] === producerEvidencePersistedBeforeCleanup, 'FORMAL_TERMINAL_PRODUCER_EVIDENCE_NOT_PERSISTED', 'runtime/terminal-conclusion.json#/producerEvidencePersistedBeforeCleanup');
+    checks.check(terminal['producerProtocolEvidenceCount'] === producerProtocolEvidenceCount && producerProtocolEvidenceCount > 0, 'FORMAL_TERMINAL_PRODUCER_EVIDENCE_EMPTY', 'runtime/terminal-conclusion.json#/producerProtocolEvidenceCount');
+    checks.check(terminal['cleanupStatus'] === terminalLifecycleActual.cleanupStatus, 'FORMAL_TERMINAL_CLEANUP_STATUS_NOT_PASSED', 'runtime/terminal-conclusion.json#/cleanupStatus');
+    checks.check(terminal['residualResourceCount'] === residualResources.length, 'FORMAL_TERMINAL_RESIDUAL_RESOURCES_PRESENT', 'runtime/terminal-conclusion.json#/residualResourceCount');
+    checks.check(terminal['residualContainerCount'] === residualContainerCount && residualContainerCount === 0, 'FORMAL_TERMINAL_RESIDUAL_CONTAINER_PRESENT', 'runtime/terminal-conclusion.json#/residualContainerCount');
+    checks.check(terminal['residualVolumeCount'] === residualVolumeCount && residualVolumeCount === 0, 'FORMAL_TERMINAL_RESIDUAL_VOLUME_PRESENT', 'runtime/terminal-conclusion.json#/residualVolumeCount');
+    checks.check(terminal['residualNetworkCount'] === residualNetworkCount && residualNetworkCount === 0, 'FORMAL_TERMINAL_RESIDUAL_NETWORK_PRESENT', 'runtime/terminal-conclusion.json#/residualNetworkCount');
+    checks.check(jsonEqual(terminal['occupiedRequiredPorts'], occupiedRequiredPorts), 'FORMAL_TERMINAL_REQUIRED_PORT_OCCUPIED', 'runtime/terminal-conclusion.json#/occupiedRequiredPorts');
+    checks.check(jsonEqual(terminal['requiredPortsObserved'], requiredPortsObserved), 'FORMAL_TERMINAL_REQUIRED_PORT_OBSERVATION_MISSING', 'runtime/terminal-conclusion.json#/requiredPortsObserved');
+    checks.check(terminal['pruneCommandsInvoked'] === terminalLifecycleActual.pruneCommandsInvoked, 'FORMAL_TERMINAL_PRUNE_COMMAND_INVOKED', 'runtime/terminal-conclusion.json#/pruneCommandsInvoked');
+    checks.check(terminal['frozenInputsStableAfterCleanup'] === summary.raw['frozenInputsStableAfterCleanup'], 'FORMAL_TERMINAL_FROZEN_INPUTS_DRIFT', 'runtime/terminal-conclusion.json#/frozenInputsStableAfterCleanup');
+    checks.check(terminal['authorityIdentityStableAfterCleanup'] === summary.raw['authorityIdentityStableAfterCleanup'], 'FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT', 'runtime/terminal-conclusion.json#/authorityIdentityStableAfterCleanup');
+    checks.check(terminal['outputDirectoryExclusive'] === summary.raw['outputDirectoryExclusive'], 'FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE', 'runtime/terminal-conclusion.json#/outputDirectoryExclusive');
+    const terminalFailureCodes = parseStringArray(
+      terminal['failureCodes'],
+      checks,
+      'FORMAL_TERMINAL_FAILURE_CODES_INVALID',
+      'runtime/terminal-conclusion.json#/failureCodes',
+    );
+    checks.check(terminalFailureCodes.length === 0, 'FORMAL_TERMINAL_FAILURE_CODES_PRESENT', 'runtime/terminal-conclusion.json#/failureCodes');
+    const assertions = asRecord(terminal['assertions']);
+    const lifecycleAssertion = assertions === null ? null : asRecord(assertions['terminalLifecycle']);
+    const sealAssertion = assertions === null ? null : asRecord(assertions['sealEligibility']);
+    checks.check(
+      assertions !== null && arrayEqual(Object.keys(assertions).sort(), ['sealEligibility', 'terminalLifecycle']),
+      'FORMAL_TERMINAL_ASSERTION_SET_INVALID',
+      'runtime/terminal-conclusion.json#/assertions',
+    );
+    checks.check(
+      jsonEqual(lifecycleAssertion, {
+        status: 'PASSED',
+        expected: terminalLifecycleExpected,
+        actual: terminalLifecycleActual,
+        failureCodes: [],
+      }),
+      'FORMAL_TERMINAL_LIFECYCLE_ASSERTION_INCONSISTENT',
+      'runtime/terminal-conclusion.json#/assertions/terminalLifecycle',
+    );
+    checks.check(
+      jsonEqual(sealAssertion, {
+        status: 'PASSED',
+        expected: sealEligibilityExpected,
+        actual: sealEligibilityActual,
+        failureCodes: [],
+      }),
+      'FORMAL_TERMINAL_SEAL_ASSERTION_INCONSISTENT',
+      'runtime/terminal-conclusion.json#/assertions/sealEligibility',
+    );
+  }
+  checks.check(
+    summary.raw['producerProtocolEvidenceCount'] === producerProtocolEvidenceCount,
+    'FORMAL_SUMMARY_PRODUCER_EVIDENCE_COUNT_MISMATCH',
+    'abg-results.json#/producerProtocolEvidenceCount',
+  );
+  validateAbg40TerminalReferences(formalProducer, abg40Proof, checks);
+  checks.check(summary.raw['status'] === 'PASSED', 'FORMAL_SUMMARY_STATUS_NOT_PASSED', 'abg-results.json#/status');
+  checks.check(summary.raw['cleanupStatus'] === 'PASSED', 'FORMAL_SUMMARY_CLEANUP_STATUS_NOT_PASSED', 'abg-results.json#/cleanupStatus');
+  checks.check(summary.raw['terminalConclusionStatus'] === 'PASSED', 'FORMAL_SUMMARY_TERMINAL_STATUS_NOT_PASSED', 'abg-results.json#/terminalConclusionStatus');
+  checks.check(summary.raw['sealEligibilityStatus'] === 'PASSED', 'FORMAL_SUMMARY_SEAL_STATUS_NOT_PASSED', 'abg-results.json#/sealEligibilityStatus');
+
+  if (finalOutcome !== null) {
+    checks.check(finalOutcome['schemaVersion'] === 'phase-01.formal-runtime-outcome.v2', 'FORMAL_FINAL_OUTCOME_SCHEMA_INVALID', 'runtime/final-outcome.json');
+    checks.check(finalOutcome['status'] === summary.raw['status'], 'FORMAL_FINAL_OUTCOME_STATUS_MISMATCH', 'runtime/final-outcome.json#/status');
+    checks.check(finalOutcome['cleanupStatus'] === summary.raw['cleanupStatus'], 'FORMAL_FINAL_OUTCOME_CLEANUP_STATUS_MISMATCH', 'runtime/final-outcome.json#/cleanupStatus');
+    checks.check(finalOutcome['terminalConclusionStatus'] === summary.raw['terminalConclusionStatus'], 'FORMAL_FINAL_OUTCOME_TERMINAL_STATUS_MISMATCH', 'runtime/final-outcome.json#/terminalConclusionStatus');
+    checks.check(finalOutcome['sealEligibilityStatus'] === summary.raw['sealEligibilityStatus'], 'FORMAL_FINAL_OUTCOME_SEAL_STATUS_MISMATCH', 'runtime/final-outcome.json#/sealEligibilityStatus');
+    checks.check(jsonEqual(finalOutcome['failureCodes'], summary.raw['failureCodes']), 'FORMAL_FINAL_OUTCOME_FAILURE_CODES_MISMATCH', 'runtime/final-outcome.json#/failureCodes');
+    checks.check(finalOutcome['sealPendingAtWrite'] === true, 'FORMAL_FINAL_OUTCOME_SEAL_PENDING_INVALID', 'runtime/final-outcome.json#/sealPendingAtWrite');
+  }
+}
+
+async function readLifecycleRecord(
+  snapshot: EvidenceSnapshot,
+  path: string,
+  checks: ReviewChecks,
+  missingCode: string,
+): Promise<Readonly<Record<string, unknown>> | null> {
+  const bytes = await readSnapshotBytes(snapshot, path, checks, missingCode);
+  return bytes === null ? null : parseJsonRecord(bytes, checks, 'FORMAL_LIFECYCLE_JSON_INVALID', path);
+}
+
+function validateProducerEvidenceSnapshot(
+  record: Readonly<Record<string, unknown>>,
+  snapshot: EvidenceSnapshot,
+  manifest: ManifestState,
+  checks: ReviewChecks,
+): number {
+  const location = 'runtime/producer-evidence-snapshot.json';
+  checks.check(
+    record['schemaVersion'] === 'phase-01.formal-producer-evidence-snapshot.v1',
+    'FORMAL_PRODUCER_SNAPSHOT_SCHEMA_INVALID',
+    location,
+  );
+  checks.check(
+    record['statusBeforeCleanup'] === 'PASSED',
+    'FORMAL_PRODUCER_SNAPSHOT_STATUS_NOT_PASSED',
+    location + '#/statusBeforeCleanup',
+  );
+  const failureCodes = parseStringArray(
+    record['failureCodes'],
+    checks,
+    'FORMAL_PRODUCER_SNAPSHOT_FAILURE_CODES_INVALID',
+    location + '#/failureCodes',
+  );
+  checks.check(
+    failureCodes.length === 0,
+    'FORMAL_PRODUCER_SNAPSHOT_HAS_FAILURE_CODES',
+    location + '#/failureCodes',
+  );
+  const discoveredEvidence = parseSnapshotFileIdentities(
+    record['discoveredEvidence'],
+    snapshot,
+    manifest,
+    checks,
+    'FORMAL_PRODUCER_SNAPSHOT_DISCOVERED_EVIDENCE_INVALID',
+    location + '#/discoveredEvidence',
+  );
+  checks.check(
+    record['discoveredEvidenceCount'] === discoveredEvidence.length,
+    'FORMAL_PRODUCER_SNAPSHOT_DISCOVERED_COUNT_MISMATCH',
+    location + '#/discoveredEvidenceCount',
+  );
+  const producerEvidence = parseSnapshotFileIdentities(
+    record['producerProtocolEvidence'],
+    snapshot,
+    manifest,
+    checks,
+    'FORMAL_PRODUCER_SNAPSHOT_PROTOCOL_EVIDENCE_INVALID',
+    location + '#/producerProtocolEvidence',
+  );
+  const producerCount = positiveIntegerField(record, 'producerProtocolEvidenceCount');
+  checks.check(
+    producerCount !== null && producerCount === producerEvidence.length,
+    'FORMAL_PRODUCER_SNAPSHOT_COUNT_MISMATCH',
+    location + '#/producerProtocolEvidenceCount',
+  );
+  checks.check(producerEvidence.length > 0, 'FORMAL_PRODUCER_SNAPSHOT_EMPTY', location);
+  checks.check(record['absenceIsNotSuccess'] === false, 'FORMAL_PRODUCER_SNAPSHOT_ABSENCE_POLICY_INVALID', location + '#/absenceIsNotSuccess');
+  const recordedAt = stringField(record, 'recordedAt');
+  checks.check(
+    recordedAt !== null && isLocalDateTime(recordedAt),
+    'FORMAL_PRODUCER_SNAPSHOT_RECORDED_AT_INVALID',
+    location + '#/recordedAt',
+  );
+  const discoveredKeys = new Set(discoveredEvidence.map(snapshotIdentityKey));
+  for (const identity of producerEvidence) {
+    checks.check(
+      discoveredKeys.has(snapshotIdentityKey(identity)),
+      'FORMAL_PRODUCER_SNAPSHOT_PROTOCOL_NOT_DISCOVERED',
+      location + '#/producerProtocolEvidence/' + identity.path,
+    );
+  }
+  const expectedProducerPaths = [...manifest.entries.keys()]
+    .filter(isPreCleanupProducerProtocolPath)
+    .sort((left, right) => left.localeCompare(right));
+  const actualProducerPaths = producerEvidence.map((identity) => identity.path)
+    .sort((left, right) => left.localeCompare(right));
+  checks.check(
+    arrayEqual(actualProducerPaths, expectedProducerPaths),
+    'FORMAL_PRODUCER_SNAPSHOT_COVERAGE_MISMATCH',
+    location + '#/producerProtocolEvidence',
+  );
+  return producerCount ?? 0;
+}
+
+function parseSnapshotFileIdentities(
+  value: unknown,
+  snapshot: EvidenceSnapshot,
+  manifest: ManifestState,
+  checks: ReviewChecks,
+  code: string,
+  location: string,
+): readonly SnapshotFileIdentity[] {
+  const records = parseRecordArray(value, checks, code, location);
+  const identities: SnapshotFileIdentity[] = [];
+  for (const [index, record] of records.entries()) {
+    const itemLocation = location + '/' + index;
+    const path = meaningfulStringField(record, 'path');
+    const byteLength = nonNegativeIntegerField(record, 'byteLength');
+    const digest = meaningfulStringField(record, 'sha256');
+    checks.check(path !== null && isSafeRelativePath(path), code, itemLocation + '/path');
+    checks.check(byteLength !== null, code, itemLocation + '/byteLength');
+    checks.check(digest !== null && isSha256(digest), code, itemLocation + '/sha256');
+    if (path === null || byteLength === null || digest === null || !isSafeRelativePath(path)) continue;
+    const identity = { path, byteLength, sha256: digest };
+    identities.push(identity);
+    const manifestEntry = manifest.entries.get(path);
+    const file = snapshot.files.get(path);
+    checks.check(manifestEntry !== undefined, 'FORMAL_PRODUCER_SNAPSHOT_FILE_NOT_MANIFESTED', itemLocation);
+    checks.check(file !== undefined, 'FORMAL_PRODUCER_SNAPSHOT_FILE_MISSING', itemLocation);
+    checks.check(
+      manifestEntry !== undefined &&
+        file !== undefined &&
+        manifestEntry.byteLength === byteLength &&
+        manifestEntry.sha256 === digest &&
+        file.byteLength === byteLength &&
+        file.sha256 === digest,
+      'FORMAL_PRODUCER_SNAPSHOT_FILE_IDENTITY_MISMATCH',
+      itemLocation,
+    );
+  }
+  checks.check(
+    new Set(identities.map((identity) => identity.path)).size === identities.length,
+    code,
+    location,
+  );
+  return identities;
+}
+
+function snapshotIdentityKey(identity: SnapshotFileIdentity): string {
+  return `${identity.path}:${identity.byteLength}:${identity.sha256}`;
+}
+
+function isPreCleanupProducerProtocolPath(path: string): boolean {
+  return path === 'shared/producer-evidence-index.json' ||
+    (/^shared\/[^/]+\/producer-evidence\.json$/u.test(path) &&
+      !path.startsWith('shared/formal-run/'));
+}
+
+function parseRuntimeResourceArray(
+  value: unknown,
+  checks: ReviewChecks,
+  code: string,
+  location: string,
+): readonly Readonly<Record<string, unknown>>[] {
+  const records = parseRecordArray(value, checks, code, location);
+  for (const [index, record] of records.entries()) {
+    const itemLocation = location + '/' + index;
+    checks.check(
+      ['process', 'container', 'volume', 'network'].includes(String(record['resourceType'])),
+      code,
+      itemLocation + '/resourceType',
+    );
+    checks.check(meaningfulStringField(record, 'id') !== null, code, itemLocation + '/id');
+    checks.check(meaningfulStringField(record, 'name') !== null, code, itemLocation + '/name');
+    checks.check(typeof record['present'] === 'boolean', code, itemLocation + '/present');
+  }
+  return records;
+}
+
+function parseRuntimePortArray(
+  value: unknown,
+  checks: ReviewChecks,
+  code: string,
+  location: string,
+): readonly Readonly<Record<string, unknown>>[] {
+  const records = parseRecordArray(value, checks, code, location);
+  for (const [index, record] of records.entries()) {
+    const itemLocation = location + '/' + index;
+    const port = positiveIntegerField(record, 'port');
+    checks.check(port !== null && port <= 65_535, code, itemLocation + '/port');
+    checks.check(typeof record['occupied'] === 'boolean', code, itemLocation + '/occupied');
+    checks.check(
+      record['verificationError'] === null || typeof record['verificationError'] === 'string',
+      code,
+      itemLocation + '/verificationError',
+    );
+  }
+  return records;
+}
+
+function uniqueLifecycleResources(
+  resources: readonly Readonly<Record<string, unknown>>[],
+): readonly Readonly<Record<string, unknown>>[] {
+  return [...new Map(resources.map((resource) => [
+    `${String(resource['resourceType'])}:${String(resource['id'])}:${String(resource['name'])}`,
+    resource,
+  ])).values()];
+}
+
+function validateNestedRunIdentity(
+  record: Readonly<Record<string, unknown>>,
+  expected: {
+    readonly runId: string | null;
+    readonly runSequence: number | null;
+    readonly gitCommitSha: string | null;
+    readonly runtimeNamespace: string | null;
+  },
+  checks: ReviewChecks,
+  location: string,
+): void {
+  const identity = asRecord(record['runIdentity']);
+  checks.check(identity !== null, 'FORMAL_LIFECYCLE_RUN_IDENTITY_MISSING', location + '#/runIdentity');
+  if (identity === null) return;
+  checks.check(identity['runId'] === expected.runId, 'FORMAL_LIFECYCLE_RUN_IDENTITY_MISMATCH', location + '#/runIdentity/runId');
+  checks.check(identity['runSequence'] === expected.runSequence, 'FORMAL_LIFECYCLE_RUN_IDENTITY_MISMATCH', location + '#/runIdentity/runSequence');
+  checks.check(identity['gitCommitSha'] === expected.gitCommitSha, 'FORMAL_LIFECYCLE_RUN_IDENTITY_MISMATCH', location + '#/runIdentity/gitCommitSha');
+  checks.check(identity['runtimeNamespace'] === expected.runtimeNamespace, 'FORMAL_LIFECYCLE_RUN_IDENTITY_MISMATCH', location + '#/runIdentity/runtimeNamespace');
+}
+
+function validateAbg40TerminalReferences(
+  formalProducer: Readonly<Record<string, unknown>> | null,
+  proof: Readonly<Record<string, unknown>> | null,
+  checks: ReviewChecks,
+): void {
+  const expectedAssertions = [
+    'ABG-40:formal-terminal-lifecycle-complete',
+    'ABG-40:formal-evidence-seal-eligible',
+  ] as const;
+  if (proof !== null) {
+    checks.check(
+      arrayEqual(stringArrayValue(proof['assertionIds']), expectedAssertions),
+      'ABG40_PROOF_ASSERTIONS_INVALID',
+      'gates/ABG-40/producer/result.json#/assertionIds',
+    );
+  }
+  if (formalProducer === null) return;
+  const scenarios = asRecord(formalProducer['scenarios']);
+  const scenario = scenarios === null ? null : asRecord(scenarios['RUN-FORMAL-TERMINAL-LIFECYCLE']);
+  const assertions = scenario === null ? null : asRecord(scenario['assertions']);
+  const terminalAssertion = assertions === null ? null : asRecord(assertions[expectedAssertions[0]]);
+  const sealAssertion = assertions === null ? null : asRecord(assertions[expectedAssertions[1]]);
+  checks.check(terminalAssertion !== null, 'ABG40_TERMINAL_ASSERTION_MISSING', 'formal-run/producer-evidence.json');
+  checks.check(sealAssertion !== null, 'ABG40_SEAL_ASSERTION_MISSING', 'formal-run/producer-evidence.json');
+  for (const [assertion, pointer] of [
+    [terminalAssertion, '/assertions/terminalLifecycle/status'],
+    [sealAssertion, '/assertions/sealEligibility/status'],
+  ] as const) {
+    if (assertion === null) continue;
+    const items = arrayValue(assertion['evidenceItems']).map(asRecord).filter(
+      (value): value is Readonly<Record<string, unknown>> => value !== null,
+    );
+    checks.check(items.length > 0, 'ABG40_TERMINAL_EVIDENCE_REFERENCE_INVALID', 'formal-run/producer-evidence.json');
+    checks.check(items.every((item) =>
+      item['relativePath'] === 'runtime/terminal-conclusion.json' && item['jsonPointer'] === pointer
+    ), 'ABG40_TERMINAL_EVIDENCE_REFERENCE_INVALID', 'formal-run/producer-evidence.json');
+  }
+}
+
 async function validateTopLevelRunIdentities(
   snapshot: EvidenceSnapshot,
   manifest: ManifestState,
@@ -1914,13 +2627,62 @@ function parseStringArray(
   return strings;
 }
 
+function parseNumberArray(
+  value: unknown,
+  checks: ReviewChecks,
+  code: string,
+  location: string,
+): readonly number[] {
+  if (
+    !checks.check(
+      Array.isArray(value) && value.every((item) => Number.isSafeInteger(item)),
+      code,
+      location,
+    ) ||
+    !Array.isArray(value)
+  ) return [];
+  const numbers = value as readonly number[];
+  checks.check(new Set(numbers).size === numbers.length, code, location);
+  return numbers;
+}
+
+function parseRecordArray(
+  value: unknown,
+  checks: ReviewChecks,
+  code: string,
+  location: string,
+): readonly Readonly<Record<string, unknown>>[] {
+  if (!checks.check(Array.isArray(value), code, location) || !Array.isArray(value)) return [];
+  const records: Readonly<Record<string, unknown>>[] = [];
+  for (const [index, item] of value.entries()) {
+    const record = asRecord(item);
+    checks.check(record !== null, code, location + '/' + index);
+    if (record !== null) records.push(record);
+  }
+  return records;
+}
+
 function stringArrayValue(value: unknown): readonly string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
     ? value as readonly string[]
     : [];
 }
 
+function numberArrayValue(value: unknown): readonly number[] {
+  return Array.isArray(value) && value.every((item) => Number.isSafeInteger(item))
+    ? value as readonly number[]
+    : [];
+}
+
+function arrayValue(value: unknown): readonly unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
 function arrayEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function numberArrayEqual(left: readonly number[], right: readonly number[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 

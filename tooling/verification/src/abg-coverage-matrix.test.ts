@@ -25,7 +25,21 @@ describe('ABG coverage matrix', () => {
     expect(ABG_COVERAGE_MATRIX.map((entry) => entry.evidenceClass)).toEqual(
       ABG_GATES.map((gate) => gate.evidenceClass),
     );
-    expect(ABG_COVERAGE_MATRIX.flatMap((entry) => entry.assertionIds)).toHaveLength(49);
+    expect(ABG_COVERAGE_MATRIX.flatMap((entry) => entry.assertionIds)).toHaveLength(50);
+  });
+
+  it('binds ABG-40 to both post-cleanup terminal lifecycle assertions', () => {
+    const entry = ABG_COVERAGE_MATRIX.find((candidate) => candidate.gateId === 'ABG-40');
+
+    expect(entry).toMatchObject({
+      scenarioIds: ['RUN-FORMAL-TERMINAL-LIFECYCLE'],
+      assertionIds: [
+        'ABG-40:formal-terminal-lifecycle-complete',
+        'ABG-40:formal-evidence-seal-eligible',
+      ],
+      producerIds: ['formal-run'],
+    });
+    expect(entry?.evidenceSelectors).toHaveLength(2);
   });
 
   it('has meaningful scenarios, gate-scoped assertions, controlled producers, and strict selectors', () => {

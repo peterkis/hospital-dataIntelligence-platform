@@ -44,7 +44,11 @@ export interface FormalRuntimeFinalOutcome<T> {
   readonly failureCodes: readonly string[];
   readonly preflight: FormalPreflightReport;
   readonly execution: FormalExecutionResult<T> | null;
+  readonly startedResources: RuntimeResourceSnapshot;
   readonly cleanup: FormalCleanupReport;
+  readonly finalResources: RuntimeResourceSnapshot;
+  readonly producerEvidencePersistedBeforeCleanup: boolean;
+  readonly outputDirectoryExclusive: boolean;
 }
 
 export interface FormalRuntimePreCleanupOutcome<T> {
@@ -52,19 +56,27 @@ export interface FormalRuntimePreCleanupOutcome<T> {
   readonly failureCodes: readonly string[];
   readonly preflight: FormalPreflightReport;
   readonly execution: FormalExecutionResult<T> | null;
-  readonly resources: RuntimeResourceSnapshot;
+  readonly startedResources: RuntimeResourceSnapshot;
 }
 
-export interface FormalRuntimeLifecycleCallbacks<T> {
-  execute(context: FormalRuntimeContext): Promise<FormalExecutionResult<T>>;
+export interface FormalRuntimeFinalizationResult<T> {
+  readonly status: 'PASSED' | 'FAILED';
+  readonly terminalConclusionStatus: 'PASSED' | 'FAILED';
+  readonly sealEligibilityStatus: 'PASSED' | 'FAILED';
+  readonly failureCodes: readonly string[];
+  readonly value: T;
+}
+
+export interface FormalRuntimeLifecycleCallbacks<TExecution, TFinal = unknown> {
+  executeBeforeCleanup(context: FormalRuntimeContext): Promise<FormalExecutionResult<TExecution>>;
   persistEvidenceBeforeCleanup(
     context: FormalRuntimeContext,
-    outcome: FormalRuntimePreCleanupOutcome<T>,
+    outcome: FormalRuntimePreCleanupOutcome<TExecution>,
   ): Promise<void>;
-  writeFinalEvidence(
+  finalizeAfterCleanup(
     context: FormalRuntimeContext,
-    outcome: FormalRuntimeFinalOutcome<T>,
-  ): Promise<void>;
+    outcome: FormalRuntimeFinalOutcome<TExecution>,
+  ): Promise<FormalRuntimeFinalizationResult<TFinal>>;
   sealEvidence(context: FormalRuntimeContext): Promise<void>;
 }
 
@@ -86,12 +98,14 @@ export interface FormalRuntimeLifecycleDependencies {
   readonly createController: () => FormalRuntimeController;
 }
 
-export interface FormalRuntimeLifecycleResult<T> {
+export interface FormalRuntimeLifecycleResult<TExecution, TFinal = unknown> {
   readonly status: 'PASSED' | 'FAILED';
   readonly identity: FormalRunIdentity;
   readonly preflight: FormalPreflightReport;
-  readonly execution: FormalExecutionResult<T> | null;
+  readonly execution: FormalExecutionResult<TExecution> | null;
+  readonly finalization: FormalRuntimeFinalizationResult<TFinal> | null;
   readonly cleanup: FormalCleanupReport | null;
+  readonly finalResources: RuntimeResourceSnapshot | null;
   readonly outputDirectoryCreated: boolean;
   readonly sealFailureCode: string | null;
 }
@@ -198,20 +212,22 @@ export function createDefaultFormalRuntimeLifecycleDependencies(): FormalRuntime
   };
 }
 
-export async function runFormalRuntimeLifecycle<T>(
+export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
   input: {
     readonly repositoryRoot: string;
     readonly outputDirectory: string;
     readonly run: FormalRunSeed;
   },
-  callbacks: FormalRuntimeLifecycleCallbacks<T>,
+  callbacks: FormalRuntimeLifecycleCallbacks<TExecution, TFinal>,
   dependencies: FormalRuntimeLifecycleDependencies = createDefaultFormalRuntimeLifecycleDependencies(),
-): Promise<FormalRuntimeLifecycleResult<T>> {
+): Promise<FormalRuntimeLifecycleResult<TExecution, TFinal>> {
   const controller = dependencies.createController();
   controller.installProcessHandlers();
   let outputDirectoryCreated = false;
   let cleanup: FormalCleanupReport | null = null;
-  let execution: FormalExecutionResult<T> | null = null;
+  let execution: FormalExecutionResult<TExecution> | null = null;
+  let finalization: FormalRuntimeFinalizationResult<TFinal> | null = null;
+  let finalResources: RuntimeResourceSnapshot | null = null;
   let sealFailureCode: string | null = null;
   let preflight: FormalPreflightReport;
   try {
@@ -229,7 +245,9 @@ export async function runFormalRuntimeLifecycle<T>(
         identity: preflight.runIdentity,
         preflight,
         execution: null,
+        finalization: null,
         cleanup: null,
+        finalResources: null,
         outputDirectoryCreated: false,
         sealFailureCode: null,
       };
@@ -264,7 +282,7 @@ export async function runFormalRuntimeLifecycle<T>(
     } else {
       try {
         controller.throwIfAborted();
-        execution = await callbacks.execute(context);
+        execution = await callbacks.executeBeforeCleanup(context);
         if (!execution.passed) failureCodes.push(execution.failureCode ?? 'FORMAL_EXECUTION_FAILED');
         controller.throwIfAborted();
       } catch (error) {
@@ -318,7 +336,7 @@ export async function runFormalRuntimeLifecycle<T>(
         failureCodes: uniqueFailureCodes(failureCodes),
         preflight,
         execution,
-        resources: startedResources,
+        startedResources,
       });
       producerEvidencePersisted = true;
     } catch (error) {
@@ -355,7 +373,6 @@ export async function runFormalRuntimeLifecycle<T>(
       failureCodes,
     );
 
-    let finalResources: RuntimeResourceSnapshot;
     try {
       const teardown = await performFormalTeardown({
         identity: preflight.runIdentity,
@@ -386,56 +403,72 @@ export async function runFormalRuntimeLifecycle<T>(
       failureCodes,
     );
 
-    const outcomeBeforeManifest: FormalRuntimeFinalOutcome<T> = {
+    const outcomeBeforeManifest: FormalRuntimeFinalOutcome<TExecution> = {
       status: failureCodes.length === 0 ? 'PASSED' : 'FAILED',
       failureCodes: uniqueFailureCodes(failureCodes),
       preflight,
       execution,
+      startedResources,
       cleanup,
+      finalResources,
+      producerEvidencePersistedBeforeCleanup: producerEvidencePersisted,
+      outputDirectoryExclusive: outputDirectoryCreated,
     };
     try {
-      await callbacks.writeFinalEvidence(context, outcomeBeforeManifest);
+      finalization = await callbacks.finalizeAfterCleanup(context, outcomeBeforeManifest);
+      failureCodes.push(...finalization.failureCodes);
+      if (finalization.status !== 'PASSED' && finalization.failureCodes.length === 0) {
+        failureCodes.push('FORMAL_TERMINAL_FINALIZATION_FAILED');
+      }
     } catch (error) {
       failureCodes.push('FORMAL_FINAL_EVIDENCE_WRITE_FAILED');
       await writeBestEffortFailure(dependencies.fileSystem, input.outputDirectory,
         'runtime/final-evidence-failure.json', error, dependencies.now());
     }
-    await writeLifecycleJson(
+    const terminalConclusionStatus = finalization?.terminalConclusionStatus ?? 'FAILED';
+    const sealEligibilityStatus = finalization?.sealEligibilityStatus ?? 'FAILED';
+    const finalOutcomePersisted = await writeLifecycleJson(
       dependencies.fileSystem,
       input.outputDirectory,
       'runtime/final-outcome.json',
       {
-        schemaVersion: 'phase-01.formal-runtime-outcome.v1',
+        schemaVersion: 'phase-01.formal-runtime-outcome.v2',
         runIdentity: preflight.runIdentity,
-        status: failureCodes.length === 0 ? 'PASSED' : 'FAILED',
+        status: failureCodes.length === 0 && finalization?.status === 'PASSED' ? 'PASSED' : 'FAILED',
         failureCodes: uniqueFailureCodes(failureCodes),
         cleanupStatus: cleanup.status,
+        terminalConclusionStatus,
+        sealEligibilityStatus,
         sealPendingAtWrite: true,
         completedEvidenceAt: dependencies.now(),
       },
       'FORMAL_FINAL_OUTCOME_WRITE_FAILED',
       failureCodes,
     );
-    try {
-      await callbacks.sealEvidence(context);
-    } catch (error) {
-      sealFailureCode = 'FORMAL_MANIFEST_GENERATION_FAILED';
-      failureCodes.push(sealFailureCode);
-      await writeBestEffortManifestFailure(
-        dependencies.fileSystem,
-        input.outputDirectory,
-        preflight.runIdentity,
-        uniqueFailureCodes(failureCodes),
-        error,
-        dependencies.now(),
-      );
+    if (failureCodes.length === 0 && finalization?.status === 'PASSED' && finalOutcomePersisted) {
+      try {
+        await callbacks.sealEvidence(context);
+      } catch (error) {
+        sealFailureCode = 'FORMAL_MANIFEST_GENERATION_FAILED';
+        failureCodes.push(sealFailureCode);
+        await writeBestEffortManifestFailure(
+          dependencies.fileSystem,
+          input.outputDirectory,
+          preflight.runIdentity,
+          uniqueFailureCodes(failureCodes),
+          error,
+          dependencies.now(),
+        );
+      }
     }
     return {
-      status: failureCodes.length === 0 ? 'PASSED' : 'FAILED',
+      status: failureCodes.length === 0 && finalization?.status === 'PASSED' ? 'PASSED' : 'FAILED',
       identity: preflight.runIdentity,
       preflight,
       execution,
+      finalization,
       cleanup,
+      finalResources,
       outputDirectoryCreated,
       sealFailureCode,
     };

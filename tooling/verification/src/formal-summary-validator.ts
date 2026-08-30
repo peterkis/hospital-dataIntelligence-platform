@@ -5,8 +5,9 @@ import {
   type AbgReferenceKind,
 } from './abg-coverage-matrix.js';
 import { canonicalJson } from './evidence/recorder.js';
+import { FORMAL_RUNTIME_PORTS } from './runtime/formal-runtime-contract.js';
 
-const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v3';
+export const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v4';
 const GATE_RESULT_SCHEMA_VERSION = 'phase-01.abg-gate-result.v3';
 const CONCLUSION_SCOPE = 'Phase 01 POC executable architecture baseline only; not full POC or production readiness.';
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
@@ -44,8 +45,6 @@ export function validateFormalAbgSummary(
     summary['producerProtocolIdentityDigest'] === expected.producerProtocolIdentityDigest,
     'PRODUCER_PROTOCOL_DIGEST_MISMATCH',
   );
-  assert(summary['frozenInputsStable'] === true, 'FROZEN_INPUTS_NOT_STABLE');
-  assert(summary['authorityIdentityStable'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE');
   assert(summary['selectorSetsDistinct'] === true, 'SELECTOR_SETS_NOT_DECLARED_DISTINCT');
   assert(summary['timezone'] === 'Asia/Shanghai', 'RUN_TIMEZONE_INVALID');
   assert(summary['conclusionScope'] === CONCLUSION_SCOPE, 'CONCLUSION_SCOPE_INVALID');
@@ -75,8 +74,8 @@ export function validateFormalAbgSummary(
   const failedCount = statuses.filter((status) => status === 'FAILED').length;
   assert(summary['passedCount'] === passedCount, 'PASSED_COUNT_MISMATCH');
   assert(summary['failedCount'] === failedCount, 'FAILED_COUNT_MISMATCH');
-  const derivedStatus = failedCount === 0 ? 'PASSED' : 'FAILED';
-  assert(summary['status'] === derivedStatus, 'RUN_STATUS_MISMATCH');
+  const derivedGateStatus = failedCount === 0 ? 'PASSED' : 'FAILED';
+  assert(summary['status'] !== 'PASSED' || derivedGateStatus === 'PASSED', 'RUN_STATUS_MISMATCH');
 
   const selectorSignatures: string[] = [];
   for (const [index, gate] of ABG_GATES.entries()) {
@@ -133,6 +132,67 @@ export function validateFormalAbgSummary(
     selectorSignatures.push(refs.map(selectorSignature).sort().join('|'));
   }
   assert(new Set(selectorSignatures).size === ABG_GATES.length, 'GATE_SELECTOR_SETS_NOT_DISTINCT');
+
+  const nonFormalResults = results.slice(0, 39);
+  const derivedNonFormalGateStatus = nonFormalResults.length === 39 &&
+    nonFormalResults.every((result) => result['status'] === 'PASSED')
+    ? 'PASSED'
+    : 'FAILED';
+  assert(summary['preflightStatus'] === 'PASSED', 'PREFLIGHT_STATUS_NOT_PASSED');
+  assert(summary['setupStatus'] === 'PASSED', 'SETUP_STATUS_NOT_PASSED');
+  assert(summary['nonFormalGateStatus'] === derivedNonFormalGateStatus, 'NON_FORMAL_GATE_STATUS_MISMATCH');
+  assert(derivedNonFormalGateStatus === 'PASSED', 'NON_FORMAL_GATE_STATUS_NOT_PASSED');
+
+  const producerEvidencePersisted = summary['producerEvidencePersistedBeforeCleanup'] === true;
+  const producerProtocolEvidenceCount = summary['producerProtocolEvidenceCount'];
+  const derivedProducerEvidenceStatus = producerEvidencePersisted &&
+    Number.isSafeInteger(producerProtocolEvidenceCount) && Number(producerProtocolEvidenceCount) > 0
+    ? 'PASSED'
+    : 'FAILED';
+  assert(summary['producerEvidenceStatus'] === derivedProducerEvidenceStatus, 'PRODUCER_EVIDENCE_STATUS_MISMATCH');
+  assert(derivedProducerEvidenceStatus === 'PASSED', 'PRODUCER_EVIDENCE_STATUS_NOT_PASSED');
+
+  assert(summary['cleanupStatus'] === 'PASSED', 'CLEANUP_STATUS_NOT_PASSED');
+  assert(summary['residualResourceCount'] === 0, 'RESIDUAL_RESOURCES_PRESENT');
+  assert(summary['residualContainerCount'] === 0, 'RESIDUAL_CONTAINER_PRESENT');
+  assert(summary['residualVolumeCount'] === 0, 'RESIDUAL_VOLUME_PRESENT');
+  assert(summary['residualNetworkCount'] === 0, 'RESIDUAL_NETWORK_PRESENT');
+  assertExactNumberArray(summary['occupiedRequiredPorts'], [], 'OCCUPIED_REQUIRED_PORTS_PRESENT');
+  assertExactNumberArray(
+    summary['requiredPortsObserved'],
+    FORMAL_RUNTIME_PORTS,
+    'REQUIRED_PORT_OBSERVATIONS_INCOMPLETE',
+  );
+  assert(summary['pruneCommandsInvoked'] === false, 'PRUNE_COMMANDS_INVOKED');
+  assert(summary['frozenInputsStableAfterCleanup'] === true, 'FROZEN_INPUTS_NOT_STABLE');
+  assert(summary['authorityIdentityStableAfterCleanup'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE');
+  assert(summary['outputDirectoryExclusive'] === true, 'OUTPUT_DIRECTORY_NOT_EXCLUSIVE');
+  assert(summary['terminalConclusionStatus'] === 'PASSED', 'TERMINAL_CONCLUSION_STATUS_NOT_PASSED');
+  assert(summary['sealEligibilityStatus'] === 'PASSED', 'SEAL_ELIGIBILITY_STATUS_NOT_PASSED');
+
+  const derivedLifecycleStatus = summary['preflightStatus'] === 'PASSED' &&
+    summary['setupStatus'] === 'PASSED' &&
+    derivedNonFormalGateStatus === 'PASSED' &&
+    derivedProducerEvidenceStatus === 'PASSED' &&
+    summary['cleanupStatus'] === 'PASSED' &&
+    summary['residualResourceCount'] === 0 &&
+    summary['residualContainerCount'] === 0 &&
+    summary['residualVolumeCount'] === 0 &&
+    summary['residualNetworkCount'] === 0 &&
+    summary['frozenInputsStableAfterCleanup'] === true &&
+    summary['authorityIdentityStableAfterCleanup'] === true &&
+    summary['outputDirectoryExclusive'] === true &&
+    summary['terminalConclusionStatus'] === 'PASSED' &&
+    summary['sealEligibilityStatus'] === 'PASSED'
+    ? 'PASSED'
+    : 'FAILED';
+  assert(summary['lifecycleStatus'] === derivedLifecycleStatus, 'LIFECYCLE_STATUS_MISMATCH');
+  const derivedStatus = derivedGateStatus === 'PASSED' && derivedLifecycleStatus === 'PASSED'
+    ? 'PASSED'
+    : 'FAILED';
+  assert(summary['status'] === derivedStatus, 'RUN_STATUS_MISMATCH');
+  const failureCodes = requireStringArray(summary['failureCodes'], 'RUN_FAILURE_CODES_INVALID');
+  assert(failureCodes.length === 0, 'PASSED_RUN_HAS_FAILURE_CODES');
 }
 
 function validateSetupResults(value: unknown, expectedDigests: readonly string[]): void {
@@ -215,6 +275,12 @@ function requireStringArray(value: unknown, code: string): readonly string[] {
 
 function assertExactStringArray(value: unknown, expected: readonly string[], code: string): void {
   const actual = requireStringArray(value, code);
+  assert(actual.length === expected.length && actual.every((item, index) => item === expected[index]), code);
+}
+
+function assertExactNumberArray(value: unknown, expected: readonly number[], code: string): void {
+  assert(Array.isArray(value) && value.every((item) => Number.isSafeInteger(item)), code);
+  const actual = value as readonly number[];
   assert(actual.length === expected.length && actual.every((item, index) => item === expected[index]), code);
 }
 

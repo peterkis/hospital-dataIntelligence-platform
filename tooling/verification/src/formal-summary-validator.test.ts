@@ -38,6 +38,32 @@ describe('formal ABG summary validator', () => {
 
     expect(() => validateFormalAbgSummary(summary, expectations())).not.toThrow();
   });
+
+  it.each([
+    ['cleanupStatus', 'CLEANUP_STATUS_NOT_PASSED'],
+    ['terminalConclusionStatus', 'TERMINAL_CONCLUSION_STATUS_NOT_PASSED'],
+    ['sealEligibilityStatus', 'SEAL_ELIGIBILITY_STATUS_NOT_PASSED'],
+  ] as const)('rejects PASSED when %s is FAILED', (field, code) => {
+    const summary = validSummary();
+    summary[field] = 'FAILED';
+
+    expect(() => validateFormalAbgSummary(summary, expectations())).toThrowError(
+      new RegExp(`^${code}$`, 'u'),
+    );
+  });
+
+  it.each([
+    ['residualContainerCount', 'RESIDUAL_CONTAINER_PRESENT'],
+    ['residualVolumeCount', 'RESIDUAL_VOLUME_PRESENT'],
+    ['residualNetworkCount', 'RESIDUAL_NETWORK_PRESENT'],
+  ] as const)('rejects PASSED when %s is nonzero', (field, code) => {
+    const summary = validSummary();
+    summary[field] = 1;
+
+    expect(() => validateFormalAbgSummary(summary, expectations())).toThrowError(
+      new RegExp(`^${code}$`, 'u'),
+    );
+  });
 });
 
 function expectations(): FormalAbgSummaryValidationExpectations {
@@ -112,7 +138,7 @@ function validSummary() {
     };
   });
   return {
-    schemaVersion: 'phase-01.abg-run.v3',
+    schemaVersion: 'phase-01.abg-run.v4',
     runId: RUN_ID,
     runSequence: RUN_SEQUENCE,
     planDigest: expected.planDigest,
@@ -120,9 +146,28 @@ function validSummary() {
     frozenInputsDigest: expected.frozenInputsDigest,
     coverageMatrixDigest: expected.coverageMatrixDigest,
     producerProtocolIdentityDigest: expected.producerProtocolIdentityDigest,
-    frozenInputsStable: true,
-    authorityIdentityStable: true,
+    preflightStatus: 'PASSED',
+    setupStatus: 'PASSED',
+    nonFormalGateStatus: 'PASSED',
+    producerEvidenceStatus: 'PASSED',
+    producerEvidencePersistedBeforeCleanup: true,
+    producerProtocolEvidenceCount: 7,
+    cleanupStatus: 'PASSED',
+    residualResourceCount: 0,
+    residualContainerCount: 0,
+    residualVolumeCount: 0,
+    residualNetworkCount: 0,
+    occupiedRequiredPorts: [],
+    requiredPortsObserved: [55432, 55433, 18080, 19000, 3000, 4101, 4102],
+    pruneCommandsInvoked: false,
+    frozenInputsStableAfterCleanup: true,
+    authorityIdentityStableAfterCleanup: true,
+    outputDirectoryExclusive: true,
+    terminalConclusionStatus: 'PASSED',
+    sealEligibilityStatus: 'PASSED',
+    lifecycleStatus: 'PASSED',
     selectorSetsDistinct: true,
+    failureCodes: [],
     status: 'PASSED',
     startedAt: '2026-08-28T10:00:00',
     completedAt: '2026-08-28T10:01:00',

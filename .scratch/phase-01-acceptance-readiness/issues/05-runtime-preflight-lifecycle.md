@@ -23,3 +23,4 @@ Blocked by: none
 - 2026-08-27：未执行完整正式 ABG，未进入 AR-06。
 - 2026-08-30：上述Docker/Compose实现记录作为历史事实保留；ADR-0111已替代现行运行时语义。当前身份字段为`runtimeNamespace`，rootful Podman直接管理带五标签的容器与卷，受管容器统一使用host network并显式绑定回环端口；预检与teardown只通过Podman逐项发现、复核和清理，禁止prune/reset。迁移验证不等于readiness或正式ABG。
 - 2026-08-30（AR-08 状态复核）：Implementation 基线为 `9bc5851c9d361f10fe90905affe797153ae4673a`，其 Docker/Compose 运行时语义已被 `5fc00d043dfbad213d647edae7be6df11016ba8a` 的 Podman 迁移直接替代；AR-09 的终态协议和 AR-11 的 authority、restart、Docker socket、partial-startup 加固仍会继续改变验证基线。AR-12 必须在这些整改完成后重新验证；历史 35/35 与 85/85 不能表示当前正式 accepted。
+- 2026-08-30（AR-09 历史影响）：formal runtime callback 现明确分为 cleanup 前执行与 producer snapshot 落盘、cleanup 后终态生成、以及只负责 Manifest 的 seal。最终 outcome 暴露 `finalResources`，cleanup 后重新核验 frozen inputs 与 verification authority；ABG-40 不再能在 cleanup 前产生。AR-11 的 Podman authority、restart policy、Docker socket 与 partial-startup 范围没有在 AR-09 中改变。

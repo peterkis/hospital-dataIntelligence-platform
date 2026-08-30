@@ -38,7 +38,13 @@ import {
 import {
   runFormalRuntimeLifecycle,
   type FormalRuntimeContext,
+  type FormalRuntimeFinalizationResult,
+  type FormalRuntimeFinalOutcome,
 } from './runtime/formal-runtime-controller.js';
+import {
+  buildFormalTerminalConclusion,
+  type FormalTerminalConclusion,
+} from './runtime/formal-terminal-conclusion.js';
 import { validateFormalAbgSummary } from './formal-summary-validator.js';
 
 type GateStatus = 'PASSED' | 'FAILED';
@@ -63,6 +69,15 @@ interface SetupResult {
   readonly elapsedMilliseconds: number;
 }
 
+interface PreCleanupExecutionState {
+  readonly startedAt: string;
+  readonly planDigest: string;
+  readonly frozenInputsDigest: string;
+  readonly setupStatus: GateStatus;
+  readonly setupResults: readonly SetupResult[];
+  readonly nonFormalResults: readonly FormalGateResult[];
+}
+
 process.env['TZ'] = 'Asia/Shanghai';
 process.env['DOCKER_HOST'] = 'unix:///run/podman/podman.sock';
 process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
@@ -72,18 +87,18 @@ const runSequence = parsePositiveInteger(requireEnvironment('ABG_RUN_SEQUENCE'),
 const requestedOutputDirectory = resolve(requireEnvironment('EVIDENCE_OUTPUT_DIR'));
 const run = createFormalRunSeed(runSequence);
 let outputDirectory = requestedOutputDirectory;
-let plan: FrozenRunPlan;
+let plan: FrozenRunPlan | undefined;
 let runId = run.runId;
 let startedAt = '';
 let frozenInputsDigest = '';
 let activeContext: FormalRuntimeContext | undefined;
 
-const lifecycle = await runFormalRuntimeLifecycle<Record<string, unknown>>({
+const lifecycle = await runFormalRuntimeLifecycle<PreCleanupExecutionState, Record<string, unknown>>({
   repositoryRoot,
   outputDirectory: requestedOutputDirectory,
   run,
 }, {
-  execute: executeFormalAbg,
+  executeBeforeCleanup: executeFormalAbgBeforeCleanup,
   async persistEvidenceBeforeCleanup(context, outcome) {
     const names = (await collectFiles(context.outputDirectory))
       .map((name) => name.replaceAll('\\', '/'))
@@ -114,43 +129,7 @@ const lifecycle = await runFormalRuntimeLifecycle<Record<string, unknown>>({
       throw new Error('FORMAL_PRODUCER_EVIDENCE_UNAVAILABLE_BEFORE_CLEANUP');
     }
   },
-  async writeFinalEvidence(context, outcome) {
-    const base = outcome.execution?.value ?? {
-      schemaVersion: 'phase-01.abg-run.v3',
-      runId: context.identity.runId,
-      runSequence: context.identity.runSequence,
-      planDigest: null,
-      frozenInputs: {},
-      frozenInputsDigest: null,
-      coverageMatrixDigest: null,
-      producerProtocolIdentityDigest: null,
-      authorityIdentity: null,
-      frozenInputsStable: false,
-      authorityIdentityStable: false,
-      selectorSetsDistinct: false,
-      status: 'FAILED',
-      startedAt: outcome.preflight.startedAt,
-      completedAt: localNow(),
-      timezone: 'Asia/Shanghai',
-      setupResults: [],
-      gateCount: 0,
-      passedCount: 0,
-      failedCount: 0,
-      conclusionScope: 'Phase 01 POC executable architecture baseline only; not full POC or production readiness.',
-      results: [],
-    };
-    await writeExclusive(join(context.outputDirectory, 'abg-results.json'), {
-      ...base,
-      runId: context.identity.runId,
-      runSequence: context.identity.runSequence,
-      gitCommitSha: context.identity.gitCommitSha,
-      runtimeNamespace: context.identity.runtimeNamespace,
-      runtimeStatusBeforeManifest: outcome.status,
-      runtimeFailureCodesBeforeManifest: outcome.failureCodes,
-      cleanupStatus: outcome.cleanup.status,
-      completedAt: localNow(),
-    });
-  },
+  finalizeAfterCleanup: finalizeFormalAbgAfterCleanup,
   async sealEvidence(context) {
     await writeManifest(context.outputDirectory);
   },
@@ -166,41 +145,42 @@ process.stdout.write(`${JSON.stringify({
 })}\n`);
 if (lifecycle.status !== 'PASSED') throw new Error('FORMAL_ABG_RUN_FAILED');
 
-async function executeFormalAbg(
+async function executeFormalAbgBeforeCleanup(
   context: FormalRuntimeContext,
 ): Promise<{
   readonly passed: boolean;
-  readonly value: Record<string, unknown>;
+  readonly value: PreCleanupExecutionState;
   readonly failureCode?: string;
 }> {
   activeContext = context;
   outputDirectory = context.outputDirectory;
   runId = context.identity.runId;
   startedAt = localNow();
-  plan = await buildAuthoritativeRunPlan(repositoryRoot, context.identity.runSequence);
-  if (plan.frozenInputs['gitCommitSha'] !== context.identity.gitCommitSha) {
+  const frozenPlan = await buildAuthoritativeRunPlan(repositoryRoot, context.identity.runSequence);
+  plan = frozenPlan;
+  if (frozenPlan.frozenInputs['gitCommitSha'] !== context.identity.gitCommitSha) {
     throw new Error('FORMAL_PREFLIGHT_GIT_COMMIT_DRIFT');
   }
-  const planBytes = Buffer.from(`${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  const planBytes = Buffer.from(`${JSON.stringify(frozenPlan, null, 2)}\n`, 'utf8');
   const planDigest = sha256(planBytes);
-  frozenInputsDigest = sha256(Buffer.from(canonicalJson(plan.frozenInputs), 'utf8'));
+  frozenInputsDigest = sha256(Buffer.from(canonicalJson(frozenPlan.frozenInputs), 'utf8'));
   await writeExclusiveBytes(join(outputDirectory, 'run-plan.json'), planBytes);
 
   const setupResults: SetupResult[] = [];
   let setupFailure: string | null = null;
-  for (const [index, command] of plan.setupCommands.entries()) {
+  for (const [index, command] of frozenPlan.setupCommands.entries()) {
     context.throwIfAborted();
     const execution = await executeCommand(
       command,
       join(outputDirectory, 'setup', String(index + 1).padStart(2, '0')),
       {
         ABG_RUN_ID: runId,
-        ABG_RUN_SEQUENCE: String(plan.runSequence),
+        ABG_RUN_SEQUENCE: String(frozenPlan.runSequence),
         ABG_RUNTIME_NAMESPACE: context.identity.runtimeNamespace,
         DOCKER_HOST: 'unix:///run/podman/podman.sock',
         TESTCONTAINERS_RYUK_DISABLED: 'true',
         ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
-        ABG_FROZEN_INPUTS_JSON: canonicalJson(plan.frozenInputs),
+        ABG_FROZEN_INPUTS_JSON: canonicalJson(frozenPlan.frozenInputs),
         ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
         ABG_RUNTIME_EVENT_DIR: context.runtimeEventDirectory,
       },
@@ -219,9 +199,9 @@ async function executeFormalAbg(
 
   if (setupFailure === null) {
     try {
-      assertFrozenInputsEqual(plan.frozenInputs, await readFrozenInputs(repositoryRoot));
+      assertFrozenInputsEqual(frozenPlan.frozenInputs, await readFrozenInputs(repositoryRoot));
       assertAuthorityIdentityEqual(
-        plan.authorityIdentity,
+        frozenPlan.authorityIdentity,
         await readVerificationAuthorityIdentity(repositoryRoot),
       );
     } catch (error) {
@@ -242,70 +222,125 @@ async function executeFormalAbg(
       gate,
       ordinal,
       runId,
-      runSequence: plan.runSequence,
+      runSequence: frozenPlan.runSequence,
       producerEvidenceIndexRelativePath: 'shared/producer-evidence-index.json',
-      coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
+      coverageMatrixDigest: frozenPlan.authorityIdentity.coverageMatrixDigest,
     }));
   }
+  results.sort((left, right) => left.ordinal - right.ordinal);
+  const passed = setupFailure === null && results.length === 39 &&
+    results.every((result) => result.status === 'PASSED');
+  return {
+    passed,
+    value: {
+      startedAt,
+      planDigest,
+      frozenInputsDigest,
+      setupStatus: setupFailure === null ? 'PASSED' : 'FAILED',
+      setupResults,
+      nonFormalResults: results,
+    },
+    ...(passed ? {} : { failureCode: 'FORMAL_NON_TERMINAL_GATE_OR_SETUP_FAILED' }),
+  };
+}
+
+async function finalizeFormalAbgAfterCleanup(
+  context: FormalRuntimeContext,
+  outcome: FormalRuntimeFinalOutcome<PreCleanupExecutionState>,
+): Promise<FormalRuntimeFinalizationResult<Record<string, unknown>>> {
+  const frozenPlan = plan;
+  const execution = outcome.execution?.value;
+  let frozenInputsStableAfterCleanup = false;
+  let authorityIdentityStableAfterCleanup = false;
+  if (frozenPlan !== undefined) {
+    try {
+      assertFrozenInputsEqual(frozenPlan.frozenInputs, await readFrozenInputs(repositoryRoot));
+      frozenInputsStableAfterCleanup = true;
+    } catch {
+      frozenInputsStableAfterCleanup = false;
+    }
+    try {
+      assertAuthorityIdentityEqual(
+        frozenPlan.authorityIdentity,
+        await readVerificationAuthorityIdentity(repositoryRoot),
+      );
+      authorityIdentityStableAfterCleanup = true;
+    } catch {
+      authorityIdentityStableAfterCleanup = false;
+    }
+  }
+
+  const producerProtocolEvidenceCount = await readProducerProtocolEvidenceCount(context.outputDirectory);
+  const nonFormalResults = execution?.nonFormalResults ?? ABG_GATES.slice(0, 39).map((gate) =>
+    failedGate(
+      gate,
+      ordinalFor(gate),
+      context.identity.runId,
+      safeCommandDigestForGate(gate),
+      'FORMAL_NON_TERMINAL_EXECUTION_MISSING',
+    ),
+  );
+  const terminalConclusion = buildFormalTerminalConclusion({
+    runIdentity: context.identity,
+    startedAt: execution?.startedAt ?? outcome.preflight.startedAt,
+    completedAt: localNow(),
+    preflightStatus: outcome.preflight.status,
+    setupStatus: execution?.setupStatus ?? 'FAILED',
+    nonFormalGateResults: nonFormalResults,
+    producerEvidencePersistedBeforeCleanup: outcome.producerEvidencePersistedBeforeCleanup,
+    producerProtocolEvidenceCount,
+    cleanup: outcome.cleanup,
+    finalResources: outcome.finalResources,
+    frozenInputsStableAfterCleanup,
+    authorityIdentityStableAfterCleanup,
+    outputDirectoryExclusive: outcome.outputDirectoryExclusive,
+    failureCodes: outcome.failureCodes,
+  });
+  await writeExclusive(
+    join(context.outputDirectory, 'runtime', 'terminal-conclusion.json'),
+    terminalConclusion,
+  );
 
   const formalGate = ABG_GATES.find((gate) => gate.gateId === 'ABG-40');
   if (formalGate === undefined) throw new Error('ABG_FORMAL_GATE_MISSING');
-  if (setupFailure !== null) {
-    results.push(failedGate(
+  let formalResult: FormalGateResult;
+  if (frozenPlan === undefined || execution === undefined) {
+    formalResult = failedGate(
       formalGate,
       ordinalFor(formalGate),
-      runId,
-      commandDigestForGate(formalGate),
-      setupFailure,
-    ));
-  } else if (results.some((result) => result.status !== 'PASSED')) {
-    results.push(failedGate(
-      formalGate,
-      ordinalFor(formalGate),
-      runId,
-      commandDigestForGate(formalGate),
-      'FORMAL_PRECONCLUSION_PREREQUISITE_FAILED',
-    ));
+      context.identity.runId,
+      safeCommandDigestForGate(formalGate),
+      'FORMAL_TERMINAL_PREREQUISITE_MISSING',
+    );
   } else {
     try {
-      await writeFormalProducerEvidence(results, plan.authorityIdentity);
-      results.push(await executeGate({
+      await writeFormalProducerEvidence(
+        terminalConclusion,
+        nonFormalResults,
+        frozenPlan.authorityIdentity,
+      );
+      formalResult = await executeGate({
         gate: formalGate,
         ordinal: ordinalFor(formalGate),
-        runId,
-        runSequence: plan.runSequence,
+        runId: context.identity.runId,
+        runSequence: frozenPlan.runSequence,
         producerEvidenceIndexRelativePath: 'producer-evidence-index.json',
-        coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
-      }));
+        coverageMatrixDigest: frozenPlan.authorityIdentity.coverageMatrixDigest,
+      });
     } catch (error) {
-      results.push(failedGate(
+      formalResult = failedGate(
         formalGate,
         ordinalFor(formalGate),
-        runId,
-        commandDigestForGate(formalGate),
-        'FORMAL_PRECONCLUSION_EVIDENCE_FAILED',
+        context.identity.runId,
+        safeCommandDigestForGate(formalGate),
+        'FORMAL_TERMINAL_EVIDENCE_FAILED',
         error,
-      ));
+      );
     }
   }
-  results.sort((left, right) => left.ordinal - right.ordinal);
 
-  let frozenInputsStable = true;
-  let authorityIdentityStable = true;
-  try {
-    assertFrozenInputsEqual(plan.frozenInputs, await readFrozenInputs(repositoryRoot));
-  } catch {
-    frozenInputsStable = false;
-  }
-  try {
-    assertAuthorityIdentityEqual(
-      plan.authorityIdentity,
-      await readVerificationAuthorityIdentity(repositoryRoot),
-    );
-  } catch {
-    authorityIdentityStable = false;
-  }
-
+  const results = [...nonFormalResults, formalResult]
+    .sort((left, right) => left.ordinal - right.ordinal);
   let selectorSetsDistinct = false;
   try {
     const proofs = results.map((result) => result.proof).filter(
@@ -319,51 +354,92 @@ async function executeFormalAbg(
     selectorSetsDistinct = false;
   }
 
-  const passed =
-    frozenInputsStable &&
-    authorityIdentityStable &&
+  const nonFormalGateStatus = nonFormalResults.length === 39 &&
+    nonFormalResults.every((result) => result.status === 'PASSED')
+    ? 'PASSED'
+    : 'FAILED';
+  const producerEvidenceStatus = terminalConclusion.producerEvidencePersistedBeforeCleanup &&
+    terminalConclusion.producerProtocolEvidenceCount > 0
+    ? 'PASSED'
+    : 'FAILED';
+  const lifecycleStatus = terminalConclusion.status;
+  const passed = lifecycleStatus === 'PASSED' &&
     selectorSetsDistinct &&
     results.length === ABG_GATES.length &&
     results.every((result) => result.status === 'PASSED');
+  const summaryStatus: GateStatus = passed ? 'PASSED' : 'FAILED';
+  const summaryFailureCodes = passed ? [] : unique([
+    ...terminalConclusion.failureCodes,
+    ...(selectorSetsDistinct ? [] : ['FORMAL_GATE_SELECTOR_SETS_NOT_DISTINCT']),
+    ...results.flatMap((result) => result.status === 'FAILED'
+      ? [result.failureCode ?? 'FORMAL_GATE_FAILED']
+      : []),
+  ]);
   const summary = {
-    schemaVersion: 'phase-01.abg-run.v3',
-    runId,
-    runSequence: plan.runSequence,
-    planDigest,
-    frozenInputs: plan.frozenInputs,
-    frozenInputsDigest,
-    coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
-    producerProtocolIdentityDigest: plan.authorityIdentity.producerProtocolIdentityDigest,
-    authorityIdentity: plan.authorityIdentity,
-    frozenInputsStable,
-    authorityIdentityStable,
+    schemaVersion: 'phase-01.abg-run.v4',
+    runId: context.identity.runId,
+    runSequence: context.identity.runSequence,
+    gitCommitSha: context.identity.gitCommitSha,
+    runtimeNamespace: context.identity.runtimeNamespace,
+    planDigest: execution?.planDigest ?? null,
+    frozenInputs: frozenPlan?.frozenInputs ?? {},
+    frozenInputsDigest: execution?.frozenInputsDigest ?? null,
+    coverageMatrixDigest: frozenPlan?.authorityIdentity.coverageMatrixDigest ?? null,
+    producerProtocolIdentityDigest:
+      frozenPlan?.authorityIdentity.producerProtocolIdentityDigest ?? null,
+    authorityIdentity: frozenPlan?.authorityIdentity ?? null,
+    preflightStatus: outcome.preflight.status,
+    setupStatus: execution?.setupStatus ?? 'FAILED',
+    nonFormalGateStatus,
+    producerEvidenceStatus,
+    producerEvidencePersistedBeforeCleanup:
+      terminalConclusion.producerEvidencePersistedBeforeCleanup,
+    producerProtocolEvidenceCount: terminalConclusion.producerProtocolEvidenceCount,
+    cleanupStatus: terminalConclusion.cleanupStatus,
+    residualResourceCount: terminalConclusion.residualResourceCount,
+    residualContainerCount: terminalConclusion.residualContainerCount,
+    residualVolumeCount: terminalConclusion.residualVolumeCount,
+    residualNetworkCount: terminalConclusion.residualNetworkCount,
+    occupiedRequiredPorts: terminalConclusion.occupiedRequiredPorts,
+    requiredPortsObserved: terminalConclusion.requiredPortsObserved,
+    pruneCommandsInvoked: terminalConclusion.pruneCommandsInvoked,
+    frozenInputsStableAfterCleanup,
+    authorityIdentityStableAfterCleanup,
+    outputDirectoryExclusive: outcome.outputDirectoryExclusive,
+    terminalConclusionStatus: terminalConclusion.status,
+    sealEligibilityStatus: terminalConclusion.assertions.sealEligibility.status,
+    lifecycleStatus,
     selectorSetsDistinct,
-    status: passed ? 'PASSED' : 'FAILED',
-    startedAt,
+    status: summaryStatus,
+    failureCodes: summaryFailureCodes,
+    startedAt: execution?.startedAt ?? outcome.preflight.startedAt,
     completedAt: localNow(),
     timezone: 'Asia/Shanghai',
-    setupResults,
+    setupResults: execution?.setupResults ?? [],
     gateCount: results.length,
     passedCount: results.filter((result) => result.status === 'PASSED').length,
     failedCount: results.filter((result) => result.status === 'FAILED').length,
     conclusionScope: 'Phase 01 POC executable architecture baseline only; not full POC or production readiness.',
     results,
   };
-  if (passed) {
+  if (passed && frozenPlan !== undefined && execution !== undefined) {
     validateFormalAbgSummary(summary, {
-      runSequence: plan.runSequence,
-      planDigest,
-      frozenInputs: plan.frozenInputs,
-      frozenInputsDigest,
-      coverageMatrixDigest: plan.authorityIdentity.coverageMatrixDigest,
-      producerProtocolIdentityDigest: plan.authorityIdentity.producerProtocolIdentityDigest,
-      setupCommandDigests: plan.setupCommands.map(commandDigest),
+      runSequence: frozenPlan.runSequence,
+      planDigest: execution.planDigest,
+      frozenInputs: frozenPlan.frozenInputs,
+      frozenInputsDigest: execution.frozenInputsDigest,
+      coverageMatrixDigest: frozenPlan.authorityIdentity.coverageMatrixDigest,
+      producerProtocolIdentityDigest: frozenPlan.authorityIdentity.producerProtocolIdentityDigest,
+      setupCommandDigests: frozenPlan.setupCommands.map(commandDigest),
     });
   }
+  await writeExclusive(join(context.outputDirectory, 'abg-results.json'), summary);
   return {
-    passed,
+    status: summaryStatus,
+    terminalConclusionStatus: terminalConclusion.status,
+    sealEligibilityStatus: terminalConclusion.assertions.sealEligibility.status,
+    failureCodes: summaryFailureCodes,
     value: summary,
-    ...(passed ? {} : { failureCode: 'FORMAL_ABG_GATE_OR_SETUP_FAILED' }),
   };
 }
 
@@ -426,50 +502,59 @@ async function executeGate(input: {
 }
 
 async function writeFormalProducerEvidence(
+  terminalConclusion: FormalTerminalConclusion,
   priorResults: readonly FormalGateResult[],
   authorityIdentity: VerificationAuthorityIdentity,
 ): Promise<void> {
   const formalEntry = getAbgCoverageEntry('ABG-40');
   const scenarioId = formalEntry.scenarioIds[0];
-  const assertionId = formalEntry.assertionIds[0];
-  if (scenarioId === undefined || assertionId === undefined) {
-    throw new Error('FORMAL_PRECONCLUSION_MATRIX_INVALID');
+  const terminalLifecycleAssertionId = formalEntry.assertionIds.find((assertionId) =>
+    assertionId === 'ABG-40:formal-terminal-lifecycle-complete',
+  );
+  const sealEligibilityAssertionId = formalEntry.assertionIds.find((assertionId) =>
+    assertionId === 'ABG-40:formal-evidence-seal-eligible',
+  );
+  if (
+    scenarioId === undefined ||
+    terminalLifecycleAssertionId === undefined ||
+    sealEligibilityAssertionId === undefined
+  ) {
+    throw new Error('FORMAL_TERMINAL_MATRIX_INVALID');
   }
-  const preliminary = {
-    schemaVersion: 'phase-01.abg-preconclusion.v1',
-    runId,
-    runSequence: plan.runSequence,
-    status: priorResults.every((result) => result.status === 'PASSED') ? 'PASSED' : 'FAILED',
-    coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
-    producerProtocolIdentityDigest: authorityIdentity.producerProtocolIdentityDigest,
-    gates: priorResults.map((result) => ({
-      gateId: result.gateId,
-      status: result.status,
-      proofPath: result.proofPath,
-      assertionIds: result.proof?.assertionIds ?? [],
-    })),
-  };
-  await writeExclusive(join(outputDirectory, 'formal-run/preliminary-conclusion.json'), preliminary);
-  const preliminaryItem = await createEvidenceItemFromFile(outputDirectory, {
-    artifactId: 'phase-01-formal-abg-preliminary-conclusion',
-    relativePath: 'formal-run/preliminary-conclusion.json',
+  const terminalLifecycleItem = await createEvidenceItemFromFile(outputDirectory, {
+    artifactId: 'phase-01-formal-terminal-lifecycle-conclusion',
+    relativePath: 'runtime/terminal-conclusion.json',
     mediaType: 'application/json',
-    jsonPointer: '/status',
+    jsonPointer: '/assertions/terminalLifecycle/status',
     claim: {
-      runId,
-      runSequence: plan.runSequence,
-      status: preliminary.status,
-      coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
+      runIdentity: { ...terminalConclusion.runIdentity },
+      assertionId: terminalLifecycleAssertionId,
+      status: terminalConclusion.assertions.terminalLifecycle.status,
     },
   });
-  const references = aggregateFormalReferences(priorResults, preliminaryItem.sha256);
+  const sealEligibilityItem = await createEvidenceItemFromFile(outputDirectory, {
+    artifactId: 'phase-01-formal-evidence-seal-eligibility',
+    relativePath: 'runtime/terminal-conclusion.json',
+    mediaType: 'application/json',
+    jsonPointer: '/assertions/sealEligibility/status',
+    claim: {
+      runIdentity: { ...terminalConclusion.runIdentity },
+      assertionId: sealEligibilityAssertionId,
+      status: terminalConclusion.assertions.sealEligibility.status,
+    },
+  });
+  const terminalItems = [terminalLifecycleItem, sealEligibilityItem] as const;
+  const references = aggregateFormalReferences(
+    priorResults,
+    unique(terminalItems.map((item) => item.sha256)),
+  );
   const evidence = buildMatrixProducerEvidence({
     producerId: 'formal-run',
     runId,
-    runSequence: plan.runSequence,
+    runSequence: terminalConclusion.runIdentity.runSequence,
     startedAt,
     completedAt: localNow(),
-    processStatus: preliminary.status === 'PASSED' ? 'PASSED' : 'FAILED',
+    processStatus: terminalConclusion.status,
     commandIdentity: {
       executable: 'node',
       arguments: ['tooling/verification/src/run-formal-abg.ts'],
@@ -477,24 +562,36 @@ async function writeFormalProducerEvidence(
       commandDigest: sha256(Buffer.from('tooling/verification/src/run-formal-abg.ts', 'utf8')),
     },
     environmentRefs: environmentReferenceDigest(process.env, ['CI', 'NODE_ENV', 'TZ']),
-    frozenInputRefs: parseFrozenInputRefs(plan.frozenInputs),
-    defaultEvidenceItems: [preliminaryItem],
+    frozenInputRefs: parseFrozenInputRefs(plan?.frozenInputs),
+    defaultEvidenceItems: terminalItems,
     scenarioReferences: { [scenarioId]: references },
     outcomes: {
-      [assertionId]: preliminary.status === 'PASSED'
-        ? {
-          status: 'PASSED',
-          description: 'The frozen run recorded every non-self ABG gate before the immutable ABG-40 proof.',
-          expected: { nonSelfGateStatus: 'PASSED' },
-          actual: { priorGateCount: priorResults.length, priorPassedCount: priorResults.length },
-        }
-        : {
-          status: 'FAILED',
-          description: 'The frozen run did not record a complete passing non-self ABG preconclusion.',
-          expected: { nonSelfGateStatus: 'PASSED' },
-          actual: { priorGateCount: priorResults.length },
-          failureCode: 'FORMAL_PRECONCLUSION_FAILED',
-        },
+      [terminalLifecycleAssertionId]: {
+        status: terminalConclusion.assertions.terminalLifecycle.status,
+        description: 'The formal run reached a complete post-cleanup terminal lifecycle state.',
+        expected: terminalConclusion.assertions.terminalLifecycle.expected,
+        actual: terminalConclusion.assertions.terminalLifecycle.actual,
+        ...(terminalConclusion.assertions.terminalLifecycle.status === 'PASSED'
+          ? {}
+          : {
+            failureCode: terminalConclusion.assertions.terminalLifecycle.failureCodes[0] ??
+              'FORMAL_TERMINAL_LIFECYCLE_FAILED',
+          }),
+        evidenceItems: [terminalLifecycleItem],
+      },
+      [sealEligibilityAssertionId]: {
+        status: terminalConclusion.assertions.sealEligibility.status,
+        description: 'The post-cleanup evidence package is eligible for runner-side manifest sealing.',
+        expected: terminalConclusion.assertions.sealEligibility.expected,
+        actual: terminalConclusion.assertions.sealEligibility.actual,
+        ...(terminalConclusion.assertions.sealEligibility.status === 'PASSED'
+          ? {}
+          : {
+            failureCode: terminalConclusion.assertions.sealEligibility.failureCodes[0] ??
+              'FORMAL_SEAL_ELIGIBILITY_FAILED',
+          }),
+        evidenceItems: [sealEligibilityItem],
+      },
     },
   });
   const formalIndexEntry = await writeProducerEvidence(
@@ -506,13 +603,16 @@ async function writeFormalProducerEvidence(
     outputDirectory,
     'shared/producer-evidence-index.json',
   );
-  if (sharedIndex.index.runId !== runId || sharedIndex.index.runSequence !== plan.runSequence) {
-    throw new Error('FORMAL_PRECONCLUSION_SHARED_INDEX_RUN_MISMATCH');
+  if (
+    sharedIndex.index.runId !== runId ||
+    sharedIndex.index.runSequence !== terminalConclusion.runIdentity.runSequence
+  ) {
+    throw new Error('FORMAL_TERMINAL_SHARED_INDEX_RUN_MISMATCH');
   }
   await writeProducerEvidenceIndex(outputDirectory, 'producer-evidence-index.json', {
     schemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
     runId,
-    runSequence: plan.runSequence,
+    runSequence: terminalConclusion.runIdentity.runSequence,
     producers: [
       ...sharedIndex.index.producers.map((entry) => ({
         ...entry,
@@ -580,13 +680,21 @@ async function executeCommand(
 }
 
 function commandForGate(gate: AbgGateDefinition): AuthoritativeCommandSpec {
-  const command = plan.gates.find((candidate) => candidate.gateId === gate.gateId);
+  const command = plan?.gates.find((candidate) => candidate.gateId === gate.gateId);
   if (command === undefined) throw new Error('ABG_PLAN_GATE_MISSING:' + gate.gateId);
   return command;
 }
 
 function commandDigestForGate(gate: AbgGateDefinition): string {
   return commandDigest(commandForGate(gate));
+}
+
+function safeCommandDigestForGate(gate: AbgGateDefinition): string {
+  try {
+    return commandDigestForGate(gate);
+  } catch {
+    return sha256(Buffer.from(`unavailable-formal-command:${gate.gateId}`, 'utf8'));
+  }
 }
 
 function ordinalFor(gate: AbgGateDefinition): number {
@@ -769,7 +877,7 @@ function assertAuthorityIdentityEqual(
 
 function aggregateFormalReferences(
   results: readonly FormalGateResult[],
-  artifactDigest: string,
+  artifactDigests: readonly string[],
 ): {
   readonly requestIds: readonly string[];
   readonly principalIds: readonly string[];
@@ -787,8 +895,22 @@ function aggregateFormalReferences(
     governanceObjectIds: unique(proofs.flatMap((proof) => proof.governanceObjectIds)),
     versionIds: unique(proofs.flatMap((proof) => proof.versionIds)),
     ruleVersions: unique(proofs.flatMap((proof) => proof.ruleVersions)),
-    artifactDigests: [artifactDigest],
+    artifactDigests,
   };
+}
+
+async function readProducerProtocolEvidenceCount(directory: string): Promise<number> {
+  try {
+    const value = JSON.parse(await readFile(
+      join(directory, 'runtime', 'producer-evidence-snapshot.json'),
+      'utf8',
+    )) as unknown;
+    if (!isRecord(value)) return 0;
+    const count = value['producerProtocolEvidenceCount'];
+    return Number.isSafeInteger(count) && Number(count) > 0 ? Number(count) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 function unique(values: readonly string[]): readonly string[] {
@@ -797,6 +919,10 @@ function unique(values: readonly string[]): readonly string[] {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isMissing(error: unknown): error is NodeJS.ErrnoException {

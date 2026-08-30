@@ -227,7 +227,19 @@ Toxiproxy及Testcontainers生命周期负责验证：
 
 门禁结果升级为 `phase-01.abg-gate-result.v3`：每项必须记录其自身的场景和断言集合、直接关联的请求/主体/对象/版本/规则/冻结输入/制品摘要，以及每个选择器对应的相对路径、媒体类型、长度、SHA-256、producer、场景、断言、JSON Pointer 和选中 claim 摘要。结果还记录覆盖矩阵和所用 producer evidence index 的摘要。任一选择器、指针、身份引用、规则或摘要无法核验即失败关闭。
 
-正式运行总结升级为 `phase-01.abg-run.v3`。它拒绝旧版门禁结果，并在 setup 前后复核覆盖矩阵及 producer 协议身份；每个引用必须留在运行根内、非符号链接、字节长度/媒体类型/摘要一致，并解析到相同 gate、scenario、assertion 和 producer 的 `PASSED` claim。ABG-40 使用先完成的 39 项非自引用结论建立不可变 preconclusion，再由自身门禁证明引用，避免把共享总体状态或循环自证当作通过条件。
+正式运行总结升级为 `phase-01.abg-run.v4`。它拒绝旧版门禁结果，并在 setup 前后复核覆盖矩阵及 producer 协议身份；每个引用必须留在运行根内、非符号链接、字节长度/媒体类型/摘要一致，并解析到相同 gate、scenario、assertion 和 producer 的 `PASSED` claim。总结验证器不信任输入的总体状态，而是从 preflight、setup、ABG-01～ABG-39、cleanup、残留资源、固定端口、cleanup 后冻结输入与验证权威身份、输出目录独占、终态结论、seal eligibility、ABG-40 及 selector 集合重新推导 `status`。
+
+### 8.2.2 cleanup 后终态与 ABG-40
+
+正式运行严格分成 cleanup 前执行、cleanup 后终态生成和 evidence 封存三个边界。preflight 成功且独占创建输出目录后，runner 写入 `runtime/preflight.json`，冻结 run plan、frozen inputs 和 verification authority identity，完成 setup，仅执行 ABG-01～ABG-39，并在 cleanup 前保存顶层 producer evidence、`runtime/resources-started.json`、`runtime/producer-evidence-snapshot.json` 和 `runtime/failure-summary.json`。此阶段不得生成 ABG-40，也不得声称正式运行最终 `PASSED`。
+
+受控子进程停止并完成精确 cleanup 后，runner 写入 `runtime/resources-final.json` 和 `runtime/cleanup.json`，重新读取 frozen inputs 和 verification authority identity，再构造 `phase-01.formal-terminal-conclusion.v1` 的 `runtime/terminal-conclusion.json`。该终态结论必须同时证明前 39 个门禁完整通过、producer evidence 已在 cleanup 前落盘、cleanup 通过、当前 run 零残留、全部 required ports 已观察且释放、未调用 prune、冻结输入和权威身份稳定以及输出目录保持独占；只有这些条件全部满足时 `sealEligible` 才能为 `true`。
+
+ABG-40 只在上述 cleanup 后终态形成后执行。它使用 `RUN-FORMAL-TERMINAL-LIFECYCLE` 场景，以 `runtime/terminal-conclusion.json` 为 formal-run producer 的唯一原始机器证据，并精确选择 `ABG-40:formal-terminal-lifecycle-complete` 与 `ABG-40:formal-evidence-seal-eligible` 两个断言。ABG-40 证明的是“该运行已达到预封存资格”，不证明 `manifest.sha256` 已经存在或已由独立 reviewer 验证；旧 `formal-run/preliminary-conclusion.json` 不再是新协议权威。
+
+ABG-40 验证后，runner 合并 40 项门禁并写入 `phase-01.abg-run.v4` 的 `abg-results.json`，通过独立 summary validator 后写入 `runtime/final-outcome.json`。final outcome 在 Manifest 之前生成，必须保持 `sealPendingAtWrite: true`，不得声称封存已完成。`sealEvidence` 只生成 `manifest.json` 与匹配的 `manifest.sha256`，不得修改既有 summary、gate proof 或 producer evidence；任何终态写入或 Manifest 失败都使 CLI 非零退出，且不得覆盖旧 evidence。
+
+独立 reviewer 最终从已封存目录复核 Manifest 摘要/长度、完整 runtime lifecycle、ABG-40 精确引用、summary/final-outcome 一致性及复核前后源 evidence 字节身份。它还把 summary 的 Git 身份绑定回 frozen run plan、从 runId/runSequence 规范派生 runtime namespace，将 cleanup 前 producer snapshot 的路径/长度/SHA-256 逐项绑定到 Manifest 字节，并独立重算 terminal conclusion 的资源/端口计数和两个 assertion body。ABG-40 `PASSED` 单独不等于正式验收完成；正式验收仍要求 Manifest 成功封存、CLI 成功终止及 independent reviewer `PASSED`。
 
 ### 8.3 不可覆盖与完整性
 
@@ -241,14 +253,15 @@ Toxiproxy及Testcontainers生命周期负责验证：
 
 AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `phase-01.validator-test-fixture.v1`，并显式记录 `formalAcceptanceEligible: false` 和 `servicesStarted: false`。fixture 使用固定运行身份、序号、时间、冻结输入和合成引用；同一代码版本下重复生成时，运行计划、40 项 producer 门禁证明、总结、manifest 和包摘要必须逐字节一致。它不连接 PostgreSQL、Keycloak、网络或浏览器，也不得被复制到正式 evidence 路径或表述为正式 ABG 证据。
 
-合法 fixture 仍完整遵循生产协议链：
+合法 fixture 仍完整模拟生产协议链，但没有正式验收资格：
 
 1. 每个 producer 生成 `phase-01.producer-evidence.v2`，其场景、断言、命令身份、冻结输入和业务引用由 producer evidence validator 校验。
-2. 40 项门禁各自生成 `phase-01.abg-gate-result.v3`；每项必须使用覆盖矩阵登记的 scenarioId、assertionId 和 selector，不得借用共享总体状态。
-3. `phase-01.abg-run.v3` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、setup 结果、运行及权威摘要、producer 退出码、失败码一致性和 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
-4. 独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
+2. ABG-01～ABG-39 各自生成 `phase-01.abg-gate-result.v3`，随后 fixture 保存 preflight、started resources、producer evidence snapshot、failure summary、cleanup 和零残留 final resources；它不通过省略 lifecycle 文件获得 reviewer `PASSED`。
+3. fixture 从 cleanup 后的 `phase-01.formal-terminal-conclusion.v1` 生成 formal-run producer evidence，再生成具有两个终态断言的 ABG-40；仅含旧 preliminary conclusion 的新格式 fixture 必须失败关闭。
+4. `phase-01.abg-run.v4` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
+5. fixture 在 Manifest 前写入一致且 `sealPendingAtWrite: true` 的 final outcome。独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、完整 lifecycle、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
 
-`npm run test:verification:adversarial` 运行 59 个互不依赖的 mutation，覆盖用户要求的 55 类缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup 越权和 secret 泄漏；其中 `placeholder`、`UNKNOWN`、`N/A` 与空字符串分别作为独立 mutation，另以 malformed JSON 中的裸配置 secret 证明解析失败也不会绕过泄漏扫描。每项都声明稳定 mutationId、检测层和期望错误码，并把实际结果写入被根 `.gitignore` 的 `.runtime/test-results/verification-adversarial-summary.json`。通过条件是 `mutationCount >= 55`、`detectedCount = mutationCount`、`survivedCount = 0`；不得通过更新 snapshot、吞掉异常或依赖测试执行顺序改变该结论。
+`npm run test:verification:adversarial` 运行 80 个互不依赖的 mutation，覆盖用户要求的缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup 越权、完整终态 lifecycle 和 secret 泄漏；新增范围包括 cleanup 失败但 summary 冒充通过、preflight 矛盾、terminal conclusion 缺失或失败、seal eligibility 伪造、容器/卷/网络残留、required port 占用、final outcome 矛盾、ABG-40 旧 preliminary 来源或缺少 seal 断言、cleanup 后 frozen input/authority 漂移，以及 malformed lifecycle 数组、pre-cleanup snapshot 字节身份、run plan Git 绑定、terminal assertion body 和 final-outcome seal 状态。其中 `placeholder`、`UNKNOWN`、`N/A` 与空字符串分别作为独立 mutation，另以 malformed JSON 中的裸配置 secret 证明解析失败也不会绕过泄漏扫描。每项都声明稳定 mutationId、检测层和期望错误码，并把实际结果写入被根 `.gitignore` 的 `.runtime/test-results/verification-adversarial-summary.json`。通过条件是 `mutationCount >= 55`、`detectedCount = mutationCount`、`survivedCount = 0`；不得通过更新 snapshot、吞掉异常或依赖测试执行顺序改变该结论。
 
 关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
 
@@ -258,6 +271,7 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 | 正式总结的 40 项完整性 | `GATE_RESULT_COUNT_INVALID`、`GATE_ID_DUPLICATE`、`GATE_ORDER_OR_ID_MISMATCH`、`PASSED_COUNT_MISMATCH`、`RUN_STATUS_MISMATCH` |
 | gate-specific 证明 | `GATE_ASSERTIONS_MISMATCH`、`ABG_GATE_RESULT_EVIDENCE_SELECTOR_MISSING`、`SELECTED_CLAIM_DIGEST_MISMATCH` |
 | manifest 与终态字节 | `MANIFEST_UNLISTED_FILE`、`MANIFEST_SHA256_MISMATCH`、`MANIFEST_FILE_SHA256_MISMATCH` |
+| 终态 lifecycle 与预封存资格 | `FORMAL_LIFECYCLE_FILE_MISSING`、`FORMAL_CLEANUP_STATUS_NOT_PASSED`、`FORMAL_FINAL_RESOURCE_PRESENT`、`FORMAL_REQUIRED_PORT_OCCUPIED`、`FORMAL_TERMINAL_CONCLUSION_STATUS_NOT_PASSED`、`FORMAL_TERMINAL_SEAL_NOT_ELIGIBLE`、`FORMAL_FINAL_OUTCOME_MISMATCH` |
 | 路径与不可覆盖输出 | `ABG_GATE_RESULT_EVIDENCE_PATH_INVALID`、`EVIDENCE_SYMLINK_FORBIDDEN`、`REVIEW_OUTPUT_ALREADY_EXISTS`、`ABG_GATE_RESULT_ALREADY_EXISTS` |
 | cleanup 范围 | `FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN`、`FORMAL_CLEANUP_COMMAND_SCOPE_INVALID`、`FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH` |
 | secret 泄漏 | `EVIDENCE_STDOUT_SECRET_EXPOSED`、`EVIDENCE_STDERR_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_SCAN_INVALID` |

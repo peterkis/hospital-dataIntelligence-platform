@@ -12,43 +12,25 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { extname, join, relative, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ABG_GATES } from './abg-catalog.js';
 import {
   ABG_COVERAGE_MATRIX,
-  ABG_FROZEN_INPUT_KINDS,
-  ABG_PRODUCER_IDS,
   type AbgProducerId,
 } from './abg-coverage-matrix.js';
-import {
-  getAbgCoverageMatrixDigest,
-  getAbgProducerProtocolIdentityDigest,
-  writeAbgGateProof,
-  type AbgGateResult,
-} from './abg-gate-proof.js';
-import { readVerificationAuthorityIdentity } from './authoritative-abg-plan.js';
-import { buildMatrixProducerEvidence } from './evidence/adapters.js';
-import {
-  createEvidenceItemFromFile,
-  createEvidenceOutputDirectory,
-  sha256,
-  writeProducerEvidence,
-  writeProducerEvidenceIndex,
-  writeRedactedJsonArtifact,
-} from './evidence/recorder.js';
-import { PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION } from './evidence/protocol.js';
+import { sha256 } from './evidence/recorder.js';
 import { reviewFormalAbgEvidence } from './review-formal-abg-evidence.js';
+import {
+  buildValidEvidenceFixture,
+  rebuildFixtureManifest,
+} from './testing/build-valid-evidence-fixture.js';
 
 const execFileAsync = promisify(execFile);
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const reviewerPath = resolve(import.meta.dirname, 'review-formal-abg-evidence.ts');
 const tsxCliPath = resolve(repositoryRoot, 'node_modules/tsx/dist/cli.mjs');
 const roots: string[] = [];
-const RUN_ID = 'synthetic-formal-abg-review-0001';
-const RUN_SEQUENCE = 17;
-const DIGEST = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -126,10 +108,35 @@ describe('formal ABG evidence reviewer CLI', () => {
     });
 
     expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout) as { readonly status: string }).toMatchObject({
+    expect(JSON.parse(result.stdout) as { readonly status: string; readonly failedCheckCount: number }).toMatchObject({
       status: 'PASSED',
+      failedCheckCount: 0,
     });
     expect(await treeDigest(fixture.evidenceDirectory)).toBe(before);
+  });
+
+  it('returns nonzero with a stable cleanup code for a cleanup-failed v4 fixture', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/cleanup.json', (cleanup) => {
+      cleanup['status'] = 'FAILED';
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    const result = await runReviewerCliExpectingFailure(fixture);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.failureCodes).toContain('FORMAL_CLEANUP_STATUS_NOT_PASSED');
+  });
+
+  it('returns nonzero with a stable code when terminal conclusion is missing', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await unlink(join(fixture.evidenceDirectory, 'runtime/terminal-conclusion.json'));
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    const result = await runReviewerCliExpectingFailure(fixture);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.failureCodes).toContain('FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING');
   });
 
   it('accepts a complete synthetic 40-gate package and leaves every source byte unchanged', async () => {
@@ -156,6 +163,228 @@ describe('formal ABG evidence reviewer CLI', () => {
       'review.sha256',
     ]);
     expect(findings.findings).toEqual([]);
+  });
+
+  it('fails when source evidence bytes change during review', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      async beforeFinalSourceIdentityCapture() {
+        await writeFile(
+          join(fixture.evidenceDirectory, 'concurrent-tamper.txt'),
+          'changed during review\n',
+          { flag: 'wx' },
+        );
+      },
+    });
+    const findings = JSON.parse(await readFile(
+      join(fixture.reviewOutputDirectory, 'review-findings.json'),
+      'utf8',
+    )) as { readonly findings: readonly { readonly code: string }[] };
+
+    expect(result.status).toBe('FAILED');
+    expect(findings.findings.map((finding) => finding.code))
+      .toContain('SOURCE_EVIDENCE_CHANGED_DURING_REVIEW');
+  });
+});
+
+describe('formal ABG terminal lifecycle review', () => {
+  it.each([
+    ['runtime/preflight.json', 'FORMAL_LIFECYCLE_PREFLIGHT_MISSING'],
+    ['runtime/resources-started.json', 'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING'],
+    ['runtime/producer-evidence-snapshot.json', 'FORMAL_LIFECYCLE_PRODUCER_EVIDENCE_SNAPSHOT_MISSING'],
+    ['runtime/failure-summary.json', 'FORMAL_LIFECYCLE_FAILURE_SUMMARY_MISSING'],
+    ['runtime/resources-final.json', 'FORMAL_LIFECYCLE_RESOURCES_FINAL_MISSING'],
+    ['runtime/cleanup.json', 'FORMAL_LIFECYCLE_CLEANUP_MISSING'],
+    ['runtime/terminal-conclusion.json', 'FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING'],
+    ['runtime/final-outcome.json', 'FORMAL_LIFECYCLE_FINAL_OUTCOME_MISSING'],
+  ] as const)('rejects a package missing %s', async (relativePath, expectedCode) => {
+    const fixture = await createFormalEvidenceFixture();
+    await unlink(join(fixture.evidenceDirectory, relativePath));
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain(expectedCode);
+  });
+
+  it('rejects cleanup FAILED even when abg-results still claims PASSED', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/cleanup.json', (cleanup) => {
+      cleanup['status'] = 'FAILED';
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_CLEANUP_STATUS_NOT_PASSED');
+  });
+
+  it.each([
+    ['runtime/cleanup.json', 'residualResources', 'FORMAL_CLEANUP_RESIDUAL_RESOURCES_INVALID'],
+    ['runtime/cleanup.json', 'occupiedPorts', 'FORMAL_CLEANUP_OCCUPIED_PORTS_INVALID'],
+    ['runtime/resources-final.json', 'resources', 'FORMAL_FINAL_RESOURCES_INVALID'],
+    ['runtime/resources-final.json', 'ports', 'FORMAL_FINAL_PORTS_INVALID'],
+  ] as const)('rejects a malformed lifecycle array at %s#/%s', async (relativePath, field, code) => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, relativePath, (recordValue) => {
+      recordValue[field] = null;
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain(code);
+  });
+
+  it('binds the pre-cleanup producer snapshot to manifested producer bytes', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(
+      fixture.evidenceDirectory,
+      'runtime/producer-evidence-snapshot.json',
+      (snapshot) => {
+        recordArray(snapshot['producerProtocolEvidence'])[0]!['sha256'] = 'f'.repeat(64);
+      },
+    );
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture))
+      .toContain('FORMAL_PRODUCER_SNAPSHOT_FILE_IDENTITY_MISMATCH');
+  });
+
+  it('binds summary Git identity to the frozen run plan', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateSummary(fixture, (summary) => {
+      summary['gitCommitSha'] = 'f'.repeat(40);
+    });
+
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_SUMMARY_GIT_COMMIT_MISMATCH');
+  });
+
+  it('requires runtimeNamespace to be canonically derived from run identity', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateSummary(fixture, (summary) => {
+      summary['runtimeNamespace'] = 'hdi_phase01_abg_999_forgednamespace';
+    });
+
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_RUNTIME_NAMESPACE_MISMATCH');
+  });
+
+  it.each([
+    ['container', 'FORMAL_RESIDUAL_CONTAINER_PRESENT'],
+    ['volume', 'FORMAL_RESIDUAL_VOLUME_PRESENT'],
+    ['network', 'FORMAL_RESIDUAL_NETWORK_PRESENT'],
+  ] as const)('rejects a residual %s', async (resourceType, expectedCode) => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/resources-final.json', (snapshot) => {
+      snapshot['resources'] = [syntheticResidualResource(resourceType)];
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain(expectedCode);
+  });
+
+  it('rejects an occupied required port', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/resources-final.json', (snapshot) => {
+      recordArray(snapshot['ports'])[0]!['occupied'] = true;
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_REQUIRED_PORT_OCCUPIED');
+  });
+
+  it('rejects a missing required port observation', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/resources-final.json', (snapshot) => {
+      recordArray(snapshot['ports']).pop();
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_REQUIRED_PORT_OBSERVATION_MISSING');
+  });
+
+  it('rejects any prune invocation', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/cleanup.json', (cleanup) => {
+      cleanup['pruneCommandsInvoked'] = true;
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_PRUNE_COMMAND_INVOKED');
+  });
+
+  it.each([
+    ['residualContainerCount', 1, 'FORMAL_TERMINAL_RESIDUAL_CONTAINER_PRESENT'],
+    ['residualVolumeCount', 1, 'FORMAL_TERMINAL_RESIDUAL_VOLUME_PRESENT'],
+    ['residualNetworkCount', 1, 'FORMAL_TERMINAL_RESIDUAL_NETWORK_PRESENT'],
+    ['failureCodes', ['FORGED_TERMINAL_FAILURE'], 'FORMAL_TERMINAL_FAILURE_CODES_PRESENT'],
+  ] as const)('rejects inconsistent terminal field %s', async (field, value, code) => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/terminal-conclusion.json', (terminal) => {
+      terminal[field] = value;
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture)).toContain(code);
+  });
+
+  it('independently rederives both terminal assertion bodies', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/terminal-conclusion.json', (terminal) => {
+      const assertions = record(terminal['assertions']);
+      record(assertions['terminalLifecycle'])['actual'] = { cleanupStatus: 'FAILED' };
+      record(assertions['sealEligibility'])['failureCodes'] = ['FORGED_SEAL_FAILURE'];
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    const codes = await reviewFailureCodes(fixture);
+    expect(codes).toContain('FORMAL_TERMINAL_LIFECYCLE_ASSERTION_INCONSISTENT');
+    expect(codes).toContain('FORMAL_TERMINAL_SEAL_ASSERTION_INCONSISTENT');
+  });
+
+  it('rejects final-outcome seal eligibility disagreement', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/final-outcome.json', (outcome) => {
+      outcome['sealEligibilityStatus'] = 'FAILED';
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture))
+      .toContain('FORMAL_FINAL_OUTCOME_SEAL_STATUS_MISMATCH');
+  });
+
+  it('rejects ABG-40 references to the retired preliminary conclusion', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await writeFile(
+      join(fixture.evidenceDirectory, 'formal-run/preliminary-conclusion.json'),
+      '{"status":"PASSED"}\n',
+      { flag: 'wx' },
+    );
+    await mutateProducerEvidenceFile(fixture, 'formal-run', (evidence) => {
+      for (const scenario of Object.values(record(evidence['scenarios']))) {
+        for (const assertion of Object.values(record(record(scenario)['assertions']))) {
+          for (const item of recordArray(record(assertion)['evidenceItems'])) {
+            item['relativePath'] = 'formal-run/preliminary-conclusion.json';
+            item['jsonPointer'] = '/status';
+          }
+        }
+      }
+    });
+
+    expect(await reviewFailureCodes(fixture)).toContain('ABG40_TERMINAL_EVIDENCE_REFERENCE_INVALID');
+  });
+
+  it('rejects ABG-40 without its seal assertion and a mismatched final outcome', async () => {
+    const missingAssertion = await createFormalEvidenceFixture();
+    await mutateProducerEvidenceFile(missingAssertion, 'formal-run', (evidence) => {
+      for (const scenario of Object.values(record(evidence['scenarios']))) {
+        delete record(record(scenario)['assertions'])['ABG-40:formal-evidence-seal-eligible'];
+      }
+    });
+    expect(await reviewFailureCodes(missingAssertion)).toContain('ABG40_SEAL_ASSERTION_MISSING');
+
+    const mismatchedOutcome = await createFormalEvidenceFixture();
+    await mutateJsonFile(mismatchedOutcome.evidenceDirectory, 'runtime/final-outcome.json', (outcome) => {
+      outcome['status'] = 'FAILED';
+    });
+    await rebuildManifest(mismatchedOutcome.evidenceDirectory);
+    expect(await reviewFailureCodes(mismatchedOutcome)).toContain('FORMAL_FINAL_OUTCOME_STATUS_MISMATCH');
   });
 });
 
@@ -421,6 +650,38 @@ interface FormalEvidenceFixture {
   readonly reviewOutputDirectory: string;
 }
 
+async function runReviewerCliExpectingFailure(
+  fixture: FormalEvidenceFixture,
+): Promise<{ readonly exitCode: number | string | undefined; readonly failureCodes: readonly string[] }> {
+  let exitCode: number | string | undefined;
+  try {
+    await execFileAsync(process.execPath, [
+      tsxCliPath,
+      reviewerPath,
+      '--evidence-dir',
+      fixture.evidenceDirectory,
+      '--review-output-dir',
+      fixture.reviewOutputDirectory,
+    ], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+  } catch (error) {
+    exitCode = error instanceof Error && 'code' in error
+      ? error.code as number | string | undefined
+      : undefined;
+  }
+  const findings = JSON.parse(await readFile(
+    join(fixture.reviewOutputDirectory, 'review-findings.json'),
+    'utf8',
+  )) as { readonly findings: readonly { readonly code: string }[] };
+  return {
+    exitCode,
+    failureCodes: findings.findings.map((finding) => finding.code),
+  };
+}
+
 async function reviewFailureCodes(fixture: FormalEvidenceFixture): Promise<readonly string[]> {
   const result = await reviewFormalAbgEvidence({
     evidenceDirectory: fixture.evidenceDirectory,
@@ -527,243 +788,15 @@ function assertionRecord(
 async function createFormalEvidenceFixture(): Promise<FormalEvidenceFixture> {
   const parent = await mkdtemp(join(tmpdir(), 'hdi-formal-abg-review-'));
   roots.push(parent);
-  const evidenceDirectory = join(parent, 'evidence');
-  const reviewOutputDirectory = join(parent, 'review');
-  const sharedDirectory = join(evidenceDirectory, 'shared');
-  await createEvidenceOutputDirectory(evidenceDirectory);
-  await createEvidenceOutputDirectory(sharedDirectory);
-
-  const frozenInputs = fixtureFrozenInputs();
-  const sharedEntries = [];
-  for (const producerId of ABG_PRODUCER_IDS.filter((candidate) => candidate !== 'formal-run')) {
-    sharedEntries.push(await writeFixtureProducer({
-      producerId,
-      evidenceRoot: sharedDirectory,
-      frozenInputs,
-      rawArtifactPath: 'raw/' + producerId + '.json',
-      evidencePath: producerId + '/producer-evidence.json',
-    }));
-  }
-  await writeProducerEvidenceIndex(sharedDirectory, 'producer-evidence-index.json', {
-    schemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
-    runId: RUN_ID,
-    runSequence: RUN_SEQUENCE,
-    producers: sharedEntries,
-  });
-
-  await writeJson(join(evidenceDirectory, 'formal-run/preliminary-conclusion.json'), {
-    schemaVersion: 'phase-01.abg-preconclusion.v1',
-    runId: RUN_ID,
-    runSequence: RUN_SEQUENCE,
-    status: 'PASSED',
-    coverageMatrixDigest: getAbgCoverageMatrixDigest(),
-    producerProtocolIdentityDigest: getAbgProducerProtocolIdentityDigest(),
-    gates: ABG_GATES.slice(0, 39).map((gate) => ({ gateId: gate.gateId, status: 'PASSED' })),
-  });
-  const formalEntry = await writeFixtureProducer({
-    producerId: 'formal-run',
-    evidenceRoot: evidenceDirectory,
-    frozenInputs,
-    rawArtifactPath: 'formal-run/preliminary-conclusion.json',
-    evidencePath: 'formal-run/producer-evidence.json',
-  });
-  await writeProducerEvidenceIndex(evidenceDirectory, 'producer-evidence-index.json', {
-    schemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
-    runId: RUN_ID,
-    runSequence: RUN_SEQUENCE,
-    producers: [
-      ...sharedEntries.map((entry) => ({ ...entry, relativePath: 'shared/' + entry.relativePath })),
-      formalEntry,
-    ],
-  });
-
-  const proofs: AbgGateResult[] = [];
-  for (const entry of ABG_COVERAGE_MATRIX) {
-    const resultRelativePath = 'gates/' + entry.gateId + '/producer/result.json';
-    proofs.push(await writeAbgGateProof({
-      gateId: entry.gateId,
-      runId: RUN_ID,
-      runSequence: RUN_SEQUENCE,
-      evidenceRoot: evidenceDirectory,
-      producerEvidenceIndexRelativePath: entry.gateId === 'ABG-40'
-        ? 'producer-evidence-index.json'
-        : 'shared/producer-evidence-index.json',
-      resultRelativePath,
-    }));
-  }
-
-  const setupCommands = [1, 2, 3].map((ordinal) => ({
-    executable: 'synthetic-setup',
-    args: ['step-' + ordinal],
-  }));
-  const gateCommands = ABG_GATES.map((gate) => ({
-    gateId: gate.gateId,
-    executable: 'node',
-    args: ['tooling/verification/src/produce-abg-gate.ts'],
-  }));
-  const authorityIdentity = await readVerificationAuthorityIdentity(repositoryRoot);
-  const plan = {
-    schemaVersion: 'phase-01.abg-run-plan.v3',
-    authorityId: 'phase-01.repository-authoritative-plan.v2',
-    runSequence: RUN_SEQUENCE,
-    frozenInputs,
-    authorityIdentity,
-    setupCommands,
-    gates: gateCommands,
-  };
-  const planBytes = Buffer.from(JSON.stringify(plan, null, 2) + '\n', 'utf8');
-  await writeFile(join(evidenceDirectory, 'run-plan.json'), planBytes, { flag: 'wx' });
-  for (const ordinal of [1, 2, 3]) {
-    const directory = join(evidenceDirectory, 'setup', String(ordinal).padStart(2, '0'));
-    await mkdir(directory, { recursive: true });
-    await writeFile(join(directory, 'stdout.log'), 'synthetic setup passed\n', { flag: 'wx' });
-    await writeFile(join(directory, 'stderr.log'), '', { flag: 'wx' });
-  }
-
-  const results = ABG_GATES.map((gate, index) => ({
-    ...gate,
-    ordinal: index + 1,
-    runId: RUN_ID,
-    status: 'PASSED',
-    producerExitCode: 0,
-    producerCommandDigest: digestJson(gateCommands[index]),
-    elapsedMilliseconds: 1,
-    proofPath: 'gates/' + gate.gateId + '/producer/result.json',
-    proof: proofs[index],
-  }));
-  await writeJson(join(evidenceDirectory, 'abg-results.json'), {
-    schemaVersion: 'phase-01.abg-run.v3',
-    runId: RUN_ID,
-    runSequence: RUN_SEQUENCE,
-    planDigest: sha256(planBytes),
-    frozenInputs,
-    frozenInputsDigest: digestJson(frozenInputs),
-    coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
-    producerProtocolIdentityDigest: authorityIdentity.producerProtocolIdentityDigest,
-    authorityIdentity,
-    frozenInputsStable: true,
-    authorityIdentityStable: true,
-    selectorSetsDistinct: true,
-    status: 'PASSED',
-    startedAt: '2026-08-27T10:00:00',
-    completedAt: '2026-08-27T10:01:00',
-    timezone: 'Asia/Shanghai',
-    setupResults: setupCommands.map((command, index) => ({
-      ordinal: index + 1,
-      commandDigest: digestJson(command),
-      exitCode: 0,
-      elapsedMilliseconds: 1,
-    })),
-    gateCount: 40,
-    passedCount: 40,
-    failedCount: 0,
-    conclusionScope: 'Phase 01 POC executable architecture baseline only; not full POC or production readiness.',
-    results,
-  });
-  await rebuildManifest(evidenceDirectory);
-  return { evidenceDirectory, reviewOutputDirectory };
-}
-
-async function writeFixtureProducer(input: {
-  readonly producerId: AbgProducerId;
-  readonly evidenceRoot: string;
-  readonly frozenInputs: Readonly<Record<string, string>>;
-  readonly rawArtifactPath: string;
-  readonly evidencePath: string;
-}) {
-  if (input.producerId !== 'formal-run') {
-    await writeRedactedJsonArtifact(input.evidenceRoot, input.rawArtifactPath, {
-      producerId: input.producerId,
-      status: 'PASSED',
-    });
-  }
-  const item = await createEvidenceItemFromFile(input.evidenceRoot, {
-    artifactId: 'fixture-' + input.producerId + '-source',
-    relativePath: input.rawArtifactPath,
-    mediaType: 'application/json',
-    jsonPointer: '/status',
-    claim: { producerId: input.producerId, status: 'PASSED' },
-  });
-  const outcomes = Object.fromEntries(ABG_COVERAGE_MATRIX.flatMap((entry) =>
-    entry.evidenceSelectors
-      .filter((selector) => selector.producerId === input.producerId)
-      .map((selector) => [selector.assertionId, {
-        status: 'PASSED' as const,
-        description: 'Synthetic gate-specific reviewer fixture assertion.',
-        expected: { status: 'PASSED' },
-        actual: { status: 'PASSED', assertionId: selector.assertionId },
-      }]),
-  ));
-  const evidence = buildMatrixProducerEvidence({
-    producerId: input.producerId,
-    runId: RUN_ID,
-    runSequence: RUN_SEQUENCE,
-    startedAt: '2026-08-27T10:00:00',
-    completedAt: '2026-08-27T10:00:01',
-    processStatus: 'PASSED',
-    commandIdentity: {
-      executable: 'synthetic-fixture',
-      arguments: [input.producerId],
-      workingDirectory: 'repository-root',
-      commandDigest: sha256(Buffer.from('synthetic-fixture:' + input.producerId, 'utf8')),
-    },
-    environmentRefs: { CI: DIGEST },
-    frozenInputRefs: Object.fromEntries(ABG_FROZEN_INPUT_KINDS.map((kind) => [
-      kind,
-      input.frozenInputs[kind],
-    ])),
-    defaultEvidenceItems: [item],
-    defaultReferences: {
-      requestIds: ['request-' + input.producerId],
-      principalIds: ['principal-' + input.producerId],
-      governanceObjectIds: ['governance-object-' + input.producerId],
-      versionIds: ['version-' + input.producerId],
-      ruleVersions: ['rule-version-' + input.producerId],
-      artifactDigests: [item.sha256],
-    },
-    outcomes,
-  });
-  return writeProducerEvidence(input.evidenceRoot, input.evidencePath, evidence);
-}
-
-function fixtureFrozenInputs(): Readonly<Record<string, string>> {
+  const fixture = await buildValidEvidenceFixture({ rootDirectory: parent });
   return {
-    gitCommitSha: '0123456789abcdef0123456789abcdef01234567',
-    workingTreeState: 'CLEAN',
-    lockfileSha256: DIGEST,
-    openapiSha256: DIGEST,
-    migrationManifestSha256: DIGEST,
-    fixtureIdentity: DIGEST,
-    nodeVersion: 'v24.18.0',
-    postgresImage: 'postgres:18.4',
-    keycloakImage: 'quay.io/keycloak/keycloak:26.7.0',
-    browserVersion: '1.61.0',
-  } satisfies Record<(typeof ABG_FROZEN_INPUT_KINDS)[number] | 'workingTreeState', string>;
+    evidenceDirectory: fixture.evidenceDirectory,
+    reviewOutputDirectory: fixture.reviewOutputDirectory,
+  };
 }
 
 async function rebuildManifest(directory: string): Promise<void> {
-  const names = (await collectFiles(directory))
-    .filter((name) => name !== 'manifest.json' && name !== 'manifest.sha256')
-    .sort((left, right) => left.localeCompare(right));
-  const files = await Promise.all(names.map(async (name) => {
-    const bytes = await readFile(join(directory, name));
-    return {
-      path: name.replaceAll('\\', '/'),
-      mediaType: mediaType(name),
-      byteLength: bytes.byteLength,
-      sha256: sha256(bytes),
-    };
-  }));
-  const manifestBytes = Buffer.from(JSON.stringify({
-    schemaVersion: 'phase-01.evidence-manifest.v1',
-    files,
-  }, null, 2) + '\n', 'utf8');
-  await writeFile(join(directory, 'manifest.json'), manifestBytes, { flag: 'w' });
-  await writeFile(
-    join(directory, 'manifest.sha256'),
-    sha256(manifestBytes) + '  manifest.json\n',
-    { flag: 'w' },
-  );
+  await rebuildFixtureManifest(directory);
 }
 
 async function collectFiles(directory: string, prefix = ''): Promise<readonly string[]> {
@@ -777,42 +810,6 @@ async function collectFiles(directory: string, prefix = ''): Promise<readonly st
     }
   }
   return names;
-}
-
-async function writeJson(path: string, value: unknown): Promise<void> {
-  await mkdir(resolve(path, '..'), { recursive: true });
-  await writeFile(path, JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
-}
-
-function digestJson(value: unknown): string {
-  return sha256(Buffer.from(canonicalJson(value), 'utf8'));
-}
-
-function canonicalJson(value: unknown): string {
-  if (value === null || typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
-    const serialized = JSON.stringify(value);
-    if (serialized === undefined) throw new Error('fixture JSON value unsupported');
-    return serialized;
-  }
-  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
-  if (typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return '{' + Object.keys(record).sort().map((key) =>
-      JSON.stringify(key) + ':' + canonicalJson(record[key]),
-    ).join(',') + '}';
-  }
-  throw new Error('fixture JSON value unsupported');
-}
-
-function mediaType(path: string): string {
-  switch (extname(path).toLowerCase()) {
-    case '.json': return 'application/json';
-    case '.xml': return 'application/xml';
-    case '.html': return 'text/html; charset=utf-8';
-    case '.png': return 'image/png';
-    case '.zip': return 'application/zip';
-    default: return 'text/plain; charset=utf-8';
-  }
 }
 
 async function treeDigest(directory: string): Promise<string> {
@@ -838,4 +835,25 @@ function recordArray(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) throw new Error('fixture record array expected');
   for (const item of value) record(item);
   return value as Record<string, unknown>[];
+}
+
+function syntheticResidualResource(resourceType: 'container' | 'volume' | 'network') {
+  return {
+    resourceType,
+    id: `residual-${resourceType}`,
+    name: `residual-${resourceType}`,
+    labels: {},
+    source: 'podman-inspect',
+    present: true,
+    active: true,
+    state: 'PRESENT',
+    imageReference: null,
+    imageId: null,
+    imageDigest: null,
+    ports: [],
+    startedAt: null,
+    stoppedAt: null,
+    exitStatus: null,
+    metrics: null,
+  };
 }

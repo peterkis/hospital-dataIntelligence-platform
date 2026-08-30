@@ -446,8 +446,11 @@ const COVERAGE_DEFINITIONS: readonly CoverageDefinition[] = [
   ),
   defineCoverage(
     'ABG-40',
-    'fresh-environment-formal-run-immutable-evidence-conclusion',
-    ['RUN-FORMAL-ABG-EVIDENCE-MANIFEST'],
+    [
+      'formal-terminal-lifecycle-complete',
+      'formal-evidence-seal-eligible',
+    ],
+    ['RUN-FORMAL-TERMINAL-LIFECYCLE'],
     ['formal-run'],
   ),
 ];

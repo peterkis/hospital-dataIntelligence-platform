@@ -16,8 +16,6 @@ import {
   type AbgProducerId,
 } from '../abg-coverage-matrix.js';
 import {
-  getAbgCoverageMatrixDigest,
-  getAbgProducerProtocolIdentityDigest,
   writeAbgGateProof,
   type AbgGateResult,
 } from '../abg-gate-proof.js';
@@ -41,6 +39,19 @@ import {
   validateFormalAbgSummary,
   type FormalAbgSummaryValidationExpectations,
 } from '../formal-summary-validator.js';
+import {
+  FORMAL_RUNTIME_PORTS,
+  createFormalRunSeed,
+  type FormalRunIdentity,
+} from '../runtime/formal-runtime-contract.js';
+import {
+  buildFormalTerminalConclusion,
+  type FormalTerminalConclusion,
+} from '../runtime/formal-terminal-conclusion.js';
+import type {
+  FormalCleanupReport,
+  RuntimeResourceSnapshot,
+} from '../runtime/formal-teardown.js';
 
 export const VALIDATOR_FIXTURE_RUN_ID = 'validator-test-fixture-run-0001';
 export const VALIDATOR_FIXTURE_RUN_SEQUENCE = 17;
@@ -61,7 +72,7 @@ export interface ValidFixtureGateSummary {
 }
 
 export interface ValidFixtureSummary {
-  readonly schemaVersion: 'phase-01.abg-run.v3';
+  readonly schemaVersion: 'phase-01.abg-run.v4';
   readonly runId: string;
   readonly runSequence: number;
   readonly status: 'PASSED';
@@ -118,45 +129,14 @@ export async function buildValidEvidenceFixture(
     producers: sharedEntries,
   });
 
-  await writeFixtureJson(join(evidenceDirectory, 'formal-run/preliminary-conclusion.json'), {
-    schemaVersion: 'phase-01.abg-preconclusion.v1',
-    runId: VALIDATOR_FIXTURE_RUN_ID,
-    runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
-    status: 'PASSED',
-    coverageMatrixDigest: getAbgCoverageMatrixDigest(),
-    producerProtocolIdentityDigest: getAbgProducerProtocolIdentityDigest(),
-    gates: ABG_GATES.slice(0, 39).map((gate) => ({ gateId: gate.gateId, status: 'PASSED' })),
-  });
-  const formalEntry = await writeFixtureProducer({
-    producerId: 'formal-run',
-    evidenceRoot: evidenceDirectory,
-    frozenInputs,
-    rawArtifactPath: 'formal-run/preliminary-conclusion.json',
-    evidencePath: 'formal-run/producer-evidence.json',
-  });
-  await writeProducerEvidenceIndex(evidenceDirectory, 'producer-evidence-index.json', {
-    schemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
-    runId: VALIDATOR_FIXTURE_RUN_ID,
-    runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
-    producers: [
-      ...sharedEntries.map((entry) => ({
-        ...entry,
-        relativePath: `shared/${entry.relativePath}`,
-      })),
-      formalEntry,
-    ],
-  });
-
   const proofs: AbgGateResult[] = [];
-  for (const entry of ABG_COVERAGE_MATRIX) {
+  for (const entry of ABG_COVERAGE_MATRIX.filter((candidate) => candidate.gateId !== 'ABG-40')) {
     proofs.push(await writeAbgGateProof({
       gateId: entry.gateId,
       runId: VALIDATOR_FIXTURE_RUN_ID,
       runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
       evidenceRoot: evidenceDirectory,
-      producerEvidenceIndexRelativePath: entry.gateId === 'ABG-40'
-        ? 'producer-evidence-index.json'
-        : 'shared/producer-evidence-index.json',
+      producerEvidenceIndexRelativePath: 'shared/producer-evidence-index.json',
       resultRelativePath: `gates/${entry.gateId}/producer/result.json`,
     }));
   }
@@ -189,6 +169,129 @@ export async function buildValidEvidenceFixture(
     await writeFile(join(directory, 'stderr.log'), '', { flag: 'wx' });
   }
 
+  const runIdentity: FormalRunIdentity = {
+    ...createFormalRunSeed(VALIDATOR_FIXTURE_RUN_SEQUENCE, () => VALIDATOR_FIXTURE_RUN_ID),
+    gitCommitSha: frozenInputs['gitCommitSha']!,
+  };
+  const ports = FORMAL_RUNTIME_PORTS.map((port) => ({
+    port,
+    occupied: false,
+    verificationError: null,
+  }));
+  const startedResources: RuntimeResourceSnapshot = {
+    schemaVersion: 'phase-01.formal-runtime-resources.v1',
+    runIdentity,
+    capturedAt: '2026-08-28T10:00:30',
+    resources: [],
+    ports,
+  };
+  const finalResources: RuntimeResourceSnapshot = {
+    ...startedResources,
+    capturedAt: '2026-08-28T10:00:50',
+  };
+  const cleanup: FormalCleanupReport = {
+    schemaVersion: 'phase-01.formal-cleanup.v1',
+    runIdentity,
+    startedAt: '2026-08-28T10:00:40',
+    completedAt: '2026-08-28T10:00:50',
+    status: 'PASSED',
+    actions: [],
+    failedItems: [],
+    residualResources: [],
+    occupiedPorts: [],
+    pruneCommandsInvoked: false,
+  };
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/preflight.json'), {
+    schemaVersion: 'phase-01.formal-preflight.v1',
+    status: 'PASSED',
+    runIdentity,
+    startedAt: '2026-08-28T09:59:58',
+    completedAt: '2026-08-28T09:59:59',
+    timezone: 'Asia/Shanghai',
+    checks: [],
+    secrets: [],
+  });
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/resources-started.json'), startedResources);
+  const producerProtocolEvidence = [
+    ...await Promise.all(sharedEntries.map((entry) =>
+      fixtureFileIdentity(evidenceDirectory, `shared/${entry.relativePath}`),
+    )),
+    await fixtureFileIdentity(evidenceDirectory, 'shared/producer-evidence-index.json'),
+  ];
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/producer-evidence-snapshot.json'), {
+    schemaVersion: 'phase-01.formal-producer-evidence-snapshot.v1',
+    runIdentity,
+    statusBeforeCleanup: 'PASSED',
+    failureCodes: [],
+    discoveredEvidence: producerProtocolEvidence,
+    discoveredEvidenceCount: producerProtocolEvidence.length,
+    producerProtocolEvidence,
+    producerProtocolEvidenceCount: producerProtocolEvidence.length,
+    absenceIsNotSuccess: false,
+    recordedAt: '2026-08-28T10:00:35',
+  });
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/failure-summary.json'), {
+    schemaVersion: 'phase-01.formal-failure-summary.v1',
+    runIdentity,
+    statusBeforeCleanup: 'PASSED',
+    failureCodes: [],
+    failureMessage: null,
+    evidencePersistedBeforeCleanup: true,
+    evidencePersistence: { preflight: true, resources: true, producer: true },
+    evidenceDirectoryRetention: 'PERMANENT',
+    recordedAt: '2026-08-28T10:00:36',
+  });
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/resources-final.json'), finalResources);
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/cleanup.json'), cleanup);
+  const terminalConclusion = buildFormalTerminalConclusion({
+    runIdentity,
+    startedAt: '2026-08-28T10:00:00',
+    completedAt: '2026-08-28T10:00:55',
+    preflightStatus: 'PASSED',
+    setupStatus: 'PASSED',
+    nonFormalGateResults: ABG_GATES.slice(0, 39).map((gate) => ({
+      gateId: gate.gateId,
+      status: 'PASSED',
+    })),
+    producerEvidencePersistedBeforeCleanup: true,
+    producerProtocolEvidenceCount: producerProtocolEvidence.length,
+    cleanup,
+    finalResources,
+    frozenInputsStableAfterCleanup: true,
+    authorityIdentityStableAfterCleanup: true,
+    outputDirectoryExclusive: true,
+    failureCodes: [],
+  });
+  await writeFixtureJson(
+    join(evidenceDirectory, 'runtime/terminal-conclusion.json'),
+    terminalConclusion,
+  );
+  const formalEntry = await writeFixtureFormalProducer({
+    evidenceRoot: evidenceDirectory,
+    frozenInputs,
+    terminalConclusion,
+  });
+  await writeProducerEvidenceIndex(evidenceDirectory, 'producer-evidence-index.json', {
+    schemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
+    runId: VALIDATOR_FIXTURE_RUN_ID,
+    runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
+    producers: [
+      ...sharedEntries.map((entry) => ({
+        ...entry,
+        relativePath: `shared/${entry.relativePath}`,
+      })),
+      formalEntry,
+    ],
+  });
+  proofs.push(await writeAbgGateProof({
+    gateId: 'ABG-40',
+    runId: VALIDATOR_FIXTURE_RUN_ID,
+    runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
+    evidenceRoot: evidenceDirectory,
+    producerEvidenceIndexRelativePath: 'producer-evidence-index.json',
+    resultRelativePath: 'gates/ABG-40/producer/result.json',
+  }));
+
   const results: ValidFixtureGateSummary[] = ABG_GATES.map((gate, index) => ({
     ...gate,
     ordinal: index + 1,
@@ -210,19 +313,40 @@ export async function buildValidEvidenceFixture(
     setupCommandDigests: setupCommands.map(digestJson),
   };
   const summary: ValidFixtureSummary = {
-    schemaVersion: 'phase-01.abg-run.v3',
+    schemaVersion: 'phase-01.abg-run.v4',
     runId: VALIDATOR_FIXTURE_RUN_ID,
     runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
+    gitCommitSha: runIdentity.gitCommitSha,
+    runtimeNamespace: runIdentity.runtimeNamespace,
     planDigest: summaryValidationExpectations.planDigest,
     frozenInputs,
     frozenInputsDigest: summaryValidationExpectations.frozenInputsDigest,
     coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
     producerProtocolIdentityDigest: authorityIdentity.producerProtocolIdentityDigest,
     authorityIdentity,
-    frozenInputsStable: true,
-    authorityIdentityStable: true,
+    preflightStatus: 'PASSED',
+    setupStatus: 'PASSED',
+    nonFormalGateStatus: 'PASSED',
+    producerEvidenceStatus: 'PASSED',
+    producerEvidencePersistedBeforeCleanup: true,
+    producerProtocolEvidenceCount: producerProtocolEvidence.length,
+    cleanupStatus: 'PASSED',
+    residualResourceCount: 0,
+    residualContainerCount: 0,
+    residualVolumeCount: 0,
+    residualNetworkCount: 0,
+    occupiedRequiredPorts: [],
+    requiredPortsObserved: FORMAL_RUNTIME_PORTS,
+    pruneCommandsInvoked: false,
+    frozenInputsStableAfterCleanup: true,
+    authorityIdentityStableAfterCleanup: true,
+    outputDirectoryExclusive: true,
+    terminalConclusionStatus: 'PASSED',
+    sealEligibilityStatus: 'PASSED',
+    lifecycleStatus: 'PASSED',
     selectorSetsDistinct: true,
     status: 'PASSED',
+    failureCodes: [],
     startedAt: '2026-08-28T10:00:00',
     completedAt: '2026-08-28T10:01:00',
     timezone: 'Asia/Shanghai',
@@ -240,6 +364,17 @@ export async function buildValidEvidenceFixture(
   };
   validateFormalAbgSummary(summary, summaryValidationExpectations);
   await writeFixtureJson(join(evidenceDirectory, 'abg-results.json'), summary);
+  await writeFixtureJson(join(evidenceDirectory, 'runtime/final-outcome.json'), {
+    schemaVersion: 'phase-01.formal-runtime-outcome.v2',
+    runIdentity,
+    status: 'PASSED',
+    failureCodes: [],
+    cleanupStatus: 'PASSED',
+    terminalConclusionStatus: 'PASSED',
+    sealEligibilityStatus: 'PASSED',
+    sealPendingAtWrite: true,
+    completedEvidenceAt: '2026-08-28T10:01:00',
+  });
   await writeFixtureJson(join(evidenceDirectory, 'validator-test-fixture.json'), {
     schemaVersion: 'phase-01.validator-test-fixture.v1',
     fixturePurpose: 'VERIFY_VALIDATORS_FAIL_CLOSED',
@@ -364,6 +499,91 @@ async function writeFixtureProducer(input: {
     outcomes,
   });
   return writeProducerEvidence(input.evidenceRoot, input.evidencePath, evidence);
+}
+
+async function writeFixtureFormalProducer(input: {
+  readonly evidenceRoot: string;
+  readonly frozenInputs: Readonly<Record<string, string>>;
+  readonly terminalConclusion: FormalTerminalConclusion;
+}) {
+  const matrix = ABG_COVERAGE_MATRIX.find((entry) => entry.gateId === 'ABG-40');
+  if (matrix === undefined || matrix.assertionIds.length !== 2) {
+    throw new Error('VALIDATOR_FIXTURE_ABG40_MATRIX_INVALID');
+  }
+  const terminalAssertionId = 'ABG-40:formal-terminal-lifecycle-complete';
+  const sealAssertionId = 'ABG-40:formal-evidence-seal-eligible';
+  const terminalItem = await createEvidenceItemFromFile(input.evidenceRoot, {
+    artifactId: 'validator-fixture-formal-terminal-lifecycle',
+    relativePath: 'runtime/terminal-conclusion.json',
+    mediaType: 'application/json',
+    jsonPointer: '/assertions/terminalLifecycle/status',
+    claim: { assertionId: terminalAssertionId, status: 'PASSED' },
+  });
+  const sealItem = await createEvidenceItemFromFile(input.evidenceRoot, {
+    artifactId: 'validator-fixture-formal-seal-eligibility',
+    relativePath: 'runtime/terminal-conclusion.json',
+    mediaType: 'application/json',
+    jsonPointer: '/assertions/sealEligibility/status',
+    claim: { assertionId: sealAssertionId, status: 'PASSED' },
+  });
+  const items = [terminalItem, sealItem] as const;
+  const evidence = buildMatrixProducerEvidence({
+    producerId: 'formal-run',
+    runId: VALIDATOR_FIXTURE_RUN_ID,
+    runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
+    startedAt: '2026-08-28T10:00:55',
+    completedAt: '2026-08-28T10:00:56',
+    processStatus: 'PASSED',
+    commandIdentity: {
+      executable: 'validator-test-fixture',
+      arguments: ['formal-run'],
+      workingDirectory: 'repository-root',
+      commandDigest: sha256(Buffer.from('validator-test-fixture:formal-run', 'utf8')),
+    },
+    environmentRefs: { CI: VALIDATOR_FIXTURE_DIGEST },
+    frozenInputRefs: Object.fromEntries(ABG_FROZEN_INPUT_KINDS.map((kind) => [
+      kind,
+      input.frozenInputs[kind],
+    ])),
+    defaultEvidenceItems: items,
+    defaultReferences: {
+      requestIds: ['request-formal-run'],
+      principalIds: ['principal-formal-run'],
+      governanceObjectIds: ['governance-object-formal-run'],
+      versionIds: ['version-formal-run'],
+      ruleVersions: ['rule-version-formal-run'],
+      artifactDigests: [...new Set(items.map((item) => item.sha256))],
+    },
+    outcomes: {
+      [terminalAssertionId]: {
+        status: 'PASSED',
+        description: 'Synthetic complete post-cleanup terminal lifecycle assertion.',
+        expected: input.terminalConclusion.assertions.terminalLifecycle.expected,
+        actual: input.terminalConclusion.assertions.terminalLifecycle.actual,
+        evidenceItems: [terminalItem],
+      },
+      [sealAssertionId]: {
+        status: 'PASSED',
+        description: 'Synthetic pre-seal eligibility assertion.',
+        expected: input.terminalConclusion.assertions.sealEligibility.expected,
+        actual: input.terminalConclusion.assertions.sealEligibility.actual,
+        evidenceItems: [sealItem],
+      },
+    },
+  });
+  return writeProducerEvidence(
+    input.evidenceRoot,
+    'formal-run/producer-evidence.json',
+    evidence,
+  );
+}
+
+async function fixtureFileIdentity(
+  evidenceDirectory: string,
+  relativePath: string,
+): Promise<{ readonly path: string; readonly byteLength: number; readonly sha256: string }> {
+  const bytes = await readFile(join(evidenceDirectory, relativePath));
+  return { path: relativePath, byteLength: bytes.byteLength, sha256: sha256(bytes) };
 }
 
 function fixtureFrozenInputs(): Readonly<Record<string, string>> {
