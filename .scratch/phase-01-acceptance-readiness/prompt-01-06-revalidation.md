@@ -1,6 +1,6 @@
 # AR-12 — Prompt 1～6 与 AR-09～AR-11 当前 HEAD 技术重基线
 
-Status: initial-rebaseline-passed — closeout commit 与 Closeout HEAD 最终完整重跑待执行
+Status: final-rebaseline-failed — AR-12 已按非覆盖恢复流程回到 claimed
 
 本报告记录正式 ABG 前的技术重基线，不是正式 ABG evidence package，不具备正式验收资格。当前授权明确禁止 PostgreSQL、Keycloak、Chrome、真实 Podman、shared readiness、正式 ABG 和独立正式 evidence acceptance；只允许静态、单元、类型、构建、合成 fixture、fake/mock runtime 和列表检查。
 
@@ -293,3 +293,9 @@ Contract tuple：
 初始技术重基线通过，未触发发布事务、数据库 Schema、稳定身份、版本语义、一发布一快照、双时态、消费者契约、人员/IAM 或 API/数据库边界停止线。AR-01～AR-06、AR-09～AR-11 可追加“当前候选重新验证通过”，Implementation 保持 `resolved`，Formal acceptance 保持 `pending`。AR-12 可随本报告 closeout 提交由 `claimed` 转为 `resolved`；AR-07 的技术依赖标记为 `satisfied`，但 AR-07 必须继续 `blocked`，唯一剩余阻断是用户另行明确授权正式执行并在正式环境建立新 candidate/run identity。
 
 本 closeout 提交将建立新的 Git SHA，因此该提交本身不沿用上述初始结果。提交后必须在新的、不可覆盖的 `...-final` 目录从身份冻结起完整重跑 42 条命令与 14 项 standalone；最终 summary 只保留在 `.runtime`。最终重跑失败时按任务约定创建非覆盖纠正提交恢复 AR-12 `claimed`，不得把本节的初始通过表述为最终完成。
+
+## Closeout HEAD 最终重跑失败（保留）
+
+Closeout HEAD `4dca3cacfc98b77e2e805260703a912b0a069d17` 使用新的不可覆盖目录 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final`。init、命令 01 `npm ci --ignore-scripts --no-audit --no-fund` 与命令 02 `npm run check:runtime` 通过；命令 03 `npm run check:repo:layout` 以 exit `1` 失败，编排错误码为 `AR12_COMMAND_EXIT_UNEXPECTED`，其余 39 条命令未执行。
+
+直接原因是布局检查同时发现根 `package-lock.json` 与为 opening-HEAD 初始执行保留在仓库内的 `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout/package-lock.json`。失败证据保留于该目录的 `run-commands-result.json`、`failure-run-commands.json` 和 `commands/03-check-repo-layout/{command.json,stdout.log,stderr.log,result.json}`；目录不删除、不覆盖、不修补。该失败未触发架构停止线，但依任务规则仍使 AR-12 恢复 `claimed`、Current frontier 恢复 AR-12、AR-07 继续 `blocked`，不得宣称 AR-12 完成。

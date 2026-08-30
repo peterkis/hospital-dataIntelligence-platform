@@ -1,8 +1,8 @@
 # 12 — 对抗回归与 Prompt 1～Prompt 6 重基线
 
-Status: resolved
+Status: claimed
 
-Blocked by: none — AR-11、Podman human review 与当前候选初始技术重基线均已满足
+Blocked by: none — AR-11 与 Podman human review 已满足；Closeout HEAD 最终重跑失败，AR-12 保持 current frontier
 
 ## What to build
 
@@ -32,6 +32,7 @@ AR-01～AR-06 的旧评论分别绑定旧提交。之后迁移、生成类型、
 - [x] AR-01～AR-06 的 Verification status 更新为新基线事实，但不得改写为 Formal acceptance。
 - [x] Podman 工作包已完成 AR-11 后人工复核；否则 AR-12 失败关闭且 AR-07 继续 blocked。
 - [x] 只有全部重基线检查通过时才建议将 AR-07 的技术依赖视为满足；AR-07 仍须另行正式执行授权并使用新的 candidate/run identity。
+- [ ] Closeout HEAD 在新的不可覆盖目录完成全部最终重跑；当前 `4dca3cacfc98b77e2e805260703a912b0a069d17` 运行已失败关闭。
 
 ## Comments
 
@@ -58,3 +59,4 @@ AR-01～AR-06 的旧评论分别绑定旧提交。之后迁移、生成类型、
   0       0
   ```
 - 2026-08-30（AR-12 初始 closeout）：在 clean execution clone 的同一分支与 opening HEAD `db57406592b5afe18ac2e95f3ddd0e1bf40173ea` 上完成当前技术重基线。有效目录为 `.runtime/rebaseline/ar-12/20260830-db57406-precloseout-r4`；`ar-12-rebaseline-summary.json` 为 `PASSED`，SHA-256 `57c0c37368ccb4335754af70c018062b57395c2379c0c6270f4acd06b90b61e1`。42/42 允许命令 exit 0；verification 22 files / 495 tests，lifecycle 10/218，Podman fake runtime 5/173，provenance 4/93，Testcontainers guard 8 passed / 3 个授权范围外真实 runtime skipped，standalone teardown 6/6；14/14 standalone 通过；140/140 mutations detected、0 survived；Secret 与副作用扫描均 0 finding；结束 identity、source manifest、contract tuple、runtime authority、lockfile 和原 completion tree 均稳定，worktree `CLEAN`。保留了两个失败关闭目录和一个安全复审后废弃的 init-only 目录，均未覆盖；细节见 `prompt-01-06-revalidation.md`。本次 `formalAcceptanceEligible=false`，没有启动 PostgreSQL、Keycloak、Chrome 或真实 Podman，没有执行 shared readiness、正式 ABG 或独立正式 evidence acceptance，也未修改原 21 个 completion Ticket。初始技术依赖满足，AR-12 随 closeout 提交转为 `resolved`；AR-07 仍 `blocked`，仅等待用户另行明确正式执行授权与正式环境运行。Closeout 提交改变 SHA 后必须从新目录完整重跑；若失败则按约定用非覆盖提交恢复本 Ticket 为 `claimed`。
+- 2026-08-30（Closeout HEAD 最终重跑失败）：候选 `4dca3cacfc98b77e2e805260703a912b0a069d17` 在新目录 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final` 通过 init、`npm ci` 与 `check:runtime`，随后命令 03 `npm run check:repo:layout` 以 exit `1` 失败，稳定编排错误码为 `AR12_COMMAND_EXIT_UNEXPECTED`。直接原因是布局检查在仓库内保留的初始执行 clone `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout/package-lock.json` 与根 `package-lock.json` 之间发现第二份 lockfile；39 条后续命令未执行。失败证据为 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final/run-commands-result.json`、`failure-run-commands.json` 与 `commands/03-check-repo-layout/{command.json,stdout.log,stderr.log,result.json}`，目录保持不可覆盖且不修补。按任务约定，本 Ticket 用本非覆盖历史恢复为 `claimed`，Current frontier 恢复为 AR-12；AR-07 继续 `blocked`，不得宣称 AR-12 完成。该失败未启动真实服务、shared readiness 或正式 ABG，也未修改原 21 个 completion Ticket。
