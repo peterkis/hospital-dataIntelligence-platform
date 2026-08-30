@@ -144,6 +144,8 @@ export function deriveVerificationAuthorityIdentity(
     gateProofIdentityDigest: requireSourceEntry(byPath, 'tooling/verification/src/abg-gate-proof.ts').sha256,
     terminalContractIdentityDigest: digestEntriesByRoles(sourceFiles, [
       'TERMINAL_CONTRACT', 'SUMMARY_VALIDATOR', 'RUNTIME_CONTRACT',
+      'RUNTIME_AUTHORITY', 'RUNTIME_AUTHORITY_LOADER', 'RUNTIME_AUTHORITY_SCHEMA',
+      'RUNTIME_SCRIPT',
     ]),
     sourceManifestDefinitionDigest: digestEntriesByRoles(sourceFiles, [
       'SOURCE_MANIFEST_DEFINITION', 'CONTRACT_VERSION', 'REVIEWER_COMPATIBILITY',

@@ -3,19 +3,26 @@ import {
   FORMAL_REQUIRED_SECRET_NAMES,
   FORMAL_RUNTIME_PORTS,
   createFormalRunSeed,
+  formalRuntimeLabels,
   type RuntimeCommandResult,
   type RuntimeCommandRunner,
   type RuntimeCommandSpec,
 } from './formal-runtime-contract.js';
 import {
   isRepositoryPodmanResource,
+  parseRegisteredWslBackends,
+  parsePodmanContainerRestartPolicy,
   runFormalPreflight,
+  type FormalPreflightAuthorityIsolationObservation,
   type FormalPreflightDependencies,
 } from './formal-preflight.js';
+import type { PodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
 
 const GIT_SHA = 'a'.repeat(40);
 const LOCK_SHA = 'b'.repeat(64);
 const PRODUCER_SOURCE_MANIFEST_SHA256 = 'c'.repeat(64);
+const RUNTIME_AUTHORITY_SHA256 = 'e'.repeat(64);
+const RUNTIME_AUTHORITY_SEMANTIC_DIGEST = 'f'.repeat(64);
 const RUN = createFormalRunSeed(5, () => '12345678-1234-1234-1234-123456789abc');
 
 describe('formal ABG preflight', () => {
@@ -25,6 +32,8 @@ describe('formal ABG preflight', () => {
 
     expect(report.status).toBe('PASSED');
     expect(report.runIdentity).toEqual({ ...RUN, gitCommitSha: GIT_SHA });
+    expect(report.runtimeAuthoritySha256).toBe(RUNTIME_AUTHORITY_SHA256);
+    expect(report.runtimeAuthoritySemanticDigest).toBe(RUNTIME_AUTHORITY_SEMANTIC_DIGEST);
     expect(report.checks.find((check) => check.id === 'git-frozen-inputs-readable')?.observed)
       .toMatchObject({
         inputs: { producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256 },
@@ -151,6 +160,35 @@ describe('formal ABG preflight', () => {
     }, 'FORMAL_PREFLIGHT_PODMAN_REPOSITORY_RESIDUE');
   });
 
+  it('projects Podman resource labels to the five governed keys before recording evidence', async () => {
+    const dependencies = passingDependencies();
+    const sensitiveValue = 'database-password-that-must-not-enter-evidence';
+    const report = await execute({
+      ...dependencies,
+      containerRuntime: {
+        async inspect() {
+          return {
+            ...(await dependencies.containerRuntime.inspect()),
+            repositoryResources: [{
+              type: 'container',
+              id: 'residual-container',
+              name: `${RUN.runtimeNamespace}_postgres`,
+              labels: {
+                ...formalRuntimeLabels(RUN),
+                'third-party.sensitive-label': sensitiveValue,
+              },
+            }],
+          };
+        },
+      },
+    });
+
+    const evidence = JSON.stringify(report);
+    expect(evidence).toContain(`\"hdi.run-id\":\"${RUN.runId}\"`);
+    expect(evidence).not.toContain('third-party.sensitive-label');
+    expect(evidence).not.toContain(sensitiveValue);
+  });
+
   it('recognizes an HDI runtime namespace even when labels are damaged', () => {
     expect(isRepositoryPodmanResource({
       type: 'volume',
@@ -158,6 +196,147 @@ describe('formal ABG preflight', () => {
       name: 'hdi_phase01_manual_probe_postgres_data',
       labels: {},
     })).toBe(true);
+  });
+
+  it.each([
+    ['Docker CLI', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      dockerExecutablePaths: ['/usr/bin/docker'],
+    }), 'FORMAL_PREFLIGHT_DOCKER_CLI_PRESENT'],
+    ['/run/docker.sock', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      forbiddenSockets: [{ path: '/run/docker.sock', kind: 'socket', symbolicLink: false, target: null }],
+    }), 'FORMAL_PREFLIGHT_DOCKER_SOCKET_PRESENT'],
+    ['Docker socket alias', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      forbiddenSockets: [{
+        path: '/var/run/docker.sock',
+        kind: 'symbolic-link',
+        symbolicLink: true,
+        target: '/run/podman/podman.sock',
+      }],
+    }), 'FORMAL_PREFLIGHT_DOCKER_SOCKET_PRESENT'],
+    ['docker.service', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      systemdUnits: [{ name: 'docker.service', loadState: 'loaded', activeState: 'active', unitFileState: 'enabled', subState: 'running' }],
+    }), 'FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT'],
+    ['docker.socket', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      systemdUnits: [{ name: 'docker.socket', loadState: 'loaded', activeState: 'active', unitFileState: 'enabled', subState: 'listening' }],
+    }), 'FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT'],
+    ['dockerd', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      forbiddenProcesses: [{ pid: 88, name: 'dockerd' }],
+    }), 'FORMAL_PREFLIGHT_DOCKER_PROCESS_PRESENT'],
+    ['docker-proxy', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      forbiddenProcesses: [{ pid: 89, name: 'docker-proxy' }],
+    }), 'FORMAL_PREFLIGHT_DOCKER_PROCESS_PRESENT'],
+    ['TCP 2375', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      forbiddenTcpListeners: [{ address: '127.0.0.1', port: 2375, process: 'dockerd' }],
+    }), 'FORMAL_PREFLIGHT_CONTAINER_API_TCP_PRESENT'],
+    ['TCP 2376', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      forbiddenTcpListeners: [{ address: '0.0.0.0', port: 2376, process: 'dockerd' }],
+    }), 'FORMAL_PREFLIGHT_CONTAINER_API_TCP_PRESENT'],
+    ['Podman TCP service', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      unexpectedContainerApiEndpoints: ['tcp://127.0.0.1:8888'],
+    }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT'],
+    ['remote Podman connection', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      podmanConnections: ['ssh://runtime.example/run/podman/podman.sock'],
+    }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT'],
+    ['Podman machine', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      podmanMachines: ['podman-machine-default'],
+    }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT'],
+    ['rootless socket', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      rootlessSocketPaths: ['/run/user/1000/podman/podman.sock'],
+    }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT'],
+    ['second WSL backend', (value: FormalPreflightAuthorityIsolationObservation) => ({
+      ...value,
+      otherWslBackends: ['docker-desktop'],
+    }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT'],
+  ] as const)('fails closed when %s is detected', async (_name, mutate, errorCode) => {
+    const dependencies = passingDependencies();
+    const baseline = await dependencies.authorityIsolation.inspect();
+    await expectFailure({
+      ...dependencies,
+      authorityIsolation: {
+        async inspect() {
+          return mutate(baseline) as FormalPreflightAuthorityIsolationObservation;
+        },
+      },
+    }, errorCode);
+  });
+
+  it.each([
+    [{ DOCKER_HOST: 'tcp://127.0.0.1:2375' }, 'FORMAL_PREFLIGHT_DOCKER_HOST_INVALID'],
+    [{ DOCKER_HOST: 'unix:///run/docker.sock' }, 'FORMAL_PREFLIGHT_DOCKER_HOST_INVALID'],
+    [{ DOCKER_CONTEXT: 'desktop-linux' }, 'FORMAL_PREFLIGHT_DOCKER_CONTEXT_PRESENT'],
+    [{ DOCKER_TLS_VERIFY: '1' }, 'FORMAL_PREFLIGHT_DOCKER_TLS_PRESENT'],
+    [{ DOCKER_CERT_PATH: '/unsafe/certs' }, 'FORMAL_PREFLIGHT_DOCKER_TLS_PRESENT'],
+    [{ CONTAINER_HOST: 'ssh://runtime.example' }, 'FORMAL_PREFLIGHT_CONTAINER_HOST_INVALID'],
+    [{ TESTCONTAINERS_HOST_OVERRIDE: 'runtime.example' }, 'FORMAL_PREFLIGHT_TESTCONTAINERS_HOST_OVERRIDE_INVALID'],
+  ])('fails closed for incompatible container environment %o', async (environment, errorCode) => {
+    const dependencies = passingDependencies();
+    await expectFailure({
+      ...dependencies,
+      environment: { ...dependencies.environment, ...environment },
+    }, errorCode);
+  });
+
+  it('allows only the exact Podman compatibility DOCKER_HOST without treating docker.io images as Docker Engine', async () => {
+    const dependencies = passingDependencies();
+    const report = await execute({
+      ...dependencies,
+      environment: {
+        ...dependencies.environment,
+        DOCKER_HOST: 'unix:///run/podman/podman.sock',
+      },
+    });
+    expect(report.status).toBe('PASSED');
+    expect(JSON.stringify(report)).toContain('docker.io/library/postgres@sha256');
+    expect(errorCodes(report)).not.toContain('FORMAL_PREFLIGHT_DOCKER_CLI_PRESENT');
+  });
+
+  it.each([
+    [{ symbolicLink: true }, 'FORMAL_PREFLIGHT_PODMAN_SOCKET_SYMLINK'],
+    [{ kind: 'file' as const }, 'FORMAL_PREFLIGHT_PODMAN_SOCKET_NOT_UNIX'],
+    [{ path: '/run/user/1000/podman/podman.sock' }, 'FORMAL_PREFLIGHT_PODMAN_SOCKET_PATH_MISMATCH'],
+    [{ systemdActive: false }, 'FORMAL_PREFLIGHT_PODMAN_SOCKET_INACTIVE'],
+    [{ tcpEndpoints: ['tcp://127.0.0.1:9999'] }, 'FORMAL_PREFLIGHT_PODMAN_SOCKET_TCP_EXPOSED'],
+    [{ rootless: true }, 'FORMAL_PREFLIGHT_PODMAN_ROOTFUL_REQUIRED'],
+  ])('fails closed for rootful Podman socket drift %o', async (drift, errorCode) => {
+    const dependencies = passingDependencies();
+    const baseline = await dependencies.authorityIsolation.inspect();
+    await expectFailure({
+      ...dependencies,
+      authorityIsolation: {
+        async inspect() {
+          return { ...baseline, podmanSocket: { ...baseline.podmanSocket, ...drift } };
+        },
+      },
+    }, errorCode);
+  });
+
+  it('parses all registered WSL backends and excludes only the authority distribution', () => {
+    expect(parseRegisteredWslBackends(
+      'Anolis-8.9-HDI-POC\0\r\ndocker-desktop\0\r\nPodman-Machine\0\r\n',
+      'Anolis-8.9-HDI-POC',
+    )).toEqual(['docker-desktop', 'Podman-Machine']);
+  });
+
+  it('reads legacy-container restart policy from HostConfig rather than Config', () => {
+    expect(parsePodmanContainerRestartPolicy({
+      Config: { RestartPolicy: { Name: 'always' } },
+      HostConfig: { RestartPolicy: { Name: 'no' } },
+    })).toBe('no');
+    expect(parsePodmanContainerRestartPolicy({ Config: { RestartPolicy: { Name: 'always' } } }))
+      .toBeNull();
   });
 });
 
@@ -218,18 +397,21 @@ function passingDependencies(): FormalPreflightDependencies {
           podmanVersion: '4.9.4-rhel',
           graphDriverName: 'overlay',
           graphRoot: '/var/lib/containers/storage',
+          runRoot: '/run/containers/storage',
           networkBackend: 'cni',
           logDriver: 'k8s-file',
           ociRuntimeName: 'runc',
+          cgroupManager: 'systemd',
+          eventsBackend: 'file',
           socketPath: '/run/podman/podman.sock',
           socketActive: true,
           rootless: false,
           images: [
             {
-              reference: 'postgres@sha256:' + '1'.repeat(64),
+              reference: 'docker.io/library/postgres@sha256:' + '1'.repeat(64),
               present: true,
               imageId: 'sha256:' + '2'.repeat(64),
-              repoDigests: ['postgres@sha256:' + '1'.repeat(64)],
+              repoDigests: ['docker.io/library/postgres@sha256:' + '1'.repeat(64)],
             },
             {
               reference: 'quay.io/keycloak/keycloak@sha256:' + '3'.repeat(64),
@@ -240,6 +422,11 @@ function passingDependencies(): FormalPreflightDependencies {
           ],
           repositoryResources: [],
         };
+      },
+    },
+    authorityIsolation: {
+      async inspect() {
+        return passingIsolationObservation();
       },
     },
     ports: {
@@ -260,7 +447,129 @@ function passingDependencies(): FormalPreflightDependencies {
     async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256) {
       return { gitCommitSha: GIT_SHA, producerSourceManifestSha256 };
     },
+    async loadRuntimeAuthority() {
+      return {
+        authority: TEST_AUTHORITY,
+        runtimeAuthoritySha256: RUNTIME_AUTHORITY_SHA256,
+        runtimeAuthoritySemanticDigest: RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
+      };
+    },
     now: () => '2026-08-27T12:00:00',
+  };
+}
+
+const TEST_AUTHORITY = {
+  host: {
+    distribution: 'Anolis-8.9-HDI-POC',
+    osId: 'anolis',
+    osVersion: '8.9',
+    architecture: 'x86_64',
+    timezone: 'Asia/Shanghai',
+    initProcess: 'systemd',
+    processorCount: 8,
+    memoryBytes: 4 * 1024 ** 3,
+    memoryToleranceBytes: 384 * 1024 ** 2,
+    swapBytes: 0,
+    rootFilesystemBytes: 10 * 1024 ** 3,
+    rootFilesystemToleranceBytes: 512 * 1024 ** 2,
+    minimumRootAvailableBytes: 2 * 1024 ** 3,
+    minimumHostAvailableBytes: 5 * 1024 ** 3,
+    wslConfigMemoryValues: ['4GB'],
+    wslConfigSwapValues: ['0'],
+  },
+  podman: {
+    version: '4.9.4-rhel',
+    packageNevra: 'podman-4.9.4-rhel',
+    conmonNevra: 'conmon',
+    containersCommonNevra: 'containers-common',
+    rootless: false,
+    socketPath: '/run/podman/podman.sock',
+    storageDriver: 'overlay',
+    graphRoot: '/var/lib/containers/storage',
+    runRoot: '/run/containers/storage',
+    ociRuntime: 'runc',
+    ociRuntimeNevra: 'runc',
+    networkBackend: 'cni',
+    networkPluginsNevra: 'containernetworking-plugins',
+    logDriver: 'k8s-file',
+    cgroupManager: 'systemd',
+    eventsBackend: 'file',
+    restartPolicy: 'no',
+  },
+  network: {
+    managedContainerMode: 'host',
+    bridgeNetworkingAllowed: false,
+    portPublishingAllowed: false,
+    bindAddress: '127.0.0.1',
+    ports: {
+      postgresRuntime: 55432,
+      postgresIntegration: 55433,
+      keycloakHttp: 18080,
+      keycloakManagement: 19000,
+      governanceApi: 3000,
+      consumerA: 4101,
+      consumerB: 4102,
+    },
+  },
+  images: {
+    postgresql: {
+      declaredVersion: '16.11',
+      runtimeReference: 'docker.io/library/postgres@sha256:' + '1'.repeat(64),
+      architecture: 'amd64',
+      os: 'linux',
+    },
+    keycloak: {
+      declaredVersion: '26.5.1',
+      runtimeReference: 'quay.io/keycloak/keycloak@sha256:' + '3'.repeat(64),
+      architecture: 'amd64',
+      os: 'linux',
+    },
+  },
+  labels: {
+    static: {
+      'hdi.repository': 'hospital-data-intelligence-platform',
+      'hdi.phase': '01',
+      'hdi.managed-by': 'formal-abg',
+    },
+    dynamic: ['hdi.run-id', 'hdi.run-sequence'],
+  },
+  dockerExclusion: {
+    forbiddenExecutableNames: ['docker'],
+    forbiddenSocketPaths: ['/run/docker.sock', '/var/run/docker.sock'],
+    forbiddenSystemdUnits: ['docker.service', 'docker.socket'],
+    forbiddenProcessNames: ['dockerd', 'docker-proxy'],
+    forbiddenTcpPorts: [2375, 2376],
+    allowedCompatibilityEnvironment: { DOCKER_HOST: 'unix:///run/podman/podman.sock' },
+  },
+} as const satisfies PodmanRuntimeAuthority;
+
+function passingIsolationObservation(): FormalPreflightAuthorityIsolationObservation {
+  return {
+    dockerExecutablePaths: [],
+    forbiddenSockets: [],
+    systemdUnits: [
+      { name: 'docker.service', loadState: 'not-found', activeState: 'inactive', unitFileState: 'disabled', subState: 'dead' },
+      { name: 'docker.socket', loadState: 'not-found', activeState: 'inactive', unitFileState: 'disabled', subState: 'dead' },
+    ],
+    forbiddenProcesses: [],
+    forbiddenTcpListeners: [],
+    unexpectedContainerApiEndpoints: [],
+    podmanConnections: [],
+    podmanMachines: [],
+    rootlessSocketPaths: [],
+    otherWslBackends: [],
+    podmanSocket: {
+      path: '/run/podman/podman.sock',
+      kind: 'socket',
+      symbolicLink: false,
+      uid: 0,
+      gid: 0,
+      mode: '0660',
+      systemdActive: true,
+      tcpEndpoints: [],
+      rootless: false,
+    },
+    inspectionFailures: [],
   };
 }
 

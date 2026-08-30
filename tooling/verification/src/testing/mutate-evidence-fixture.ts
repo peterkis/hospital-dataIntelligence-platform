@@ -39,6 +39,17 @@ import {
   rebuildFixtureManifest,
   type ValidEvidenceFixture,
 } from './build-valid-evidence-fixture.js';
+import {
+  assertContainerRestartPolicy,
+  assertRuntimeAuthoritySecondSourceMatches,
+  assertRuntimeAuthoritySnapshot,
+  assertRuntimeAuthorityStableAfterCleanup,
+  assertSyntheticFailureCleanup,
+  cloneRuntimeAuthorityDocument,
+  runSyntheticPreflightPolicyMutation,
+  validRuntimeAuthorityMutationFixture,
+} from './ar11-runtime-mutation-support.js';
+import { parsePodmanRuntimeAuthority } from '../runtime/podman-runtime-authority.js';
 
 export type MutationDetectionLayer =
   | 'producer-evidence-validator'
@@ -46,7 +57,10 @@ export type MutationDetectionLayer =
   | 'formal-summary-validator'
   | 'independent-reviewer'
   | 'exclusive-output-guard'
-  | 'runtime-teardown-guard';
+  | 'runtime-teardown-guard'
+  | 'runtime-authority-validator'
+  | 'formal-preflight-policy'
+  | 'runtime-lifecycle-guard';
 
 export interface EvidenceMutationCase {
   readonly mutationId: string;
@@ -186,6 +200,36 @@ export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   mutation('REVIEWER_SOURCE_MANIFEST_TAMPERED', 'Tamper the independently written reviewer source manifest.', 'independent-reviewer', 'REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH'),
   mutation('REVIEW_OUTPUT_DIRECTORY_EXISTS', 'Reuse an existing provenance review output directory.', 'exclusive-output-guard', 'REVIEW_OUTPUT_ALREADY_EXISTS'),
   mutation('EVIDENCE_EMBEDDED_SCRIPT_NOT_EXECUTED', 'Add an embedded script whose sentinel side effect must never execute.', 'independent-reviewer', 'MANIFEST_UNLISTED_FILE'),
+  mutation('RUNTIME_AUTHORITY_MISSING', 'Remove the sole runtime authority input.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_MISSING'),
+  mutation('RUNTIME_AUTHORITY_SHA_MISMATCH', 'Make the runtime authority byte digest disagree.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_SHA_MISMATCH'),
+  mutation('RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH', 'Make the runtime authority semantic digest disagree.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH'),
+  mutation('RUNTIME_AUTHORITY_ROOTLESS', 'Enable rootless Podman in runtime authority.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_ROOTLESS_FORBIDDEN'),
+  mutation('RUNTIME_AUTHORITY_RESTART_POLICY_INVALID', 'Set an authority restart policy other than no.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_RESTART_POLICY_INVALID'),
+  mutation('RUNTIME_AUTHORITY_IMAGE_FLOATING_TAG', 'Replace a digest-pinned image with a floating tag.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_IMAGE_DIGEST_REQUIRED'),
+  mutation('RUNTIME_AUTHORITY_PORT_DUPLICATE', 'Assign the same host port to two services.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_PORT_DUPLICATE'),
+  mutation('RUNTIME_AUTHORITY_SECOND_SOURCE_DRIFT', 'Make a second runtime source disagree with the authority digest.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_SECOND_SOURCE_DRIFT'),
+  mutation('DOCKER_SOCKET_ALIAS_PRESENT', 'Expose a Docker socket alias to the Podman socket.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_DOCKER_SOCKET_PRESENT'),
+  mutation('DOCKER_SERVICE_ACTIVE', 'Leave docker.service active.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT'),
+  mutation('DOCKER_DAEMON_PRESENT', 'Leave a dockerd process running.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_DOCKER_PROCESS_PRESENT'),
+  mutation('DOCKER_TCP_API_PRESENT', 'Expose the Docker TCP API.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_CONTAINER_API_TCP_PRESENT'),
+  mutation('PODMAN_TCP_API_PRESENT', 'Expose an additional Podman TCP API.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT'),
+  mutation('DOCKER_HOST_REMOTE', 'Point DOCKER_HOST at a remote Docker endpoint.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_DOCKER_HOST_INVALID'),
+  mutation('PODMAN_REMOTE_CONNECTION_PRESENT', 'Configure a remote Podman connection.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT'),
+  mutation('ROOTLESS_PODMAN_SOCKET_PRESENT', 'Expose a rootless Podman socket.', 'formal-preflight-policy', 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT'),
+  mutation('CONTAINER_RESTART_UNLESS_STOPPED', 'Create a managed container with unless-stopped.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_CONTAINER_RESTART_POLICY_INVALID'),
+  mutation('CONTAINER_RESTART_POLICY_DRIFT', 'Observe a managed container restart policy that drifted.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_CONTAINER_RESTART_POLICY_INVALID'),
+  mutation('PARTIAL_STARTUP_POSTGRES_VOLUME_RESIDUE', 'Leave a PostgreSQL volume after partial startup.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_PARTIAL_STARTUP_RESIDUE'),
+  mutation('PARTIAL_STARTUP_KEYCLOAK_VOLUME_RESIDUE', 'Leave a Keycloak volume after partial startup.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_PARTIAL_STARTUP_RESIDUE'),
+  mutation('PARTIAL_STARTUP_POSTGRES_CONTAINER_RESIDUE', 'Leave a PostgreSQL container after partial startup.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_PARTIAL_STARTUP_RESIDUE'),
+  mutation('PARTIAL_STARTUP_KEYCLOAK_CONTAINER_RESIDUE', 'Leave a Keycloak container after partial startup.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_PARTIAL_STARTUP_RESIDUE'),
+  mutation('PARTIAL_STARTUP_OWNERSHIP_MISMATCH', 'Present a partial-startup resource with mismatched ownership.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH'),
+  mutation('PARTIAL_STARTUP_CLEANUP_FAILED', 'Fail cleanup after partial startup.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_PARTIAL_STARTUP_CLEANUP_FAILED'),
+  mutation('BOOTSTRAP_READINESS_FAILURE_RESIDUE', 'Leave owned resources after bootstrap readiness failure.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_BOOTSTRAP_FAILURE_RESIDUE'),
+  mutation('BOOTSTRAP_MIGRATION_FAILURE_RESIDUE', 'Leave owned resources after bootstrap migration failure.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_BOOTSTRAP_FAILURE_RESIDUE'),
+  mutation('BOOTSTRAP_SEED_FAILURE_RESIDUE', 'Leave owned resources after bootstrap seed failure.', 'runtime-lifecycle-guard', 'FORMAL_RUNTIME_BOOTSTRAP_FAILURE_RESIDUE'),
+  mutation('UNRELATED_PODMAN_RESOURCE_REMOVED', 'Attempt cleanup of an unrelated Podman resource.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH'),
+  mutation('PODMAN_PRUNE_ATTEMPT', 'Attempt a Podman prune during targeted cleanup.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN'),
+  mutation('RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP', 'Change runtime authority identity after cleanup.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP'),
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -818,6 +862,143 @@ async function executeMutation(
     }
     case 'EVIDENCE_EMBEDDED_SCRIPT_NOT_EXECUTED':
       return embeddedScriptMutation(mutationId, context);
+    case 'RUNTIME_AUTHORITY_MISSING': {
+      const fixture = validRuntimeAuthorityMutationFixture();
+      return captureErrorCodes(() => Promise.resolve(assertRuntimeAuthoritySnapshot({
+        bytes: null,
+        expectedSha256: fixture.loaded.runtimeAuthoritySha256,
+        expectedSemanticDigest: fixture.loaded.runtimeAuthoritySemanticDigest,
+      })));
+    }
+    case 'RUNTIME_AUTHORITY_SHA_MISMATCH': {
+      const fixture = validRuntimeAuthorityMutationFixture();
+      return captureErrorCodes(() => Promise.resolve(assertRuntimeAuthoritySnapshot({
+        bytes: fixture.bytes,
+        expectedSha256: '0'.repeat(64),
+        expectedSemanticDigest: fixture.loaded.runtimeAuthoritySemanticDigest,
+      })));
+    }
+    case 'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH': {
+      const fixture = validRuntimeAuthorityMutationFixture();
+      return captureErrorCodes(() => Promise.resolve(assertRuntimeAuthoritySnapshot({
+        bytes: fixture.bytes,
+        expectedSha256: fixture.loaded.runtimeAuthoritySha256,
+        expectedSemanticDigest: '0'.repeat(64),
+      })));
+    }
+    case 'RUNTIME_AUTHORITY_ROOTLESS':
+      return runtimeAuthorityParserMutation((document) => {
+        record(record(document['authority'])['podman'])['rootless'] = true;
+      });
+    case 'RUNTIME_AUTHORITY_RESTART_POLICY_INVALID':
+      return runtimeAuthorityParserMutation((document) => {
+        record(record(document['authority'])['podman'])['restartPolicy'] = 'unless-stopped';
+      });
+    case 'RUNTIME_AUTHORITY_IMAGE_FLOATING_TAG':
+      return runtimeAuthorityParserMutation((document) => {
+        record(record(record(document['authority'])['images'])['postgresql'])['runtimeReference'] =
+          'docker.io/library/postgres:18.4';
+      });
+    case 'RUNTIME_AUTHORITY_PORT_DUPLICATE':
+      return runtimeAuthorityParserMutation((document) => {
+        const ports = record(record(record(document['authority'])['network'])['ports']);
+        ports['postgresIntegration'] = ports['postgresRuntime'];
+      });
+    case 'RUNTIME_AUTHORITY_SECOND_SOURCE_DRIFT': {
+      const fixture = validRuntimeAuthorityMutationFixture();
+      return captureErrorCodes(() => Promise.resolve(assertRuntimeAuthoritySecondSourceMatches({
+        runtimeAuthoritySemanticDigest: fixture.loaded.runtimeAuthoritySemanticDigest,
+        secondSourceSemanticDigest: '0'.repeat(64),
+      })));
+    }
+    case 'DOCKER_SOCKET_ALIAS_PRESENT':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.forbiddenSockets).push({
+          path: '/var/run/docker.sock',
+          kind: 'symbolic-link',
+          symbolicLink: true,
+          target: '/run/podman/podman.sock',
+        });
+      });
+    case 'DOCKER_SERVICE_ACTIVE':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.systemdUnits).push({
+          name: 'docker.service',
+          loadState: 'loaded',
+          activeState: 'active',
+          unitFileState: 'enabled',
+          subState: 'running',
+        });
+      });
+    case 'DOCKER_DAEMON_PRESENT':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.forbiddenProcesses).push({ pid: 88, name: 'dockerd' });
+      });
+    case 'DOCKER_TCP_API_PRESENT':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.forbiddenTcpListeners).push({
+          address: '127.0.0.1', port: 2375, process: 'dockerd',
+        });
+      });
+    case 'PODMAN_TCP_API_PRESENT':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.unexpectedContainerApiEndpoints).push('tcp://127.0.0.1:8888');
+      });
+    case 'DOCKER_HOST_REMOTE':
+      return runSyntheticPreflightPolicyMutation(({ environment }) => {
+        environment['DOCKER_HOST'] = 'tcp://runtime.example:2376';
+      });
+    case 'PODMAN_REMOTE_CONNECTION_PRESENT':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.podmanConnections).push(
+          'ssh://runtime.example/run/podman/podman.sock',
+        );
+      });
+    case 'ROOTLESS_PODMAN_SOCKET_PRESENT':
+      return runSyntheticPreflightPolicyMutation(({ observation }) => {
+        mutableArray(observation.rootlessSocketPaths).push('/run/user/1000/podman/podman.sock');
+      });
+    case 'CONTAINER_RESTART_UNLESS_STOPPED':
+      return captureErrorCodes(() => Promise.resolve(assertContainerRestartPolicy({
+        expected: 'no', observed: 'unless-stopped',
+      })));
+    case 'CONTAINER_RESTART_POLICY_DRIFT':
+      return captureErrorCodes(() => Promise.resolve(assertContainerRestartPolicy({
+        expected: 'no', observed: 'always',
+      })));
+    case 'PARTIAL_STARTUP_POSTGRES_VOLUME_RESIDUE':
+      return syntheticFailureResidueMutation('partial-startup', 'postgres-volume-created', 'volume', 'postgres-data');
+    case 'PARTIAL_STARTUP_KEYCLOAK_VOLUME_RESIDUE':
+      return syntheticFailureResidueMutation('partial-startup', 'keycloak-volume-created', 'volume', 'keycloak-data');
+    case 'PARTIAL_STARTUP_POSTGRES_CONTAINER_RESIDUE':
+      return syntheticFailureResidueMutation('partial-startup', 'postgres-container-created', 'container', 'postgres');
+    case 'PARTIAL_STARTUP_KEYCLOAK_CONTAINER_RESIDUE':
+      return syntheticFailureResidueMutation('partial-startup', 'keycloak-container-created', 'container', 'keycloak');
+    case 'PARTIAL_STARTUP_OWNERSHIP_MISMATCH':
+      return syntheticOwnershipMismatchMutation();
+    case 'PARTIAL_STARTUP_CLEANUP_FAILED':
+      return syntheticCleanupFailureMutation();
+    case 'BOOTSTRAP_READINESS_FAILURE_RESIDUE':
+      return syntheticFailureResidueMutation('bootstrap', 'readiness', 'container', 'postgres');
+    case 'BOOTSTRAP_MIGRATION_FAILURE_RESIDUE':
+      return syntheticFailureResidueMutation('bootstrap', 'migration', 'container', 'postgres');
+    case 'BOOTSTRAP_SEED_FAILURE_RESIDUE':
+      return syntheticFailureResidueMutation('bootstrap', 'seed', 'container', 'postgres');
+    case 'UNRELATED_PODMAN_RESOURCE_REMOVED':
+      return unrelatedCleanupMutation();
+    case 'PODMAN_PRUNE_ATTEMPT':
+      return captureErrorCodes(() => Promise.resolve(
+        assertSafeFormalCleanupCommand('podman', ['system', 'prune', '--all']),
+      ));
+    case 'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP': {
+      const fixture = validRuntimeAuthorityMutationFixture();
+      return captureErrorCodes(() => Promise.resolve(assertRuntimeAuthorityStableAfterCleanup({
+        beforeSha256: fixture.loaded.runtimeAuthoritySha256,
+        beforeSemanticDigest: fixture.loaded.runtimeAuthoritySemanticDigest,
+        afterSha256: fixture.loaded.runtimeAuthoritySha256,
+        afterSemanticDigest: '0'.repeat(64),
+      })));
+    }
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
@@ -1212,6 +1393,98 @@ async function writeManifestAndDigest(
     `${sha256(bytes)}  manifest.json\n`,
     { flag: 'w' },
   );
+}
+
+async function runtimeAuthorityParserMutation(
+  mutate: (document: Record<string, unknown>) => void,
+): Promise<readonly string[]> {
+  const fixture = validRuntimeAuthorityMutationFixture();
+  const document = cloneRuntimeAuthorityDocument(fixture.document);
+  mutate(document);
+  return captureErrorCodes(() => Promise.resolve(parsePodmanRuntimeAuthority(document)));
+}
+
+async function syntheticFailureResidueMutation(
+  failureKind: 'partial-startup' | 'bootstrap',
+  failureStage: string,
+  resourceType: 'container' | 'volume',
+  role: string,
+): Promise<readonly string[]> {
+  const identity = syntheticRuntimeIdentity();
+  const resource = syntheticRuntimeResource(identity, resourceType, role);
+  return captureErrorCodes(() => Promise.resolve(assertSyntheticFailureCleanup({
+    failureKind,
+    failureStage,
+    cleanupSucceeded: true,
+    identity,
+    resources: [resource],
+  })));
+}
+
+async function syntheticOwnershipMismatchMutation(): Promise<readonly string[]> {
+  const identity = syntheticRuntimeIdentity();
+  const resource = syntheticRuntimeResource(identity, 'container', 'postgres', false);
+  return captureErrorCodes(() => Promise.resolve(assertSyntheticFailureCleanup({
+    failureKind: 'partial-startup',
+    failureStage: 'postgres-container-created',
+    cleanupSucceeded: true,
+    identity,
+    resources: [resource],
+  })));
+}
+
+async function syntheticCleanupFailureMutation(): Promise<readonly string[]> {
+  const identity = syntheticRuntimeIdentity();
+  return captureErrorCodes(() => Promise.resolve(assertSyntheticFailureCleanup({
+    failureKind: 'partial-startup',
+    failureStage: 'postgres-container-created',
+    cleanupSucceeded: false,
+    identity,
+    resources: [],
+  })));
+}
+
+function syntheticRuntimeIdentity(): FormalRunIdentity {
+  return {
+    runId: 'ar11-runtime-mutation-run',
+    runSequence: 111,
+    runtimeNamespace: 'hdi_phase01_abg_111_ar11runtime',
+    gitCommitSha: '0123456789abcdef0123456789abcdef01234567',
+  };
+}
+
+function syntheticRuntimeResource(
+  identity: FormalRunIdentity,
+  resourceType: 'container' | 'volume',
+  role: string,
+  owned = true,
+): RuntimeResourceRecord {
+  return {
+    resourceType,
+    id: `ar11-${role}-${resourceType}`,
+    name: `${identity.runtimeNamespace}-${role}-${resourceType}`,
+    labels: {
+      ...formalRuntimeLabels(identity),
+      ...(owned ? {} : { 'hdi.run-id': 'unrelated-run-id' }),
+    },
+    source: 'runtime-event',
+    present: true,
+    active: resourceType === 'container',
+    state: resourceType === 'container' ? 'running' : 'created',
+    imageReference: resourceType === 'container' ? 'synthetic@sha256:' + '1'.repeat(64) : null,
+    imageId: resourceType === 'container' ? 'sha256:' + '2'.repeat(64) : null,
+    imageDigest: resourceType === 'container' ? 'sha256:' + '1'.repeat(64) : null,
+    ports: [],
+    startedAt: '2026-08-30T12:00:00',
+    stoppedAt: null,
+    exitStatus: null,
+    metrics: null,
+    role,
+  };
+}
+
+function mutableArray<T>(value: readonly T[]): T[] {
+  return value as T[];
 }
 
 async function unrelatedCleanupMutation(): Promise<readonly string[]> {

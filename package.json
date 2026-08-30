@@ -37,7 +37,9 @@
     "test:verification": "npm run test --workspace @hospital-data-intelligence/verification-tooling",
     "test:verification:adversarial": "npm run test:adversarial --workspace @hospital-data-intelligence/verification-tooling",
     "test:verification:lifecycle": "npm run test:lifecycle --workspace @hospital-data-intelligence/verification-tooling",
+    "test:verification:podman-runtime": "npm run test:podman-runtime --workspace @hospital-data-intelligence/verification-tooling",
     "test:verification:provenance": "npm run test:provenance --workspace @hospital-data-intelligence/verification-tooling",
+    "verify:podman-runtime-authority": "npm run verify:podman-runtime-authority --workspace @hospital-data-intelligence/verification-tooling",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

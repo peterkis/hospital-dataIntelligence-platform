@@ -44,6 +44,25 @@ export function validateFormalAbgSummary(
   assert(summary['planDigest'] === expected.planDigest, 'RUN_PLAN_DIGEST_MISMATCH');
   assert(summary['frozenInputsDigest'] === expected.frozenInputsDigest, 'FROZEN_INPUTS_DIGEST_MISMATCH');
   assert(jsonEqual(summary['frozenInputs'], expected.frozenInputs), 'FROZEN_INPUTS_MISMATCH');
+  const runtimeAuthoritySha256 = expected.frozenInputs['runtimeAuthoritySha256'];
+  const runtimeAuthoritySemanticDigest = expected.frozenInputs['runtimeAuthoritySemanticDigest'];
+  assert(
+    typeof runtimeAuthoritySha256 === 'string' && SHA256_PATTERN.test(runtimeAuthoritySha256),
+    'RUNTIME_AUTHORITY_SHA_MISMATCH',
+  );
+  assert(
+    typeof runtimeAuthoritySemanticDigest === 'string' &&
+      SHA256_PATTERN.test(runtimeAuthoritySemanticDigest),
+    'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+  );
+  assert(
+    summary['runtimeAuthoritySha256'] === runtimeAuthoritySha256,
+    'RUNTIME_AUTHORITY_SHA_MISMATCH',
+  );
+  assert(
+    summary['runtimeAuthoritySemanticDigest'] === runtimeAuthoritySemanticDigest,
+    'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+  );
   assert(summary['coverageMatrixDigest'] === expected.coverageMatrixDigest, 'COVERAGE_MATRIX_DIGEST_MISMATCH');
   assert(
     summary['producerProtocolIdentityDigest'] === expected.producerProtocolIdentityDigest,
@@ -180,6 +199,10 @@ export function validateFormalAbgSummary(
   assert(summary['frozenInputsStableAfterCleanup'] === true, 'FROZEN_INPUTS_NOT_STABLE');
   assert(summary['authorityIdentityStableAfterCleanup'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE');
   assert(
+    summary['runtimeAuthorityStableAfterCleanup'] === true,
+    'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP',
+  );
+  assert(
     summary['producerSourceManifestStableAfterCleanup'] === true,
     'PRODUCER_SOURCE_MANIFEST_NOT_STABLE',
   );
@@ -198,6 +221,7 @@ export function validateFormalAbgSummary(
     summary['residualNetworkCount'] === 0 &&
     summary['frozenInputsStableAfterCleanup'] === true &&
     summary['authorityIdentityStableAfterCleanup'] === true &&
+    summary['runtimeAuthorityStableAfterCleanup'] === true &&
     summary['producerSourceManifestStableAfterCleanup'] === true &&
     summary['outputDirectoryExclusive'] === true &&
     summary['terminalConclusionStatus'] === 'PASSED' &&

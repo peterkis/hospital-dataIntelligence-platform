@@ -35,6 +35,7 @@ import { PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION } from './evidence/protocol.js';
 import {
   createFormalRunSeed,
 } from './runtime/formal-runtime-contract.js';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
 import {
   runFormalRuntimeLifecycle,
   type FormalRuntimeContext,
@@ -88,11 +89,8 @@ interface PreCleanupExecutionState {
   readonly nonFormalResults: readonly FormalGateResult[];
 }
 
-process.env['TZ'] = 'Asia/Shanghai';
-process.env['DOCKER_HOST'] = 'unix:///run/podman/podman.sock';
-process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
-
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
+process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 const runSequence = parsePositiveInteger(requireEnvironment('ABG_RUN_SEQUENCE'), 'ABG_RUN_SEQUENCE_INVALID');
 const requestedOutputDirectory = resolve(requireEnvironment('EVIDENCE_OUTPUT_DIR'));
 const run = createFormalRunSeed(runSequence);
@@ -165,6 +163,9 @@ async function executeFormalAbgBeforeCleanup(
   readonly value: PreCleanupExecutionState;
   readonly failureCode?: string;
 }> {
+  process.env['TZ'] = context.runtimeAuthority.authority.host.timezone;
+  process.env['DOCKER_HOST'] =
+    context.runtimeAuthority.authority.dockerExclusion.allowedCompatibilityEnvironment.DOCKER_HOST;
   activeContext = context;
   outputDirectory = context.outputDirectory;
   runId = context.identity.runId;
@@ -189,6 +190,13 @@ async function executeFormalAbgBeforeCleanup(
     },
   );
   plan = frozenPlan;
+  if (
+    frozenPlan.runtimeAuthoritySha256 !== context.runtimeAuthority.runtimeAuthoritySha256 ||
+    frozenPlan.runtimeAuthoritySemanticDigest !==
+      context.runtimeAuthority.runtimeAuthoritySemanticDigest
+  ) {
+    throw new Error('FORMAL_RUNTIME_AUTHORITY_DRIFT_BEFORE_EXECUTION');
+  }
   if (frozenPlan.frozenInputs['gitCommitSha'] !== context.identity.gitCommitSha) {
     throw new Error('FORMAL_PREFLIGHT_GIT_COMMIT_DRIFT');
   }
@@ -208,7 +216,8 @@ async function executeFormalAbgBeforeCleanup(
         ABG_RUN_ID: runId,
         ABG_RUN_SEQUENCE: String(frozenPlan.runSequence),
         ABG_RUNTIME_NAMESPACE: context.identity.runtimeNamespace,
-        DOCKER_HOST: 'unix:///run/podman/podman.sock',
+        DOCKER_HOST:
+          context.runtimeAuthority.authority.dockerExclusion.allowedCompatibilityEnvironment.DOCKER_HOST,
         TESTCONTAINERS_RYUK_DISABLED: 'true',
         ABG_FROZEN_INPUTS_DIGEST: frozenInputsDigest,
         ABG_FROZEN_INPUTS_JSON: canonicalJson(frozenPlan.frozenInputs),
@@ -290,6 +299,7 @@ async function finalizeFormalAbgAfterCleanup(
   const execution = outcome.execution?.value;
   let frozenInputsStableAfterCleanup = false;
   let authorityIdentityStableAfterCleanup = false;
+  let runtimeAuthorityStableAfterCleanup = false;
   let producerSourceManifestStableAfterCleanup = false;
   if (frozenPlan !== undefined) {
     try {
@@ -309,6 +319,16 @@ async function finalizeFormalAbgAfterCleanup(
       authorityIdentityStableAfterCleanup = true;
     } catch {
       authorityIdentityStableAfterCleanup = false;
+    }
+    try {
+      const observedRuntimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot);
+      runtimeAuthorityStableAfterCleanup =
+        outcome.runtimeAuthorityStableAfterCleanup &&
+        observedRuntimeAuthority.runtimeAuthoritySha256 === frozenPlan.runtimeAuthoritySha256 &&
+        observedRuntimeAuthority.runtimeAuthoritySemanticDigest ===
+          frozenPlan.runtimeAuthoritySemanticDigest;
+    } catch {
+      runtimeAuthorityStableAfterCleanup = false;
     }
     producerSourceManifestStableAfterCleanup = await verifyProducerSourceManifestStable(
       context.outputDirectory,
@@ -339,6 +359,12 @@ async function finalizeFormalAbgAfterCleanup(
     finalResources: outcome.finalResources,
     frozenInputsStableAfterCleanup,
     authorityIdentityStableAfterCleanup,
+    runtimeAuthoritySha256:
+      frozenPlan?.runtimeAuthoritySha256 ?? context.runtimeAuthority.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest:
+      frozenPlan?.runtimeAuthoritySemanticDigest ??
+        context.runtimeAuthority.runtimeAuthoritySemanticDigest,
+    runtimeAuthorityStableAfterCleanup,
     producerSourceManifestSha256:
       frozenPlan?.producerSourceManifestSha256 ?? producerSourceManifestSha256,
     producerSourceManifestStableAfterCleanup,
@@ -437,6 +463,11 @@ async function finalizeFormalAbgAfterCleanup(
     producerProtocolIdentityDigest:
       frozenPlan?.authorityIdentity.producerProtocolIdentityDigest ?? null,
     authorityIdentity: frozenPlan?.authorityIdentity ?? null,
+    runtimeAuthoritySha256:
+      frozenPlan?.runtimeAuthoritySha256 ?? context.runtimeAuthority.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest:
+      frozenPlan?.runtimeAuthoritySemanticDigest ??
+        context.runtimeAuthority.runtimeAuthoritySemanticDigest,
     producerSourceManifestSha256:
       frozenPlan?.producerSourceManifestSha256 ?? producerSourceManifestSha256,
     preflightStatus: outcome.preflight.status,
@@ -456,6 +487,7 @@ async function finalizeFormalAbgAfterCleanup(
     pruneCommandsInvoked: terminalConclusion.pruneCommandsInvoked,
     frozenInputsStableAfterCleanup,
     authorityIdentityStableAfterCleanup,
+    runtimeAuthorityStableAfterCleanup,
     producerSourceManifestStableAfterCleanup,
     outputDirectoryExclusive: outcome.outputDirectoryExclusive,
     terminalConclusionStatus: terminalConclusion.status,

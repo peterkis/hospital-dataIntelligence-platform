@@ -1,6 +1,6 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   FORMAL_REQUIRED_SECRET_NAMES,
@@ -11,22 +11,29 @@ import {
 import {
   FormalRuntimeController,
   runFormalRuntimeLifecycle,
+  writeFormalRuntimeEvent,
   type FormalRuntimeFileSystem,
   type FormalRuntimeLifecycleCallbacks,
   type FormalRuntimeLifecycleDependencies,
   type FormalRuntimeProcessEvents,
 } from './formal-runtime-controller.js';
-import type { FormalPreflightReport } from './formal-preflight.js';
+import type {
+  FormalPreflightAuthorityIsolationObservation,
+  FormalPreflightReport,
+} from './formal-preflight.js';
 import type {
   FormalTeardownAdapter,
   RuntimeResourceRecord,
   RuntimeResourceSnapshot,
 } from './formal-teardown.js';
+import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
 
 const LOCK_SHA = 'b'.repeat(64);
 const GIT_SHA = 'a'.repeat(40);
 const RUN = createFormalRunSeed(9, () => '12345678-1234-1234-1234-123456789abc');
 const PRODUCER_SOURCE_MANIFEST_SHA256 = 'd'.repeat(64);
+const RUNTIME_AUTHORITY_SHA256 = 'e'.repeat(64);
+const RUNTIME_AUTHORITY_SEMANTIC_DIGEST = 'f'.repeat(64);
 const IDENTITY: FormalRunIdentity = { ...RUN, gitCommitSha: GIT_SHA };
 const roots: string[] = [];
 
@@ -35,6 +42,46 @@ afterEach(async () => {
 });
 
 describe('formal runtime lifecycle', () => {
+  it('writes restart-aware, ownership-explicit runtime event evidence without environment values', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hdi-formal-event-'));
+    roots.push(root);
+    await writeFormalRuntimeEvent(root, {
+      identity: RUN,
+      event: 'STARTED',
+      resourceType: 'container',
+      id: 'container-id',
+      name: `${RUN.runtimeNamespace}_postgres`,
+      role: 'postgresql',
+      restartPolicy: 'no',
+      actualLabels: {
+        ...formalRuntimeLabels(RUN),
+        'third-party.sensitive-label': 'must-not-enter-runtime-event-evidence',
+      },
+    });
+
+    const files = await readdir(root);
+    expect(files).toHaveLength(1);
+    const event = await readJson(join(root, files[0]!));
+    expect(event).toMatchObject({
+      schemaVersion: 'phase-01.formal-runtime-event.v1',
+      runId: RUN.runId,
+      runSequence: RUN.runSequence,
+      runtimeNamespace: RUN.runtimeNamespace,
+      stage: 'RESOURCE_STARTED',
+      status: 'PASSED',
+      resourceType: 'container',
+      resourceName: `${RUN.runtimeNamespace}_postgres`,
+      resourceId: 'container-id',
+      restartPolicy: 'no',
+      errorCode: null,
+      expectedLabels: formalRuntimeLabels(RUN),
+      actualLabels: formalRuntimeLabels(RUN),
+    });
+    expect(JSON.stringify(event)).not.toContain('DATABASE_URL');
+    expect(JSON.stringify(event)).not.toContain('third-party.sensitive-label');
+    expect(JSON.stringify(event)).not.toContain('must-not-enter-runtime-event-evidence');
+  });
+
   it.each([
     'SETUP_COMMAND_FAILED',
     'APPLICATION_START_FAILED',
@@ -191,7 +238,7 @@ describe('formal runtime lifecycle', () => {
     expect(harness.fileSystem.writes.indexOf('runtime/final-outcome.json')).toBeGreaterThan(-1);
     const finalOutcome = await readJson(join(harness.outputDirectory, 'runtime', 'final-outcome.json'));
     expect(finalOutcome).toMatchObject({
-      schemaVersion: 'phase-01.formal-runtime-outcome.v2',
+      schemaVersion: 'phase-01.formal-runtime-outcome.v3',
       status: 'PASSED',
       cleanupStatus: 'PASSED',
       terminalConclusionStatus: 'PASSED',
@@ -236,8 +283,11 @@ describe('formal runtime lifecycle', () => {
     const calls: string[] = [];
 
     const result = await run(harness, {
-      async executeBeforeCleanup() {
+      async executeBeforeCleanup(context) {
         calls.push('execute-before-cleanup');
+        expect(context.runtimeAuthority.runtimeAuthoritySha256).toBe(RUNTIME_AUTHORITY_SHA256);
+        expect(context.runtimeAuthority.runtimeAuthoritySemanticDigest)
+          .toBe(RUNTIME_AUTHORITY_SEMANTIC_DIGEST);
         return { passed: true, value: {} };
       },
       async persistEvidenceBeforeCleanup() {
@@ -287,6 +337,72 @@ describe('formal runtime lifecycle', () => {
     expect(summary['failureCodes']).toContain('FORMAL_RUNTIME_LOCKFILE_MUTATED');
   });
 
+  it('fails before sealing when the runtime authority changes during cleanup', async () => {
+    const harness = await createHarness({ authorityDrift: true });
+    let observedStable: boolean | undefined;
+    const callbacks = passingCallbacks();
+    const result = await run(harness, {
+      ...callbacks,
+      async finalizeAfterCleanup(_context, outcome) {
+        observedStable = outcome.runtimeAuthorityStableAfterCleanup;
+        return terminalResult(outcome.status, outcome.failureCodes);
+      },
+    });
+
+    expect(observedStable).toBe(false);
+    expect(result.status).toBe('FAILED');
+    const finalOutcome = await readJson(join(harness.outputDirectory, 'runtime', 'final-outcome.json'));
+    expect(finalOutcome).toMatchObject({
+      runtimeAuthoritySha256: RUNTIME_AUTHORITY_SHA256,
+      runtimeAuthoritySemanticDigest: RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
+      runtimeAuthorityStableAfterCleanup: false,
+    });
+    expect(finalOutcome['failureCodes']).toContain('FORMAL_RUNTIME_AUTHORITY_MUTATED');
+  });
+
+  it('preserves a stable failed evidence result and never executes callbacks when authority loading fails', async () => {
+    const harness = await createHarness({ authorityUnavailable: true });
+    const calls: string[] = [];
+    const result = await run(harness, {
+      async executeBeforeCleanup() {
+        calls.push('execute');
+        return { passed: true, value: {} };
+      },
+      async persistEvidenceBeforeCleanup() {
+        calls.push('persist');
+      },
+      async finalizeAfterCleanup() {
+        calls.push('finalize');
+        return terminalResult('PASSED', []);
+      },
+      async sealEvidence() {
+        calls.push('seal');
+      },
+    });
+
+    expect(result.status).toBe('FAILED');
+    expect(result.runtimeAuthorityFailureCode).toBe('FORMAL_RUNTIME_AUTHORITY_UNAVAILABLE');
+    expect(result.runtimeAuthoritySha256).toBeNull();
+    expect(result.runtimeAuthoritySemanticDigest).toBeNull();
+    expect(result.outputDirectoryCreated).toBe(true);
+    expect(result.cleanup).toBeNull();
+    expect(calls).toEqual([]);
+    expect(harness.adapter.calls).toEqual([]);
+    expect(await readJson(join(harness.outputDirectory, 'runtime', 'authority-failure.json')))
+      .toMatchObject({
+        status: 'FAILED',
+        failureCode: 'FORMAL_RUNTIME_AUTHORITY_UNAVAILABLE',
+      });
+    expect(await readJson(join(harness.outputDirectory, 'runtime', 'final-outcome.json')))
+      .toMatchObject({
+        status: 'FAILED',
+        failureCodes: ['FORMAL_RUNTIME_AUTHORITY_UNAVAILABLE'],
+        runtimeAuthoritySha256: null,
+        runtimeAuthoritySemanticDigest: null,
+        runtimeAuthorityStableAfterCleanup: false,
+      });
+  });
+
   it('never reuses or overwrites an existing output directory', async () => {
     const harness = await createHarness({ outputAlreadyExists: true });
     await mkdir(harness.outputDirectory, { recursive: true });
@@ -307,23 +423,42 @@ async function createHarness(options: {
   readonly outputAlreadyExists?: boolean;
   readonly sha256?: () => string;
   readonly failWrites?: readonly string[];
+  readonly authorityDrift?: boolean;
+  readonly authorityUnavailable?: boolean;
 } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'hdi-formal-lifecycle-'));
   roots.push(root);
   const outputDirectory = join(root, 'evidence', 'run-9');
   const fileSystem = new RecordingFileSystem(options.failWrites ?? []);
   const adapter = new LifecycleTeardownAdapter(options.stopFailure ?? false);
+  const runtimeAuthority = loadRuntimeAuthorityFixture();
   const dependencies: FormalRuntimeLifecycleDependencies = {
     fileSystem,
     async preflight() {
-      return preflightReport(options.outputAlreadyExists ?? false);
+      return preflightReport(
+        options.outputAlreadyExists ?? false,
+        options.authorityUnavailable ?? false,
+      );
     },
     async sha256() {
       return options.sha256?.() ?? LOCK_SHA;
     },
     teardownDependencies: {
       adapter,
+      authorityIsolation: {
+        async inspect() {
+          return passingIsolationObservation(runtimeAuthority.authority.podman.socketPath);
+        },
+      },
+      environment: {},
+      loadRuntimeAuthority: () => options.authorityDrift
+        ? { ...runtimeAuthority, runtimeAuthoritySemanticDigest: '0'.repeat(64) }
+        : runtimeAuthority,
       now: () => '2026-08-27T12:00:00',
+    },
+    loadRuntimeAuthority: () => {
+      if (options.authorityUnavailable) throw new Error('RUNTIME_AUTHORITY_MISSING');
+      return runtimeAuthority;
     },
     now: () => '2026-08-27T12:00:00',
     createController: () => options.controller ?? new FormalRuntimeController(),
@@ -422,6 +557,10 @@ class LifecycleTeardownAdapter implements FormalTeardownAdapter {
     return [this.currentResource];
   }
 
+  async reinspectResource(): Promise<RuntimeResourceRecord | null> {
+    return this.currentResource;
+  }
+
   async stopProcess(candidate: RuntimeResourceRecord): Promise<void> {
     await this.beforeStop();
     this.calls.push('stop-process:' + candidate.id);
@@ -443,6 +582,14 @@ class LifecycleTeardownAdapter implements FormalTeardownAdapter {
 
   async inspectPorts(ports: readonly number[]): Promise<RuntimeResourceSnapshot['ports']> {
     return ports.map((port) => ({ port, occupied: false, verificationError: null }));
+  }
+
+  async inspectTerminalState() {
+    return {
+      persistenceFindings: [],
+      dockerSecondAuthorityFindings: [],
+      partialStartupRecoveryFindings: [],
+    };
   }
 }
 
@@ -469,7 +616,18 @@ function processResource(): RuntimeResourceRecord {
   };
 }
 
-function preflightReport(outputAlreadyExists: boolean): FormalPreflightReport {
+function loadRuntimeAuthorityFixture() {
+  return {
+    ...loadPodmanRuntimeAuthority(resolve(import.meta.dirname, '../../../..')),
+    runtimeAuthoritySha256: RUNTIME_AUTHORITY_SHA256,
+    runtimeAuthoritySemanticDigest: RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
+  };
+}
+
+function preflightReport(
+  outputAlreadyExists: boolean,
+  authorityUnavailable: boolean = false,
+): FormalPreflightReport {
   return {
     schemaVersion: 'phase-01.formal-preflight.v1',
     status: outputAlreadyExists ? 'FAILED' : 'PASSED',
@@ -477,6 +635,8 @@ function preflightReport(outputAlreadyExists: boolean): FormalPreflightReport {
     startedAt: '2026-08-27T11:58:00',
     completedAt: '2026-08-27T11:58:01',
     timezone: 'Asia/Shanghai',
+    runtimeAuthoritySha256: authorityUnavailable ? null : RUNTIME_AUTHORITY_SHA256,
+    runtimeAuthoritySemanticDigest: authorityUnavailable ? null : RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
     checks: [
       {
         id: 'git-output-directory-absent',
@@ -494,6 +654,36 @@ function preflightReport(outputAlreadyExists: boolean): FormalPreflightReport {
       },
     ],
     secrets: FORMAL_REQUIRED_SECRET_NAMES.map((name) => ({ name, present: true })),
+  };
+}
+
+function passingIsolationObservation(socketPath: string): FormalPreflightAuthorityIsolationObservation {
+  return {
+    dockerExecutablePaths: [],
+    forbiddenSockets: [],
+    systemdUnits: [
+      { name: 'docker.service', loadState: 'not-found', activeState: 'inactive', unitFileState: 'disabled', subState: 'dead' },
+      { name: 'docker.socket', loadState: 'not-found', activeState: 'inactive', unitFileState: 'disabled', subState: 'dead' },
+    ],
+    forbiddenProcesses: [],
+    forbiddenTcpListeners: [],
+    unexpectedContainerApiEndpoints: [],
+    podmanConnections: [],
+    podmanMachines: [],
+    rootlessSocketPaths: [],
+    otherWslBackends: [],
+    podmanSocket: {
+      path: socketPath,
+      kind: 'socket',
+      symbolicLink: false,
+      uid: 0,
+      gid: 0,
+      mode: '0660',
+      systemdActive: true,
+      tcpEndpoints: [],
+      rootless: false,
+    },
+    inspectionFailures: [],
   };
 }
 

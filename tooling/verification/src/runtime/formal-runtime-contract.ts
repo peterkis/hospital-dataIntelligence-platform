@@ -1,11 +1,22 @@
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
 
-export const FORMAL_REPOSITORY_LABEL = 'hospital-data-intelligence-platform';
-export const FORMAL_PHASE_LABEL = '01';
-export const FORMAL_MANAGED_BY_LABEL = 'formal-abg';
+export const FORMAL_RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority();
+export const FORMAL_REPOSITORY_LABEL = FORMAL_RUNTIME_AUTHORITY.authority.labels.static['hdi.repository'];
+export const FORMAL_PHASE_LABEL = FORMAL_RUNTIME_AUTHORITY.authority.labels.static['hdi.phase'];
+export const FORMAL_MANAGED_BY_LABEL = FORMAL_RUNTIME_AUTHORITY.authority.labels.static['hdi.managed-by'];
 
-export const FORMAL_RUNTIME_PORTS = [55432, 55433, 18080, 19000, 3000, 4101, 4102] as const;
+const AUTHORITY_PORTS = FORMAL_RUNTIME_AUTHORITY.authority.network.ports;
+export const FORMAL_RUNTIME_PORTS: readonly number[] = Object.freeze([
+  AUTHORITY_PORTS.postgresRuntime,
+  AUTHORITY_PORTS.postgresIntegration,
+  AUTHORITY_PORTS.keycloakHttp,
+  AUTHORITY_PORTS.keycloakManagement,
+  AUTHORITY_PORTS.governanceApi,
+  AUTHORITY_PORTS.consumerA,
+  AUTHORITY_PORTS.consumerB,
+]);
 
 export const FORMAL_REQUIRED_SECRET_NAMES = [
   'HDI_POSTGRES_PASSWORD',

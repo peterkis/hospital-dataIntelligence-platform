@@ -86,7 +86,11 @@ function validateFrozenInputRefs(evidence: ProducerEvidence): void {
     assertKnownFrozenInputKind(kind);
     assertMeaningful(value, 'PRODUCER_EVIDENCE_FROZEN_INPUT_INVALID:' + kind);
     assertNoSensitiveData(value, 'PRODUCER_EVIDENCE_FROZEN_INPUT_SENSITIVE:' + kind);
-    if (kind.endsWith('Sha256') || kind === 'fixtureIdentity') {
+    if (
+      kind.endsWith('Sha256') ||
+      kind === 'fixtureIdentity' ||
+      kind === 'runtimeAuthoritySemanticDigest'
+    ) {
       assertSha256(value, 'PRODUCER_EVIDENCE_FROZEN_INPUT_DIGEST_INVALID:' + kind);
     }
   }

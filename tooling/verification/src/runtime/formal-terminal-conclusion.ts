@@ -43,6 +43,9 @@ export interface FormalTerminalConclusion {
   readonly pruneCommandsInvoked: boolean;
   readonly frozenInputsStableAfterCleanup: boolean;
   readonly authorityIdentityStableAfterCleanup: boolean;
+  readonly runtimeAuthoritySha256: string;
+  readonly runtimeAuthoritySemanticDigest: string;
+  readonly runtimeAuthorityStableAfterCleanup: boolean;
   readonly producerSourceManifestSha256: string | null;
   readonly producerSourceManifestStableAfterCleanup: boolean;
   readonly outputDirectoryExclusive: boolean;
@@ -70,6 +73,9 @@ export interface BuildFormalTerminalConclusionInput {
   readonly finalResources: RuntimeResourceSnapshot;
   readonly frozenInputsStableAfterCleanup: boolean;
   readonly authorityIdentityStableAfterCleanup: boolean;
+  readonly runtimeAuthoritySha256: string;
+  readonly runtimeAuthoritySemanticDigest: string;
+  readonly runtimeAuthorityStableAfterCleanup: boolean;
   readonly producerSourceManifestSha256: string | null;
   readonly producerSourceManifestStableAfterCleanup: boolean;
   readonly outputDirectoryExclusive: boolean;
@@ -149,6 +155,13 @@ export function buildFormalTerminalConclusion(
   if (!input.authorityIdentityStableAfterCleanup) {
     sealFailureCodes.push('FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT');
   }
+  if (
+    !SHA256_PATTERN.test(input.runtimeAuthoritySha256) ||
+    !SHA256_PATTERN.test(input.runtimeAuthoritySemanticDigest)
+  ) sealFailureCodes.push('FORMAL_TERMINAL_RUNTIME_AUTHORITY_DIGEST_INVALID');
+  if (!input.runtimeAuthorityStableAfterCleanup) {
+    sealFailureCodes.push('FORMAL_TERMINAL_RUNTIME_AUTHORITY_DRIFT');
+  }
   if (!input.producerSourceManifestStableAfterCleanup) {
     sealFailureCodes.push('FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DRIFT');
   }
@@ -193,6 +206,8 @@ export function buildFormalTerminalConclusion(
       producerProtocolEvidenceCountMinimum: 1,
       frozenInputsStableAfterCleanup: true,
       authorityIdentityStableAfterCleanup: true,
+      runtimeAuthorityDigestValid: true,
+      runtimeAuthorityStableAfterCleanup: true,
       producerSourceManifestStableAfterCleanup: true,
       outputDirectoryExclusive: true,
     },
@@ -202,6 +217,9 @@ export function buildFormalTerminalConclusion(
       producerSourceManifestSha256: input.producerSourceManifestSha256,
       frozenInputsStableAfterCleanup: input.frozenInputsStableAfterCleanup,
       authorityIdentityStableAfterCleanup: input.authorityIdentityStableAfterCleanup,
+      runtimeAuthoritySha256: input.runtimeAuthoritySha256,
+      runtimeAuthoritySemanticDigest: input.runtimeAuthoritySemanticDigest,
+      runtimeAuthorityStableAfterCleanup: input.runtimeAuthorityStableAfterCleanup,
       producerSourceManifestStableAfterCleanup: input.producerSourceManifestStableAfterCleanup,
       outputDirectoryExclusive: input.outputDirectoryExclusive,
     },
@@ -232,6 +250,9 @@ export function buildFormalTerminalConclusion(
     pruneCommandsInvoked,
     frozenInputsStableAfterCleanup: input.frozenInputsStableAfterCleanup,
     authorityIdentityStableAfterCleanup: input.authorityIdentityStableAfterCleanup,
+    runtimeAuthoritySha256: input.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest: input.runtimeAuthoritySemanticDigest,
+    runtimeAuthorityStableAfterCleanup: input.runtimeAuthorityStableAfterCleanup,
     producerSourceManifestSha256: input.producerSourceManifestSha256,
     producerSourceManifestStableAfterCleanup: input.producerSourceManifestStableAfterCleanup,
     outputDirectoryExclusive: input.outputDirectoryExclusive,

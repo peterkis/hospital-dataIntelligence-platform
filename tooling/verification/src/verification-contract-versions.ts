@@ -1,18 +1,20 @@
 /**
  * Single authority for the machine-readable Phase 01 verification contract.
- * Existing contract versions are deliberately preserved; only AR-10 structures
- * receive new versions.
+ * Versions change only when a reader-visible required field or authority
+ * meaning changes. AR-11 adds explicit runtime-authority identity to the plan,
+ * terminal conclusion, summary, and final outcome; producer/gate envelopes stay
+ * structurally compatible.
  */
-export const RUN_PLAN_SCHEMA_VERSION = 'phase-01.abg-run-plan.v3' as const;
-export const RUN_PLAN_AUTHORITY_ID = 'phase-01.repository-authoritative-plan.v2' as const;
+export const RUN_PLAN_SCHEMA_VERSION = 'phase-01.abg-run-plan.v4' as const;
+export const RUN_PLAN_AUTHORITY_ID = 'phase-01.repository-authoritative-plan.v3' as const;
 export const PRODUCER_EVIDENCE_SCHEMA_VERSION = 'phase-01.producer-evidence.v2' as const;
 export const PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION =
   'phase-01.producer-evidence-index.v2' as const;
 export const GATE_RESULT_SCHEMA_VERSION = 'phase-01.abg-gate-result.v3' as const;
-export const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v4' as const;
+export const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v5' as const;
 export const TERMINAL_CONCLUSION_SCHEMA_VERSION =
-  'phase-01.formal-terminal-conclusion.v1' as const;
-export const RUNTIME_OUTCOME_SCHEMA_VERSION = 'phase-01.formal-runtime-outcome.v2' as const;
+  'phase-01.formal-terminal-conclusion.v2' as const;
+export const RUNTIME_OUTCOME_SCHEMA_VERSION = 'phase-01.formal-runtime-outcome.v3' as const;
 export const EVIDENCE_MANIFEST_SCHEMA_VERSION = 'phase-01.evidence-manifest.v1' as const;
 
 export const VERIFICATION_SOURCE_MANIFEST_SCHEMA_VERSION =

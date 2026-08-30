@@ -34,6 +34,8 @@ export interface FrozenRunPlan {
   readonly producerSourceManifestSha256: string;
   readonly producerGitCommitSha: string;
   readonly contractIdentity: typeof CURRENT_EVIDENCE_CONTRACT_IDENTITY;
+  readonly runtimeAuthoritySha256: string;
+  readonly runtimeAuthoritySemanticDigest: string;
   readonly frozenInputs: Readonly<Record<string, string>>;
   readonly authorityIdentity: VerificationAuthorityIdentity;
   readonly setupCommands: readonly AuthoritativeCommandSpec[];
@@ -71,6 +73,8 @@ export async function buildAuthoritativeRunPlan(
     producerSourceManifestSha256: producerSourceManifest.sha256,
     producerGitCommitSha: producerSourceManifest.producerGitCommitSha,
     contractIdentity: CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+    runtimeAuthoritySha256: requireFrozenInput(frozenInputs, 'runtimeAuthoritySha256'),
+    runtimeAuthoritySemanticDigest: requireFrozenInput(frozenInputs, 'runtimeAuthoritySemanticDigest'),
     frozenInputs,
     authorityIdentity: await readVerificationAuthorityIdentity(repositoryRoot),
     setupCommands: [
@@ -99,6 +103,15 @@ export async function buildAuthoritativeRunPlan(
       },
     })),
   };
+}
+
+function requireFrozenInput(
+  frozenInputs: Readonly<Record<string, string>>,
+  name: string,
+): string {
+  const value = frozenInputs[name];
+  if (value === undefined || value.length === 0) throw new Error(`FROZEN_INPUT_MISSING:${name}`);
+  return value;
 }
 
 export async function readVerificationAuthorityIdentity(

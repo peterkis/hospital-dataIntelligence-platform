@@ -1,5 +1,8 @@
+import { execFile } from 'node:child_process';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
 import { Pool } from 'pg';
 import { sql } from 'kysely';
 import {
@@ -44,10 +47,40 @@ import { createScopedModules, type ScopedModules } from './create-scoped-modules
 import { createPhase01VerticalSlice } from './phase-01-vertical-slice.js';
 import { buildApplication } from './build-application.js';
 
-const POSTGRES_IMAGE =
-  'docker.io/library/postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382';
-const POSTGRES_HOST_PORT = 55_433;
+interface IntegrationRuntimeAuthority {
+  readonly authority: {
+    readonly host: { readonly timezone: string };
+    readonly podman: { readonly restartPolicy: 'no' };
+    readonly network: {
+      readonly managedContainerMode: 'host';
+      readonly bindAddress: '127.0.0.1';
+      readonly ports: { readonly postgresIntegration: number };
+    };
+    readonly images: { readonly postgresql: { readonly runtimeReference: string } };
+    readonly labels: {
+      readonly static: Readonly<{
+        'hdi.repository': string;
+        'hdi.phase': string;
+        'hdi.managed-by': string;
+      }>;
+    };
+  };
+}
+
+const execFileAsync = promisify(execFile);
+const REPOSITORY_ROOT = resolve(import.meta.dirname, '../../../..');
+const runtimeAuthorityModuleUrl = pathToFileURL(resolve(
+  REPOSITORY_ROOT,
+  'tooling/verification/src/runtime/podman-runtime-authority.ts',
+)).href;
+const { loadPodmanRuntimeAuthority } = await import(runtimeAuthorityModuleUrl) as Readonly<{
+  loadPodmanRuntimeAuthority(repositoryRoot?: string): IntegrationRuntimeAuthority;
+}>;
+const RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(REPOSITORY_ROOT).authority;
+const POSTGRES_IMAGE = RUNTIME_AUTHORITY.images.postgresql.runtimeReference;
+const POSTGRES_HOST_PORT = RUNTIME_AUTHORITY.network.ports.postgresIntegration;
 const TESTCONTAINER_LABELS = formalTestcontainerLabels();
+const POSTGRES_CONTAINER_NAME = integrationPostgresContainerName();
 const MIGRATION_DIRECTORY = resolve(
   import.meta.dirname,
   '../../../../db/migrations',
@@ -79,6 +112,31 @@ interface IntegrationEvidenceObservation {
 
 type PublicationTransactionFaultPoint = (typeof PUBLICATION_TRANSACTION_FAULT_POINTS)[number];
 
+class AuthorityBoundGenericContainer extends GenericContainer {
+  constructor(image: string, restartPolicy: 'no') {
+    super(image);
+    this.hostConfig.RestartPolicy = {
+      Name: restartPolicy,
+      MaximumRetryCount: 0,
+    };
+  }
+
+  protected override async containerCreated(containerId: string): Promise<void> {
+    const { stdout } = await execFileAsync('podman', [
+      'inspect',
+      '--format',
+      '{{.HostConfig.RestartPolicy.Name}}',
+      containerId,
+    ], {
+      windowsHide: true,
+      encoding: 'utf8',
+    });
+    if (stdout.trim() !== RUNTIME_AUTHORITY.podman.restartPolicy) {
+      throw new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT');
+    }
+  }
+}
+
 let container: StartedTestContainer | undefined;
 let databaseHandle: DatabaseHandle | undefined;
 let foundation: FoundationIds;
@@ -87,18 +145,22 @@ const integrationEvidenceObservations: IntegrationEvidenceObservation[] = [];
 process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 
 beforeAll(async () => {
-  container = await new GenericContainer(POSTGRES_IMAGE)
+  container = await new AuthorityBoundGenericContainer(
+    POSTGRES_IMAGE,
+    RUNTIME_AUTHORITY.podman.restartPolicy,
+  )
+    .withName(POSTGRES_CONTAINER_NAME)
     .withLabels(TESTCONTAINER_LABELS)
     .withEnvironment({
       POSTGRES_HOST_AUTH_METHOD: 'trust',
-      TZ: 'Asia/Shanghai',
+      TZ: RUNTIME_AUTHORITY.host.timezone,
     })
     .withCommand([
-      '-c', 'timezone=Asia/Shanghai',
-      '-c', 'listen_addresses=127.0.0.1',
+      '-c', `timezone=${RUNTIME_AUTHORITY.host.timezone}`,
+      '-c', `listen_addresses=${RUNTIME_AUTHORITY.network.bindAddress}`,
       '-p', String(POSTGRES_HOST_PORT),
     ])
-    .withNetworkMode('host')
+    .withNetworkMode(RUNTIME_AUTHORITY.network.managedContainerMode)
     .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/u, 2))
     .start();
   await writeTestcontainerRuntimeEvent('STARTED', container);
@@ -1675,12 +1737,21 @@ function formalTestcontainerLabels(): Readonly<Record<string, string>> {
     throw new Error('FORMAL_TESTCONTAINER_RUN_IDENTITY_INCOMPLETE');
   }
   return {
-    'hdi.repository': 'hospital-data-intelligence-platform',
-    'hdi.phase': '01',
+    'hdi.repository': RUNTIME_AUTHORITY.labels.static['hdi.repository'],
+    'hdi.phase': RUNTIME_AUTHORITY.labels.static['hdi.phase'],
     'hdi.run-id': runId ?? `integration-${process.pid}`,
     'hdi.run-sequence': runSequence ?? '0',
-    'hdi.managed-by': runId === undefined ? 'integration-test' : 'formal-abg',
+    'hdi.managed-by': runId === undefined
+      ? 'integration-test'
+      : RUNTIME_AUTHORITY.labels.static['hdi.managed-by'],
   };
+}
+
+function integrationPostgresContainerName(): string {
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  return runtimeNamespace === undefined
+    ? `phase-01-integration-postgres-${process.pid}`
+    : `${runtimeNamespace}_integration_postgres`;
 }
 
 async function writeTestcontainerRuntimeEvent(
@@ -1707,15 +1778,16 @@ async function writeTestcontainerRuntimeEvent(
       event,
       resourceType: 'container',
       id,
-      name: 'phase-01-integration-postgres',
+      name: POSTGRES_CONTAINER_NAME,
       role: 'testcontainers-postgres',
       labels: TESTCONTAINER_LABELS,
       occurredAt: new Date().toISOString(),
       imageReference: POSTGRES_IMAGE,
       imageDigest: POSTGRES_IMAGE.split('@')[1] ?? null,
+      restartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
       ports: [{
         containerPort: `${POSTGRES_HOST_PORT}/tcp`,
-        hostIp: '127.0.0.1',
+        hostIp: RUNTIME_AUTHORITY.network.bindAddress,
         hostPort: POSTGRES_HOST_PORT,
       }],
       ...(event === 'STOPPED' ? { exitStatus: 'STOPPED_BY_TESTCONTAINERS' } : {}),

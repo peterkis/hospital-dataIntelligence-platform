@@ -24,9 +24,12 @@ import {
   type FormalTeardownDependencies,
   type RuntimeResourceSnapshot,
 } from './formal-teardown.js';
+import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
+import type { LoadedPodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
 
 export interface FormalRuntimeContext {
   readonly identity: FormalRunIdentity;
+  readonly runtimeAuthority: LoadedPodmanRuntimeAuthority;
   readonly outputDirectory: string;
   readonly runtimeEventDirectory: string;
   readonly signal: AbortSignal;
@@ -50,6 +53,9 @@ export interface FormalRuntimeFinalOutcome<T> {
   readonly finalResources: RuntimeResourceSnapshot;
   readonly producerEvidencePersistedBeforeCleanup: boolean;
   readonly outputDirectoryExclusive: boolean;
+  readonly runtimeAuthoritySha256: string;
+  readonly runtimeAuthoritySemanticDigest: string;
+  readonly runtimeAuthorityStableAfterCleanup: boolean;
 }
 
 export interface FormalRuntimePreCleanupOutcome<T> {
@@ -96,6 +102,9 @@ export interface FormalRuntimeLifecycleDependencies {
     readonly producerSourceManifestSha256: string;
   }) => Promise<FormalPreflightReport>;
   readonly sha256: (path: string) => Promise<string>;
+  readonly loadRuntimeAuthority: (
+    repositoryRoot: string,
+  ) => LoadedPodmanRuntimeAuthority | Promise<LoadedPodmanRuntimeAuthority>;
   readonly teardownDependencies: FormalTeardownDependencies;
   readonly now: () => string;
   readonly createController: () => FormalRuntimeController;
@@ -111,6 +120,10 @@ export interface FormalRuntimeLifecycleResult<TExecution, TFinal = unknown> {
   readonly finalResources: RuntimeResourceSnapshot | null;
   readonly outputDirectoryCreated: boolean;
   readonly sealFailureCode: string | null;
+  readonly runtimeAuthorityFailureCode: string | null;
+  readonly runtimeAuthoritySha256: string | null;
+  readonly runtimeAuthoritySemanticDigest: string | null;
+  readonly runtimeAuthorityStableAfterCleanup: boolean;
 }
 
 export interface FormalRuntimeProcessEvents {
@@ -209,6 +222,7 @@ export function createDefaultFormalRuntimeLifecycleDependencies(): FormalRuntime
     fileSystem: new NodeFormalRuntimeFileSystem(),
     preflight: (input) => runFormalPreflight(input, preflightDependencies),
     sha256: (path) => preflightDependencies.fileSystem.sha256(path),
+    loadRuntimeAuthority: loadPodmanRuntimeAuthority,
     teardownDependencies: createDefaultFormalTeardownDependencies(),
     now: localNowInAsiaShanghai,
     createController: () => new FormalRuntimeController(),
@@ -233,6 +247,7 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
   let finalization: FormalRuntimeFinalizationResult<TFinal> | null = null;
   let finalResources: RuntimeResourceSnapshot | null = null;
   let sealFailureCode: string | null = null;
+  let runtimeAuthorityStableAfterCleanup = false;
   let preflight: FormalPreflightReport;
   try {
     preflight = await dependencies.preflight({
@@ -245,6 +260,8 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       check.errorCode === 'FORMAL_PREFLIGHT_OUTPUT_ALREADY_EXISTS',
     );
     if (outputExists) {
+      const authorityUnavailable = preflight.runtimeAuthoritySha256 === null ||
+        preflight.runtimeAuthoritySemanticDigest === null;
       return {
         status: 'FAILED',
         identity: preflight.runIdentity,
@@ -255,6 +272,104 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
         finalResources: null,
         outputDirectoryCreated: false,
         sealFailureCode: null,
+        runtimeAuthorityFailureCode: authorityUnavailable
+          ? 'FORMAL_RUNTIME_AUTHORITY_UNAVAILABLE'
+          : null,
+        runtimeAuthoritySha256: preflight.runtimeAuthoritySha256,
+        runtimeAuthoritySemanticDigest: preflight.runtimeAuthoritySemanticDigest,
+        runtimeAuthorityStableAfterCleanup: false,
+      };
+    }
+
+    let runtimeAuthority: LoadedPodmanRuntimeAuthority;
+    try {
+      runtimeAuthority = await dependencies.loadRuntimeAuthority(input.repositoryRoot);
+    } catch (error) {
+      await dependencies.fileSystem.reserveOutputDirectory(input.outputDirectory);
+      outputDirectoryCreated = true;
+      const authorityFailureCode = 'FORMAL_RUNTIME_AUTHORITY_UNAVAILABLE';
+      const failureCodes: string[] = [authorityFailureCode];
+      const preflightPersisted = await writeLifecycleJson(
+        dependencies.fileSystem,
+        input.outputDirectory,
+        'runtime/preflight.json',
+        preflight,
+        'FORMAL_PREFLIGHT_EVIDENCE_WRITE_FAILED',
+        failureCodes,
+      );
+      await writeLifecycleJson(
+        dependencies.fileSystem,
+        input.outputDirectory,
+        'runtime/authority-failure.json',
+        {
+          schemaVersion: 'phase-01.formal-runtime-authority-failure.v1',
+          runIdentity: preflight.runIdentity,
+          status: 'FAILED',
+          failureCode: authorityFailureCode,
+          observedErrorCode: stableFailureCode(error),
+          recordedAt: dependencies.now(),
+        },
+        'FORMAL_RUNTIME_AUTHORITY_FAILURE_EVIDENCE_WRITE_FAILED',
+        failureCodes,
+      );
+      await writeLifecycleJson(
+        dependencies.fileSystem,
+        input.outputDirectory,
+        'runtime/failure-summary.json',
+        {
+          schemaVersion: 'phase-01.formal-failure-summary.v1',
+          runIdentity: preflight.runIdentity,
+          statusBeforeCleanup: 'FAILED',
+          failureCodes: uniqueFailureCodes(failureCodes),
+          failureMessage: null,
+          evidencePersistedBeforeCleanup: preflightPersisted,
+          evidencePersistence: {
+            preflight: preflightPersisted,
+            resources: false,
+            producer: false,
+          },
+          evidenceDirectoryRetention: 'PERMANENT',
+          recordedAt: dependencies.now(),
+        },
+        'FORMAL_FAILURE_SUMMARY_WRITE_FAILED',
+        failureCodes,
+      );
+      await writeLifecycleJson(
+        dependencies.fileSystem,
+        input.outputDirectory,
+        'runtime/final-outcome.json',
+        {
+          schemaVersion: RUNTIME_OUTCOME_SCHEMA_VERSION,
+          runIdentity: preflight.runIdentity,
+          status: 'FAILED',
+          failureCodes: uniqueFailureCodes(failureCodes),
+          cleanupStatus: 'FAILED',
+          terminalConclusionStatus: 'FAILED',
+          sealEligibilityStatus: 'FAILED',
+          producerSourceManifestSha256: input.producerSourceManifestSha256,
+          runtimeAuthoritySha256: null,
+          runtimeAuthoritySemanticDigest: null,
+          runtimeAuthorityStableAfterCleanup: false,
+          sealPendingAtWrite: false,
+          completedEvidenceAt: dependencies.now(),
+        },
+        'FORMAL_FINAL_OUTCOME_WRITE_FAILED',
+        failureCodes,
+      );
+      return {
+        status: 'FAILED',
+        identity: preflight.runIdentity,
+        preflight,
+        execution: null,
+        finalization: null,
+        cleanup: null,
+        finalResources: null,
+        outputDirectoryCreated,
+        sealFailureCode: null,
+        runtimeAuthorityFailureCode: authorityFailureCode,
+        runtimeAuthoritySha256: null,
+        runtimeAuthoritySemanticDigest: null,
+        runtimeAuthorityStableAfterCleanup: false,
       };
     }
 
@@ -263,6 +378,10 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
     const runtimeEventDirectory = join(input.outputDirectory, 'runtime', 'events');
     await mkdir(runtimeEventDirectory, { recursive: true, mode: 0o700 });
     const failureCodes: string[] = [];
+    if (
+      preflight.runtimeAuthoritySha256 !== runtimeAuthority.runtimeAuthoritySha256 ||
+      preflight.runtimeAuthoritySemanticDigest !== runtimeAuthority.runtimeAuthoritySemanticDigest
+    ) failureCodes.push('FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_IDENTITY_MISMATCH');
     const preflightPersisted = await writeLifecycleJson(
       dependencies.fileSystem,
       input.outputDirectory,
@@ -273,6 +392,7 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
     );
     const context: FormalRuntimeContext = {
       identity: preflight.runIdentity,
+      runtimeAuthority,
       outputDirectory: input.outputDirectory,
       runtimeEventDirectory,
       signal: controller.signal,
@@ -282,6 +402,8 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
     let executionError: unknown;
     if (preflight.status !== 'PASSED') {
       failureCodes.push('FORMAL_PREFLIGHT_FAILED');
+    } else if (failureCodes.includes('FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_IDENTITY_MISMATCH')) {
+      failureCodes.push('FORMAL_EXECUTION_SKIPPED_AUTHORITY_IDENTITY_MISMATCH');
     } else if (!preflightPersisted) {
       failureCodes.push('FORMAL_EXECUTION_SKIPPED_EVIDENCE_UNAVAILABLE');
     } else {
@@ -314,6 +436,7 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       startedResources = await captureFormalRuntimeResources({
         identity: preflight.runIdentity,
         runtimeEventDirectory,
+        runtimeAuthority,
       }, dependencies.teardownDependencies);
     } catch (error) {
       failureCodes.push('FORMAL_RUNTIME_RESOURCE_SNAPSHOT_FAILED');
@@ -381,14 +504,20 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
     try {
       const teardown = await performFormalTeardown({
         identity: preflight.runIdentity,
+        repositoryRoot: input.repositoryRoot,
         runtimeEventDirectory,
+        runtimeAuthority,
       }, dependencies.teardownDependencies);
       cleanup = teardown.cleanup;
       finalResources = teardown.finalResources;
+      runtimeAuthorityStableAfterCleanup = cleanup.runtimeAuthority?.stable ?? false;
     } catch (error) {
       failureCodes.push('FORMAL_CLEANUP_UNCAUGHT_FAILURE');
-      cleanup = unavailableCleanup(preflight.runIdentity, dependencies.now(), error);
+      cleanup = unavailableCleanup(preflight.runIdentity, dependencies.now(), error, runtimeAuthority);
       finalResources = unavailableSnapshot(preflight.runIdentity, dependencies.now(), error);
+    }
+    if (!runtimeAuthorityStableAfterCleanup) {
+      failureCodes.push('FORMAL_RUNTIME_AUTHORITY_MUTATED');
     }
     if (cleanup.status !== 'PASSED') failureCodes.push('FORMAL_CLEANUP_FAILED');
     await writeLifecycleJson(
@@ -418,6 +547,9 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       finalResources,
       producerEvidencePersistedBeforeCleanup: producerEvidencePersisted,
       outputDirectoryExclusive: outputDirectoryCreated,
+      runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+      runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+      runtimeAuthorityStableAfterCleanup,
     };
     try {
       finalization = await callbacks.finalizeAfterCleanup(context, outcomeBeforeManifest);
@@ -446,6 +578,9 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
         sealEligibilityStatus,
         producerSourceManifestSha256:
           finalization?.producerSourceManifestSha256 ?? input.producerSourceManifestSha256,
+        runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+        runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+        runtimeAuthorityStableAfterCleanup,
         sealPendingAtWrite: true,
         completedEvidenceAt: dependencies.now(),
       },
@@ -478,6 +613,10 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       finalResources,
       outputDirectoryCreated,
       sealFailureCode,
+      runtimeAuthorityFailureCode: null,
+      runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+      runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+      runtimeAuthorityStableAfterCleanup,
     };
   } finally {
     controller.dispose();
@@ -519,6 +658,11 @@ export async function writeFormalRuntimeEvent(
     readonly imageReference?: string;
     readonly imageId?: string;
     readonly imageDigest?: string;
+    readonly stage?: string;
+    readonly status?: 'PASSED' | 'FAILED';
+    readonly actualLabels?: Readonly<Record<string, string>>;
+    readonly restartPolicy?: string | null;
+    readonly errorCode?: string | null;
     readonly ports?: readonly {
       readonly containerPort: string;
       readonly hostIp: string | null;
@@ -543,8 +687,19 @@ export async function writeFormalRuntimeEvent(
     resourceType: input.resourceType,
     id: input.id,
     name: input.name,
+    resourceId: input.id,
+    resourceName: input.name,
     role: input.role,
+    stage: input.stage ?? `RESOURCE_${input.event}`,
+    status: input.status ?? 'PASSED',
     labels: formalRuntimeLabels(input.identity),
+    expectedLabels: formalRuntimeLabels(input.identity),
+    actualLabels: projectFormalRuntimeLabels(
+      input.actualLabels ?? formalRuntimeLabels(input.identity),
+      input.identity,
+    ),
+    restartPolicy: input.restartPolicy ?? null,
+    errorCode: input.errorCode ?? null,
     occurredAt: input.occurredAt ?? localNowInAsiaShanghai(),
     ...(input.pid === undefined ? {} : { pid: input.pid }),
     ...(input.imageReference === undefined ? {} : { imageReference: input.imageReference }),
@@ -591,6 +746,7 @@ function unavailableCleanup(
   identity: FormalRunIdentity,
   completedAt: string,
   error: unknown,
+  runtimeAuthority: LoadedPodmanRuntimeAuthority,
 ): FormalCleanupReport {
   const code = stableFailureCode(error);
   return {
@@ -609,6 +765,18 @@ function unavailableCleanup(
     residualResources: [],
     occupiedPorts: [],
     pruneCommandsInvoked: false,
+    runtimeAuthority: {
+      expectedSha256: runtimeAuthority.runtimeAuthoritySha256,
+      observedAfterSha256: null,
+      expectedSemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+      observedAfterSemanticDigest: null,
+      stable: false,
+    },
+    restartPolicyFindings: [],
+    dockerSecondAuthorityFindings: [],
+    partialStartupRecoveryFindings: [],
+    persistenceFindings: [],
+    residualCounts: { process: 0, container: 0, volume: 0, network: 0 },
   };
 }
 
@@ -662,6 +830,16 @@ function sanitizeFailure(error: unknown): string {
     if (secret !== undefined && secret.length > 0) value = value.replaceAll(secret, '[REDACTED]');
   }
   return value.slice(0, 2_000);
+}
+
+function projectFormalRuntimeLabels(
+  labels: object,
+  identity: FormalRunSeed,
+): Readonly<Record<string, string>> {
+  const values = labels as Readonly<Record<string, unknown>>;
+  return Object.fromEntries(Object.keys(formalRuntimeLabels(identity)).flatMap((name) =>
+    typeof values[name] === 'string' ? [[name, values[name]]] : [],
+  ));
 }
 
 function stableFailureCode(error: unknown): string {

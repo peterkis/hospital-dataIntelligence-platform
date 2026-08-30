@@ -35,6 +35,7 @@ import {
   type ProducerEvidenceItem,
 } from './evidence/protocol.js';
 import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
 
 interface SharedCommand {
   readonly id: string;
@@ -60,6 +61,9 @@ interface RunningApplication {
 }
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
+const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot).authority;
+const runtimeBindAddress = runtimeAuthority.network.bindAddress;
+const runtimePorts = runtimeAuthority.network.ports;
 const sharedDirectory = resolve(requireEnvironment('ABG_SHARED_EVIDENCE_DIR'));
 const runId = process.env['ABG_RUN_ID'] ?? randomUUID();
 const runSequence = parsePositiveInteger(process.env['ABG_RUN_SEQUENCE'] ?? '1');
@@ -651,12 +655,12 @@ async function startApplication(): Promise<RunningApplication> {
   const notificationTargets = JSON.stringify([
     {
       servicePrincipalId: '40000000-0000-7000-8000-000000000002',
-      url: 'http://127.0.0.1:4101/v1/release-notifications',
+      url: `http://${runtimeBindAddress}:${runtimePorts.consumerA}/v1/release-notifications`,
       authorizationHeader: notificationAuthorization,
     },
     {
       servicePrincipalId: '40000000-0000-7000-8000-000000000003',
-      url: 'http://127.0.0.1:4102/v1/release-notifications',
+      url: `http://${runtimeBindAddress}:${runtimePorts.consumerB}/v1/release-notifications`,
       authorizationHeader: notificationAuthorization,
     },
   ]);
@@ -664,17 +668,18 @@ async function startApplication(): Promise<RunningApplication> {
     cwd: repositoryRoot,
     env: {
       ...process.env,
-      DATABASE_URL: 'postgresql://hdi_phase01:' + postgresPassword + '@127.0.0.1:55432/hdi_phase01',
-      KEYCLOAK_ISSUER_URL: 'http://127.0.0.1:18080/realms/hdi-phase01',
+      DATABASE_URL: 'postgresql://hdi_phase01:' + postgresPassword + '@' +
+        runtimeBindAddress + ':' + runtimePorts.postgresRuntime + '/hdi_phase01',
+      KEYCLOAK_ISSUER_URL: `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`,
       KEYCLOAK_BROWSER_CLIENT_ID: 'hdi-governance-browser',
       KEYCLOAK_BROWSER_CLIENT_SECRET: requireEnvironment('HDI_BROWSER_CLIENT_SECRET'),
       KEYCLOAK_SERVICE_AUDIENCE: 'hdi-governance-api',
-      PUBLIC_ORIGIN: 'http://127.0.0.1:3000',
+      PUBLIC_ORIGIN: `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`,
       SESSION_CSRF_SECRET: requireEnvironment('SESSION_CSRF_SECRET'),
       SIM_CONSUMER_NOTIFICATION_TARGETS_JSON: notificationTargets,
       ADMIN_STATIC_ROOT: join(repositoryRoot, 'apps/admin-web/dist'),
-      HOST: '127.0.0.1',
-      PORT: '3000',
+      HOST: runtimeBindAddress,
+      PORT: String(runtimePorts.governanceApi),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
@@ -691,16 +696,20 @@ async function startApplication(): Promise<RunningApplication> {
   };
   try {
     await recordRuntimeProcess('STARTED', child, 'governance-api');
-    await waitForPort(3000, child);
+    await waitForPort(runtimePorts.governanceApi, child);
   } catch (error) {
     await stopApplication(running).catch(() => undefined);
     throw error;
   }
-  process.env['DATABASE_URL'] = 'postgresql://hdi_phase01:' + postgresPassword + '@127.0.0.1:55432/hdi_phase01';
-  process.env['KEYCLOAK_ISSUER_URL'] = 'http://127.0.0.1:18080/realms/hdi-phase01';
+  process.env['DATABASE_URL'] = 'postgresql://hdi_phase01:' + postgresPassword + '@' +
+    runtimeBindAddress + ':' + runtimePorts.postgresRuntime + '/hdi_phase01';
+  process.env['KEYCLOAK_ISSUER_URL'] =
+    `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`;
   process.env['KEYCLOAK_REALM_IMPORT_PATH'] = realmImportPath;
-  process.env['GOVERNANCE_API_BASE_URL'] = 'http://127.0.0.1:3000';
-  process.env['PHASE01_E2E_BASE_URL'] = 'http://127.0.0.1:3000';
+  process.env['GOVERNANCE_API_BASE_URL'] =
+    `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`;
+  process.env['PHASE01_E2E_BASE_URL'] =
+    `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`;
   process.env['PHASE01_E2E_PASSWORD'] = requireEnvironment('HDI_OWNER_PASSWORD');
   process.env['SIM_CONSUMER_NOTIFICATION_TARGETS_JSON'] = notificationTargets;
   return {

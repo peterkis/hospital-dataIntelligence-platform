@@ -8,10 +8,12 @@
     "test": "vitest run",
     "test:adversarial": "vitest run src/testing/adversarial-verification.test.ts",
     "test:lifecycle": "vitest run src/runtime src/evidence/recorder.test.ts",
+    "test:podman-runtime": "vitest run src/runtime/podman-runtime-authority.test.ts src/runtime/podman-runtime-shell.test.ts src/runtime/formal-preflight.test.ts src/runtime/formal-teardown.test.ts src/runtime/formal-runtime-invariants.test.ts",
     "test:provenance": "vitest run src/provenance src/review-formal-abg-evidence.test.ts src/testing/build-valid-evidence-fixture.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify:phase-01:preflight": "node src/runtime/formal-preflight.ts",
     "verify:phase-01:teardown": "node src/runtime/formal-teardown.ts",
+    "verify:podman-runtime-authority": "tsx src/runtime/verify-podman-runtime-authority.ts --repository-root ../..",
     "verify:source-manifest": "tsx src/provenance/verify-current-source-manifest.ts",
     "verify:abg-coverage": "tsx src/report-abg-coverage.ts --check"
   },

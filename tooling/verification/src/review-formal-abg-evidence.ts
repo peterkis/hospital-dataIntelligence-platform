@@ -925,6 +925,8 @@ function compareSourceDefinitions(
       checks.fail('GATE_PROOF_DEFINITION_DRIFT', path);
     } else if (role !== undefined && [
       'TERMINAL_CONTRACT', 'SUMMARY_VALIDATOR', 'RUNTIME_CONTRACT',
+      'RUNTIME_AUTHORITY', 'RUNTIME_AUTHORITY_LOADER', 'RUNTIME_AUTHORITY_SCHEMA',
+      'RUNTIME_SCRIPT',
     ].includes(role)) {
       checks.fail('TERMINAL_CONTRACT_DEFINITION_DRIFT', path);
     }
@@ -1314,7 +1316,19 @@ async function validateRunPlan(
   checks.check(runSequence !== null, 'RUN_PLAN_SEQUENCE_INVALID', 'run-plan.json');
   const frozenInputs = asRecord(raw['frozenInputs']);
   checks.check(frozenInputs !== null, 'RUN_PLAN_FROZEN_INPUTS_INVALID', 'run-plan.json');
-  if (frozenInputs !== null) validateFrozenInputs(frozenInputs, checks);
+  if (frozenInputs !== null) {
+    validateFrozenInputs(frozenInputs, checks);
+    checks.check(
+      raw['runtimeAuthoritySha256'] === frozenInputs['runtimeAuthoritySha256'],
+      'RUNTIME_AUTHORITY_SHA_MISMATCH',
+      'run-plan.json#/runtimeAuthoritySha256',
+    );
+    checks.check(
+      raw['runtimeAuthoritySemanticDigest'] === frozenInputs['runtimeAuthoritySemanticDigest'],
+      'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+      'run-plan.json#/runtimeAuthoritySemanticDigest',
+    );
+  }
   const authorityIdentity = asRecord(raw['authorityIdentity']);
   checks.check(authorityIdentity !== null, 'RUN_PLAN_AUTHORITY_IDENTITY_INVALID', 'run-plan.json');
   if (authorityIdentity !== null) {
@@ -1360,7 +1374,14 @@ function validateFrozenInputs(
     'RUN_PLAN_GIT_IDENTITY_INVALID',
     'run-plan.json#/frozenInputs/gitCommitSha',
   );
-  for (const field of ['lockfileSha256', 'openapiSha256', 'migrationManifestSha256', 'fixtureIdentity'] as const) {
+  for (const field of [
+    'lockfileSha256',
+    'openapiSha256',
+    'migrationManifestSha256',
+    'fixtureIdentity',
+    'runtimeAuthoritySha256',
+    'runtimeAuthoritySemanticDigest',
+  ] as const) {
     const value = frozenInputs[field];
     checks.check(
       typeof value === 'string' && isSha256(value),
@@ -1474,6 +1495,17 @@ async function validateRunSummary(
         'FROZEN_INPUTS_MISMATCH',
         'abg-results.json#/frozenInputs',
       );
+      checks.check(
+        raw['runtimeAuthoritySha256'] === plan.frozenInputs['runtimeAuthoritySha256'],
+        'RUNTIME_AUTHORITY_SHA_MISMATCH',
+        'abg-results.json#/runtimeAuthoritySha256',
+      );
+      checks.check(
+        raw['runtimeAuthoritySemanticDigest'] ===
+          plan.frozenInputs['runtimeAuthoritySemanticDigest'],
+        'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+        'abg-results.json#/runtimeAuthoritySemanticDigest',
+      );
     }
     if (plan.authorityIdentity !== null) {
       checks.check(
@@ -1517,6 +1549,11 @@ async function validateRunSummary(
   checks.check(raw['pruneCommandsInvoked'] === false, 'FORMAL_SUMMARY_PRUNE_COMMAND_INVOKED', 'abg-results.json#/pruneCommandsInvoked');
   checks.check(raw['frozenInputsStableAfterCleanup'] === true, 'FROZEN_INPUTS_NOT_STABLE', 'abg-results.json#/frozenInputsStableAfterCleanup');
   checks.check(raw['authorityIdentityStableAfterCleanup'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE', 'abg-results.json#/authorityIdentityStableAfterCleanup');
+  checks.check(
+    raw['runtimeAuthorityStableAfterCleanup'] === true,
+    'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP',
+    'abg-results.json#/runtimeAuthorityStableAfterCleanup',
+  );
   checks.check(raw['outputDirectoryExclusive'] === true, 'FORMAL_SUMMARY_OUTPUT_DIRECTORY_NOT_EXCLUSIVE', 'abg-results.json#/outputDirectoryExclusive');
   checks.check(raw['terminalConclusionStatus'] === 'PASSED', 'FORMAL_SUMMARY_TERMINAL_STATUS_NOT_PASSED', 'abg-results.json#/terminalConclusionStatus');
   checks.check(raw['sealEligibilityStatus'] === 'PASSED', 'FORMAL_SUMMARY_SEAL_STATUS_NOT_PASSED', 'abg-results.json#/sealEligibilityStatus');
@@ -1602,6 +1639,7 @@ async function validateRunSummary(
     numberArrayValue(raw['occupiedRequiredPorts']).length === 0 &&
     raw['frozenInputsStableAfterCleanup'] === true &&
     raw['authorityIdentityStableAfterCleanup'] === true &&
+    raw['runtimeAuthorityStableAfterCleanup'] === true &&
     raw['outputDirectoryExclusive'] === true &&
     raw['terminalConclusionStatus'] === 'PASSED' &&
     raw['sealEligibilityStatus'] === 'PASSED'
@@ -1932,7 +1970,11 @@ async function validateProducerEvidence(input: {
   for (const [kind, value] of Object.entries(frozenInputRefs)) {
     checks.check(ABG_FROZEN_INPUT_KINDS.includes(kind as AbgFrozenInputKind), 'PRODUCER_FROZEN_INPUT_KIND_UNKNOWN', relativePath + '#/frozenInputRefs/' + kind);
     checks.check(typeof value === 'string' && value.trim().length > 0, 'PRODUCER_FROZEN_INPUT_INVALID', relativePath + '#/frozenInputRefs/' + kind);
-    if (kind.endsWith('Sha256') || kind === 'fixtureIdentity') {
+    if (
+      kind.endsWith('Sha256') ||
+      kind === 'fixtureIdentity' ||
+      kind === 'runtimeAuthoritySemanticDigest'
+    ) {
       checks.check(typeof value === 'string' && isSha256(value), 'PRODUCER_FROZEN_INPUT_DIGEST_INVALID', relativePath + '#/frozenInputRefs/' + kind);
     }
   }
@@ -2384,6 +2426,17 @@ async function validateFormalLifecycle(
   if (preflight !== null) {
     checks.check(preflight['schemaVersion'] === 'phase-01.formal-preflight.v1', 'FORMAL_PREFLIGHT_SCHEMA_INVALID', 'runtime/preflight.json');
     checks.check(preflight['status'] === 'PASSED', 'FORMAL_PREFLIGHT_STATUS_NOT_PASSED', 'runtime/preflight.json#/status');
+    checks.check(
+      preflight['runtimeAuthoritySha256'] === summary.raw['runtimeAuthoritySha256'],
+      'RUNTIME_AUTHORITY_SHA_MISMATCH',
+      'runtime/preflight.json#/runtimeAuthoritySha256',
+    );
+    checks.check(
+      preflight['runtimeAuthoritySemanticDigest'] ===
+        summary.raw['runtimeAuthoritySemanticDigest'],
+      'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+      'runtime/preflight.json#/runtimeAuthoritySemanticDigest',
+    );
   }
   if (startedResources !== null) {
     checks.check(startedResources['schemaVersion'] === 'phase-01.formal-runtime-resources.v1', 'FORMAL_RESOURCES_STARTED_SCHEMA_INVALID', 'runtime/resources-started.json');
@@ -2443,6 +2496,64 @@ async function validateFormalLifecycle(
     );
     checks.check(cleanupOccupiedPorts.length === 0, 'FORMAL_CLEANUP_OCCUPIED_PORTS_PRESENT', 'runtime/cleanup.json#/occupiedPorts');
     checks.check(cleanup['pruneCommandsInvoked'] === false, 'FORMAL_PRUNE_COMMAND_INVOKED', 'runtime/cleanup.json#/pruneCommandsInvoked');
+    const cleanupAuthority = asRecord(cleanup['runtimeAuthority']);
+    checks.check(
+      cleanupAuthority !== null &&
+        cleanupAuthority['expectedSha256'] === summary.raw['runtimeAuthoritySha256'] &&
+        cleanupAuthority['observedAfterSha256'] === summary.raw['runtimeAuthoritySha256'],
+      'RUNTIME_AUTHORITY_SHA_MISMATCH',
+      'runtime/cleanup.json#/runtimeAuthority',
+    );
+    checks.check(
+      cleanupAuthority !== null &&
+        cleanupAuthority['expectedSemanticDigest'] ===
+          summary.raw['runtimeAuthoritySemanticDigest'] &&
+        cleanupAuthority['observedAfterSemanticDigest'] ===
+          summary.raw['runtimeAuthoritySemanticDigest'],
+      'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+      'runtime/cleanup.json#/runtimeAuthority',
+    );
+    checks.check(
+      cleanupAuthority?.['stable'] === true,
+      'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP',
+      'runtime/cleanup.json#/runtimeAuthority/stable',
+    );
+    const restartFindings = parseRecordArray(
+      cleanup['restartPolicyFindings'],
+      checks,
+      'FORMAL_CLEANUP_RESTART_POLICY_FINDINGS_INVALID',
+      'runtime/cleanup.json#/restartPolicyFindings',
+    );
+    checks.check(
+      restartFindings.every((finding) =>
+        finding['expected'] === 'no' && finding['actual'] === 'no' &&
+          finding['status'] === 'PASSED'),
+      'FORMAL_CLEANUP_RESTART_POLICY_MISMATCH',
+      'runtime/cleanup.json#/restartPolicyFindings',
+    );
+    for (const [field, code] of [
+      ['dockerSecondAuthorityFindings', 'FORMAL_CLEANUP_SECOND_RUNTIME_AUTHORITY_PRESENT'],
+      ['partialStartupRecoveryFindings', 'FORMAL_CLEANUP_PARTIAL_RECOVERY_INCOMPLETE'],
+      ['persistenceFindings', 'FORMAL_CLEANUP_PERSISTENT_UNIT_PRESENT'],
+    ] as const) {
+      const findings = parseStringArray(
+        cleanup[field],
+        checks,
+        'FORMAL_CLEANUP_FINDINGS_INVALID',
+        `runtime/cleanup.json#/${field}`,
+      );
+      checks.check(findings.length === 0, code, `runtime/cleanup.json#/${field}`);
+    }
+    checks.check(
+      jsonEqual(cleanup['residualCounts'], {
+        process: 0,
+        container: 0,
+        volume: 0,
+        network: 0,
+      }),
+      'FORMAL_CLEANUP_RESIDUAL_COUNTS_NONZERO',
+      'runtime/cleanup.json#/residualCounts',
+    );
   }
   let finalResourceRecords: readonly Readonly<Record<string, unknown>>[] = [];
   let finalPortRecords: readonly Readonly<Record<string, unknown>>[] = [];
@@ -2544,6 +2655,8 @@ async function validateFormalLifecycle(
     producerProtocolEvidenceCountMinimum: 1,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    runtimeAuthorityDigestValid: true,
+    runtimeAuthorityStableAfterCleanup: true,
     producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,
   };
@@ -2553,6 +2666,10 @@ async function validateFormalLifecycle(
     producerSourceManifestSha256: summary.raw['producerSourceManifestSha256'],
     frozenInputsStableAfterCleanup: summary.raw['frozenInputsStableAfterCleanup'],
     authorityIdentityStableAfterCleanup: summary.raw['authorityIdentityStableAfterCleanup'],
+    runtimeAuthoritySha256: summary.raw['runtimeAuthoritySha256'],
+    runtimeAuthoritySemanticDigest: summary.raw['runtimeAuthoritySemanticDigest'],
+    runtimeAuthorityStableAfterCleanup:
+      summary.raw['runtimeAuthorityStableAfterCleanup'],
     producerSourceManifestStableAfterCleanup:
       summary.raw['producerSourceManifestStableAfterCleanup'],
     outputDirectoryExclusive: summary.raw['outputDirectoryExclusive'],
@@ -2591,6 +2708,23 @@ async function validateFormalLifecycle(
     checks.check(terminal['pruneCommandsInvoked'] === terminalLifecycleActual.pruneCommandsInvoked, 'FORMAL_TERMINAL_PRUNE_COMMAND_INVOKED', 'runtime/terminal-conclusion.json#/pruneCommandsInvoked');
     checks.check(terminal['frozenInputsStableAfterCleanup'] === summary.raw['frozenInputsStableAfterCleanup'], 'FORMAL_TERMINAL_FROZEN_INPUTS_DRIFT', 'runtime/terminal-conclusion.json#/frozenInputsStableAfterCleanup');
     checks.check(terminal['authorityIdentityStableAfterCleanup'] === summary.raw['authorityIdentityStableAfterCleanup'], 'FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT', 'runtime/terminal-conclusion.json#/authorityIdentityStableAfterCleanup');
+    checks.check(
+      terminal['runtimeAuthoritySha256'] === summary.raw['runtimeAuthoritySha256'],
+      'RUNTIME_AUTHORITY_SHA_MISMATCH',
+      'runtime/terminal-conclusion.json#/runtimeAuthoritySha256',
+    );
+    checks.check(
+      terminal['runtimeAuthoritySemanticDigest'] ===
+        summary.raw['runtimeAuthoritySemanticDigest'],
+      'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+      'runtime/terminal-conclusion.json#/runtimeAuthoritySemanticDigest',
+    );
+    checks.check(
+      terminal['runtimeAuthorityStableAfterCleanup'] ===
+        summary.raw['runtimeAuthorityStableAfterCleanup'],
+      'FORMAL_TERMINAL_RUNTIME_AUTHORITY_DRIFT',
+      'runtime/terminal-conclusion.json#/runtimeAuthorityStableAfterCleanup',
+    );
     checks.check(terminal['producerSourceManifestStableAfterCleanup'] === summary.raw['producerSourceManifestStableAfterCleanup'], 'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DRIFT', 'runtime/terminal-conclusion.json#/producerSourceManifestStableAfterCleanup');
     checks.check(terminal['outputDirectoryExclusive'] === summary.raw['outputDirectoryExclusive'], 'FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE', 'runtime/terminal-conclusion.json#/outputDirectoryExclusive');
     const terminalFailureCodes = parseStringArray(
@@ -2646,6 +2780,23 @@ async function validateFormalLifecycle(
     checks.check(finalOutcome['cleanupStatus'] === summary.raw['cleanupStatus'], 'FORMAL_FINAL_OUTCOME_CLEANUP_STATUS_MISMATCH', 'runtime/final-outcome.json#/cleanupStatus');
     checks.check(finalOutcome['terminalConclusionStatus'] === summary.raw['terminalConclusionStatus'], 'FORMAL_FINAL_OUTCOME_TERMINAL_STATUS_MISMATCH', 'runtime/final-outcome.json#/terminalConclusionStatus');
     checks.check(finalOutcome['sealEligibilityStatus'] === summary.raw['sealEligibilityStatus'], 'FORMAL_FINAL_OUTCOME_SEAL_STATUS_MISMATCH', 'runtime/final-outcome.json#/sealEligibilityStatus');
+    checks.check(
+      finalOutcome['runtimeAuthoritySha256'] === summary.raw['runtimeAuthoritySha256'],
+      'RUNTIME_AUTHORITY_SHA_MISMATCH',
+      'runtime/final-outcome.json#/runtimeAuthoritySha256',
+    );
+    checks.check(
+      finalOutcome['runtimeAuthoritySemanticDigest'] ===
+        summary.raw['runtimeAuthoritySemanticDigest'],
+      'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
+      'runtime/final-outcome.json#/runtimeAuthoritySemanticDigest',
+    );
+    checks.check(
+      finalOutcome['runtimeAuthorityStableAfterCleanup'] ===
+        summary.raw['runtimeAuthorityStableAfterCleanup'],
+      'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP',
+      'runtime/final-outcome.json#/runtimeAuthorityStableAfterCleanup',
+    );
     checks.check(jsonEqual(finalOutcome['failureCodes'], summary.raw['failureCodes']), 'FORMAL_FINAL_OUTCOME_FAILURE_CODES_MISMATCH', 'runtime/final-outcome.json#/failureCodes');
     checks.check(finalOutcome['sealPendingAtWrite'] === true, 'FORMAL_FINAL_OUTCOME_SEAL_PENDING_INVALID', 'runtime/final-outcome.json#/sealPendingAtWrite');
   }
@@ -2816,6 +2967,13 @@ function parseRuntimeResourceArray(
     checks.check(meaningfulStringField(record, 'id') !== null, code, itemLocation + '/id');
     checks.check(meaningfulStringField(record, 'name') !== null, code, itemLocation + '/name');
     checks.check(typeof record['present'] === 'boolean', code, itemLocation + '/present');
+    if (record['resourceType'] === 'container') {
+      checks.check(
+        record['restartPolicy'] === 'no',
+        'FORMAL_RUNTIME_CONTAINER_RESTART_POLICY_INVALID',
+        itemLocation + '/restartPolicy',
+      );
+    }
   }
   return records;
 }

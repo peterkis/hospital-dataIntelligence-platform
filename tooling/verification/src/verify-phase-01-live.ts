@@ -25,11 +25,25 @@ import {
   writeRedactedTextArtifact,
 } from './evidence/recorder.js';
 import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
 
-process.env['TZ'] = 'Asia/Shanghai';
+const repositoryRoot = resolve(import.meta.dirname, '../../..');
+const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot).authority;
+const runtimeBindAddress = runtimeAuthority.network.bindAddress;
+const runtimePorts = runtimeAuthority.network.ports;
+process.env['TZ'] = runtimeAuthority.host.timezone;
 
 const API_BASE_URL = requireEnvironment('GOVERNANCE_API_BASE_URL').replace(/\/$/u, '');
 const KEYCLOAK_ISSUER_URL = requireEnvironment('KEYCLOAK_ISSUER_URL').replace(/\/$/u, '');
+if (API_BASE_URL !== `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`) {
+  throw new Error('FORMAL_LIVE_GOVERNANCE_ENDPOINT_AUTHORITY_DRIFT');
+}
+if (
+  KEYCLOAK_ISSUER_URL !==
+    `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`
+) {
+  throw new Error('FORMAL_LIVE_KEYCLOAK_ENDPOINT_AUTHORITY_DRIFT');
+}
 const REALM_IMPORT_PATH = resolve(requireEnvironment('KEYCLOAK_REALM_IMPORT_PATH'));
 const REALM_IMPORT = JSON.parse(await readFile(REALM_IMPORT_PATH, 'utf8'));
 const OWNER = requireRealmUser(REALM_IMPORT, 'phase01-owner');
@@ -125,7 +139,7 @@ try {
   consumerProcesses.push(
     await startConsumer({
       label: 'consumer-a',
-      port: 4101,
+      port: runtimePorts.consumerA,
       clientId: 'hdi-sim-consumer-a',
       clientSecret: CONSUMER_A_SECRET,
       notificationAuthorization: requireNotificationAuthorization(CONSUMER_A_PRINCIPAL_ID),
@@ -133,7 +147,7 @@ try {
     }),
     await startConsumer({
       label: 'consumer-b',
-      port: 4102,
+      port: runtimePorts.consumerB,
       clientId: 'hdi-sim-consumer-b',
       clientSecret: CONSUMER_B_SECRET,
       notificationAuthorization: requireNotificationAuthorization(CONSUMER_B_PRINCIPAL_ID),
@@ -625,7 +639,7 @@ async function startConsumer(options: {
       KEYCLOAK_CLIENT_SECRET: options.clientSecret,
       SIM_CONSUMER_MODE: 'server',
       SIM_CONSUMER_NOTIFICATION_AUTHORIZATION: options.notificationAuthorization,
-      HOST: '127.0.0.1',
+      HOST: runtimeBindAddress,
       PORT: String(options.port),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -715,7 +729,7 @@ async function recordConsumerRuntimeEvent(
     pid: consumer.child.pid,
     ports: port === undefined ? [] : [{
       containerPort: String(port),
-      hostIp: '127.0.0.1',
+      hostIp: runtimeBindAddress,
       hostPort: port,
     }],
     exitStatus: event === 'STOPPED'
@@ -729,7 +743,7 @@ async function waitForPort(port: number, child: any): Promise<void> {
   while (Date.now() < deadline) {
     if (child.exitCode !== null) throw new Error(`SIM_CONSUMER_${port}_EXITED_${child.exitCode}`);
     const connected = await new Promise((resolveConnected) => {
-      const socket = connect({ host: '127.0.0.1', port });
+      const socket = connect({ host: runtimeBindAddress, port });
       socket.once('connect', () => {
         socket.destroy();
         resolveConnected(true);

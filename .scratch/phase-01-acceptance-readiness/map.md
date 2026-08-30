@@ -36,13 +36,13 @@ AR-01 权威覆盖矩阵
 | 07 | AR-08 状态与基线协调 | resolved | AR-06 已满足 |
 | 08 | AR-09 终态生命周期与 ABG-40 | resolved | AR-08 已满足；本地整改及限定验证完成 |
 | 09 | AR-10 evidence provenance 与契约漂移 | resolved | AR-09 已满足；本地整改及限定验证完成 |
-| 10 | AR-11 Podman 运行时权威加固 | ready-for-agent | AR-10 已满足；当前 frontier，尚未认领 |
+| 10 | AR-11 Podman 运行时权威加固 | claimed | AR-10 已满足；当前 frontier，已认领 |
 | 11 | AR-12 对抗回归与重基线 | ready-for-agent | blocked by AR-11 |
 | 12 | AR-07 正式执行与原 Ticket 复核 | blocked | blocked by AR-12 and explicit formal execution authorization |
 
 ## Current frontier
 
-- Current frontier 为 `AR-11`。本轮只完成 AR-10 closeout；AR-11 仍为 `ready-for-agent` 且未认领，本轮不得进入 AR-11、AR-12 或 AR-07。
+- Current frontier 为 `AR-11`。本轮只实施已认领的 AR-11；AR-12 继续 blocked by AR-11，AR-07 继续 blocked by AR-12 和另行正式执行授权。
 - AR-01～AR-06 的实现提交和旧定向验证评论保留，但 Prompt 1～Prompt 6 尚未在最新终态协议和 Podman 权威下完成 AR-12 重新验证。
 - Podman 运行时工作包仍为 `ready-for-human`；AR-11 完成并经人工复核前不得解除该边界。
 - AR-07 为 `blocked by AR-12`，并继续要求另行正式执行授权。
@@ -63,3 +63,4 @@ AR-01 权威覆盖矩阵
 - 2026-08-30：AR-09 终态 lifecycle 与 ABG-40 整改通过限定验收并转为 `resolved`；current frontier 推进到 AR-10，AR-10 仍为 `ready-for-agent` 且本轮未执行。AR-07 继续由 AR-12 和另行正式执行授权阻断。
 - 2026-08-30：AR-10 在开工 Git/Ticket 门禁全部满足后转为 `claimed` 并保持 current frontier；本轮不认领 AR-11、AR-12 或 AR-07，不执行正式 ABG。
 - 2026-08-30：AR-10 完成 producer/evidence/reviewer provenance、contract compatibility、definition drift 和 review output seal 的本地实现及限定验证，转为 `resolved`；current frontier 推进到仍为 `ready-for-agent` 且未认领的 AR-11。AR-07 继续阻断于 AR-12 和另行正式执行授权，未执行正式 ABG。
+- 2026-08-30：AR-11 在开工 Git/Ticket 门禁全部满足后转为 `claimed` 并保持 current frontier；AR-12 继续 blocked by AR-11，AR-07 继续 blocked by AR-12 和另行正式执行授权。本轮不执行真实服务、shared readiness 或正式 ABG。

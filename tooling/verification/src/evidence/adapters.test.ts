@@ -183,6 +183,8 @@ function frozenInputs(producerId: 'static' | 'live') {
     ? {
       gitCommitSha: SHA256,
       lockfileSha256: SHA256,
+      runtimeAuthoritySha256: SHA256,
+      runtimeAuthoritySemanticDigest: SHA256,
       nodeVersion: 'v24.18.0',
     }
     : {
@@ -191,6 +193,8 @@ function frozenInputs(producerId: 'static' | 'live') {
       openapiSha256: SHA256,
       migrationManifestSha256: SHA256,
       fixtureIdentity: SHA256,
+      runtimeAuthoritySha256: SHA256,
+      runtimeAuthoritySemanticDigest: SHA256,
       nodeVersion: 'v24.18.0',
       postgresImage: 'postgres@sha256:' + SHA256,
       keycloakImage: 'keycloak@sha256:' + SHA256,

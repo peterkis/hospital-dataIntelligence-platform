@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -40,18 +41,14 @@ export async function readFrozenInputs(
       sha256: await fileSha256(join(repositoryRoot, 'db/migrations', name)),
     })),
   );
-  const runtimeBaseline = JSON.parse(await readFile(
-    join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json'),
-    'utf8',
-  )) as unknown;
+  const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot);
   const runtimeModule = await readFile(
     join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/podman-phase-01-runtime.sh'),
     'utf8',
   );
-  const postgresImage = requireShellReadonly(runtimeModule, 'POSTGRES_IMAGE');
-  const keycloakImage = requireShellReadonly(runtimeModule, 'KEYCLOAK_IMAGE');
   const fixtureIdentity = sha256(Buffer.from(canonicalJson({
-    runtimeBaseline,
+    runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
     runtimeModuleSha256: sha256(Buffer.from(runtimeModule, 'utf8')),
     realmRendererSha256: await fileSha256(
       join(repositoryRoot, 'tooling/runtime/render-keycloak-realm.ts'),
@@ -72,8 +69,18 @@ export async function readFrozenInputs(
     migrationManifestSha256: sha256(Buffer.from(canonicalJson(migrationManifest), 'utf8')),
     fixtureIdentity,
     nodeVersion: process.version,
-    postgresImage,
-    keycloakImage,
+    runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+    podmanVersion: runtimeAuthority.authority.podman.version,
+    podmanSocketPath: runtimeAuthority.authority.podman.socketPath,
+    podmanStorageDriver: runtimeAuthority.authority.podman.storageDriver,
+    podmanGraphRoot: runtimeAuthority.authority.podman.graphRoot,
+    podmanOciRuntime: runtimeAuthority.authority.podman.ociRuntime,
+    podmanNetworkBackend: runtimeAuthority.authority.podman.networkBackend,
+    podmanLogDriver: runtimeAuthority.authority.podman.logDriver,
+    podmanRestartPolicy: runtimeAuthority.authority.podman.restartPolicy,
+    postgresImage: runtimeAuthority.authority.images.postgresql.runtimeReference,
+    keycloakImage: runtimeAuthority.authority.images.keycloak.runtimeReference,
     browserVersion,
     producerSourceManifestSha256,
   };
@@ -90,15 +97,6 @@ async function executeGit(repositoryRoot: string, args: readonly string[]): Prom
 
 async function fileSha256(path: string): Promise<string> {
   return sha256(await readFile(path));
-}
-
-function requireShellReadonly(script: string, name: string): string {
-  const match = new RegExp(`^readonly ${name}="([^"]+)"$`, 'mu').exec(script);
-  const value = match?.[1];
-  if (value === undefined || !value.includes('@sha256:')) {
-    throw new Error(`ABG_IMAGE_IDENTITY_MISSING:${name}`);
-  }
-  return value;
 }
 
 function canonicalJson(value: unknown): string {

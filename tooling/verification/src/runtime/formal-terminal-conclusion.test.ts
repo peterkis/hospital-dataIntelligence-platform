@@ -19,7 +19,7 @@ describe('formal terminal conclusion', () => {
     const conclusion = buildFormalTerminalConclusion(validInput());
 
     expect(conclusion).toMatchObject({
-      schemaVersion: 'phase-01.formal-terminal-conclusion.v1',
+      schemaVersion: 'phase-01.formal-terminal-conclusion.v2',
       status: 'PASSED',
       preflightStatus: 'PASSED',
       setupStatus: 'PASSED',
@@ -37,6 +37,9 @@ describe('formal terminal conclusion', () => {
       pruneCommandsInvoked: false,
       frozenInputsStableAfterCleanup: true,
       authorityIdentityStableAfterCleanup: true,
+      runtimeAuthoritySha256: 'c'.repeat(64),
+      runtimeAuthoritySemanticDigest: 'd'.repeat(64),
+      runtimeAuthorityStableAfterCleanup: true,
       producerSourceManifestSha256: 'b'.repeat(64),
       producerSourceManifestStableAfterCleanup: true,
       outputDirectoryExclusive: true,
@@ -108,6 +111,27 @@ describe('formal terminal conclusion', () => {
     expect(conclusion.failureCodes).toContain(expectedCode);
   });
 
+  it('fails seal eligibility with a stable code when runtime authority drifts after cleanup', () => {
+    const conclusion = buildFormalTerminalConclusion({
+      ...validInput(),
+      runtimeAuthorityStableAfterCleanup: false,
+    });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.runtimeAuthorityStableAfterCleanup).toBe(false);
+    expect(conclusion.failureCodes).toContain('FORMAL_TERMINAL_RUNTIME_AUTHORITY_DRIFT');
+  });
+
+  it.each(['runtimeAuthoritySha256', 'runtimeAuthoritySemanticDigest'] as const)(
+    'fails seal eligibility when %s is not a SHA-256 digest',
+    (field) => {
+      const conclusion = buildFormalTerminalConclusion({ ...validInput(), [field]: 'invalid' });
+      expect(conclusion.status).toBe('FAILED');
+      expect(conclusion.failureCodes).toContain('FORMAL_TERMINAL_RUNTIME_AUTHORITY_DIGEST_INVALID');
+    },
+  );
+
   it('fails seal eligibility when the producer source manifest digest is unavailable', () => {
     const conclusion = buildFormalTerminalConclusion({
       ...validInput(),
@@ -158,6 +182,9 @@ function validInput() {
     finalResources,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    runtimeAuthoritySha256: 'c'.repeat(64),
+    runtimeAuthoritySemanticDigest: 'd'.repeat(64),
+    runtimeAuthorityStableAfterCleanup: true,
     producerSourceManifestSha256: 'b'.repeat(64),
     producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,

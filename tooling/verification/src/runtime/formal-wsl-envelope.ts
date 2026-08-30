@@ -1,19 +1,23 @@
-/** Typed authority shared by preflight and during/post runtime audits. */
+import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
+
+const HOST_AUTHORITY = loadPodmanRuntimeAuthority().authority.host;
+
+/** Derived view of the sole runtime authority shared by preflight and post-runtime audits. */
 export const FROZEN_WSL_ENVELOPE = Object.freeze({
-  distribution: 'Anolis-8.9-HDI-POC',
-  osId: 'anolis',
-  osVersion: '8.9',
-  architecture: 'x86_64',
-  initProcess: 'systemd',
-  timezone: 'Asia/Shanghai',
-  processorCount: 8,
-  memoryBytes: 4 * 1024 ** 3,
-  memoryToleranceBytes: 384 * 1024 ** 2,
-  swapBytes: 0,
-  rootDeviceBytes: 10 * 1024 ** 3,
-  rootSizeToleranceBytes: 512 * 1024 ** 2,
-  minimumRootAvailableBytes: 2 * 1024 ** 3,
-  minimumMntDAvailableBytes: 5 * 1024 ** 3,
-  wslConfigMemoryValues: ['4GB', '4096MB'] as const,
-  wslConfigSwapValues: ['0', '0B', '0GB', '0MB'] as const,
+  distribution: HOST_AUTHORITY.distribution,
+  osId: HOST_AUTHORITY.osId,
+  osVersion: HOST_AUTHORITY.osVersion,
+  architecture: HOST_AUTHORITY.architecture,
+  initProcess: HOST_AUTHORITY.initProcess,
+  timezone: HOST_AUTHORITY.timezone,
+  processorCount: HOST_AUTHORITY.processorCount,
+  memoryBytes: HOST_AUTHORITY.memoryBytes,
+  memoryToleranceBytes: HOST_AUTHORITY.memoryToleranceBytes,
+  swapBytes: HOST_AUTHORITY.swapBytes,
+  rootDeviceBytes: HOST_AUTHORITY.rootFilesystemBytes,
+  rootSizeToleranceBytes: HOST_AUTHORITY.rootFilesystemToleranceBytes,
+  minimumRootAvailableBytes: HOST_AUTHORITY.minimumRootAvailableBytes,
+  minimumMntDAvailableBytes: HOST_AUTHORITY.minimumHostAvailableBytes,
+  wslConfigMemoryValues: HOST_AUTHORITY.wslConfigMemoryValues,
+  wslConfigSwapValues: HOST_AUTHORITY.wslConfigSwapValues,
 });

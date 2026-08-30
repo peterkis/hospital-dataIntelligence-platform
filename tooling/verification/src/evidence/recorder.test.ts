@@ -207,6 +207,8 @@ function staticFrozenInputs(): ProducerEvidence['frozenInputRefs'] {
   return {
     gitCommitSha: SHA256,
     lockfileSha256: SHA256,
+    runtimeAuthoritySha256: SHA256,
+    runtimeAuthoritySemanticDigest: SHA256,
     nodeVersion: 'v24.18.0',
   };
 }

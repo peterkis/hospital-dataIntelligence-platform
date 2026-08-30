@@ -5,15 +5,48 @@ import {
   REVIEWER_COMPATIBILITY_REGISTRY,
 } from './reviewer-compatibility.js';
 
+const CURRENT_AR11_TUPLE = {
+  runPlanSchemaVersion: 'phase-01.abg-run-plan.v4',
+  runPlanAuthorityId: 'phase-01.repository-authoritative-plan.v3',
+  producerEvidenceSchemaVersion: 'phase-01.producer-evidence.v2',
+  producerEvidenceIndexSchemaVersion: 'phase-01.producer-evidence-index.v2',
+  gateResultSchemaVersion: 'phase-01.abg-gate-result.v3',
+  runSummarySchemaVersion: 'phase-01.abg-run.v5',
+  terminalConclusionSchemaVersion: 'phase-01.formal-terminal-conclusion.v2',
+  runtimeOutcomeSchemaVersion: 'phase-01.formal-runtime-outcome.v3',
+  evidenceManifestSchemaVersion: 'phase-01.evidence-manifest.v1',
+} as const;
+
 describe('reviewer compatibility public seam', () => {
-  it('requires the current tuple and identical definitions for an exact review', () => {
+  it('requires the exact current AR-11 tuple and identical definitions for an exact review', () => {
+    expect(CURRENT_EVIDENCE_CONTRACT_IDENTITY).toEqual(CURRENT_AR11_TUPLE);
     expect(assessReviewerCompatibility({
-      evidenceContractIdentity: CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+      evidenceContractIdentity: CURRENT_AR11_TUPLE,
       definitionsMatch: true,
     })).toMatchObject({
       compatibilityLevel: 'EXACT',
       parsingPolicy: 'FULL_SUPPORTED_SCHEMA_VALIDATION',
       semanticPolicy: 'CURRENT_DEFINITIONS_IDENTICAL',
+    });
+  });
+
+  it('rejects the prior AR-10 runtime tuple as incompatible', () => {
+    const priorAr10Tuple = {
+      ...CURRENT_AR11_TUPLE,
+      runPlanSchemaVersion: 'phase-01.abg-run-plan.v3',
+      runPlanAuthorityId: 'phase-01.repository-authoritative-plan.v2',
+      runSummarySchemaVersion: 'phase-01.abg-run.v4',
+      terminalConclusionSchemaVersion: 'phase-01.formal-terminal-conclusion.v1',
+      runtimeOutcomeSchemaVersion: 'phase-01.formal-runtime-outcome.v2',
+    };
+
+    expect(assessReviewerCompatibility({
+      evidenceContractIdentity: priorAr10Tuple,
+      definitionsMatch: true,
+    })).toMatchObject({
+      compatibilityLevel: 'INCOMPATIBLE',
+      parsingPolicy: 'SAFE_ENVELOPE_ONLY',
+      semanticPolicy: 'UNKNOWN_CONTRACT_REQUIRES_FAILURE',
     });
   });
 

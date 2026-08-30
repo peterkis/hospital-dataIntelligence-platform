@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import {
-  FORMAL_RUNTIME_PORTS,
   SpawnRuntimeCommandRunner,
   createFormalRunSeed,
   errorMessage,
@@ -15,11 +14,19 @@ import {
   type RuntimeCommandRunner,
 } from './formal-runtime-contract.ts';
 import {
+  createFormalRuntimeAuthorityIsolationAdapter,
+  evaluateFormalRuntimeAuthorityIsolation,
+  type FormalPreflightAuthorityIsolationAdapter,
+} from './formal-preflight.ts';
+import {
   inspectWslHost,
-  wslConfigurationMatchesFrozenEnvelope,
   type WslHostEvidence,
 } from './formal-wsl-host.ts';
-import { FROZEN_WSL_ENVELOPE } from './formal-wsl-envelope.ts';
+import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.ts';
+import type {
+  LoadedPodmanRuntimeAuthority,
+  PodmanRuntimeAuthority,
+} from './podman-runtime-authority-schema.ts';
 
 export type RuntimeResourceType = 'process' | 'container' | 'volume' | 'network';
 
@@ -46,6 +53,7 @@ export interface RuntimeResourceRecord {
   readonly stoppedAt: string | null;
   readonly exitStatus: number | string | null;
   readonly metrics: Readonly<Record<string, string>> | null;
+  readonly restartPolicy?: string | null;
   readonly pid?: number;
   readonly role?: string;
 }
@@ -85,12 +93,21 @@ export interface CleanupAction {
   readonly occurredAt: string;
   readonly action: 'DISCOVER_RESOURCES' | 'STOP_PROCESS' | 'REMOVE_CONTAINER' |
     'REMOVE_VOLUME' | 'REMOVE_NETWORK' | 'VERIFY_PORT' |
-    'VERIFY_ENVIRONMENT';
+    'VERIFY_ENVIRONMENT' | 'VERIFY_RESOURCE' | 'VERIFY_RUNTIME_AUTHORITY' |
+    'VERIFY_RUNTIME_ISOLATION' | 'VERIFY_PERSISTENCE' | 'VERIFY_PARTIAL_RECOVERY';
   readonly resourceType: RuntimeResourceType | 'port' | 'runtime';
   readonly resourceId: string;
   readonly resourceName: string;
   readonly status: 'PASSED' | 'FAILED' | 'SKIPPED';
   readonly errorCode: string | null;
+}
+
+export interface RestartPolicyFinding {
+  readonly resourceId: string;
+  readonly resourceName: string;
+  readonly expected: 'no';
+  readonly actual: string | null;
+  readonly status: 'PASSED' | 'FAILED';
 }
 
 export interface FormalCleanupReport {
@@ -109,26 +126,64 @@ export interface FormalCleanupReport {
   readonly residualResources: readonly RuntimeResourceRecord[];
   readonly occupiedPorts: readonly number[];
   readonly pruneCommandsInvoked: false;
+  readonly runtimeAuthority?: {
+    readonly expectedSha256: string;
+    readonly observedAfterSha256: string | null;
+    readonly expectedSemanticDigest: string;
+    readonly observedAfterSemanticDigest: string | null;
+    readonly stable: boolean;
+  };
+  readonly restartPolicyFindings?: readonly RestartPolicyFinding[];
+  readonly dockerSecondAuthorityFindings?: readonly string[];
+  readonly partialStartupRecoveryFindings?: readonly string[];
+  readonly persistenceFindings?: readonly string[];
+  readonly residualCounts?: Readonly<Record<RuntimeResourceType, number>>;
+}
+
+export interface FormalTeardownTerminalState {
+  readonly persistenceFindings: readonly string[];
+  readonly dockerSecondAuthorityFindings: readonly string[];
+  readonly partialStartupRecoveryFindings: readonly string[];
 }
 
 export interface FormalTeardownAdapter {
   listResources(identity: FormalRunIdentity, runtimeEventDirectory: string): Promise<readonly RuntimeResourceRecord[]>;
+  reinspectResource(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+  ): Promise<RuntimeResourceRecord | null>;
   stopProcess(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   removeContainer(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   removeVolume(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   removeNetwork(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
   inspectPorts(ports: readonly number[]): Promise<RuntimeResourceSnapshot['ports']>;
-  inspectEnvironment?(): Promise<RuntimeEnvironmentObservation>;
+  inspectEnvironment?(authority?: PodmanRuntimeAuthority): Promise<RuntimeEnvironmentObservation>;
+  inspectTerminalState(
+    identity: FormalRunIdentity,
+    runtimeEventDirectory: string,
+    authority?: PodmanRuntimeAuthority,
+  ): Promise<FormalTeardownTerminalState>;
 }
 
 export interface FormalTeardownDependencies {
   readonly adapter: FormalTeardownAdapter;
+  readonly authorityIsolation: FormalPreflightAuthorityIsolationAdapter;
+  readonly environment: Readonly<NodeJS.ProcessEnv>;
+  readonly loadRuntimeAuthority: (
+    repositoryRoot?: string,
+  ) => LoadedPodmanRuntimeAuthority | Promise<LoadedPodmanRuntimeAuthority>;
   readonly now: () => string;
 }
 
 export function createDefaultFormalTeardownDependencies(): FormalTeardownDependencies {
+  const commandRunner = new SpawnRuntimeCommandRunner();
   return {
-    adapter: new PodmanCliFormalTeardownAdapter(new SpawnRuntimeCommandRunner()),
+    adapter: new PodmanCliFormalTeardownAdapter(commandRunner),
+    authorityIsolation: createFormalRuntimeAuthorityIsolationAdapter(commandRunner, process.env),
+    environment: process.env,
+    loadRuntimeAuthority: (repositoryRoot) => loadPodmanRuntimeAuthority(
+      repositoryRoot ?? resolve(import.meta.dirname, '../../../..'),
+    ),
     now: localNowInAsiaShanghai,
   };
 }
@@ -137,18 +192,20 @@ export async function captureFormalRuntimeResources(
   input: {
     readonly identity: FormalRunIdentity;
     readonly runtimeEventDirectory: string;
+    readonly runtimeAuthority: LoadedPodmanRuntimeAuthority;
   },
   dependencies: FormalTeardownDependencies = createDefaultFormalTeardownDependencies(),
 ): Promise<RuntimeResourceSnapshot> {
   const resources = (await dependencies.adapter.listResources(
     input.identity,
     input.runtimeEventDirectory,
-  )).filter((resource) => belongsToRun(resource, input.identity));
+  )).map(projectRuntimeResourceLabels)
+    .filter((resource) => isPotentialRunResource(resource, input.identity));
   let environment: RuntimeEnvironmentObservation | null = null;
   let environmentCaptureFailure: string | null = null;
   if (dependencies.adapter.inspectEnvironment !== undefined) {
     try {
-      environment = await dependencies.adapter.inspectEnvironment();
+      environment = await dependencies.adapter.inspectEnvironment(input.runtimeAuthority.authority);
     } catch (error) {
       environmentCaptureFailure = stableError(error);
     }
@@ -158,7 +215,7 @@ export async function captureFormalRuntimeResources(
     runIdentity: input.identity,
     capturedAt: dependencies.now(),
     resources: stableResources(resources),
-    ports: await dependencies.adapter.inspectPorts(FORMAL_RUNTIME_PORTS),
+    ports: await dependencies.adapter.inspectPorts(runtimeAuthorityPorts(input.runtimeAuthority)),
     environment,
     environmentCaptureFailure,
   };
@@ -167,7 +224,9 @@ export async function captureFormalRuntimeResources(
 export async function performFormalTeardown(
   input: {
     readonly identity: FormalRunIdentity;
+    readonly repositoryRoot: string;
     readonly runtimeEventDirectory: string;
+    readonly runtimeAuthority: LoadedPodmanRuntimeAuthority;
   },
   dependencies: FormalTeardownDependencies = createDefaultFormalTeardownDependencies(),
 ): Promise<{ readonly cleanup: FormalCleanupReport; readonly finalResources: RuntimeResourceSnapshot }> {
@@ -178,7 +237,10 @@ export async function performFormalTeardown(
   ) => actions.push({ ordinal: actions.length + 1, occurredAt: dependencies.now(), ...action });
   let resources: readonly RuntimeResourceRecord[] = [];
   try {
-    resources = await dependencies.adapter.listResources(input.identity, input.runtimeEventDirectory);
+    resources = (await dependencies.adapter.listResources(
+      input.identity,
+      input.runtimeEventDirectory,
+    )).map(projectRuntimeResourceLabels);
   } catch (error) {
     addAction({
       action: 'DISCOVER_RESOURCES',
@@ -190,66 +252,79 @@ export async function performFormalTeardown(
     });
   }
 
-  const exactResources = resources.filter((resource) => belongsToRun(resource, input.identity));
+  const restartPolicyFindings: RestartPolicyFinding[] = [];
+  const candidateResources: RuntimeResourceRecord[] = [];
+  for (const resource of resources.filter((candidate) => candidate.present || candidate.active)) {
+    if (!isPotentialRunResource(resource, input.identity)) continue;
+    if (!belongsToRun(resource, input.identity)) {
+      addAction({
+        action: 'VERIFY_RESOURCE',
+        resourceType: resource.resourceType,
+        resourceId: resource.id,
+        resourceName: resource.name,
+        status: 'FAILED',
+        errorCode: 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH',
+      });
+      continue;
+    }
+    if (!hasCanonicalResourceName(resource, input.identity)) {
+      addAction({
+        action: 'VERIFY_RESOURCE',
+        resourceType: resource.resourceType,
+        resourceId: resource.id,
+        resourceName: resource.name,
+        status: 'FAILED',
+        errorCode: 'FORMAL_CLEANUP_RESOURCE_NAME_MISMATCH',
+      });
+      continue;
+    }
+    candidateResources.push(resource);
+  }
   const processOrder = (resource: RuntimeResourceRecord): number => {
     if (resource.role === 'governance-api') return 0;
     if (resource.role?.startsWith('sim-consumer') === true) return 1;
     return 2;
   };
-  for (const resource of exactResources.filter((candidate) =>
+  for (const resource of candidateResources.filter((candidate) =>
     candidate.resourceType === 'process' && candidate.active,
   ).sort((left, right) => processOrder(left) - processOrder(right))) {
-    await attempt(addAction, {
+    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
       action: 'STOP_PROCESS',
-      resourceType: resource.resourceType,
-      resourceId: resource.id,
-      resourceName: resource.name,
-    }, () => dependencies.adapter.stopProcess(resource, input.identity));
-  }
-
-  for (const resource of exactResources.filter((candidate) =>
-    candidate.resourceType === 'container' && candidate.present,
-  )) {
-    await attempt(addAction, {
-      action: 'REMOVE_CONTAINER',
-      resourceType: resource.resourceType,
-      resourceId: resource.id,
-      resourceName: resource.name,
-    }, () => dependencies.adapter.removeContainer(resource, input.identity));
-  }
-
-  let afterContainers = resources;
-  try {
-    afterContainers = await dependencies.adapter.listResources(input.identity, input.runtimeEventDirectory);
-  } catch (error) {
-    addAction({
-      action: 'DISCOVER_RESOURCES',
-      resourceType: 'runtime',
-      resourceId: input.identity.runId,
-      resourceName: input.identity.runtimeNamespace,
-      status: 'FAILED',
-      errorCode: 'FORMAL_CLEANUP_POST_CONTAINER_DISCOVERY_FAILED:' + stableError(error),
+      mutate: (fresh) => dependencies.adapter.stopProcess(fresh, input.identity),
     });
   }
-  for (const resource of afterContainers.filter((candidate) =>
-    belongsToRun(candidate, input.identity) && candidate.present && candidate.resourceType === 'volume',
-  )) {
-    await attempt(addAction, {
-      action: 'REMOVE_VOLUME',
-      resourceType: resource.resourceType,
-      resourceId: resource.id,
-      resourceName: resource.name,
-    }, () => dependencies.adapter.removeVolume(resource, input.identity));
+
+  const containerOrder = (resource: RuntimeResourceRecord): number => {
+    if (resource.name.includes('keycloak')) return 0;
+    if (resource.name.includes('integration')) return 1;
+    return 2;
+  };
+  for (const resource of candidateResources.filter((candidate) =>
+    candidate.resourceType === 'container' && candidate.present,
+  ).sort((left, right) => containerOrder(left) - containerOrder(right))) {
+    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
+      action: 'REMOVE_CONTAINER',
+      mutate: (fresh) => dependencies.adapter.removeContainer(fresh, input.identity),
+    });
   }
-  for (const resource of afterContainers.filter((candidate) =>
-    belongsToRun(candidate, input.identity) && candidate.present && candidate.resourceType === 'network',
+
+  const volumeOrder = (resource: RuntimeResourceRecord): number =>
+    resource.name.includes('keycloak') ? 0 : 1;
+  for (const resource of candidateResources.filter((candidate) =>
+    candidate.present && candidate.resourceType === 'volume',
+  ).sort((left, right) => volumeOrder(left) - volumeOrder(right))) {
+    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
+      action: 'REMOVE_VOLUME',
+      mutate: (fresh) => dependencies.adapter.removeVolume(fresh, input.identity),
+    });
+  }
+  for (const resource of candidateResources.filter((candidate) =>
+    candidate.present && candidate.resourceType === 'network',
   )) {
-    await attempt(addAction, {
+    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
       action: 'REMOVE_NETWORK',
-      resourceType: resource.resourceType,
-      resourceId: resource.id,
-      resourceName: resource.name,
-    }, () => dependencies.adapter.removeNetwork(resource, input.identity));
+      mutate: (fresh) => dependencies.adapter.removeNetwork(fresh, input.identity),
+    });
   }
 
   let finalResources: RuntimeResourceSnapshot;
@@ -257,6 +332,7 @@ export async function performFormalTeardown(
     finalResources = await captureFormalRuntimeResources({
       identity: input.identity,
       runtimeEventDirectory: input.runtimeEventDirectory,
+      runtimeAuthority: input.runtimeAuthority,
     }, dependencies);
   } catch (error) {
     addAction({
@@ -272,12 +348,106 @@ export async function performFormalTeardown(
       runIdentity: input.identity,
       capturedAt: dependencies.now(),
       resources: [],
-      ports: FORMAL_RUNTIME_PORTS.map((port) => ({
+      ports: runtimeAuthorityPorts(input.runtimeAuthority).map((port) => ({
         port,
         occupied: true,
         verificationError: 'FINAL_SNAPSHOT_UNAVAILABLE',
       })),
     };
+  }
+
+  let terminalState: FormalTeardownTerminalState = {
+    persistenceFindings: [],
+    dockerSecondAuthorityFindings: [],
+    partialStartupRecoveryFindings: [],
+  };
+  let terminalInspectionComplete = false;
+  try {
+    terminalState = await dependencies.adapter.inspectTerminalState(
+      input.identity,
+      input.runtimeEventDirectory,
+      input.runtimeAuthority.authority,
+    );
+    terminalInspectionComplete = true;
+  } catch (error) {
+    addAction({
+      action: 'VERIFY_RUNTIME_ISOLATION',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: input.identity.runtimeNamespace,
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_TERMINAL_INSPECTION_FAILED:' + stableError(error),
+    });
+  }
+  let sharedIsolationInspectionComplete = false;
+  let sharedIsolationFindings: readonly string[] = [];
+  try {
+    const observation = await dependencies.authorityIsolation.inspect(input.runtimeAuthority.authority);
+    sharedIsolationFindings = evaluateFormalRuntimeAuthorityIsolation(
+      observation,
+      dependencies.environment,
+      input.runtimeAuthority.authority,
+    ).filter((check) => check.status === 'FAILED').map((check) =>
+      `${check.errorCode ?? 'FORMAL_PREFLIGHT_AUTHORITY_ISOLATION_FAILED'}:${check.id}`,
+    );
+    sharedIsolationInspectionComplete = true;
+  } catch (error) {
+    sharedIsolationFindings = [
+      'FORMAL_PREFLIGHT_AUTHORITY_ISOLATION_UNAVAILABLE:' + stableError(error),
+    ];
+    addAction({
+      action: 'VERIFY_RUNTIME_ISOLATION',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: input.identity.runtimeNamespace,
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_AUTHORITY_ISOLATION_INSPECTION_FAILED:' + stableError(error),
+    });
+  }
+  terminalState = {
+    ...terminalState,
+    dockerSecondAuthorityFindings: [...new Set([
+      ...terminalState.dockerSecondAuthorityFindings,
+      ...sharedIsolationFindings,
+    ])].sort(),
+  };
+  if (terminalInspectionComplete) {
+    addFindingAction(addAction, 'VERIFY_PERSISTENCE', terminalState.persistenceFindings,
+      'FORMAL_CLEANUP_PERSISTENT_UNIT_PRESENT', input.identity);
+    if (sharedIsolationInspectionComplete) {
+      addFindingAction(addAction, 'VERIFY_RUNTIME_ISOLATION', terminalState.dockerSecondAuthorityFindings,
+        'FORMAL_CLEANUP_SECOND_RUNTIME_AUTHORITY_PRESENT', input.identity);
+    }
+    addFindingAction(addAction, 'VERIFY_PARTIAL_RECOVERY', terminalState.partialStartupRecoveryFindings,
+      'FORMAL_CLEANUP_PARTIAL_RECOVERY_INCOMPLETE', input.identity);
+  }
+
+  let observedAuthority: LoadedPodmanRuntimeAuthority | null = null;
+  try {
+    observedAuthority = await dependencies.loadRuntimeAuthority(input.repositoryRoot);
+  } catch (error) {
+    addAction({
+      action: 'VERIFY_RUNTIME_AUTHORITY',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: 'runtime-baseline.lock.json',
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_RUNTIME_AUTHORITY_UNAVAILABLE:' + stableError(error),
+    });
+  }
+  const runtimeAuthorityStable = observedAuthority !== null &&
+    observedAuthority.runtimeAuthoritySha256 === input.runtimeAuthority.runtimeAuthoritySha256 &&
+    observedAuthority.runtimeAuthoritySemanticDigest ===
+      input.runtimeAuthority.runtimeAuthoritySemanticDigest;
+  if (observedAuthority !== null) {
+    addAction({
+      action: 'VERIFY_RUNTIME_AUTHORITY',
+      resourceType: 'runtime',
+      resourceId: input.identity.runId,
+      resourceName: 'runtime-baseline.lock.json',
+      status: runtimeAuthorityStable ? 'PASSED' : 'FAILED',
+      errorCode: runtimeAuthorityStable ? null : 'FORMAL_CLEANUP_RUNTIME_AUTHORITY_DRIFT',
+    });
   }
 
   for (const port of finalResources.ports) {
@@ -325,6 +495,7 @@ export async function performFormalTeardown(
     resourceName: action.resourceName,
     errorCode: action.errorCode ?? 'FORMAL_CLEANUP_ACTION_FAILED',
   }));
+  const residualCounts = countResidualResources(residualResources);
   const cleanup: FormalCleanupReport = {
     schemaVersion: 'phase-01.formal-cleanup.v1',
     runIdentity: input.identity,
@@ -338,8 +509,159 @@ export async function performFormalTeardown(
     residualResources,
     occupiedPorts,
     pruneCommandsInvoked: false,
+    runtimeAuthority: {
+      expectedSha256: input.runtimeAuthority.runtimeAuthoritySha256,
+      observedAfterSha256: observedAuthority?.runtimeAuthoritySha256 ?? null,
+      expectedSemanticDigest: input.runtimeAuthority.runtimeAuthoritySemanticDigest,
+      observedAfterSemanticDigest: observedAuthority?.runtimeAuthoritySemanticDigest ?? null,
+      stable: runtimeAuthorityStable,
+    },
+    restartPolicyFindings,
+    dockerSecondAuthorityFindings: terminalState.dockerSecondAuthorityFindings,
+    partialStartupRecoveryFindings: terminalState.partialStartupRecoveryFindings,
+    persistenceFindings: terminalState.persistenceFindings,
+    residualCounts,
   };
   return { cleanup, finalResources };
+}
+
+async function verifyAndMutateResource(
+  resource: RuntimeResourceRecord,
+  identity: FormalRunIdentity,
+  adapter: FormalTeardownAdapter,
+  addAction: (action: Omit<CleanupAction, 'ordinal' | 'occurredAt'>) => void,
+  restartPolicyFindings: RestartPolicyFinding[],
+  operation: {
+    readonly action: Extract<CleanupAction['action'],
+    'STOP_PROCESS' | 'REMOVE_CONTAINER' | 'REMOVE_VOLUME' | 'REMOVE_NETWORK'>;
+    readonly mutate: (fresh: RuntimeResourceRecord) => Promise<void>;
+  },
+): Promise<void> {
+  let fresh: RuntimeResourceRecord | null;
+  try {
+    fresh = await adapter.reinspectResource(resource, identity);
+  } catch (error) {
+    addAction({
+      action: 'VERIFY_RESOURCE',
+      resourceType: resource.resourceType,
+      resourceId: resource.id,
+      resourceName: resource.name,
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_RESOURCE_REINSPECTION_FAILED:' + stableError(error),
+    });
+    return;
+  }
+  if (fresh !== null) fresh = projectRuntimeResourceLabels(fresh);
+  if (fresh === null || (!fresh.present && !fresh.active)) {
+    addAction({
+      action: 'VERIFY_RESOURCE',
+      resourceType: resource.resourceType,
+      resourceId: resource.id,
+      resourceName: resource.name,
+      status: 'SKIPPED',
+      errorCode: null,
+    });
+    return;
+  }
+  if (!belongsToRun(fresh, identity)) {
+    addAction({
+      action: 'VERIFY_RESOURCE',
+      resourceType: resource.resourceType,
+      resourceId: resource.id,
+      resourceName: resource.name,
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH',
+    });
+    return;
+  }
+  if (!hasCanonicalResourceName(fresh, identity) || fresh.name !== resource.name) {
+    addAction({
+      action: 'VERIFY_RESOURCE',
+      resourceType: resource.resourceType,
+      resourceId: resource.id,
+      resourceName: resource.name,
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_RESOURCE_NAME_MISMATCH',
+    });
+    return;
+  }
+  if (fresh.resourceType === 'container') {
+    const actual = fresh.restartPolicy ?? null;
+    const status = actual === 'no' ? 'PASSED' : 'FAILED';
+    restartPolicyFindings.push({
+      resourceId: fresh.id,
+      resourceName: fresh.name,
+      expected: 'no',
+      actual,
+      status,
+    });
+    if (status === 'FAILED') {
+      addAction({
+        action: 'VERIFY_RESOURCE',
+        resourceType: fresh.resourceType,
+        resourceId: fresh.id,
+        resourceName: fresh.name,
+        status: 'FAILED',
+        errorCode: 'FORMAL_CLEANUP_RESTART_POLICY_MISMATCH',
+      });
+    }
+  }
+  await attempt(addAction, {
+    action: operation.action,
+    resourceType: fresh.resourceType,
+    resourceId: fresh.id,
+    resourceName: fresh.name,
+  }, () => operation.mutate(fresh));
+}
+
+function addFindingAction(
+  addAction: (action: Omit<CleanupAction, 'ordinal' | 'occurredAt'>) => void,
+  action: Extract<CleanupAction['action'],
+  'VERIFY_RUNTIME_ISOLATION' | 'VERIFY_PERSISTENCE' | 'VERIFY_PARTIAL_RECOVERY'>,
+  findings: readonly string[],
+  errorCode: string,
+  identity: FormalRunIdentity,
+): void {
+  addAction({
+    action,
+    resourceType: 'runtime',
+    resourceId: identity.runId,
+    resourceName: identity.runtimeNamespace,
+    status: findings.length === 0 ? 'PASSED' : 'FAILED',
+    errorCode: findings.length === 0 ? null : errorCode,
+  });
+}
+
+function runtimeAuthorityPorts(authority: LoadedPodmanRuntimeAuthority): readonly number[] {
+  return Object.values(authority.authority.network.ports);
+}
+
+function hasCanonicalResourceName(
+  resource: RuntimeResourceRecord,
+  identity: FormalRunIdentity,
+): boolean {
+  return resource.resourceType === 'process' ||
+    resource.name.startsWith(identity.runtimeNamespace + '_');
+}
+
+function isPotentialRunResource(
+  resource: RuntimeResourceRecord,
+  identity: FormalRunIdentity,
+): boolean {
+  return belongsToRun(resource, identity) ||
+    resource.name.startsWith(identity.runtimeNamespace + '_') ||
+    resource.labels['hdi.run-id'] === identity.runId;
+}
+
+function countResidualResources(
+  resources: readonly RuntimeResourceRecord[],
+): Readonly<Record<RuntimeResourceType, number>> {
+  return {
+    process: resources.filter((resource) => resource.resourceType === 'process').length,
+    container: resources.filter((resource) => resource.resourceType === 'container').length,
+    volume: resources.filter((resource) => resource.resourceType === 'volume').length,
+    network: resources.filter((resource) => resource.resourceType === 'network').length,
+  };
 }
 
 export function belongsToRun(
@@ -367,9 +689,9 @@ export function assertSafeFormalCleanupCommand(
   if (args.some((argument) => argument.toLowerCase() === 'prune')) {
     throw new Error('FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN');
   }
-  const containerRemove = args.length === 5 &&
+  const containerRemove = args.length === 4 &&
     args[0] === 'container' && args[1] === 'rm' &&
-    args[2] === '--force' && args[3] === '--volumes' && meaningfulArgument(args[4]);
+    args[2] === '--force' && meaningfulArgument(args[3]);
   const volumeRemove = args.length === 3 &&
     args[0] === 'volume' && args[1] === 'rm' && meaningfulArgument(args[2]);
   const networkRemove = args.length === 3 &&
@@ -399,6 +721,29 @@ class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     return mergePodmanAndEventResources(podman, events);
   }
 
+  async reinspectResource(
+    resource: RuntimeResourceRecord,
+    _identity: FormalRunIdentity,
+  ): Promise<RuntimeResourceRecord | null> {
+    if (resource.resourceType === 'process') {
+      return resource.pid !== undefined && isProcessAlive(resource.pid) ? resource : null;
+    }
+    const inspected = await tryInspectOne(this.runner, [
+      resource.resourceType,
+      'inspect',
+      resource.resourceType === 'volume' ? resource.name : resource.id,
+    ]);
+    if (inspected === null) return null;
+    if (resource.resourceType === 'container') return containerResourceFromInspect(inspected);
+    if (resource.resourceType === 'volume') {
+      const name = stringOrEmpty(inspected['Name']);
+      return basePodmanResource('volume', name, name, stringRecord(inspected['Labels']),
+        normalizePodmanTimestamp(inspected['CreatedAt']));
+    }
+    return basePodmanResource('network', stringOrEmpty(inspected['id']), stringOrEmpty(inspected['name']),
+      stringRecord(inspected['labels']), normalizePodmanTimestamp(inspected['created']));
+  }
+
   async stopProcess(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
     if (resource.pid === undefined) throw new Error('FORMAL_CLEANUP_PROCESS_PID_MISSING');
     if (!isProcessAlive(resource.pid)) return;
@@ -419,17 +764,17 @@ class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
   }
 
   async removeContainer(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertPodmanResourceOwned('container', resource.id, identity);
-    await requireSuccess(this.runner, 'podman', ['container', 'rm', '--force', '--volumes', resource.id]);
+    await this.assertPodmanResourceOwned('container', resource.id, identity, resource);
+    await requireSuccess(this.runner, 'podman', ['container', 'rm', '--force', resource.id]);
   }
 
   async removeVolume(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertPodmanResourceOwned('volume', resource.name, identity);
+    await this.assertPodmanResourceOwned('volume', resource.name, identity, resource);
     await requireSuccess(this.runner, 'podman', ['volume', 'rm', resource.name]);
   }
 
   async removeNetwork(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertPodmanResourceOwned('network', resource.id, identity);
+    await this.assertPodmanResourceOwned('network', resource.id, identity, resource);
     await requireSuccess(this.runner, 'podman', ['network', 'rm', resource.id]);
   }
 
@@ -437,7 +782,9 @@ class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     return Promise.all(ports.map((port) => inspectPort(port)));
   }
 
-  async inspectEnvironment(): Promise<RuntimeEnvironmentObservation> {
+  async inspectEnvironment(authority?: PodmanRuntimeAuthority): Promise<RuntimeEnvironmentObservation> {
+    if (authority === undefined) throw new Error('FORMAL_CLEANUP_RUNTIME_AUTHORITY_REQUIRED');
+    const hostAuthority = authority.host;
     const host = await inspectWslHost(this.runner);
     const processorCount = Number.parseInt(await requireText(this.runner, 'nproc', []), 10);
     const memInfo = await readFile('/proc/meminfo', 'utf8');
@@ -454,29 +801,29 @@ class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     const failureCodes: string[] = [];
     if (
       host.runningDistributions.length !== 1 ||
-      host.runningDistributions[0] !== FROZEN_WSL_ENVELOPE.distribution
+      host.runningDistributions[0] !== hostAuthority.distribution
     ) failureCodes.push('FORMAL_RUNTIME_WSL_RUNNING_SET_MISMATCH');
-    if (!wslConfigurationMatchesFrozenEnvelope(host.configuration)) {
+    if (!wslConfigurationMatchesAuthority(host.configuration, hostAuthority)) {
       failureCodes.push('FORMAL_RUNTIME_WSLCONFIG_MISMATCH');
     }
-    if (process.env['WSL_DISTRO_NAME'] !== FROZEN_WSL_ENVELOPE.distribution) {
+    if (process.env['WSL_DISTRO_NAME'] !== hostAuthority.distribution) {
       failureCodes.push('FORMAL_RUNTIME_WSL_DISTRO_MISMATCH');
     }
-    if (processorCount !== FROZEN_WSL_ENVELOPE.processorCount) {
+    if (processorCount !== hostAuthority.processorCount) {
       failureCodes.push('FORMAL_RUNTIME_WSL_CPU_MISMATCH');
     }
     if (
-      Math.abs(memoryTotalBytes - FROZEN_WSL_ENVELOPE.memoryBytes) >
-      FROZEN_WSL_ENVELOPE.memoryToleranceBytes
+      Math.abs(memoryTotalBytes - hostAuthority.memoryBytes) >
+      hostAuthority.memoryToleranceBytes
     ) {
       failureCodes.push('FORMAL_RUNTIME_WSL_MEMORY_MISMATCH');
     }
-    if (swapTotalBytes !== FROZEN_WSL_ENVELOPE.swapBytes || swapDevices.length !== 0) {
+    if (swapTotalBytes !== hostAuthority.swapBytes || swapDevices.length !== 0) {
       failureCodes.push('FORMAL_RUNTIME_WSL_SWAP_NONZERO');
     }
     if (
-      Math.abs(rootBlockDeviceSizeBytes - FROZEN_WSL_ENVELOPE.rootDeviceBytes) >
-      FROZEN_WSL_ENVELOPE.rootSizeToleranceBytes
+      Math.abs(rootBlockDeviceSizeBytes - hostAuthority.rootFilesystemBytes) >
+      hostAuthority.rootFilesystemToleranceBytes
     ) {
       failureCodes.push('FORMAL_RUNTIME_WSL_ROOT_DEVICE_MISMATCH');
     }
@@ -496,34 +843,163 @@ class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     };
   }
 
+  async inspectTerminalState(
+    identity: FormalRunIdentity,
+    runtimeEventDirectory: string,
+    authority?: PodmanRuntimeAuthority,
+  ): Promise<FormalTeardownTerminalState> {
+    if (authority === undefined) throw new Error('FORMAL_CLEANUP_RUNTIME_AUTHORITY_REQUIRED');
+    const persistenceFindings: string[] = [];
+    for (const args of [
+      ['list-units', '--all', '--no-legend'],
+      ['list-unit-files', '--no-legend'],
+    ] as const) {
+      const result = await this.runner.run({ executable: 'systemctl', args });
+      if (result.exitCode !== 0) throw new Error('FORMAL_CLEANUP_PERSISTENCE_INSPECTION_FAILED');
+      for (const line of result.stdout.split(/\r?\n/u)) {
+        if (line.includes(identity.runtimeNamespace)) persistenceFindings.push(line.trim());
+      }
+    }
+    for (const directory of [
+      '/etc/containers/systemd',
+      '/usr/share/containers/systemd',
+      '/root/.config/containers/systemd',
+    ]) {
+      try {
+        const entries = await readdir(directory);
+        persistenceFindings.push(...entries.filter((name) => name.includes(identity.runtimeNamespace))
+          .map((name) => `${directory}/${name}`));
+      } catch (error) {
+        if (!isMissing(error)) throw error;
+      }
+    }
+    const dockerSecondAuthorityFindings: string[] = [];
+    for (const path of ['/usr/bin/docker', '/usr/local/bin/docker', '/usr/sbin/docker', '/bin/docker', '/sbin/docker']) {
+      try {
+        await access(path);
+        dockerSecondAuthorityFindings.push(`executable:${path}`);
+      } catch (error) {
+        if (!isMissing(error)) throw error;
+      }
+    }
+    for (const path of ['/run/docker.sock', '/var/run/docker.sock']) {
+      try {
+        await access(path);
+        dockerSecondAuthorityFindings.push(path);
+      } catch (error) {
+        if (!isMissing(error)) throw error;
+      }
+    }
+    for (const unit of authority.dockerExclusion.forbiddenSystemdUnits) {
+      const result = await this.runner.run({
+        executable: 'systemctl',
+        args: ['show', unit, '--property=LoadState,ActiveState,UnitFileState,SubState', '--no-pager'],
+      });
+      const absent = result.exitCode === 0 &&
+        /(?:^|\n)LoadState=not-found(?:\r?$|\n)/u.test(result.stdout) &&
+        /(?:^|\n)ActiveState=inactive(?:\r?$|\n)/u.test(result.stdout);
+      if (!absent) dockerSecondAuthorityFindings.push(`unit:${unit}`);
+    }
+    const allowedEndpoint = authority.dockerExclusion.allowedCompatibilityEnvironment.DOCKER_HOST;
+    const dockerHost = process.env['DOCKER_HOST'];
+    if (dockerHost !== undefined && dockerHost !== allowedEndpoint) {
+      dockerSecondAuthorityFindings.push('environment:DOCKER_HOST');
+    }
+    for (const name of [
+      'DOCKER_CONTEXT',
+      'DOCKER_TLS_VERIFY',
+      'DOCKER_CERT_PATH',
+      'CONTAINER_HOST',
+      'TESTCONTAINERS_HOST_OVERRIDE',
+    ]) {
+      if ((process.env[name] ?? '').length > 0) dockerSecondAuthorityFindings.push(`environment:${name}`);
+    }
+    const processNames = new Set(authority.dockerExclusion.forbiddenProcessNames);
+    try {
+      const procEntries = await readdir('/proc', { withFileTypes: true });
+      const processFindings = await Promise.all(procEntries.flatMap((entry) => /^\d+$/u.test(entry.name)
+        ? [readFile(join('/proc', entry.name, 'comm'), 'utf8').catch(() => '')]
+        : []));
+      dockerSecondAuthorityFindings.push(...processFindings.map((name) => name.trim())
+        .filter((name) => processNames.has(name))
+        .map((name) => `process:${name}`));
+    } catch {
+      throw new Error('FORMAL_CLEANUP_PROCESS_INSPECTION_FAILED');
+    }
+    const listeners = await this.runner.run({ executable: 'ss', args: ['-H', '-ltnp'] });
+    if (listeners.exitCode !== 0) throw new Error('FORMAL_CLEANUP_TCP_INSPECTION_FAILED');
+    for (const line of listeners.stdout.split(/\r?\n/u)) {
+      const endpoint = line.trim().split(/\s+/u)[3];
+      const port = Number(/:(\d+)$/u.exec(endpoint ?? '')?.[1]);
+      if (
+        authority.dockerExclusion.forbiddenTcpPorts.includes(port) ||
+        /\b(?:dockerd|docker-proxy|podman)\b/u.test(line)
+      ) dockerSecondAuthorityFindings.push(`listener:${endpoint ?? 'unknown'}`);
+    }
+    const connectionResult = await this.runner.run({
+      executable: 'podman',
+      args: ['system', 'connection', 'list', '--format', 'json'],
+    });
+    if (connectionResult.exitCode !== 0) {
+      throw new Error('FORMAL_CLEANUP_CONNECTION_INSPECTION_FAILED');
+    }
+    const connectionValues = JSON.parse(connectionResult.stdout) as unknown;
+    if (!Array.isArray(connectionValues)) throw new Error('FORMAL_CLEANUP_CONNECTION_INSPECTION_INVALID');
+    for (const value of connectionValues) {
+      if (!isRecord(value)) continue;
+      const endpoint = value['URI'] ?? value['Uri'] ?? value['uri'];
+      if (typeof endpoint === 'string' && endpoint !== allowedEndpoint) {
+        dockerSecondAuthorityFindings.push(`connection:${endpoint}`);
+      }
+    }
+    const machineResult = await this.runner.run({
+      executable: 'podman',
+      args: ['machine', 'list', '--format', 'json'],
+    });
+    if (machineResult.exitCode !== 0) throw new Error('FORMAL_CLEANUP_MACHINE_INSPECTION_FAILED');
+    const machineValues = JSON.parse(machineResult.stdout) as unknown;
+    if (!Array.isArray(machineValues)) throw new Error('FORMAL_CLEANUP_MACHINE_INSPECTION_INVALID');
+    for (const value of machineValues) {
+      if (!isRecord(value)) continue;
+      const name = value['Name'] ?? value['name'];
+      if (typeof name === 'string' && name.length > 0) {
+        dockerSecondAuthorityFindings.push(`machine:${name}`);
+      }
+    }
+    try {
+      const users = await readdir('/run/user', { withFileTypes: true });
+      for (const user of users.filter((entry) => entry.isDirectory())) {
+        const socket = join('/run/user', user.name, 'podman', 'podman.sock');
+        try {
+          await access(socket);
+          dockerSecondAuthorityFindings.push(`rootless-socket:${socket}`);
+        } catch (error) {
+          if (!isMissing(error)) throw error;
+        }
+      }
+    } catch (error) {
+      if (!isMissing(error)) throw error;
+    }
+    const partialStartupRecoveryFindings = await failedPartialRecoveryEvents(
+      runtimeEventDirectory,
+      identity,
+    );
+    return {
+      persistenceFindings: [...new Set(persistenceFindings)].sort(),
+      dockerSecondAuthorityFindings: [...new Set(dockerSecondAuthorityFindings)].sort(),
+      partialStartupRecoveryFindings,
+    };
+  }
+
   private async listPodmanContainers(): Promise<readonly RuntimeResourceRecord[]> {
     const ids = await listIds(this.runner, ['container', 'ls', '--all', '--quiet']);
     return Promise.all(ids.map(async (id) => {
       const inspected = await inspectOne(this.runner, ['container', 'inspect', id]);
-      const config = recordField(inspected, 'Config');
+      const resource = containerResourceFromInspect(inspected);
       const state = recordField(inspected, 'State');
-      const network = recordField(inspected, 'NetworkSettings');
-      const labels = stringRecord(config['Labels']);
-      const imageReference = stringOrNull(config['Image']);
-      const ports = parsePortBindings(network['Ports']);
-      const metrics = state['Running'] === true ? await readPodmanStats(this.runner, id) : null;
       return {
-        resourceType: 'container' as const,
-        id: stringOrEmpty(inspected['Id']),
-        name: stringOrEmpty(inspected['Name']).replace(/^\//u, ''),
-        labels,
-        source: 'podman-inspect' as const,
-        present: true,
-        active: state['Running'] === true,
-        state: stringOrNull(state['Status']),
-        imageReference,
-        imageId: stringOrNull(inspected['Image']),
-        imageDigest: imageReference?.split('@')[1] ?? null,
-        ports,
-        startedAt: normalizePodmanTimestamp(state['StartedAt']),
-        stoppedAt: normalizePodmanTimestamp(state['FinishedAt']),
-        exitStatus: typeof state['ExitCode'] === 'number' ? state['ExitCode'] : null,
-        metrics,
+        ...resource,
+        metrics: state['Running'] === true ? await readPodmanStats(this.runner, id) : null,
       };
     }));
   }
@@ -550,13 +1026,20 @@ class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     type: 'container' | 'volume' | 'network',
     id: string,
     identity: FormalRunIdentity,
+    expectedResource: RuntimeResourceRecord,
   ): Promise<void> {
     const inspected = await inspectOne(this.runner, [type, 'inspect', id]);
     const labels = type === 'container'
       ? stringRecord(recordField(inspected, 'Config')['Labels'])
       : stringRecord(inspected[type === 'network' ? 'labels' : 'Labels']);
-    const resource = basePodmanResource(type, id, id, labels, null);
+    const actualName = type === 'container'
+      ? stringOrEmpty(inspected['Name']).replace(/^\//u, '')
+      : stringOrEmpty(inspected[type === 'network' ? 'name' : 'Name']);
+    const resource = basePodmanResource(type, id, actualName, labels, null);
     assertFormalRuntimeResourceOwned(resource, identity);
+    if (actualName !== expectedResource.name || !hasCanonicalResourceName(resource, identity)) {
+      throw new Error('FORMAL_CLEANUP_RESOURCE_NAME_MISMATCH');
+    }
   }
 }
 
@@ -585,14 +1068,14 @@ async function readRuntimeEvents(
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
       values.push(JSON.parse(await readFile(join(directory, entry.name), 'utf8')) as unknown);
     }
-    return mergeEventValues(values, identity);
+    return parseFormalRuntimeEventResources(values, identity);
   } catch (error) {
     if (isMissing(error)) return [];
     throw error;
   }
 }
 
-function mergeEventValues(
+export function parseFormalRuntimeEventResources(
   values: readonly unknown[],
   identity: FormalRunIdentity,
 ): readonly RuntimeResourceRecord[] {
@@ -608,7 +1091,7 @@ function mergeEventValues(
       typeof id !== 'string'
     ) continue;
     const existing = resources.get(String(resourceType) + ':' + id);
-    const labels = stringRecord(value['labels']);
+    const labels = stringRecord(value['actualLabels'] ?? value['labels']);
     if (event === 'STARTED') {
       const pid = typeof value['pid'] === 'number' ? value['pid'] : undefined;
       const processIsAlive = resourceType === 'process' && pid !== undefined && isProcessAlive(pid);
@@ -631,6 +1114,7 @@ function mergeEventValues(
         stoppedAt: null,
         exitStatus: null,
         metrics: null,
+        restartPolicy: typeof value['restartPolicy'] === 'string' ? value['restartPolicy'] : null,
         ...(pid === undefined ? {} : { pid }),
         ...(typeof value['role'] === 'string' ? { role: value['role'] } : {}),
       });
@@ -692,6 +1176,37 @@ function basePodmanResource(
     stoppedAt: null,
     exitStatus: null,
     metrics: null,
+    restartPolicy: null,
+  };
+}
+
+function containerResourceFromInspect(
+  inspected: Readonly<Record<string, unknown>>,
+): RuntimeResourceRecord {
+  const config = recordField(inspected, 'Config');
+  const hostConfig = recordField(inspected, 'HostConfig');
+  const restartPolicy = recordField(hostConfig, 'RestartPolicy');
+  const state = recordField(inspected, 'State');
+  const network = recordField(inspected, 'NetworkSettings');
+  const imageReference = stringOrNull(config['Image']);
+  return {
+    resourceType: 'container',
+    id: stringOrEmpty(inspected['Id']),
+    name: stringOrEmpty(inspected['Name']).replace(/^\//u, ''),
+    labels: stringRecord(config['Labels']),
+    source: 'podman-inspect',
+    present: true,
+    active: state['Running'] === true,
+    state: stringOrNull(state['Status']),
+    imageReference,
+    imageId: stringOrNull(inspected['Image']),
+    imageDigest: imageReference?.split('@')[1] ?? null,
+    ports: parsePortBindings(network['Ports']),
+    startedAt: normalizePodmanTimestamp(state['StartedAt']),
+    stoppedAt: normalizePodmanTimestamp(state['FinishedAt']),
+    exitStatus: typeof state['ExitCode'] === 'number' ? state['ExitCode'] : null,
+    metrics: null,
+    restartPolicy: stringOrNull(restartPolicy['Name']),
   };
 }
 
@@ -718,6 +1233,44 @@ async function inspectOne(
   const first = Array.isArray(value) ? value[0] : undefined;
   if (!isRecord(first)) throw new Error('FORMAL_PODMAN_INSPECT_INVALID:' + args[0]);
   return first;
+}
+
+async function tryInspectOne(
+  runner: RuntimeCommandRunner,
+  args: readonly string[],
+): Promise<Readonly<Record<string, unknown>> | null> {
+  const result = await runner.run({ executable: 'podman', args });
+  if (result.exitCode !== 0) return null;
+  const value = JSON.parse(result.stdout) as unknown;
+  const first = Array.isArray(value) ? value[0] : undefined;
+  if (!isRecord(first)) throw new Error('FORMAL_PODMAN_INSPECT_INVALID:' + args[0]);
+  return first;
+}
+
+async function failedPartialRecoveryEvents(
+  directory: string,
+  identity: FormalRunIdentity,
+): Promise<readonly string[]> {
+  try {
+    const entries = await readdir(directory, { withFileTypes: true });
+    const failures: string[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      const value = JSON.parse(await readFile(join(directory, entry.name), 'utf8')) as unknown;
+      if (!isRecord(value) || value['runId'] !== identity.runId) continue;
+      if (
+        value['status'] === 'FAILED' &&
+        typeof value['stage'] === 'string' &&
+        value['stage'].includes('PARTIAL_CLEANUP')
+      ) {
+        failures.push(typeof value['errorCode'] === 'string' ? value['errorCode'] : value['stage']);
+      }
+    }
+    return [...new Set(failures)].sort();
+  } catch (error) {
+    if (isMissing(error)) return [];
+    throw error;
+  }
 }
 
 async function readPodmanStats(
@@ -756,7 +1309,7 @@ async function requireSuccess(
 }
 
 function meaningfulArgument(value: string | undefined): value is string {
-  return value !== undefined && value.trim().length > 0;
+  return value !== undefined && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/u.test(value);
 }
 
 async function requireText(
@@ -773,6 +1326,22 @@ function memInfoBytes(value: string, field: string): number {
   const match = new RegExp('^' + field + ':\\s+(\\d+)\\s+kB$', 'mu').exec(value);
   if (match?.[1] === undefined) throw new Error('FORMAL_RUNTIME_MEMINFO_INVALID:' + field);
   return Number.parseInt(match[1], 10) * 1024;
+}
+
+function wslConfigurationMatchesAuthority(
+  configuration: WslHostEvidence['configuration'],
+  authority: PodmanRuntimeAuthority['host'],
+): boolean {
+  const memory = configuration.memory;
+  const swap = configuration.swap;
+  return configuration.present &&
+    configuration.processors === String(authority.processorCount) &&
+    typeof memory === 'string' &&
+    authority.wslConfigMemoryValues.some((value) =>
+      value.toUpperCase() === memory.toUpperCase(),
+    ) &&
+    typeof swap === 'string' &&
+    authority.wslConfigSwapValues.includes(swap);
 }
 
 async function inspectPort(port: number): Promise<RuntimeResourceSnapshot['ports'][number]> {
@@ -806,9 +1375,29 @@ function recordField(
 
 function stringRecord(value: unknown): Readonly<Record<string, string>> {
   if (!isRecord(value)) return {};
-  return Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
+  return projectGovernedRuntimeLabels(Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
     typeof item === 'string' ? [[name, item]] : [],
+  )));
+}
+
+const GOVERNED_RUNTIME_LABEL_NAMES = [
+  'hdi.repository',
+  'hdi.phase',
+  'hdi.run-id',
+  'hdi.run-sequence',
+  'hdi.managed-by',
+] as const;
+
+function projectGovernedRuntimeLabels(
+  labels: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(GOVERNED_RUNTIME_LABEL_NAMES.flatMap((name) =>
+    typeof labels[name] === 'string' ? [[name, labels[name]]] : [],
   ));
+}
+
+function projectRuntimeResourceLabels(resource: RuntimeResourceRecord): RuntimeResourceRecord {
+  return { ...resource, labels: projectGovernedRuntimeLabels(resource.labels) };
 }
 
 function parsePortBindings(value: unknown): readonly RuntimePortBinding[] {
@@ -909,9 +1498,13 @@ async function runControlledTeardownCli(): Promise<void> {
     throw new Error('FORMAL_TEARDOWN_RUNTIME_NAMESPACE_IDENTITY_MISMATCH');
   }
   const identity: FormalRunIdentity = { ...derived, gitCommitSha };
+  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+  const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot);
   const result = await performFormalTeardown({
     identity,
+    repositoryRoot,
     runtimeEventDirectory: join(evidenceDirectory, 'runtime', 'events'),
+    runtimeAuthority,
   });
   const runtimeDirectory = join(evidenceDirectory, 'runtime');
   const followupName = 'cleanup-followup-' +

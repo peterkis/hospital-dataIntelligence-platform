@@ -35,7 +35,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-01:repository-runtime-lockfile-topology`
 - Producers: `static`
 - Required references: `requestIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `gitCommitSha`, `lockfileSha256`, `nodeVersion`
+- Required frozen inputs: `gitCommitSha`, `lockfileSha256`, `nodeVersion`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `static` / `phase-01-static-evidence` / `STATIC-REPOSITORY-RUNTIME-LOCKFILE-TOPOLOGY` / `ABG-01:repository-runtime-lockfile-topology` / `/scenarios/STATIC-REPOSITORY-RUNTIME-LOCKFILE-TOPOLOGY/assertions/ABG-01:repository-runtime-lockfile-topology/status` / expected `PASSED`
@@ -47,7 +47,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-02:empty-postgres-migration-schema-fingerprint-derived-types`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-EMPTY-POSTGRES-MIGRATION-CLOSURE` / `ABG-02:empty-postgres-migration-schema-fingerprint-derived-types` / `/scenarios/INTEGRATION-EMPTY-POSTGRES-MIGRATION-CLOSURE/assertions/ABG-02:empty-postgres-migration-schema-fingerprint-derived-types/status` / expected `PASSED`
@@ -60,7 +60,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-03:asia-shanghai-no-timezone-contract`
 - Producers: `database`, `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN` / `ABG-03:asia-shanghai-no-timezone-contract` / `/scenarios/INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN/assertions/ABG-03:asia-shanghai-no-timezone-contract/status` / expected `PASSED`
@@ -74,7 +74,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-04:keycloak-person-service-local-principal-binding`
 - Producers: `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `live` / `phase-01-live-evidence` / `LIVE-KEYCLOAK-PERSON-AND-SERVICE-IDENTITY` / `ABG-04:keycloak-person-service-local-principal-binding` / `/scenarios/LIVE-KEYCLOAK-PERSON-AND-SERVICE-IDENTITY/assertions/ABG-04:keycloak-person-service-local-principal-binding/status` / expected `PASSED`
@@ -86,7 +86,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-05:object-authorization-allow-deny-matrix`
 - Producers: `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `LIVE-OBJECT-AUTHORIZATION-ALLOW-DENY` / `ABG-05:object-authorization-allow-deny-matrix` / `/scenarios/LIVE-OBJECT-AUTHORIZATION-ALLOW-DENY/assertions/ABG-05:object-authorization-allow-deny-matrix/status` / expected `PASSED`
@@ -99,7 +99,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-06:campus-scope-and-hospital-authority-boundary`
 - Producers: `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-CAMPUS-SCOPE-AUTHORIZATION` / `ABG-06:campus-scope-and-hospital-authority-boundary` / `/scenarios/INTEGRATION-CAMPUS-SCOPE-AUTHORIZATION/assertions/ABG-06:campus-scope-and-hospital-authority-boundary/status` / expected `PASSED`
@@ -112,7 +112,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-07:charge-item-draft-crud-and-csrf-rejection`
 - Producers: `integration`, `browser`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-07:charge-item-draft-crud-and-csrf-rejection` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-07:charge-item-draft-crud-and-csrf-rejection/status` / expected `PASSED`
@@ -125,7 +125,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-08:charge-item-stable-identity-version-candidate-immutable-publication`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-CHARGE-CATALOG-VERSION-PUBLICATION` / `ABG-08:charge-item-stable-identity-version-candidate-immutable-publication` / `/scenarios/INTEGRATION-CHARGE-CATALOG-VERSION-PUBLICATION/assertions/ABG-08:charge-item-stable-identity-version-candidate-immutable-publication/status` / expected `PASSED`
@@ -138,7 +138,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-09:charge-item-bitemporal-history-and-difference`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-CHARGE-CATALOG-BITEMPORAL-HISTORY` / `ABG-09:charge-item-bitemporal-history-and-difference` / `/scenarios/INTEGRATION-CHARGE-CATALOG-BITEMPORAL-HISTORY/assertions/ABG-09:charge-item-bitemporal-history-and-difference/status` / expected `PASSED`
@@ -150,7 +150,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-10:price-list-draft-entry-change-complete-snapshot`
 - Producers: `integration`, `browser`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-VERTICAL-SLICE-PUBLICATION` / `ABG-10:price-list-draft-entry-change-complete-snapshot` / `/scenarios/INTEGRATION-VERTICAL-SLICE-PUBLICATION/assertions/ABG-10:price-list-draft-entry-change-complete-snapshot/status` / expected `PASSED`
@@ -163,7 +163,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-11:general-specific-exclusivity-campus-scope-exclusion`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-PRICE-EXCLUSIVITY-CONSTRAINTS` / `ABG-11:general-specific-exclusivity-campus-scope-exclusion` / `/scenarios/INTEGRATION-PRICE-EXCLUSIVITY-CONSTRAINTS/assertions/ABG-11:general-specific-exclusivity-campus-scope-exclusion/status` / expected `PASSED`
@@ -176,7 +176,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-12:two-level-price-resolution-fail-closed-evidence`
 - Producers: `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED` / `ABG-12:two-level-price-resolution-fail-closed-evidence` / `/scenarios/INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED/assertions/ABG-12:two-level-price-resolution-fail-closed-evidence/status` / expected `PASSED`
@@ -189,7 +189,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-13:csv-json-charge-import-equivalence`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-IMPORT-CSV-JSON-EQUIVALENCE` / `ABG-13:csv-json-charge-import-equivalence` / `/scenarios/INTEGRATION-IMPORT-CSV-JSON-EQUIVALENCE/assertions/ABG-13:csv-json-charge-import-equivalence/status` / expected `PASSED`
@@ -201,7 +201,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-14:batch-duplicate-key-stable-row-identity`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-IMPORT-DUPLICATE-ROW-IDENTITIES` / `ABG-14:batch-duplicate-key-stable-row-identity` / `/scenarios/INTEGRATION-IMPORT-DUPLICATE-ROW-IDENTITIES/assertions/ABG-14:batch-duplicate-key-stable-row-identity/status` / expected `PASSED`
@@ -213,7 +213,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-15:row-partial-success-failure-evidence`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-IMPORT-PARTIAL-SUCCESS` / `ABG-15:row-partial-success-failure-evidence` / `/scenarios/INTEGRATION-IMPORT-PARTIAL-SUCCESS/assertions/ABG-15:row-partial-success-failure-evidence/status` / expected `PASSED`
@@ -226,7 +226,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-16:original-batch-idempotent-retry-success-row-skip`
 - Producers: `fault`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `fault` / `phase-01-fault-evidence` / `FAULT-IMPORT-IDEMPOTENT-RETRY` / `ABG-16:original-batch-idempotent-retry-success-row-skip` / `/scenarios/FAULT-IMPORT-IDEMPOTENT-RETRY/assertions/ABG-16:original-batch-idempotent-retry-success-row-skip/status` / expected `PASSED`
@@ -239,7 +239,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-17:new-batch-same-key-version-candidate`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-IMPORT-NEW-BATCH-VERSION-CANDIDATE` / `ABG-17:new-batch-same-key-version-candidate` / `/scenarios/INTEGRATION-IMPORT-NEW-BATCH-VERSION-CANDIDATE/assertions/ABG-17:new-batch-same-key-version-candidate/status` / expected `PASSED`
@@ -251,7 +251,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-18:price-entry-import-prepublication-conflict`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-PRICE-ENTRY-IMPORT-CONFLICT` / `ABG-18:price-entry-import-prepublication-conflict` / `/scenarios/INTEGRATION-PRICE-ENTRY-IMPORT-CONFLICT/assertions/ABG-18:price-entry-import-prepublication-conflict/status` / expected `PASSED`
@@ -263,7 +263,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-19:normal-content-frozen-template-stage-order`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-WORKFLOW-TEMPLATE-STAGE-ORDER` / `ABG-19:normal-content-frozen-template-stage-order` / `/scenarios/INTEGRATION-WORKFLOW-TEMPLATE-STAGE-ORDER/assertions/ABG-19:normal-content-frozen-template-stage-order/status` / expected `PASSED`
@@ -275,7 +275,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-20:duty-separation-content-drift-terminal-block`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-WORKFLOW-DUTY-SEPARATION-DRIFT` / `ABG-20:duty-separation-content-drift-terminal-block` / `/scenarios/INTEGRATION-WORKFLOW-DUTY-SEPARATION-DRIFT/assertions/ABG-20:duty-separation-content-drift-terminal-block/status` / expected `PASSED`
@@ -287,7 +287,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-21:high-risk-price-review-owner-final-approval`
 - Producers: `integration`, `browser`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-HIGH-RISK-PRICE-APPROVAL` / `ABG-21:high-risk-price-review-owner-final-approval` / `/scenarios/INTEGRATION-HIGH-RISK-PRICE-APPROVAL/assertions/ABG-21:high-risk-price-review-owner-final-approval/status` / expected `PASSED`
@@ -300,7 +300,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-22:campus-price-preconfirmation-single-owner-authority`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-CAMPUS-DIFFERENCE-PRECONFIRMATION` / `ABG-22:campus-price-preconfirmation-single-owner-authority` / `/scenarios/INTEGRATION-CAMPUS-DIFFERENCE-PRECONFIRMATION/assertions/ABG-22:campus-price-preconfirmation-single-owner-authority/status` / expected `PASSED`
@@ -312,7 +312,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-23:projection-schema-upgrade-self-approval-exception-scope`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-SCHEMA-UPGRADE-EXCEPTION-SCOPE` / `ABG-23:projection-schema-upgrade-self-approval-exception-scope` / `/scenarios/INTEGRATION-SCHEMA-UPGRADE-EXCEPTION-SCOPE/assertions/ABG-23:projection-schema-upgrade-self-approval-exception-scope/status` / expected `PASSED`
@@ -324,7 +324,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay`
 - Producers: `consumer`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `LIVE-CONSUMER-INCOMPATIBILITY-REPLAY` / `ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay` / `/scenarios/LIVE-CONSUMER-INCOMPATIBILITY-REPLAY/assertions/ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay/status` / expected `PASSED`
@@ -337,7 +337,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-25:emergency-suspension-append-event-future-block`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-EMERGENCY-SUSPEND` / `ABG-25:emergency-suspension-append-event-future-block` / `/scenarios/INTEGRATION-EMERGENCY-SUSPEND/assertions/ABG-25:emergency-suspension-append-event-future-block/status` / expected `PASSED`
@@ -349,7 +349,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-26:suspension-history-record-as-of-remains-reproducible`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-SUSPENSION-HISTORICAL-REPRODUCTION` / `ABG-26:suspension-history-record-as-of-remains-reproducible` / `/scenarios/INTEGRATION-SUSPENSION-HISTORICAL-REPRODUCTION/assertions/ABG-26:suspension-history-record-as-of-remains-reproducible/status` / expected `PASSED`
@@ -362,7 +362,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-27:impact-issue-and-independent-post-emergency-review`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-IMPACT-REVIEW-CLOSURE` / `ABG-27:impact-issue-and-independent-post-emergency-review` / `/scenarios/INTEGRATION-IMPACT-REVIEW-CLOSURE/assertions/ABG-27:impact-issue-and-independent-post-emergency-review/status` / expected `PASSED`
@@ -374,7 +374,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-28:compensating-publication-relationship-consumption-recovery`
 - Producers: `consumer`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `INTEGRATION-COMPENSATING-PUBLICATION-CONSUMPTION` / `ABG-28:compensating-publication-relationship-consumption-recovery` / `/scenarios/INTEGRATION-COMPENSATING-PUBLICATION-CONSUMPTION/assertions/ABG-28:compensating-publication-relationship-consumption-recovery/status` / expected `PASSED`
@@ -387,7 +387,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-29:audit-dimensional-filter-and-object-read-authorization`
 - Producers: `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `integration` / `phase-01-integration-evidence` / `INTEGRATION-AUDIT-READ-AUTHORIZATION` / `ABG-29:audit-dimensional-filter-and-object-read-authorization` / `/scenarios/INTEGRATION-AUDIT-READ-AUTHORIZATION/assertions/ABG-29:audit-dimensional-filter-and-object-read-authorization/status` / expected `PASSED`
@@ -399,7 +399,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-30:audit-hash-chain-recompute-first-tamper-position`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-AUDIT-HASH-CHAIN-TAMPER` / `ABG-30:audit-hash-chain-recompute-first-tamper-position` / `/scenarios/INTEGRATION-AUDIT-HASH-CHAIN-TAMPER/assertions/ABG-30:audit-hash-chain-recompute-first-tamper-position/status` / expected `PASSED`
@@ -412,7 +412,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-31:same-local-time-stream-sequence-canonical-order`
 - Producers: `database`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `database` / `phase-01-database-evidence` / `INTEGRATION-STREAM-SEQUENCE-SAME-TIMESTAMP` / `ABG-31:same-local-time-stream-sequence-canonical-order` / `/scenarios/INTEGRATION-STREAM-SEQUENCE-SAME-TIMESTAMP/assertions/ABG-31:same-local-time-stream-sequence-canonical-order/status` / expected `PASSED`
@@ -425,7 +425,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-32:publication-workflow-decision-rollback`, `ABG-32:publication-release-envelope-rollback`, `ABG-32:publication-snapshot-artifact-rollback`, `ABG-32:publication-release-member-rollback`, `ABG-32:publication-outbox-event-rollback`, `ABG-32:publication-compatibility-precheck-rollback`, `ABG-32:publication-delivery-registration-rollback`, `ABG-32:publication-domain-candidate-confirmation-rollback`, `ABG-32:publication-audit-event-rollback`
 - Producers: `fault`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `fault` / `phase-01-fault-evidence` / `FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX` / `ABG-32:publication-workflow-decision-rollback` / `/scenarios/FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX/assertions/ABG-32:publication-workflow-decision-rollback/status` / expected `PASSED`
@@ -454,7 +454,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-33:outbox-lost-wakeup-database-polling-recovery`
 - Producers: `fault`, `consumer`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `fault` / `phase-01-fault-evidence` / `FAULT-OUTBOX-LOST-WAKEUP-POLLING` / `ABG-33:outbox-lost-wakeup-database-polling-recovery` / `/scenarios/FAULT-OUTBOX-LOST-WAKEUP-POLLING/assertions/ABG-33:outbox-lost-wakeup-database-polling-recovery/status` / expected `PASSED`
@@ -467,7 +467,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-34:lease-reclaim-notification-crash-at-least-once-delivery`
 - Producers: `fault`, `consumer`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `fault` / `phase-01-fault-evidence` / `FAULT-OUTBOX-LEASE-CRASH-RECOVERY` / `ABG-34:lease-reclaim-notification-crash-at-least-once-delivery` / `/scenarios/FAULT-OUTBOX-LEASE-CRASH-RECOVERY/assertions/ABG-34:lease-reclaim-notification-crash-at-least-once-delivery/status` / expected `PASSED`
@@ -480,7 +480,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-35:two-consumer-isolation-next-version-gap-block`
 - Producers: `consumer`, `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `CONSUMER-ISOLATION-GAP-BLOCKING` / `ABG-35:two-consumer-isolation-next-version-gap-block` / `/scenarios/CONSUMER-ISOLATION-GAP-BLOCKING/assertions/ABG-35:two-consumer-isolation-next-version-gap-block/status` / expected `PASSED`
@@ -494,7 +494,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client`
 - Producers: `consumer`, `integration`, `live`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `consumer` / `phase-01-consumer-evidence` / `CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST` / `ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client` / `/scenarios/CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST/assertions/ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client/status` / expected `PASSED`
@@ -508,7 +508,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-37:canonical-artifact-16mib-exact-accepted`, `ABG-37:canonical-artifact-16mib-plus-one-rejected`
 - Producers: `capacity`, `integration`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `fixtureIdentity`, `gitCommitSha`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `capacity` / `phase-01-capacity-evidence` / `INTEGRATION-SNAPSHOT-16MIB-BOUNDARY` / `ABG-37:canonical-artifact-16mib-exact-accepted` / `/scenarios/INTEGRATION-SNAPSHOT-16MIB-BOUNDARY/assertions/ABG-37:canonical-artifact-16mib-exact-accepted/status` / expected `PASSED`
@@ -523,7 +523,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-38:typebox-openapi-generated-client-single-authority`
 - Producers: `static`
 - Required references: `requestIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `gitCommitSha`, `lockfileSha256`, `nodeVersion`
+- Required frozen inputs: `gitCommitSha`, `lockfileSha256`, `nodeVersion`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `static` / `phase-01-static-evidence` / `STATIC-TYPEBOX-OPENAPI-GENERATED-CLIENT` / `ABG-38:typebox-openapi-generated-client-single-authority` / `/scenarios/STATIC-TYPEBOX-OPENAPI-GENERATED-CLIENT/assertions/ABG-38:typebox-openapi-generated-client-single-authority/status` / expected `PASSED`
@@ -535,7 +535,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-39:deep-module-table-ownership-forbidden-bypass`
 - Producers: `static`
 - Required references: `requestIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `gitCommitSha`, `lockfileSha256`, `nodeVersion`
+- Required frozen inputs: `gitCommitSha`, `lockfileSha256`, `nodeVersion`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `static` / `phase-01-static-evidence` / `STATIC-DEEP-MODULE-TABLE-OWNERSHIP` / `ABG-39:deep-module-table-ownership-forbidden-bypass` / `/scenarios/STATIC-DEEP-MODULE-TABLE-OWNERSHIP/assertions/ABG-39:deep-module-table-ownership-forbidden-bypass/status` / expected `PASSED`
@@ -547,7 +547,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-40:formal-terminal-lifecycle-complete`, `ABG-40:formal-evidence-seal-eligible`
 - Producers: `formal-run`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `producerSourceManifestSha256`
+- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `podmanGraphRoot`, `podmanLogDriver`, `podmanNetworkBackend`, `podmanOciRuntime`, `podmanRestartPolicy`, `podmanSocketPath`, `podmanStorageDriver`, `podmanVersion`, `postgresImage`, `producerSourceManifestSha256`, `runtimeAuthoritySemanticDigest`, `runtimeAuthoritySha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `formal-run` / `phase-01-formal-run-evidence` / `RUN-FORMAL-TERMINAL-LIFECYCLE` / `ABG-40:formal-terminal-lifecycle-complete` / `/scenarios/RUN-FORMAL-TERMINAL-LIFECYCLE/assertions/ABG-40:formal-terminal-lifecycle-complete/status` / expected `PASSED`

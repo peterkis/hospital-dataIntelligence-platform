@@ -25,7 +25,10 @@ export type VerificationSourceFileRole =
   | 'WSL_HOST'
   | 'NODE_LOADER'
   | 'PACKAGE_DEFINITION'
-  | 'RUNTIME_BASELINE'
+  | 'RUNTIME_AUTHORITY'
+  | 'RUNTIME_AUTHORITY_LOADER'
+  | 'RUNTIME_AUTHORITY_SCHEMA'
+  | 'RUNTIME_RECEIPT'
   | 'RUNTIME_SCRIPT';
 
 export interface VerificationSourceFileDefinition {
@@ -34,10 +37,14 @@ export interface VerificationSourceFileDefinition {
 }
 
 const SOURCE_FILES = [
+  ['apps/governance-api/src/composition/phase-01-vertical-slice.integration.test.ts', 'PRODUCER'],
   ['package.json', 'PACKAGE_DEFINITION'],
   ['phase-plan/environment/anolis-8.9-wsl2/bootstrap-phase-01-runtime.sh', 'RUNTIME_SCRIPT'],
+  ['phase-plan/environment/anolis-8.9-wsl2/bootstrap-phase-01.sh', 'RUNTIME_SCRIPT'],
+  ['phase-plan/environment/anolis-8.9-wsl2/configure-podman-proxy.sh', 'RUNTIME_SCRIPT'],
   ['phase-plan/environment/anolis-8.9-wsl2/podman-phase-01-runtime.sh', 'RUNTIME_SCRIPT'],
-  ['phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json', 'RUNTIME_BASELINE'],
+  ['phase-plan/environment/anolis-8.9-wsl2/receipt-20260830-podman.json', 'RUNTIME_RECEIPT'],
+  ['phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json', 'RUNTIME_AUTHORITY'],
   ['phase-plan/environment/anolis-8.9-wsl2/verify-phase-01-runtime.sh', 'RUNTIME_SCRIPT'],
   ['tooling/verification/node-ts-loader.mjs', 'NODE_LOADER'],
   ['tooling/verification/package.json', 'PACKAGE_DEFINITION'],
@@ -68,7 +75,11 @@ const SOURCE_FILES = [
   ['tooling/verification/src/runtime/formal-terminal-conclusion.ts', 'TERMINAL_CONTRACT'],
   ['tooling/verification/src/runtime/formal-wsl-envelope.ts', 'WSL_ENVELOPE'],
   ['tooling/verification/src/runtime/formal-wsl-host.ts', 'WSL_HOST'],
+  ['tooling/verification/src/runtime/podman-runtime-authority-schema.ts', 'RUNTIME_AUTHORITY_SCHEMA'],
+  ['tooling/verification/src/runtime/podman-runtime-authority.ts', 'RUNTIME_AUTHORITY_LOADER'],
+  ['tooling/verification/src/runtime/verify-podman-runtime-authority.ts', 'RUNTIME_AUTHORITY_LOADER'],
   ['tooling/verification/src/verification-contract-versions.ts', 'CONTRACT_VERSION'],
+  ['tooling/verification/src/verify-phase-01-live.ts', 'PRODUCER'],
 ] as const satisfies readonly (readonly [string, VerificationSourceFileRole])[];
 
 export const VERIFICATION_SOURCE_FILES: readonly VerificationSourceFileDefinition[] =

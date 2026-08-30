@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { lstat, readFile, readdir, statfs } from 'node:fs/promises';
+import { lstat, readFile, readdir, readlink, statfs } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,6 @@ import { readFrozenInputs } from '../frozen-inputs.ts';
 import {
   FORMAL_REPOSITORY_LABEL,
   FORMAL_REQUIRED_SECRET_NAMES,
-  FORMAL_RUNTIME_PORTS,
   SpawnRuntimeCommandRunner,
   createFormalRunSeed,
   errorMessage,
@@ -18,18 +17,13 @@ import {
 } from './formal-runtime-contract.ts';
 import {
   inspectWslHost,
-  wslConfigurationMatchesFrozenEnvelope,
   type WslHostEvidence,
 } from './formal-wsl-host.ts';
-import { FROZEN_WSL_ENVELOPE } from './formal-wsl-envelope.ts';
+import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.ts';
+import { PODMAN_RUNTIME_AUTHORITY_ID } from './podman-runtime-authority-schema.ts';
 
-const EXPECTED_IMAGE_REFERENCES = [
-  'docker.io/library/postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382',
-  'quay.io/keycloak/keycloak@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13',
-] as const;
-const EXPECTED_PODMAN_VERSION = '4.9.4-rhel';
-const EXPECTED_PODMAN_SOCKET = '/run/podman/podman.sock';
-const EXPECTED_PODMAN_GRAPH_ROOT = '/var/lib/containers/storage';
+type LoadedRuntimeAuthority = Awaited<ReturnType<typeof loadPodmanRuntimeAuthority>>;
+type RuntimeAuthority = LoadedRuntimeAuthority['authority'];
 
 type PreflightStatus = 'PASSED' | 'FAILED';
 
@@ -55,6 +49,7 @@ export interface PodmanResourceObservation {
   readonly imageReference?: string;
   readonly state?: string;
   readonly ports?: string;
+  readonly restartPolicy?: string | null;
 }
 
 export interface PodmanImageObservation {
@@ -68,9 +63,12 @@ export interface PodmanPreflightObservation {
   readonly podmanVersion: string;
   readonly graphDriverName: string;
   readonly graphRoot: string;
+  readonly runRoot: string;
   readonly networkBackend: string;
   readonly logDriver: string;
   readonly ociRuntimeName: string;
+  readonly cgroupManager: string;
+  readonly eventsBackend: string;
   readonly socketPath: string;
   readonly socketActive: boolean;
   readonly rootless: boolean;
@@ -96,6 +94,8 @@ export interface FormalPreflightReport {
   readonly startedAt: string;
   readonly completedAt: string;
   readonly timezone: 'Asia/Shanghai';
+  readonly runtimeAuthoritySha256: string | null;
+  readonly runtimeAuthoritySemanticDigest: string | null;
   readonly checks: readonly FormalPreflightCheck[];
   readonly secrets: readonly SecretPresenceObservation[];
 }
@@ -108,7 +108,51 @@ export interface FormalPreflightFileSystem {
 }
 
 export interface FormalPreflightContainerRuntimeAdapter {
-  inspect(): Promise<PodmanPreflightObservation>;
+  inspect(authority?: RuntimeAuthority): Promise<PodmanPreflightObservation>;
+}
+
+export interface FormalPreflightAuthorityIsolationObservation {
+  readonly dockerExecutablePaths: readonly string[];
+  readonly forbiddenSockets: readonly {
+    readonly path: string;
+    readonly kind: 'missing' | 'socket' | 'file' | 'directory' | 'symbolic-link' | 'other';
+    readonly symbolicLink: boolean;
+    readonly target: string | null;
+  }[];
+  readonly systemdUnits: readonly {
+    readonly name: string;
+    readonly loadState: string;
+    readonly activeState: string;
+    readonly unitFileState: string;
+    readonly subState: string;
+  }[];
+  readonly forbiddenProcesses: readonly { readonly pid: number; readonly name: string }[];
+  readonly forbiddenTcpListeners: readonly {
+    readonly address: string;
+    readonly port: number;
+    readonly process: string | null;
+  }[];
+  readonly unexpectedContainerApiEndpoints: readonly string[];
+  readonly podmanConnections: readonly string[];
+  readonly podmanMachines: readonly string[];
+  readonly rootlessSocketPaths: readonly string[];
+  readonly otherWslBackends: readonly string[];
+  readonly podmanSocket: {
+    readonly path: string;
+    readonly kind: 'missing' | 'socket' | 'file' | 'directory' | 'symbolic-link' | 'other';
+    readonly symbolicLink: boolean;
+    readonly uid: number | null;
+    readonly gid: number | null;
+    readonly mode: string | null;
+    readonly systemdActive: boolean;
+    readonly tcpEndpoints: readonly string[];
+    readonly rootless: boolean | null;
+  };
+  readonly inspectionFailures: readonly string[];
+}
+
+export interface FormalPreflightAuthorityIsolationAdapter {
+  inspect(authority?: RuntimeAuthority): Promise<FormalPreflightAuthorityIsolationObservation>;
 }
 
 export interface FormalPreflightPortAdapter {
@@ -125,12 +169,16 @@ export interface FormalPreflightDependencies {
   readonly containerRuntime: FormalPreflightContainerRuntimeAdapter;
   readonly ports: FormalPreflightPortAdapter;
   readonly host: FormalPreflightHostAdapter;
+  readonly authorityIsolation: FormalPreflightAuthorityIsolationAdapter;
   readonly environment: Readonly<NodeJS.ProcessEnv>;
   readonly nodeVersion: string;
   readonly readFrozenInputs: (
     repositoryRoot: string,
     producerSourceManifestSha256: string,
   ) => Promise<Readonly<Record<string, string>>>;
+  readonly loadRuntimeAuthority: (
+    repositoryRoot: string,
+  ) => LoadedRuntimeAuthority | Promise<LoadedRuntimeAuthority>;
   readonly now: () => string;
 }
 
@@ -142,9 +190,11 @@ export function createDefaultFormalPreflightDependencies(): FormalPreflightDepen
     containerRuntime: new PodmanCliPreflightAdapter(commandRunner),
     ports: new BindPreflightPortAdapter(),
     host: new WindowsWslHostAdapter(commandRunner),
+    authorityIsolation: createFormalRuntimeAuthorityIsolationAdapter(commandRunner, process.env),
     environment: process.env,
     nodeVersion: process.version,
     readFrozenInputs,
+    loadRuntimeAuthority: loadPodmanRuntimeAuthority,
     now: localNowInAsiaShanghai,
   };
 }
@@ -161,6 +211,20 @@ export async function runFormalPreflight(
   const startedAt = dependencies.now();
   const checks: FormalPreflightCheck[] = [];
   let gitCommitSha: string | null = null;
+  let loadedAuthority: LoadedRuntimeAuthority | null = null;
+
+  try {
+    loadedAuthority = await dependencies.loadRuntimeAuthority(input.repositoryRoot);
+    checks.push(passed('runtime-authority', 'podman', {
+      authorityId: PODMAN_RUNTIME_AUTHORITY_ID,
+      runtimeAuthoritySha256: loadedAuthority.runtimeAuthoritySha256,
+      runtimeAuthoritySemanticDigest: loadedAuthority.runtimeAuthoritySemanticDigest,
+    }));
+  } catch (error) {
+    checks.push(failed('runtime-authority', 'podman', 'FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_INVALID', {
+      errorCode: stableObservedError(error),
+    }));
+  }
 
   const gitStatus = await runText(dependencies.commandRunner, input.repositoryRoot, 'git', [
     'status', '--porcelain=v1',
@@ -230,9 +294,21 @@ export async function runFormalPreflight(
   }
 
   await appendNodeAndNpmChecks(input.repositoryRoot, checks, dependencies);
-  await appendWslChecks(checks, dependencies);
-  const podmanObservation = await appendPodmanChecks(checks, dependencies);
-  await appendPortChecks(checks, dependencies, podmanObservation?.repositoryResources ?? []);
+  if (loadedAuthority !== null) {
+    await appendWslChecks(checks, dependencies, loadedAuthority.authority);
+  }
+  const podmanObservation = loadedAuthority === null
+    ? undefined
+    : await appendPodmanChecks(checks, dependencies, loadedAuthority.authority);
+  if (loadedAuthority !== null) {
+    await appendAuthorityIsolationChecks(checks, dependencies, loadedAuthority.authority);
+    await appendPortChecks(
+      checks,
+      dependencies,
+      Object.values(loadedAuthority.authority.network.ports),
+      podmanObservation?.repositoryResources ?? [],
+    );
+  }
   const secrets = appendSecretChecks(checks, dependencies.environment);
 
   return {
@@ -242,6 +318,8 @@ export async function runFormalPreflight(
     startedAt,
     completedAt: dependencies.now(),
     timezone: 'Asia/Shanghai',
+    runtimeAuthoritySha256: loadedAuthority?.runtimeAuthoritySha256 ?? null,
+    runtimeAuthoritySemanticDigest: loadedAuthority?.runtimeAuthoritySemanticDigest ?? null,
     checks,
     secrets,
   };
@@ -305,20 +383,22 @@ async function appendNodeAndNpmChecks(
 async function appendWslChecks(
   checks: FormalPreflightCheck[],
   dependencies: FormalPreflightDependencies,
+  authority: RuntimeAuthority,
 ): Promise<void> {
+  const hostAuthority = authority.host;
   const distribution = dependencies.environment['WSL_DISTRO_NAME'];
-  checks.push(distribution === FROZEN_WSL_ENVELOPE.distribution
+  checks.push(distribution === hostAuthority.distribution
     ? passed('wsl-distribution', 'wsl', { distribution })
     : failed('wsl-distribution', 'wsl', 'FORMAL_PREFLIGHT_WSL_DISTRO_MISMATCH', {
-      expected: FROZEN_WSL_ENVELOPE.distribution,
+      expected: hostAuthority.distribution,
       actual: distribution ?? null,
     }));
 
   try {
     const release = parseOsRelease(await dependencies.fileSystem.readText('/etc/os-release'));
     checks.push(
-      release['ID'] === FROZEN_WSL_ENVELOPE.osId &&
-      release['VERSION_ID'] === FROZEN_WSL_ENVELOPE.osVersion
+      release['ID'] === hostAuthority.osId &&
+      release['VERSION_ID'] === hostAuthority.osVersion
       ? passed('wsl-os-release', 'wsl', { id: release['ID'], versionId: release['VERSION_ID'] })
       : failed('wsl-os-release', 'wsl', 'FORMAL_PREFLIGHT_WSL_OS_RELEASE_MISMATCH', {
         id: release['ID'] ?? null,
@@ -331,34 +411,34 @@ async function appendWslChecks(
   }
 
   await appendExactCommandCheck(checks, dependencies.commandRunner, 'wsl-architecture', 'wsl',
-    'uname', ['-m'], FROZEN_WSL_ENVELOPE.architecture, 'FORMAL_PREFLIGHT_WSL_ARCH_MISMATCH');
+    'uname', ['-m'], hostAuthority.architecture, 'FORMAL_PREFLIGHT_WSL_ARCH_MISMATCH');
   await appendExactCommandCheck(checks, dependencies.commandRunner, 'wsl-pid-one', 'wsl',
-    'ps', ['-p', '1', '-o', 'comm='], FROZEN_WSL_ENVELOPE.initProcess,
+    'ps', ['-p', '1', '-o', 'comm='], hostAuthority.initProcess,
     'FORMAL_PREFLIGHT_WSL_PID1_NOT_SYSTEMD');
   await appendExactCommandCheck(checks, dependencies.commandRunner, 'wsl-timezone', 'wsl',
-    'timedatectl', ['show', '--property=Timezone', '--value'], FROZEN_WSL_ENVELOPE.timezone,
+    'timedatectl', ['show', '--property=Timezone', '--value'], hostAuthority.timezone,
     'FORMAL_PREFLIGHT_WSL_TIMEZONE_MISMATCH');
   await appendExactCommandCheck(checks, dependencies.commandRunner, 'wsl-cpu', 'wsl',
-    'nproc', [], String(FROZEN_WSL_ENVELOPE.processorCount),
+    'nproc', [], String(hostAuthority.processorCount),
     'FORMAL_PREFLIGHT_WSL_CPU_MISMATCH');
 
   try {
     const memory = parseMemInfo(await dependencies.fileSystem.readText('/proc/meminfo'));
-    const memoryMatches = Math.abs(memory.memTotalBytes - FROZEN_WSL_ENVELOPE.memoryBytes) <=
-      FROZEN_WSL_ENVELOPE.memoryToleranceBytes;
+    const memoryMatches = Math.abs(memory.memTotalBytes - hostAuthority.memoryBytes) <=
+      hostAuthority.memoryToleranceBytes;
     checks.push(memoryMatches
       ? passed('wsl-memory', 'wsl', {
-        expectedBytes: FROZEN_WSL_ENVELOPE.memoryBytes,
+        expectedBytes: hostAuthority.memoryBytes,
         actualBytes: memory.memTotalBytes,
-        toleranceBytes: FROZEN_WSL_ENVELOPE.memoryToleranceBytes,
+        toleranceBytes: hostAuthority.memoryToleranceBytes,
       })
       : failed('wsl-memory', 'wsl', 'FORMAL_PREFLIGHT_WSL_MEMORY_MISMATCH', {
-        expectedBytes: FROZEN_WSL_ENVELOPE.memoryBytes,
+        expectedBytes: hostAuthority.memoryBytes,
         actualBytes: memory.memTotalBytes,
-        toleranceBytes: FROZEN_WSL_ENVELOPE.memoryToleranceBytes,
+        toleranceBytes: hostAuthority.memoryToleranceBytes,
       }));
-    checks.push(memory.swapTotalBytes === FROZEN_WSL_ENVELOPE.swapBytes
-      ? passed('wsl-swap', 'wsl', { swapTotalBytes: FROZEN_WSL_ENVELOPE.swapBytes })
+    checks.push(memory.swapTotalBytes === hostAuthority.swapBytes
+      ? passed('wsl-swap', 'wsl', { swapTotalBytes: hostAuthority.swapBytes })
       : failed('wsl-swap', 'wsl', 'FORMAL_PREFLIGHT_WSL_SWAP_NONZERO', {
         swapTotalBytes: memory.swapTotalBytes,
       }));
@@ -372,28 +452,28 @@ async function appendWslChecks(
   }
 
   await appendDiskCheck(checks, dependencies.fileSystem, '/', 'wsl-root-disk', {
-    expectedTotalBytes: FROZEN_WSL_ENVELOPE.rootDeviceBytes,
-    totalToleranceBytes: FROZEN_WSL_ENVELOPE.rootSizeToleranceBytes,
-    minimumAvailableBytes: FROZEN_WSL_ENVELOPE.minimumRootAvailableBytes,
+    expectedTotalBytes: hostAuthority.rootFilesystemBytes,
+    totalToleranceBytes: hostAuthority.rootFilesystemToleranceBytes,
+    minimumAvailableBytes: hostAuthority.minimumRootAvailableBytes,
     mismatchCode: 'FORMAL_PREFLIGHT_WSL_ROOT_DISK_UNSAFE',
   });
   await appendDiskCheck(checks, dependencies.fileSystem, '/mnt/d', 'wsl-mnt-d-disk', {
-    minimumAvailableBytes: FROZEN_WSL_ENVELOPE.minimumMntDAvailableBytes,
+    minimumAvailableBytes: hostAuthority.minimumHostAvailableBytes,
     mismatchCode: 'FORMAL_PREFLIGHT_WSL_MNT_D_DISK_UNSAFE',
   });
 
   try {
     const host = await dependencies.host.inspect();
     const running = host.runningDistributions;
-    checks.push(running.length === 1 && running[0] === FROZEN_WSL_ENVELOPE.distribution
+    checks.push(running.length === 1 && running[0] === hostAuthority.distribution
       ? passed('wsl-host-running-distributions', 'wsl', { running })
       : failed(
         'wsl-host-running-distributions',
         'wsl',
         'FORMAL_PREFLIGHT_WSL_RUNNING_SET_MISMATCH',
-        { expected: [FROZEN_WSL_ENVELOPE.distribution], running },
+        { expected: [hostAuthority.distribution], running },
       ));
-    checks.push(wslConfigurationMatchesFrozenEnvelope(host.configuration)
+    checks.push(wslConfigurationMatchesAuthority(host.configuration, hostAuthority)
       ? passed('wsl-host-configuration', 'wsl', host.configuration)
       : failed(
         'wsl-host-configuration',
@@ -420,43 +500,60 @@ async function appendWslChecks(
 async function appendPodmanChecks(
   checks: FormalPreflightCheck[],
   dependencies: FormalPreflightDependencies,
+  authority: RuntimeAuthority,
 ): Promise<PodmanPreflightObservation | undefined> {
   try {
-    const observation = await dependencies.containerRuntime.inspect();
+    const rawObservation = await dependencies.containerRuntime.inspect(authority);
+    const observation: PodmanPreflightObservation = {
+      ...rawObservation,
+      repositoryResources: rawObservation.repositoryResources.map((resource) => ({
+        ...resource,
+        labels: projectGovernedRuntimeLabels(resource.labels),
+      })),
+    };
+    const expectedPodman = authority.podman;
     const baselineMatches =
-      observation.podmanVersion === EXPECTED_PODMAN_VERSION &&
-      observation.graphDriverName === 'overlay' &&
-      observation.graphRoot === EXPECTED_PODMAN_GRAPH_ROOT &&
-      observation.networkBackend === 'cni' &&
-      observation.logDriver === 'k8s-file' &&
-      observation.ociRuntimeName === 'runc' &&
-      observation.socketPath === EXPECTED_PODMAN_SOCKET &&
+      observation.podmanVersion === expectedPodman.version &&
+      observation.graphDriverName === expectedPodman.storageDriver &&
+      observation.graphRoot === expectedPodman.graphRoot &&
+      observation.runRoot === expectedPodman.runRoot &&
+      observation.networkBackend === expectedPodman.networkBackend &&
+      observation.logDriver === expectedPodman.logDriver &&
+      observation.ociRuntimeName === expectedPodman.ociRuntime &&
+      observation.cgroupManager === expectedPodman.cgroupManager &&
+      observation.eventsBackend === expectedPodman.eventsBackend &&
+      observation.socketPath === expectedPodman.socketPath &&
       observation.socketActive &&
-      !observation.rootless;
+      observation.rootless === expectedPodman.rootless;
     checks.push(baselineMatches
       ? passed('podman-runtime', 'podman', observation)
       : failed('podman-runtime', 'podman', 'FORMAL_PREFLIGHT_PODMAN_BASELINE_MISMATCH', {
         expected: {
-          podmanVersion: EXPECTED_PODMAN_VERSION,
-          graphDriverName: 'overlay',
-          graphRoot: EXPECTED_PODMAN_GRAPH_ROOT,
-          networkBackend: 'cni',
-          logDriver: 'k8s-file',
-          ociRuntimeName: 'runc',
-          socketPath: EXPECTED_PODMAN_SOCKET,
+          podmanVersion: expectedPodman.version,
+          graphDriverName: expectedPodman.storageDriver,
+          graphRoot: expectedPodman.graphRoot,
+          runRoot: expectedPodman.runRoot,
+          networkBackend: expectedPodman.networkBackend,
+          logDriver: expectedPodman.logDriver,
+          ociRuntimeName: expectedPodman.ociRuntime,
+          cgroupManager: expectedPodman.cgroupManager,
+          eventsBackend: expectedPodman.eventsBackend,
+          socketPath: expectedPodman.socketPath,
           socketActive: true,
-          rootless: false,
+          rootless: expectedPodman.rootless,
         },
         actual: observation,
       }));
-    for (const image of observation.images) {
-      checks.push(image.present
+    const expectedImages = [authority.images.postgresql.runtimeReference, authority.images.keycloak.runtimeReference];
+    for (const reference of expectedImages) {
+      const image = observation.images.find((candidate) => candidate.reference === reference);
+      checks.push(image?.present === true && image.repoDigests.includes(reference)
         ? passed('podman-image-' + image.reference.split('@', 1)[0], 'podman', image)
         : failed(
-          'podman-image-' + image.reference.split('@', 1)[0],
+          'podman-image-' + reference.split('@', 1)[0],
           'podman',
           'FORMAL_PREFLIGHT_PODMAN_IMAGE_MISSING',
-          image,
+          image ?? { reference, present: false, imageId: null, repoDigests: [] },
         ));
     }
     checks.push(observation.repositoryResources.length === 0
@@ -467,22 +564,6 @@ async function appendPodmanChecks(
         'FORMAL_PREFLIGHT_PODMAN_REPOSITORY_RESIDUE',
         { resources: observation.repositoryResources },
       ));
-    const dockerPaths = [
-      '/usr/bin/docker',
-      '/usr/local/bin/docker',
-      '/usr/sbin/docker',
-      '/bin/docker',
-      '/sbin/docker',
-    ];
-    const presentDockerPaths: string[] = [];
-    for (const path of dockerPaths) {
-      if (await dependencies.fileSystem.exists(path)) presentDockerPaths.push(path);
-    }
-    checks.push(presentDockerPaths.length === 0
-      ? passed('podman-docker-cli-absent', 'podman', { paths: [] })
-      : failed('podman-docker-cli-absent', 'podman', 'FORMAL_PREFLIGHT_DOCKER_CLI_PRESENT', {
-        paths: presentDockerPaths,
-      }));
     return observation;
   } catch (error) {
     checks.push(failed('podman-runtime', 'podman', 'FORMAL_PREFLIGHT_PODMAN_UNAVAILABLE', {
@@ -495,12 +576,13 @@ async function appendPodmanChecks(
 async function appendPortChecks(
   checks: FormalPreflightCheck[],
   dependencies: FormalPreflightDependencies,
+  ports: readonly number[],
   repositoryResources: readonly PodmanResourceObservation[],
 ): Promise<void> {
   try {
-    const observations = await dependencies.ports.inspect(FORMAL_RUNTIME_PORTS);
+    const observations = await dependencies.ports.inspect(ports);
     const byPort = new Map(observations.map((observation) => [observation.port, observation]));
-    for (const port of FORMAL_RUNTIME_PORTS) {
+    for (const port of ports) {
       const observation = byPort.get(port);
       const matchingResources = repositoryResources.filter((resource) =>
         resource.ports?.includes(String(port)) ?? false,
@@ -520,13 +602,151 @@ async function appendPortChecks(
       }
     }
   } catch (error) {
-    for (const port of FORMAL_RUNTIME_PORTS) {
+    for (const port of ports) {
       checks.push(failed('port-' + port, 'port', 'FORMAL_PREFLIGHT_PORT_CHECK_UNAVAILABLE', {
         port,
         errorCode: stableObservedError(error),
       }));
     }
   }
+}
+
+async function appendAuthorityIsolationChecks(
+  checks: FormalPreflightCheck[],
+  dependencies: FormalPreflightDependencies,
+  authority: RuntimeAuthority,
+): Promise<void> {
+  let observation: FormalPreflightAuthorityIsolationObservation;
+  try {
+    observation = await dependencies.authorityIsolation.inspect(authority);
+  } catch (error) {
+    checks.push(failed('runtime-authority-isolation', 'podman', 'FORMAL_PREFLIGHT_AUTHORITY_ISOLATION_UNAVAILABLE', {
+      errorCode: stableObservedError(error),
+    }));
+    return;
+  }
+  checks.push(...evaluateFormalRuntimeAuthorityIsolation(
+    observation,
+    dependencies.environment,
+    authority,
+  ));
+}
+
+export function evaluateFormalRuntimeAuthorityIsolation(
+  observation: FormalPreflightAuthorityIsolationObservation,
+  environment: Readonly<NodeJS.ProcessEnv>,
+  authority: RuntimeAuthority,
+): readonly FormalPreflightCheck[] {
+  const checks: FormalPreflightCheck[] = [];
+  const addAbsence = (
+    id: string,
+    findings: readonly unknown[],
+    errorCode: string,
+  ): void => {
+    checks.push(findings.length === 0
+      ? passed(id, 'podman', { findings: [] })
+      : failed(id, 'podman', errorCode, { findings }));
+  };
+
+  addAbsence('docker-cli-absent', observation.dockerExecutablePaths, 'FORMAL_PREFLIGHT_DOCKER_CLI_PRESENT');
+  addAbsence('docker-sockets-absent', observation.forbiddenSockets, 'FORMAL_PREFLIGHT_DOCKER_SOCKET_PRESENT');
+  addAbsence('docker-systemd-units-absent', observation.systemdUnits.filter((unit) =>
+    unit.loadState !== 'not-found' ||
+    unit.activeState !== 'inactive' ||
+    unit.subState === 'listening' ||
+    !['disabled', 'not-found'].includes(unit.unitFileState),
+  ), 'FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT');
+  addAbsence('docker-processes-absent', observation.forbiddenProcesses, 'FORMAL_PREFLIGHT_DOCKER_PROCESS_PRESENT');
+  addAbsence('container-api-tcp-absent', observation.forbiddenTcpListeners, 'FORMAL_PREFLIGHT_CONTAINER_API_TCP_PRESENT');
+  addAbsence('container-api-endpoints-absent', [
+    ...observation.unexpectedContainerApiEndpoints,
+    ...observation.podmanConnections,
+  ], 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT');
+  addAbsence('second-runtime-authority-absent', [
+    ...observation.podmanMachines,
+    ...observation.rootlessSocketPaths,
+    ...observation.otherWslBackends,
+  ], 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT');
+  addAbsence('runtime-isolation-inspection-complete', observation.inspectionFailures,
+    'FORMAL_PREFLIGHT_AUTHORITY_ISOLATION_UNAVAILABLE');
+
+  const expectedSocketPath = authority.podman.socketPath;
+  const socket = observation.podmanSocket;
+  checks.push(socket.path === expectedSocketPath
+    ? passed('podman-socket-path', 'podman', { expected: expectedSocketPath, actual: socket.path })
+    : failed('podman-socket-path', 'podman', 'FORMAL_PREFLIGHT_PODMAN_SOCKET_PATH_MISMATCH', {
+      expected: expectedSocketPath,
+      actual: socket.path,
+    }));
+  checks.push(!socket.symbolicLink
+    ? passed('podman-socket-not-symlink', 'podman', { symbolicLink: false })
+    : failed('podman-socket-not-symlink', 'podman', 'FORMAL_PREFLIGHT_PODMAN_SOCKET_SYMLINK', {
+      symbolicLink: true,
+    }));
+  checks.push(socket.kind === 'socket'
+    ? passed('podman-socket-type', 'podman', {
+      kind: socket.kind,
+      uid: socket.uid,
+      gid: socket.gid,
+      mode: socket.mode,
+    })
+    : failed('podman-socket-type', 'podman', 'FORMAL_PREFLIGHT_PODMAN_SOCKET_NOT_UNIX', {
+      kind: socket.kind,
+    }));
+  checks.push(socket.systemdActive
+    ? passed('podman-socket-systemd-active', 'podman', { active: true })
+    : failed('podman-socket-systemd-active', 'podman', 'FORMAL_PREFLIGHT_PODMAN_SOCKET_INACTIVE', {
+      active: false,
+    }));
+  checks.push(socket.tcpEndpoints.length === 0
+    ? passed('podman-socket-not-tcp', 'podman', { endpoints: [] })
+    : failed('podman-socket-not-tcp', 'podman', 'FORMAL_PREFLIGHT_PODMAN_SOCKET_TCP_EXPOSED', {
+      endpoints: socket.tcpEndpoints,
+    }));
+  checks.push(socket.rootless === false
+    ? passed('podman-runtime-rootful', 'podman', { rootless: false })
+    : failed('podman-runtime-rootful', 'podman', 'FORMAL_PREFLIGHT_PODMAN_ROOTFUL_REQUIRED', {
+      rootless: socket.rootless,
+    }));
+
+  const expectedDockerHost = authority.dockerExclusion.allowedCompatibilityEnvironment.DOCKER_HOST;
+  const dockerHost = environment['DOCKER_HOST'];
+  checks.push(dockerHost === undefined || dockerHost === expectedDockerHost
+    ? passed('container-environment-docker-host', 'podman', {
+      present: dockerHost !== undefined,
+      compatibilityEndpoint: dockerHost === expectedDockerHost,
+    })
+    : failed('container-environment-docker-host', 'podman', 'FORMAL_PREFLIGHT_DOCKER_HOST_INVALID', {
+      scheme: endpointScheme(dockerHost),
+    }));
+  appendEnvironmentAbsenceCheck(checks, environment, 'DOCKER_CONTEXT',
+    'container-environment-docker-context', 'FORMAL_PREFLIGHT_DOCKER_CONTEXT_PRESENT');
+  const tlsNames = ['DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH'] as const;
+  const presentTlsNames = tlsNames.filter((name) => nonEmpty(environment[name]));
+  addAbsence('container-environment-docker-tls', presentTlsNames, 'FORMAL_PREFLIGHT_DOCKER_TLS_PRESENT');
+  const containerHost = environment['CONTAINER_HOST'];
+  checks.push(!nonEmpty(containerHost)
+    ? passed('container-environment-container-host', 'podman', { present: false })
+    : failed('container-environment-container-host', 'podman', 'FORMAL_PREFLIGHT_CONTAINER_HOST_INVALID', {
+      scheme: endpointScheme(containerHost),
+    }));
+  appendEnvironmentAbsenceCheck(checks, environment, 'TESTCONTAINERS_HOST_OVERRIDE',
+    'container-environment-testcontainers-host-override',
+    'FORMAL_PREFLIGHT_TESTCONTAINERS_HOST_OVERRIDE_INVALID');
+  return checks;
+}
+
+function appendEnvironmentAbsenceCheck(
+  checks: FormalPreflightCheck[],
+  environment: Readonly<NodeJS.ProcessEnv>,
+  name: string,
+  id: string,
+  errorCode: string,
+): void {
+  const present = nonEmpty(environment[name]);
+  checks.push(!present
+    ? passed(id, 'podman', { present: false })
+    : failed(id, 'podman', errorCode, { present: true }));
 }
 
 function appendSecretChecks(
@@ -582,7 +802,8 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
     this.runner = runner;
   }
 
-  async inspect(): Promise<PodmanPreflightObservation> {
+  async inspect(authority?: RuntimeAuthority): Promise<PodmanPreflightObservation> {
+    if (authority === undefined) throw new Error('FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_REQUIRED');
     const rawInfo = JSON.parse(await requireCommandText(this.runner, 'podman', [
       'info', '--format', 'json',
     ])) as unknown;
@@ -596,7 +817,11 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
     const socketState = await requireCommandText(this.runner, 'systemctl', [
       'is-active', 'podman.socket',
     ]);
-    const images = await Promise.all(EXPECTED_IMAGE_REFERENCES.map(async (reference) => {
+    const expectedImageReferences = [
+      authority.images.postgresql.runtimeReference,
+      authority.images.keycloak.runtimeReference,
+    ];
+    const images = await Promise.all(expectedImageReferences.map(async (reference) => {
       const result = await this.runner.run({ executable: 'podman', args: ['image', 'inspect', reference] });
       if (result.exitCode !== 0) {
         return { reference, present: false, imageId: null, repoDigests: [] };
@@ -627,9 +852,12 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
       podmanVersion: stringField(version, 'Version'),
       graphDriverName: stringField(store, 'graphDriverName'),
       graphRoot: stringField(store, 'graphRoot'),
+      runRoot: stringField(store, 'runRoot'),
       networkBackend: stringField(host, 'networkBackend'),
       logDriver: stringField(host, 'logDriver'),
       ociRuntimeName: stringField(ociRuntime, 'name'),
+      cgroupManager: stringField(host, 'cgroupManager'),
+      eventsBackend: stringField(host, 'eventLogger') || stringField(host, 'eventsBackend'),
       socketPath: stringField(socket, 'path'),
       socketActive: socketState.trim() === 'active' && socket['exists'] === true,
       rootless: security['rootless'] === true,
@@ -643,15 +871,24 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
     args: readonly string[],
   ): Promise<readonly PodmanResourceObservation[]> {
     const output = await requireCommandText(this.runner, 'podman', args);
-    return output.split(/\r?\n/u).filter((line) => line.trim().length > 0).map((line) => {
+    return Promise.all(output.split(/\r?\n/u).filter((line) => line.trim().length > 0).map(async (line) => {
       const value = JSON.parse(line) as unknown;
       if (!isRecord(value)) throw new Error('FORMAL_PREFLIGHT_PODMAN_LIST_INVALID');
       const labels = parsePodmanLabels(value['Labels'] ?? value['labels']);
+      const id = type === 'volume'
+        ? stringField(value, 'Name')
+        : stringField(value, type === 'network' ? 'id' : 'ID');
+      let restartPolicy: string | null | undefined;
+      if (type === 'container' && id.length > 0) {
+        const rawInspect = JSON.parse(await requireCommandText(this.runner, 'podman', [
+          'container', 'inspect', id,
+        ])) as unknown;
+        const inspected = Array.isArray(rawInspect) ? rawInspect[0] : rawInspect;
+        restartPolicy = parsePodmanContainerRestartPolicy(inspected);
+      }
       return {
         type,
-        id: type === 'volume'
-          ? stringField(value, 'Name')
-          : stringField(value, type === 'network' ? 'id' : 'ID'),
+        id,
         name: type === 'container'
           ? stringField(value, 'Names')
           : stringField(value, type === 'network' ? 'name' : 'Name'),
@@ -659,8 +896,9 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
         ...(typeof value['Image'] === 'string' ? { imageReference: value['Image'] } : {}),
         ...(typeof value['State'] === 'string' ? { state: value['State'] } : {}),
         ...(typeof value['Ports'] === 'string' ? { ports: value['Ports'] } : {}),
+        ...(restartPolicy === undefined ? {} : { restartPolicy }),
       };
-    });
+    }));
   }
 }
 
@@ -680,6 +918,312 @@ class WindowsWslHostAdapter implements FormalPreflightHostAdapter {
   async inspect(): Promise<WslHostEvidence> {
     return inspectWslHost(this.runner);
   }
+}
+
+export function createFormalRuntimeAuthorityIsolationAdapter(
+  runner: RuntimeCommandRunner,
+  environment: Readonly<NodeJS.ProcessEnv>,
+): FormalPreflightAuthorityIsolationAdapter {
+  return new HostAuthorityIsolationAdapter(runner, environment);
+}
+
+class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolationAdapter {
+  constructor(
+    private readonly runner: RuntimeCommandRunner,
+    private readonly environment: Readonly<NodeJS.ProcessEnv>,
+  ) {}
+
+  async inspect(authority?: RuntimeAuthority): Promise<FormalPreflightAuthorityIsolationObservation> {
+    if (authority === undefined) throw new Error('FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_REQUIRED');
+    const failures: string[] = [];
+    const dockerExecutablePaths = new Set<string>();
+    for (const name of authority.dockerExclusion.forbiddenExecutableNames) {
+      const resolved = await runText(this.runner, undefined, 'sh', ['-lc', 'command -v -- "$1"', 'sh', name]);
+      if (resolved.ok && resolved.value.trim().length > 0) dockerExecutablePaths.add(resolved.value.trim());
+    }
+    for (const path of ['/usr/bin/docker', '/usr/local/bin/docker', '/usr/sbin/docker', '/bin/docker', '/sbin/docker']) {
+      try {
+        await lstat(path);
+        dockerExecutablePaths.add(path);
+      } catch (error) {
+        if (!isMissing(error)) failures.push('DOCKER_EXECUTABLE_INSPECTION_FAILED');
+      }
+    }
+
+    const forbiddenSockets = (await Promise.all(
+      authority.dockerExclusion.forbiddenSocketPaths.map((path) => inspectSocketPath(path)),
+    )).filter((candidate) => candidate.kind !== 'missing');
+    const systemdUnits = await Promise.all(authority.dockerExclusion.forbiddenSystemdUnits.map(
+      (name) => inspectSystemdUnit(this.runner, name),
+    ));
+    const forbiddenProcesses = await inspectForbiddenProcesses(
+      authority.dockerExclusion.forbiddenProcessNames,
+      failures,
+    );
+    const listeners = await inspectTcpListeners(this.runner, failures);
+    const forbiddenPortSet = new Set(authority.dockerExclusion.forbiddenTcpPorts);
+    const forbiddenTcpListeners = listeners.filter((listener) => forbiddenPortSet.has(listener.port));
+    const podmanTcpListeners = listeners.filter((listener) => listener.process?.includes('podman') === true)
+      .map((listener) => `tcp://${listener.address}:${listener.port}`);
+    const podmanConnections = await inspectPodmanConnections(this.runner, failures);
+    const podmanMachines = await inspectPodmanMachines(this.runner, failures);
+    const rootlessSocketPaths = await inspectRootlessPodmanSockets(failures);
+    const socketPath = authority.podman.socketPath;
+    const socketObservation = await inspectSocketPath(socketPath);
+    const podmanInfo = await inspectIsolationPodmanInfo(this.runner, failures);
+    const otherWslBackends = await inspectRegisteredWslBackends(
+      this.runner,
+      authority.host.distribution,
+      failures,
+    );
+    const podmanSocketActive = await runText(this.runner, undefined, 'systemctl', [
+      'is-active', 'podman.socket',
+    ]);
+    if (!podmanSocketActive.ok) failures.push('PODMAN_SOCKET_SYSTEMD_INSPECTION_FAILED');
+    const allowedEndpoint = authority.dockerExclusion.allowedCompatibilityEnvironment.DOCKER_HOST;
+    const unexpectedContainerApiEndpoints = [...new Set([
+      ...podmanTcpListeners,
+      ...podmanConnections.filter((endpoint) => endpoint !== allowedEndpoint),
+      ...environmentRemoteEndpoints(this.environment, socketPath),
+    ])];
+    return {
+      dockerExecutablePaths: [...dockerExecutablePaths].sort(),
+      forbiddenSockets,
+      systemdUnits,
+      forbiddenProcesses,
+      forbiddenTcpListeners,
+      unexpectedContainerApiEndpoints,
+      podmanConnections: podmanConnections.filter((endpoint) => endpoint !== allowedEndpoint),
+      podmanMachines,
+      rootlessSocketPaths,
+      otherWslBackends,
+      podmanSocket: {
+        path: podmanInfo.socketPath ?? '',
+        kind: socketObservation.kind,
+        symbolicLink: socketObservation.symbolicLink,
+        uid: socketObservation.uid,
+        gid: socketObservation.gid,
+        mode: socketObservation.mode,
+        systemdActive: podmanSocketActive.ok && podmanSocketActive.value.trim() === 'active',
+        tcpEndpoints: podmanTcpListeners,
+        rootless: podmanInfo.rootless,
+      },
+      inspectionFailures: [...new Set(failures)].sort(),
+    };
+  }
+}
+
+async function inspectIsolationPodmanInfo(
+  runner: RuntimeCommandRunner,
+  failures: string[],
+): Promise<{ readonly socketPath: string | null; readonly rootless: boolean | null }> {
+  const result = await runText(runner, undefined, 'podman', ['info', '--format', 'json']);
+  if (!result.ok) {
+    failures.push('PODMAN_INFO_INSPECTION_FAILED');
+    return { socketPath: null, rootless: null };
+  }
+  try {
+    const value = JSON.parse(result.value) as unknown;
+    if (!isRecord(value)) throw new Error('INVALID');
+    const host = isRecord(value['host']) ? value['host'] : {};
+    const remoteSocket = isRecord(host['remoteSocket']) ? host['remoteSocket'] : {};
+    const security = isRecord(host['security']) ? host['security'] : {};
+    return {
+      socketPath: typeof remoteSocket['path'] === 'string' ? remoteSocket['path'] : null,
+      rootless: typeof security['rootless'] === 'boolean' ? security['rootless'] : null,
+    };
+  } catch {
+    failures.push('PODMAN_INFO_INSPECTION_INVALID');
+    return { socketPath: null, rootless: null };
+  }
+}
+
+async function inspectRegisteredWslBackends(
+  runner: RuntimeCommandRunner,
+  expectedDistribution: string,
+  failures: string[],
+): Promise<readonly string[]> {
+  const result = await runText(runner, undefined, 'wsl.exe', ['--list', '--quiet']);
+  if (!result.ok) {
+    failures.push('WSL_REGISTERED_BACKEND_INSPECTION_FAILED');
+    return [];
+  }
+  return parseRegisteredWslBackends(result.value, expectedDistribution);
+}
+
+export function parseRegisteredWslBackends(
+  output: string,
+  expectedDistribution: string,
+): readonly string[] {
+  return [...new Set(output.replaceAll('\0', '').split(/\r?\n/u)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0 && value !== expectedDistribution))];
+}
+
+async function inspectSocketPath(path: string): Promise<{
+  readonly path: string;
+  readonly kind: FormalPreflightAuthorityIsolationObservation['podmanSocket']['kind'];
+  readonly symbolicLink: boolean;
+  readonly target: string | null;
+  readonly uid: number | null;
+  readonly gid: number | null;
+  readonly mode: string | null;
+}> {
+  try {
+    const stats = await lstat(path);
+    const symbolicLink = stats.isSymbolicLink();
+    return {
+      path,
+      kind: symbolicLink
+        ? 'symbolic-link'
+        : stats.isSocket()
+          ? 'socket'
+          : stats.isFile()
+            ? 'file'
+            : stats.isDirectory()
+              ? 'directory'
+              : 'other',
+      symbolicLink,
+      target: symbolicLink ? await readlink(path) : null,
+      uid: stats.uid,
+      gid: stats.gid,
+      mode: '0' + (stats.mode & 0o777).toString(8),
+    };
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+    return { path, kind: 'missing', symbolicLink: false, target: null, uid: null, gid: null, mode: null };
+  }
+}
+
+async function inspectSystemdUnit(
+  runner: RuntimeCommandRunner,
+  name: string,
+): Promise<FormalPreflightAuthorityIsolationObservation['systemdUnits'][number]> {
+  const result = await runText(runner, undefined, 'systemctl', [
+    'show', name, '--property=LoadState,ActiveState,UnitFileState,SubState', '--no-pager',
+  ]);
+  if (!result.ok) {
+    return { name, loadState: 'unknown', activeState: 'unknown', unitFileState: 'unknown', subState: 'unknown' };
+  }
+  const fields = Object.fromEntries(result.value.split(/\r?\n/u).flatMap((line) => {
+    const separator = line.indexOf('=');
+    return separator > 0 ? [[line.slice(0, separator), line.slice(separator + 1)]] : [];
+  }));
+  return {
+    name,
+    loadState: fields['LoadState'] ?? 'unknown',
+    activeState: fields['ActiveState'] ?? 'unknown',
+    unitFileState: fields['UnitFileState'] ?? 'unknown',
+    subState: fields['SubState'] ?? 'unknown',
+  };
+}
+
+async function inspectForbiddenProcesses(
+  forbiddenNames: readonly string[],
+  failures: string[],
+): Promise<readonly { readonly pid: number; readonly name: string }[]> {
+  const forbidden = new Set(forbiddenNames);
+  try {
+    const entries = await readdir('/proc', { withFileTypes: true });
+    const findings = await Promise.all(entries.flatMap((entry) => /^\d+$/u.test(entry.name)
+      ? [readFile(join('/proc', entry.name, 'comm'), 'utf8').then((value) => ({
+        pid: Number(entry.name),
+        name: value.trim(),
+      })).catch(() => null)]
+      : []));
+    return findings.filter((value): value is { readonly pid: number; readonly name: string } =>
+      value !== null && forbidden.has(value.name),
+    );
+  } catch {
+    failures.push('PROCESS_INSPECTION_FAILED');
+    return [];
+  }
+}
+
+async function inspectTcpListeners(
+  runner: RuntimeCommandRunner,
+  failures: string[],
+): Promise<readonly FormalPreflightAuthorityIsolationObservation['forbiddenTcpListeners'][number][]> {
+  const result = await runText(runner, undefined, 'ss', ['-H', '-ltnp']);
+  if (!result.ok) {
+    failures.push('TCP_LISTENER_INSPECTION_FAILED');
+    return [];
+  }
+  return result.value.split(/\r?\n/u).flatMap((line) => {
+    const endpoint = line.trim().split(/\s+/u)[3];
+    const match = /^(.*):(\d+)$/u.exec(endpoint ?? '');
+    if (match?.[1] === undefined || match[2] === undefined) return [];
+    const processMatch = /users:\(\("([^"]+)"/u.exec(line);
+    return [{ address: match[1], port: Number(match[2]), process: processMatch?.[1] ?? null }];
+  });
+}
+
+async function inspectPodmanConnections(
+  runner: RuntimeCommandRunner,
+  failures: string[],
+): Promise<readonly string[]> {
+  const result = await runText(runner, undefined, 'podman', ['system', 'connection', 'list', '--format', 'json']);
+  if (!result.ok) {
+    failures.push('PODMAN_CONNECTION_INSPECTION_FAILED');
+    return [];
+  }
+  try {
+    const values = JSON.parse(result.value) as unknown;
+    return Array.isArray(values) ? values.flatMap((value) => {
+      if (!isRecord(value)) return [];
+      const uri = value['URI'] ?? value['Uri'] ?? value['uri'];
+      return typeof uri === 'string' ? [uri] : [];
+    }) : [];
+  } catch {
+    failures.push('PODMAN_CONNECTION_INSPECTION_INVALID');
+    return [];
+  }
+}
+
+async function inspectPodmanMachines(
+  runner: RuntimeCommandRunner,
+  failures: string[],
+): Promise<readonly string[]> {
+  const result = await runText(runner, undefined, 'podman', ['machine', 'list', '--format', 'json']);
+  if (!result.ok) {
+    failures.push('PODMAN_MACHINE_INSPECTION_FAILED');
+    return [];
+  }
+  try {
+    const values = JSON.parse(result.value) as unknown;
+    return Array.isArray(values) ? values.flatMap((value) => {
+      if (!isRecord(value)) return [];
+      const name = value['Name'] ?? value['name'];
+      return typeof name === 'string' && name.length > 0 ? [name] : [];
+    }) : [];
+  } catch {
+    failures.push('PODMAN_MACHINE_INSPECTION_INVALID');
+    return [];
+  }
+}
+
+async function inspectRootlessPodmanSockets(failures: string[]): Promise<readonly string[]> {
+  try {
+    const users = await readdir('/run/user', { withFileTypes: true });
+    const findings: string[] = [];
+    for (const user of users.filter((entry) => entry.isDirectory())) {
+      const path = join('/run/user', user.name, 'podman', 'podman.sock');
+      const observation = await inspectSocketPath(path);
+      if (observation.kind !== 'missing') findings.push(path);
+    }
+    return findings;
+  } catch (error) {
+    if (!isMissing(error)) failures.push('ROOTLESS_SOCKET_INSPECTION_FAILED');
+    return [];
+  }
+}
+
+function environmentRemoteEndpoints(environment: Readonly<NodeJS.ProcessEnv>, socketPath: string): readonly string[] {
+  const allowed = 'unix://' + socketPath;
+  return ['DOCKER_HOST', 'CONTAINER_HOST'].flatMap((name) => {
+    const value = environment[name];
+    return nonEmpty(value) && value !== allowed ? [value] : [];
+  });
 }
 
 async function appendExactCommandCheck(
@@ -766,6 +1310,20 @@ function parseOsRelease(value: string): Readonly<Record<string, string>> {
   }));
 }
 
+function wslConfigurationMatchesAuthority(
+  configuration: WslHostEvidence['configuration'],
+  authority: RuntimeAuthority['host'],
+): boolean {
+  return configuration.present &&
+    configuration.processors === String(authority.processorCount) &&
+    configuration.memory !== undefined &&
+    authority.wslConfigMemoryValues.some((value) =>
+      value.toUpperCase() === configuration.memory?.toUpperCase(),
+    ) &&
+    configuration.swap !== undefined &&
+    authority.wslConfigSwapValues.some((value) => value === configuration.swap);
+}
+
 function parseMemInfo(value: string): { readonly memTotalBytes: number; readonly swapTotalBytes: number } {
   const readKilobytes = (name: string): number => {
     const match = new RegExp('^' + name + ':\\s+(\\d+)\\s+kB$', 'mu').exec(value);
@@ -776,17 +1334,44 @@ function parseMemInfo(value: string): { readonly memTotalBytes: number; readonly
 }
 
 function parsePodmanLabels(value: unknown): Readonly<Record<string, string>> {
+  let labels: Readonly<Record<string, string>>;
   if (isRecord(value)) {
-    return Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
+    labels = Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
       typeof item === 'string' ? [[name, item]] : [],
     ));
+  } else if (typeof value === 'string') {
+    labels = Object.fromEntries(value.split(',').flatMap((item) => {
+      const separator = item.indexOf('=');
+      if (separator <= 0) return [];
+      return [[item.slice(0, separator), item.slice(separator + 1)]];
+    }));
+  } else {
+    labels = {};
   }
-  if (typeof value !== 'string') return {};
-  return Object.fromEntries(value.split(',').flatMap((item) => {
-    const separator = item.indexOf('=');
-    if (separator <= 0) return [];
-    return [[item.slice(0, separator), item.slice(separator + 1)]];
-  }));
+  return projectGovernedRuntimeLabels(labels);
+}
+
+const GOVERNED_RUNTIME_LABEL_NAMES = [
+  'hdi.repository',
+  'hdi.phase',
+  'hdi.run-id',
+  'hdi.run-sequence',
+  'hdi.managed-by',
+] as const;
+
+function projectGovernedRuntimeLabels(
+  labels: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(GOVERNED_RUNTIME_LABEL_NAMES.flatMap((name) =>
+    typeof labels[name] === 'string' ? [[name, labels[name]]] : [],
+  ));
+}
+
+export function parsePodmanContainerRestartPolicy(inspected: unknown): string | null {
+  if (!isRecord(inspected)) return null;
+  const hostConfig = isRecord(inspected['HostConfig']) ? inspected['HostConfig'] : {};
+  const policy = isRecord(hostConfig['RestartPolicy']) ? hostConfig['RestartPolicy'] : {};
+  return stringField(policy, 'Name') || null;
 }
 
 export function isRepositoryPodmanResource(resource: PodmanResourceObservation): boolean {
@@ -855,6 +1440,16 @@ function stableObservedError(error: unknown): string {
     ? error.name.toUpperCase()
     : 'UNKNOWN_ERROR';
   return stable.slice(0, 160);
+}
+
+function nonEmpty(value: string | undefined): value is string {
+  return value !== undefined && value.trim().length > 0;
+}
+
+function endpointScheme(value: string | undefined): string | null {
+  if (!nonEmpty(value)) return null;
+  const separator = value.indexOf('://');
+  return separator > 0 ? value.slice(0, separator).toLowerCase() : 'unknown';
 }
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {

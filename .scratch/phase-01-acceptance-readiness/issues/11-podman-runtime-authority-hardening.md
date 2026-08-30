@@ -1,6 +1,6 @@
 # 11 — Podman 运行时权威加固
 
-Status: ready-for-agent
+Status: claimed
 
 Blocked by: AR-10 — Evidence provenance 与契约漂移整改
 
@@ -37,3 +37,15 @@ Blocked by: AR-10 — Evidence provenance 与契约漂移整改
 ## Comments
 
 - 2026-08-30（AR-08 建立）：Podman 迁移已在 `5fc00d043dfbad213d647edae7be6df11016ba8a` 进入分支，但本 Ticket 的加固与人工复核尚未执行；等待 AR-10。
+- 2026-08-30（AR-11 开工基线）：开工 HEAD 为 `7ef55be50b4e71789667ca7aa262c2f59c71320d`；`git status --short` 无输出；当前分支为 `phase-01-acceptance-readiness`；本地与 `origin/phase-01-acceptance-readiness` 的差异为 `0 0`；AR-10 已为 `resolved`。本任务只实施 AR-11，不授权启动 PostgreSQL、Keycloak、Chrome、真实 Podman 容器、shared readiness 或正式 ABG。
+- 2026-08-30（AR-11 修改前问题定义）：以下均为静态审阅识别的**当前设计缺口**，不是已经发生的正式运行事故：
+  1. 当前运行事实分散在 `runtime-baseline.lock.json`、Podman Shell 脚本、TypeScript preflight 常量、`formal-runtime-contract` 端口常量、teardown 和 frozen-inputs 代码中。
+  2. 这些平行定义可能形成第二 authority，必须收敛为一个机器可读目标权威。
+  3. `runtime-baseline.lock.json` 当前同时包含规范性事实和迁移/容量观察事实，需要明确 authority 与 observation 的边界。
+  4. 当前 Podman 长期容器使用或可能使用非临时 restart policy；正式验收容器必须明确冻结为 `restart=no`。
+  5. Docker 排除需要覆盖 `/run/docker.sock`、`/var/run/docker.sock`、socket alias 或符号链接、`docker.service`、`docker.socket`、`dockerd`、`docker-proxy`、TCP Docker/Podman API、非预期 `DOCKER_HOST` 与第二 remote container endpoint，而不能只检查常见 CLI 文件路径。
+  6. `DOCKER_HOST=unix:///run/podman/podman.sock` 仅是 Testcontainers compatibility endpoint，不能解释为 Docker Engine authority。
+  7. Podman runtime module 顺序创建卷和容器，任一中间步骤失败都可能遗留部分资源。
+  8. 即使 `podman ... up` 成功，后续 readiness、migration、seed 或 schema check 失败仍可能留下已启动容器，因此 bootstrap 层也必须受控失败收尾。
+  9. 所有清理都必须在删除前重新核验当前运行的完整五标签；标签缺失或不一致时必须保留资源并失败关闭，不能猜测所有权。
+  10. AR-10 已冻结 35 个验证权威文件；AR-11 新增或修改运行权威文件时必须同步更新 source manifest registry、producer provenance 和精确 reviewer 回归。

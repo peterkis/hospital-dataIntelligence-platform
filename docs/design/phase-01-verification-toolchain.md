@@ -4,7 +4,7 @@
 
 容量环境补充状态：ADR-0110已确认本机WSL2 Anolis OS 8.9独占运行环境及环境门禁；当前初始化回执不是容量证据运行。
 
-容器运行时补充状态：ADR-0111已确认rootful Podman为唯一现行容器运行时；受管容器只用host network和冻结回环端口，Docker/Compose不再进入执行路径。
+容器运行时补充状态：ADR-0111已确认rootful Podman为唯一现行容器运行时；AR-11进一步把唯一机器可读运行权威收敛到`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`（`schemaVersion: 3`、`authorityId: phase-01.podman-runtime-authority.v1`）。受管容器只用host network和冻结回环端口，Docker/Compose不再进入执行路径。AR-11只建立代码、协议和合成测试就绪，不等于当前真实Anolis/Podman环境验收。
 
 更新日期：2026-08-30
 
@@ -71,6 +71,10 @@ flowchart LR
 20. 容量画像生成器及矩阵编排只属于既有TypeScript验证工具链中的确定性fixture资产，不是业务领域、数据库实体、公共契约、管理界面能力、独立应用、workspace或共享包。矩阵固定包含`F00`、`N10`、`N30`、`N50`、`N100`、`W50`和`E50`，最终CSV数据行数分别为24、10,000、30,000、50,000、100,000、50,000和50,000且不含表头；`F00`不参与上限推断，四个`N`画像仅改变行数，`W50`隔离行宽压力，`E50`隔离中文多字节和合法CSV转义压力。容量fixture与业务验收fixture隔离，记录必须有效、唯一、引用完整、有稳定全序且可确定转换；画像必须冻结身份/版本、投影Schema、交付配置/格式、生成器/代码摘要、种子、行数、分布及字符规则，且每个外部变长字符串必须有有限可执行最大长度。Phase 01不得预建或运行该生成器；集成后阶段必须让生成结果进入真实`release-distribution`及公共下载路径，不能保留平行容量实现。
 21. 同一容量fixture资产必须按精确输出列身份和稳定记录顺序执行ADR-0109，不得以运行时随机近似：四个`N`画像逐可选字段精确70%有值/30%冻结空值，适用非空文本精确70%/25%/5%达到冻结合法最大Unicode码点长度的20%/50%/85%；普通画像只用安全单字节基线字符，身份/代码/枚举/引用/摘要/严格模式字符串使用合法确定性生成器且排除出长度分布。`W50`全部可选字段有值，字符串目标90%且唯一后缀计入预算，非字符串采用最长合法表示，字符串保持单字节。`E50`复用`N50`逐字段非空与码点长度分布，每个适用文本字段内按稳定顺序形成纯中文、中文+ASCII、含逗号、含双引号、含逗号/双引号/LF五组各20%；适用/排除列由身份清单冻结，LF只进入多行字段，身份/代码/枚举/引用/摘要/金额/数值/日期/日期时间/布尔/不兼容模式字段排除。无合法字段、映射与Schema不一致、静默跳过或重分配必须失败关闭。字符串长度使用Unicode码点，容量只使用最终ZIP字节。该规则不形成第二生成器、业务配置或Phase 01资产。
 22. 两阶段容量证据运行前必须执行ADR-0110环境门禁：先`wsl --shutdown`，再只启动`Anolis-8.9-HDI-POC`；保存WSL版本/内核、`.wslconfig`摘要、唯一运行发行版、Anolis用户空间身份、`nproc=8`、约4 GiB `MemTotal`、空swap列表、10 GiB根块设备、systemd状态和`Asia/Shanghai`。任一其他WSL、Docker Desktop、Podman Machine或其他容器后端并发，或者资源配置漂移、根磁盘扩容、环境清单缺失，均使该轮证据失格；不得把通过结果描述为Anolis原生内核、生产实机或内网服务器验收。
+23. 唯一机器可读运行权威是`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`的`.authority`对象。文件的`.observations`只保存一次捕获的环境、工具、镜像和迁移观察，`receipt-20260830-podman.json`只保存历史迁移回执；二者可进入provenance，但不得提供、覆盖或推断正式运行期望值。`runtimeAuthoritySha256`绑定整个权威文件字节，`runtimeAuthoritySemanticDigest`只对规范化`.authority`对象计算，二者都进入frozen inputs并在cleanup后重新核验；`podmanVersion`、`podmanSocketPath`、storage driver/graph root、OCI runtime、network backend、log driver及restart policy也只能从该authority派生并冻结。
+24. Shell启动、bootstrap和基线核验脚本必须用`jq`直接读取同一权威文件；TypeScript正式preflight、teardown、Testcontainers适配和证据协议必须通过严格schema parser读取同一文件。不得在Shell、TypeScript、环境变量、receipt或文档中维护版本、socket、镜像、端口、标签、网络、restart policy的第二份可执行硬编码权威。
+25. 所有正式验证容器，包括PostgreSQL、Keycloak和Testcontainers PostgreSQL，必须显式创建为`restart=no`并在创建后inspect实际策略。该策略阻止cleanup后自动复活，并与禁止生成systemd unit、Quadlet或auto-update持久化共同保证临时运行边界。Docker CLI、daemon、socket（包括指向Podman socket的alias）、systemd unit、进程、TCP API以及任何第二容器endpoint均失败关闭；唯一允许的兼容变量是精确`DOCKER_HOST=unix:///run/podman/podman.sock`，它只为Testcontainers提供Podman API传输兼容，不授予Docker Engine authority，`docker.io`也只是OCI registry名称。
+26. Partial startup和bootstrap失败都走相同的反向收尾：先Keycloak容器，再PostgreSQL容器，再Keycloak卷，最后PostgreSQL卷；bootstrap在runtime up后的readiness、migration、seed或schema verification失败时调用同一`down`路径。每次停止或删除前都重新inspect，只有名称属于当前namespace，且仓库、阶段、run id、run sequence、managed-by五个必需标签全部存在并与当前运行匹配时才允许变更；附加无关元数据标签不影响所有权，必需标签缺失或不一致的资源必须保留并失败关闭。所有路径只允许逐项删除，禁止`prune`和`podman system reset`。
 
 `E50`适用字段必须同时合法容纳全部五类；不允许LF的单行文本列整体排除在五组压力清单之外并保持普通内容，不能只跳过第五组或把其20%转移给其他类别。
 
@@ -79,7 +83,7 @@ flowchart LR
 | 能力 | Phase 01基线 | 版本与冻结要求 |
 |---|---|---|
 | 包管理与工作区 | npm workspaces | Node.js精确`24.18.0`、npm精确`11.9.0`、一个根`package-lock.json`，正式安装使用`npm ci` |
-| 容器运行时 | rootful Podman | 精确`4.9.4-rhel`；唯一API为`/run/podman/podman.sock`；受管容器只用host network并在进程层绑定冻结回环端口；Docker CLI、Compose provider、桥接网络和端口发布均不进入现行执行路径 |
+| 容器运行时 | rootful Podman | 唯一权威为`runtime-baseline.lock.json`的`.authority`；精确`4.9.4-rhel`、`/run/podman/podman.sock`、`overlay`、`runc`、CNI、`k8s-file`及`restart=no`；受管容器只用host network并在进程层绑定冻结回环端口；Docker CLI/daemon/socket/TCP、Compose provider、第二endpoint、桥接网络和端口发布均不进入现行执行路径 |
 | 通用TypeScript测试 | Vitest | 首个证据基线精确固定`4.1.6`；`@vitest/coverage-v8`保持同版 |
 | Fastify模块和路由测试 | Vitest＋Fastify `inject()` | 使用实际应用构建入口，不另建测试专用业务实现 |
 | REST API场景 | Vitest＋冻结OpenAPI生成客户端 | 客户端来源摘要进入证据包 |
@@ -227,17 +231,17 @@ Toxiproxy及Testcontainers生命周期负责验证：
 
 门禁结果升级为 `phase-01.abg-gate-result.v3`：每项必须记录其自身的场景和断言集合、直接关联的请求/主体/对象/版本/规则/冻结输入/制品摘要，以及每个选择器对应的相对路径、媒体类型、长度、SHA-256、producer、场景、断言、JSON Pointer 和选中 claim 摘要。结果还记录覆盖矩阵和所用 producer evidence index 的摘要。任一选择器、指针、身份引用、规则或摘要无法核验即失败关闭。
 
-正式运行总结升级为 `phase-01.abg-run.v4`。它拒绝旧版门禁结果，并在 setup 前后复核覆盖矩阵及 producer 协议身份；每个引用必须留在运行根内、非符号链接、字节长度/媒体类型/摘要一致，并解析到相同 gate、scenario、assertion 和 producer 的 `PASSED` claim。总结验证器不信任输入的总体状态，而是从 preflight、setup、ABG-01～ABG-39、cleanup、残留资源、固定端口、cleanup 后冻结输入与验证权威身份、输出目录独占、终态结论、seal eligibility、ABG-40 及 selector 集合重新推导 `status`。
+正式运行总结升级为 `phase-01.abg-run.v5`，run plan及其authority分别升级为`phase-01.abg-run-plan.v4`和`phase-01.repository-authoritative-plan.v3`。它拒绝旧版门禁结果，并在 setup 前后复核覆盖矩阵及 producer 协议身份；每个引用必须留在运行根内、非符号链接、字节长度/媒体类型/摘要一致，并解析到相同 gate、scenario、assertion 和 producer 的 `PASSED` claim。总结验证器不信任输入的总体状态，而是从 preflight、setup、ABG-01～ABG-39、cleanup、残留资源、固定端口、cleanup 后冻结输入、验证权威身份与Podman runtime authority身份、输出目录独占、终态结论、seal eligibility、ABG-40 及 selector 集合重新推导 `status`。
 
 ### 8.2.2 cleanup 后终态与 ABG-40
 
 正式运行严格分成 cleanup 前执行、cleanup 后终态生成和 evidence 封存三个边界。preflight 成功且独占创建输出目录后，runner 写入 `runtime/preflight.json`，冻结 run plan、frozen inputs 和 verification authority identity，完成 setup，仅执行 ABG-01～ABG-39，并在 cleanup 前保存顶层 producer evidence、`runtime/resources-started.json`、`runtime/producer-evidence-snapshot.json` 和 `runtime/failure-summary.json`。此阶段不得生成 ABG-40，也不得声称正式运行最终 `PASSED`。
 
-受控子进程停止并完成精确 cleanup 后，runner 写入 `runtime/resources-final.json` 和 `runtime/cleanup.json`，重新读取 frozen inputs 和 verification authority identity，再构造 `phase-01.formal-terminal-conclusion.v1` 的 `runtime/terminal-conclusion.json`。该终态结论必须同时证明前 39 个门禁完整通过、producer evidence 已在 cleanup 前落盘、cleanup 通过、当前 run 零残留、全部 required ports 已观察且释放、未调用 prune、冻结输入和权威身份稳定以及输出目录保持独占；只有这些条件全部满足时 `sealEligible` 才能为 `true`。
+受控子进程停止并完成精确 cleanup 后，runner 写入 `runtime/resources-final.json` 和 `runtime/cleanup.json`，重新读取 frozen inputs、verification authority identity与Podman runtime authority identity，再构造 `phase-01.formal-terminal-conclusion.v2` 的 `runtime/terminal-conclusion.json`。该终态结论必须同时证明前 39 个门禁完整通过、producer evidence 已在 cleanup 前落盘、cleanup 通过、当前 run 零残留、全部 required ports 已观察且释放、未调用 prune、冻结输入、验证权威身份和runtime authority字节/语义摘要稳定以及输出目录保持独占；只有这些条件全部满足时 `sealEligible` 才能为 `true`。对应`runtime/final-outcome.json`使用`phase-01.formal-runtime-outcome.v3`并携带相同runtime authority身份与稳定性。
 
 ABG-40 只在上述 cleanup 后终态形成后执行。它使用 `RUN-FORMAL-TERMINAL-LIFECYCLE` 场景，以 `runtime/terminal-conclusion.json` 为 formal-run producer 的唯一原始机器证据，并精确选择 `ABG-40:formal-terminal-lifecycle-complete` 与 `ABG-40:formal-evidence-seal-eligible` 两个断言。ABG-40 证明的是“该运行已达到预封存资格”，不证明 `manifest.sha256` 已经存在或已由独立 reviewer 验证；旧 `formal-run/preliminary-conclusion.json` 不再是新协议权威。
 
-ABG-40 验证后，runner 合并 40 项门禁并写入 `phase-01.abg-run.v4` 的 `abg-results.json`，通过独立 summary validator 后写入 `runtime/final-outcome.json`。final outcome 在 Manifest 之前生成，必须保持 `sealPendingAtWrite: true`，不得声称封存已完成。`sealEvidence` 只生成 `manifest.json` 与匹配的 `manifest.sha256`，不得修改既有 summary、gate proof 或 producer evidence；任何终态写入或 Manifest 失败都使 CLI 非零退出，且不得覆盖旧 evidence。
+ABG-40 验证后，runner 合并 40 项门禁并写入 `phase-01.abg-run.v5` 的 `abg-results.json`，通过独立 summary validator 后写入 `phase-01.formal-runtime-outcome.v3` 的 `runtime/final-outcome.json`。final outcome 在 Manifest 之前生成，必须保持 `sealPendingAtWrite: true`，不得声称封存已完成。`sealEvidence` 只生成 `manifest.json` 与匹配的 `manifest.sha256`，不得修改既有 summary、gate proof 或 producer evidence；任何终态写入或 Manifest 失败都使 CLI 非零退出，且不得覆盖旧 evidence。
 
 独立 reviewer 最终从已封存目录复核 Manifest 摘要/长度、完整 runtime lifecycle、ABG-40 精确引用、summary/final-outcome 一致性及复核前后源 evidence 字节身份。它还把 summary 的 Git 身份绑定回 frozen run plan、从 runId/runSequence 规范派生 runtime namespace，将 cleanup 前 producer snapshot 的路径/长度/SHA-256 逐项绑定到 Manifest 字节，并独立重算 terminal conclusion 的资源/端口计数和两个 assertion body。ABG-40 `PASSED` 单独不等于正式验收完成；正式验收仍要求 Manifest 成功封存、CLI 成功终止及 independent reviewer `PASSED`。
 
@@ -259,7 +263,7 @@ Definition drift 与 evidence integrity 是独立状态轴。Coverage matrix、p
 
 Reviewer 只把 evidence 文件视为不可信普通字节：不得执行、import 或动态加载其中的 TypeScript、JavaScript、Shell、SQL、二进制或命令，也不得启动应用、数据库、浏览器、容器或网络访问。复核输出写入独立且尚不存在的目录，并由 `review-manifest.json` 与 sidecar 封存 review、findings 和 reviewer source manifest；原 evidence 始终只读。
 
-AR-10 完成只表示 provenance、compatibility 和 drift 失败关闭机制完成本地实现及规定验证，不表示正式 ABG 已运行或 Phase 01 已 accepted。AR-11 仍单独负责 Podman runtime authority、Docker 排他、restart policy 和 partial-startup hardening；这些运行时权威不得由 source provenance 文档提前替代。
+AR-10 完成只表示 provenance、compatibility 和 drift 失败关闭机制完成本地实现及规定验证，不表示正式 ABG 已运行或 Phase 01 已 accepted。AR-11把Podman runtime authority、Docker/第二endpoint排他、`restart=no`和partial-startup/bootstrap失败收尾纳入同一producer source manifest与精确reviewer回归；source manifest从AR-10的历史35文件扩展为当前43文件，以不同角色登记runtime authority、严格TS loader/schema与verify CLI、运行时装配/代理/三只生命周期脚本、Testcontainers/live producer及历史receipt，但provenance登记本身不把receipt或observation提升为authority。AR-11完成后仍须由AR-12在冻结的当前HEAD上进入真实Anolis/Podman环境重基线及readiness，才能建立新的真实环境结论。
 
 ### 8.3 不可覆盖与完整性
 
@@ -277,11 +281,11 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 
 1. 每个 producer 生成 `phase-01.producer-evidence.v2`，其场景、断言、命令身份、冻结输入和业务引用由 producer evidence validator 校验。
 2. ABG-01～ABG-39 各自生成 `phase-01.abg-gate-result.v3`，随后 fixture 保存 preflight、started resources、producer evidence snapshot、failure summary、cleanup 和零残留 final resources；它不通过省略 lifecycle 文件获得 reviewer `PASSED`。
-3. fixture 从 cleanup 后的 `phase-01.formal-terminal-conclusion.v1` 生成 formal-run producer evidence，再生成具有两个终态断言的 ABG-40；仅含旧 preliminary conclusion 的新格式 fixture 必须失败关闭。
-4. `phase-01.abg-run.v4` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
+3. fixture 从 cleanup 后的 `phase-01.formal-terminal-conclusion.v2` 生成 formal-run producer evidence，再生成具有两个终态断言的 ABG-40；仅含旧 preliminary conclusion 的新格式 fixture 必须失败关闭。
+4. `phase-01.abg-run.v5` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、runtime authority字节/语义摘要及cleanup后稳定性、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
 5. fixture 在 Manifest 前写入一致且 `sealPendingAtWrite: true` 的 final outcome。独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、完整 lifecycle、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
 
-`npm run test:verification:adversarial` 运行 110 个互不依赖的 mutation，覆盖用户要求的缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup 越权、完整终态 lifecycle、secret 泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift 和 reviewer 工作区状态；新增范围包括 cleanup 失败但 summary 冒充通过、preflight 矛盾、terminal conclusion 缺失或失败、seal eligibility 伪造、容器/卷/网络残留、required port 占用、final outcome 矛盾、ABG-40 旧 preliminary 来源或缺少 seal 断言、cleanup 后 frozen input/authority 漂移，以及 malformed lifecycle 数组、pre-cleanup snapshot 字节身份、run plan Git 绑定、terminal assertion body 和 final-outcome seal 状态。其中 `placeholder`、`UNKNOWN`、`N/A` 与空字符串分别作为独立 mutation，另以 malformed JSON 中的裸配置 secret 证明解析失败也不会绕过泄漏扫描；带明显副作用的 evidence 内脚本只作为不可信普通字节读取，reviewer 不执行它。每项都声明稳定 mutationId、检测层和期望错误码，并把实际结果写入被根 `.gitignore` 的 `.runtime/test-results/verification-adversarial-summary.json`。通过条件是 `mutationCount >= 110`、`detectedCount = mutationCount`、`survivedCount = 0`；不得通过更新 snapshot、吞掉异常或依赖测试执行顺序改变该结论。
+`npm run test:verification:adversarial`保留原110个互不依赖的mutation，并把AR-11的runtime authority字节/语义漂移、非法schema、rootless/socket/storage/OCI/network/log/restart漂移、Docker socket alias/TCP/第二endpoint、Testcontainers兼容边界、partial-startup/bootstrap残留、五标签损坏、无关资源删除、prune企图及cleanup后authority漂移加入回归，总数不得少于140。既有范围继续覆盖缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup越权、完整终态lifecycle、secret泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift和reviewer工作区状态。其中`placeholder`、`UNKNOWN`、`N/A`与空字符串分别作为独立mutation，另以malformed JSON中的裸配置secret证明解析失败也不会绕过泄漏扫描；带明显副作用的evidence内脚本只作为不可信普通字节读取，reviewer不执行它。每项都声明稳定mutationId、检测层和期望错误码，并把实际结果写入被根`.gitignore`的`.runtime/test-results/verification-adversarial-summary.json`。通过条件是`mutationCount >= 140`、`detectedCount = mutationCount`、`survivedCount = 0`；不得删除原110项，也不得通过更新snapshot、吞掉异常或依赖测试执行顺序改变结论。
 
 关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
 
@@ -294,6 +298,7 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 | 终态 lifecycle 与预封存资格 | `FORMAL_LIFECYCLE_FILE_MISSING`、`FORMAL_CLEANUP_STATUS_NOT_PASSED`、`FORMAL_FINAL_RESOURCE_PRESENT`、`FORMAL_REQUIRED_PORT_OCCUPIED`、`FORMAL_TERMINAL_CONCLUSION_STATUS_NOT_PASSED`、`FORMAL_TERMINAL_SEAL_NOT_ELIGIBLE`、`FORMAL_FINAL_OUTCOME_MISMATCH` |
 | 路径与不可覆盖输出 | `ABG_GATE_RESULT_EVIDENCE_PATH_INVALID`、`EVIDENCE_SYMLINK_FORBIDDEN`、`REVIEW_OUTPUT_ALREADY_EXISTS`、`ABG_GATE_RESULT_ALREADY_EXISTS` |
 | cleanup 范围 | `FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN`、`FORMAL_CLEANUP_COMMAND_SCOPE_INVALID`、`FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH` |
+| runtime authority 与运行时隔离 | `RUNTIME_AUTHORITY_SCHEMA_INVALID`、`FORMAL_PREFLIGHT_DOCKER_SOCKET_PRESENT`、`FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT`、`FORMAL_PREFLIGHT_DOCKER_HOST_INVALID`、`FORMAL_CLEANUP_RESTART_POLICY_MISMATCH`、`FORMAL_CLEANUP_RUNTIME_AUTHORITY_DRIFT`、`FORMAL_CLEANUP_PARTIAL_RECOVERY_INCOMPLETE` |
 | secret 泄漏 | `EVIDENCE_STDOUT_SECRET_EXPOSED`、`EVIDENCE_STDERR_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_SCAN_INVALID` |
 
 失败证据遵循两类不同保留边界。正式运行或独立复核失败时，原 evidence 和 review findings 都必须保留，不得补写、覆盖或用后续成功结果替换；需要重跑时创建新运行身份。对抗性测试只操作操作系统临时目录中的 fixture 副本，测试结束后校验临时目录前缀再递归删除，绝不删除正式 evidence 路径；仓库内只保留忽略提交的机器汇总。无论该对抗测试是否全部通过，都只能说明验证器具有已列失败能力，不能表述为正式 ABG 通过、完整 POC 通过或生产就绪。
@@ -335,6 +340,8 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 
 完整POC扩展所称“冻结七类画像矩阵”和“完全相同的画像版本”均包含ADR-0109逐字段分布版本与适用字段清单；G04、G05、G12和U19共同验证该规则，不新增场景或Phase 01门禁。
 
+AR-11的代码、fake CLI、DI adapter及合成evidence验证只证明运行权威与生命周期约束可执行，不启动真实PostgreSQL、Keycloak、Chrome或Podman容器，也不执行shared readiness或正式ABG。AR-12才在另行授权下冻结当时的当前HEAD，并在真实`Anolis-8.9-HDI-POC`/rootful Podman环境重新建立baseline与readiness；因此AR-11结论不得写成Phase 01 accepted、Podman工作包accepted或生产就绪。
+
 ## 11. 禁止的平行权威
 
 下列做法不能进入Phase 01架构门禁或完整POC验收结论：
@@ -362,6 +369,8 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 - SQLite、内存数据库、内存Outbox、伪造IAM、预置消费者成功或直接业务数据库写入。
 - 测试专用公开接口、请求头、Cookie或生产可启用的故障开关。
 - 未冻结的在线工具、浮动容器标签、未记录浏览器版本或未锁定依赖。
+- 以receipt、`.observations`、Shell常量、环境变量或文档复制`runtime-baseline.lock.json`的`.authority`，把精确Podman兼容`DOCKER_HOST`解释为Docker Engine authority，允许Docker socket alias/TCP API/第二容器endpoint，或让`restart=always`、`unless-stopped`、`on-failure`、systemd生成单元、Quadlet或auto-update使临时资源在cleanup后复活。
+- 清理名称或部分标签“看起来像”当前运行的资源、标签缺失时猜测所有权、跳过删除前重新inspect、清理顺序不反向、吞掉原始启动/bootstrap错误或cleanup结果，或者调用任何Podman prune/system reset及删除历史`/var/lib/docker`数据。
 - 只提供截图、覆盖率或测试总数，不提供场景、请求、规则和服务副作用证据。
 - 覆盖旧证据目录、补写终态证据或让CI平台重新解释原始测试结果。
 - 外部混沌平台、随机故障或CI厂商专有能力成为POC通过前提。

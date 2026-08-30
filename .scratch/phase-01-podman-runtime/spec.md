@@ -2,7 +2,7 @@
 
 Status: ready-for-human
 
-Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理、Testcontainers 适配、Anolis 装配脚本、运行手册和机器可读基线从 Docker/Compose 迁移为单一 rootful Podman 权威；历史 ADR、历史回执和既有终态证据只追加替代说明，不改写既有事实。
+Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理、Testcontainers 适配、Anolis 装配脚本、运行手册和机器可读基线从 Docker/Compose 迁移为单一 rootful Podman 权威；AR-11进一步把唯一机器可读权威固定为`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`的`.authority`对象。历史 ADR、历史回执、`.observations`和既有终态证据只记录决策、观察或历史事实，不提供第二份运行期望，也不改写既有事实。
 
 ## Objective
 
@@ -15,6 +15,9 @@ Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理
 - 不把 `docker.io` OCI registry、Testcontainers 的 `DOCKER_HOST` 兼容变量或历史根文件系统归档名称误写为 Docker Engine 依赖。
 - 不覆盖 `.runtime/evidence/` 中既有终态证据，不回写历史回执。
 - 不改变既有固定镜像 digest、数据库持久化语义或业务契约。
+- 不允许Docker CLI/daemon/socket alias/systemd unit/process/TCP API、Podman TCP API、第二Podman connection或其他container endpoint；Testcontainers只允许精确`DOCKER_HOST=unix:///run/podman/podman.sock`访问同一Podman authority。
+- 所有正式验证容器固定`restart=no`且创建后inspect；不得生成systemd unit、Quadlet或auto-update等持久化路径。
+- Partial startup和bootstrap failure只按当前run逐项反向收尾；每次变更前重新inspect，五个必需标签任一缺失或不一致即保留资源并失败关闭。
 
 ## Completion Criteria
 
@@ -23,10 +26,18 @@ Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理
 3. 正式预检记录 Podman 与镜像身份并拒绝漂移、缺失及仓库遗留资源；teardown 只逐项删除重新核验所有权的当前运行资源。
 4. Testcontainers 只经 `/run/podman/podman.sock` 兼容适配访问同一 Podman 权威。
 5. 活跃脚本、设计、运行手册、故障矩阵和测试不再依赖 Docker/Compose；历史事实保留并有明确说明。
-6. Podman 基线验证、验证工具专项测试、类型检查、仓库静态检查和真实 PostgreSQL 集成验证通过；不据此声称 readiness、正式 ABG 或生产就绪。
+6. 初始Podman迁移期的基线与真实PostgreSQL集成验证作为历史结果保留；AR-11只执行验证工具专项、fake CLI/DI测试、类型检查和仓库静态检查，不重跑真实依赖。两类结果都不得据此声称当前readiness、正式ABG或生产就绪。
+7. `runtime-baseline.lock.json`固定`schemaVersion: 3`、`authorityId: phase-01.podman-runtime-authority.v1`；Shell通过`jq`、TypeScript通过严格schema loader读取同一`.authority`，byte SHA-256与authority semantic digest进入frozen inputs并在cleanup后复核。
+8. `.observations`、Podman迁移receipt和历史Docker数据只保留provenance/恢复事实，不参与正式期望值解析；source manifest以不同角色登记authority、loader/schema、运行脚本及receipt，不混淆其语义。
+9. PostgreSQL、Keycloak及Testcontainers PostgreSQL均显式`restart=no`并inspect；preflight拒绝任何自动重启或生成持久化单元，teardown记录restart-policy findings。
+10. `up`各失败点及中断均按Keycloak容器、PostgreSQL容器、Keycloak卷、PostgreSQL卷反向清理；runtime up后的readiness、migration、seed、schema verification失败由bootstrap调用相同`down`路径，并同时保留原始错误和cleanup结果。
+11. 删除前重新inspect资源；只有名称属于当前namespace且`hdi.repository`、`hdi.phase`、`hdi.run-id`、`hdi.run-sequence`、`hdi.managed-by`五个必需标签全部存在并匹配当前run时才允许变更。附加的无关元数据标签不影响所有权；必需标签缺失/不一致、inspect失败或名称不规范时必须保留并失败关闭。
+12. AR-11只允许fake CLI、DI/mock adapter和合成文件系统验证。AR-12才在另行授权后冻结当时的当前HEAD，并在真实Anolis/rootful Podman环境重新建立baseline与readiness；Podman工作包在此之前保持`ready-for-human`，不得自动标为accepted。
+13. `.scratch/phase-01-podman-runtime/human-review.md`必须记录AR-11实现提交、authority路径/schema/ID及byte/semantic digest、Podman metadata、`restart=no`、Docker socket/daemon/TCP排他、精确兼容`DOCKER_HOST`、partial-startup/bootstrap cleanup、五标签规则、禁止prune/reset、43文件source manifest、定向测试/mutation总数，以及未启动真实容器、未执行正式ABG、AR-12必须真实环境重验的边界。
 
 ## Comments
 
 - 2026-08-30：用户明确要求将 Docker 改为 Podman，并调整整个现行设计。AR-07 的 Docker 路径停止，`runSequence 9` 不在旧设计上启动。
 - 2026-08-30：实现与本地验证完成。直接Podman运行模块、host network回环端口、五标签所有权、预检/teardown、Testcontainers适配、基线回执、ADR和活跃设计已一致；未启动新的readiness、正式ABG、Chrome或独立复核。
 - 2026-08-30（AR-08 状态复核）：Podman 迁移已进入代码分支，但尚未形成正式 ABG evidence；本工作包继续保持 `ready-for-human`。AR-11 将完成 authority、restart、Docker socket 和 partial-startup hardening，并在完成后接受人工复核；只有 AR-12 完成最新基线重新验证后，才可解除其对 AR-07 的阻断。
+- 2026-08-30（AR-11协议影响）：唯一机器可读运行权威收敛为`runtime-baseline.lock.json`的`.authority`（schema v3、稳定authority ID），Shell/TypeScript共同读取该文件；`.observations`和迁移receipt继续只作历史观察/provenance。正式生命周期新增authority字节/语义摘要冻结及cleanup后复核、Docker socket alias/TCP/第二endpoint排他、精确Podman兼容`DOCKER_HOST`、`restart=no`、partial-startup/bootstrap反向收尾和删除前五个必需标签复核。该变化不改写前述真实迁移验证事实，也不构成新的真实环境readiness或正式ABG；AR-12仍负责当前HEAD的真实Anolis/Podman重基线。
