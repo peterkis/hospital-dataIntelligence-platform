@@ -45,6 +45,7 @@ import {
   formalRuntimePorts,
   type FormalRunIdentity,
 } from '../runtime/formal-runtime-contract.js';
+import { createFormalRuntimeAuthoritySnapshot } from '../runtime/podman-runtime-authority.js';
 import {
   buildFormalTerminalConclusion,
   type FormalTerminalConclusion,
@@ -120,7 +121,8 @@ export interface ValidEvidenceFixture {
 export async function buildValidEvidenceFixture(
   input: BuildValidEvidenceFixtureInput,
 ): Promise<ValidEvidenceFixture> {
-  const runtimeAuthority = formalRuntimeAuthority().authority;
+  const loadedRuntimeAuthority = formalRuntimeAuthority();
+  const runtimeAuthority = loadedRuntimeAuthority.authority;
   const rootDirectory = resolve(input.rootDirectory);
   const rootStat = await lstat(rootDirectory);
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
@@ -150,7 +152,7 @@ export async function buildValidEvidenceFixture(
   const frozenInputs = fixtureFrozenInputs(
     producerSourceManifestSha256,
     producerSourceManifest.producerGitCommitSha,
-    runtimeAuthority,
+    loadedRuntimeAuthority,
   );
   const sharedEntries = [];
   for (const producerId of ABG_PRODUCER_IDS.filter((candidate) => candidate !== 'formal-run')) {
@@ -273,6 +275,13 @@ export async function buildValidEvidenceFixture(
     checks: [],
     secrets: [],
   });
+  await writeFixtureJson(
+    join(evidenceDirectory, 'runtime/runtime-authority-snapshot.json'),
+    createFormalRuntimeAuthoritySnapshot({
+      runIdentity: { ...runIdentity, gitCommitSha: runIdentity.gitCommitSha! },
+      runtimeAuthority: loadedRuntimeAuthority,
+    }),
+  );
   await writeFixtureJson(join(evidenceDirectory, 'runtime/resources-started.json'), startedResources);
   const producerProtocolEvidence = [
     ...await Promise.all(sharedEntries.map((entry) =>
@@ -669,7 +678,7 @@ async function fixtureFileIdentity(
 function fixtureFrozenInputs(
   producerSourceManifestSha256: string,
   producerGitCommitSha: string,
-  runtimeAuthority: ReturnType<typeof formalRuntimeAuthority>['authority'],
+  runtimeAuthority: ReturnType<typeof formalRuntimeAuthority>,
 ): Readonly<Record<string, string>> {
   return {
     gitCommitSha: producerGitCommitSha,
@@ -678,19 +687,19 @@ function fixtureFrozenInputs(
     openapiSha256: VALIDATOR_FIXTURE_DIGEST,
     migrationManifestSha256: VALIDATOR_FIXTURE_DIGEST,
     fixtureIdentity: VALIDATOR_FIXTURE_DIGEST,
-    runtimeAuthoritySha256: VALIDATOR_FIXTURE_DIGEST,
-    runtimeAuthoritySemanticDigest: VALIDATOR_FIXTURE_DIGEST,
+    runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
     nodeVersion: 'v24.18.0',
-    podmanVersion: runtimeAuthority.podman.version,
-    podmanSocketPath: runtimeAuthority.podman.socketPath,
-    podmanStorageDriver: runtimeAuthority.podman.storageDriver,
-    podmanGraphRoot: runtimeAuthority.podman.graphRoot,
-    podmanOciRuntime: runtimeAuthority.podman.ociRuntime,
-    podmanNetworkBackend: runtimeAuthority.podman.networkBackend,
-    podmanLogDriver: runtimeAuthority.podman.logDriver,
-    podmanRestartPolicy: runtimeAuthority.podman.restartPolicy,
-    postgresImage: runtimeAuthority.images.postgresql.runtimeReference,
-    keycloakImage: runtimeAuthority.images.keycloak.runtimeReference,
+    podmanVersion: runtimeAuthority.authority.podman.version,
+    podmanSocketPath: runtimeAuthority.authority.podman.socketPath,
+    podmanStorageDriver: runtimeAuthority.authority.podman.storageDriver,
+    podmanGraphRoot: runtimeAuthority.authority.podman.graphRoot,
+    podmanOciRuntime: runtimeAuthority.authority.podman.ociRuntime,
+    podmanNetworkBackend: runtimeAuthority.authority.podman.networkBackend,
+    podmanLogDriver: runtimeAuthority.authority.podman.logDriver,
+    podmanRestartPolicy: runtimeAuthority.authority.podman.restartPolicy,
+    postgresImage: runtimeAuthority.authority.images.postgresql.runtimeReference,
+    keycloakImage: runtimeAuthority.authority.images.keycloak.runtimeReference,
     browserVersion: '1.61.0',
     producerSourceManifestSha256,
   } satisfies Record<(typeof ABG_FROZEN_INPUT_KINDS)[number] | 'workingTreeState', string>;

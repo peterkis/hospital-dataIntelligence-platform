@@ -4,6 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
+import type { LoadedPodmanRuntimeAuthority } from './runtime/podman-runtime-authority-schema.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -15,6 +16,7 @@ const execFileAsync = promisify(execFile);
 export async function readFrozenInputs(
   repositoryRoot: string,
   producerSourceManifestSha256: string,
+  frozenRuntimeAuthority?: LoadedPodmanRuntimeAuthority,
 ): Promise<Readonly<Record<string, string>>> {
   if (!/^[0-9a-f]{64}$/u.test(producerSourceManifestSha256)) {
     throw new Error('PRODUCER_SOURCE_MANIFEST_SHA256_INVALID');
@@ -41,7 +43,7 @@ export async function readFrozenInputs(
       sha256: await fileSha256(join(repositoryRoot, 'db/migrations', name)),
     })),
   );
-  const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot);
+  const runtimeAuthority = frozenRuntimeAuthority ?? loadPodmanRuntimeAuthority(repositoryRoot);
   const runtimeModule = await readFile(
     join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/podman-phase-01-runtime.sh'),
     'utf8',

@@ -13,7 +13,8 @@ import {
 } from './formal-runtime-contract.js';
 import {
   createDefaultFormalPreflightDependencies,
-  runFormalPreflight,
+  runFormalPreflightWithFrozenAuthority,
+  type FrozenFormalPreflightResult,
   type FormalPreflightReport,
 } from './formal-preflight.js';
 import {
@@ -24,7 +25,9 @@ import {
   type FormalTeardownDependencies,
   type RuntimeResourceSnapshot,
 } from './formal-teardown.js';
-import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
+import {
+  createFormalRuntimeAuthoritySnapshot,
+} from './podman-runtime-authority.js';
 import type {
   LoadedPodmanRuntimeAuthority,
   PodmanRuntimeAuthority,
@@ -103,11 +106,8 @@ export interface FormalRuntimeLifecycleDependencies {
     readonly outputDirectory: string;
     readonly run: FormalRunSeed;
     readonly producerSourceManifestSha256: string;
-  }) => Promise<FormalPreflightReport>;
+  }) => Promise<FrozenFormalPreflightResult>;
   readonly sha256: (path: string) => Promise<string>;
-  readonly loadRuntimeAuthority: (
-    repositoryRoot: string,
-  ) => LoadedPodmanRuntimeAuthority | Promise<LoadedPodmanRuntimeAuthority>;
   readonly teardownDependencies: FormalTeardownDependencies;
   readonly now: () => string;
   readonly createController: () => FormalRuntimeController;
@@ -223,9 +223,8 @@ export function createDefaultFormalRuntimeLifecycleDependencies(): FormalRuntime
   const preflightDependencies = createDefaultFormalPreflightDependencies();
   return {
     fileSystem: new NodeFormalRuntimeFileSystem(),
-    preflight: (input) => runFormalPreflight(input, preflightDependencies),
+    preflight: (input) => runFormalPreflightWithFrozenAuthority(input, preflightDependencies),
     sha256: (path) => preflightDependencies.fileSystem.sha256(path),
-    loadRuntimeAuthority: loadPodmanRuntimeAuthority,
     teardownDependencies: createDefaultFormalTeardownDependencies(),
     now: localNowInAsiaShanghai,
     createController: () => new FormalRuntimeController(),
@@ -253,12 +252,13 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
   let runtimeAuthorityStableAfterCleanup = false;
   let preflight: FormalPreflightReport;
   try {
-    preflight = await dependencies.preflight({
+    const frozenPreflight = await dependencies.preflight({
       repositoryRoot: input.repositoryRoot,
       outputDirectory: input.outputDirectory,
       run: input.run,
       producerSourceManifestSha256: input.producerSourceManifestSha256,
     });
+    preflight = frozenPreflight.report;
     const outputExists = preflight.checks.some((check) =>
       check.errorCode === 'FORMAL_PREFLIGHT_OUTPUT_ALREADY_EXISTS',
     );
@@ -284,10 +284,8 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       };
     }
 
-    let runtimeAuthority: LoadedPodmanRuntimeAuthority;
-    try {
-      runtimeAuthority = await dependencies.loadRuntimeAuthority(input.repositoryRoot);
-    } catch (error) {
+    const runtimeAuthority = frozenPreflight.runtimeAuthority;
+    if (runtimeAuthority === null) {
       await dependencies.fileSystem.reserveOutputDirectory(input.outputDirectory);
       outputDirectoryCreated = true;
       const authorityFailureCode = 'FORMAL_RUNTIME_AUTHORITY_UNAVAILABLE';
@@ -309,7 +307,7 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
           runIdentity: preflight.runIdentity,
           status: 'FAILED',
           failureCode: authorityFailureCode,
-          observedErrorCode: stableFailureCode(error),
+          observedErrorCode: preflightRuntimeAuthorityError(preflight),
           recordedAt: dependencies.now(),
         },
         'FORMAL_RUNTIME_AUTHORITY_FAILURE_EVIDENCE_WRITE_FAILED',
@@ -393,6 +391,30 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       'FORMAL_PREFLIGHT_EVIDENCE_WRITE_FAILED',
       failureCodes,
     );
+    let runtimeAuthoritySnapshotPersisted = false;
+    if (preflight.runIdentity.gitCommitSha === null) {
+      failureCodes.push('FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_IDENTITY_INVALID');
+    } else if (!failureCodes.includes('FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_IDENTITY_MISMATCH')) {
+      try {
+        const runtimeAuthoritySnapshot = createFormalRuntimeAuthoritySnapshot({
+          runIdentity: {
+            ...preflight.runIdentity,
+            gitCommitSha: preflight.runIdentity.gitCommitSha,
+          },
+          runtimeAuthority,
+        });
+        runtimeAuthoritySnapshotPersisted = await writeLifecycleJson(
+          dependencies.fileSystem,
+          input.outputDirectory,
+          'runtime/runtime-authority-snapshot.json',
+          runtimeAuthoritySnapshot,
+          'FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_WRITE_FAILED',
+          failureCodes,
+        );
+      } catch {
+        failureCodes.push('FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_INVALID');
+      }
+    }
     const context: FormalRuntimeContext = {
       identity: preflight.runIdentity,
       runtimeAuthority,
@@ -409,6 +431,8 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       failureCodes.push('FORMAL_EXECUTION_SKIPPED_AUTHORITY_IDENTITY_MISMATCH');
     } else if (!preflightPersisted) {
       failureCodes.push('FORMAL_EXECUTION_SKIPPED_EVIDENCE_UNAVAILABLE');
+    } else if (!runtimeAuthoritySnapshotPersisted) {
+      failureCodes.push('FORMAL_EXECUTION_SKIPPED_AUTHORITY_SNAPSHOT_UNAVAILABLE');
     } else {
       try {
         controller.throwIfAborted();
@@ -461,24 +485,26 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       failureCodes,
     );
     let producerEvidencePersisted = false;
-    try {
-      await callbacks.persistEvidenceBeforeCleanup(context, {
-        status: failureCodes.length === 0 ? 'PASSED' : 'FAILED',
-        failureCodes: uniqueFailureCodes(failureCodes),
-        preflight,
-        execution,
-        startedResources,
-      });
-      producerEvidencePersisted = true;
-    } catch (error) {
-      failureCodes.push('FORMAL_PRE_CLEANUP_EVIDENCE_WRITE_FAILED');
-      await writeBestEffortFailure(
-        dependencies.fileSystem,
-        input.outputDirectory,
-        'runtime/pre-cleanup-evidence-failure.json',
-        error,
-        dependencies.now(),
-      );
+    if (runtimeAuthoritySnapshotPersisted) {
+      try {
+        await callbacks.persistEvidenceBeforeCleanup(context, {
+          status: failureCodes.length === 0 ? 'PASSED' : 'FAILED',
+          failureCodes: uniqueFailureCodes(failureCodes),
+          preflight,
+          execution,
+          startedResources,
+        });
+        producerEvidencePersisted = true;
+      } catch (error) {
+        failureCodes.push('FORMAL_PRE_CLEANUP_EVIDENCE_WRITE_FAILED');
+        await writeBestEffortFailure(
+          dependencies.fileSystem,
+          input.outputDirectory,
+          'runtime/pre-cleanup-evidence-failure.json',
+          error,
+          dependencies.now(),
+        );
+      }
     }
     await writeLifecycleJson(
       dependencies.fileSystem,
@@ -554,16 +580,18 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
       runtimeAuthorityStableAfterCleanup,
     };
-    try {
-      finalization = await callbacks.finalizeAfterCleanup(context, outcomeBeforeManifest);
-      failureCodes.push(...finalization.failureCodes);
-      if (finalization.status !== 'PASSED' && finalization.failureCodes.length === 0) {
-        failureCodes.push('FORMAL_TERMINAL_FINALIZATION_FAILED');
+    if (runtimeAuthoritySnapshotPersisted) {
+      try {
+        finalization = await callbacks.finalizeAfterCleanup(context, outcomeBeforeManifest);
+        failureCodes.push(...finalization.failureCodes);
+        if (finalization.status !== 'PASSED' && finalization.failureCodes.length === 0) {
+          failureCodes.push('FORMAL_TERMINAL_FINALIZATION_FAILED');
+        }
+      } catch (error) {
+        failureCodes.push('FORMAL_FINAL_EVIDENCE_WRITE_FAILED');
+        await writeBestEffortFailure(dependencies.fileSystem, input.outputDirectory,
+          'runtime/final-evidence-failure.json', error, dependencies.now());
       }
-    } catch (error) {
-      failureCodes.push('FORMAL_FINAL_EVIDENCE_WRITE_FAILED');
-      await writeBestEffortFailure(dependencies.fileSystem, input.outputDirectory,
-        'runtime/final-evidence-failure.json', error, dependencies.now());
     }
     const terminalConclusionStatus = finalization?.terminalConclusionStatus ?? 'FAILED';
     const sealEligibilityStatus = finalization?.sealEligibilityStatus ?? 'FAILED';
@@ -641,6 +669,15 @@ async function writeLifecycleJson(
     failureCodes.push(failureCode);
     return false;
   }
+}
+
+function preflightRuntimeAuthorityError(preflight: FormalPreflightReport): string {
+  const observed = preflight.checks.find((check) => check.id === 'runtime-authority')?.observed;
+  if (observed !== null && typeof observed === 'object' && !Array.isArray(observed)) {
+    const errorCode = (observed as Readonly<Record<string, unknown>>)['errorCode'];
+    if (typeof errorCode === 'string' && /^[A-Z0-9_:-]+$/u.test(errorCode)) return errorCode;
+  }
+  return 'RUNTIME_AUTHORITY_UNAVAILABLE';
 }
 
 function uniqueFailureCodes(failureCodes: readonly string[]): readonly string[] {

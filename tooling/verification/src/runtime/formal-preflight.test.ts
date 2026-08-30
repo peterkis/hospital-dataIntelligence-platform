@@ -14,6 +14,7 @@ import {
   parseRegisteredWslBackends,
   parsePodmanContainerRestartPolicy,
   runFormalPreflight,
+  runFormalPreflightWithFrozenAuthority,
   type FormalPreflightAuthorityIsolationObservation,
   type FormalPreflightDependencies,
 } from './formal-preflight.js';
@@ -56,6 +57,54 @@ describe('formal ABG preflight', () => {
         expect(JSON.stringify(report)).not.toContain(secret);
       }
     }
+  });
+
+  it('threads the exact preflight-loaded authority into frozen-input derivation', async () => {
+    const dependencies = passingDependencies();
+    const frozenAuthority = {
+      authority: TEST_AUTHORITY,
+      runtimeAuthoritySha256: RUNTIME_AUTHORITY_SHA256,
+      runtimeAuthoritySemanticDigest: RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
+    };
+    let observedAuthority: unknown;
+
+    const frozenPreflight = await runFormalPreflightWithFrozenAuthority({
+      repositoryRoot: 'D:/repository',
+      outputDirectory: 'D:/evidence/new-run',
+      run: RUN,
+      producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256,
+    }, {
+      ...dependencies,
+      loadRuntimeAuthority: () => frozenAuthority,
+      async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256, runtimeAuthority) {
+        observedAuthority = runtimeAuthority;
+        return {
+          gitCommitSha: GIT_SHA,
+          producerSourceManifestSha256,
+          runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+          runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+        };
+      },
+    });
+
+    expect(frozenPreflight.report.status).toBe('PASSED');
+    expect(frozenPreflight.runtimeAuthority).toBe(frozenAuthority);
+    expect(observedAuthority).toBe(frozenAuthority);
+  });
+
+  it('fails closed when frozen inputs do not retain the preflight authority digest pair', async () => {
+    const dependencies = passingDependencies();
+    await expectFailure({
+      ...dependencies,
+      async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256) {
+        return {
+          gitCommitSha: GIT_SHA,
+          producerSourceManifestSha256,
+          runtimeAuthoritySha256: '0'.repeat(64),
+          runtimeAuthoritySemanticDigest: RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
+        };
+      },
+    }, 'FORMAL_PREFLIGHT_FROZEN_RUNTIME_AUTHORITY_MISMATCH');
   });
 
   it('records a structured failure when the runtime authority cannot be loaded', async () => {
@@ -553,8 +602,13 @@ function passingDependencies(): FormalPreflightDependencies {
     },
     environment,
     nodeVersion: 'v24.18.0',
-    async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256) {
-      return { gitCommitSha: GIT_SHA, producerSourceManifestSha256 };
+    async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256, runtimeAuthority) {
+      return {
+        gitCommitSha: GIT_SHA,
+        producerSourceManifestSha256,
+        runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+        runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+      };
     },
     async loadRuntimeAuthority() {
       return {

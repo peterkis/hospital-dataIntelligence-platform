@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   canonicalRuntimeAuthorityJson,
+  createFormalRuntimeAuthoritySnapshot,
   loadPodmanRuntimeAuthority,
+  parseFormalRuntimeAuthoritySnapshot,
   parsePodmanRuntimeAuthority,
   RUNTIME_AUTHORITY_RELATIVE_PATH,
 } from './podman-runtime-authority.js';
@@ -162,6 +164,51 @@ describe('Podman runtime authority', () => {
     expect(parsePodmanRuntimeAuthority(VALID_AUTHORITY)).toEqual(VALID_AUTHORITY);
     expect(canonicalRuntimeAuthorityJson(VALID_AUTHORITY.authority)).toContain('"restartPolicy":"no"');
     expect(loadPodmanRuntimeAuthority().authority.podman.version).toBe('4.9.4-rhel');
+  });
+
+  it('round-trips a strictly validated authority snapshot bound to one formal run', () => {
+    const loaded = loadPodmanRuntimeAuthority();
+    const runIdentity = {
+      runId: '12345678-1234-1234-1234-123456789abc',
+      runSequence: 9,
+      runtimeNamespace: 'hdi_phase01_abg_9_123456781234',
+      gitCommitSha: 'a'.repeat(40),
+    };
+
+    const snapshot = createFormalRuntimeAuthoritySnapshot({ runIdentity, runtimeAuthority: loaded });
+
+    expect(parseFormalRuntimeAuthoritySnapshot(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
+    expect(snapshot).toMatchObject({
+      schemaVersion: 'phase-01.formal-runtime-authority-snapshot.v1',
+      authoritySchemaVersion: 3,
+      authorityId: 'phase-01.podman-runtime-authority.v1',
+      runIdentity,
+      runtimeAuthoritySha256: loaded.runtimeAuthoritySha256,
+      runtimeAuthoritySemanticDigest: loaded.runtimeAuthoritySemanticDigest,
+      authority: loaded.authority,
+    });
+  });
+
+  it('rejects tampered or extended authority snapshots', () => {
+    const loaded = loadPodmanRuntimeAuthority();
+    const snapshot = createFormalRuntimeAuthoritySnapshot({
+      runIdentity: {
+        runId: '12345678-1234-1234-1234-123456789abc',
+        runSequence: 9,
+        runtimeNamespace: 'hdi_phase01_abg_9_123456781234',
+        gitCommitSha: 'a'.repeat(40),
+      },
+      runtimeAuthority: loaded,
+    });
+    const tampered = JSON.parse(JSON.stringify(snapshot)) as Record<string, unknown>;
+    objectAt(tampered, 'authority', 'network', 'ports')['governanceApi'] = 6_100;
+    expect(() => parseFormalRuntimeAuthoritySnapshot(tampered))
+      .toThrow('RUNTIME_AUTHORITY_SNAPSHOT_SEMANTIC_DIGEST_MISMATCH');
+
+    const extended = JSON.parse(JSON.stringify(snapshot)) as Record<string, unknown>;
+    extended['editableAuthorityPath'] = 'runtime-baseline.lock.json';
+    expect(() => parseFormalRuntimeAuthoritySnapshot(extended))
+      .toThrow('RUNTIME_AUTHORITY_SCHEMA_INVALID:editableAuthorityPath:UNKNOWN_FIELD');
   });
 
   it('rejects a missing authority id and unknown fields', () => {

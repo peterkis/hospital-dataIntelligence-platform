@@ -42,6 +42,7 @@ import {
   formalRuntimeAuthority,
   formalRuntimePorts,
 } from './runtime/formal-runtime-contract.js';
+import { parseFormalRuntimeAuthoritySnapshot } from './runtime/podman-runtime-authority.js';
 import {
   CURRENT_EVIDENCE_CONTRACT_IDENTITY,
   EVIDENCE_MANIFEST_SCHEMA_VERSION,
@@ -467,6 +468,7 @@ function validateRequiredLifecycleEnvelope(
 ): void {
   for (const [path, code] of [
     ['runtime/preflight.json', 'FORMAL_LIFECYCLE_PREFLIGHT_MISSING'],
+    ['runtime/runtime-authority-snapshot.json', 'FORMAL_LIFECYCLE_RUNTIME_AUTHORITY_SNAPSHOT_MISSING'],
     ['runtime/resources-started.json', 'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING'],
     ['runtime/producer-evidence-snapshot.json', 'FORMAL_LIFECYCLE_PRODUCER_EVIDENCE_SNAPSHOT_MISSING'],
     ['runtime/failure-summary.json', 'FORMAL_LIFECYCLE_FAILURE_SUMMARY_MISSING'],
@@ -2347,6 +2349,7 @@ async function validateFormalLifecycle(
   const requiredRuntimePorts = formalRuntimePorts(formalRuntimeAuthority().authority);
   const requiredFiles = [
     ['runtime/preflight.json', 'FORMAL_LIFECYCLE_PREFLIGHT_MISSING'],
+    ['runtime/runtime-authority-snapshot.json', 'FORMAL_LIFECYCLE_RUNTIME_AUTHORITY_SNAPSHOT_MISSING'],
     ['runtime/resources-started.json', 'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING'],
     ['runtime/producer-evidence-snapshot.json', 'FORMAL_LIFECYCLE_PRODUCER_EVIDENCE_SNAPSHOT_MISSING'],
     ['runtime/failure-summary.json', 'FORMAL_LIFECYCLE_FAILURE_SUMMARY_MISSING'],
@@ -2376,6 +2379,12 @@ async function validateFormalLifecycle(
 
   const preflight = await readLifecycleRecord(snapshot, 'runtime/preflight.json', checks,
     'FORMAL_LIFECYCLE_PREFLIGHT_MISSING');
+  const runtimeAuthoritySnapshot = await readLifecycleRecord(
+    snapshot,
+    'runtime/runtime-authority-snapshot.json',
+    checks,
+    'FORMAL_LIFECYCLE_RUNTIME_AUTHORITY_SNAPSHOT_MISSING',
+  );
   const startedResources = await readLifecycleRecord(snapshot, 'runtime/resources-started.json', checks,
     'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING');
   const producerSnapshot = await readLifecycleRecord(
@@ -2415,6 +2424,7 @@ async function validateFormalLifecycle(
   );
   for (const [path, record] of [
     ['runtime/preflight.json', preflight],
+    ['runtime/runtime-authority-snapshot.json', runtimeAuthoritySnapshot],
     ['runtime/resources-started.json', startedResources],
     ['runtime/producer-evidence-snapshot.json', producerSnapshot],
     ['runtime/failure-summary.json', failureSummary],
@@ -2440,6 +2450,30 @@ async function validateFormalLifecycle(
       'RUNTIME_AUTHORITY_SEMANTIC_DIGEST_MISMATCH',
       'runtime/preflight.json#/runtimeAuthoritySemanticDigest',
     );
+  }
+  if (runtimeAuthoritySnapshot !== null) {
+    try {
+      const parsedSnapshot = parseFormalRuntimeAuthoritySnapshot(runtimeAuthoritySnapshot);
+      checks.check(
+        parsedSnapshot.runtimeAuthoritySha256 === preflight?.['runtimeAuthoritySha256'] &&
+          parsedSnapshot.runtimeAuthoritySha256 === summary.raw['runtimeAuthoritySha256'],
+        'FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SHA_MISMATCH',
+        'runtime/runtime-authority-snapshot.json#/runtimeAuthoritySha256',
+      );
+      checks.check(
+        parsedSnapshot.runtimeAuthoritySemanticDigest ===
+            preflight?.['runtimeAuthoritySemanticDigest'] &&
+          parsedSnapshot.runtimeAuthoritySemanticDigest ===
+            summary.raw['runtimeAuthoritySemanticDigest'],
+        'FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SEMANTIC_DIGEST_MISMATCH',
+        'runtime/runtime-authority-snapshot.json#/runtimeAuthoritySemanticDigest',
+      );
+    } catch {
+      checks.fail(
+        'FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_INVALID',
+        'runtime/runtime-authority-snapshot.json',
+      );
+    }
   }
   if (startedResources !== null) {
     checks.check(startedResources['schemaVersion'] === 'phase-01.formal-runtime-resources.v1', 'FORMAL_RESOURCES_STARTED_SCHEMA_INVALID', 'runtime/resources-started.json');

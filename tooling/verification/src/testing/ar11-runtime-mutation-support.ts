@@ -245,8 +245,13 @@ function passingPreflightDependencies(
     },
     environment,
     nodeVersion: 'v24.18.0',
-    async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256) {
-      return { gitCommitSha: GIT_SHA, producerSourceManifestSha256 };
+    async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256, runtimeAuthority) {
+      return {
+        gitCommitSha: GIT_SHA,
+        producerSourceManifestSha256,
+        runtimeAuthoritySha256: runtimeAuthority.runtimeAuthoritySha256,
+        runtimeAuthoritySemanticDigest: runtimeAuthority.runtimeAuthoritySemanticDigest,
+      };
     },
     async loadRuntimeAuthority() { return loaded; },
     now: () => '2026-08-30T12:00:00',

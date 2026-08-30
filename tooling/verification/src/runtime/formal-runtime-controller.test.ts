@@ -26,18 +26,23 @@ import type {
   RuntimeResourceRecord,
   RuntimeResourceSnapshot,
 } from './formal-teardown.js';
-import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
+import {
+  loadPodmanRuntimeAuthority,
+  parseFormalRuntimeAuthoritySnapshot,
+} from './podman-runtime-authority.js';
 
 const LOCK_SHA = 'b'.repeat(64);
 const GIT_SHA = 'a'.repeat(40);
 const RUN = createFormalRunSeed(9, () => '12345678-1234-1234-1234-123456789abc');
 const PRODUCER_SOURCE_MANIFEST_SHA256 = 'd'.repeat(64);
-const RUNTIME_AUTHORITY_SHA256 = 'e'.repeat(64);
-const RUNTIME_AUTHORITY_SEMANTIC_DIGEST = 'f'.repeat(64);
 const IDENTITY: FormalRunIdentity = { ...RUN, gitCommitSha: GIT_SHA };
-const TEST_RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(
+const TEST_LOADED_RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(
   resolve(import.meta.dirname, '../../../..'),
-).authority;
+);
+const TEST_RUNTIME_AUTHORITY = TEST_LOADED_RUNTIME_AUTHORITY.authority;
+const RUNTIME_AUTHORITY_SHA256 = TEST_LOADED_RUNTIME_AUTHORITY.runtimeAuthoritySha256;
+const RUNTIME_AUTHORITY_SEMANTIC_DIGEST =
+  TEST_LOADED_RUNTIME_AUTHORITY.runtimeAuthoritySemanticDigest;
 const roots: string[] = [];
 
 afterEach(async () => {
@@ -121,6 +126,76 @@ describe('formal runtime lifecycle', () => {
       .toBe(failureCode);
     const summary = await readJson(join(harness.outputDirectory, 'runtime', 'failure-summary.json'));
     expect(summary['failureCodes']).toContain(failureCode);
+  });
+
+  it('persists the frozen authority snapshot before invoking any lifecycle callback', async () => {
+    const harness = await createHarness();
+    const calls: string[] = [];
+
+    const result = await run(harness, {
+      async executeBeforeCleanup(context) {
+        calls.push('execute');
+        expect(context.runtimeAuthority).toBe(harness.runtimeAuthority);
+        const snapshot = parseFormalRuntimeAuthoritySnapshot(await readJson(
+          join(context.outputDirectory, 'runtime', 'runtime-authority-snapshot.json'),
+        ));
+        expect(snapshot.runIdentity).toEqual(IDENTITY);
+        expect(snapshot.runtimeAuthoritySha256).toBe(context.runtimeAuthority.runtimeAuthoritySha256);
+        expect(snapshot.runtimeAuthoritySemanticDigest)
+          .toBe(context.runtimeAuthority.runtimeAuthoritySemanticDigest);
+        return { passed: true, value: {} };
+      },
+      async persistEvidenceBeforeCleanup() {
+        calls.push('persist');
+      },
+      async finalizeAfterCleanup(_context, outcome) {
+        calls.push('finalize');
+        return terminalResult(outcome.status, outcome.failureCodes);
+      },
+      async sealEvidence() {
+        calls.push('seal');
+      },
+    });
+
+    expect(result.status).toBe('PASSED');
+    expect(calls).toEqual(['execute', 'persist', 'finalize', 'seal']);
+    expect(harness.fileSystem.writes.indexOf('runtime/preflight.json'))
+      .toBeLessThan(harness.fileSystem.writes.indexOf('runtime/runtime-authority-snapshot.json'));
+  });
+
+  it('does not invoke lifecycle callbacks when the frozen authority snapshot cannot be persisted', async () => {
+    const harness = await createHarness({
+      failWrites: ['runtime/runtime-authority-snapshot.json'],
+    });
+    const calls: string[] = [];
+    const callbacks = passingCallbacks();
+
+    const result = await run(harness, {
+      ...callbacks,
+      async executeBeforeCleanup() {
+        calls.push('execute');
+        return { passed: true, value: {} };
+      },
+      async persistEvidenceBeforeCleanup() {
+        calls.push('persist');
+      },
+      async finalizeAfterCleanup() {
+        calls.push('finalize');
+        return terminalResult('PASSED', []);
+      },
+      async sealEvidence() {
+        calls.push('seal');
+      },
+    });
+
+    expect(result.status).toBe('FAILED');
+    expect(calls).toEqual([]);
+    expect(harness.adapter.calls).toContain('stop-process:501');
+    const summary = await readJson(join(harness.outputDirectory, 'runtime', 'failure-summary.json'));
+    expect(summary['failureCodes']).toEqual(expect.arrayContaining([
+      'FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_WRITE_FAILED',
+      'FORMAL_EXECUTION_SKIPPED_AUTHORITY_SNAPSHOT_UNAVAILABLE',
+    ]));
   });
 
   it.each(['SIGINT', 'SIGTERM'] as const)('%s enters the same controlled cleanup path', async (signal) => {
@@ -439,10 +514,13 @@ async function createHarness(options: {
   const dependencies: FormalRuntimeLifecycleDependencies = {
     fileSystem,
     async preflight() {
-      return preflightReport(
-        options.outputAlreadyExists ?? false,
-        options.authorityUnavailable ?? false,
-      );
+      return {
+        report: preflightReport(
+          options.outputAlreadyExists ?? false,
+          options.authorityUnavailable ?? false,
+        ),
+        runtimeAuthority: options.authorityUnavailable ? null : runtimeAuthority,
+      };
     },
     async sha256() {
       return options.sha256?.() ?? LOCK_SHA;
@@ -460,14 +538,10 @@ async function createHarness(options: {
         : runtimeAuthority,
       now: () => '2026-08-27T12:00:00',
     },
-    loadRuntimeAuthority: () => {
-      if (options.authorityUnavailable) throw new Error('RUNTIME_AUTHORITY_MISSING');
-      return runtimeAuthority;
-    },
     now: () => '2026-08-27T12:00:00',
     createController: () => options.controller ?? new FormalRuntimeController(),
   };
-  return { root, outputDirectory, fileSystem, adapter, dependencies };
+  return { root, outputDirectory, fileSystem, adapter, runtimeAuthority, dependencies };
 }
 
 async function run<T>(
@@ -621,11 +695,7 @@ function processResource(): RuntimeResourceRecord {
 }
 
 function loadRuntimeAuthorityFixture() {
-  return {
-    ...loadPodmanRuntimeAuthority(resolve(import.meta.dirname, '../../../..')),
-    runtimeAuthoritySha256: RUNTIME_AUTHORITY_SHA256,
-    runtimeAuthoritySemanticDigest: RUNTIME_AUTHORITY_SEMANTIC_DIGEST,
-  };
+  return TEST_LOADED_RUNTIME_AUTHORITY;
 }
 
 function preflightReport(

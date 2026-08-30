@@ -23,7 +23,10 @@ import {
   inspectWslHost,
   type WslHostEvidence,
 } from './formal-wsl-host.ts';
-import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.ts';
+import {
+  loadPodmanRuntimeAuthority,
+  parseFormalRuntimeAuthoritySnapshot,
+} from './podman-runtime-authority.ts';
 import type {
   LoadedPodmanRuntimeAuthority,
   PodmanRuntimeAuthority,
@@ -1563,14 +1566,22 @@ function isAlreadyExists(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error && error.code === 'EEXIST';
 }
 
-async function runControlledTeardownCli(): Promise<void> {
-  const evidenceDirectoryArgument = readCliArgument('--evidence-dir');
-  if (evidenceDirectoryArgument === undefined) {
-    throw new Error('FORMAL_TEARDOWN_EVIDENCE_DIRECTORY_REQUIRED');
-  }
-  const evidenceDirectory = resolve(evidenceDirectoryArgument);
+export async function runControlledTeardownCli(
+  input: {
+    readonly evidenceDirectory: string;
+    readonly repositoryRoot: string;
+  },
+  dependencies: FormalTeardownDependencies = createDefaultFormalTeardownDependencies(),
+) {
+  const evidenceDirectory = resolve(input.evidenceDirectory);
   const preflightPath = join(evidenceDirectory, 'runtime', 'preflight.json');
-  const parsed = JSON.parse(await readFile(preflightPath, 'utf8')) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(preflightPath, 'utf8')) as unknown;
+  } catch (error) {
+    if (isMissing(error)) throw new Error('FORMAL_TEARDOWN_PREFLIGHT_MISSING');
+    throw new Error('FORMAL_TEARDOWN_PREFLIGHT_INVALID');
+  }
   if (!isRecord(parsed) || parsed['schemaVersion'] !== 'phase-01.formal-preflight.v1') {
     throw new Error('FORMAL_TEARDOWN_PREFLIGHT_INVALID');
   }
@@ -1592,14 +1603,71 @@ async function runControlledTeardownCli(): Promise<void> {
     throw new Error('FORMAL_TEARDOWN_RUNTIME_NAMESPACE_IDENTITY_MISMATCH');
   }
   const identity: FormalRunIdentity = { ...derived, gitCommitSha };
-  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
-  const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot);
+  const runtimeAuthoritySha256 = parsed['runtimeAuthoritySha256'];
+  const runtimeAuthoritySemanticDigest = parsed['runtimeAuthoritySemanticDigest'];
+  const authorityCheck = Array.isArray(parsed['checks'])
+    ? parsed['checks'].find((candidate) =>
+      isRecord(candidate) && candidate['id'] === 'runtime-authority',
+    )
+    : undefined;
+  const authorityCheckObserved = isRecord(authorityCheck)
+    ? authorityCheck['observed']
+    : undefined;
+  if (
+    parsed['status'] !== 'PASSED' ||
+    typeof runtimeAuthoritySha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(runtimeAuthoritySha256) ||
+    typeof runtimeAuthoritySemanticDigest !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(runtimeAuthoritySemanticDigest) ||
+    !isRecord(authorityCheck) ||
+    authorityCheck['status'] !== 'PASSED' ||
+    !isRecord(authorityCheckObserved) ||
+    authorityCheckObserved['runtimeAuthoritySha256'] !== runtimeAuthoritySha256 ||
+    authorityCheckObserved['runtimeAuthoritySemanticDigest'] !== runtimeAuthoritySemanticDigest
+  ) throw new Error('FORMAL_TEARDOWN_PREFLIGHT_RUNTIME_AUTHORITY_INVALID');
+
+  const authoritySnapshotPath = join(
+    evidenceDirectory,
+    'runtime',
+    'runtime-authority-snapshot.json',
+  );
+  let rawAuthoritySnapshot: unknown;
+  try {
+    rawAuthoritySnapshot = JSON.parse(await readFile(authoritySnapshotPath, 'utf8')) as unknown;
+  } catch (error) {
+    if (isMissing(error)) throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_MISSING');
+    if (error instanceof SyntaxError) {
+      throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_JSON_INVALID');
+    }
+    throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_READ_FAILED');
+  }
+  let authoritySnapshot;
+  try {
+    authoritySnapshot = parseFormalRuntimeAuthoritySnapshot(rawAuthoritySnapshot);
+  } catch {
+    throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_INVALID');
+  }
+  if (
+    authoritySnapshot.runIdentity.runId !== identity.runId ||
+    authoritySnapshot.runIdentity.runSequence !== identity.runSequence ||
+    authoritySnapshot.runIdentity.runtimeNamespace !== identity.runtimeNamespace ||
+    authoritySnapshot.runIdentity.gitCommitSha !== identity.gitCommitSha
+  ) throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_RUN_IDENTITY_MISMATCH');
+  if (
+    authoritySnapshot.runtimeAuthoritySha256 !== runtimeAuthoritySha256 ||
+    authoritySnapshot.runtimeAuthoritySemanticDigest !== runtimeAuthoritySemanticDigest
+  ) throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_PREFLIGHT_MISMATCH');
+  const runtimeAuthority: LoadedPodmanRuntimeAuthority = {
+    authority: authoritySnapshot.authority,
+    runtimeAuthoritySha256: authoritySnapshot.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest: authoritySnapshot.runtimeAuthoritySemanticDigest,
+  };
   const result = await performFormalTeardown({
     identity,
-    repositoryRoot,
+    repositoryRoot: resolve(input.repositoryRoot),
     runtimeEventDirectory: join(evidenceDirectory, 'runtime', 'events'),
     runtimeAuthority,
-  });
+  }, dependencies);
   const runtimeDirectory = join(evidenceDirectory, 'runtime');
   const followupName = 'cleanup-followup-' +
     localNowInAsiaShanghai().replaceAll(/[^0-9A-Za-z]/gu, '-') + '-' +
@@ -1619,12 +1687,11 @@ async function runControlledTeardownCli(): Promise<void> {
   } catch (error) {
     evidenceWriteFailure = stableError(error);
   }
-  process.stdout.write(JSON.stringify({
+  return {
     ...result,
     cleanupEvidencePath: evidenceWriteFailure === null ? followupPath : null,
     cleanupEvidenceWriteFailure: evidenceWriteFailure,
-  }, null, 2) + '\n');
-  if (result.cleanup.status !== 'PASSED' || evidenceWriteFailure !== null) process.exitCode = 1;
+  };
 }
 
 async function writeIfAbsent(path: string, value: unknown): Promise<void> {
@@ -1649,6 +1716,21 @@ function readCliArgument(name: string): string | undefined {
   return index === -1 ? undefined : process.argv[index + 1];
 }
 
+async function runControlledTeardownCliEntrypoint(): Promise<void> {
+  const evidenceDirectory = readCliArgument('--evidence-dir');
+  if (evidenceDirectory === undefined) {
+    throw new Error('FORMAL_TEARDOWN_EVIDENCE_DIRECTORY_REQUIRED');
+  }
+  const result = await runControlledTeardownCli({
+    evidenceDirectory,
+    repositoryRoot: resolve(import.meta.dirname, '../../../..'),
+  });
+  process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  if (result.cleanup.status !== 'PASSED' || result.cleanupEvidenceWriteFailure !== null) {
+    process.exitCode = 1;
+  }
+}
+
 if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  await runControlledTeardownCli();
+  await runControlledTeardownCliEntrypoint();
 }

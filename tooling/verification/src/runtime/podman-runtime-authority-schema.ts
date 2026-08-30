@@ -1,5 +1,7 @@
 export const PODMAN_RUNTIME_AUTHORITY_SCHEMA_VERSION = 3 as const;
 export const PODMAN_RUNTIME_AUTHORITY_ID = 'phase-01.podman-runtime-authority.v1' as const;
+export const FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SCHEMA_VERSION =
+  'phase-01.formal-runtime-authority-snapshot.v1' as const;
 
 export interface PodmanRuntimeAuthorityHost {
   readonly distribution: string;
@@ -153,4 +155,19 @@ export interface LoadedPodmanRuntimeAuthority {
   readonly authority: PodmanRuntimeAuthority;
   readonly runtimeAuthoritySha256: string;
   readonly runtimeAuthoritySemanticDigest: string;
+}
+
+export interface FormalRuntimeAuthoritySnapshot {
+  readonly schemaVersion: typeof FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SCHEMA_VERSION;
+  readonly authoritySchemaVersion: typeof PODMAN_RUNTIME_AUTHORITY_SCHEMA_VERSION;
+  readonly authorityId: typeof PODMAN_RUNTIME_AUTHORITY_ID;
+  readonly runIdentity: Readonly<{
+    runId: string;
+    runSequence: number;
+    runtimeNamespace: string;
+    gitCommitSha: string;
+  }>;
+  readonly runtimeAuthoritySha256: string;
+  readonly runtimeAuthoritySemanticDigest: string;
+  readonly authority: PodmanRuntimeAuthority;
 }

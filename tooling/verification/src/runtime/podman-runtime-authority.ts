@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SCHEMA_VERSION,
   PODMAN_RUNTIME_AUTHORITY_ID,
   PODMAN_RUNTIME_AUTHORITY_SCHEMA_VERSION,
+  type FormalRuntimeAuthoritySnapshot,
   type LoadedPodmanRuntimeAuthority,
   type PodmanRuntimeAuthority,
   type PodmanRuntimeAuthorityDocument,
@@ -53,6 +55,70 @@ export function parsePodmanRuntimeAuthority(value: unknown): PodmanRuntimeAuthor
 
 export function canonicalRuntimeAuthorityJson(value: PodmanRuntimeAuthority): string {
   return canonicalJson(value);
+}
+
+export function createFormalRuntimeAuthoritySnapshot(input: {
+  readonly runIdentity: FormalRuntimeAuthoritySnapshot['runIdentity'];
+  readonly runtimeAuthority: LoadedPodmanRuntimeAuthority;
+}): FormalRuntimeAuthoritySnapshot {
+  const snapshot: FormalRuntimeAuthoritySnapshot = {
+    schemaVersion: FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SCHEMA_VERSION,
+    authoritySchemaVersion: PODMAN_RUNTIME_AUTHORITY_SCHEMA_VERSION,
+    authorityId: PODMAN_RUNTIME_AUTHORITY_ID,
+    runIdentity: input.runIdentity,
+    runtimeAuthoritySha256: input.runtimeAuthority.runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest: input.runtimeAuthority.runtimeAuthoritySemanticDigest,
+    authority: input.runtimeAuthority.authority,
+  };
+  return parseFormalRuntimeAuthoritySnapshot(snapshot);
+}
+
+export function parseFormalRuntimeAuthoritySnapshot(value: unknown): FormalRuntimeAuthoritySnapshot {
+  const root = exactRecord(value, '', [
+    'schemaVersion', 'authoritySchemaVersion', 'authorityId', 'runIdentity',
+    'runtimeAuthoritySha256', 'runtimeAuthoritySemanticDigest', 'authority',
+  ]);
+  literal(
+    root['schemaVersion'],
+    FORMAL_RUNTIME_AUTHORITY_SNAPSHOT_SCHEMA_VERSION,
+    'schemaVersion',
+  );
+  literal(
+    root['authoritySchemaVersion'],
+    PODMAN_RUNTIME_AUTHORITY_SCHEMA_VERSION,
+    'authoritySchemaVersion',
+  );
+  literal(root['authorityId'], PODMAN_RUNTIME_AUTHORITY_ID, 'authorityId');
+  validateFormalRunIdentity(root['runIdentity']);
+  sha256String(root['runtimeAuthoritySha256'], 'runtimeAuthoritySha256');
+  sha256String(root['runtimeAuthoritySemanticDigest'], 'runtimeAuthoritySemanticDigest');
+  validateAuthority(root['authority']);
+  const computedSemanticDigest = sha256(Buffer.from(
+    canonicalRuntimeAuthorityJson(root['authority'] as PodmanRuntimeAuthority),
+    'utf8',
+  ));
+  if (root['runtimeAuthoritySemanticDigest'] !== computedSemanticDigest) {
+    throw new Error('RUNTIME_AUTHORITY_SNAPSHOT_SEMANTIC_DIGEST_MISMATCH');
+  }
+  return value as FormalRuntimeAuthoritySnapshot;
+}
+
+function validateFormalRunIdentity(value: unknown): void {
+  const identity = exactRecord(value, 'runIdentity', [
+    'runId', 'runSequence', 'runtimeNamespace', 'gitCommitSha',
+  ]);
+  if (typeof identity['runId'] !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9-]{7,127}$/u.test(identity['runId'])) {
+    schemaError('runIdentity.runId', 'VALUE_INVALID');
+  }
+  if (!Number.isSafeInteger(identity['runSequence']) || (identity['runSequence'] as number) <= 0) {
+    schemaError('runIdentity.runSequence', 'POSITIVE_INTEGER_REQUIRED');
+  }
+  nonEmptyString(identity['runtimeNamespace'], 'runIdentity.runtimeNamespace');
+  if (typeof identity['gitCommitSha'] !== 'string' ||
+      !/^[0-9a-f]{40}$/u.test(identity['gitCommitSha'])) {
+    schemaError('runIdentity.gitCommitSha', 'VALUE_INVALID');
+  }
 }
 
 function validateAuthority(value: unknown): void {

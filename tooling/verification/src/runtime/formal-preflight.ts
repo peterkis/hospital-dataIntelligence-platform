@@ -21,7 +21,7 @@ import {
 import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.ts';
 import { PODMAN_RUNTIME_AUTHORITY_ID } from './podman-runtime-authority-schema.ts';
 
-type LoadedRuntimeAuthority = Awaited<ReturnType<typeof loadPodmanRuntimeAuthority>>;
+export type LoadedRuntimeAuthority = Awaited<ReturnType<typeof loadPodmanRuntimeAuthority>>;
 type RuntimeAuthority = LoadedRuntimeAuthority['authority'];
 
 type PreflightStatus = 'PASSED' | 'FAILED';
@@ -106,6 +106,11 @@ export interface FormalPreflightReport {
   readonly secrets: readonly SecretPresenceObservation[];
 }
 
+export interface FrozenFormalPreflightResult {
+  readonly report: FormalPreflightReport;
+  readonly runtimeAuthority: LoadedRuntimeAuthority | null;
+}
+
 export interface FormalPreflightFileSystem {
   exists(path: string): Promise<boolean>;
   readText(path: string): Promise<string>;
@@ -181,6 +186,7 @@ export interface FormalPreflightDependencies {
   readonly readFrozenInputs: (
     repositoryRoot: string,
     producerSourceManifestSha256: string,
+    runtimeAuthority: LoadedRuntimeAuthority,
   ) => Promise<Readonly<Record<string, string>>>;
   readonly loadRuntimeAuthority: (
     repositoryRoot: string,
@@ -270,15 +276,32 @@ export async function runFormalPreflight(
   }
 
   try {
+    if (loadedAuthority === null) throw new Error('RUNTIME_AUTHORITY_UNAVAILABLE');
     const frozenInputs = await dependencies.readFrozenInputs(
       input.repositoryRoot,
       input.producerSourceManifestSha256,
+      loadedAuthority,
     );
     checks.push(passed('git-frozen-inputs-readable', 'git', {
       readable: true,
       inputNames: Object.keys(frozenInputs).sort(),
       inputs: frozenInputs,
     }));
+    const frozenAuthorityMatches =
+      frozenInputs['runtimeAuthoritySha256'] === loadedAuthority.runtimeAuthoritySha256 &&
+      frozenInputs['runtimeAuthoritySemanticDigest'] ===
+        loadedAuthority.runtimeAuthoritySemanticDigest;
+    checks.push(frozenAuthorityMatches
+      ? passed('runtime-authority-frozen-input-binding', 'podman', {
+        runtimeAuthoritySha256: loadedAuthority.runtimeAuthoritySha256,
+        runtimeAuthoritySemanticDigest: loadedAuthority.runtimeAuthoritySemanticDigest,
+      })
+      : failed(
+        'runtime-authority-frozen-input-binding',
+        'podman',
+        'FORMAL_PREFLIGHT_FROZEN_RUNTIME_AUTHORITY_MISMATCH',
+        { matched: false },
+      ));
   } catch (error) {
     checks.push(failed('git-frozen-inputs-readable', 'git', 'FORMAL_PREFLIGHT_FROZEN_INPUT_UNREADABLE', {
       readable: false,
@@ -329,6 +352,26 @@ export async function runFormalPreflight(
     checks,
     secrets,
   };
+}
+
+export async function runFormalPreflightWithFrozenAuthority(
+  input: {
+    readonly repositoryRoot: string;
+    readonly outputDirectory: string;
+    readonly run: FormalRunSeed;
+    readonly producerSourceManifestSha256: string;
+  },
+  dependencies: FormalPreflightDependencies = createDefaultFormalPreflightDependencies(),
+): Promise<FrozenFormalPreflightResult> {
+  let runtimeAuthority: LoadedRuntimeAuthority | null = null;
+  const report = await runFormalPreflight(input, {
+    ...dependencies,
+    async loadRuntimeAuthority(repositoryRoot) {
+      runtimeAuthority = await dependencies.loadRuntimeAuthority(repositoryRoot);
+      return runtimeAuthority;
+    },
+  });
+  return { report, runtimeAuthority };
 }
 
 async function appendNodeAndNpmChecks(
