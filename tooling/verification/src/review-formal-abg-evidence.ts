@@ -72,7 +72,6 @@ import {
   createSourceManifestBuilder,
   defaultSourceManifestDependencies,
   sourceManifestSha256,
-  verifyCommittedProducerSourceEntry,
   type GitObjectReader,
   type RepositoryStateReader,
   type SourceManifestBuilder,
@@ -209,6 +208,11 @@ interface ProducerSourceManifestState {
   readonly sha256: string | null;
 }
 
+interface ProducerProvenanceVerification {
+  readonly status: 'VERIFIED' | 'INVALID' | 'UNVERIFIABLE';
+  readonly verifiedSourceBytes: ReadonlyMap<string, Buffer>;
+}
+
 interface ContractExtractionState {
   readonly identity: EvidenceContractTuple | null;
   readonly terminalConclusionSchemaVersion: string | null;
@@ -320,11 +324,12 @@ export async function reviewFormalAbgEvidence(
   validateRequiredLifecycleEnvelope(snapshot, manifest, checks);
   const producer = await validateProducerSourceManifest(snapshot, manifest, checks);
   const contract = await extractEvidenceContractIdentity(snapshot, manifest, checks);
-  let producerProvenanceStatus = await verifyProducerProvenance(
+  const producerProvenance = await verifyProducerProvenance(
     producer.manifest,
     dependencies,
     checks,
   );
+  let producerProvenanceStatus = producerProvenance.status;
 
   const currentIdentity = await readCurrentAuthorityIdentity();
   const reviewerToolIdentity = await readReviewerToolIdentity();
@@ -360,7 +365,12 @@ export async function reviewFormalAbgEvidence(
   }
 
   await validateProducerSourceManifestReferences(snapshot, producer, contract, checks);
-  await validateRuntimeAuthorityProducerBinding(snapshot, producer, dependencies, checks);
+  await validateRuntimeAuthorityProducerBinding(
+    snapshot,
+    producer,
+    producerProvenance,
+    checks,
+  );
   if (compatibility.compatibilityLevel === 'EXACT') {
     const plan = await validateRunPlan(snapshot, manifest, currentIdentity, checks);
     const summary = await validateRunSummary(
@@ -813,18 +823,19 @@ async function verifyProducerProvenance(
   manifest: ProducerVerificationSourceManifest | null,
   dependencies: ReviewFormalAbgEvidenceDependencies,
   checks: ReviewChecks,
-): Promise<'VERIFIED' | 'INVALID' | 'UNVERIFIABLE'> {
-  if (manifest === null) return 'INVALID';
+): Promise<ProducerProvenanceVerification> {
+  const verifiedSourceBytes = new Map<string, Buffer>();
+  if (manifest === null) return { status: 'INVALID', verifiedSourceBytes };
   if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/u.test(manifest.producerGitCommitSha)) {
     checks.fail('PRODUCER_COMMIT_INVALID', 'producer-source-manifest');
-    return 'INVALID';
+    return { status: 'INVALID', verifiedSourceBytes };
   }
   if (!await dependencies.git.commitExists(
     dependencies.repositoryRoot,
     manifest.producerGitCommitSha,
   )) {
     checks.fail('PRODUCER_COMMIT_UNAVAILABLE', manifest.producerGitCommitSha);
-    return 'UNVERIFIABLE';
+    return { status: 'UNVERIFIABLE', verifiedSourceBytes };
   }
   let valid = true;
   for (const entry of manifest.sourceFiles) {
@@ -843,25 +854,31 @@ async function verifyProducerProvenance(
       valid = false;
       continue;
     }
+    let entryValid = true;
     if (blob.mode !== '100644' && blob.mode !== '100755') {
       checks.fail('PRODUCER_SOURCE_MANIFEST_PATH_UNSAFE', entry.path);
       valid = false;
+      entryValid = false;
     }
     const bytes = Buffer.from(blob.bytes);
     if (blob.oid !== entry.gitBlobOid) {
       checks.fail('PRODUCER_SOURCE_BLOB_ID_MISMATCH', entry.path);
       valid = false;
+      entryValid = false;
     }
     if (bytes.byteLength !== entry.byteLength) {
       checks.fail('PRODUCER_SOURCE_BYTE_LENGTH_MISMATCH', entry.path);
       valid = false;
+      entryValid = false;
     }
     if (sha256(bytes) !== entry.sha256) {
       checks.fail('PRODUCER_SOURCE_SHA256_MISMATCH', entry.path);
       valid = false;
+      entryValid = false;
     }
+    if (entryValid) verifiedSourceBytes.set(entry.path, bytes);
   }
-  return valid ? 'VERIFIED' : 'INVALID';
+  return { status: valid ? 'VERIFIED' : 'INVALID', verifiedSourceBytes };
 }
 
 async function validateProducerSourceManifestReferences(
@@ -908,7 +925,7 @@ async function validateProducerSourceManifestReferences(
 async function validateRuntimeAuthorityProducerBinding(
   snapshot: EvidenceSnapshot,
   producer: ProducerSourceManifestState,
-  dependencies: ReviewFormalAbgEvidenceDependencies,
+  producerProvenance: ProducerProvenanceVerification,
   checks: ReviewChecks,
 ): Promise<void> {
   const code = 'FORMAL_RUNTIME_AUTHORITY_PRODUCER_BINDING_MISMATCH';
@@ -962,28 +979,29 @@ async function validateRuntimeAuthorityProducerBinding(
     'runtime/preflight.json#/checks/git-frozen-inputs-readable',
   );
   if (!referencesValid || runGitCommitSha === null) return;
-
-  const binding = await verifyCommittedProducerSourceEntry({
-    repositoryRoot: dependencies.repositoryRoot,
-    manifest: producer.manifest,
-    expectedManifestSha256: frozenManifestSha256,
-    runGitCommitSha,
-    sourcePath: RUNTIME_AUTHORITY_RELATIVE_PATH,
-    expectedRole: 'RUNTIME_AUTHORITY',
-    expectedSourceSha256: authoritySnapshot.runtimeAuthoritySha256,
-    git: dependencies.git,
-  });
-  if (!binding.ok) {
-    // Commit availability is already reported on the independent producer
-    // provenance axis. It still prevents a passing review, but it is not an
-    // evidence-integrity mismatch until the referenced Git object can be read.
-    if (binding.code === 'PRODUCER_COMMIT_UNAVAILABLE') return;
-    checks.fail(code, `${RUNTIME_AUTHORITY_RELATIVE_PATH}:${binding.code}`);
+  // Reuse the bytes authenticated during producer provenance verification.
+  // A second Git lookup here would create a TOCTOU window where provenance was
+  // marked VERIFIED but the authority comparison could be skipped.
+  if (producerProvenance.status !== 'VERIFIED') return;
+  const authorityEntries = producer.manifest.sourceFiles.filter(
+    (entry) => entry.path === RUNTIME_AUTHORITY_RELATIVE_PATH,
+  );
+  const authorityEntry = authorityEntries.length === 1 ? authorityEntries[0] : undefined;
+  const committedAuthorityBytes = producerProvenance.verifiedSourceBytes.get(
+    RUNTIME_AUTHORITY_RELATIVE_PATH,
+  );
+  if (
+    authorityEntry === undefined ||
+    authorityEntry.role !== 'RUNTIME_AUTHORITY' ||
+    authorityEntry.sha256 !== authoritySnapshot.runtimeAuthoritySha256 ||
+    committedAuthorityBytes === undefined
+  ) {
+    checks.fail(code, RUNTIME_AUTHORITY_RELATIVE_PATH);
     return;
   }
   try {
     const document = parsePodmanRuntimeAuthority(JSON.parse(
-      binding.blobBytes.toString('utf8'),
+      committedAuthorityBytes.toString('utf8'),
     ) as unknown);
     const committedAuthorityJson = canonicalRuntimeAuthorityJson(document.authority);
     checks.check(

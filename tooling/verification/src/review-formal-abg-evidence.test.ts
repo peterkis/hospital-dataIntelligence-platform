@@ -304,8 +304,27 @@ describe('formal ABG provenance and compatibility review', () => {
     });
     await rebuildManifest(fixture.evidenceDirectory);
 
-    expect(await reviewFailureCodes(fixture))
+    const originalGit = fixture.reviewerDependencies.git;
+    let commitExistsCalls = 0;
+    const racedFixture: FormalEvidenceFixture = {
+      ...fixture,
+      reviewerDependencies: {
+        ...fixture.reviewerDependencies,
+        sourceManifestBuilder: createSourceManifestBuilder(fixture.reviewerDependencies),
+        git: {
+          async commitExists(root, commitSha) {
+            commitExistsCalls += 1;
+            return commitExistsCalls === 1
+              ? originalGit.commitExists(root, commitSha)
+              : false;
+          },
+          readBlob: (root, commitSha, path) => originalGit.readBlob(root, commitSha, path),
+        },
+      },
+    };
+    expect(await reviewFailureCodes(racedFixture))
       .toContain('FORMAL_RUNTIME_AUTHORITY_PRODUCER_BINDING_MISMATCH');
+    expect(commitExistsCalls).toBe(1);
   });
 
   it('reports a malformed producer commit SHA with its stable provenance code', async () => {
