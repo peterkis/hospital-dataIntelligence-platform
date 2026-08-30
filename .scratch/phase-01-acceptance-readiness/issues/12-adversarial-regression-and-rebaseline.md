@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-Blocked by: AR-11 — Podman 运行时权威加固
+Blocked by: none — AR-11 已满足；本任务未认领或授权执行 AR-12
 
 ## What to build
 
@@ -36,3 +36,4 @@ AR-01～AR-06 的旧评论分别绑定旧提交。之后迁移、生成类型、
 ## Comments
 
 - 2026-08-30（AR-08 建立）：本 Ticket 是解除 AR-07 技术阻断前的最后重基线步骤；尚未执行任何测试、真实服务或正式 ABG，等待 AR-11。
+- 2026-08-30（AR-11 closeout）：AR-11 已完成并转为 `resolved`，本 Ticket 的上游依赖已满足，成为仍未认领的 current frontier。该状态变化不构成执行授权；本轮没有冻结 AR-12 candidate、没有启动真实 Anolis/Podman 重基线，也没有执行 shared readiness 或正式 ABG。

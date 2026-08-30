@@ -1,6 +1,6 @@
 # 11 — Podman 运行时权威加固
 
-Status: claimed
+Status: resolved
 
 Blocked by: AR-10 — Evidence provenance 与契约漂移整改
 
@@ -28,11 +28,11 @@ Blocked by: AR-10 — Evidence provenance 与契约漂移整改
 
 ## Acceptance criteria
 
-- [ ] 预检能证明只有预期 rootful Podman Unix socket/运行时权威存在，并对 Docker socket/daemon/远程 API 或第二 authority 失败关闭。
-- [ ] Restart policy 被明确冻结、验证并保证终态/teardown 后资源不会自动复活。
-- [ ] 任一 partial-startup 失败都留下稳定错误证据，并只清理重新核验为当前运行所有的精确资源；无标签或标签不全资源保持不动。
-- [ ] 定向测试覆盖每个创建阶段、所有权漂移、socket alias、restart 和残留资源路径，禁止 prune/reset。
-- [ ] AR-11 完成后提供人工复核材料；人工复核前 Podman 工作包继续为 `ready-for-human`，且未运行正式 ABG。
+- [x] 预检能证明只有预期 rootful Podman Unix socket/运行时权威存在，并对 Docker socket/daemon/远程 API 或第二 authority 失败关闭。
+- [x] Restart policy 被明确冻结、验证并保证终态/teardown 后资源不会自动复活。
+- [x] 任一 partial-startup 失败都留下稳定错误证据，并只清理重新核验为当前运行所有的精确资源；无标签或标签不全资源保持不动。
+- [x] 定向测试覆盖每个创建阶段、所有权漂移、socket alias、restart 和残留资源路径，禁止 prune/reset。
+- [x] AR-11 完成后提供人工复核材料；人工复核前 Podman 工作包继续为 `ready-for-human`，且未运行正式 ABG。
 
 ## Comments
 
@@ -49,3 +49,4 @@ Blocked by: AR-10 — Evidence provenance 与契约漂移整改
   8. 即使 `podman ... up` 成功，后续 readiness、migration、seed 或 schema check 失败仍可能留下已启动容器，因此 bootstrap 层也必须受控失败收尾。
   9. 所有清理都必须在删除前重新核验当前运行的完整五标签；标签缺失或不一致时必须保留资源并失败关闭，不能猜测所有权。
   10. AR-10 已冻结 35 个验证权威文件；AR-11 新增或修改运行权威文件时必须同步更新 source manifest registry、producer provenance 和精确 reviewer 回归。
+- 2026-08-30（AR-11 完成）：实现及审查修复提交为 `ebd19ad205539695600b66ec82efdbf81957706c`、`9ad9fa2ad4f750f77259e88ec32db12811cea03c`、`e8d56f46e561048132734a20279fa61113dab789`、`2feaee74944761ca42dd2f9b92e9d4c3f13b2795`、`4f8032b10cdadcb3d95d5cb44bbf82c52458fb18`、`5601bb9c18ac93f872846821fb3340f9b56d80ad`、`fd8f0d7c4658c717e06d14ba950b2befce976915`。唯一 authority 为 `runtime-baseline.lock.json` 的 schema v3 `.authority`，byte SHA-256 为 `20af1706102a68c10ae4a9cf1c141d83c51078381187abe0436e176b7508c42f`，semantic digest 为 `96442161a82bea15bbf01bf16a9d488335bdb55ca59a5ec0210ec7f412564b8c`。最终 clean-HEAD source manifest 为 43 文件、`sourceFilesDigest=48a6fd9a67f13a02df0bb46b56ddcbb87b1b78765e488e364155062d83365415`；verification 全量 22 files / 495 tests、Podman 173、lifecycle 217、provenance 93、adversarial 142 均通过，140/140 mutations detected、0 survived；Standards 与 Spec 两轴只读复审均 `APPROVED`。人工复核输入见 `.scratch/phase-01-podman-runtime/human-review.md`。本轮仅使用 fake/DI/mock/合成资产，未启动真实服务或容器，未执行 shared readiness/正式 ABG，未运行 prune/reset，Podman 工作包保持 `ready-for-human`；AR-12 仍须真实 Anolis/rootful Podman 重基线。

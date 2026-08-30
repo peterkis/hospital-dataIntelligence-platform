@@ -6,7 +6,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Objective
 
-在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08～AR-10 已完成并转为 `resolved`；当前 frontier 为本轮已认领的 AR-11，AR-07 必须等待 AR-11～AR-12 完成后再按新的正式授权执行。
+在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08～AR-11 已完成并转为 `resolved`；当前 frontier 为仍未认领的 AR-12，AR-07 必须等待 AR-12 完成后再按新的正式授权执行。
 
 ## Status semantics
 
@@ -43,7 +43,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；本轮只授权已认领的 AR-11，不授权进入 AR-12、AR-07、shared readiness 或正式 ABG。只有AR-11全部限定验收完成后，ledger frontier才可推进到仍不自动认领的AR-12。
+- 每次只执行获得授权的 current frontier；本轮授权只覆盖已经完成 closeout 的 AR-11，不授权认领或执行 AR-12、AR-07、shared readiness 或正式 ABG。Ledger frontier 已推进到仍不自动认领的 AR-12。
 
 ## AR-10 provenance contract
 
@@ -80,3 +80,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 2026-08-30（AR-10 协议影响）：验收工作包新增 producer source manifest、evidence package 交叉绑定、reviewer source manifest、Git object provenance 核验及 `EXACT`/`COMPATIBLE`/`INCOMPATIBLE` 契约关系。Definition drift 即使结构可解析也不能形成正式 review `PASSED`；integrity failure、commit unavailable 和 manifest invalid 分别分类。独立 review output 由自身 Manifest 封存。本条只记录 AR-10 协议边界，不表示正式 ABG 已执行；AR-11 的 runtime authority 责任不变。
 - 2026-08-30（AR-10 完成）：AR-10 的统一 contract version authority、35 文件 producer/reviewer source manifest、evidence cross-binding、Git object provenance、compatibility registry、reviewer 双捕获稳定性和独立 review manifest 已通过规定的本地验证及双轴只读 review，转为 `resolved`。110 项 mutation 全部被检测且无 survived case；五条 standalone reviewer 路径均按契约通过或失败关闭。当前 frontier 推进到仍未认领的 AR-11；正式验收状态继续为 `pending`，未执行正式 ABG。
 - 2026-08-30（AR-11协议影响）：当前frontier AR-11已认领，范围只包括单一Podman runtime authority、Docker/第二endpoint排他、`restart=no`、partial-startup/bootstrap失败收尾、完整五个必需标签删除前复核及其provenance/对抗性回归。Source manifest从AR-10历史35文件扩展为当前43文件，并以不同角色区分runtime authority、loader/schema、运行脚本、runtime authority provisioning、Testcontainers/live producer和非authority receipt；run plan/authority、summary、terminal conclusion及runtime outcome分别定向升级为v4/v3、v5、v2、v3，以携带runtime authority字节/语义身份及cleanup后稳定性。本条只记录协议影响，不提前改变AR-11状态、frontier或正式验收结论；AR-12和AR-07仍未获授权。
+- 2026-08-30（AR-11 完成）：唯一 runtime authority、严格 schema/byte/semantic identity、Docker/第二 endpoint 排他、`restart=no`、12 阶段 state machine、partial-startup/bootstrap reverse cleanup、删除前完整五标签复核、standalone frozen snapshot 恢复及 producer source-manifest/commit/Git blob provenance 绑定均完成。最终 verification 全量 22 files / 495 tests、adversarial 140/140 detected 且 0 survived，Standards/Spec 双轴只读复审均 `APPROVED`；人工复核输入已写入 `.scratch/phase-01-podman-runtime/human-review.md`。AR-11 转为 `resolved` 只表示本地整改与限定验证完成；Podman 工作包仍为 `ready-for-human`，未启动真实服务、shared readiness 或正式 ABG。Current frontier 推进到仍未认领的 AR-12，AR-07 继续 blocked。
