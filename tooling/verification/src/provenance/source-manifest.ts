@@ -12,7 +12,10 @@ import {
   CURRENT_EVIDENCE_CONTRACT_IDENTITY,
   VERIFICATION_SOURCE_MANIFEST_SCHEMA_VERSION,
 } from '../verification-contract-versions.js';
-import { VERIFICATION_SOURCE_FILES } from './source-manifest-files.js';
+import {
+  VERIFICATION_SOURCE_FILES,
+  type VerificationSourceFileRole,
+} from './source-manifest-files.js';
 import {
   canonicalVerificationProvenanceJson,
   deriveVerificationAuthorityIdentity,
@@ -78,6 +81,29 @@ export interface SourceManifestBuilder {
   buildProducer(repositoryRoot: string): Promise<ProducerVerificationSourceManifest>;
   buildReviewer(repositoryRoot: string): Promise<ReviewerVerificationSourceManifest>;
 }
+
+export type CommittedProducerSourceEntryFailureCode =
+  | 'PRODUCER_SOURCE_MANIFEST_SHA256_MISMATCH'
+  | 'PRODUCER_COMMIT_RUN_IDENTITY_MISMATCH'
+  | 'PRODUCER_COMMIT_UNAVAILABLE'
+  | 'PRODUCER_SOURCE_ENTRY_MISMATCH'
+  | 'PRODUCER_SOURCE_ENTRY_SHA256_MISMATCH'
+  | 'PRODUCER_SOURCE_PATH_MISSING_AT_COMMIT'
+  | 'PRODUCER_SOURCE_GIT_MODE_NOT_REGULAR'
+  | 'PRODUCER_SOURCE_BLOB_ID_MISMATCH'
+  | 'PRODUCER_SOURCE_BYTE_LENGTH_MISMATCH'
+  | 'PRODUCER_SOURCE_SHA256_MISMATCH';
+
+export type CommittedProducerSourceEntryVerification =
+  | {
+      readonly ok: true;
+      readonly entry: VerificationSourceManifestEntry;
+      readonly blobBytes: Buffer;
+    }
+  | {
+      readonly ok: false;
+      readonly code: CommittedProducerSourceEntryFailureCode;
+    };
 
 export function createSourceManifestBuilder(
   dependencies: SourceManifestDependencies = defaultSourceManifestDependencies(),
@@ -220,6 +246,82 @@ export async function verifyProducerSourceManifestStable(
   } catch {
     return false;
   }
+}
+
+/**
+ * Authenticates one governed producer entry against the exact commit and Git
+ * blob recorded by the canonical producer manifest. Callers still decide how
+ * the committed bytes bind to their domain object.
+ */
+export async function verifyCommittedProducerSourceEntry(input: {
+  readonly repositoryRoot: string;
+  readonly manifest: ProducerVerificationSourceManifest;
+  readonly expectedManifestSha256: string;
+  readonly runGitCommitSha: string;
+  readonly sourcePath: string;
+  readonly expectedRole: VerificationSourceFileRole;
+  readonly expectedSourceSha256: string;
+  readonly git: GitObjectReader;
+}): Promise<CommittedProducerSourceEntryVerification> {
+  const parsed = parseVerificationSourceManifest(input.manifest);
+  if (
+    parsed.manifestRole !== 'PRODUCER' ||
+    sourceManifestSha256(parsed) !== input.expectedManifestSha256
+  ) {
+    return { ok: false, code: 'PRODUCER_SOURCE_MANIFEST_SHA256_MISMATCH' };
+  }
+  if (parsed.producerGitCommitSha !== input.runGitCommitSha) {
+    return { ok: false, code: 'PRODUCER_COMMIT_RUN_IDENTITY_MISMATCH' };
+  }
+  let commitExists = false;
+  try {
+    commitExists = await input.git.commitExists(
+      input.repositoryRoot,
+      parsed.producerGitCommitSha,
+    );
+  } catch {
+    commitExists = false;
+  }
+  if (!commitExists) return { ok: false, code: 'PRODUCER_COMMIT_UNAVAILABLE' };
+  const matchingEntries = parsed.sourceFiles.filter((entry) => entry.path === input.sourcePath);
+  const entry = matchingEntries.length === 1 ? matchingEntries[0] : undefined;
+  if (entry === undefined || entry.role !== input.expectedRole) {
+    return { ok: false, code: 'PRODUCER_SOURCE_ENTRY_MISMATCH' };
+  }
+  if (entry.sha256 !== input.expectedSourceSha256) {
+    return { ok: false, code: 'PRODUCER_SOURCE_ENTRY_SHA256_MISMATCH' };
+  }
+  let blob: GitBlob | null = null;
+  try {
+    blob = await input.git.readBlob(
+      input.repositoryRoot,
+      parsed.producerGitCommitSha,
+      entry.path,
+    );
+  } catch {
+    blob = null;
+  }
+  if (blob === null) return { ok: false, code: 'PRODUCER_SOURCE_PATH_MISSING_AT_COMMIT' };
+  if (!REGULAR_GIT_MODES.has(blob.mode)) {
+    return { ok: false, code: 'PRODUCER_SOURCE_GIT_MODE_NOT_REGULAR' };
+  }
+  const blobBytes = Buffer.from(blob.bytes);
+  let authenticBlobOid = false;
+  try {
+    authenticBlobOid = gitBlobOid(blobBytes, blob.oid.length) === blob.oid;
+  } catch {
+    authenticBlobOid = false;
+  }
+  if (blob.oid !== entry.gitBlobOid || !authenticBlobOid) {
+    return { ok: false, code: 'PRODUCER_SOURCE_BLOB_ID_MISMATCH' };
+  }
+  if (blobBytes.byteLength !== entry.byteLength) {
+    return { ok: false, code: 'PRODUCER_SOURCE_BYTE_LENGTH_MISMATCH' };
+  }
+  if (sha256(blobBytes) !== entry.sha256) {
+    return { ok: false, code: 'PRODUCER_SOURCE_SHA256_MISMATCH' };
+  }
+  return { ok: true, entry, blobBytes };
 }
 
 export function defaultSourceManifestDependencies(): SourceManifestDependencies {

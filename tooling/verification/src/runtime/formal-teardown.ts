@@ -1,9 +1,20 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { access, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import {
+  defaultSourceManifestDependencies,
+  sourceManifestSha256,
+  verifyCommittedProducerSourceEntry,
+  verifyProducerSourceManifestStable,
+  type GitObjectReader,
+} from '../provenance/source-manifest.js';
+import {
+  parseVerificationSourceManifest,
+  type ProducerVerificationSourceManifest,
+} from '../provenance/source-manifest-schema.js';
 import {
   SpawnRuntimeCommandRunner,
   createFormalRunSeed,
@@ -24,8 +35,11 @@ import {
   type WslHostEvidence,
 } from './formal-wsl-host.ts';
 import {
+  canonicalRuntimeAuthorityJson,
   loadPodmanRuntimeAuthority,
   parseFormalRuntimeAuthoritySnapshot,
+  parsePodmanRuntimeAuthority,
+  RUNTIME_AUTHORITY_RELATIVE_PATH,
 } from './podman-runtime-authority.ts';
 import type {
   LoadedPodmanRuntimeAuthority,
@@ -195,6 +209,11 @@ export interface FormalTeardownDependencies {
   readonly now: () => string;
 }
 
+export interface ControlledTeardownCliDependencies {
+  readonly teardown: FormalTeardownDependencies;
+  readonly git: GitObjectReader;
+}
+
 export function createDefaultFormalTeardownDependencies(): FormalTeardownDependencies {
   const commandRunner = new SpawnRuntimeCommandRunner();
   return {
@@ -205,6 +224,13 @@ export function createDefaultFormalTeardownDependencies(): FormalTeardownDepende
       repositoryRoot ?? resolve(import.meta.dirname, '../../../..'),
     ),
     now: localNowInAsiaShanghai,
+  };
+}
+
+export function createDefaultControlledTeardownCliDependencies(): ControlledTeardownCliDependencies {
+  return {
+    teardown: createDefaultFormalTeardownDependencies(),
+    git: defaultSourceManifestDependencies().git,
   };
 }
 
@@ -1554,6 +1580,41 @@ function stableError(error: unknown): string {
   return (/^[A-Z0-9_:-]+$/u.test(message) ? message : 'FORMAL_CLEANUP_OPERATION_FAILED').slice(0, 200);
 }
 
+function preflightProducerSourceManifestSha256(
+  preflight: Readonly<Record<string, unknown>>,
+  runtimeAuthoritySha256: string,
+  runtimeAuthoritySemanticDigest: string,
+): string {
+  const frozenChecks = Array.isArray(preflight['checks'])
+    ? preflight['checks'].filter((candidate) =>
+      isRecord(candidate) && candidate['id'] === 'git-frozen-inputs-readable',
+    )
+    : [];
+  const frozenCheck = frozenChecks.length === 1 ? frozenChecks[0] : undefined;
+  const observed = isRecord(frozenCheck) ? frozenCheck['observed'] : undefined;
+  const inputs = isRecord(observed) ? observed['inputs'] : undefined;
+  const digest = isRecord(inputs) ? inputs['producerSourceManifestSha256'] : undefined;
+  const runIdentity = isRecord(preflight['runIdentity']) ? preflight['runIdentity'] : undefined;
+  if (
+    !isRecord(frozenCheck) ||
+    frozenCheck['status'] !== 'PASSED' ||
+    !isRecord(inputs) ||
+    typeof digest !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(digest) ||
+    !isRecord(runIdentity) ||
+    inputs['gitCommitSha'] !== runIdentity['gitCommitSha'] ||
+    inputs['runtimeAuthoritySha256'] !== runtimeAuthoritySha256 ||
+    inputs['runtimeAuthoritySemanticDigest'] !== runtimeAuthoritySemanticDigest
+  ) {
+    throw new Error('FORMAL_TEARDOWN_PREFLIGHT_FROZEN_INPUTS_INVALID');
+  }
+  return digest;
+}
+
+function sha256Bytes(bytes: Uint8Array): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -1571,7 +1632,8 @@ export async function runControlledTeardownCli(
     readonly evidenceDirectory: string;
     readonly repositoryRoot: string;
   },
-  dependencies: FormalTeardownDependencies = createDefaultFormalTeardownDependencies(),
+  dependencies: ControlledTeardownCliDependencies =
+    createDefaultControlledTeardownCliDependencies(),
 ) {
   const evidenceDirectory = resolve(input.evidenceDirectory);
   const preflightPath = join(evidenceDirectory, 'runtime', 'preflight.json');
@@ -1625,6 +1687,11 @@ export async function runControlledTeardownCli(
     authorityCheckObserved['runtimeAuthoritySha256'] !== runtimeAuthoritySha256 ||
     authorityCheckObserved['runtimeAuthoritySemanticDigest'] !== runtimeAuthoritySemanticDigest
   ) throw new Error('FORMAL_TEARDOWN_PREFLIGHT_RUNTIME_AUTHORITY_INVALID');
+  const producerSourceManifestSha256 = preflightProducerSourceManifestSha256(
+    parsed,
+    runtimeAuthoritySha256,
+    runtimeAuthoritySemanticDigest,
+  );
 
   const authoritySnapshotPath = join(
     evidenceDirectory,
@@ -1657,6 +1724,59 @@ export async function runControlledTeardownCli(
     authoritySnapshot.runtimeAuthoritySha256 !== runtimeAuthoritySha256 ||
     authoritySnapshot.runtimeAuthoritySemanticDigest !== runtimeAuthoritySemanticDigest
   ) throw new Error('FORMAL_TEARDOWN_AUTHORITY_SNAPSHOT_PREFLIGHT_MISMATCH');
+
+  const producerManifestPath = join(
+    evidenceDirectory,
+    'provenance',
+    'producer-source-manifest.json',
+  );
+  if (!await verifyProducerSourceManifestStable(
+    evidenceDirectory,
+    producerSourceManifestSha256,
+  )) {
+    throw new Error('FORMAL_TEARDOWN_PRODUCER_SOURCE_MANIFEST_INVALID');
+  }
+  let producerManifest: ProducerVerificationSourceManifest;
+  try {
+    const candidate = parseVerificationSourceManifest(JSON.parse(
+      await readFile(producerManifestPath, 'utf8'),
+    ) as unknown);
+    if (candidate.manifestRole !== 'PRODUCER') throw new Error('MANIFEST_ROLE_INVALID');
+    producerManifest = candidate;
+  } catch {
+    throw new Error('FORMAL_TEARDOWN_PRODUCER_SOURCE_MANIFEST_INVALID');
+  }
+  if (sourceManifestSha256(producerManifest) !== producerSourceManifestSha256) {
+    throw new Error('FORMAL_TEARDOWN_PRODUCER_SOURCE_MANIFEST_INVALID');
+  }
+  const committedAuthority = await verifyCommittedProducerSourceEntry({
+    repositoryRoot: resolve(input.repositoryRoot),
+    manifest: producerManifest,
+    expectedManifestSha256: producerSourceManifestSha256,
+    runGitCommitSha: identity.gitCommitSha!,
+    sourcePath: RUNTIME_AUTHORITY_RELATIVE_PATH,
+    expectedRole: 'RUNTIME_AUTHORITY',
+    expectedSourceSha256: authoritySnapshot.runtimeAuthoritySha256,
+    git: dependencies.git,
+  });
+  if (!committedAuthority.ok) {
+    throw new Error('FORMAL_TEARDOWN_RUNTIME_AUTHORITY_SOURCE_BINDING_INVALID');
+  }
+  try {
+    const document = parsePodmanRuntimeAuthority(JSON.parse(
+      committedAuthority.blobBytes.toString('utf8'),
+    ) as unknown);
+    const committedAuthorityJson = canonicalRuntimeAuthorityJson(document.authority);
+    if (
+      sha256Bytes(Buffer.from(committedAuthorityJson, 'utf8')) !==
+        authoritySnapshot.runtimeAuthoritySemanticDigest ||
+      committedAuthorityJson !== canonicalRuntimeAuthorityJson(authoritySnapshot.authority)
+    ) {
+      throw new Error('RUNTIME_AUTHORITY_CONTENT_MISMATCH');
+    }
+  } catch {
+    throw new Error('FORMAL_TEARDOWN_RUNTIME_AUTHORITY_SOURCE_BINDING_INVALID');
+  }
   const runtimeAuthority: LoadedPodmanRuntimeAuthority = {
     authority: authoritySnapshot.authority,
     runtimeAuthoritySha256: authoritySnapshot.runtimeAuthoritySha256,
@@ -1667,7 +1787,7 @@ export async function runControlledTeardownCli(
     repositoryRoot: resolve(input.repositoryRoot),
     runtimeEventDirectory: join(evidenceDirectory, 'runtime', 'events'),
     runtimeAuthority,
-  }, dependencies);
+  }, dependencies.teardown);
   const runtimeDirectory = join(evidenceDirectory, 'runtime');
   const followupName = 'cleanup-followup-' +
     localNowInAsiaShanghai().replaceAll(/[^0-9A-Za-z]/gu, '-') + '-' +

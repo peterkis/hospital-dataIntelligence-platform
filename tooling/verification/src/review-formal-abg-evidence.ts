@@ -42,7 +42,12 @@ import {
   formalRuntimeAuthority,
   formalRuntimePorts,
 } from './runtime/formal-runtime-contract.js';
-import { parseFormalRuntimeAuthoritySnapshot } from './runtime/podman-runtime-authority.js';
+import {
+  canonicalRuntimeAuthorityJson,
+  parseFormalRuntimeAuthoritySnapshot,
+  parsePodmanRuntimeAuthority,
+  RUNTIME_AUTHORITY_RELATIVE_PATH,
+} from './runtime/podman-runtime-authority.js';
 import {
   CURRENT_EVIDENCE_CONTRACT_IDENTITY,
   EVIDENCE_MANIFEST_SCHEMA_VERSION,
@@ -67,6 +72,7 @@ import {
   createSourceManifestBuilder,
   defaultSourceManifestDependencies,
   sourceManifestSha256,
+  verifyCommittedProducerSourceEntry,
   type GitObjectReader,
   type RepositoryStateReader,
   type SourceManifestBuilder,
@@ -354,6 +360,7 @@ export async function reviewFormalAbgEvidence(
   }
 
   await validateProducerSourceManifestReferences(snapshot, producer, contract, checks);
+  await validateRuntimeAuthorityProducerBinding(snapshot, producer, dependencies, checks);
   if (compatibility.compatibilityLevel === 'EXACT') {
     const plan = await validateRunPlan(snapshot, manifest, currentIdentity, checks);
     const summary = await validateRunSummary(
@@ -896,6 +903,99 @@ async function validateProducerSourceManifestReferences(
     'EVIDENCE_CONTRACT_TUPLE_INCONSISTENT',
     'provenance/producer-source-manifest.json#/contractIdentity',
   );
+}
+
+async function validateRuntimeAuthorityProducerBinding(
+  snapshot: EvidenceSnapshot,
+  producer: ProducerSourceManifestState,
+  dependencies: ReviewFormalAbgEvidenceDependencies,
+  checks: ReviewChecks,
+): Promise<void> {
+  const code = 'FORMAL_RUNTIME_AUTHORITY_PRODUCER_BINDING_MISMATCH';
+  const preflight = await readContractRecord(snapshot, 'runtime/preflight.json');
+  const rawAuthoritySnapshot = await readContractRecord(
+    snapshot,
+    'runtime/runtime-authority-snapshot.json',
+  );
+  if (
+    preflight === null ||
+    rawAuthoritySnapshot === null ||
+    producer.manifest === null ||
+    producer.sha256 === null
+  ) {
+    checks.fail(code, 'runtime-authority-producer-binding');
+    return;
+  }
+
+  let authoritySnapshot;
+  try {
+    authoritySnapshot = parseFormalRuntimeAuthoritySnapshot(rawAuthoritySnapshot);
+  } catch {
+    checks.fail(code, 'runtime/runtime-authority-snapshot.json');
+    return;
+  }
+  const frozenChecks = Array.isArray(preflight['checks'])
+    ? preflight['checks'].filter((candidate) =>
+      asRecord(candidate)?.['id'] === 'git-frozen-inputs-readable',
+    )
+    : [];
+  const frozenCheck = frozenChecks.length === 1 ? asRecord(frozenChecks[0]) : null;
+  const observed = asRecord(frozenCheck?.['observed']);
+  const frozenInputs = asRecord(observed?.['inputs']);
+  const preflightIdentity = asRecord(preflight['runIdentity']);
+  const frozenManifestSha256 = stringField(
+    frozenInputs ?? {},
+    'producerSourceManifestSha256',
+  );
+  const runGitCommitSha = stringField(preflightIdentity ?? {}, 'gitCommitSha');
+  const referencesValid =
+    frozenCheck?.['status'] === 'PASSED' &&
+    frozenManifestSha256 === producer.sha256 &&
+    frozenInputs?.['gitCommitSha'] === runGitCommitSha &&
+    frozenInputs?.['runtimeAuthoritySha256'] === authoritySnapshot.runtimeAuthoritySha256 &&
+    frozenInputs?.['runtimeAuthoritySemanticDigest'] ===
+      authoritySnapshot.runtimeAuthoritySemanticDigest &&
+    runGitCommitSha === authoritySnapshot.runIdentity.gitCommitSha;
+  checks.check(
+    referencesValid,
+    code,
+    'runtime/preflight.json#/checks/git-frozen-inputs-readable',
+  );
+  if (!referencesValid || runGitCommitSha === null) return;
+
+  const binding = await verifyCommittedProducerSourceEntry({
+    repositoryRoot: dependencies.repositoryRoot,
+    manifest: producer.manifest,
+    expectedManifestSha256: frozenManifestSha256,
+    runGitCommitSha,
+    sourcePath: RUNTIME_AUTHORITY_RELATIVE_PATH,
+    expectedRole: 'RUNTIME_AUTHORITY',
+    expectedSourceSha256: authoritySnapshot.runtimeAuthoritySha256,
+    git: dependencies.git,
+  });
+  if (!binding.ok) {
+    // Commit availability is already reported on the independent producer
+    // provenance axis. It still prevents a passing review, but it is not an
+    // evidence-integrity mismatch until the referenced Git object can be read.
+    if (binding.code === 'PRODUCER_COMMIT_UNAVAILABLE') return;
+    checks.fail(code, `${RUNTIME_AUTHORITY_RELATIVE_PATH}:${binding.code}`);
+    return;
+  }
+  try {
+    const document = parsePodmanRuntimeAuthority(JSON.parse(
+      binding.blobBytes.toString('utf8'),
+    ) as unknown);
+    const committedAuthorityJson = canonicalRuntimeAuthorityJson(document.authority);
+    checks.check(
+      sha256(Buffer.from(committedAuthorityJson, 'utf8')) ===
+          authoritySnapshot.runtimeAuthoritySemanticDigest &&
+        committedAuthorityJson === canonicalRuntimeAuthorityJson(authoritySnapshot.authority),
+      code,
+      RUNTIME_AUTHORITY_RELATIVE_PATH,
+    );
+  } catch {
+    checks.fail(code, RUNTIME_AUTHORITY_RELATIVE_PATH);
+  }
 }
 
 function compareSourceDefinitions(

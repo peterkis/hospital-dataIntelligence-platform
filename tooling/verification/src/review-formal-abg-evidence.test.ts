@@ -272,6 +272,42 @@ describe('formal ABG provenance and compatibility review', () => {
       .toContain('PRODUCER_COMMIT_UNAVAILABLE');
   });
 
+  it('rejects a resealed semantic authority fabrication that retains the producer entry byte digest', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    let fabricatedSemanticDigest = '';
+    await mutateJsonFile(
+      fixture.evidenceDirectory,
+      'runtime/runtime-authority-snapshot.json',
+      (snapshot) => {
+        const authority = record(snapshot['authority']);
+        const host = record(authority['host']);
+        host['memoryToleranceBytes'] = Number(host['memoryToleranceBytes']) + 1;
+        fabricatedSemanticDigest = digestVerificationProvenanceJson(authority);
+        snapshot['runtimeAuthoritySemanticDigest'] = fabricatedSemanticDigest;
+      },
+    );
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/preflight.json', (preflight) => {
+      preflight['runtimeAuthoritySemanticDigest'] = fabricatedSemanticDigest;
+      for (const check of recordArray(preflight['checks'])) {
+        if (check['id'] === 'runtime-authority') {
+          const observed = record(check['observed']);
+          observed['runtimeAuthoritySemanticDigest'] = fabricatedSemanticDigest;
+        }
+        if (check['id'] === 'git-frozen-inputs-readable') {
+          const inputs = record(record(check['observed'])['inputs']);
+          inputs['runtimeAuthoritySemanticDigest'] = fabricatedSemanticDigest;
+        }
+      }
+    });
+    await mutateJsonFile(fixture.evidenceDirectory, 'abg-results.json', (summary) => {
+      summary['runtimeAuthoritySemanticDigest'] = fabricatedSemanticDigest;
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture))
+      .toContain('FORMAL_RUNTIME_AUTHORITY_PRODUCER_BINDING_MISMATCH');
+  });
+
   it('reports a malformed producer commit SHA with its stable provenance code', async () => {
     const fixture = await createFormalEvidenceFixture();
     await mutateProducerSourceManifest(fixture, (sourceManifest) => {

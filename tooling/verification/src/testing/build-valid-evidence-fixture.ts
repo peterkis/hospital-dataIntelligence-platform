@@ -45,7 +45,10 @@ import {
   formalRuntimePorts,
   type FormalRunIdentity,
 } from '../runtime/formal-runtime-contract.js';
-import { createFormalRuntimeAuthoritySnapshot } from '../runtime/podman-runtime-authority.js';
+import {
+  createFormalRuntimeAuthoritySnapshot,
+  RUNTIME_AUTHORITY_RELATIVE_PATH,
+} from '../runtime/podman-runtime-authority.js';
 import {
   buildFormalTerminalConclusion,
   type FormalTerminalConclusion,
@@ -135,7 +138,7 @@ export async function buildValidEvidenceFixture(
   await createEvidenceOutputDirectory(sharedDirectory);
 
   const reviewerDependencies = input.sourceManifestDependencies === undefined
-    ? fixtureSourceManifestDependencies()
+    ? await fixtureSourceManifestDependencies()
     : {
         ...input.sourceManifestDependencies,
         repositoryRoot: resolve(input.repositoryRoot ?? repositoryRoot),
@@ -272,7 +275,22 @@ export async function buildValidEvidenceFixture(
     timezone: 'Asia/Shanghai',
     runtimeAuthoritySha256: frozenInputs['runtimeAuthoritySha256']!,
     runtimeAuthoritySemanticDigest: frozenInputs['runtimeAuthoritySemanticDigest']!,
-    checks: [],
+    checks: [{
+      id: 'git-frozen-inputs-readable',
+      status: 'PASSED',
+      observed: {
+        readable: true,
+        inputNames: Object.keys(frozenInputs).sort(),
+        inputs: frozenInputs,
+      },
+    }, {
+      id: 'runtime-authority',
+      status: 'PASSED',
+      observed: {
+        runtimeAuthoritySha256: frozenInputs['runtimeAuthoritySha256']!,
+        runtimeAuthoritySemanticDigest: frozenInputs['runtimeAuthoritySemanticDigest']!,
+      },
+    }],
     secrets: [],
   });
   await writeFixtureJson(
@@ -705,13 +723,17 @@ function fixtureFrozenInputs(
   } satisfies Record<(typeof ABG_FROZEN_INPUT_KINDS)[number] | 'workingTreeState', string>;
 }
 
-function fixtureSourceManifestDependencies(): SourceManifestDependencies & {
+async function fixtureSourceManifestDependencies(): Promise<SourceManifestDependencies & {
   readonly repositoryRoot: string;
-} {
+}> {
   const bytesByPath = new Map(VERIFICATION_SOURCE_FILES.map((entry) => [
     entry.path,
     Buffer.from(`source:${entry.path}`, 'utf8'),
   ]));
+  bytesByPath.set(
+    RUNTIME_AUTHORITY_RELATIVE_PATH,
+    await readFile(join(repositoryRoot, RUNTIME_AUTHORITY_RELATIVE_PATH)),
+  );
   return {
     repositoryRoot: 'validator-fixture-repository',
     repository: {
