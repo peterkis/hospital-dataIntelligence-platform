@@ -2,7 +2,7 @@
 
 Status: blocked
 
-Blocked by: AR-12 — 对抗回归与重基线；以及明确的正式执行授权
+Blocked by: 明确的正式执行授权与正式环境运行（AR-12 技术依赖已 satisfied）
 
 ## What to build
 
@@ -19,3 +19,4 @@ Blocked by: AR-12 — 对抗回归与重基线；以及明确的正式执行授�
 - 2026-08-30：readiness runSequence `8` 的 Stage 2 在投影时间文本修复后继续暴露两项独立问题，用户随后明确授权修复双时态语义与故障矩阵夹具，并要求以 runSequence `9` 从 Stage 0 重跑。价表发布现在以最终审批事务的`occurredAt`作为发布版本`recorded_from`，用同一时点关闭上一发布记录，并在领域模块内重新生成发布态内容摘要与投影；提交和各审批动作仍冻结草稿摘要，既有投影字段解释和Schema版本不变。故障矩阵继续复用治理对象已绑定的`HOSPITAL-DEFAULT-PRICE`稳定代码，并以无副作用数据库只读断言验证每个受控写点同时回滚治理状态、记录时点和内容摘要，未放宽稳定身份约束或生产审计。上述修复的本地类型检查、真实PostgreSQL纵切面和全仓测试通过，但仍不代表readiness、正式ABG、Chrome或独立复核通过；后续结论只取 runSequence `9` 的新证据。
 - 2026-08-30：用户随后要求将整个现行容器设计迁移为Podman，旧Docker路径及原定`runSequence 9`因此停止且未启动。ADR-0111、Podman运行时、预检、逐项teardown、故障夹具、host-network回环端口与迁移回执完成后，仍需以新的候选提交和新的runSequence从Stage 0取得证据；本次迁移验证不形成readiness、正式ABG、Chrome或独立复核结论。
 - 2026-08-30（AR-08 状态复核）：本 Ticket 从已认领执行状态重新归类为 `blocked by AR-12`。AR-09～AR-11 尚需解决终态 lifecycle/ABG-40、reviewer provenance/契约漂移以及 Podman authority/restart/Docker socket/partial-startup 问题，随后由 AR-12 统一重基线；正式候选与新 run identity 均未冻结，未运行新的正式 ABG，不得将本 Ticket 改为 `resolved`。
+- 2026-08-30（AR-12 初始 closeout）：opening HEAD `db57406592b5afe18ac2e95f3ddd0e1bf40173ea` 的 AR-12 技术重基线已通过，summary SHA-256 为 `57c0c37368ccb4335754af70c018062b57395c2379c0c6270f4acd06b90b61e1`；AR-12 技术依赖标记为 `satisfied`。本 Ticket 保持 `blocked`，唯一剩余阻断是用户另行明确授权正式执行并在正式环境建立新的 candidate/run identity。该技术结果 `formalAcceptanceEligible=false`，没有启动真实服务、shared readiness 或正式 ABG，也没有关闭或修改原 21 个 completion Ticket；本任务不得执行 AR-07。
