@@ -1,8 +1,8 @@
 # 09 — 终态生命周期与 ABG-40 语义整改
 
-Status: ready-for-agent
+Status: claimed
 
-Blocked by: AR-08 — 工作包状态与验证基线协调
+Blocked by: AR-08 — 工作包状态与验证基线协调（已 `resolved`；保留为历史依赖）
 
 ## What to build
 
@@ -35,3 +35,4 @@ Blocked by: AR-08 — 工作包状态与验证基线协调
 ## Comments
 
 - 2026-08-30（AR-08 建立）：该问题来自当前代码的静态状态复核，尚未实施或运行验证；等待 AR-08 完成后方可认领。
+- 2026-08-30：AR-08 已 `resolved`，AR-09 已进入当前 frontier 并认领。本次只授权终态生命周期、ABG-40 和 reviewer 生命周期整改；不授权 AR-10、AR-11、AR-12 或正式 ABG。

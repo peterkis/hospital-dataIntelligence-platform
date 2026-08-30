@@ -33,8 +33,8 @@ AR-01 权威覆盖矩阵
 | 04 | AR-04 独立证据复核 | resolved | AR-03 已满足；AR-12 重新验证 |
 | 05 | AR-05 运行时预检生命周期 | resolved | AR-04 已满足；AR-12 重新验证 |
 | 06 | AR-06 对抗验证测试 | resolved | AR-05 已满足；AR-12 重新验证 |
-| 07 | AR-08 状态与基线协调 | claimed | AR-06 已满足 |
-| 08 | AR-09 终态生命周期与 ABG-40 | ready-for-agent | blocked by AR-08 |
+| 07 | AR-08 状态与基线协调 | resolved | AR-06 已满足 |
+| 08 | AR-09 终态生命周期与 ABG-40 | claimed | blocked by AR-08（AR-08 已 resolved，历史依赖已满足） |
 | 09 | AR-10 evidence provenance 与契约漂移 | ready-for-agent | blocked by AR-09 |
 | 10 | AR-11 Podman 运行时权威加固 | ready-for-agent | blocked by AR-10 |
 | 11 | AR-12 对抗回归与重基线 | ready-for-agent | blocked by AR-11 |
@@ -42,7 +42,7 @@ AR-01 权威覆盖矩阵
 
 ## Current frontier
 
-- Current frontier 为 `AR-08`。本轮只协调状态和建立 AR-09～AR-12，不执行 AR-09。
+- Current frontier 为 `AR-09`。本轮只完成 AR-08 状态跃迁并认领 AR-09，不执行 AR-09 整改。
 - AR-01～AR-06 的实现提交和旧定向验证评论保留，但 Prompt 1～Prompt 6 尚未在最新终态协议和 Podman 权威下完成 AR-12 重新验证。
 - Podman 运行时工作包仍为 `ready-for-human`；AR-11 完成并经人工复核前不得解除该边界。
 - AR-07 为 `blocked by AR-12`，并继续要求另行正式执行授权。
@@ -59,3 +59,4 @@ AR-01 权威覆盖矩阵
 
 - 2026-08-27：本地图明确采用 01 to 02 to 03 to 04 to 05 to 06 to 07 的顺序依赖。后续工作不得越过当前 Ticket。
 - 2026-08-30：AR-08 将依赖顺序改为 AR-01 → AR-02 → AR-03 → AR-04 → AR-05 → AR-06 → AR-08 → AR-09 → AR-10 → AR-11 → AR-12 → AR-07；旧顺序作为历史评论保留。
+- 2026-08-30：AR-08 复核完成并转为 `resolved`；AR-09 转为 `claimed` 并成为 current frontier。AR-10 继续由 AR-09 阻断，AR-07 继续由 AR-12 和另行正式执行授权阻断。

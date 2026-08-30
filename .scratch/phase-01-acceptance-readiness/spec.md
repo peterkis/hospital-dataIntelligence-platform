@@ -6,7 +6,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Objective
 
-在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证；当前 frontier 为 AR-08，AR-07 必须等待 AR-09～AR-12 完成后再按新的正式授权执行。
+在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证，AR-08 已完成并转为 `resolved`；当前活动任务和 frontier 为 AR-09，AR-07 必须等待 AR-09～AR-12 完成后再按新的正式授权执行。
 
 ## Status semantics
 
@@ -20,7 +20,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ### Formal acceptance status
 
-记录是否在冻结的真实环境、冻结候选提交和新的正式运行身份下执行完整 ABG，并由独立 reviewer 对不可覆盖证据完成复核。只有正式 evidence 能用于逐项关闭原 Phase 01 completion 的 21 个 Ticket；本工作包 Ticket 的本地 `resolved` 状态不能替代该证据。
+记录是否在冻结的真实环境、冻结候选提交和新的正式运行身份下执行完整 ABG，并由独立 reviewer 对不可覆盖证据完成复核。只有正式 evidence 能用于逐项关闭原 Phase 01 completion 的 21 个 Ticket；本工作包 Ticket 的本地 `resolved` 状态不能替代该证据。当前正式验收状态仍为 `pending`。
 
 ## Status rules
 
@@ -33,7 +33,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Triage compatibility
 
-- 本工作包的 `Status:` 行是既有 acceptance-readiness lifecycle ledger。AR-08 按本次明确要求保留并协调历史值 `resolved`、执行占用值 `claimed`、阻断值 `blocked` 和 canonical 值 `ready-for-agent`；前三者仅为本工作包内状态，不新增或修改 `docs/agents/triage-labels.md` 的全局 canonical triage vocabulary。
+- 本工作包的 `Status:` 行是既有 acceptance-readiness lifecycle ledger。AR-08 已完成对历史值 `resolved`、执行占用值 `claimed`、阻断值 `blocked` 和 canonical 值 `ready-for-agent` 的协调；前三者仅为本工作包内状态，不新增或修改 `docs/agents/triage-labels.md` 的全局 canonical triage vocabulary。
 - 对 AR-09～AR-12，`ready-for-agent` 只表示规格已经完整；实际执行资格必须同时满足 `Blocked by`。上游未满足时不得认领或实施，因此不会把“规格可交给 agent”误写成“可以越过依赖执行”。
 - 其他工作包继续使用全局 canonical triage labels；不得把本工作包的 legacy lifecycle 值复制为仓库通用标签。
 
@@ -43,7 +43,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；AR-08 完成后停止，不进入 AR-09。
+- 每次只执行获得授权的 current frontier；AR-09 当前仅完成认领和状态跃迁，本次不执行 AR-09 整改。
 
 ## Completion Criteria
 
@@ -57,3 +57,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 - 2026-08-27：工作包创建。01 已认领；其余任务在明确依赖满足前保持阻断。
 - 2026-08-30：AR-08 统一状态语义和后续整改依赖。AR-01～AR-06 的 `resolved` 保留为本地实现与当时定向验证结论；正式候选尚未冻结，Podman 工作包仍待人工复核，AR-07 阻断于 AR-12 和另行正式执行授权。
+- 2026-08-30：AR-08 完成复核并转为 `resolved`，当前活动任务改为 AR-09。Prompt 1～Prompt 6 仍须在 AR-12 基于最新终态协议和 Podman 权威重新验证；正式验收状态保持 `pending`。
