@@ -5,7 +5,7 @@ import {
   type AbgReferenceKind,
 } from './abg-coverage-matrix.js';
 import { canonicalJson } from './evidence/recorder.js';
-import { FORMAL_RUNTIME_PORTS } from './runtime/formal-runtime-contract.js';
+import { formalRuntimePorts } from './runtime/formal-runtime-contract.js';
 import {
   GATE_RESULT_SCHEMA_VERSION,
   RUN_SUMMARY_SCHEMA_VERSION as CONTRACT_RUN_SUMMARY_SCHEMA_VERSION,
@@ -36,6 +36,7 @@ export function validateFormalAbgSummary(
   value: unknown,
   expected: FormalAbgSummaryValidationExpectations,
 ): void {
+  const requiredRuntimePorts = formalRuntimePorts();
   const summary = requireRecord(value, 'RUN_SUMMARY_INVALID');
   assert(summary['schemaVersion'] === RUN_SUMMARY_SCHEMA_VERSION, 'RUN_SUMMARY_SCHEMA_VERSION_INVALID');
   const runId = requireMeaningfulString(summary['runId'], 'RUN_ID_INVALID');
@@ -192,7 +193,7 @@ export function validateFormalAbgSummary(
   assertExactNumberArray(summary['occupiedRequiredPorts'], [], 'OCCUPIED_REQUIRED_PORTS_PRESENT');
   assertExactNumberArray(
     summary['requiredPortsObserved'],
-    FORMAL_RUNTIME_PORTS,
+    requiredRuntimePorts,
     'REQUIRED_PORT_OBSERVATIONS_INCOMPLETE',
   );
   assert(summary['pruneCommandsInvoked'] === false, 'PRUNE_COMMANDS_INVOKED');

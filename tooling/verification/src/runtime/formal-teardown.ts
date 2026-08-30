@@ -701,7 +701,7 @@ export function assertSafeFormalCleanupCommand(
   }
 }
 
-class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
+export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
   private readonly runner: RuntimeCommandRunner;
 
   constructor(runner: RuntimeCommandRunner) {
@@ -1240,11 +1240,39 @@ async function tryInspectOne(
   args: readonly string[],
 ): Promise<Readonly<Record<string, unknown>> | null> {
   const result = await runner.run({ executable: 'podman', args });
-  if (result.exitCode !== 0) return null;
+  if (result.exitCode !== 0) {
+    if (isExactPodmanInspectNotFound(result, args[0], args.at(-1))) return null;
+    throw new Error('FORMAL_PODMAN_INSPECT_FAILED:' + stablePodmanResourceType(args[0]));
+  }
   const value = JSON.parse(result.stdout) as unknown;
   const first = Array.isArray(value) ? value[0] : undefined;
   if (!isRecord(first)) throw new Error('FORMAL_PODMAN_INSPECT_INVALID:' + args[0]);
   return first;
+}
+
+function isExactPodmanInspectNotFound(
+  result: Awaited<ReturnType<RuntimeCommandRunner['run']>>,
+  resourceType: string | undefined,
+  target: string | undefined,
+): boolean {
+  if (
+    result.exitCode !== 125 ||
+    result.signal !== null ||
+    result.stdout.trim() !== '[]' ||
+    target === undefined
+  ) return false;
+  const stderr = result.stderr.trimEnd();
+  if (resourceType === 'container') return stderr === `Error: no such container ${target}`;
+  if (resourceType === 'volume') return stderr === `Error: no such volume ${target}`;
+  if (resourceType === 'network') return stderr === `Error: network ${target}: network not found`;
+  return false;
+}
+
+function stablePodmanResourceType(resourceType: string | undefined): string {
+  if (resourceType === 'container') return 'CONTAINER';
+  if (resourceType === 'volume') return 'VOLUME';
+  if (resourceType === 'network') return 'NETWORK';
+  return 'RESOURCE';
 }
 
 async function failedPartialRecoveryEvents(

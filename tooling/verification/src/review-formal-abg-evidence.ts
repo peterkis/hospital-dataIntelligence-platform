@@ -39,7 +39,7 @@ import {
 import {
   createFormalRunSeed,
   FORMAL_REQUIRED_SECRET_NAMES,
-  FORMAL_RUNTIME_PORTS,
+  formalRuntimePorts,
 } from './runtime/formal-runtime-contract.js';
 import {
   CURRENT_EVIDENCE_CONTRACT_IDENTITY,
@@ -1542,7 +1542,7 @@ async function validateRunSummary(
     'abg-results.json#/requiredPortsObserved',
   );
   checks.check(
-    numberArrayEqual(requiredPortsObserved, FORMAL_RUNTIME_PORTS),
+    numberArrayEqual(requiredPortsObserved, formalRuntimePorts()),
     'FORMAL_SUMMARY_REQUIRED_PORT_OBSERVATION_MISSING',
     'abg-results.json#/requiredPortsObserved',
   );
@@ -2583,7 +2583,7 @@ async function validateFormalLifecycle(
       'FORMAL_FINAL_PORTS_INVALID',
       'runtime/resources-final.json#/ports',
     );
-    for (const port of FORMAL_RUNTIME_PORTS) {
+    for (const port of formalRuntimePorts()) {
       const matches = finalPortRecords.filter((record) => record['port'] === port);
       checks.check(matches.length === 1, 'FORMAL_REQUIRED_PORT_OBSERVATION_MISSING', `runtime/resources-final.json#/ports/${port}`);
       const observation = matches[0];
@@ -2607,12 +2607,13 @@ async function validateFormalLifecycle(
     ...finalPortRecords.filter((record) => record['occupied'] === true)
       .map((record) => Number(record['port'])),
   ]);
-  const occupiedRequiredPorts = FORMAL_RUNTIME_PORTS.filter((port) => occupiedPortSet.has(port));
-  const requiredPortsObserved = FORMAL_RUNTIME_PORTS.filter((port) =>
+  const requiredRuntimePorts = formalRuntimePorts();
+  const occupiedRequiredPorts = requiredRuntimePorts.filter((port) => occupiedPortSet.has(port));
+  const requiredPortsObserved = requiredRuntimePorts.filter((port) =>
     finalPortRecords.some((record) => record['port'] === port));
   const requiredPortObservationFailures = finalPortRecords
     .filter((record) =>
-      FORMAL_RUNTIME_PORTS.some((port) => port === record['port']) &&
+      requiredRuntimePorts.some((port) => port === record['port']) &&
       record['verificationError'] !== null)
     .map((record) => ({
       port: record['port'],
@@ -2634,7 +2635,7 @@ async function validateFormalLifecycle(
     cleanupStatus: 'PASSED',
     residualResourceCount: 0,
     occupiedRequiredPorts: [],
-    requiredPortsObserved: FORMAL_RUNTIME_PORTS,
+    requiredPortsObserved: requiredRuntimePorts,
     pruneCommandsInvoked: false,
   };
   const terminalLifecycleActual = {

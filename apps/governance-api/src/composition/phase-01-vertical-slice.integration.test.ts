@@ -1,14 +1,15 @@
 import { execFile } from 'node:child_process';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { Pool } from 'pg';
 import { sql } from 'kysely';
 import {
   GenericContainer,
-  Wait,
   type StartedTestContainer,
+  type WaitStrategy,
 } from 'testcontainers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, type DatabaseHandle } from '../platform/database/create-database.js';
@@ -63,6 +64,7 @@ interface IntegrationRuntimeAuthority {
         'hdi.phase': string;
         'hdi.managed-by': string;
       }>;
+      readonly dynamic: readonly ['hdi.run-id', 'hdi.run-sequence'];
     };
   };
 }
@@ -80,6 +82,10 @@ const RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(REPOSITORY_ROOT).authority;
 const POSTGRES_IMAGE = RUNTIME_AUTHORITY.images.postgresql.runtimeReference;
 const POSTGRES_HOST_PORT = RUNTIME_AUTHORITY.network.ports.postgresIntegration;
 const TESTCONTAINER_LABELS = formalTestcontainerLabels();
+const TESTCONTAINER_GOVERNED_LABEL_NAMES = [
+  ...Object.keys(RUNTIME_AUTHORITY.labels.static),
+  ...RUNTIME_AUTHORITY.labels.dynamic,
+] as const;
 const POSTGRES_CONTAINER_NAME = integrationPostgresContainerName();
 const MIGRATION_DIRECTORY = resolve(
   import.meta.dirname,
@@ -112,96 +118,212 @@ interface IntegrationEvidenceObservation {
 
 type PublicationTransactionFaultPoint = (typeof PUBLICATION_TRANSACTION_FAULT_POINTS)[number];
 
+interface PodmanCommandResult {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+type PodmanContainerCommandRunner = (
+  args: readonly string[],
+) => Promise<PodmanCommandResult>;
+
+interface GuardedTestcontainerCleanupResult {
+  readonly status: 'NOT_CREATED' | 'ABSENT' | 'REMOVED' | 'FAILED';
+  readonly containerId: string | null;
+  readonly containerName: string;
+  readonly errorCode: string | null;
+  readonly restartPolicyRemediated: boolean;
+}
+
+interface TestcontainerInspection {
+  readonly containerId: string;
+  readonly containerName: string;
+  readonly labels: Readonly<Record<string, string>>;
+  readonly restartPolicy: string;
+}
+
+class GuardedTestcontainerLifecycleError extends Error {
+  readonly originalFailure: unknown;
+  readonly cleanupResult: GuardedTestcontainerCleanupResult;
+
+  constructor(
+    phase: 'SETUP' | 'TEARDOWN',
+    originalFailure: unknown,
+    cleanupResult: GuardedTestcontainerCleanupResult,
+  ) {
+    super(
+      `FORMAL_TESTCONTAINER_${phase}_FAILED:${stableTestcontainerError(originalFailure)}` +
+        `;cleanup=${cleanupResult.status}` +
+        (cleanupResult.errorCode === null ? '' : `:${cleanupResult.errorCode}`),
+      { cause: originalFailure },
+    );
+    this.name = 'GuardedTestcontainerLifecycleError';
+    this.originalFailure = originalFailure;
+    this.cleanupResult = cleanupResult;
+  }
+}
+
+class GuardedExternalReadinessStrategy implements WaitStrategy {
+  async waitUntilReady(): Promise<void> {}
+
+  withStartupTimeout(_startupTimeoutMs: number): this {
+    return this;
+  }
+
+  isStartupTimeoutSet(): boolean {
+    return false;
+  }
+
+  getStartupTimeout(): number {
+    return 0;
+  }
+}
+
 class AuthorityBoundGenericContainer extends GenericContainer {
-  constructor(image: string, restartPolicy: 'no') {
+  private createdContainerId: string | undefined;
+
+  constructor(
+    image: string,
+    restartPolicy: 'no',
+    private readonly expectedName: string,
+    private readonly expectedLabels: Readonly<Record<string, string>>,
+  ) {
     super(image);
+    this.autoCleanup = false;
+    this.autoRemove = false;
     this.hostConfig.RestartPolicy = {
       Name: restartPolicy,
       MaximumRetryCount: 0,
     };
   }
 
+  getCreatedContainerId(): string | undefined {
+    return this.createdContainerId;
+  }
+
   protected override async containerCreated(containerId: string): Promise<void> {
-    const { stdout } = await execFileAsync('podman', [
-      'inspect',
-      '--format',
-      '{{.HostConfig.RestartPolicy.Name}}',
+    this.createdContainerId = containerId;
+    const inspection = await inspectOwnedTestcontainer({
       containerId,
-    ], {
-      windowsHide: true,
-      encoding: 'utf8',
-    });
-    if (stdout.trim() !== RUNTIME_AUTHORITY.podman.restartPolicy) {
+      containerName: this.expectedName,
+      expectedLabels: this.expectedLabels,
+    }, runPodmanContainerCommand);
+    if (typeof inspection === 'string') throw new Error(inspection);
+    if (inspection.restartPolicy !== RUNTIME_AUTHORITY.podman.restartPolicy) {
       throw new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT');
     }
   }
 }
 
 let container: StartedTestContainer | undefined;
+let authorityBoundContainer: AuthorityBoundGenericContainer | undefined;
+let startedRuntimeEventWritten = false;
 let databaseHandle: DatabaseHandle | undefined;
 let foundation: FoundationIds;
 const integrationEvidenceObservations: IntegrationEvidenceObservation[] = [];
 
 process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 
+describe('Phase 01 executable vertical slice', () => {
 beforeAll(async () => {
-  container = await new AuthorityBoundGenericContainer(
+  authorityBoundContainer = new AuthorityBoundGenericContainer(
     POSTGRES_IMAGE,
     RUNTIME_AUTHORITY.podman.restartPolicy,
-  )
-    .withName(POSTGRES_CONTAINER_NAME)
-    .withLabels(TESTCONTAINER_LABELS)
-    .withEnvironment({
-      POSTGRES_HOST_AUTH_METHOD: 'trust',
-      TZ: RUNTIME_AUTHORITY.host.timezone,
-    })
-    .withCommand([
-      '-c', `timezone=${RUNTIME_AUTHORITY.host.timezone}`,
-      '-c', `listen_addresses=${RUNTIME_AUTHORITY.network.bindAddress}`,
-      '-p', String(POSTGRES_HOST_PORT),
-    ])
-    .withNetworkMode(RUNTIME_AUTHORITY.network.managedContainerMode)
-    .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/u, 2))
-    .start();
-  await writeTestcontainerRuntimeEvent('STARTED', container);
-
-  const poolConfig = {
-    host: '127.0.0.1',
-    port: POSTGRES_HOST_PORT,
-    user: 'postgres',
-    database: 'postgres',
-  };
-  const bootstrapPool = new Pool(poolConfig);
+    POSTGRES_CONTAINER_NAME,
+    TESTCONTAINER_LABELS,
+  );
   try {
-    const migrations = (await readdir(MIGRATION_DIRECTORY))
-      .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
-      .sort((left, right) => left.localeCompare(right));
-    for (const migration of migrations) {
-      await bootstrapPool.query(await readFile(resolve(MIGRATION_DIRECTORY, migration), 'utf8'));
+    container = await authorityBoundContainer
+      .withName(POSTGRES_CONTAINER_NAME)
+      .withLabels(TESTCONTAINER_LABELS)
+      .withEnvironment({
+        POSTGRES_HOST_AUTH_METHOD: 'trust',
+        TZ: RUNTIME_AUTHORITY.host.timezone,
+      })
+      .withCommand([
+        '-c', `timezone=${RUNTIME_AUTHORITY.host.timezone}`,
+        '-c', `listen_addresses=${RUNTIME_AUTHORITY.network.bindAddress}`,
+        '-p', String(POSTGRES_HOST_PORT),
+      ])
+      .withNetworkMode(RUNTIME_AUTHORITY.network.managedContainerMode)
+      .withWaitStrategy(new GuardedExternalReadinessStrategy())
+      .start();
+    await waitForPostgresReadiness(container.getId(), runPodmanContainerCommand);
+    await writeTestcontainerRuntimeEvent('STARTED', container.getId());
+    startedRuntimeEventWritten = true;
+
+    const poolConfig = {
+      host: '127.0.0.1',
+      port: POSTGRES_HOST_PORT,
+      user: 'postgres',
+      database: 'postgres',
+    };
+    const bootstrapPool = new Pool(poolConfig);
+    try {
+      const migrations = (await readdir(MIGRATION_DIRECTORY))
+        .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
+        .sort((left, right) => left.localeCompare(right));
+      for (const migration of migrations) {
+        await bootstrapPool.query(await readFile(resolve(MIGRATION_DIRECTORY, migration), 'utf8'));
+      }
+    } finally {
+      await bootstrapPool.end();
     }
-  } finally {
-    await bootstrapPool.end();
+    databaseHandle = createDatabase(poolConfig);
+    foundation = await seedFoundation(databaseHandle);
+  } catch (originalFailure) {
+    const failures = [originalFailure];
+    if (databaseHandle !== undefined) {
+      try {
+        await databaseHandle.close();
+      } catch (databaseCloseFailure) {
+        failures.push(databaseCloseFailure);
+      } finally {
+        databaseHandle = undefined;
+      }
+    }
+    const cleanupResult = await cleanupCurrentTestcontainer();
+    throw new GuardedTestcontainerLifecycleError(
+      'SETUP',
+      combineTestcontainerFailures(failures),
+      cleanupResult,
+    );
   }
-  databaseHandle = createDatabase(poolConfig);
-  foundation = await seedFoundation(databaseHandle);
 }, 120_000);
 
 afterAll(async () => {
+  const failures: unknown[] = [];
   try {
     await writeIntegrationEvidenceObservations();
-  } finally {
+  } catch (evidenceFailure) {
+    failures.push(evidenceFailure);
+  }
+  if (databaseHandle !== undefined) {
     try {
-      await databaseHandle?.close();
+      await databaseHandle.close();
+    } catch (databaseCloseFailure) {
+      failures.push(databaseCloseFailure);
     } finally {
-      if (container !== undefined) {
-        await container.stop();
-        await writeTestcontainerRuntimeEvent('STOPPED', container);
-      }
+      databaseHandle = undefined;
     }
+  }
+  const cleanupResult = await cleanupCurrentTestcontainer();
+  if (cleanupResult.status === 'FAILED') {
+    failures.push(new Error(cleanupResult.errorCode ?? 'FORMAL_TESTCONTAINER_CLEANUP_FAILED'));
+  }
+  if (cleanupResult.restartPolicyRemediated) {
+    failures.push(new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT_REMEDIATED'));
+  }
+  if (failures.length > 0) {
+    throw new GuardedTestcontainerLifecycleError(
+      'TEARDOWN',
+      combineTestcontainerFailures(failures),
+      cleanupResult,
+    );
   }
 }, 30_000);
 
-describe('Phase 01 executable vertical slice', () => {
   it('publishes, resolves, audits, snapshots, and closes simulated consumption', async () => {
     if (!databaseHandle) throw new Error('Integration database was not initialized');
     const rootDatabase = databaseHandle.database;
@@ -1300,6 +1422,531 @@ describe('Phase 01 executable vertical slice', () => {
   }, 180_000);
 });
 
+describe('Testcontainers Podman lifecycle guard', () => {
+  it('remediates restart-only drift, re-inspects, and removes only the exact owned container', async () => {
+    const containerId = 'a'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(containerId, POSTGRES_CONTAINER_NAME, 'always'),
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(
+        containerId,
+        POSTGRES_CONTAINER_NAME,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+      ),
+      { exitCode: 0, stdout: '', stderr: '' },
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toEqual({
+      status: 'REMOVED',
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      errorCode: null,
+      restartPolicyRemediated: true,
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+      [
+        'container',
+        'update',
+        `--restart=${RUNTIME_AUTHORITY.podman.restartPolicy}`,
+        containerId,
+      ],
+      ['container', 'inspect', containerId],
+      ['container', 'rm', '--force', containerId],
+    ]);
+  });
+
+  it('preserves the original setup failure together with the guarded cleanup outcome', () => {
+    const originalFailure = new Error('SYNTHETIC_TESTCONTAINER_START_FAILURE');
+    const cleanupResult: GuardedTestcontainerCleanupResult = {
+      status: 'REMOVED',
+      containerId: 'b'.repeat(64),
+      containerName: POSTGRES_CONTAINER_NAME,
+      errorCode: null,
+      restartPolicyRemediated: false,
+    };
+
+    const failure = new GuardedTestcontainerLifecycleError(
+      'SETUP',
+      originalFailure,
+      cleanupResult,
+    );
+
+    expect(failure.cause).toBe(originalFailure);
+    expect(failure.originalFailure).toBe(originalFailure);
+    expect(failure.cleanupResult).toBe(cleanupResult);
+    expect(failure.message).toContain('SYNTHETIC_TESTCONTAINER_START_FAILURE');
+    expect(failure.message).toContain('cleanup=REMOVED');
+  });
+
+  it('preserves a container whose current-run ownership labels drift', async () => {
+    const containerId = 'c'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(
+        containerId,
+        POSTGRES_CONTAINER_NAME,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+        { ...TESTCONTAINER_LABELS, 'hdi.run-id': 'different-run' },
+      ),
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_OWNERSHIP_DRIFT',
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+    ]);
+  });
+
+  it('fails closed when the fresh inspect has an operational failure', async () => {
+    const containerId = 'd'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      { exitCode: 125, stdout: '', stderr: 'synthetic inspect failure' },
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_INSPECT_FAILED',
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+    ]);
+  });
+
+  it('surfaces readiness failure without invoking an unguarded stop or removal', async () => {
+    const containerId = '9'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      testcontainerInspectResult(
+        containerId,
+        POSTGRES_CONTAINER_NAME,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+      ),
+      { exitCode: 125, stdout: '', stderr: 'synthetic logs failure' },
+    ];
+
+    await expect(waitForPostgresReadiness(
+      containerId,
+      async (args: readonly string[]) => {
+        commands.push([...args]);
+        const response = responses.shift();
+        if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+        return response;
+      },
+      { maxAttempts: 1, retryDelayMs: 0, wait: async () => {} },
+    )).rejects.toThrow('FORMAL_TESTCONTAINER_READINESS_LOGS_FAILED');
+    expect(commands).toEqual([
+      ['container', 'inspect', containerId],
+      ['container', 'logs', containerId],
+    ]);
+  });
+
+  it('does not remove when restart remediation is not confirmed by a second fresh inspect', async () => {
+    const containerId = 'e'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(containerId, POSTGRES_CONTAINER_NAME, 'always'),
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(containerId, POSTGRES_CONTAINER_NAME, 'always'),
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT',
+      restartPolicyRemediated: true,
+    });
+    expect(commands).not.toContainEqual(['container', 'rm', '--force', containerId]);
+  });
+
+  it.each([
+    ['container id', 'f'.repeat(64), POSTGRES_CONTAINER_NAME],
+    ['container name', 'a'.repeat(64), `${POSTGRES_CONTAINER_NAME}-other`],
+  ])('preserves exact-identity drift in the %s', async (_field, inspectedId, inspectedName) => {
+    const containerId = 'a'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(
+        inspectedId,
+        inspectedName,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+      ),
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_IDENTITY_DRIFT',
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+    ]);
+  });
+});
+
+async function guardedRemoveTestcontainer(
+  input: {
+    readonly containerId: string | undefined;
+    readonly containerName: string;
+    readonly expectedLabels: Readonly<Record<string, string>>;
+    readonly expectedRestartPolicy: 'no';
+  },
+  runPodman: PodmanContainerCommandRunner,
+): Promise<GuardedTestcontainerCleanupResult> {
+  if (input.containerId === undefined) {
+    return {
+      status: 'NOT_CREATED',
+      containerId: null,
+      containerName: input.containerName,
+      errorCode: null,
+      restartPolicyRemediated: false,
+    };
+  }
+  const containerId = input.containerId;
+  const baseResult = {
+    containerId,
+    containerName: input.containerName,
+  } as const;
+  const expectedLabelNames = Object.keys(input.expectedLabels).sort();
+  const governedLabelNames = [...TESTCONTAINER_GOVERNED_LABEL_NAMES].sort();
+  if (
+    governedLabelNames.length !== 5 ||
+    new Set(governedLabelNames).size !== 5 ||
+    expectedLabelNames.length !== governedLabelNames.length ||
+    expectedLabelNames.some((name, index) => name !== governedLabelNames[index])
+  ) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_GOVERNED_LABEL_SET_INVALID',
+      false,
+    );
+  }
+  const exists = await runPodman(['container', 'exists', containerId]);
+  if (exists.exitCode === 1) {
+    return {
+      ...baseResult,
+      status: 'ABSENT',
+      errorCode: null,
+      restartPolicyRemediated: false,
+    };
+  }
+  if (exists.exitCode !== 0) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_EXISTS_CHECK_FAILED',
+      false,
+    );
+  }
+
+  const inspectionInput = { ...input, containerId };
+  let inspection = await inspectOwnedTestcontainer(inspectionInput, runPodman);
+  if (typeof inspection === 'string') {
+    return failedTestcontainerCleanup(baseResult, inspection, false);
+  }
+  let restartPolicyRemediated = false;
+  if (inspection.restartPolicy !== input.expectedRestartPolicy) {
+    const update = await runPodman([
+      'container',
+      'update',
+      `--restart=${input.expectedRestartPolicy}`,
+      containerId,
+    ]);
+    if (update.exitCode !== 0) {
+      return failedTestcontainerCleanup(
+        baseResult,
+        'FORMAL_TESTCONTAINER_RESTART_POLICY_REMEDIATION_FAILED',
+        false,
+      );
+    }
+    restartPolicyRemediated = true;
+    inspection = await inspectOwnedTestcontainer(inspectionInput, runPodman);
+    if (typeof inspection === 'string') {
+      return failedTestcontainerCleanup(baseResult, inspection, true);
+    }
+  }
+  if (inspection.restartPolicy !== input.expectedRestartPolicy) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT',
+      restartPolicyRemediated,
+    );
+  }
+  const removal = await runPodman(['container', 'rm', '--force', containerId]);
+  if (removal.exitCode !== 0) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_REMOVE_FAILED',
+      restartPolicyRemediated,
+    );
+  }
+  return {
+    ...baseResult,
+    status: 'REMOVED',
+    errorCode: null,
+    restartPolicyRemediated,
+  };
+}
+
+async function inspectOwnedTestcontainer(
+  input: {
+    readonly containerId: string;
+    readonly containerName: string;
+    readonly expectedLabels: Readonly<Record<string, string>>;
+  },
+  runPodman: PodmanContainerCommandRunner,
+): Promise<TestcontainerInspection | string> {
+  const response = await runPodman(['container', 'inspect', input.containerId]);
+  if (response.exitCode !== 0) return 'FORMAL_TESTCONTAINER_INSPECT_FAILED';
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response.stdout);
+  } catch {
+    return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 1) {
+    return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  }
+  const record = parsed[0];
+  if (!isRecord(record)) return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  const containerId = record['Id'];
+  const rawName = record['Name'];
+  const config = record['Config'];
+  const hostConfig = record['HostConfig'];
+  if (
+    typeof containerId !== 'string' ||
+    typeof rawName !== 'string' ||
+    !isRecord(config) ||
+    !isRecord(hostConfig)
+  ) return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  const containerName = rawName.startsWith('/') ? rawName.slice(1) : rawName;
+  if (containerId !== input.containerId || containerName !== input.containerName) {
+    return 'FORMAL_TESTCONTAINER_IDENTITY_DRIFT';
+  }
+  const rawLabels = config['Labels'];
+  if (!isRecord(rawLabels)) return 'FORMAL_TESTCONTAINER_OWNERSHIP_DRIFT';
+  const labels: Record<string, string> = {};
+  for (const [name, value] of Object.entries(rawLabels)) {
+    if (typeof value === 'string') labels[name] = value;
+  }
+  if (
+    !Object.entries(input.expectedLabels)
+      .every(([name, value]) => labels[name] === value)
+  ) return 'FORMAL_TESTCONTAINER_OWNERSHIP_DRIFT';
+  const rawRestartPolicy = hostConfig['RestartPolicy'];
+  if (!isRecord(rawRestartPolicy) || typeof rawRestartPolicy['Name'] !== 'string') {
+    return 'FORMAL_TESTCONTAINER_RESTART_POLICY_UNAVAILABLE';
+  }
+  return {
+    containerId,
+    containerName,
+    labels,
+    restartPolicy: rawRestartPolicy['Name'],
+  };
+}
+
+function failedTestcontainerCleanup(
+  input: { readonly containerId: string; readonly containerName: string },
+  errorCode: string,
+  restartPolicyRemediated: boolean,
+): GuardedTestcontainerCleanupResult {
+  return {
+    ...input,
+    status: 'FAILED',
+    errorCode,
+    restartPolicyRemediated,
+  };
+}
+
+function testcontainerInspectResult(
+  containerId: string,
+  containerName: string,
+  restartPolicy: string,
+  labels: Readonly<Record<string, string>> = TESTCONTAINER_LABELS,
+): PodmanCommandResult {
+  return {
+    exitCode: 0,
+    stdout: JSON.stringify([{
+      Id: containerId,
+      Name: containerName,
+      Config: { Labels: labels },
+      HostConfig: { RestartPolicy: { Name: restartPolicy } },
+    }]),
+    stderr: '',
+  };
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stableTestcontainerError(error: unknown): string {
+  if (error instanceof Error) return `${error.name}:${error.message}`;
+  return String(error);
+}
+
+function combineTestcontainerFailures(failures: readonly unknown[]): unknown {
+  if (failures.length === 1) return failures[0];
+  return new AggregateError(
+    [...failures],
+    'FORMAL_TESTCONTAINER_MULTIPLE_LIFECYCLE_FAILURES',
+  );
+}
+
+async function runPodmanContainerCommand(
+  args: readonly string[],
+): Promise<PodmanCommandResult> {
+  try {
+    const { stdout, stderr } = await execFileAsync('podman', [...args], {
+      windowsHide: true,
+      encoding: 'utf8',
+      timeout: 30_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return { exitCode: 0, stdout, stderr };
+  } catch (error) {
+    if (!isRecord(error)) return { exitCode: 125, stdout: '', stderr: String(error) };
+    return {
+      exitCode: typeof error['code'] === 'number' ? error['code'] : 125,
+      stdout: typeof error['stdout'] === 'string' ? error['stdout'] : '',
+      stderr: typeof error['stderr'] === 'string'
+        ? error['stderr']
+        : stableTestcontainerError(error),
+    };
+  }
+}
+
+async function waitForPostgresReadiness(
+  containerId: string,
+  runPodman: PodmanContainerCommandRunner,
+  options: {
+    readonly maxAttempts?: number;
+    readonly retryDelayMs?: number;
+    readonly wait?: (milliseconds: number) => Promise<void>;
+  } = {},
+): Promise<void> {
+  const maxAttempts = options.maxAttempts ?? 300;
+  const retryDelayMs = options.retryDelayMs ?? 200;
+  const wait = options.wait ?? (async (milliseconds) => delay(milliseconds));
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const inspection = await inspectOwnedTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+    }, runPodman);
+    if (typeof inspection === 'string') throw new Error(inspection);
+    if (inspection.restartPolicy !== RUNTIME_AUTHORITY.podman.restartPolicy) {
+      throw new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT');
+    }
+    const logs = await runPodman(['container', 'logs', containerId]);
+    if (logs.exitCode !== 0) throw new Error('FORMAL_TESTCONTAINER_READINESS_LOGS_FAILED');
+    const combinedLogs = `${logs.stdout}\n${logs.stderr}`;
+    if (
+      combinedLogs.split('database system is ready to accept connections').length - 1 >= 2
+    ) return;
+    if (attempt < maxAttempts) await wait(retryDelayMs);
+  }
+  throw new Error('FORMAL_TESTCONTAINER_READINESS_TIMEOUT');
+}
+
+async function cleanupCurrentTestcontainer(): Promise<GuardedTestcontainerCleanupResult> {
+  const containerId = container?.getId() ?? authorityBoundContainer?.getCreatedContainerId();
+  const runtimeEventWasWritten = startedRuntimeEventWritten;
+  const result = await guardedRemoveTestcontainer({
+    containerId,
+    containerName: POSTGRES_CONTAINER_NAME,
+    expectedLabels: TESTCONTAINER_LABELS,
+    expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+  }, runPodmanContainerCommand);
+  if (result.status === 'REMOVED' || result.status === 'ABSENT' || result.status === 'NOT_CREATED') {
+    container = undefined;
+    authorityBoundContainer = undefined;
+    startedRuntimeEventWritten = false;
+  }
+  if (result.status === 'REMOVED' && runtimeEventWasWritten && containerId !== undefined) {
+    try {
+      await writeTestcontainerRuntimeEvent('STOPPED', containerId);
+    } catch {
+      return failedTestcontainerCleanup(
+        { containerId, containerName: POSTGRES_CONTAINER_NAME },
+        'FORMAL_TESTCONTAINER_STOPPED_EVENT_WRITE_FAILED',
+        result.restartPolicyRemediated,
+      );
+    }
+  }
+  return result;
+}
+
 function recordIntegrationObservation(observation: IntegrationEvidenceObservation): void {
   integrationEvidenceObservations.push(observation);
 }
@@ -1756,7 +2403,7 @@ function integrationPostgresContainerName(): string {
 
 async function writeTestcontainerRuntimeEvent(
   event: 'STARTED' | 'STOPPED',
-  startedContainer: StartedTestContainer,
+  containerId: string,
 ): Promise<void> {
   const eventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
   if (eventDirectory === undefined) return;
@@ -1766,10 +2413,9 @@ async function writeTestcontainerRuntimeEvent(
   if (runId === undefined || runSequence === undefined || runtimeNamespace === undefined) {
     throw new Error('FORMAL_TESTCONTAINER_EVENT_IDENTITY_INCOMPLETE');
   }
-  const id = startedContainer.getId();
   await mkdir(eventDirectory, { recursive: true, mode: 0o700 });
   await writeFile(
-    resolve(eventDirectory, `container-integration-postgres-${id}-${event.toLowerCase()}.json`),
+    resolve(eventDirectory, `container-integration-postgres-${containerId}-${event.toLowerCase()}.json`),
     JSON.stringify({
       schemaVersion: 'phase-01.formal-runtime-event.v1',
       runId,
@@ -1777,7 +2423,7 @@ async function writeTestcontainerRuntimeEvent(
       runtimeNamespace,
       event,
       resourceType: 'container',
-      id,
+      id: containerId,
       name: POSTGRES_CONTAINER_NAME,
       role: 'testcontainers-postgres',
       labels: TESTCONTAINER_LABELS,
@@ -1790,7 +2436,7 @@ async function writeTestcontainerRuntimeEvent(
         hostIp: RUNTIME_AUTHORITY.network.bindAddress,
         hostPort: POSTGRES_HOST_PORT,
       }],
-      ...(event === 'STOPPED' ? { exitStatus: 'STOPPED_BY_TESTCONTAINERS' } : {}),
+      ...(event === 'STOPPED' ? { exitStatus: 'REMOVED_BY_GUARDED_PODMAN_CLEANUP' } : {}),
     }, null, 2) + '\n',
     { encoding: 'utf8', flag: 'wx', mode: 0o600 },
   );

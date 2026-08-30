@@ -192,6 +192,13 @@ function passingPreflightDependencies(
       async inspect() {
         return {
           podmanVersion: authority.podman.version,
+          packageNevras: {
+            podman: authority.podman.packageNevra,
+            conmon: authority.podman.conmonNevra,
+            containersCommon: authority.podman.containersCommonNevra,
+            runc: authority.podman.ociRuntimeNevra,
+            networkPlugins: authority.podman.networkPluginsNevra,
+          },
           graphDriverName: authority.podman.storageDriver,
           graphRoot: authority.podman.graphRoot,
           runRoot: authority.podman.runRoot,

@@ -1,4 +1,4 @@
-import { FORMAL_RUNTIME_PORTS, type FormalRunIdentity } from './formal-runtime-contract.js';
+import { formalRuntimePorts, type FormalRunIdentity } from './formal-runtime-contract.js';
 import type { JsonValue } from '../evidence/protocol.js';
 import type {
   FormalCleanupReport,
@@ -85,6 +85,7 @@ export interface BuildFormalTerminalConclusionInput {
 export function buildFormalTerminalConclusion(
   input: BuildFormalTerminalConclusionInput,
 ): FormalTerminalConclusion {
+  const requiredRuntimePorts = formalRuntimePorts();
   const nonFormalGateCount = input.nonFormalGateResults.length;
   const nonFormalPassedCount = input.nonFormalGateResults.filter((gate) => gate.status === 'PASSED').length;
   const nonFormalFailedCount = nonFormalGateCount - nonFormalPassedCount;
@@ -96,17 +97,17 @@ export function buildFormalTerminalConclusion(
   const residualVolumeCount = countResources(residualResources, 'volume');
   const residualNetworkCount = countResources(residualResources, 'network');
   const observedPortSet = new Set(input.finalResources.ports.map((observation) => observation.port));
-  const requiredPortsObserved = FORMAL_RUNTIME_PORTS.filter((port) => observedPortSet.has(port));
+  const requiredPortsObserved = requiredRuntimePorts.filter((port) => observedPortSet.has(port));
   const occupiedPortSet = new Set([
     ...input.cleanup.occupiedPorts,
     ...input.finalResources.ports
       .filter((observation) => observation.occupied)
       .map((observation) => observation.port),
   ]);
-  const occupiedRequiredPorts = FORMAL_RUNTIME_PORTS.filter((port) => occupiedPortSet.has(port));
-  const missingRequiredPorts = FORMAL_RUNTIME_PORTS.filter((port) => !requiredPortsObserved.includes(port));
+  const occupiedRequiredPorts = requiredRuntimePorts.filter((port) => occupiedPortSet.has(port));
+  const missingRequiredPorts = requiredRuntimePorts.filter((port) => !requiredPortsObserved.includes(port));
   const unverifiableRequiredPorts = input.finalResources.ports.filter((observation) =>
-    FORMAL_RUNTIME_PORTS.some((port) => port === observation.port) &&
+    requiredRuntimePorts.some((port) => port === observation.port) &&
       observation.verificationError !== null,
   );
   const pruneCommandsInvoked = Boolean(
@@ -178,7 +179,7 @@ export function buildFormalTerminalConclusion(
       cleanupStatus: 'PASSED',
       residualResourceCount: 0,
       occupiedRequiredPorts: [],
-      requiredPortsObserved: FORMAL_RUNTIME_PORTS,
+      requiredPortsObserved: requiredRuntimePorts,
       pruneCommandsInvoked: false,
     },
     actual: {

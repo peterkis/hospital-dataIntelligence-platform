@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   FORMAL_REQUIRED_SECRET_NAMES,
-  FORMAL_RUNTIME_PORTS,
   createFormalRunSeed,
+  formalRuntimePorts,
   formalRuntimeLabels,
   type RuntimeCommandResult,
   type RuntimeCommandRunner,
@@ -10,6 +10,7 @@ import {
 } from './formal-runtime-contract.js';
 import {
   isRepositoryPodmanResource,
+  inspectRpmNevra,
   parseRegisteredWslBackends,
   parsePodmanContainerRestartPolicy,
   runFormalPreflight,
@@ -39,11 +40,87 @@ describe('formal ABG preflight', () => {
         inputs: { producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256 },
       });
     expect(report.secrets.every((secret) => secret.present)).toBe(true);
+    expect(report.checks.filter((check) => check.id.startsWith('podman-package-nevra-')))
+      .toEqual([
+        expect.objectContaining({ id: 'podman-package-nevra-podman', status: 'PASSED' }),
+        expect.objectContaining({ id: 'podman-package-nevra-conmon', status: 'PASSED' }),
+        expect.objectContaining({ id: 'podman-package-nevra-containers-common', status: 'PASSED' }),
+        expect.objectContaining({ id: 'podman-package-nevra-runc', status: 'PASSED' }),
+        expect.objectContaining({
+          id: 'podman-package-nevra-containernetworking-plugins',
+          status: 'PASSED',
+        }),
+      ]);
     for (const secret of Object.values(dependencies.environment)) {
       if (secret?.startsWith('formal-secret-') === true) {
         expect(JSON.stringify(report)).not.toContain(secret);
       }
     }
+  });
+
+  it('records a structured failure when the runtime authority cannot be loaded', async () => {
+    const dependencies = passingDependencies();
+    const report = await execute({
+      ...dependencies,
+      loadRuntimeAuthority() {
+        throw new Error('RUNTIME_AUTHORITY_MISSING');
+      },
+    });
+
+    expect(report.status).toBe('FAILED');
+    expect(report.runtimeAuthoritySha256).toBeNull();
+    expect(report.runtimeAuthoritySemanticDigest).toBeNull();
+    expect(report.checks).toContainEqual({
+      id: 'runtime-authority',
+      category: 'podman',
+      status: 'FAILED',
+      errorCode: 'FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_INVALID',
+      observed: { errorCode: 'RUNTIME_AUTHORITY_MISSING' },
+    });
+  });
+
+  it.each([
+    ['podman', 'FORMAL_PREFLIGHT_PODMAN_PACKAGE_NEVRA_MISMATCH'],
+    ['conmon', 'FORMAL_PREFLIGHT_CONMON_NEVRA_MISMATCH'],
+    ['containersCommon', 'FORMAL_PREFLIGHT_CONTAINERS_COMMON_NEVRA_MISMATCH'],
+    ['runc', 'FORMAL_PREFLIGHT_RUNC_NEVRA_MISMATCH'],
+    ['networkPlugins', 'FORMAL_PREFLIGHT_NETWORK_PLUGINS_NEVRA_MISMATCH'],
+  ] as const)('fails closed when the %s RPM NEVRA drifts', async (name, errorCode) => {
+    const dependencies = passingDependencies();
+    await expectFailure({
+      ...dependencies,
+      containerRuntime: {
+        async inspect(authority) {
+          const observation = await dependencies.containerRuntime.inspect(authority);
+          return {
+            ...observation,
+            packageNevras: { ...observation.packageNevras, [name]: 'unexpected-nevra' },
+          };
+        },
+      },
+    }, errorCode);
+  });
+
+  it.each([
+    ['podman', 'FORMAL_PREFLIGHT_PODMAN_PACKAGE_NEVRA_UNAVAILABLE'],
+    ['conmon', 'FORMAL_PREFLIGHT_CONMON_NEVRA_UNAVAILABLE'],
+    ['containersCommon', 'FORMAL_PREFLIGHT_CONTAINERS_COMMON_NEVRA_UNAVAILABLE'],
+    ['runc', 'FORMAL_PREFLIGHT_RUNC_NEVRA_UNAVAILABLE'],
+    ['networkPlugins', 'FORMAL_PREFLIGHT_NETWORK_PLUGINS_NEVRA_UNAVAILABLE'],
+  ] as const)('fails closed when the %s RPM NEVRA cannot be observed', async (name, errorCode) => {
+    const dependencies = passingDependencies();
+    await expectFailure({
+      ...dependencies,
+      containerRuntime: {
+        async inspect(authority) {
+          const observation = await dependencies.containerRuntime.inspect(authority);
+          return {
+            ...observation,
+            packageNevras: { ...observation.packageNevras, [name]: null },
+          };
+        },
+      },
+    }, errorCode);
   });
 
   it('fails closed on a port conflict', async () => {
@@ -338,6 +415,31 @@ describe('formal ABG preflight', () => {
     expect(parsePodmanContainerRestartPolicy({ Config: { RestartPolicy: { Name: 'always' } } }))
       .toBeNull();
   });
+
+  it('captures an exact RPM NEVRA with the governed query format and fails closed on query errors', async () => {
+    const commands: RuntimeCommandSpec[] = [];
+    const nevra = TEST_AUTHORITY.podman.networkPluginsNevra;
+    const runner: RuntimeCommandRunner = {
+      async run(command) {
+        commands.push(command);
+        return command.args.at(-1) === 'containernetworking-plugins'
+          ? { exitCode: 0, signal: null, stdout: nevra + '\n', stderr: '' }
+          : { exitCode: 1, signal: null, stdout: '', stderr: 'synthetic query failure' };
+      },
+    };
+
+    await expect(inspectRpmNevra(runner, 'containernetworking-plugins')).resolves.toBe(nevra);
+    await expect(inspectRpmNevra(runner, 'missing-package')).resolves.toBeNull();
+    expect(commands[0]).toEqual({
+      executable: 'rpm',
+      args: [
+        '-q',
+        '--qf',
+        '%{NAME}-%{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}',
+        'containernetworking-plugins',
+      ],
+    });
+  });
 });
 
 async function execute(dependencies: FormalPreflightDependencies) {
@@ -395,6 +497,13 @@ function passingDependencies(): FormalPreflightDependencies {
       async inspect() {
         return {
           podmanVersion: '4.9.4-rhel',
+          packageNevras: {
+            podman: TEST_AUTHORITY.podman.packageNevra,
+            conmon: TEST_AUTHORITY.podman.conmonNevra,
+            containersCommon: TEST_AUTHORITY.podman.containersCommonNevra,
+            runc: TEST_AUTHORITY.podman.ociRuntimeNevra,
+            networkPlugins: TEST_AUTHORITY.podman.networkPluginsNevra,
+          },
           graphDriverName: 'overlay',
           graphRoot: '/var/lib/containers/storage',
           runRoot: '/run/containers/storage',
@@ -601,4 +710,4 @@ function memInfo(swapKilobytes: number): string {
   return `MemTotal:       4194304 kB\nSwapTotal:      ${swapKilobytes} kB\n`;
 }
 
-expect(FORMAL_RUNTIME_PORTS).toEqual([55432, 55433, 18080, 19000, 3000, 4101, 4102]);
+expect(formalRuntimePorts()).toEqual([55432, 55433, 18080, 19000, 3000, 4101, 4102]);

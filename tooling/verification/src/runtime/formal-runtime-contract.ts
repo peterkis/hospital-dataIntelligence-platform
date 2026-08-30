@@ -1,22 +1,31 @@
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
+import type {
+  LoadedPodmanRuntimeAuthority,
+  PodmanRuntimeAuthority,
+} from './podman-runtime-authority-schema.js';
 
-export const FORMAL_RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority();
-export const FORMAL_REPOSITORY_LABEL = FORMAL_RUNTIME_AUTHORITY.authority.labels.static['hdi.repository'];
-export const FORMAL_PHASE_LABEL = FORMAL_RUNTIME_AUTHORITY.authority.labels.static['hdi.phase'];
-export const FORMAL_MANAGED_BY_LABEL = FORMAL_RUNTIME_AUTHORITY.authority.labels.static['hdi.managed-by'];
+export function formalRuntimeAuthority(repositoryRoot?: string): LoadedPodmanRuntimeAuthority {
+  return repositoryRoot === undefined
+    ? loadPodmanRuntimeAuthority()
+    : loadPodmanRuntimeAuthority(repositoryRoot);
+}
 
-const AUTHORITY_PORTS = FORMAL_RUNTIME_AUTHORITY.authority.network.ports;
-export const FORMAL_RUNTIME_PORTS: readonly number[] = Object.freeze([
-  AUTHORITY_PORTS.postgresRuntime,
-  AUTHORITY_PORTS.postgresIntegration,
-  AUTHORITY_PORTS.keycloakHttp,
-  AUTHORITY_PORTS.keycloakManagement,
-  AUTHORITY_PORTS.governanceApi,
-  AUTHORITY_PORTS.consumerA,
-  AUTHORITY_PORTS.consumerB,
-]);
+export function formalRuntimePorts(
+  authority: PodmanRuntimeAuthority = formalRuntimeAuthority().authority,
+): readonly number[] {
+  const ports = authority.network.ports;
+  return Object.freeze([
+    ports.postgresRuntime,
+    ports.postgresIntegration,
+    ports.keycloakHttp,
+    ports.keycloakManagement,
+    ports.governanceApi,
+    ports.consumerA,
+    ports.consumerB,
+  ]);
+}
 
 export const FORMAL_REQUIRED_SECRET_NAMES = [
   'HDI_POSTGRES_PASSWORD',
@@ -43,11 +52,11 @@ export interface FormalRunIdentity extends FormalRunSeed {
 }
 
 export interface FormalRuntimeLabels {
-  readonly 'hdi.repository': typeof FORMAL_REPOSITORY_LABEL;
-  readonly 'hdi.phase': typeof FORMAL_PHASE_LABEL;
+  readonly 'hdi.repository': PodmanRuntimeAuthority['labels']['static']['hdi.repository'];
+  readonly 'hdi.phase': PodmanRuntimeAuthority['labels']['static']['hdi.phase'];
   readonly 'hdi.run-id': string;
   readonly 'hdi.run-sequence': string;
-  readonly 'hdi.managed-by': typeof FORMAL_MANAGED_BY_LABEL;
+  readonly 'hdi.managed-by': PodmanRuntimeAuthority['labels']['static']['hdi.managed-by'];
 }
 
 export interface RuntimeCommandSpec {
@@ -129,13 +138,17 @@ export function createFormalRunSeed(
   };
 }
 
-export function formalRuntimeLabels(identity: FormalRunSeed): FormalRuntimeLabels {
+export function formalRuntimeLabels(
+  identity: FormalRunSeed,
+  authority: PodmanRuntimeAuthority = formalRuntimeAuthority().authority,
+): FormalRuntimeLabels {
+  const staticLabels = authority.labels.static;
   return {
-    'hdi.repository': FORMAL_REPOSITORY_LABEL,
-    'hdi.phase': FORMAL_PHASE_LABEL,
+    'hdi.repository': staticLabels['hdi.repository'],
+    'hdi.phase': staticLabels['hdi.phase'],
     'hdi.run-id': identity.runId,
     'hdi.run-sequence': String(identity.runSequence),
-    'hdi.managed-by': FORMAL_MANAGED_BY_LABEL,
+    'hdi.managed-by': staticLabels['hdi.managed-by'],
   };
 }
 

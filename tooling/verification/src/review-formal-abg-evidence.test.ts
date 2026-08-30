@@ -14,7 +14,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ABG_COVERAGE_MATRIX,
   type AbgProducerId,
@@ -36,6 +36,10 @@ const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const reviewerPath = resolve(import.meta.dirname, 'review-formal-abg-evidence.ts');
 const tsxCliPath = resolve(repositoryRoot, 'node_modules/tsx/dist/cli.mjs');
 const roots: string[] = [];
+
+// These reviews build and hash complete evidence packages. Parallel full-suite
+// load can legitimately exceed Vitest's 5 s default without indicating a hang.
+vi.setConfig({ testTimeout: 15_000 });
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -112,7 +116,7 @@ describe('formal ABG evidence reviewer CLI', () => {
     expect(exitCode).toBe(1);
     expect(await reviewFindingCodes(fixture.reviewOutputDirectory))
       .toContain('MANIFEST_SHA256_MISMATCH');
-  }, 30_000);
+  }, 60_000);
 
   it('accepts the exact contract through the public reviewer seam without host Git coupling', async () => {
     const fixture = await createFormalEvidenceFixture();

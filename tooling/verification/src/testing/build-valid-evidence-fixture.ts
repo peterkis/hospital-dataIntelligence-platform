@@ -40,9 +40,9 @@ import {
   type FormalAbgSummaryValidationExpectations,
 } from '../formal-summary-validator.js';
 import {
-  FORMAL_RUNTIME_AUTHORITY,
-  FORMAL_RUNTIME_PORTS,
   createFormalRunSeed,
+  formalRuntimeAuthority,
+  formalRuntimePorts,
   type FormalRunIdentity,
 } from '../runtime/formal-runtime-contract.js';
 import {
@@ -219,7 +219,7 @@ export async function buildValidEvidenceFixture(
     ...createFormalRunSeed(VALIDATOR_FIXTURE_RUN_SEQUENCE, () => VALIDATOR_FIXTURE_RUN_ID),
     gitCommitSha: frozenInputs['gitCommitSha']!,
   };
-  const ports = FORMAL_RUNTIME_PORTS.map((port) => ({
+  const ports = formalRuntimePorts().map((port) => ({
     port,
     occupied: false,
     verificationError: null,
@@ -405,7 +405,7 @@ export async function buildValidEvidenceFixture(
     residualVolumeCount: 0,
     residualNetworkCount: 0,
     occupiedRequiredPorts: [],
-    requiredPortsObserved: FORMAL_RUNTIME_PORTS,
+    requiredPortsObserved: formalRuntimePorts(),
     pruneCommandsInvoked: false,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
@@ -666,7 +666,7 @@ function fixtureFrozenInputs(
   producerSourceManifestSha256: string,
   producerGitCommitSha: string,
 ): Readonly<Record<string, string>> {
-  const runtimeAuthority = FORMAL_RUNTIME_AUTHORITY.authority;
+  const runtimeAuthority = formalRuntimeAuthority().authority;
   return {
     gitCommitSha: producerGitCommitSha,
     workingTreeState: 'CLEAN',

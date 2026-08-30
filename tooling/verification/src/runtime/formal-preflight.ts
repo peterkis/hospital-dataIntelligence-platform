@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFrozenInputs } from '../frozen-inputs.ts';
 import {
-  FORMAL_REPOSITORY_LABEL,
   FORMAL_REQUIRED_SECRET_NAMES,
   SpawnRuntimeCommandRunner,
   createFormalRunSeed,
@@ -61,6 +60,13 @@ export interface PodmanImageObservation {
 
 export interface PodmanPreflightObservation {
   readonly podmanVersion: string;
+  readonly packageNevras: Readonly<{
+    podman: string | null;
+    conmon: string | null;
+    containersCommon: string | null;
+    runc: string | null;
+    networkPlugins: string | null;
+  }>;
   readonly graphDriverName: string;
   readonly graphRoot: string;
   readonly runRoot: string;
@@ -512,6 +518,7 @@ async function appendPodmanChecks(
       })),
     };
     const expectedPodman = authority.podman;
+    appendPodmanPackageNevraChecks(checks, observation.packageNevras, expectedPodman);
     const baselineMatches =
       observation.podmanVersion === expectedPodman.version &&
       observation.graphDriverName === expectedPodman.storageDriver &&
@@ -847,9 +854,27 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
       ...await this.listResources('container', ['container', 'ls', '--all', '--format', '{{json .}}']),
       ...await this.listResources('volume', ['volume', 'ls', '--format', '{{json .}}']),
       ...await this.listResources('network', ['network', 'ls', '--format', '{{json .}}']),
-    ].filter(isRepositoryPodmanResource);
+    ].filter((resource) => isRepositoryPodmanResource(
+      resource,
+      authority.labels.static['hdi.repository'],
+    ));
+    const [podmanNevra, conmonNevra, containersCommonNevra, runcNevra, networkPluginsNevra] =
+      await Promise.all([
+        inspectRpmNevra(this.runner, 'podman'),
+        inspectRpmNevra(this.runner, 'conmon'),
+        inspectRpmNevra(this.runner, 'containers-common'),
+        inspectRpmNevra(this.runner, 'runc'),
+        inspectRpmNevra(this.runner, 'containernetworking-plugins'),
+      ]);
     return {
       podmanVersion: stringField(version, 'Version'),
+      packageNevras: {
+        podman: podmanNevra,
+        conmon: conmonNevra,
+        containersCommon: containersCommonNevra,
+        runc: runcNevra,
+        networkPlugins: networkPluginsNevra,
+      },
       graphDriverName: stringField(store, 'graphDriverName'),
       graphRoot: stringField(store, 'graphRoot'),
       runRoot: stringField(store, 'runRoot'),
@@ -900,6 +925,89 @@ class PodmanCliPreflightAdapter implements FormalPreflightContainerRuntimeAdapte
       };
     }));
   }
+}
+
+type PodmanPackageNevraObservation = PodmanPreflightObservation['packageNevras'];
+type GovernedPodmanAuthority = RuntimeAuthority['podman'];
+
+const GOVERNED_PODMAN_PACKAGE_CHECKS = [
+  {
+    observationKey: 'podman',
+    authorityKey: 'packageNevra',
+    packageName: 'podman',
+    checkId: 'podman-package-nevra-podman',
+    unavailableCode: 'FORMAL_PREFLIGHT_PODMAN_PACKAGE_NEVRA_UNAVAILABLE',
+    mismatchCode: 'FORMAL_PREFLIGHT_PODMAN_PACKAGE_NEVRA_MISMATCH',
+  },
+  {
+    observationKey: 'conmon',
+    authorityKey: 'conmonNevra',
+    packageName: 'conmon',
+    checkId: 'podman-package-nevra-conmon',
+    unavailableCode: 'FORMAL_PREFLIGHT_CONMON_NEVRA_UNAVAILABLE',
+    mismatchCode: 'FORMAL_PREFLIGHT_CONMON_NEVRA_MISMATCH',
+  },
+  {
+    observationKey: 'containersCommon',
+    authorityKey: 'containersCommonNevra',
+    packageName: 'containers-common',
+    checkId: 'podman-package-nevra-containers-common',
+    unavailableCode: 'FORMAL_PREFLIGHT_CONTAINERS_COMMON_NEVRA_UNAVAILABLE',
+    mismatchCode: 'FORMAL_PREFLIGHT_CONTAINERS_COMMON_NEVRA_MISMATCH',
+  },
+  {
+    observationKey: 'runc',
+    authorityKey: 'ociRuntimeNevra',
+    packageName: 'runc',
+    checkId: 'podman-package-nevra-runc',
+    unavailableCode: 'FORMAL_PREFLIGHT_RUNC_NEVRA_UNAVAILABLE',
+    mismatchCode: 'FORMAL_PREFLIGHT_RUNC_NEVRA_MISMATCH',
+  },
+  {
+    observationKey: 'networkPlugins',
+    authorityKey: 'networkPluginsNevra',
+    packageName: 'containernetworking-plugins',
+    checkId: 'podman-package-nevra-containernetworking-plugins',
+    unavailableCode: 'FORMAL_PREFLIGHT_NETWORK_PLUGINS_NEVRA_UNAVAILABLE',
+    mismatchCode: 'FORMAL_PREFLIGHT_NETWORK_PLUGINS_NEVRA_MISMATCH',
+  },
+] as const;
+
+function appendPodmanPackageNevraChecks(
+  checks: FormalPreflightCheck[],
+  actualNevras: PodmanPackageNevraObservation,
+  authority: GovernedPodmanAuthority,
+): void {
+  for (const governedPackage of GOVERNED_PODMAN_PACKAGE_CHECKS) {
+    const actual = actualNevras[governedPackage.observationKey];
+    const expected = authority[governedPackage.authorityKey];
+    const observed = { packageName: governedPackage.packageName, expected, actual };
+    checks.push(actual === null
+      ? failed(
+        governedPackage.checkId,
+        'podman',
+        governedPackage.unavailableCode,
+        observed,
+      )
+      : actual === expected
+        ? passed(governedPackage.checkId, 'podman', observed)
+        : failed(governedPackage.checkId, 'podman', governedPackage.mismatchCode, observed));
+  }
+}
+
+export async function inspectRpmNevra(
+  runner: RuntimeCommandRunner,
+  packageName: string,
+): Promise<string | null> {
+  const result = await runText(runner, undefined, 'rpm', [
+    '-q',
+    '--qf',
+    '%{NAME}-%{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}',
+    packageName,
+  ]);
+  if (!result.ok) return null;
+  const nevra = result.value.trim();
+  return nevra.length > 0 ? nevra : null;
 }
 
 class BindPreflightPortAdapter implements FormalPreflightPortAdapter {
@@ -1374,8 +1482,11 @@ export function parsePodmanContainerRestartPolicy(inspected: unknown): string | 
   return stringField(policy, 'Name') || null;
 }
 
-export function isRepositoryPodmanResource(resource: PodmanResourceObservation): boolean {
-  return resource.labels['hdi.repository'] === FORMAL_REPOSITORY_LABEL ||
+export function isRepositoryPodmanResource(
+  resource: PodmanResourceObservation,
+  repositoryLabel?: string,
+): boolean {
+  return (repositoryLabel !== undefined && resource.labels['hdi.repository'] === repositoryLabel) ||
     resource.name.startsWith('hdi_phase01_');
 }
 

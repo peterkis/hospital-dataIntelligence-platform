@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORMAL_RUNTIME_PORTS, type FormalRunIdentity } from './formal-runtime-contract.js';
+import { formalRuntimePorts, type FormalRunIdentity } from './formal-runtime-contract.js';
 import { buildFormalTerminalConclusion } from './formal-terminal-conclusion.js';
 import type {
   FormalCleanupReport,
@@ -33,7 +33,7 @@ describe('formal terminal conclusion', () => {
       residualVolumeCount: 0,
       residualNetworkCount: 0,
       occupiedRequiredPorts: [],
-      requiredPortsObserved: FORMAL_RUNTIME_PORTS,
+      requiredPortsObserved: formalRuntimePorts(),
       pruneCommandsInvoked: false,
       frozenInputsStableAfterCleanup: true,
       authorityIdentityStableAfterCleanup: true,
@@ -152,7 +152,7 @@ function validInput() {
     runIdentity: IDENTITY,
     capturedAt: '2026-08-30T10:01:00',
     resources: [],
-    ports: FORMAL_RUNTIME_PORTS.map((port) => ({ port, occupied: false, verificationError: null })),
+    ports: formalRuntimePorts().map((port) => ({ port, occupied: false, verificationError: null })),
   };
   const cleanup: FormalCleanupReport = {
     schemaVersion: 'phase-01.formal-cleanup.v1',

@@ -3,12 +3,14 @@ import { resolve } from 'node:path';
 import {
   formalRuntimeLabels,
   type FormalRunIdentity,
+  type RuntimeCommandRunner,
 } from './formal-runtime-contract.js';
 import {
   assertSafeFormalCleanupCommand,
   belongsToRun,
   parseFormalRuntimeEventResources,
   performFormalTeardown,
+  PodmanCliFormalTeardownAdapter,
   type FormalTeardownAdapter,
   type RuntimeResourceRecord,
   type RuntimeResourceSnapshot,
@@ -136,6 +138,67 @@ describe('formal ABG controlled teardown', () => {
     expect(result.cleanup.failedItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ errorCode: 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH' }),
     ]));
+  });
+
+  it.each([
+    ['container', resource('container', 'runtime-postgres'),
+      'Error: no such container runtime-postgres\n'],
+    ['volume', resource('volume', 'runtime-postgres-data'),
+      `Error: no such volume ${IDENTITY.runtimeNamespace}_runtime-postgres-data\n`],
+    ['network', resource('network', 'runtime-network'),
+      'Error: network runtime-network: network not found\n'],
+  ] as const)(
+    'treats only an exact Podman %s not-found result as absent during re-inspection',
+    async (_resourceType, candidate, stderr) => {
+      const adapter = podmanAdapterReturning({ exitCode: 125, stdout: '[]\n', stderr });
+
+      await expect(adapter.reinspectResource(candidate, IDENTITY)).resolves.toBeNull();
+    },
+  );
+
+  it.each([
+    ['permission failure', resource('container', 'runtime-postgres'), 125,
+      'Error: permission denied while opening /run/podman/podman.sock\n', 'CONTAINER'],
+    ['socket failure', resource('volume', 'runtime-postgres-data'), 125,
+      'Error: unable to connect to Podman socket: connection refused\n', 'VOLUME'],
+    ['service failure', resource('network', 'runtime-network'), 125,
+      'Error: podman service is unavailable\n', 'NETWORK'],
+    ['wrong resource', resource('container', 'runtime-postgres'), 125,
+      'Error: no such container a-different-container\n', 'CONTAINER'],
+    ['wrong exit code', resource('container', 'runtime-postgres'), 1,
+      'Error: no such container runtime-postgres\n', 'CONTAINER'],
+  ] as const)(
+    'fails closed with stable evidence when Podman re-inspection has a %s',
+    async (_scenario, candidate, exitCode, stderr, stableResourceType) => {
+      const adapter = podmanAdapterReturning({ exitCode, stdout: '[]\n', stderr });
+
+      await expect(adapter.reinspectResource(candidate, IDENTITY))
+        .rejects.toThrow('FORMAL_PODMAN_INSPECT_FAILED:' + stableResourceType);
+    },
+  );
+
+  it('records a stable fail-closed cleanup action for an operational Podman re-inspection error', async () => {
+    const candidate = resource('container', 'runtime-postgres');
+    const podman = podmanAdapterReturning({
+      exitCode: 125,
+      stdout: '[]\n',
+      stderr: 'Error: permission denied while opening /run/podman/podman.sock\n',
+    });
+    const adapter = new FakeTeardownAdapter([candidate]);
+    adapter.reinspectDelegate = (resource, identity) => podman.reinspectResource(resource, identity);
+
+    const result = await execute(adapter);
+
+    expect(result.cleanup.status).toBe('FAILED');
+    expect(adapter.calls).toEqual(['reinspect:container:runtime-postgres']);
+    expect(result.cleanup.actions).toContainEqual(expect.objectContaining({
+      action: 'VERIFY_RESOURCE',
+      resourceType: 'container',
+      resourceId: 'runtime-postgres',
+      status: 'FAILED',
+      errorCode: 'FORMAL_CLEANUP_RESOURCE_REINSPECTION_FAILED:' +
+        'FORMAL_PODMAN_INSPECT_FAILED:CONTAINER',
+    }));
   });
 
   it('preserves exact-label resources whose names are not derived from the runtime namespace', async () => {
@@ -400,9 +463,28 @@ function passingIsolationObservation(): FormalPreflightAuthorityIsolationObserva
   };
 }
 
+function podmanAdapterReturning(result: {
+  readonly exitCode: number;
+  readonly stdout?: string;
+  readonly stderr: string;
+}): PodmanCliFormalTeardownAdapter {
+  const runner: RuntimeCommandRunner = {
+    async run() {
+      return {
+        exitCode: result.exitCode,
+        signal: null,
+        stdout: result.stdout ?? '',
+        stderr: result.stderr,
+      };
+    },
+  };
+  return new PodmanCliFormalTeardownAdapter(runner);
+}
+
 class FakeTeardownAdapter implements FormalTeardownAdapter {
   readonly calls: string[] = [];
   readonly reinspectOverrides = new Map<string, RuntimeResourceRecord | null>();
+  reinspectDelegate?: FormalTeardownAdapter['reinspectResource'];
   terminalFindings = {
     persistenceFindings: [] as readonly string[],
     dockerSecondAuthorityFindings: [] as readonly string[],
@@ -426,8 +508,12 @@ class FakeTeardownAdapter implements FormalTeardownAdapter {
     return [...this.resources.values()];
   }
 
-  async reinspectResource(candidate: RuntimeResourceRecord): Promise<RuntimeResourceRecord | null> {
+  async reinspectResource(
+    candidate: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+  ): Promise<RuntimeResourceRecord | null> {
     this.calls.push(`reinspect:${candidate.resourceType}:${candidate.id}`);
+    if (this.reinspectDelegate !== undefined) return this.reinspectDelegate(candidate, identity);
     return this.reinspectOverrides.has(candidate.id)
       ? (this.reinspectOverrides.get(candidate.id) ?? null)
       : (this.resources.get(candidate.id) ?? null);

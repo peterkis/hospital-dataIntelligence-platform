@@ -36,6 +36,7 @@ export interface ShellHarness {
     options?: Readonly<Record<string, string>>,
   ): Promise<ShellRunResult>;
   runBootstrap(options?: Readonly<Record<string, string>>): Promise<ShellRunResult>;
+  runVerification(options?: Readonly<Record<string, string>>): Promise<ShellRunResult>;
   dispose(): Promise<void>;
 }
 
@@ -71,6 +72,24 @@ log() {
   printf '%s\n' "\${sanitized}" >>"\${FAKE_PODMAN_LOG}"
 }
 resource_dir() { printf '%s/%s/%s' "\${FAKE_PODMAN_STATE}" "$1" "$2"; }
+
+resource_name_from_reference() {
+  local type="$1"
+  local reference="$2"
+  local directory
+  if [[ -d "$(resource_dir "\${type}" "\${reference}")" ]]; then
+    printf '%s' "\${reference}"
+    return 0
+  fi
+  for directory in "\${FAKE_PODMAN_STATE}/\${type}"/*; do
+    [[ -d "\${directory}" && -f "\${directory}/id" ]] || continue
+    if [[ "$(<"\${directory}/id")" == "\${reference}" ]]; then
+      basename -- "\${directory}"
+      return 0
+    fi
+  done
+  return 1
+}
 
 labels_from_args() {
   local labels='{}'
@@ -193,7 +212,17 @@ case "\${kind}:\${action}" in
     cat "$(resource_dir container "\${name}")/id"
     ;;
   container:start)
-    name="\${arguments[\${#arguments[@]} - 1]}"
+    reference="\${arguments[\${#arguments[@]} - 1]}"
+    name="$(resource_name_from_reference container "\${reference}")"
+    if [[ "\${name}" == *_postgres_image_probe ]]; then
+      if [[ "\${FAKE_VERIFY_PROBE_START_FAIL:-}" == '1' ]]; then exit 47; fi
+      printf 'postgres (PostgreSQL) %s\n' "$(jq --raw-output '.authority.images.postgresql.declaredVersion' "\${FAKE_AUTHORITY}")"
+      exit 0
+    fi
+    if [[ "\${name}" == *_keycloak_image_probe ]]; then
+      printf 'Keycloak %s\n' "$(jq --raw-output '.authority.images.keycloak.declaredVersion' "\${FAKE_AUTHORITY}")"
+      exit 0
+    fi
     if [[ "\${FAKE_SIGNAL_STAGE:-}" == 'POSTGRES_CONTAINER_START' && "\${name}" == *_postgres ]]; then
       kill "-\${FAKE_SIGNAL_NAME:-INT}" "\${PPID}"
       /bin/sleep 0.05
@@ -203,10 +232,37 @@ case "\${kind}:\${action}" in
     printf '%s\n' "\${name}"
     ;;
   container:inspect)
-    name="\${arguments[\${#arguments[@]} - 1]}"
+    reference="\${arguments[\${#arguments[@]} - 1]}"
+    name="$(resource_name_from_reference container "\${reference}")"
     directory="$(resource_dir container "\${name}")"
     format="\${arguments[3]:-}"
-    if [[ "\${format}" == *RestartPolicy* ]]; then
+    if [[ "\${format}" == '{{json .}}' ]]; then
+      if [[ "\${name}" == *_postgres_image_probe && "\${FAKE_VERIFY_PROBE_INSPECT_ERROR:-}" == '1' ]]; then
+        exit 125
+      fi
+      inspection_id="$(<"\${directory}/id")"
+      inspection_name="\${name}"
+      inspection_labels="$(<"\${directory}/labels.json")"
+      inspection_restart_policy="$(<"\${directory}/restart-policy")"
+      if [[ "\${name}" == *_postgres_image_probe && "\${FAKE_VERIFY_PROBE_DRIFT:-}" == 'id' ]]; then
+        inspection_id='fake-replacement-container-id'
+      fi
+      if [[ "\${name}" == *_postgres_image_probe && "\${FAKE_VERIFY_PROBE_DRIFT:-}" == 'name' ]]; then
+        inspection_name='replacement-container-name'
+      fi
+      if [[ "\${name}" == *_postgres_image_probe && "\${FAKE_VERIFY_PROBE_DRIFT:-}" == 'labels' ]]; then
+        inspection_labels="$(jq --compact-output 'del(."hdi.managed-by")' <<<"\${inspection_labels}")"
+      fi
+      if [[ "\${name}" == *_postgres_image_probe && "\${FAKE_VERIFY_PROBE_DRIFT:-}" == 'restart' ]]; then
+        inspection_restart_policy='always'
+      fi
+      jq --null-input --compact-output \
+        --arg id "\${inspection_id}" \
+        --arg name "\${inspection_name}" \
+        --argjson labels "\${inspection_labels}" \
+        --arg restartPolicy "\${inspection_restart_policy}" \
+        '{Id:$id,Name:$name,Config:{Labels:$labels},HostConfig:{RestartPolicy:{Name:$restartPolicy}}}'
+    elif [[ "\${format}" == *RestartPolicy* ]]; then
       if [[ "\${FAKE_FAIL:-}" == 'POSTGRES_RESTART_INSPECT' && "\${name}" == *_postgres ]]; then printf 'always\n'; exit 0; fi
       if [[ "\${FAKE_FAIL:-}" == 'KEYCLOAK_RESTART_INSPECT' && "\${name}" == *_keycloak ]]; then printf 'always\n'; exit 0; fi
       cat "\${directory}/restart-policy"
@@ -219,13 +275,16 @@ case "\${kind}:\${action}" in
     cat "$(resource_dir volume "\${name}")/labels.json"
     ;;
   container:rm|volume:rm)
-    name="\${arguments[\${#arguments[@]} - 1]}"
+    reference="\${arguments[\${#arguments[@]} - 1]}"
+    name="$(resource_name_from_reference "\${kind}" "\${reference}")"
     if [[ "\${FAKE_CLEANUP_FAIL:-}" == '1' ]]; then exit 91; fi
     rm -rf -- "$(resource_dir "\${kind}" "\${name}")"
     ;;
   exec:*)
     if [[ "$*" == *pg_isready* && "\${FAKE_FAIL:-}" == 'BOOTSTRAP_POSTGRES_READINESS' ]]; then exit 81; fi
     if [[ "$*" == *psql* && "\${FAKE_FAIL:-}" == 'BOOTSTRAP_SCHEMA' ]]; then exit 82; fi
+    if [[ "$*" == *'current_setting('* ]]; then printf 't\n'; fi
+    if [[ "$*" == *'string_agg(extname'* ]]; then printf 'btree_gist,pgcrypto\n'; fi
     ;;
   *)
     printf 'unexpected fake podman invocation: %s\n' "$*" >&2
@@ -341,6 +400,7 @@ export async function createShellHarness(): Promise<ShellHarness> {
   await Promise.all([
     cp(resolve(environmentDirectory, 'podman-phase-01-runtime.sh'), resolve(copiedEnvironment, 'podman-phase-01-runtime.sh')),
     cp(resolve(environmentDirectory, 'bootstrap-phase-01-runtime.sh'), resolve(copiedEnvironment, 'bootstrap-phase-01-runtime.sh')),
+    cp(resolve(environmentDirectory, 'verify-phase-01-runtime.sh'), resolve(copiedEnvironment, 'verify-phase-01-runtime.sh')),
     cp(resolve(environmentDirectory, 'runtime-baseline.lock.json'), resolve(copiedEnvironment, 'runtime-baseline.lock.json')),
     mkdir(fakeBin, { recursive: true }),
     mkdir(resolve(state, 'container'), { recursive: true }),
@@ -349,6 +409,16 @@ export async function createShellHarness(): Promise<ShellHarness> {
     mkdir(realm, { recursive: true }),
     mkdir(resolve(root, 'db/migrations'), { recursive: true }),
   ]);
+  const copiedVerificationPath = resolve(copiedEnvironment, 'verify-phase-01-runtime.sh');
+  const copiedVerificationSource = await readFile(copiedVerificationPath, 'utf8');
+  await writeFile(
+    copiedVerificationPath,
+    copiedVerificationSource.replace(
+      '[[ -S "${PODMAN_SOCKET_PATH}" && ! -L "${PODMAN_SOCKET_PATH}" ]]',
+      '[[ "${FAKE_VERIFY_SOCKET_OK:-0}" == "1" ]]',
+    ),
+    'utf8',
+  );
   await Promise.all([
     mkdir(resolve(state, 'container/unrelated_container'), { recursive: true }),
     mkdir(resolve(state, 'volume/unrelated_volume'), { recursive: true }),
@@ -373,6 +443,7 @@ export async function createShellHarness(): Promise<ShellHarness> {
     FAKE_AUTHORITY: `${linuxRoot}/phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`,
     FAKE_PODMAN_LOG: `${linuxRoot}/operations.log`,
     FAKE_PODMAN_STATE: `${linuxRoot}/state`,
+    FAKE_VERIFY_SOCKET_OK: '1',
     HDI_KEYCLOAK_REALM_IMPORT_DIR: `${linuxRoot}/realm`,
     POSTGRES_PASSWORD: 'postgres-P@ss:/+value',
     KC_BOOTSTRAP_ADMIN_USERNAME: 'admin-user',
@@ -428,6 +499,9 @@ export async function createShellHarness(): Promise<ShellHarness> {
     },
     runBootstrap(options) {
       return run('bootstrap-phase-01-runtime.sh', null, options);
+    },
+    runVerification(options) {
+      return run('verify-phase-01-runtime.sh', null, options);
     },
     dispose() {
       return rm(root, { recursive: true, force: true });

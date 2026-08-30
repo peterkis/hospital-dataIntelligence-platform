@@ -131,6 +131,103 @@ function expectNoSecrets(result: ShellRunResult): void {
 const FAKE_CLI_TEST_TIMEOUT_MS = 60_000;
 
 describe.sequential('Podman runtime Shell transaction (fake CLI)', () => {
+  it('runs image version probes as governed named containers and removes their inspected IDs exactly', async () => {
+    const harness = await createShellHarness();
+    try {
+      const result = await harness.runVerification();
+      const operations = result.operations.join('\n');
+
+      expect(result.status).toBe(0);
+      expect(operations).not.toContain('run --rm');
+      expect(result.operations.filter((operation) => operation.includes('container create')))
+        .toEqual(expect.arrayContaining([
+          expect.stringContaining('_postgres_image_probe'),
+          expect.stringContaining('_keycloak_image_probe'),
+        ]));
+      const probeCreates = result.operations.filter((operation) => operation.includes('_image_probe'))
+        .filter((operation) => operation.includes('container create'));
+      for (const operation of probeCreates) {
+        expect(operation.match(/--label\b/gu)).toHaveLength(5);
+        for (const labelKey of [
+          'hdi.repository',
+          'hdi.phase',
+          'hdi.run-id',
+          'hdi.run-sequence',
+          'hdi.managed-by',
+        ]) {
+          expect(operation).toContain(`--label ${labelKey}=`);
+        }
+        expect(operation).toContain('--network none');
+        expect(operation).toContain('--restart=no');
+      }
+      expect(result.operations.filter((operation) => operation.includes('container rm --force fake-')))
+        .toEqual(expect.arrayContaining([
+          expect.stringContaining('_postgres_image_probe'),
+          expect.stringContaining('_keycloak_image_probe'),
+        ]));
+      for (const probe of ['postgres', 'keycloak']) {
+        const inspectionIndex = result.operations.findIndex((operation) => (
+          operation.startsWith('container inspect --format {{json .}}')
+          && operation.endsWith(`_${probe}_image_probe`)
+        ));
+        const removalIndex = result.operations.findIndex((operation) => (
+          operation.startsWith('container rm --force fake-')
+          && operation.endsWith(`_${probe}_image_probe`)
+        ));
+        expect(inspectionIndex).toBeGreaterThanOrEqual(0);
+        expect(removalIndex).toBe(inspectionIndex + 1);
+      }
+      expect(result.containers).toEqual(['unrelated_container']);
+      expectNoBroadOrUnrelatedCleanup(result);
+    } finally {
+      await harness.dispose();
+    }
+  }, FAKE_CLI_TEST_TIMEOUT_MS);
+
+  it.each(['id', 'name', 'labels', 'restart'])(
+    'preserves a probe when fresh inspection reports %s drift',
+    async (drift) => {
+      const harness = await createShellHarness();
+      try {
+        const result = await harness.runVerification({ FAKE_VERIFY_PROBE_DRIFT: drift });
+
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain('ERROR_CODE=PODMAN_RUNTIME_VERIFICATION_IDENTITY_MISMATCH');
+        expect(result.containers).toEqual([
+          expect.stringMatching(/_postgres_image_probe$/u),
+          'unrelated_container',
+        ]);
+        expect(result.operations.some((operation) => operation.includes('container rm'))).toBe(false);
+        expectNoBroadOrUnrelatedCleanup(result);
+      } finally {
+        await harness.dispose();
+      }
+    },
+    FAKE_CLI_TEST_TIMEOUT_MS,
+  );
+
+  it('retains the probe failure status and reports cleanup inspection failure separately', async () => {
+    const harness = await createShellHarness();
+    try {
+      const result = await harness.runVerification({
+        FAKE_VERIFY_PROBE_START_FAIL: '1',
+        FAKE_VERIFY_PROBE_INSPECT_ERROR: '1',
+      });
+
+      expect(result.status).toBe(47);
+      expect(result.stderr).toContain('ERROR_CODE=PODMAN_RUNTIME_POSTGRES_IMAGE_PROBE_START_FAILED');
+      expect(result.stderr).toContain('ERROR_CODE=PODMAN_RUNTIME_VERIFICATION_INSPECTION_FAILED');
+      expect(result.containers).toEqual([
+        expect.stringMatching(/_postgres_image_probe$/u),
+        'unrelated_container',
+      ]);
+      expect(result.operations.some((operation) => operation.includes('container rm'))).toBe(false);
+      expectNoBroadOrUnrelatedCleanup(result);
+    } finally {
+      await harness.dispose();
+    }
+  }, FAKE_CLI_TEST_TIMEOUT_MS);
+
   it('completes all stages with no-restart containers and transfers ownership to the lifecycle controller', async () => {
     const harness = await createShellHarness();
     try {

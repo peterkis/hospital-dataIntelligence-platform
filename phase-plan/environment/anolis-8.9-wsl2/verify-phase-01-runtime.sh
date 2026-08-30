@@ -50,6 +50,8 @@ readonly LABEL_PHASE="$(authority_string '.authority.labels.static["hdi.phase"]'
 readonly LABEL_MANAGED_BY="$(authority_string '.authority.labels.static["hdi.managed-by"]')"
 readonly POSTGRES_CONTAINER_NAME="hdi_phase01_runtime_verification_$$_postgres"
 readonly KEYCLOAK_CONTAINER_NAME="hdi_phase01_runtime_verification_$$_keycloak"
+readonly POSTGRES_IMAGE_PROBE_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME}_image_probe"
+readonly KEYCLOAK_IMAGE_PROBE_CONTAINER_NAME="${KEYCLOAK_CONTAINER_NAME}_image_probe"
 readonly RUN_ID='runtime-baseline-verification'
 readonly RUN_SEQUENCE='0'
 readonly EXPECTED_LABELS_JSON="$(jq --null-input --compact-output \
@@ -66,14 +68,70 @@ readonly -a VERIFICATION_LABELS=(
   --label "hdi.run-sequence=${RUN_SEQUENCE}"
   --label "hdi.managed-by=${LABEL_MANAGED_BY}"
 )
+readonly -a VERIFICATION_CONTAINER_NAMES=(
+  "${KEYCLOAK_CONTAINER_NAME}"
+  "${POSTGRES_CONTAINER_NAME}"
+  "${KEYCLOAK_IMAGE_PROBE_CONTAINER_NAME}"
+  "${POSTGRES_IMAGE_PROBE_CONTAINER_NAME}"
+)
+declare -A VERIFICATION_CONTAINER_IDS=()
 
-assert_container_owned() {
+INSPECTED_CONTAINER_ID=''
+REMOVE_ERROR_CODE=''
+
+inspect_owned_container_id() {
   local container_name="$1"
-  local labels_json
-  labels_json="$(podman container inspect --format '{{json .Config.Labels}}' "${container_name}")"
-  jq --exit-status --null-input --argjson expected "${EXPECTED_LABELS_JSON}" --argjson labels "${labels_json}" '
-    $expected | to_entries | all(. as $entry | $labels[$entry.key] == $entry.value)
-  ' >/dev/null
+  local expected_container_id="${2:-}"
+  local inspection_json
+  if inspection_json="$(podman container inspect --format '{{json .}}' "${container_name}")"; then
+    :
+  else
+    return 2
+  fi
+  if INSPECTED_CONTAINER_ID="$(jq --exit-status --raw-output \
+    --arg expectedName "${container_name}" \
+    --arg expectedId "${expected_container_id}" \
+    --arg expectedRestartPolicy "${PODMAN_RESTART_POLICY}" \
+    --argjson expectedLabels "${EXPECTED_LABELS_JSON}" '
+      . as $inspection |
+      select(
+        ($inspection.Id | type == "string" and length > 0) and
+        ($expectedId == "" or $inspection.Id == $expectedId) and
+        ($inspection.Name == $expectedName or $inspection.Name == ("/" + $expectedName)) and
+        ($inspection.Config.Labels | type == "object") and
+        ($expectedLabels | length == 5) and
+        ($expectedLabels | to_entries | all(. as $entry | $inspection.Config.Labels[$entry.key] == $entry.value)) and
+        ($inspection.HostConfig.RestartPolicy.Name == $expectedRestartPolicy)
+      ) |
+      $inspection.Id
+    ' <<<"${inspection_json}")"; then
+    :
+  else
+    return 3
+  fi
+}
+
+remove_verification_container_exact() {
+  local container_name="$1"
+  local expected_container_id="${VERIFICATION_CONTAINER_IDS[${container_name}]:-}"
+  local inspect_status
+  REMOVE_ERROR_CODE=''
+  if inspect_owned_container_id "${container_name}" "${expected_container_id}"; then
+    :
+  else
+    inspect_status=$?
+    if (( inspect_status == 2 )); then
+      REMOVE_ERROR_CODE='PODMAN_RUNTIME_VERIFICATION_INSPECTION_FAILED'
+    else
+      REMOVE_ERROR_CODE='PODMAN_RUNTIME_VERIFICATION_IDENTITY_MISMATCH'
+    fi
+    return 1
+  fi
+  if podman container rm --force "${INSPECTED_CONTAINER_ID}" >/dev/null; then
+    return 0
+  fi
+  REMOVE_ERROR_CODE='PODMAN_RUNTIME_VERIFICATION_CLEANUP_FAILED'
+  return 1
 }
 
 cleanup() {
@@ -84,12 +142,11 @@ cleanup() {
   local exists_status
   trap - EXIT
   set +e
-  for container_name in "${KEYCLOAK_CONTAINER_NAME}" "${POSTGRES_CONTAINER_NAME}"; do
+  for container_name in "${VERIFICATION_CONTAINER_NAMES[@]}"; do
     if podman container exists "${container_name}"; then
-      if assert_container_owned "${container_name}"; then
-        podman container rm --force "${container_name}" >/dev/null || cleanup_failed=1
-      else
+      if ! remove_verification_container_exact "${container_name}"; then
         cleanup_failed=1
+        cleanup_error_code="${REMOVE_ERROR_CODE}"
       fi
     else
       exists_status=$?
@@ -110,7 +167,7 @@ cleanup() {
 assert_verification_names_absent() {
   local container_name
   local exists_status
-  for container_name in "${KEYCLOAK_CONTAINER_NAME}" "${POSTGRES_CONTAINER_NAME}"; do
+  for container_name in "${VERIFICATION_CONTAINER_NAMES[@]}"; do
     if podman container exists "${container_name}"; then
       echo 'ERROR_CODE=PODMAN_RUNTIME_VERIFICATION_RESOURCE_NAME_ALREADY_EXISTS' >&2
       return 1
@@ -122,6 +179,55 @@ assert_verification_names_absent() {
       fi
     fi
   done
+}
+
+run_image_version_probe() {
+  local probe_name="$1"
+  local image="$2"
+  local expected_version_line="$3"
+  local probe_kind="$4"
+  local probe_container_id
+  local probe_output
+  local probe_status
+  shift 4
+
+  if probe_container_id="$(podman container create \
+    --pull=never \
+    --name "${probe_name}" \
+    "${VERIFICATION_LABELS[@]}" \
+    --network none \
+    --restart="${PODMAN_RESTART_POLICY}" \
+    "${image}" \
+    "$@")"; then
+    :
+  else
+    probe_status=$?
+    echo "ERROR_CODE=PODMAN_RUNTIME_${probe_kind}_IMAGE_PROBE_CREATE_FAILED" >&2
+    return "${probe_status}"
+  fi
+  VERIFICATION_CONTAINER_IDS["${probe_name}"]="${probe_container_id}"
+
+  if probe_output="$(podman container start --attach "${probe_container_id}")"; then
+    :
+  else
+    probe_status=$?
+    echo "ERROR_CODE=PODMAN_RUNTIME_${probe_kind}_IMAGE_PROBE_START_FAILED" >&2
+    return "${probe_status}"
+  fi
+
+  if grep --fixed-strings "${expected_version_line}" <<<"${probe_output}"; then
+    :
+  else
+    probe_status=$?
+    echo "ERROR_CODE=PODMAN_RUNTIME_${probe_kind}_IMAGE_PROBE_VERSION_MISMATCH" >&2
+    return "${probe_status}"
+  fi
+
+  if remove_verification_container_exact "${probe_name}"; then
+    return 0
+  fi
+  echo "ERROR_CODE=${REMOVE_ERROR_CODE}" >&2
+  return 1
 }
 
 [[ "$(podman version --format '{{.Version}}')" == "${PODMAN_VERSION}" ]]
@@ -157,11 +263,21 @@ for image in "${POSTGRES_IMAGE}" "${KEYCLOAK_IMAGE}"; do
   jq --exit-status --arg image "${image}" 'index($image) != null' <<<"${repo_digests}" >/dev/null
 done
 
-podman run --rm --pull=never --network none --restart="${PODMAN_RESTART_POLICY}" "${POSTGRES_IMAGE}" postgres --version | grep -F "PostgreSQL) ${POSTGRES_DECLARED_VERSION}"
-podman run --rm --pull=never --network none --restart="${PODMAN_RESTART_POLICY}" "${KEYCLOAK_IMAGE}" --version | grep -F "Keycloak ${KEYCLOAK_DECLARED_VERSION}"
-
 assert_verification_names_absent
 trap cleanup EXIT
+
+run_image_version_probe \
+  "${POSTGRES_IMAGE_PROBE_CONTAINER_NAME}" \
+  "${POSTGRES_IMAGE}" \
+  "PostgreSQL) ${POSTGRES_DECLARED_VERSION}" \
+  'POSTGRES' \
+  postgres --version
+run_image_version_probe \
+  "${KEYCLOAK_IMAGE_PROBE_CONTAINER_NAME}" \
+  "${KEYCLOAK_IMAGE}" \
+  "Keycloak ${KEYCLOAK_DECLARED_VERSION}" \
+  'KEYCLOAK' \
+  --version
 
 postgres_container_id="$(podman container create \
   --pull=never \
@@ -178,6 +294,7 @@ postgres_container_id="$(podman container create \
   -c "timezone=${RUNTIME_TIMEZONE}" \
   -c "listen_addresses=${LOOPBACK_BIND_ADDRESS}" \
   -p "${POSTGRES_HOST_PORT}")"
+VERIFICATION_CONTAINER_IDS["${POSTGRES_CONTAINER_NAME}"]="${postgres_container_id}"
 podman container start "${postgres_container_id}" >/dev/null
 [[ "$(podman container inspect --format '{{.HostConfig.RestartPolicy.Name}}' "${POSTGRES_CONTAINER_NAME}")" == "${PODMAN_RESTART_POLICY}" ]]
 
@@ -218,6 +335,7 @@ keycloak_container_id="$(podman container create \
   --http-host="${LOOPBACK_BIND_ADDRESS}" \
   --http-port="${KEYCLOAK_HTTP_PORT}" \
   --http-management-port="${KEYCLOAK_MANAGEMENT_PORT}")"
+VERIFICATION_CONTAINER_IDS["${KEYCLOAK_CONTAINER_NAME}"]="${keycloak_container_id}"
 podman container start "${keycloak_container_id}" >/dev/null
 [[ "$(podman container inspect --format '{{.HostConfig.RestartPolicy.Name}}' "${KEYCLOAK_CONTAINER_NAME}")" == "${PODMAN_RESTART_POLICY}" ]]
 
