@@ -6,7 +6,36 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Objective
 
-在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序。首项工作建立 ABG-01 至 ABG-40 的唯一机器可读覆盖矩阵：每个门禁必须关联可读场景、门禁级断言、制品选择器、引用要求、冻结输入和失败关闭策略。
+在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 已完成各自的本地实现和当时规定的定向验证；当前 frontier 为 AR-08，AR-07 必须等待 AR-09～AR-12 完成后再按新的正式授权执行。
+
+## Status semantics
+
+### Implementation status
+
+记录代码、测试和文档资产是否已经在一个明确提交上实现。它回答“资产是否存在并完成本地整改”，不回答这些资产是否已在当前 HEAD 重跑，也不构成 Phase 01 正式验收。
+
+### Verification status
+
+记录规定的定向单元、类型、静态和对抗性检查是否在一个明确 HEAD 上执行，并保留可定位的命令、结果和稳定产物。旧提交上的通过评论只对其记录的基线有效；运行时、证据协议、验证权威或冻结输入变化后，必须重新验证。
+
+### Formal acceptance status
+
+记录是否在冻结的真实环境、冻结候选提交和新的正式运行身份下执行完整 ABG，并由独立 reviewer 对不可覆盖证据完成复核。只有正式 evidence 能用于逐项关闭原 Phase 01 completion 的 21 个 Ticket；本工作包 Ticket 的本地 `resolved` 状态不能替代该证据。
+
+## Status rules
+
+- `resolved` 只表示该本地整改 Ticket 的实现及其规定的定向验证已经完成。
+- `resolved` 不等于 Phase 01 正式验收通过，也不得据此把 Phase 01 表述为 accepted、完整 POC 或生产就绪。
+- 原 Phase 01 completion 的 21 个 Ticket 保持独立状态，必须依据新的正式 evidence 逐项关闭。
+- Prompt 1～Prompt 6 对应的 AR-01～AR-06 必须在 AR-09～AR-11 完成后的最新终态协议和 Podman 权威上由 AR-12 重新验证；不得只沿用旧提交评论。
+- `ready-for-agent` 表示 Ticket 已具备可执行规格，不会覆盖 `Blocked by` 依赖。依赖未满足时不得越过 current frontier。
+- AR-07 当前为 `blocked`，阻断项为 AR-12 及另行给出的正式执行授权；不得保持 `claimed`。
+
+## Triage compatibility
+
+- 本工作包的 `Status:` 行是既有 acceptance-readiness lifecycle ledger。AR-08 按本次明确要求保留并协调历史值 `resolved`、执行占用值 `claimed`、阻断值 `blocked` 和 canonical 值 `ready-for-agent`；前三者仅为本工作包内状态，不新增或修改 `docs/agents/triage-labels.md` 的全局 canonical triage vocabulary。
+- 对 AR-09～AR-12，`ready-for-agent` 只表示规格已经完整；实际执行资格必须同时满足 `Blocked by`。上游未满足时不得认领或实施，因此不会把“规格可交给 agent”误写成“可以越过依赖执行”。
+- 其他工作包继续使用全局 canonical triage labels；不得把本工作包的 legacy lifecycle 值复制为仓库通用标签。
 
 ## Boundaries
 
@@ -14,16 +43,17 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- AR-01 完成后停止；场景证据协议、门禁特定 producer、独立复核、运行时生命周期、对抗测试和正式执行由后续 Ticket 处理。
+- 每次只执行获得授权的 current frontier；AR-08 完成后停止，不进入 AR-09。
 
 ## Completion Criteria
 
-1. 覆盖矩阵严格按照 ABG_GATES 的顺序覆盖 40 个门禁，不维护第二份标题清单。
-2. 每个门禁具有稳定场景、唯一门禁级断言、受控 producer、严格证据选择器、引用种类、冻结输入和失败关闭策略。
-3. 自动校验拒绝缺失、重复、未知、泛化临时场景、占位值和未声明引用。
-4. 派生 Markdown 报告与 TypeScript 矩阵一致。
-5. 定向类型、单元和仓库静态边界检查通过；正式 ABG 保持未运行。
+1. AR-01～AR-12 的状态、依赖、实现基线和重新验证要求在 spec、map 与 Ticket 中一致。
+2. Implementation、Verification 与 Formal acceptance 三层状态不得互相替代。
+3. AR-09～AR-11 完成后，由 AR-12 在新的冻结 HEAD 上重新验证 AR-01～AR-06 及新增整改，不沿用旧提交结论。
+4. Podman 工作包在 AR-11 完成并经人工复核前保持 `ready-for-human`。
+5. 只有 AR-12 通过且取得明确正式执行授权后，AR-07 才可解除阻断并建立新的正式候选；当前未运行正式 ABG。
 
 ## Comments
 
 - 2026-08-27：工作包创建。01 已认领；其余任务在明确依赖满足前保持阻断。
+- 2026-08-30：AR-08 统一状态语义和后续整改依赖。AR-01～AR-06 的 `resolved` 保留为本地实现与当时定向验证结论；正式候选尚未冻结，Podman 工作包仍待人工复核，AR-07 阻断于 AR-12 和另行正式执行授权。

@@ -22,3 +22,4 @@ Blocked by: none
 - 2026-08-27：生命周期专项 35/35、verification-tooling 全量 85/85 通过；verification 与 governance-api typecheck、ABG coverage、仓库布局、模块边界、Compose config、bootstrap shell syntax 和 `git diff --check` 通过。真实 Anolis `--dry-run` 在实现期对脏工作区及既有 `anolis-89-wsl2` PostgreSQL/Keycloak/卷/网络和 55432/18080/19000 端口准确失败关闭；未自动清理这些无法证明属于当前 run 的旧资源。
 - 2026-08-27：未执行完整正式 ABG，未进入 AR-06。
 - 2026-08-30：上述Docker/Compose实现记录作为历史事实保留；ADR-0111已替代现行运行时语义。当前身份字段为`runtimeNamespace`，rootful Podman直接管理带五标签的容器与卷，受管容器统一使用host network并显式绑定回环端口；预检与teardown只通过Podman逐项发现、复核和清理，禁止prune/reset。迁移验证不等于readiness或正式ABG。
+- 2026-08-30（AR-08 状态复核）：Implementation 基线为 `9bc5851c9d361f10fe90905affe797153ae4673a`，其 Docker/Compose 运行时语义已被 `5fc00d043dfbad213d647edae7be6df11016ba8a` 的 Podman 迁移直接替代；AR-09 的终态协议和 AR-11 的 authority、restart、Docker socket、partial-startup 加固仍会继续改变验证基线。AR-12 必须在这些整改完成后重新验证；历史 35/35 与 85/85 不能表示当前正式 accepted。

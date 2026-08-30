@@ -29,3 +29,4 @@ Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理
 
 - 2026-08-30：用户明确要求将 Docker 改为 Podman，并调整整个现行设计。AR-07 的 Docker 路径停止，`runSequence 9` 不在旧设计上启动。
 - 2026-08-30：实现与本地验证完成。直接Podman运行模块、host network回环端口、五标签所有权、预检/teardown、Testcontainers适配、基线回执、ADR和活跃设计已一致；未启动新的readiness、正式ABG、Chrome或独立复核。
+- 2026-08-30（AR-08 状态复核）：Podman 迁移已进入代码分支，但尚未形成正式 ABG evidence；本工作包继续保持 `ready-for-human`。AR-11 将完成 authority、restart、Docker socket 和 partial-startup hardening，并在完成后接受人工复核；只有 AR-12 完成最新基线重新验证后，才可解除其对 AR-07 的阻断。

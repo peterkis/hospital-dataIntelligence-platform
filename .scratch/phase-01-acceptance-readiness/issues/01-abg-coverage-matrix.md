@@ -20,3 +20,4 @@ Blocked by: none
 
 - 2026-08-27：AR-01 已认领。
 - 2026-08-27：AR-01 已完成；权威矩阵、派生报告和定向校验已通过，提交为 `cf1a78e` 并已推送到 `origin/phase-01-acceptance-readiness`。未执行正式 ABG。
+- 2026-08-30（AR-08 状态复核）：Implementation 基线为 `cf1a78ef07db70ce691dc0c4b271d5db859cd522`。其后证据协议、producer、reviewer、运行时生命周期、数据库/领域修复和 Podman 权威均发生变化，旧评论中的定向验证不能代表当前终态协议基线；AR-12 必须在 AR-09～AR-11 完成后的冻结 HEAD 重新验证。本 Ticket 的验收框保持原状，不凭旧评论补勾；`resolved` 不表示正式 accepted。
