@@ -30,7 +30,10 @@ const RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(REPOSITORY_ROOT);
 describe('formal ABG controlled teardown', () => {
   it('stops and removes only resources carrying every current-run label', async () => {
     const unrelated = resource('container', 'unrelated', {
-      labels: { ...formalRuntimeLabels(IDENTITY), 'hdi.run-id': 'different-run-id' },
+      labels: {
+        ...formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority),
+        'hdi.run-id': 'different-run-id',
+      },
       name: 'other_namespace_unrelated',
     });
     const adapter = new FakeTeardownAdapter([
@@ -97,10 +100,10 @@ describe('formal ABG controlled teardown', () => {
   it('rejects partial label matches as unrelated', () => {
     const exact = resource('container', 'exact');
     const partial = resource('container', 'partial', {
-      labels: { ...formalRuntimeLabels(IDENTITY), 'hdi.run-sequence': '8' },
+      labels: { ...formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority), 'hdi.run-sequence': '8' },
     });
-    expect(belongsToRun(exact, IDENTITY)).toBe(true);
-    expect(belongsToRun(partial, IDENTITY)).toBe(false);
+    expect(belongsToRun(exact, IDENTITY, RUNTIME_AUTHORITY.authority)).toBe(true);
+    expect(belongsToRun(partial, IDENTITY, RUNTIME_AUTHORITY.authority)).toBe(false);
   });
 
   it('permits only exact Podman removals and rejects prune, reset, bulk, and implicit volume deletion', () => {
@@ -225,7 +228,8 @@ describe('formal ABG controlled teardown', () => {
 
     const result = await execute(adapter);
 
-    expect(result.finalResources.resources[0]?.labels).toEqual(formalRuntimeLabels(IDENTITY));
+    expect(result.finalResources.resources[0]?.labels)
+      .toEqual(formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority));
     expect(JSON.stringify(result)).not.toContain('third-party.sensitive-label');
     expect(JSON.stringify(result)).not.toContain(sensitiveValue);
   });
@@ -237,19 +241,19 @@ describe('formal ABG controlled teardown', () => {
       resourceType: 'container',
       id: 'runtime-postgres',
       name: `${IDENTITY.runtimeNamespace}_runtime-postgres`,
-      labels: formalRuntimeLabels(IDENTITY),
+      labels: formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority),
       actualLabels: {
-        ...formalRuntimeLabels(IDENTITY),
+        ...formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority),
         'hdi.run-id': 'different-run',
         'third-party.sensitive-label': 'must-not-enter-event-evidence',
       },
-    }], IDENTITY);
+    }], IDENTITY, RUNTIME_AUTHORITY.authority);
 
     expect(resources[0]?.labels).toEqual({
-      ...formalRuntimeLabels(IDENTITY),
+      ...formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority),
       'hdi.run-id': 'different-run',
     });
-    expect(belongsToRun(resources[0]!, IDENTITY)).toBe(false);
+    expect(belongsToRun(resources[0]!, IDENTITY, RUNTIME_AUTHORITY.authority)).toBe(false);
     expect(JSON.stringify(resources)).not.toContain('third-party.sensitive-label');
     expect(JSON.stringify(resources)).not.toContain('must-not-enter-event-evidence');
   });
@@ -289,6 +293,42 @@ describe('formal ABG controlled teardown', () => {
     expect(result.cleanup.failedItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ errorCode: 'FORMAL_CLEANUP_RUNTIME_AUTHORITY_DRIFT' }),
     ]));
+  });
+
+  it('uses the frozen authority for cleanup ownership when the post-cleanup authority is invalid', async () => {
+    const frozenRuntimeAuthority = {
+      ...RUNTIME_AUTHORITY,
+      authority: {
+        ...RUNTIME_AUTHORITY.authority,
+        labels: {
+          ...RUNTIME_AUTHORITY.authority.labels,
+          static: {
+            ...RUNTIME_AUTHORITY.authority.labels.static,
+            'hdi.repository': 'synthetic-frozen-repository',
+          },
+        },
+      },
+    } as unknown as typeof RUNTIME_AUTHORITY;
+    const adapter = new FakeTeardownAdapter([
+      resource('container', 'runtime-postgres', {
+        labels: { ...formalRuntimeLabels(IDENTITY, frozenRuntimeAuthority.authority) },
+      }),
+    ]);
+
+    const result = await execute(adapter, {
+      runtimeAuthority: frozenRuntimeAuthority,
+      runtimeAuthorityReloadError: 'RUNTIME_AUTHORITY_JSON_INVALID',
+    });
+
+    expect(adapter.calls).toEqual([
+      'reinspect:container:runtime-postgres',
+      'remove-container:runtime-postgres',
+    ]);
+    expect(adapter.current('runtime-postgres')?.present).toBe(false);
+    expect(result.cleanup.runtimeAuthority?.stable).toBe(false);
+    expect(result.cleanup.failedItems).toContainEqual(expect.objectContaining({
+      errorCode: 'FORMAL_CLEANUP_RUNTIME_AUTHORITY_UNAVAILABLE:RUNTIME_AUTHORITY_JSON_INVALID',
+    }));
   });
 
   it('reloads the post-cleanup authority from the same repository root', async () => {
@@ -407,7 +447,9 @@ describe('formal ABG controlled teardown', () => {
 async function execute(
   adapter: FormalTeardownAdapter,
   options: {
+    readonly runtimeAuthority?: typeof RUNTIME_AUTHORITY;
     readonly runtimeAuthorityAfter?: typeof RUNTIME_AUTHORITY;
+    readonly runtimeAuthorityReloadError?: string;
     readonly isolationObservation?: FormalPreflightAuthorityIsolationObservation;
     readonly onReloadRoot?: (repositoryRoot?: string) => void;
   } = {},
@@ -416,11 +458,14 @@ async function execute(
     identity: IDENTITY,
     repositoryRoot: REPOSITORY_ROOT,
     runtimeEventDirectory: 'D:/evidence/runtime/events',
-    runtimeAuthority: RUNTIME_AUTHORITY,
+    runtimeAuthority: options.runtimeAuthority ?? RUNTIME_AUTHORITY,
   }, {
     adapter,
     loadRuntimeAuthority: (repositoryRoot) => {
       options.onReloadRoot?.(repositoryRoot);
+      if (options.runtimeAuthorityReloadError !== undefined) {
+        throw new Error(options.runtimeAuthorityReloadError);
+      }
       return options.runtimeAuthorityAfter ?? RUNTIME_AUTHORITY;
     },
     authorityIsolation: {
@@ -575,7 +620,7 @@ function resource(
   } = {},
 ): RuntimeResourceRecord {
   const labels = {
-    ...formalRuntimeLabels(IDENTITY),
+    ...formalRuntimeLabels(IDENTITY, RUNTIME_AUTHORITY.authority),
     ...options.labels,
   };
   return {

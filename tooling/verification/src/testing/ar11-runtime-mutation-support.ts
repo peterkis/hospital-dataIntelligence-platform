@@ -19,6 +19,7 @@ import {
 } from '../runtime/podman-runtime-authority.js';
 import type {
   LoadedPodmanRuntimeAuthority,
+  PodmanRuntimeAuthority,
   PodmanRuntimeAuthorityDocument,
 } from '../runtime/podman-runtime-authority-schema.js';
 import {
@@ -104,9 +105,12 @@ export function assertSyntheticFailureCleanup(input: {
   readonly failureStage: string;
   readonly cleanupSucceeded: boolean;
   readonly identity: FormalRunIdentity;
+  readonly runtimeAuthority: PodmanRuntimeAuthority;
   readonly resources: readonly RuntimeResourceRecord[];
 }): void {
-  for (const resource of input.resources) assertFormalRuntimeResourceOwned(resource, input.identity);
+  for (const resource of input.resources) {
+    assertFormalRuntimeResourceOwned(resource, input.identity, input.runtimeAuthority);
+  }
   if (!input.cleanupSucceeded) throw new Error('FORMAL_RUNTIME_PARTIAL_STARTUP_CLEANUP_FAILED');
   const residue = input.resources.filter((resource) => resource.present);
   if (residue.length === 0) return;

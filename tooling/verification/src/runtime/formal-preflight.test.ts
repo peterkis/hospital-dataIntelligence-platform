@@ -251,7 +251,7 @@ describe('formal ABG preflight', () => {
               id: 'residual-container',
               name: `${RUN.runtimeNamespace}_postgres`,
               labels: {
-                ...formalRuntimeLabels(RUN),
+                ...formalRuntimeLabels(RUN, TEST_AUTHORITY),
                 'third-party.sensitive-label': sensitiveValue,
               },
             }],
@@ -710,4 +710,4 @@ function memInfo(swapKilobytes: number): string {
   return `MemTotal:       4194304 kB\nSwapTotal:      ${swapKilobytes} kB\n`;
 }
 
-expect(formalRuntimePorts()).toEqual([55432, 55433, 18080, 19000, 3000, 4101, 4102]);
+expect(formalRuntimePorts(TEST_AUTHORITY)).toEqual([55432, 55433, 18080, 19000, 3000, 4101, 4102]);

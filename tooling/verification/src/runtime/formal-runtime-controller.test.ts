@@ -35,6 +35,9 @@ const PRODUCER_SOURCE_MANIFEST_SHA256 = 'd'.repeat(64);
 const RUNTIME_AUTHORITY_SHA256 = 'e'.repeat(64);
 const RUNTIME_AUTHORITY_SEMANTIC_DIGEST = 'f'.repeat(64);
 const IDENTITY: FormalRunIdentity = { ...RUN, gitCommitSha: GIT_SHA };
+const TEST_RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(
+  resolve(import.meta.dirname, '../../../..'),
+).authority;
 const roots: string[] = [];
 
 afterEach(async () => {
@@ -47,6 +50,7 @@ describe('formal runtime lifecycle', () => {
     roots.push(root);
     await writeFormalRuntimeEvent(root, {
       identity: RUN,
+      runtimeAuthority: TEST_RUNTIME_AUTHORITY,
       event: 'STARTED',
       resourceType: 'container',
       id: 'container-id',
@@ -54,7 +58,7 @@ describe('formal runtime lifecycle', () => {
       role: 'postgresql',
       restartPolicy: 'no',
       actualLabels: {
-        ...formalRuntimeLabels(RUN),
+        ...formalRuntimeLabels(RUN, TEST_RUNTIME_AUTHORITY),
         'third-party.sensitive-label': 'must-not-enter-runtime-event-evidence',
       },
     });
@@ -74,8 +78,8 @@ describe('formal runtime lifecycle', () => {
       resourceId: 'container-id',
       restartPolicy: 'no',
       errorCode: null,
-      expectedLabels: formalRuntimeLabels(RUN),
-      actualLabels: formalRuntimeLabels(RUN),
+      expectedLabels: formalRuntimeLabels(RUN, TEST_RUNTIME_AUTHORITY),
+      actualLabels: formalRuntimeLabels(RUN, TEST_RUNTIME_AUTHORITY),
     });
     expect(JSON.stringify(event)).not.toContain('DATABASE_URL');
     expect(JSON.stringify(event)).not.toContain('third-party.sensitive-label');
@@ -598,7 +602,7 @@ function processResource(): RuntimeResourceRecord {
     resourceType: 'process',
     id: '501',
     name: 'governance-api',
-    labels: { ...formalRuntimeLabels(IDENTITY) },
+    labels: { ...formalRuntimeLabels(IDENTITY, TEST_RUNTIME_AUTHORITY) },
     source: 'runtime-event',
     present: true,
     active: true,

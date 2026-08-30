@@ -25,7 +25,10 @@ import {
   type RuntimeResourceSnapshot,
 } from './formal-teardown.js';
 import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.js';
-import type { LoadedPodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
+import type {
+  LoadedPodmanRuntimeAuthority,
+  PodmanRuntimeAuthority,
+} from './podman-runtime-authority-schema.js';
 
 export interface FormalRuntimeContext {
   readonly identity: FormalRunIdentity;
@@ -648,6 +651,7 @@ export async function writeFormalRuntimeEvent(
   eventDirectory: string,
   input: {
     readonly identity: FormalRunSeed;
+    readonly runtimeAuthority: PodmanRuntimeAuthority;
     readonly event: 'STARTED' | 'STOPPED';
     readonly resourceType: 'process' | 'container';
     readonly id: string;
@@ -692,11 +696,12 @@ export async function writeFormalRuntimeEvent(
     role: input.role,
     stage: input.stage ?? `RESOURCE_${input.event}`,
     status: input.status ?? 'PASSED',
-    labels: formalRuntimeLabels(input.identity),
-    expectedLabels: formalRuntimeLabels(input.identity),
+    labels: formalRuntimeLabels(input.identity, input.runtimeAuthority),
+    expectedLabels: formalRuntimeLabels(input.identity, input.runtimeAuthority),
     actualLabels: projectFormalRuntimeLabels(
-      input.actualLabels ?? formalRuntimeLabels(input.identity),
+      input.actualLabels ?? formalRuntimeLabels(input.identity, input.runtimeAuthority),
       input.identity,
+      input.runtimeAuthority,
     ),
     restartPolicy: input.restartPolicy ?? null,
     errorCode: input.errorCode ?? null,
@@ -835,9 +840,10 @@ function sanitizeFailure(error: unknown): string {
 function projectFormalRuntimeLabels(
   labels: object,
   identity: FormalRunSeed,
+  authority: PodmanRuntimeAuthority,
 ): Readonly<Record<string, string>> {
   const values = labels as Readonly<Record<string, unknown>>;
-  return Object.fromEntries(Object.keys(formalRuntimeLabels(identity)).flatMap((name) =>
+  return Object.fromEntries(Object.keys(formalRuntimeLabels(identity, authority)).flatMap((name) =>
     typeof values[name] === 'string' ? [[name, values[name]]] : [],
   ));
 }

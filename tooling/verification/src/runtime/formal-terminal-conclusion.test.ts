@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formalRuntimePorts, type FormalRunIdentity } from './formal-runtime-contract.js';
+import {
+  formalRuntimeAuthority,
+  formalRuntimePorts,
+  type FormalRunIdentity,
+} from './formal-runtime-contract.js';
+import type { PodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
 import { buildFormalTerminalConclusion } from './formal-terminal-conclusion.js';
 import type {
   FormalCleanupReport,
@@ -13,6 +18,7 @@ const IDENTITY: FormalRunIdentity = {
   runtimeNamespace: 'hdi_phase01_abg_17_terminaltest',
   gitCommitSha: 'a'.repeat(40),
 };
+const RUNTIME_AUTHORITY = formalRuntimeAuthority().authority;
 
 describe('formal terminal conclusion', () => {
   it('derives a seal-eligible PASSED conclusion only from a complete cleanup terminal state', () => {
@@ -33,7 +39,7 @@ describe('formal terminal conclusion', () => {
       residualVolumeCount: 0,
       residualNetworkCount: 0,
       occupiedRequiredPorts: [],
-      requiredPortsObserved: formalRuntimePorts(),
+      requiredPortsObserved: formalRuntimePorts(RUNTIME_AUTHORITY),
       pruneCommandsInvoked: false,
       frozenInputsStableAfterCleanup: true,
       authorityIdentityStableAfterCleanup: true,
@@ -144,6 +150,40 @@ describe('formal terminal conclusion', () => {
       'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DIGEST_INVALID',
     );
   });
+
+  it('derives required ports from the frozen authority rather than reloading disk', () => {
+    const frozenAuthority = {
+      ...RUNTIME_AUTHORITY,
+      network: {
+        ...RUNTIME_AUTHORITY.network,
+        ports: {
+          postgresRuntime: 61_001,
+          postgresIntegration: 61_002,
+          keycloakHttp: 61_003,
+          keycloakManagement: 61_004,
+          governanceApi: 61_005,
+          consumerA: 61_006,
+          consumerB: 61_007,
+        },
+      },
+    } satisfies PodmanRuntimeAuthority;
+    const input = validInput();
+    const frozenPorts = formalRuntimePorts(frozenAuthority);
+    const conclusion = buildFormalTerminalConclusion({
+      ...input,
+      runtimeAuthority: frozenAuthority,
+      finalResources: {
+        ...input.finalResources,
+        ports: frozenPorts.map((port) => ({ port, occupied: false, verificationError: null })),
+      },
+    });
+
+    expect(conclusion.requiredPortsObserved).toEqual(frozenPorts);
+    expect(conclusion.assertions.terminalLifecycle.expected).toMatchObject({
+      requiredPortsObserved: frozenPorts,
+    });
+    expect(conclusion.status).toBe('PASSED');
+  });
 });
 
 function validInput() {
@@ -152,7 +192,8 @@ function validInput() {
     runIdentity: IDENTITY,
     capturedAt: '2026-08-30T10:01:00',
     resources: [],
-    ports: formalRuntimePorts().map((port) => ({ port, occupied: false, verificationError: null })),
+    ports: formalRuntimePorts(RUNTIME_AUTHORITY)
+      .map((port) => ({ port, occupied: false, verificationError: null })),
   };
   const cleanup: FormalCleanupReport = {
     schemaVersion: 'phase-01.formal-cleanup.v1',
@@ -167,6 +208,7 @@ function validInput() {
     pruneCommandsInvoked: false,
   };
   return {
+    runtimeAuthority: RUNTIME_AUTHORITY,
     runIdentity: IDENTITY,
     startedAt: '2026-08-30T10:00:00',
     completedAt: '2026-08-30T10:01:01',

@@ -13,7 +13,7 @@ export function formalRuntimeAuthority(repositoryRoot?: string): LoadedPodmanRun
 }
 
 export function formalRuntimePorts(
-  authority: PodmanRuntimeAuthority = formalRuntimeAuthority().authority,
+  authority: PodmanRuntimeAuthority,
 ): readonly number[] {
   const ports = authority.network.ports;
   return Object.freeze([
@@ -140,7 +140,7 @@ export function createFormalRunSeed(
 
 export function formalRuntimeLabels(
   identity: FormalRunSeed,
-  authority: PodmanRuntimeAuthority = formalRuntimeAuthority().authority,
+  authority: PodmanRuntimeAuthority,
 ): FormalRuntimeLabels {
   const staticLabels = authority.labels.static;
   return {

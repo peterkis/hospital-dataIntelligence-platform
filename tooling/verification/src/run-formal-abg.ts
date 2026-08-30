@@ -347,6 +347,7 @@ async function finalizeFormalAbgAfterCleanup(
     ),
   );
   const terminalConclusion = buildFormalTerminalConclusion({
+    runtimeAuthority: context.runtimeAuthority.authority,
     runIdentity: context.identity,
     startedAt: execution?.startedAt ?? outcome.preflight.startedAt,
     completedAt: localNow(),
@@ -508,6 +509,7 @@ async function finalizeFormalAbgAfterCleanup(
   };
   if (passed && frozenPlan !== undefined && execution !== undefined) {
     validateFormalAbgSummary(summary, {
+      runtimeAuthority: context.runtimeAuthority.authority,
       runSequence: frozenPlan.runSequence,
       planDigest: execution.planDigest,
       frozenInputs: frozenPlan.frozenInputs,

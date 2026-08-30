@@ -9,6 +9,7 @@ import {
   createFormalRunSeed,
   errorMessage,
   formalRuntimeLabels,
+  formalRuntimePorts,
   localNowInAsiaShanghai,
   type FormalRunIdentity,
   type RuntimeCommandRunner,
@@ -147,21 +148,37 @@ export interface FormalTeardownTerminalState {
 }
 
 export interface FormalTeardownAdapter {
-  listResources(identity: FormalRunIdentity, runtimeEventDirectory: string): Promise<readonly RuntimeResourceRecord[]>;
+  listResources(
+    identity: FormalRunIdentity,
+    runtimeEventDirectory: string,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<readonly RuntimeResourceRecord[]>;
   reinspectResource(
     resource: RuntimeResourceRecord,
     identity: FormalRunIdentity,
   ): Promise<RuntimeResourceRecord | null>;
   stopProcess(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
-  removeContainer(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
-  removeVolume(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
-  removeNetwork(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void>;
+  removeContainer(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<void>;
+  removeVolume(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<void>;
+  removeNetwork(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<void>;
   inspectPorts(ports: readonly number[]): Promise<RuntimeResourceSnapshot['ports']>;
-  inspectEnvironment?(authority?: PodmanRuntimeAuthority): Promise<RuntimeEnvironmentObservation>;
+  inspectEnvironment?(authority: PodmanRuntimeAuthority): Promise<RuntimeEnvironmentObservation>;
   inspectTerminalState(
     identity: FormalRunIdentity,
     runtimeEventDirectory: string,
-    authority?: PodmanRuntimeAuthority,
+    authority: PodmanRuntimeAuthority,
   ): Promise<FormalTeardownTerminalState>;
 }
 
@@ -199,8 +216,16 @@ export async function captureFormalRuntimeResources(
   const resources = (await dependencies.adapter.listResources(
     input.identity,
     input.runtimeEventDirectory,
-  )).map(projectRuntimeResourceLabels)
-    .filter((resource) => isPotentialRunResource(resource, input.identity));
+    input.runtimeAuthority.authority,
+  )).map((resource) => projectRuntimeResourceLabels(
+    resource,
+    input.identity,
+    input.runtimeAuthority.authority,
+  )).filter((resource) => isPotentialRunResource(
+    resource,
+    input.identity,
+    input.runtimeAuthority.authority,
+  ));
   let environment: RuntimeEnvironmentObservation | null = null;
   let environmentCaptureFailure: string | null = null;
   if (dependencies.adapter.inspectEnvironment !== undefined) {
@@ -240,7 +265,12 @@ export async function performFormalTeardown(
     resources = (await dependencies.adapter.listResources(
       input.identity,
       input.runtimeEventDirectory,
-    )).map(projectRuntimeResourceLabels);
+      input.runtimeAuthority.authority,
+    )).map((resource) => projectRuntimeResourceLabels(
+      resource,
+      input.identity,
+      input.runtimeAuthority.authority,
+    ));
   } catch (error) {
     addAction({
       action: 'DISCOVER_RESOURCES',
@@ -255,8 +285,8 @@ export async function performFormalTeardown(
   const restartPolicyFindings: RestartPolicyFinding[] = [];
   const candidateResources: RuntimeResourceRecord[] = [];
   for (const resource of resources.filter((candidate) => candidate.present || candidate.active)) {
-    if (!isPotentialRunResource(resource, input.identity)) continue;
-    if (!belongsToRun(resource, input.identity)) {
+    if (!isPotentialRunResource(resource, input.identity, input.runtimeAuthority.authority)) continue;
+    if (!belongsToRun(resource, input.identity, input.runtimeAuthority.authority)) {
       addAction({
         action: 'VERIFY_RESOURCE',
         resourceType: resource.resourceType,
@@ -288,7 +318,8 @@ export async function performFormalTeardown(
   for (const resource of candidateResources.filter((candidate) =>
     candidate.resourceType === 'process' && candidate.active,
   ).sort((left, right) => processOrder(left) - processOrder(right))) {
-    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
+    await verifyAndMutateResource(resource, input.identity, input.runtimeAuthority.authority,
+      dependencies.adapter, addAction, restartPolicyFindings, {
       action: 'STOP_PROCESS',
       mutate: (fresh) => dependencies.adapter.stopProcess(fresh, input.identity),
     });
@@ -302,9 +333,14 @@ export async function performFormalTeardown(
   for (const resource of candidateResources.filter((candidate) =>
     candidate.resourceType === 'container' && candidate.present,
   ).sort((left, right) => containerOrder(left) - containerOrder(right))) {
-    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
+    await verifyAndMutateResource(resource, input.identity, input.runtimeAuthority.authority,
+      dependencies.adapter, addAction, restartPolicyFindings, {
       action: 'REMOVE_CONTAINER',
-      mutate: (fresh) => dependencies.adapter.removeContainer(fresh, input.identity),
+      mutate: (fresh) => dependencies.adapter.removeContainer(
+        fresh,
+        input.identity,
+        input.runtimeAuthority.authority,
+      ),
     });
   }
 
@@ -313,17 +349,27 @@ export async function performFormalTeardown(
   for (const resource of candidateResources.filter((candidate) =>
     candidate.present && candidate.resourceType === 'volume',
   ).sort((left, right) => volumeOrder(left) - volumeOrder(right))) {
-    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
+    await verifyAndMutateResource(resource, input.identity, input.runtimeAuthority.authority,
+      dependencies.adapter, addAction, restartPolicyFindings, {
       action: 'REMOVE_VOLUME',
-      mutate: (fresh) => dependencies.adapter.removeVolume(fresh, input.identity),
+      mutate: (fresh) => dependencies.adapter.removeVolume(
+        fresh,
+        input.identity,
+        input.runtimeAuthority.authority,
+      ),
     });
   }
   for (const resource of candidateResources.filter((candidate) =>
     candidate.present && candidate.resourceType === 'network',
   )) {
-    await verifyAndMutateResource(resource, input.identity, dependencies.adapter, addAction, restartPolicyFindings, {
+    await verifyAndMutateResource(resource, input.identity, input.runtimeAuthority.authority,
+      dependencies.adapter, addAction, restartPolicyFindings, {
       action: 'REMOVE_NETWORK',
-      mutate: (fresh) => dependencies.adapter.removeNetwork(fresh, input.identity),
+      mutate: (fresh) => dependencies.adapter.removeNetwork(
+        fresh,
+        input.identity,
+        input.runtimeAuthority.authority,
+      ),
     });
   }
 
@@ -528,6 +574,7 @@ export async function performFormalTeardown(
 async function verifyAndMutateResource(
   resource: RuntimeResourceRecord,
   identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
   adapter: FormalTeardownAdapter,
   addAction: (action: Omit<CleanupAction, 'ordinal' | 'occurredAt'>) => void,
   restartPolicyFindings: RestartPolicyFinding[],
@@ -551,7 +598,7 @@ async function verifyAndMutateResource(
     });
     return;
   }
-  if (fresh !== null) fresh = projectRuntimeResourceLabels(fresh);
+  if (fresh !== null) fresh = projectRuntimeResourceLabels(fresh, identity, authority);
   if (fresh === null || (!fresh.present && !fresh.active)) {
     addAction({
       action: 'VERIFY_RESOURCE',
@@ -563,7 +610,7 @@ async function verifyAndMutateResource(
     });
     return;
   }
-  if (!belongsToRun(fresh, identity)) {
+  if (!belongsToRun(fresh, identity, authority)) {
     addAction({
       action: 'VERIFY_RESOURCE',
       resourceType: resource.resourceType,
@@ -633,7 +680,7 @@ function addFindingAction(
 }
 
 function runtimeAuthorityPorts(authority: LoadedPodmanRuntimeAuthority): readonly number[] {
-  return Object.values(authority.authority.network.ports);
+  return formalRuntimePorts(authority.authority);
 }
 
 function hasCanonicalResourceName(
@@ -647,8 +694,9 @@ function hasCanonicalResourceName(
 function isPotentialRunResource(
   resource: RuntimeResourceRecord,
   identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
 ): boolean {
-  return belongsToRun(resource, identity) ||
+  return belongsToRun(resource, identity, authority) ||
     resource.name.startsWith(identity.runtimeNamespace + '_') ||
     resource.labels['hdi.run-id'] === identity.runId;
 }
@@ -667,16 +715,18 @@ function countResidualResources(
 export function belongsToRun(
   resource: RuntimeResourceRecord,
   identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
 ): boolean {
-  const expected = formalRuntimeLabels(identity);
+  const expected = formalRuntimeLabels(identity, authority);
   return Object.entries(expected).every(([name, value]) => resource.labels[name] === value);
 }
 
 export function assertFormalRuntimeResourceOwned(
   resource: RuntimeResourceRecord,
   identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
 ): void {
-  if (!belongsToRun(resource, identity)) {
+  if (!belongsToRun(resource, identity, authority)) {
     throw new Error('FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH');
   }
 }
@@ -711,13 +761,14 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
   async listResources(
     identity: FormalRunIdentity,
     runtimeEventDirectory: string,
+    authority: PodmanRuntimeAuthority,
   ): Promise<readonly RuntimeResourceRecord[]> {
     const podman = [
       ...await this.listPodmanContainers(),
       ...await this.listPodmanVolumes(),
       ...await this.listPodmanNetworks(),
     ];
-    const events = await readRuntimeEvents(runtimeEventDirectory, identity);
+    const events = await readRuntimeEvents(runtimeEventDirectory, identity, authority);
     return mergePodmanAndEventResources(podman, events);
   }
 
@@ -763,18 +814,30 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     if (isProcessAlive(resource.pid)) process.kill(resource.pid, 'SIGKILL');
   }
 
-  async removeContainer(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertPodmanResourceOwned('container', resource.id, identity, resource);
+  async removeContainer(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<void> {
+    await this.assertPodmanResourceOwned('container', resource.id, identity, authority, resource);
     await requireSuccess(this.runner, 'podman', ['container', 'rm', '--force', resource.id]);
   }
 
-  async removeVolume(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertPodmanResourceOwned('volume', resource.name, identity, resource);
+  async removeVolume(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<void> {
+    await this.assertPodmanResourceOwned('volume', resource.name, identity, authority, resource);
     await requireSuccess(this.runner, 'podman', ['volume', 'rm', resource.name]);
   }
 
-  async removeNetwork(resource: RuntimeResourceRecord, identity: FormalRunIdentity): Promise<void> {
-    await this.assertPodmanResourceOwned('network', resource.id, identity, resource);
+  async removeNetwork(
+    resource: RuntimeResourceRecord,
+    identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
+  ): Promise<void> {
+    await this.assertPodmanResourceOwned('network', resource.id, identity, authority, resource);
     await requireSuccess(this.runner, 'podman', ['network', 'rm', resource.id]);
   }
 
@@ -782,8 +845,7 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     return Promise.all(ports.map((port) => inspectPort(port)));
   }
 
-  async inspectEnvironment(authority?: PodmanRuntimeAuthority): Promise<RuntimeEnvironmentObservation> {
-    if (authority === undefined) throw new Error('FORMAL_CLEANUP_RUNTIME_AUTHORITY_REQUIRED');
+  async inspectEnvironment(authority: PodmanRuntimeAuthority): Promise<RuntimeEnvironmentObservation> {
     const hostAuthority = authority.host;
     const host = await inspectWslHost(this.runner);
     const processorCount = Number.parseInt(await requireText(this.runner, 'nproc', []), 10);
@@ -846,9 +908,8 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
   async inspectTerminalState(
     identity: FormalRunIdentity,
     runtimeEventDirectory: string,
-    authority?: PodmanRuntimeAuthority,
+    authority: PodmanRuntimeAuthority,
   ): Promise<FormalTeardownTerminalState> {
-    if (authority === undefined) throw new Error('FORMAL_CLEANUP_RUNTIME_AUTHORITY_REQUIRED');
     const persistenceFindings: string[] = [];
     for (const args of [
       ['list-units', '--all', '--no-legend'],
@@ -1026,6 +1087,7 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
     type: 'container' | 'volume' | 'network',
     id: string,
     identity: FormalRunIdentity,
+    authority: PodmanRuntimeAuthority,
     expectedResource: RuntimeResourceRecord,
   ): Promise<void> {
     const inspected = await inspectOne(this.runner, [type, 'inspect', id]);
@@ -1036,7 +1098,7 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
       ? stringOrEmpty(inspected['Name']).replace(/^\//u, '')
       : stringOrEmpty(inspected[type === 'network' ? 'name' : 'Name']);
     const resource = basePodmanResource(type, id, actualName, labels, null);
-    assertFormalRuntimeResourceOwned(resource, identity);
+    assertFormalRuntimeResourceOwned(resource, identity, authority);
     if (actualName !== expectedResource.name || !hasCanonicalResourceName(resource, identity)) {
       throw new Error('FORMAL_CLEANUP_RESOURCE_NAME_MISMATCH');
     }
@@ -1059,6 +1121,7 @@ async function attempt(
 async function readRuntimeEvents(
   directory: string,
   identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
 ): Promise<readonly RuntimeResourceRecord[]> {
   try {
     const entries = await readdir(directory, { withFileTypes: true });
@@ -1068,7 +1131,7 @@ async function readRuntimeEvents(
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
       values.push(JSON.parse(await readFile(join(directory, entry.name), 'utf8')) as unknown);
     }
-    return parseFormalRuntimeEventResources(values, identity);
+    return parseFormalRuntimeEventResources(values, identity, authority);
   } catch (error) {
     if (isMissing(error)) return [];
     throw error;
@@ -1078,6 +1141,7 @@ async function readRuntimeEvents(
 export function parseFormalRuntimeEventResources(
   values: readonly unknown[],
   identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
 ): readonly RuntimeResourceRecord[] {
   const resources = new Map<string, RuntimeResourceRecord>();
   for (const value of values) {
@@ -1091,7 +1155,11 @@ export function parseFormalRuntimeEventResources(
       typeof id !== 'string'
     ) continue;
     const existing = resources.get(String(resourceType) + ':' + id);
-    const labels = stringRecord(value['actualLabels'] ?? value['labels']);
+    const labels = projectGovernedRuntimeLabels(
+      stringRecord(value['actualLabels'] ?? value['labels']),
+      identity,
+      authority,
+    );
     if (event === 'STARTED') {
       const pid = typeof value['pid'] === 'number' ? value['pid'] : undefined;
       const processIsAlive = resourceType === 'process' && pid !== undefined && isProcessAlive(pid);
@@ -1403,29 +1471,27 @@ function recordField(
 
 function stringRecord(value: unknown): Readonly<Record<string, string>> {
   if (!isRecord(value)) return {};
-  return projectGovernedRuntimeLabels(Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
+  return Object.fromEntries(Object.entries(value).flatMap(([name, item]) =>
     typeof item === 'string' ? [[name, item]] : [],
-  )));
+  ));
 }
-
-const GOVERNED_RUNTIME_LABEL_NAMES = [
-  'hdi.repository',
-  'hdi.phase',
-  'hdi.run-id',
-  'hdi.run-sequence',
-  'hdi.managed-by',
-] as const;
 
 function projectGovernedRuntimeLabels(
   labels: Readonly<Record<string, string>>,
+  identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
 ): Readonly<Record<string, string>> {
-  return Object.fromEntries(GOVERNED_RUNTIME_LABEL_NAMES.flatMap((name) =>
+  return Object.fromEntries(Object.keys(formalRuntimeLabels(identity, authority)).flatMap((name) =>
     typeof labels[name] === 'string' ? [[name, labels[name]]] : [],
   ));
 }
 
-function projectRuntimeResourceLabels(resource: RuntimeResourceRecord): RuntimeResourceRecord {
-  return { ...resource, labels: projectGovernedRuntimeLabels(resource.labels) };
+function projectRuntimeResourceLabels(
+  resource: RuntimeResourceRecord,
+  identity: FormalRunIdentity,
+  authority: PodmanRuntimeAuthority,
+): RuntimeResourceRecord {
+  return { ...resource, labels: projectGovernedRuntimeLabels(resource.labels, identity, authority) };
 }
 
 function parsePortBindings(value: unknown): readonly RuntimePortBinding[] {

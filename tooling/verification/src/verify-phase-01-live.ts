@@ -716,6 +716,7 @@ async function recordConsumerRuntimeEvent(
   ) throw new Error('FORMAL_CONSUMER_RUN_IDENTITY_INCOMPLETE');
   if (consumer.child.pid === undefined) throw new Error('FORMAL_CONSUMER_PID_MISSING');
   await writeFormalRuntimeEvent(eventDirectory, {
+    runtimeAuthority,
     identity: {
       runId: formalRunId,
       runSequence: parseRunSequence(formalRunSequence),

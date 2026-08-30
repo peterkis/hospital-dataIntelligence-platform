@@ -6,6 +6,7 @@ import type {
   RuntimeResourceSnapshot,
 } from './formal-teardown.js';
 import { TERMINAL_CONCLUSION_SCHEMA_VERSION } from '../verification-contract-versions.js';
+import type { PodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
 
 export const FORMAL_TERMINAL_CONCLUSION_SCHEMA_VERSION =
   TERMINAL_CONCLUSION_SCHEMA_VERSION;
@@ -58,6 +59,7 @@ export interface FormalTerminalConclusion {
 }
 
 export interface BuildFormalTerminalConclusionInput {
+  readonly runtimeAuthority: PodmanRuntimeAuthority;
   readonly runIdentity: FormalRunIdentity;
   readonly startedAt: string;
   readonly completedAt: string;
@@ -85,7 +87,7 @@ export interface BuildFormalTerminalConclusionInput {
 export function buildFormalTerminalConclusion(
   input: BuildFormalTerminalConclusionInput,
 ): FormalTerminalConclusion {
-  const requiredRuntimePorts = formalRuntimePorts();
+  const requiredRuntimePorts = formalRuntimePorts(input.runtimeAuthority);
   const nonFormalGateCount = input.nonFormalGateResults.length;
   const nonFormalPassedCount = input.nonFormalGateResults.filter((gate) => gate.status === 'PASSED').length;
   const nonFormalFailedCount = nonFormalGateCount - nonFormalPassedCount;

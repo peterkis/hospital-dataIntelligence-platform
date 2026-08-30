@@ -6,6 +6,7 @@ import {
 } from './abg-coverage-matrix.js';
 import { canonicalJson } from './evidence/recorder.js';
 import { formalRuntimePorts } from './runtime/formal-runtime-contract.js';
+import type { PodmanRuntimeAuthority } from './runtime/podman-runtime-authority-schema.js';
 import {
   GATE_RESULT_SCHEMA_VERSION,
   RUN_SUMMARY_SCHEMA_VERSION as CONTRACT_RUN_SUMMARY_SCHEMA_VERSION,
@@ -17,6 +18,7 @@ const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const LOCAL_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/u;
 
 export interface FormalAbgSummaryValidationExpectations {
+  readonly runtimeAuthority: PodmanRuntimeAuthority;
   readonly runSequence: number;
   readonly planDigest: string;
   readonly frozenInputs: Readonly<Record<string, string>>;
@@ -36,7 +38,7 @@ export function validateFormalAbgSummary(
   value: unknown,
   expected: FormalAbgSummaryValidationExpectations,
 ): void {
-  const requiredRuntimePorts = formalRuntimePorts();
+  const requiredRuntimePorts = formalRuntimePorts(expected.runtimeAuthority);
   const summary = requireRecord(value, 'RUN_SUMMARY_INVALID');
   assert(summary['schemaVersion'] === RUN_SUMMARY_SCHEMA_VERSION, 'RUN_SUMMARY_SCHEMA_VERSION_INVALID');
   const runId = requireMeaningfulString(summary['runId'], 'RUN_ID_INVALID');

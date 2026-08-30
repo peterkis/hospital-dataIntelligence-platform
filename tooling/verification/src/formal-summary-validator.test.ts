@@ -6,6 +6,7 @@ import {
   getAbgProducerProtocolIdentityDigest,
 } from './abg-gate-proof.js';
 import { canonicalJson, sha256 } from './evidence/recorder.js';
+import { formalRuntimeAuthority } from './runtime/formal-runtime-contract.js';
 import {
   validateFormalAbgSummary,
   type FormalAbgSummaryValidationExpectations,
@@ -129,6 +130,7 @@ function expectations(): FormalAbgSummaryValidationExpectations {
     producerSourceManifestSha256: SOURCE_MANIFEST_DIGEST,
   };
   return {
+    runtimeAuthority: formalRuntimeAuthority().authority,
     runSequence: RUN_SEQUENCE,
     planDigest: DIGEST,
     frozenInputs,

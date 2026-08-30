@@ -1411,35 +1411,41 @@ async function syntheticFailureResidueMutation(
   role: string,
 ): Promise<readonly string[]> {
   const identity = syntheticRuntimeIdentity();
-  const resource = syntheticRuntimeResource(identity, resourceType, role);
+  const runtimeAuthority = validRuntimeAuthorityMutationFixture().loaded.authority;
+  const resource = syntheticRuntimeResource(identity, runtimeAuthority, resourceType, role);
   return captureErrorCodes(() => Promise.resolve(assertSyntheticFailureCleanup({
     failureKind,
     failureStage,
     cleanupSucceeded: true,
     identity,
+    runtimeAuthority,
     resources: [resource],
   })));
 }
 
 async function syntheticOwnershipMismatchMutation(): Promise<readonly string[]> {
   const identity = syntheticRuntimeIdentity();
-  const resource = syntheticRuntimeResource(identity, 'container', 'postgres', false);
+  const runtimeAuthority = validRuntimeAuthorityMutationFixture().loaded.authority;
+  const resource = syntheticRuntimeResource(identity, runtimeAuthority, 'container', 'postgres', false);
   return captureErrorCodes(() => Promise.resolve(assertSyntheticFailureCleanup({
     failureKind: 'partial-startup',
     failureStage: 'postgres-container-created',
     cleanupSucceeded: true,
     identity,
+    runtimeAuthority,
     resources: [resource],
   })));
 }
 
 async function syntheticCleanupFailureMutation(): Promise<readonly string[]> {
   const identity = syntheticRuntimeIdentity();
+  const runtimeAuthority = validRuntimeAuthorityMutationFixture().loaded.authority;
   return captureErrorCodes(() => Promise.resolve(assertSyntheticFailureCleanup({
     failureKind: 'partial-startup',
     failureStage: 'postgres-container-created',
     cleanupSucceeded: false,
     identity,
+    runtimeAuthority,
     resources: [],
   })));
 }
@@ -1455,6 +1461,7 @@ function syntheticRuntimeIdentity(): FormalRunIdentity {
 
 function syntheticRuntimeResource(
   identity: FormalRunIdentity,
+  runtimeAuthority: ReturnType<typeof validRuntimeAuthorityMutationFixture>['loaded']['authority'],
   resourceType: 'container' | 'volume',
   role: string,
   owned = true,
@@ -1464,7 +1471,7 @@ function syntheticRuntimeResource(
     id: `ar11-${role}-${resourceType}`,
     name: `${identity.runtimeNamespace}-${role}-${resourceType}`,
     labels: {
-      ...formalRuntimeLabels(identity),
+      ...formalRuntimeLabels(identity, runtimeAuthority),
       ...(owned ? {} : { 'hdi.run-id': 'unrelated-run-id' }),
     },
     source: 'runtime-event',
@@ -1499,7 +1506,7 @@ async function unrelatedCleanupMutation(): Promise<readonly string[]> {
     id: 'unrelated-container-id',
     name: 'unrelated-container',
     labels: {
-      ...formalRuntimeLabels(identity),
+      ...formalRuntimeLabels(identity, validRuntimeAuthorityMutationFixture().loaded.authority),
       'hdi.run-id': 'different-run-id',
     },
     source: 'podman-inspect',
@@ -1516,7 +1523,11 @@ async function unrelatedCleanupMutation(): Promise<readonly string[]> {
     metrics: null,
   };
   return captureErrorCodes(() => Promise.resolve(
-    assertFormalRuntimeResourceOwned(unrelated, identity),
+    assertFormalRuntimeResourceOwned(
+      unrelated,
+      identity,
+      validRuntimeAuthorityMutationFixture().loaded.authority,
+    ),
   ));
 }
 

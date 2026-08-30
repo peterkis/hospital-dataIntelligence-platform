@@ -120,6 +120,7 @@ export interface ValidEvidenceFixture {
 export async function buildValidEvidenceFixture(
   input: BuildValidEvidenceFixtureInput,
 ): Promise<ValidEvidenceFixture> {
+  const runtimeAuthority = formalRuntimeAuthority().authority;
   const rootDirectory = resolve(input.rootDirectory);
   const rootStat = await lstat(rootDirectory);
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
@@ -149,6 +150,7 @@ export async function buildValidEvidenceFixture(
   const frozenInputs = fixtureFrozenInputs(
     producerSourceManifestSha256,
     producerSourceManifest.producerGitCommitSha,
+    runtimeAuthority,
   );
   const sharedEntries = [];
   for (const producerId of ABG_PRODUCER_IDS.filter((candidate) => candidate !== 'formal-run')) {
@@ -219,7 +221,7 @@ export async function buildValidEvidenceFixture(
     ...createFormalRunSeed(VALIDATOR_FIXTURE_RUN_SEQUENCE, () => VALIDATOR_FIXTURE_RUN_ID),
     gitCommitSha: frozenInputs['gitCommitSha']!,
   };
-  const ports = formalRuntimePorts().map((port) => ({
+  const ports = formalRuntimePorts(runtimeAuthority).map((port) => ({
     port,
     occupied: false,
     verificationError: null,
@@ -304,6 +306,7 @@ export async function buildValidEvidenceFixture(
   await writeFixtureJson(join(evidenceDirectory, 'runtime/resources-final.json'), finalResources);
   await writeFixtureJson(join(evidenceDirectory, 'runtime/cleanup.json'), cleanup);
   const terminalConclusion = buildFormalTerminalConclusion({
+    runtimeAuthority,
     runIdentity,
     startedAt: '2026-08-28T10:00:00',
     completedAt: '2026-08-28T10:00:55',
@@ -369,6 +372,7 @@ export async function buildValidEvidenceFixture(
     proof: proofs[index]!,
   }));
   const summaryValidationExpectations: FormalAbgSummaryValidationExpectations = {
+    runtimeAuthority,
     runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
     planDigest: sha256(planBytes),
     frozenInputs,
@@ -405,7 +409,7 @@ export async function buildValidEvidenceFixture(
     residualVolumeCount: 0,
     residualNetworkCount: 0,
     occupiedRequiredPorts: [],
-    requiredPortsObserved: formalRuntimePorts(),
+    requiredPortsObserved: formalRuntimePorts(runtimeAuthority),
     pruneCommandsInvoked: false,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
@@ -665,8 +669,8 @@ async function fixtureFileIdentity(
 function fixtureFrozenInputs(
   producerSourceManifestSha256: string,
   producerGitCommitSha: string,
+  runtimeAuthority: ReturnType<typeof formalRuntimeAuthority>['authority'],
 ): Readonly<Record<string, string>> {
-  const runtimeAuthority = formalRuntimeAuthority().authority;
   return {
     gitCommitSha: producerGitCommitSha,
     workingTreeState: 'CLEAN',

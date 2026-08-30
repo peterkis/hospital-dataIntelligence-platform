@@ -763,6 +763,7 @@ async function recordRuntimeProcess(
   }
   if (child.pid === undefined) throw new Error('FORMAL_RUNTIME_PROCESS_PID_MISSING');
   await writeFormalRuntimeEvent(runtimeEventDirectory, {
+    runtimeAuthority,
     identity: { runId, runSequence, runtimeNamespace },
     event,
     resourceType: 'process',

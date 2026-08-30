@@ -39,6 +39,7 @@ import {
 import {
   createFormalRunSeed,
   FORMAL_REQUIRED_SECRET_NAMES,
+  formalRuntimeAuthority,
   formalRuntimePorts,
 } from './runtime/formal-runtime-contract.js';
 import {
@@ -1446,6 +1447,7 @@ async function validateRunSummary(
   currentIdentity: CurrentAuthorityIdentity,
   checks: ReviewChecks,
 ): Promise<SummaryState | null> {
+  const requiredRuntimePorts = formalRuntimePorts(formalRuntimeAuthority().authority);
   checks.check(manifest.entries.has('abg-results.json'), 'RUN_SUMMARY_NOT_MANIFESTED', 'abg-results.json');
   const bytes = await readSnapshotBytes(snapshot, 'abg-results.json', checks, 'RUN_SUMMARY_MISSING');
   if (bytes === null) return null;
@@ -1542,7 +1544,7 @@ async function validateRunSummary(
     'abg-results.json#/requiredPortsObserved',
   );
   checks.check(
-    numberArrayEqual(requiredPortsObserved, formalRuntimePorts()),
+    numberArrayEqual(requiredPortsObserved, requiredRuntimePorts),
     'FORMAL_SUMMARY_REQUIRED_PORT_OBSERVATION_MISSING',
     'abg-results.json#/requiredPortsObserved',
   );
@@ -2342,6 +2344,7 @@ async function validateFormalLifecycle(
   summary: SummaryState,
   checks: ReviewChecks,
 ): Promise<void> {
+  const requiredRuntimePorts = formalRuntimePorts(formalRuntimeAuthority().authority);
   const requiredFiles = [
     ['runtime/preflight.json', 'FORMAL_LIFECYCLE_PREFLIGHT_MISSING'],
     ['runtime/resources-started.json', 'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING'],
@@ -2583,7 +2586,7 @@ async function validateFormalLifecycle(
       'FORMAL_FINAL_PORTS_INVALID',
       'runtime/resources-final.json#/ports',
     );
-    for (const port of formalRuntimePorts()) {
+    for (const port of requiredRuntimePorts) {
       const matches = finalPortRecords.filter((record) => record['port'] === port);
       checks.check(matches.length === 1, 'FORMAL_REQUIRED_PORT_OBSERVATION_MISSING', `runtime/resources-final.json#/ports/${port}`);
       const observation = matches[0];
@@ -2607,7 +2610,6 @@ async function validateFormalLifecycle(
     ...finalPortRecords.filter((record) => record['occupied'] === true)
       .map((record) => Number(record['port'])),
   ]);
-  const requiredRuntimePorts = formalRuntimePorts();
   const occupiedRequiredPorts = requiredRuntimePorts.filter((port) => occupiedPortSet.has(port));
   const requiredPortsObserved = requiredRuntimePorts.filter((port) =>
     finalPortRecords.some((record) => record['port'] === port));
