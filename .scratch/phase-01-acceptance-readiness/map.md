@@ -42,9 +42,9 @@ AR-01 权威覆盖矩阵
 
 ## Current frontier
 
-- Current frontier 为仍未认领的 `AR-12`。AR-11 已完成本地整改、限定验证和双轴只读复审；本次 closeout 不授权认领或执行 AR-12，AR-07 继续 blocked by AR-12 和另行正式执行授权。
+- Current frontier 保持为仍未认领的 `AR-12`。AR-11 保持 `resolved`；Podman human review prerequisite 已完成。本次 HR-01 只记录人工复核结论，不授权认领或执行 AR-12，AR-07 继续 blocked by AR-12 和另行正式执行授权。
 - AR-01～AR-06 的实现提交和旧定向验证评论保留，但 Prompt 1～Prompt 6 尚未在最新终态协议和 Podman 权威下完成 AR-12 重新验证。
-- Podman 运行时工作包仍为 `ready-for-human`；AR-11 的人工复核输入已生成，但没有人工 accepted 或真实环境重基线，不得解除该边界。
+- Podman 运行时工作包已在人工复核 `APPROVED` 后转为 `resolved`；该状态只表示 AR-11 实现和人工设计复核完成，没有执行真实环境验收、正式 ABG，也不声称生产就绪。AR-12 仍须在最终冻结 HEAD 上完成统一重基线。
 - AR-07 为 `blocked by AR-12`，并继续要求另行正式执行授权。
 
 ## Baseline snapshot
@@ -65,3 +65,4 @@ AR-01 权威覆盖矩阵
 - 2026-08-30：AR-10 完成 producer/evidence/reviewer provenance、contract compatibility、definition drift 和 review output seal 的本地实现及限定验证，转为 `resolved`；current frontier 推进到仍为 `ready-for-agent` 且未认领的 AR-11。AR-07 继续阻断于 AR-12 和另行正式执行授权，未执行正式 ABG。
 - 2026-08-30：AR-11 在开工 Git/Ticket 门禁全部满足后转为 `claimed` 并保持 current frontier；AR-12 继续 blocked by AR-11，AR-07 继续 blocked by AR-12 和另行正式执行授权。本轮不执行真实服务、shared readiness 或正式 ABG。
 - 2026-08-30：AR-11 完成单一 Podman authority、Docker/第二 endpoint 排他、`restart=no`、12 阶段 lifecycle、partial-startup/bootstrap 失败收尾、五标签删除前复核、冻结 authority snapshot 与 producer manifest/Git blob 绑定；规定的安全验证和 Standards/Spec 双轴只读复审均通过，转为 `resolved`。Current frontier 推进到仍为 `ready-for-agent` 且未认领的 AR-12；Podman 工作包保持 `ready-for-human`，AR-07 继续 blocked，未启动真实服务或执行正式 ABG。
+- 2026-08-30（HR-01 人工复核）：Podman human review prerequisite 已完成，复核候选为 `ab48a26463332d6639ab9c642377235e9c8d0062`，Decision 为 `APPROVED`。AR-11 保持 `resolved`，AR-12 保持 `ready-for-agent` 且仍为未认领的 current frontier，AR-07 继续 `blocked`；未执行真实服务、真实环境验收或正式 ABG，不声称生产就绪。

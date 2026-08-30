@@ -43,7 +43,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；本轮授权只覆盖已经完成 closeout 的 AR-11，不授权认领或执行 AR-12、AR-07、shared readiness 或正式 ABG。Ledger frontier 已推进到仍不自动认领的 AR-12。
+- 每次只执行获得授权的 current frontier；本轮授权只覆盖 HR-01 对 AR-11 后人工复核结论的记录，不授权认领或执行 AR-12、AR-07、shared readiness 或正式 ABG。Ledger frontier 保持在仍不自动认领的 AR-12。
 
 ## AR-10 provenance contract
 
@@ -68,7 +68,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 1. AR-01～AR-12 的状态、依赖、实现基线和重新验证要求在 spec、map 与 Ticket 中一致。
 2. Implementation、Verification 与 Formal acceptance 三层状态不得互相替代。
 3. AR-09～AR-11 完成后，由 AR-12 在新的冻结 HEAD 上重新验证 AR-01～AR-06 及新增整改，不沿用旧提交结论。
-4. Podman 工作包在 AR-11 完成后仍保持 `ready-for-human`；人工复核在AR-12或正式运行前记录，不得因AR-11的合成验证自动标为accepted。
+4. Podman 工作包在 AR-11 完成后先保持 `ready-for-human`；HR-01 已在 AR-12 或正式运行前记录人工复核 `APPROVED`，工作包转为 `resolved` 只表示 AR-11 实现和人工设计复核完成，不表示真实环境验收、正式 ABG 或生产就绪。
 5. 只有 AR-12 通过且取得明确正式执行授权后，AR-07 才可解除阻断并建立新的正式候选；当前未运行正式 ABG。
 
 ## Comments
@@ -81,3 +81,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 2026-08-30（AR-10 完成）：AR-10 的统一 contract version authority、35 文件 producer/reviewer source manifest、evidence cross-binding、Git object provenance、compatibility registry、reviewer 双捕获稳定性和独立 review manifest 已通过规定的本地验证及双轴只读 review，转为 `resolved`。110 项 mutation 全部被检测且无 survived case；五条 standalone reviewer 路径均按契约通过或失败关闭。当前 frontier 推进到仍未认领的 AR-11；正式验收状态继续为 `pending`，未执行正式 ABG。
 - 2026-08-30（AR-11协议影响）：当前frontier AR-11已认领，范围只包括单一Podman runtime authority、Docker/第二endpoint排他、`restart=no`、partial-startup/bootstrap失败收尾、完整五个必需标签删除前复核及其provenance/对抗性回归。Source manifest从AR-10历史35文件扩展为当前43文件，并以不同角色区分runtime authority、loader/schema、运行脚本、runtime authority provisioning、Testcontainers/live producer和非authority receipt；run plan/authority、summary、terminal conclusion及runtime outcome分别定向升级为v4/v3、v5、v2、v3，以携带runtime authority字节/语义身份及cleanup后稳定性。本条只记录协议影响，不提前改变AR-11状态、frontier或正式验收结论；AR-12和AR-07仍未获授权。
 - 2026-08-30（AR-11 完成）：唯一 runtime authority、严格 schema/byte/semantic identity、Docker/第二 endpoint 排他、`restart=no`、12 阶段 state machine、partial-startup/bootstrap reverse cleanup、删除前完整五标签复核、standalone frozen snapshot 恢复及 producer source-manifest/commit/Git blob provenance 绑定均完成。最终 verification 全量 22 files / 495 tests、adversarial 140/140 detected 且 0 survived，Standards/Spec 双轴只读复审均 `APPROVED`；人工复核输入已写入 `.scratch/phase-01-podman-runtime/human-review.md`。AR-11 转为 `resolved` 只表示本地整改与限定验证完成；Podman 工作包仍为 `ready-for-human`，未启动真实服务、shared readiness 或正式 ABG。Current frontier 推进到仍未认领的 AR-12，AR-07 继续 blocked。
+- 2026-08-30（HR-01 人工复核）：仓库责任人对候选 `ab48a26463332d6639ab9c642377235e9c8d0062` 作出 `APPROVED` 决策，Podman 工作包及 runtime issue 转为 `resolved`。该结论只覆盖 AR-11 实现、合成失败关闭验证和人工设计复核；未执行真实环境验收或正式 ABG，不声称生产就绪。Podman human review prerequisite 已完成；AR-12 保持 `ready-for-agent` 且未开始，仍为 current frontier；AR-07 继续 `blocked`。

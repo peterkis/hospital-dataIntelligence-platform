@@ -37,3 +37,4 @@ AR-01～AR-06 的旧评论分别绑定旧提交。之后迁移、生成类型、
 
 - 2026-08-30（AR-08 建立）：本 Ticket 是解除 AR-07 技术阻断前的最后重基线步骤；尚未执行任何测试、真实服务或正式 ABG，等待 AR-11。
 - 2026-08-30（AR-11 closeout）：AR-11 已完成并转为 `resolved`，本 Ticket 的上游依赖已满足，成为仍未认领的 current frontier。该状态变化不构成执行授权；本轮没有冻结 AR-12 candidate、没有启动真实 Anolis/Podman 重基线，也没有执行 shared readiness 或正式 ABG。
+- 2026-08-30（HR-01 人工复核）：Podman human review prerequisite 已完成；AR-12 尚未开始；下一次实施必须在新的 clean、remote-synced HEAD 上进行。

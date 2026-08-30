@@ -1,6 +1,6 @@
 # Phase 01 Podman 运行时迁移
 
-Status: ready-for-human
+Status: resolved
 
 Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理、Testcontainers 适配、Anolis 装配脚本、运行手册和机器可读基线从 Docker/Compose 迁移为单一 rootful Podman 权威；AR-11进一步把唯一机器可读权威固定为`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`的`.authority`对象。历史 ADR、历史回执、`.observations`和既有终态证据只记录决策、观察或历史事实，不提供第二份运行期望，也不改写既有事实。
 
@@ -32,7 +32,7 @@ Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理
 9. PostgreSQL、Keycloak及Testcontainers PostgreSQL均显式`restart=no`并inspect；preflight拒绝任何自动重启或生成持久化单元，teardown记录restart-policy findings。
 10. `up`各失败点及中断均按Keycloak容器、PostgreSQL容器、Keycloak卷、PostgreSQL卷反向清理；runtime up后的readiness、migration、seed、schema verification失败由bootstrap调用相同`down`路径，并同时保留原始错误和cleanup结果。
 11. 删除前重新inspect资源；只有名称属于当前namespace且`hdi.repository`、`hdi.phase`、`hdi.run-id`、`hdi.run-sequence`、`hdi.managed-by`五个必需标签全部存在并匹配当前run时才允许变更。附加的无关元数据标签不影响所有权；必需标签缺失/不一致、inspect失败或名称不规范时必须保留并失败关闭。
-12. AR-11只允许fake CLI、DI/mock adapter和合成文件系统验证。AR-12才在另行授权后冻结当时的当前HEAD，并在真实Anolis/rootful Podman环境重新建立baseline与readiness；Podman工作包在此之前保持`ready-for-human`，不得自动标为accepted。
+12. AR-11只允许fake CLI、DI/mock adapter和合成文件系统验证。HR-01记录人工复核`APPROVED`后，本工作包仅按“AR-11实现和人工设计复核完成”的范围转为`resolved`；AR-12仍须在另行授权后冻结当时的当前HEAD，并在真实Anolis/rootful Podman环境重新建立baseline与readiness。该`resolved`不表示真实Podman环境验收、正式ABG或生产就绪，AR-12和AR-07仍为后续独立门禁。
 13. `.scratch/phase-01-podman-runtime/human-review.md`必须记录AR-11实现提交、authority路径/schema/ID及byte/semantic digest、Podman metadata、`restart=no`、Docker socket/daemon/TCP排他、精确兼容`DOCKER_HOST`、partial-startup/bootstrap cleanup、五标签规则、禁止prune/reset、43文件source manifest、定向测试/mutation总数，以及未启动真实容器、未执行正式ABG、AR-12必须真实环境重验的边界。
 
 ## Comments
@@ -42,3 +42,4 @@ Scope: 将现行 Phase 01 容器运行时、运行身份、预检、受控清理
 - 2026-08-30（AR-08 状态复核）：Podman 迁移已进入代码分支，但尚未形成正式 ABG evidence；本工作包继续保持 `ready-for-human`。AR-11 将完成 authority、restart、Docker socket 和 partial-startup hardening，并在完成后接受人工复核；只有 AR-12 完成最新基线重新验证后，才可解除其对 AR-07 的阻断。
 - 2026-08-30（AR-11协议影响）：唯一机器可读运行权威收敛为`runtime-baseline.lock.json`的`.authority`（schema v3、稳定authority ID），Shell/TypeScript共同读取该文件；`.observations`和迁移receipt继续只作历史观察/provenance。正式生命周期新增authority字节/语义摘要冻结及cleanup后复核、Docker socket alias/TCP/第二endpoint排他、精确Podman兼容`DOCKER_HOST`、`restart=no`、partial-startup/bootstrap反向收尾和删除前五个必需标签复核。该变化不改写前述真实迁移验证事实，也不构成新的真实环境readiness或正式ABG；AR-12仍负责当前HEAD的真实Anolis/Podman重基线。
 - 2026-08-30（AR-11 closeout）：AR-11 已在最终实现 HEAD `fd8f0d7c4658c717e06d14ba950b2befce976915` 完成规定的 fake/DI/mock/合成验证，verification 全量 22 files / 495 tests、140/140 mutations detected 且 0 survived，Standards/Spec 双轴只读复审均 `APPROVED`。人工复核输入见 `human-review.md`。本工作包继续保持 `ready-for-human`：没有新的真实 Anolis/Podman readiness、人工 accepted、shared readiness 或正式 ABG；AR-12 仍须在另行授权后真实重基线。
+- 2026-08-30（HR-01 人工复核）：仓库责任人已对 AR-11 最终候选 `ab48a26463332d6639ab9c642377235e9c8d0062` 作出 `APPROVED` 决策，本工作包转为 `resolved`。该状态只表示 AR-11 实现和人工设计复核完成；未执行真实 Podman 环境验收或正式 ABG，不声称生产就绪。AR-12 的统一重基线和 AR-07 的正式执行仍是后续独立门禁。

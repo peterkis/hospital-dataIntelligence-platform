@@ -104,3 +104,15 @@ Status: ready-for-human
 - 本轮没有启动 PostgreSQL、Keycloak、Chrome、真实 Podman 容器、Docker、systemd unit、socket service、TCP listener 或 shared readiness；没有执行正式 ABG。
 - 没有运行 prune/reset，也没有删除用户/旧运行资源；没有触发 architecture stop line；没有修改业务模块、数据库迁移、冻结 OpenAPI 或生成客户端。
 - AR-11 的 `resolved` 只表示本地整改、规定的安全验证和双轴只读审查完成。AR-12 保持 `ready-for-agent` 且未认领，必须在另行授权后以新的冻结 HEAD 在真实 Anolis/rootful Podman 环境重建 baseline/readiness；AR-07 继续 blocked by AR-12 和明确的正式执行授权。
+
+## Review decision
+
+本段记录仓库责任人在完整阅读上述复核输入后作出的后续决定；上文保留的是决定前的原始复核内容与边界。
+
+- Decision: APPROVED
+- Scope: implementation and synthetic fail-closed verification only
+- Reviewed candidate: ab48a26463332d6639ab9c642377235e9c8d0062
+- Real-environment acceptance: NOT PERFORMED
+- Formal ABG acceptance: NOT PERFORMED
+- Production readiness: NOT CLAIMED
+- Next required gate: AR-12
