@@ -6,9 +6,12 @@ import {
 } from './abg-coverage-matrix.js';
 import { canonicalJson } from './evidence/recorder.js';
 import { FORMAL_RUNTIME_PORTS } from './runtime/formal-runtime-contract.js';
+import {
+  GATE_RESULT_SCHEMA_VERSION,
+  RUN_SUMMARY_SCHEMA_VERSION as CONTRACT_RUN_SUMMARY_SCHEMA_VERSION,
+} from './verification-contract-versions.js';
 
-export const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v4';
-const GATE_RESULT_SCHEMA_VERSION = 'phase-01.abg-gate-result.v3';
+export const RUN_SUMMARY_SCHEMA_VERSION = CONTRACT_RUN_SUMMARY_SCHEMA_VERSION;
 const CONCLUSION_SCOPE = 'Phase 01 POC executable architecture baseline only; not full POC or production readiness.';
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const LOCAL_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/u;
@@ -20,6 +23,7 @@ export interface FormalAbgSummaryValidationExpectations {
   readonly frozenInputsDigest: string;
   readonly coverageMatrixDigest: string;
   readonly producerProtocolIdentityDigest: string;
+  readonly producerSourceManifestSha256: string;
   readonly setupCommandDigests: readonly string[];
 }
 
@@ -44,6 +48,15 @@ export function validateFormalAbgSummary(
   assert(
     summary['producerProtocolIdentityDigest'] === expected.producerProtocolIdentityDigest,
     'PRODUCER_PROTOCOL_DIGEST_MISMATCH',
+  );
+  assert(
+    summary['producerSourceManifestSha256'] === expected.producerSourceManifestSha256,
+    'PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH',
+  );
+  assert(
+    expected.frozenInputs['producerSourceManifestSha256'] ===
+      expected.producerSourceManifestSha256,
+    'FROZEN_INPUTS_SOURCE_MANIFEST_DIGEST_MISMATCH',
   );
   assert(summary['selectorSetsDistinct'] === true, 'SELECTOR_SETS_NOT_DECLARED_DISTINCT');
   assert(summary['timezone'] === 'Asia/Shanghai', 'RUN_TIMEZONE_INVALID');
@@ -166,6 +179,10 @@ export function validateFormalAbgSummary(
   assert(summary['pruneCommandsInvoked'] === false, 'PRUNE_COMMANDS_INVOKED');
   assert(summary['frozenInputsStableAfterCleanup'] === true, 'FROZEN_INPUTS_NOT_STABLE');
   assert(summary['authorityIdentityStableAfterCleanup'] === true, 'AUTHORITY_IDENTITY_NOT_STABLE');
+  assert(
+    summary['producerSourceManifestStableAfterCleanup'] === true,
+    'PRODUCER_SOURCE_MANIFEST_NOT_STABLE',
+  );
   assert(summary['outputDirectoryExclusive'] === true, 'OUTPUT_DIRECTORY_NOT_EXCLUSIVE');
   assert(summary['terminalConclusionStatus'] === 'PASSED', 'TERMINAL_CONCLUSION_STATUS_NOT_PASSED');
   assert(summary['sealEligibilityStatus'] === 'PASSED', 'SEAL_ELIGIBILITY_STATUS_NOT_PASSED');
@@ -181,6 +198,7 @@ export function validateFormalAbgSummary(
     summary['residualNetworkCount'] === 0 &&
     summary['frozenInputsStableAfterCleanup'] === true &&
     summary['authorityIdentityStableAfterCleanup'] === true &&
+    summary['producerSourceManifestStableAfterCleanup'] === true &&
     summary['outputDirectoryExclusive'] === true &&
     summary['terminalConclusionStatus'] === 'PASSED' &&
     summary['sealEligibilityStatus'] === 'PASSED'

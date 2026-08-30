@@ -7,6 +7,11 @@ import {
   getAbgProducerProtocolIdentityDigest,
 } from './abg-gate-proof.js';
 import { readFrozenInputs } from './frozen-inputs.js';
+import {
+  CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+  RUN_PLAN_AUTHORITY_ID,
+  RUN_PLAN_SCHEMA_VERSION,
+} from './verification-contract-versions.js';
 
 export { readFrozenInputs } from './frozen-inputs.js';
 
@@ -22,13 +27,23 @@ export interface AuthoritativeGateCommandSpec extends AuthoritativeCommandSpec {
 }
 
 export interface FrozenRunPlan {
-  readonly schemaVersion: 'phase-01.abg-run-plan.v3';
-  readonly authorityId: 'phase-01.repository-authoritative-plan.v2';
+  readonly schemaVersion: typeof RUN_PLAN_SCHEMA_VERSION;
+  readonly authorityId: typeof RUN_PLAN_AUTHORITY_ID;
   readonly runSequence: number;
+  readonly producerSourceManifestPath: 'provenance/producer-source-manifest.json';
+  readonly producerSourceManifestSha256: string;
+  readonly producerGitCommitSha: string;
+  readonly contractIdentity: typeof CURRENT_EVIDENCE_CONTRACT_IDENTITY;
   readonly frozenInputs: Readonly<Record<string, string>>;
   readonly authorityIdentity: VerificationAuthorityIdentity;
   readonly setupCommands: readonly AuthoritativeCommandSpec[];
   readonly gates: readonly AuthoritativeGateCommandSpec[];
+}
+
+export interface ProducerSourceManifestReference {
+  readonly path: 'provenance/producer-source-manifest.json';
+  readonly sha256: string;
+  readonly producerGitCommitSha: string;
 }
 
 export interface VerificationAuthorityIdentity {
@@ -42,12 +57,21 @@ export interface VerificationAuthorityIdentity {
 export async function buildAuthoritativeRunPlan(
   repositoryRoot: string,
   runSequence: number,
+  producerSourceManifest: ProducerSourceManifestReference,
 ): Promise<FrozenRunPlan> {
+  const frozenInputs = await readFrozenInputs(repositoryRoot, producerSourceManifest.sha256);
+  if (frozenInputs['gitCommitSha'] !== producerSourceManifest.producerGitCommitSha) {
+    throw new Error('PRODUCER_SOURCE_MANIFEST_GIT_COMMIT_MISMATCH');
+  }
   return {
-    schemaVersion: 'phase-01.abg-run-plan.v3',
-    authorityId: 'phase-01.repository-authoritative-plan.v2',
+    schemaVersion: RUN_PLAN_SCHEMA_VERSION,
+    authorityId: RUN_PLAN_AUTHORITY_ID,
     runSequence,
-    frozenInputs: await readFrozenInputs(repositoryRoot),
+    producerSourceManifestPath: producerSourceManifest.path,
+    producerSourceManifestSha256: producerSourceManifest.sha256,
+    producerGitCommitSha: producerSourceManifest.producerGitCommitSha,
+    contractIdentity: CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+    frozenInputs,
     authorityIdentity: await readVerificationAuthorityIdentity(repositoryRoot),
     setupCommands: [
       {

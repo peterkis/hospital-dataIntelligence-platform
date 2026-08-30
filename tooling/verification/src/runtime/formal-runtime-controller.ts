@@ -2,6 +2,7 @@ import type { ChildProcess } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { redactSensitiveText } from '../evidence/recorder.js';
+import { RUNTIME_OUTCOME_SCHEMA_VERSION } from '../verification-contract-versions.js';
 import {
   FORMAL_REQUIRED_SECRET_NAMES,
   errorMessage,
@@ -63,6 +64,7 @@ export interface FormalRuntimeFinalizationResult<T> {
   readonly status: 'PASSED' | 'FAILED';
   readonly terminalConclusionStatus: 'PASSED' | 'FAILED';
   readonly sealEligibilityStatus: 'PASSED' | 'FAILED';
+  readonly producerSourceManifestSha256: string | null;
   readonly failureCodes: readonly string[];
   readonly value: T;
 }
@@ -91,6 +93,7 @@ export interface FormalRuntimeLifecycleDependencies {
     readonly repositoryRoot: string;
     readonly outputDirectory: string;
     readonly run: FormalRunSeed;
+    readonly producerSourceManifestSha256: string;
   }) => Promise<FormalPreflightReport>;
   readonly sha256: (path: string) => Promise<string>;
   readonly teardownDependencies: FormalTeardownDependencies;
@@ -217,6 +220,7 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
     readonly repositoryRoot: string;
     readonly outputDirectory: string;
     readonly run: FormalRunSeed;
+    readonly producerSourceManifestSha256: string;
   },
   callbacks: FormalRuntimeLifecycleCallbacks<TExecution, TFinal>,
   dependencies: FormalRuntimeLifecycleDependencies = createDefaultFormalRuntimeLifecycleDependencies(),
@@ -235,6 +239,7 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       repositoryRoot: input.repositoryRoot,
       outputDirectory: input.outputDirectory,
       run: input.run,
+      producerSourceManifestSha256: input.producerSourceManifestSha256,
     });
     const outputExists = preflight.checks.some((check) =>
       check.errorCode === 'FORMAL_PREFLIGHT_OUTPUT_ALREADY_EXISTS',
@@ -432,13 +437,15 @@ export async function runFormalRuntimeLifecycle<TExecution, TFinal = unknown>(
       input.outputDirectory,
       'runtime/final-outcome.json',
       {
-        schemaVersion: 'phase-01.formal-runtime-outcome.v2',
+        schemaVersion: RUNTIME_OUTCOME_SCHEMA_VERSION,
         runIdentity: preflight.runIdentity,
         status: failureCodes.length === 0 && finalization?.status === 'PASSED' ? 'PASSED' : 'FAILED',
         failureCodes: uniqueFailureCodes(failureCodes),
         cleanupStatus: cleanup.status,
         terminalConclusionStatus,
         sealEligibilityStatus,
+        producerSourceManifestSha256:
+          finalization?.producerSourceManifestSha256 ?? input.producerSourceManifestSha256,
         sealPendingAtWrite: true,
         completedEvidenceAt: dependencies.now(),
       },

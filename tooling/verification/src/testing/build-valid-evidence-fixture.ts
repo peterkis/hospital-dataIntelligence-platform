@@ -52,6 +52,20 @@ import type {
   FormalCleanupReport,
   RuntimeResourceSnapshot,
 } from '../runtime/formal-teardown.js';
+import {
+  CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+  EVIDENCE_MANIFEST_SCHEMA_VERSION,
+  RUN_PLAN_AUTHORITY_ID,
+  RUN_PLAN_SCHEMA_VERSION,
+  RUN_SUMMARY_SCHEMA_VERSION,
+  RUNTIME_OUTCOME_SCHEMA_VERSION,
+} from '../verification-contract-versions.js';
+import { VERIFICATION_SOURCE_FILES } from '../provenance/source-manifest-files.js';
+import {
+  buildProducerSourceManifest,
+  writeProducerSourceManifest,
+  type SourceManifestDependencies,
+} from '../provenance/source-manifest.js';
 
 export const VALIDATOR_FIXTURE_RUN_ID = 'validator-test-fixture-run-0001';
 export const VALIDATOR_FIXTURE_RUN_SEQUENCE = 17;
@@ -61,6 +75,10 @@ export const VALIDATOR_FIXTURE_DIGEST =
 export interface BuildValidEvidenceFixtureInput {
   /** Existing, caller-owned temporary directory. */
   readonly rootDirectory: string;
+  /** Optional checkout root for a CLI fixture bound to a real clean HEAD. */
+  readonly repositoryRoot?: string;
+  /** Optional source adapters; omitted for the deterministic controlled fixture. */
+  readonly sourceManifestDependencies?: SourceManifestDependencies;
 }
 
 export interface ValidFixtureGateSummary {
@@ -72,7 +90,7 @@ export interface ValidFixtureGateSummary {
 }
 
 export interface ValidFixtureSummary {
-  readonly schemaVersion: 'phase-01.abg-run.v4';
+  readonly schemaVersion: typeof RUN_SUMMARY_SCHEMA_VERSION;
   readonly runId: string;
   readonly runSequence: number;
   readonly status: 'PASSED';
@@ -91,6 +109,7 @@ export interface ValidEvidenceFixture {
   readonly plan: FrozenRunPlan;
   readonly summary: ValidFixtureSummary;
   readonly summaryValidationExpectations: FormalAbgSummaryValidationExpectations;
+  readonly reviewerDependencies: SourceManifestDependencies & { readonly repositoryRoot: string };
 }
 
 /**
@@ -111,7 +130,25 @@ export async function buildValidEvidenceFixture(
   await createEvidenceOutputDirectory(evidenceDirectory);
   await createEvidenceOutputDirectory(sharedDirectory);
 
-  const frozenInputs = fixtureFrozenInputs();
+  const reviewerDependencies = input.sourceManifestDependencies === undefined
+    ? fixtureSourceManifestDependencies()
+    : {
+        ...input.sourceManifestDependencies,
+        repositoryRoot: resolve(input.repositoryRoot ?? repositoryRoot),
+      };
+  const producerSourceManifest = await buildProducerSourceManifest(
+    reviewerDependencies.repositoryRoot,
+    reviewerDependencies,
+  );
+  const producerSourceManifestWrite = await writeProducerSourceManifest(
+    evidenceDirectory,
+    producerSourceManifest,
+  );
+  const producerSourceManifestSha256 = producerSourceManifestWrite.sha256;
+  const frozenInputs = fixtureFrozenInputs(
+    producerSourceManifestSha256,
+    producerSourceManifest.producerGitCommitSha,
+  );
   const sharedEntries = [];
   for (const producerId of ABG_PRODUCER_IDS.filter((candidate) => candidate !== 'formal-run')) {
     sharedEntries.push(await writeFixtureProducer({
@@ -150,11 +187,17 @@ export async function buildValidEvidenceFixture(
     executable: 'node',
     args: ['tooling/verification/src/produce-abg-gate.ts'],
   }));
-  const authorityIdentity = await readVerificationAuthorityIdentity(repositoryRoot);
+  const authorityIdentity = await readVerificationAuthorityIdentity(
+    input.repositoryRoot === undefined ? repositoryRoot : resolve(input.repositoryRoot),
+  );
   const plan: FrozenRunPlan = {
-    schemaVersion: 'phase-01.abg-run-plan.v3',
-    authorityId: 'phase-01.repository-authoritative-plan.v2',
+    schemaVersion: RUN_PLAN_SCHEMA_VERSION,
+    authorityId: RUN_PLAN_AUTHORITY_ID,
     runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
+    producerSourceManifestPath: producerSourceManifestWrite.relativePath,
+    producerSourceManifestSha256,
+    producerGitCommitSha: producerSourceManifest.producerGitCommitSha,
+    contractIdentity: CURRENT_EVIDENCE_CONTRACT_IDENTITY,
     frozenInputs,
     authorityIdentity,
     setupCommands,
@@ -259,6 +302,8 @@ export async function buildValidEvidenceFixture(
     finalResources,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    producerSourceManifestSha256,
+    producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,
     failureCodes: [],
   });
@@ -310,10 +355,11 @@ export async function buildValidEvidenceFixture(
     frozenInputsDigest: digestJson(frozenInputs),
     coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
     producerProtocolIdentityDigest: authorityIdentity.producerProtocolIdentityDigest,
+    producerSourceManifestSha256,
     setupCommandDigests: setupCommands.map(digestJson),
   };
   const summary: ValidFixtureSummary = {
-    schemaVersion: 'phase-01.abg-run.v4',
+    schemaVersion: RUN_SUMMARY_SCHEMA_VERSION,
     runId: VALIDATOR_FIXTURE_RUN_ID,
     runSequence: VALIDATOR_FIXTURE_RUN_SEQUENCE,
     gitCommitSha: runIdentity.gitCommitSha,
@@ -323,6 +369,7 @@ export async function buildValidEvidenceFixture(
     frozenInputsDigest: summaryValidationExpectations.frozenInputsDigest,
     coverageMatrixDigest: authorityIdentity.coverageMatrixDigest,
     producerProtocolIdentityDigest: authorityIdentity.producerProtocolIdentityDigest,
+    producerSourceManifestSha256,
     authorityIdentity,
     preflightStatus: 'PASSED',
     setupStatus: 'PASSED',
@@ -340,6 +387,7 @@ export async function buildValidEvidenceFixture(
     pruneCommandsInvoked: false,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,
     terminalConclusionStatus: 'PASSED',
     sealEligibilityStatus: 'PASSED',
@@ -365,8 +413,9 @@ export async function buildValidEvidenceFixture(
   validateFormalAbgSummary(summary, summaryValidationExpectations);
   await writeFixtureJson(join(evidenceDirectory, 'abg-results.json'), summary);
   await writeFixtureJson(join(evidenceDirectory, 'runtime/final-outcome.json'), {
-    schemaVersion: 'phase-01.formal-runtime-outcome.v2',
+    schemaVersion: RUNTIME_OUTCOME_SCHEMA_VERSION,
     runIdentity,
+    producerSourceManifestSha256,
     status: 'PASSED',
     failureCodes: [],
     cleanupStatus: 'PASSED',
@@ -396,6 +445,7 @@ export async function buildValidEvidenceFixture(
     plan,
     summary,
     summaryValidationExpectations,
+    reviewerDependencies,
   };
 }
 
@@ -413,7 +463,7 @@ export async function rebuildFixtureManifest(evidenceDirectory: string): Promise
     };
   }));
   const manifestBytes = Buffer.from(`${JSON.stringify({
-    schemaVersion: 'phase-01.evidence-manifest.v1',
+    schemaVersion: EVIDENCE_MANIFEST_SCHEMA_VERSION,
     files,
   }, null, 2)}\n`, 'utf8');
   await writeFile(join(evidenceDirectory, 'manifest.json'), manifestBytes, { flag: 'w' });
@@ -586,9 +636,12 @@ async function fixtureFileIdentity(
   return { path: relativePath, byteLength: bytes.byteLength, sha256: sha256(bytes) };
 }
 
-function fixtureFrozenInputs(): Readonly<Record<string, string>> {
+function fixtureFrozenInputs(
+  producerSourceManifestSha256: string,
+  producerGitCommitSha: string,
+): Readonly<Record<string, string>> {
   return {
-    gitCommitSha: '0123456789abcdef0123456789abcdef01234567',
+    gitCommitSha: producerGitCommitSha,
     workingTreeState: 'CLEAN',
     lockfileSha256: VALIDATOR_FIXTURE_DIGEST,
     openapiSha256: VALIDATOR_FIXTURE_DIGEST,
@@ -598,7 +651,57 @@ function fixtureFrozenInputs(): Readonly<Record<string, string>> {
     postgresImage: 'postgres:18.4',
     keycloakImage: 'quay.io/keycloak/keycloak:26.7.0',
     browserVersion: '1.61.0',
+    producerSourceManifestSha256,
   } satisfies Record<(typeof ABG_FROZEN_INPUT_KINDS)[number] | 'workingTreeState', string>;
+}
+
+function fixtureSourceManifestDependencies(): SourceManifestDependencies & {
+  readonly repositoryRoot: string;
+} {
+  const bytesByPath = new Map(VERIFICATION_SOURCE_FILES.map((entry) => [
+    entry.path,
+    Buffer.from(`source:${entry.path}`, 'utf8'),
+  ]));
+  return {
+    repositoryRoot: 'validator-fixture-repository',
+    repository: {
+      async readState() {
+        return {
+          repositoryFullName: 'hospital/Hospital-DataIntelligence-Platform',
+          gitCommitSha: '0123456789abcdef0123456789abcdef01234567',
+          branch: 'phase-01-acceptance-readiness',
+          worktreeStatus: 'CLEAN' as const,
+        };
+      },
+    },
+    workspace: {
+      async readSourceFile(_repositoryRoot, path) {
+        const bytes = bytesByPath.get(path);
+        return bytes === undefined
+          ? { kind: 'MISSING' as const }
+          : { kind: 'REGULAR' as const, bytes };
+      },
+    },
+    git: {
+      async commitExists(_repositoryRoot, commitSha) {
+        return commitSha === '0123456789abcdef0123456789abcdef01234567';
+      },
+      async readBlob(_repositoryRoot, commitSha, path) {
+        const bytes = bytesByPath.get(path);
+        if (commitSha !== '0123456789abcdef0123456789abcdef01234567' || bytes === undefined) {
+          return null;
+        }
+        return { mode: '100644', oid: fixtureGitBlobOid(bytes), bytes };
+      },
+    },
+    clock: () => '2026-08-30T00:00:00.000Z',
+  };
+}
+
+function fixtureGitBlobOid(bytes: Uint8Array): string {
+  const buffer = Buffer.from(bytes);
+  const header = Buffer.from(`blob ${buffer.byteLength}\0`, 'utf8');
+  return createHash('sha1').update(Buffer.concat([header, buffer])).digest('hex');
 }
 
 async function collectFixtureFiles(directory: string, prefix = ''): Promise<readonly string[]> {

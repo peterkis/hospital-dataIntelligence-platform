@@ -241,6 +241,26 @@ ABG-40 验证后，runner 合并 40 项门禁并写入 `phase-01.abg-run.v4` 的
 
 独立 reviewer 最终从已封存目录复核 Manifest 摘要/长度、完整 runtime lifecycle、ABG-40 精确引用、summary/final-outcome 一致性及复核前后源 evidence 字节身份。它还把 summary 的 Git 身份绑定回 frozen run plan、从 runId/runSequence 规范派生 runtime namespace，将 cleanup 前 producer snapshot 的路径/长度/SHA-256 逐项绑定到 Manifest 字节，并独立重算 terminal conclusion 的资源/端口计数和两个 assertion body。ABG-40 `PASSED` 单独不等于正式验收完成；正式验收仍要求 Manifest 成功封存、CLI 成功终止及 independent reviewer `PASSED`。
 
+### 8.2.3 Producer、evidence package 与 reviewer provenance
+
+正式 producer 必须在 run plan 之前从干净工作区生成 `provenance/producer-source-manifest.json` 及其 SHA-256 sidecar。Producer source manifest 是生产时验证定义的只读身份记录：它绑定 producer commit、分支、干净工作区状态、evidence contract tuple，以及所有会改变证据生成或解释语义的权威源文件路径、角色、字节长度、SHA-256 与该 commit 中的 Git blob identity；它不携带源文件内容，也不是可执行代码包。每个工作区文件必须与同一 producer commit 的 blob 字节一致，manifest 生成后只能在 setup 后和 cleanup 后重新核验既有字节，不能重建或补写。
+
+Producer source manifest 先在内存中从干净 checkout 构建，其摘要作为正式 preflight 的必填 frozen input；输出目录独占保留后，再把同一 manifest 在 run plan 之前独占落盘。Run plan、frozen inputs、`runtime/terminal-conclusion.json`、`abg-results.json` 和 `runtime/final-outcome.json` 必须引用同一 producer source manifest SHA-256；terminal conclusion 还必须记录 cleanup 后稳定性，只有稳定为 `true` 才具备 seal eligibility。顶层 evidence Manifest 必须列出 producer source manifest 和 sidecar。独立复核前后 source evidence tree identity 必须一致；任何交叉文件引用、逐文件摘要或清单不一致属于 evidence integrity failure，而不是 definition drift。
+
+Reviewer 必须先验证 evidence 自身 contract tuple 与完整性，再使用本地 Git object database 对 producer provenance 做只读核验：确认 producer commit 存在，并以 Git plumbing 读取 manifest 各路径在该 commit 中的 blob，重新核对 object identity、字节长度和 SHA-256。Reviewer 禁止 checkout、fetch 或执行 producer commit 中的文件。Producer commit 不存在时结论是 provenance `UNVERIFIABLE`；commit 存在但 manifest 与其 blob 不一致时才是 provenance `INVALID`。两者都失败关闭，但不得把前者误报为 evidence 被篡改。
+
+Producer provenance 通过后，reviewer 才生成当前 checkout 的 reviewer source manifest，并比较两端定义。语义复核完成后、创建任何 review output 目录之前，reviewer 必须再次读取仓库状态和 source definitions；两次比较排除非身份字段 `generatedAt`，但工作区/commit/branch 变化与 source definition 变化分别失败关闭。Reviewer 自身输出不能使 CLEAN checkout 被误判为 DIRTY。Evidence contract 关系分为：
+
+- `EXACT`：受支持 tuple 完全匹配且权威源文件定义无漂移；只有此路径才可能形成正式 review `PASSED`。
+- `COMPATIBLE`：结构可按明确策略安全解析，但定义存在漂移；可以继续只读结构复核和输出完整 findings，最终 review 必须 `FAILED`。
+- `INCOMPATIBLE`：tuple 未受支持或混用未知版本；只允许安全目录、Manifest、摘要和基础版本提取，不得用当前 parser 猜测未知语义，最终 review 必须 `FAILED`。
+
+Definition drift 与 evidence integrity 是独立状态轴。Coverage matrix、producer protocol/schema、gate proof、terminal/summary contract 或 reviewer tool 任一语义源文件摘要不同，均须定位具体路径并标为 drift；即使旧 JSON 仍可解析，也不得以当前 checkout 的定义替代 producer 定义或给出 `PASSED`。Reviewer 自身工作区脏或身份不可用同样失败关闭。
+
+Reviewer 只把 evidence 文件视为不可信普通字节：不得执行、import 或动态加载其中的 TypeScript、JavaScript、Shell、SQL、二进制或命令，也不得启动应用、数据库、浏览器、容器或网络访问。复核输出写入独立且尚不存在的目录，并由 `review-manifest.json` 与 sidecar 封存 review、findings 和 reviewer source manifest；原 evidence 始终只读。
+
+AR-10 完成只表示 provenance、compatibility 和 drift 失败关闭机制完成本地实现及规定验证，不表示正式 ABG 已运行或 Phase 01 已 accepted。AR-11 仍单独负责 Podman runtime authority、Docker 排他、restart policy 和 partial-startup hardening；这些运行时权威不得由 source provenance 文档提前替代。
+
 ### 8.3 不可覆盖与完整性
 
 证据编排器在运行结束后生成规范化`manifest.json`，其中按稳定路径排序列出除清单自身及`manifest.sha256`外每个产物的媒体类型、字节数和SHA-256；再将规范化清单字节的SHA-256写入`manifest.sha256`，该值就是证据包身份。清单和包身份完成后运行进入终态，任何文件不得覆盖、补写或删除；需要纠正、补跑或重新取证时必须创建新的运行身份，并通过显式关系指向被取代或补充的运行。
@@ -261,7 +281,7 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 4. `phase-01.abg-run.v4` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
 5. fixture 在 Manifest 前写入一致且 `sealPendingAtWrite: true` 的 final outcome。独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、完整 lifecycle、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
 
-`npm run test:verification:adversarial` 运行 80 个互不依赖的 mutation，覆盖用户要求的缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup 越权、完整终态 lifecycle 和 secret 泄漏；新增范围包括 cleanup 失败但 summary 冒充通过、preflight 矛盾、terminal conclusion 缺失或失败、seal eligibility 伪造、容器/卷/网络残留、required port 占用、final outcome 矛盾、ABG-40 旧 preliminary 来源或缺少 seal 断言、cleanup 后 frozen input/authority 漂移，以及 malformed lifecycle 数组、pre-cleanup snapshot 字节身份、run plan Git 绑定、terminal assertion body 和 final-outcome seal 状态。其中 `placeholder`、`UNKNOWN`、`N/A` 与空字符串分别作为独立 mutation，另以 malformed JSON 中的裸配置 secret 证明解析失败也不会绕过泄漏扫描。每项都声明稳定 mutationId、检测层和期望错误码，并把实际结果写入被根 `.gitignore` 的 `.runtime/test-results/verification-adversarial-summary.json`。通过条件是 `mutationCount >= 55`、`detectedCount = mutationCount`、`survivedCount = 0`；不得通过更新 snapshot、吞掉异常或依赖测试执行顺序改变该结论。
+`npm run test:verification:adversarial` 运行 110 个互不依赖的 mutation，覆盖用户要求的缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup 越权、完整终态 lifecycle、secret 泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift 和 reviewer 工作区状态；新增范围包括 cleanup 失败但 summary 冒充通过、preflight 矛盾、terminal conclusion 缺失或失败、seal eligibility 伪造、容器/卷/网络残留、required port 占用、final outcome 矛盾、ABG-40 旧 preliminary 来源或缺少 seal 断言、cleanup 后 frozen input/authority 漂移，以及 malformed lifecycle 数组、pre-cleanup snapshot 字节身份、run plan Git 绑定、terminal assertion body 和 final-outcome seal 状态。其中 `placeholder`、`UNKNOWN`、`N/A` 与空字符串分别作为独立 mutation，另以 malformed JSON 中的裸配置 secret 证明解析失败也不会绕过泄漏扫描；带明显副作用的 evidence 内脚本只作为不可信普通字节读取，reviewer 不执行它。每项都声明稳定 mutationId、检测层和期望错误码，并把实际结果写入被根 `.gitignore` 的 `.runtime/test-results/verification-adversarial-summary.json`。通过条件是 `mutationCount >= 110`、`detectedCount = mutationCount`、`survivedCount = 0`；不得通过更新 snapshot、吞掉异常或依赖测试执行顺序改变该结论。
 
 关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
 

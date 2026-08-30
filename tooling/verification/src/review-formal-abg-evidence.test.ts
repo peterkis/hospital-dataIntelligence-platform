@@ -20,7 +20,12 @@ import {
   type AbgProducerId,
 } from './abg-coverage-matrix.js';
 import { sha256 } from './evidence/recorder.js';
-import { reviewFormalAbgEvidence } from './review-formal-abg-evidence.js';
+import { createSourceManifestBuilder } from './provenance/source-manifest.js';
+import { digestVerificationProvenanceJson } from './provenance/source-manifest-schema.js';
+import {
+  reviewFormalAbgEvidence,
+  type ReviewFormalAbgEvidenceDependencies,
+} from './review-formal-abg-evidence.js';
 import {
   buildValidEvidenceFixture,
   rebuildFixtureManifest,
@@ -54,7 +59,29 @@ describe('formal ABG evidence reviewer CLI', () => {
     expect(result.stdout).toContain('--review-output-dir <directory>');
   });
 
-  it('returns a nonzero process exit while retaining machine-readable findings', async () => {
+  it('retains machine-readable findings when review fails', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await writeFile(
+      join(fixture.evidenceDirectory, 'manifest.sha256'),
+      '0'.repeat(64) + '  manifest.json\n',
+      { flag: 'w' },
+    );
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
+    });
+
+    expect(result.reviewStatus).toBe('FAILED');
+    const findings = JSON.parse(await readFile(
+      join(fixture.reviewOutputDirectory, 'review-findings.json'),
+      'utf8',
+    )) as { readonly findings: readonly { readonly code: string }[] };
+    expect(findings.findings.map((finding) => finding.code)).toContain('MANIFEST_SHA256_MISMATCH');
+  });
+
+  it('returns process exit 1 while retaining standalone CLI findings', async () => {
     const fixture = await createFormalEvidenceFixture();
     await writeFile(
       join(fixture.evidenceDirectory, 'manifest.sha256'),
@@ -83,60 +110,48 @@ describe('formal ABG evidence reviewer CLI', () => {
     }
 
     expect(exitCode).toBe(1);
-    const findings = JSON.parse(await readFile(
-      join(fixture.reviewOutputDirectory, 'review-findings.json'),
-      'utf8',
-    )) as { readonly findings: readonly { readonly code: string }[] };
-    expect(findings.findings.map((finding) => finding.code)).toContain('MANIFEST_SHA256_MISMATCH');
-  });
+    expect(await reviewFindingCodes(fixture.reviewOutputDirectory))
+      .toContain('MANIFEST_SHA256_MISMATCH');
+  }, 30_000);
 
-  it('runs the standalone CLI successfully against a valid synthetic package', async () => {
+  it('accepts the exact contract through the public reviewer seam without host Git coupling', async () => {
     const fixture = await createFormalEvidenceFixture();
     const before = await treeDigest(fixture.evidenceDirectory);
 
-    const result = await execFileAsync(process.execPath, [
-      tsxCliPath,
-      reviewerPath,
-      '--evidence-dir',
-      fixture.evidenceDirectory,
-      '--review-output-dir',
-      fixture.reviewOutputDirectory,
-    ], {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      windowsHide: true,
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
     });
 
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout) as { readonly status: string; readonly failedCheckCount: number }).toMatchObject({
-      status: 'PASSED',
+    expect(result).toMatchObject({
+      reviewStatus: 'PASSED',
+      producerProvenanceStatus: 'VERIFIED',
+      reviewerContractStatus: 'EXACT',
+      definitionDriftStatus: 'NONE',
+      reviewerWorktreeStatus: 'CLEAN',
       failedCheckCount: 0,
     });
     expect(await treeDigest(fixture.evidenceDirectory)).toBe(before);
   });
 
-  it('returns nonzero with a stable cleanup code for a cleanup-failed v4 fixture', async () => {
+  it('returns a stable cleanup code for a cleanup-failed v4 fixture', async () => {
     const fixture = await createFormalEvidenceFixture();
     await mutateJsonFile(fixture.evidenceDirectory, 'runtime/cleanup.json', (cleanup) => {
       cleanup['status'] = 'FAILED';
     });
     await rebuildManifest(fixture.evidenceDirectory);
 
-    const result = await runReviewerCliExpectingFailure(fixture);
-
-    expect(result.exitCode).toBe(1);
-    expect(result.failureCodes).toContain('FORMAL_CLEANUP_STATUS_NOT_PASSED');
+    expect(await reviewFailureCodes(fixture)).toContain('FORMAL_CLEANUP_STATUS_NOT_PASSED');
   });
 
-  it('returns nonzero with a stable code when terminal conclusion is missing', async () => {
+  it('returns a stable code when terminal conclusion is missing', async () => {
     const fixture = await createFormalEvidenceFixture();
     await unlink(join(fixture.evidenceDirectory, 'runtime/terminal-conclusion.json'));
     await rebuildManifest(fixture.evidenceDirectory);
 
-    const result = await runReviewerCliExpectingFailure(fixture);
-
-    expect(result.exitCode).toBe(1);
-    expect(result.failureCodes).toContain('FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING');
+    expect(await reviewFailureCodes(fixture))
+      .toContain('FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING');
   });
 
   it('accepts a complete synthetic 40-gate package and leaves every source byte unchanged', async () => {
@@ -146,6 +161,7 @@ describe('formal ABG evidence reviewer CLI', () => {
     const result = await reviewFormalAbgEvidence({
       evidenceDirectory: fixture.evidenceDirectory,
       reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
     });
     const findings = JSON.parse(await readFile(
       join(fixture.reviewOutputDirectory, 'review-findings.json'),
@@ -158,7 +174,10 @@ describe('formal ABG evidence reviewer CLI', () => {
     expect(result.sourceEvidenceDigestBefore).toBe(result.sourceEvidenceDigestAfter);
     expect(await treeDigest(fixture.evidenceDirectory)).toBe(before);
     expect((await readdir(fixture.reviewOutputDirectory)).sort()).toEqual([
+      'provenance',
       'review-findings.json',
+      'review-manifest.json',
+      'review-manifest.sha256',
       'review.json',
       'review.sha256',
     ]);
@@ -170,6 +189,7 @@ describe('formal ABG evidence reviewer CLI', () => {
     const result = await reviewFormalAbgEvidence({
       evidenceDirectory: fixture.evidenceDirectory,
       reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
       async beforeFinalSourceIdentityCapture() {
         await writeFile(
           join(fixture.evidenceDirectory, 'concurrent-tamper.txt'),
@@ -186,6 +206,402 @@ describe('formal ABG evidence reviewer CLI', () => {
     expect(result.status).toBe('FAILED');
     expect(findings.findings.map((finding) => finding.code))
       .toContain('SOURCE_EVIDENCE_CHANGED_DURING_REVIEW');
+  });
+});
+
+describe('formal ABG provenance and compatibility review', () => {
+  it('verifies producer Git provenance before capturing reviewer definitions', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const events: string[] = [];
+    const git = fixture.reviewerDependencies.git;
+    const repository = fixture.reviewerDependencies.repository;
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        git: {
+          ...git,
+          async commitExists(repositoryRoot, commitSha) {
+            events.push('producer-provenance');
+            return git.commitExists(repositoryRoot, commitSha);
+          },
+        },
+        repository: {
+          async readState(repositoryRoot) {
+            events.push('reviewer-manifest');
+            return repository.readState(repositoryRoot);
+          },
+        },
+      },
+    });
+
+    expect(result.reviewStatus).toBe('PASSED');
+    expect(events[0]).toBe('producer-provenance');
+    expect(events.indexOf('producer-provenance'))
+      .toBeLessThan(events.indexOf('reviewer-manifest'));
+  });
+
+  it('distinguishes an unavailable producer commit from evidence tampering', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        git: {
+          ...fixture.reviewerDependencies.git,
+          async commitExists() {
+            return false;
+          },
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      evidenceIntegrityStatus: 'PASSED',
+      producerProvenanceStatus: 'UNVERIFIABLE',
+      reviewStatus: 'FAILED',
+    });
+    expect(await reviewFindingCodes(fixture.reviewOutputDirectory))
+      .toContain('PRODUCER_COMMIT_UNAVAILABLE');
+  });
+
+  it('reports a malformed producer commit SHA with its stable provenance code', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateProducerSourceManifest(fixture, (sourceManifest) => {
+      sourceManifest['producerGitCommitSha'] = 'not-a-git-commit';
+    });
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
+    });
+
+    expect(result).toMatchObject({
+      producerProvenanceStatus: 'INVALID',
+      reviewStatus: 'FAILED',
+    });
+    const codes = await reviewFindingCodes(fixture.reviewOutputDirectory);
+    expect(codes).toContain('PRODUCER_COMMIT_INVALID');
+    expect(codes).not.toContain('PRODUCER_SOURCE_MANIFEST_SCHEMA_UNSUPPORTED');
+  });
+
+  it('writes a failed review and reviewer manifest for a dirty reviewer worktree', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const repository = fixture.reviewerDependencies.repository;
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        repository: {
+          async readState(root) {
+            return { ...await repository.readState(root), worktreeStatus: 'DIRTY' };
+          },
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      evidenceIntegrityStatus: 'PASSED',
+      reviewerWorktreeStatus: 'DIRTY',
+      reviewStatus: 'FAILED',
+    });
+    expect(await reviewFindingCodes(fixture.reviewOutputDirectory))
+      .toContain('REVIEWER_WORKTREE_DIRTY');
+    expect(await readFile(
+      join(fixture.reviewOutputDirectory, 'provenance/reviewer-source-manifest.json'),
+      'utf8',
+    )).toContain('"reviewerWorktreeState":"DIRTY"');
+  });
+
+  it('fails closed when the reviewer checkout changes during review', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const repository = fixture.reviewerDependencies.repository;
+    let changed = false;
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        repository: {
+          async readState(root) {
+            const state = await repository.readState(root);
+            return changed ? { ...state, worktreeStatus: 'DIRTY' as const } : state;
+          },
+        },
+      },
+      async beforeFinalSourceIdentityCapture() {
+        changed = true;
+      },
+    });
+
+    expect(result).toMatchObject({
+      reviewerWorktreeStatus: 'DIRTY',
+      reviewerContractStatus: 'EXACT',
+      definitionDriftStatus: 'NONE',
+      reviewStatus: 'FAILED',
+    });
+    const codes = await reviewFindingCodes(fixture.reviewOutputDirectory);
+    expect(codes).toEqual(
+      expect.arrayContaining([
+        'REVIEWER_WORKTREE_DIRTY',
+        'REVIEWER_REPOSITORY_STATE_CHANGED_DURING_REVIEW',
+      ]),
+    );
+    expect(codes).not.toContain('REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH');
+  });
+
+  it('fails closed when reviewer source definitions change during review', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const builder = createSourceManifestBuilder(fixture.reviewerDependencies);
+    let captureCount = 0;
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        sourceManifestBuilder: {
+          buildProducer: (root) => builder.buildProducer(root),
+          async buildReviewer(root) {
+            const manifest = await builder.buildReviewer(root);
+            captureCount += 1;
+            if (captureCount === 1) return manifest;
+            const sourceFiles = manifest.sourceFiles.map((entry) =>
+              entry.role === 'REVIEWER'
+                ? { ...entry, sha256: 'f'.repeat(64) }
+                : entry
+            );
+            return {
+              ...manifest,
+              sourceFiles,
+              sourceFilesDigest: digestVerificationProvenanceJson(sourceFiles),
+            };
+          },
+        },
+      },
+    });
+
+    expect(captureCount).toBe(2);
+    expect(result).toMatchObject({
+      reviewerWorktreeStatus: 'CLEAN',
+      reviewerContractStatus: 'COMPATIBLE',
+      definitionDriftStatus: 'UNRESOLVED',
+      reviewStatus: 'FAILED',
+    });
+    const codes = await reviewFindingCodes(fixture.reviewOutputDirectory);
+    expect(codes).toEqual(expect.arrayContaining([
+      'REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH',
+      'REVIEWER_TOOL_DEFINITION_DRIFT',
+      'REVIEWER_CONTRACT_EXACT_MATCH_REQUIRED',
+    ]));
+    expect(codes).not.toContain('REVIEWER_REPOSITORY_STATE_CHANGED_DURING_REVIEW');
+  });
+
+  it('ignores generatedAt changes when reviewer definitions remain stable', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    let tick = 0;
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        clock: () => new Date(Date.UTC(2026, 7, 30, 0, 0, tick++)).toISOString(),
+      },
+    });
+
+    expect(result).toMatchObject({
+      reviewerWorktreeStatus: 'CLEAN',
+      definitionDriftStatus: 'NONE',
+      reviewStatus: 'PASSED',
+    });
+  });
+
+  it('captures the final reviewer state before creating review output', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const repository = fixture.reviewerDependencies.repository;
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        repository: {
+          async readState(root) {
+            const state = await repository.readState(root);
+            return await directoryExists(fixture.reviewOutputDirectory)
+              ? { ...state, worktreeStatus: 'DIRTY' as const }
+              : state;
+          },
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      reviewerWorktreeStatus: 'CLEAN',
+      reviewStatus: 'PASSED',
+    });
+    expect(await directoryExists(fixture.reviewOutputDirectory)).toBe(true);
+  });
+
+  it('classifies parseable definition drift as compatible but never passed', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const workspace = fixture.reviewerDependencies.workspace;
+    const repository = fixture.reviewerDependencies.repository;
+    const git = fixture.reviewerDependencies.git;
+    const reviewerCommit = '2'.repeat(40);
+    const driftBytes = Buffer.from('reviewer-definition-drift', 'utf8');
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        repository: {
+          async readState(root) {
+            return { ...await repository.readState(root), gitCommitSha: reviewerCommit };
+          },
+        },
+        git: {
+          async commitExists() {
+            return true;
+          },
+          async readBlob(root, commitSha, path) {
+            if (commitSha !== reviewerCommit) return git.readBlob(root, commitSha, path);
+            const source = await workspace.readSourceFile(root, path);
+            if (source.kind !== 'REGULAR' || source.bytes === undefined) return null;
+            const bytes = path === 'tooling/verification/src/abg-coverage-matrix.ts'
+              ? driftBytes
+              : Buffer.from(source.bytes);
+            return { mode: '100644', oid: gitBlobOid(bytes), bytes };
+          },
+        },
+        workspace: {
+          async readSourceFile(root, path) {
+            const source = await workspace.readSourceFile(root, path);
+            return path === 'tooling/verification/src/abg-coverage-matrix.ts'
+              ? { kind: 'REGULAR', bytes: driftBytes }
+              : source;
+          },
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      evidenceIntegrityStatus: 'PASSED',
+      reviewerContractStatus: 'COMPATIBLE',
+      definitionDriftStatus: 'DRIFTED',
+      reviewStatus: 'FAILED',
+    });
+    const codes = await reviewFindingCodes(fixture.reviewOutputDirectory);
+    expect(codes).toContain('REVIEWER_DEFINITION_DRIFT');
+    expect(codes).toContain('COVERAGE_MATRIX_DEFINITION_DRIFT');
+    expect(codes).toContain('REVIEWER_CONTRACT_EXACT_MATCH_REQUIRED');
+  });
+
+  it('limits an unknown tuple to incompatible envelope review', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateJsonFile(fixture.evidenceDirectory, 'abg-results.json', (summary) => {
+      summary['schemaVersion'] = 'phase-01.abg-run.v999';
+    });
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
+    });
+
+    expect(result).toMatchObject({
+      reviewerContractStatus: 'INCOMPATIBLE',
+      reviewStatus: 'FAILED',
+    });
+    const codes = await reviewFindingCodes(fixture.reviewOutputDirectory);
+    expect(codes).toContain('REVIEWER_CONTRACT_VERSION_UNKNOWN');
+    expect(codes).toContain('REVIEWER_CONTRACT_INCOMPATIBLE');
+    expect(codes).toContain('REVIEWER_CONTRACT_EXACT_MATCH_REQUIRED');
+    expect(codes).toContain('EVIDENCE_CONTRACT_TUPLE_INCONSISTENT');
+    expect(codes).not.toContain('RUN_SUMMARY_SCHEMA_VERSION_INVALID');
+    expect(result.evidenceIntegrityStatus).toBe('FAILED');
+  });
+
+  it('fails closed when the reviewer commit identity is invalid', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const repository = fixture.reviewerDependencies.repository;
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: {
+        ...fixture.reviewerDependencies,
+        repository: {
+          async readState(root) {
+            return { ...await repository.readState(root), gitCommitSha: 'not-a-commit' };
+          },
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      reviewerGitCommitSha: null,
+      reviewerWorktreeStatus: 'CLEAN',
+      reviewStatus: 'FAILED',
+    });
+    expect(await reviewFindingCodes(fixture.reviewOutputDirectory))
+      .toContain('REVIEWER_GIT_COMMIT_UNAVAILABLE');
+  });
+
+  it('classifies mixed producer evidence versions as evidence integrity failure', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await mutateProducerEvidenceFile(fixture, 'fault', (evidence) => {
+      evidence['schemaVersion'] = 'phase-01.producer-evidence.v999';
+    });
+
+    const result = await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
+    });
+
+    expect(result).toMatchObject({
+      evidenceIntegrityStatus: 'FAILED',
+      reviewerContractStatus: 'INCOMPATIBLE',
+      reviewStatus: 'FAILED',
+    });
+    expect(await reviewFindingCodes(fixture.reviewOutputDirectory))
+      .toContain('REVIEWER_CONTRACT_VERSION_MIXED');
+  });
+
+  it('seals reviewer identity and findings in a deterministic review manifest', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    await reviewFormalAbgEvidence({
+      evidenceDirectory: fixture.evidenceDirectory,
+      reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
+    });
+
+    const reviewManifestBytes = await readFile(
+      join(fixture.reviewOutputDirectory, 'review-manifest.json'),
+    );
+    const reviewManifest = record(JSON.parse(reviewManifestBytes.toString('utf8')) as unknown);
+    const paths = recordArray(reviewManifest['files']).map((entry) => String(entry['path']));
+    expect(paths).toEqual([...paths].sort());
+    expect(paths).toEqual(expect.arrayContaining([
+      'review.json',
+      'review-findings.json',
+      'provenance/reviewer-source-manifest.json',
+      'provenance/reviewer-source-manifest.sha256',
+    ]));
+    expect(paths).not.toContain('review-manifest.json');
+    expect(await readFile(
+      join(fixture.reviewOutputDirectory, 'review-manifest.sha256'),
+      'utf8',
+    )).toBe(sha256(reviewManifestBytes) + '  review-manifest.json\n');
   });
 });
 
@@ -587,6 +1003,7 @@ describe('formal ABG evidence directory and output safety', () => {
     await expect(reviewFormalAbgEvidence({
       evidenceDirectory: fixture.evidenceDirectory,
       reviewOutputDirectory: fixture.reviewOutputDirectory,
+      dependencies: fixture.reviewerDependencies,
     })).rejects.toThrow('REVIEW_OUTPUT_ALREADY_EXISTS');
   });
 
@@ -598,6 +1015,7 @@ describe('formal ABG evidence directory and output safety', () => {
     await expect(reviewFormalAbgEvidence({
       evidenceDirectory: fixture.evidenceDirectory,
       reviewOutputDirectory: unsafeOutput,
+      dependencies: fixture.reviewerDependencies,
     })).rejects.toThrow('REVIEW_OUTPUT_INSIDE_SOURCE_EVIDENCE');
     expect(await treeDigest(fixture.evidenceDirectory)).toBe(before);
   });
@@ -618,6 +1036,7 @@ describe('formal ABG evidence directory and output safety', () => {
     await expect(reviewFormalAbgEvidence({
       evidenceDirectory: fixture.evidenceDirectory,
       reviewOutputDirectory: unsafeOutput,
+      dependencies: fixture.reviewerDependencies,
     })).rejects.toThrow('REVIEW_OUTPUT_INSIDE_SOURCE_EVIDENCE');
     expect((await readdir(fixture.evidenceDirectory)).sort()).toEqual(beforeEntries);
     expect(await treeDigest(fixture.evidenceDirectory)).toBe(beforeFiles);
@@ -648,44 +1067,14 @@ describe('formal ABG evidence directory and output safety', () => {
 interface FormalEvidenceFixture {
   readonly evidenceDirectory: string;
   readonly reviewOutputDirectory: string;
-}
-
-async function runReviewerCliExpectingFailure(
-  fixture: FormalEvidenceFixture,
-): Promise<{ readonly exitCode: number | string | undefined; readonly failureCodes: readonly string[] }> {
-  let exitCode: number | string | undefined;
-  try {
-    await execFileAsync(process.execPath, [
-      tsxCliPath,
-      reviewerPath,
-      '--evidence-dir',
-      fixture.evidenceDirectory,
-      '--review-output-dir',
-      fixture.reviewOutputDirectory,
-    ], {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      windowsHide: true,
-    });
-  } catch (error) {
-    exitCode = error instanceof Error && 'code' in error
-      ? error.code as number | string | undefined
-      : undefined;
-  }
-  const findings = JSON.parse(await readFile(
-    join(fixture.reviewOutputDirectory, 'review-findings.json'),
-    'utf8',
-  )) as { readonly findings: readonly { readonly code: string }[] };
-  return {
-    exitCode,
-    failureCodes: findings.findings.map((finding) => finding.code),
-  };
+  readonly reviewerDependencies: ReviewFormalAbgEvidenceDependencies;
 }
 
 async function reviewFailureCodes(fixture: FormalEvidenceFixture): Promise<readonly string[]> {
   const result = await reviewFormalAbgEvidence({
     evidenceDirectory: fixture.evidenceDirectory,
     reviewOutputDirectory: fixture.reviewOutputDirectory,
+    dependencies: fixture.reviewerDependencies,
   });
   expect(result.status).toBe('FAILED');
   const findings = JSON.parse(await readFile(
@@ -693,6 +1082,14 @@ async function reviewFailureCodes(fixture: FormalEvidenceFixture): Promise<reado
     'utf8',
   )) as { readonly findings: readonly { readonly code: string }[] };
   expect(findings.findings.length).toBeGreaterThan(0);
+  return findings.findings.map((finding) => finding.code);
+}
+
+async function reviewFindingCodes(reviewOutputDirectory: string): Promise<readonly string[]> {
+  const findings = JSON.parse(await readFile(
+    join(reviewOutputDirectory, 'review-findings.json'),
+    'utf8',
+  )) as { readonly findings: readonly { readonly code: string }[] };
   return findings.findings.map((finding) => finding.code);
 }
 
@@ -757,6 +1154,24 @@ async function mutateProducerEvidenceFile(
   await rebuildManifest(fixture.evidenceDirectory);
 }
 
+async function mutateProducerSourceManifest(
+  fixture: FormalEvidenceFixture,
+  mutate: (sourceManifest: Record<string, unknown>) => void,
+): Promise<void> {
+  const relativePath = 'provenance/producer-source-manifest.json';
+  const manifestPath = join(fixture.evidenceDirectory, relativePath);
+  const sourceManifest = record(JSON.parse(await readFile(manifestPath, 'utf8')) as unknown);
+  mutate(sourceManifest);
+  const bytes = Buffer.from(JSON.stringify(sourceManifest) + '\n', 'utf8');
+  await writeFile(manifestPath, bytes, { flag: 'w' });
+  await writeFile(
+    join(fixture.evidenceDirectory, 'provenance/producer-source-manifest.sha256'),
+    sha256(bytes) + '  producer-source-manifest.json\n',
+    { flag: 'w' },
+  );
+  await rebuildManifest(fixture.evidenceDirectory);
+}
+
 async function mutateJsonFile(
   evidenceDirectory: string,
   relativePath: string,
@@ -792,6 +1207,10 @@ async function createFormalEvidenceFixture(): Promise<FormalEvidenceFixture> {
   return {
     evidenceDirectory: fixture.evidenceDirectory,
     reviewOutputDirectory: fixture.reviewOutputDirectory,
+    reviewerDependencies: {
+      ...fixture.reviewerDependencies,
+      repositoryRoot: fixture.reviewerDependencies.repositoryRoot,
+    },
   };
 }
 
@@ -824,6 +1243,14 @@ async function treeDigest(directory: string): Promise<string> {
   return hash.digest('hex');
 }
 
+async function directoryExists(directory: string): Promise<boolean> {
+  try {
+    return (await stat(directory)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('fixture record expected');
@@ -835,6 +1262,13 @@ function recordArray(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) throw new Error('fixture record array expected');
   for (const item of value) record(item);
   return value as Record<string, unknown>[];
+}
+
+function gitBlobOid(bytes: Uint8Array): string {
+  return createHash('sha1')
+    .update(`blob ${bytes.byteLength}\0`, 'utf8')
+    .update(bytes)
+    .digest('hex');
 }
 
 function syntheticResidualResource(resourceType: 'container' | 'volume' | 'network') {

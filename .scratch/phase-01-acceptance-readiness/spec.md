@@ -43,7 +43,17 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；本次仅完成 AR-09 整改并把 frontier 推进到 AR-10，不认领或实施 AR-10。
+- 每次只执行获得授权的 current frontier；当前只实施 AR-10 的 producer/evidence/reviewer provenance、contract compatibility 与 definition drift，不进入 AR-11、AR-12 或 AR-07。
+
+## AR-10 provenance contract
+
+- Producer source manifest 是生产时验证定义的只读身份记录，必须绑定干净工作区、producer commit、Git blob identity、contract tuple 和完整权威文件摘要；evidence 只保存身份元数据，不携带或执行 producer 代码。
+- Run plan、frozen inputs、terminal conclusion、ABG summary、final outcome 和 evidence Manifest 必须绑定同一 producer source manifest；独立复核前后 source evidence tree 不得变化。
+- Reviewer 先核验 evidence integrity 和实际文件中的 contract tuple，再用本地 Git object 只读核验 producer commit/blob，最后生成 reviewer source manifest 并比较定义；不得 checkout、自动 fetch、联网或执行 evidence 内任何代码。
+- Producer commit 不可用是 provenance `UNVERIFIABLE`，manifest 与可用 commit 的 blob 不一致是 provenance `INVALID`；两者与 evidence integrity failure 和 definition drift 分别记录，不能混称篡改。
+- Contract relation 分为 `EXACT`、`COMPATIBLE`、`INCOMPATIBLE`。只有 `EXACT` 且无 definition drift、reviewer 工作区干净、完整 lifecycle/Manifest 均通过时 review 才可能 `PASSED`；可解析但漂移的 `COMPATIBLE` 与未知/混用版本的 `INCOMPATIBLE` 均必须 `FAILED`。
+- Review 输出写入独立不可覆盖目录，并由 review output manifest 封存 review、findings 和 reviewer source manifest；不得修改 source evidence。
+- AR-10 本地完成不等于正式 ABG 已运行或 Phase 01 accepted。AR-11 仍负责 Podman runtime authority、Docker 排他、restart policy 和 partial-startup hardening。
 
 ## Completion Criteria
 
@@ -59,3 +69,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 2026-08-30：AR-08 统一状态语义和后续整改依赖。AR-01～AR-06 的 `resolved` 保留为本地实现与当时定向验证结论；正式候选尚未冻结，Podman 工作包仍待人工复核，AR-07 阻断于 AR-12 和另行正式执行授权。
 - 2026-08-30：AR-08 完成复核并转为 `resolved`，当前活动任务改为 AR-09。Prompt 1～Prompt 6 仍须在 AR-12 基于最新终态协议和 Podman 权威重新验证；正式验收状态保持 `pending`。
 - 2026-08-30：AR-09 完成终态 lifecycle、ABG-40、summary v4、independent reviewer 和合成 fixture 整改并通过限定验收，转为 `resolved`；current frontier 推进到仍为 `ready-for-agent` 的 AR-10，但本次未实施 AR-10。AR-07 继续阻断于 AR-12 和另行正式执行授权，正式验收状态保持 `pending`。
+- 2026-08-30（AR-10 协议影响）：验收工作包新增 producer source manifest、evidence package 交叉绑定、reviewer source manifest、Git object provenance 核验及 `EXACT`/`COMPATIBLE`/`INCOMPATIBLE` 契约关系。Definition drift 即使结构可解析也不能形成正式 review `PASSED`；integrity failure、commit unavailable 和 manifest invalid 分别分类。独立 review output 由自身 Manifest 封存。本条只记录 AR-10 协议边界，不表示正式 ABG 已执行；AR-11 的 runtime authority 责任不变。

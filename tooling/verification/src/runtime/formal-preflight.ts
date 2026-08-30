@@ -127,7 +127,10 @@ export interface FormalPreflightDependencies {
   readonly host: FormalPreflightHostAdapter;
   readonly environment: Readonly<NodeJS.ProcessEnv>;
   readonly nodeVersion: string;
-  readonly readFrozenInputs: (repositoryRoot: string) => Promise<Readonly<Record<string, string>>>;
+  readonly readFrozenInputs: (
+    repositoryRoot: string,
+    producerSourceManifestSha256: string,
+  ) => Promise<Readonly<Record<string, string>>>;
   readonly now: () => string;
 }
 
@@ -151,6 +154,7 @@ export async function runFormalPreflight(
     readonly repositoryRoot: string;
     readonly outputDirectory: string;
     readonly run: FormalRunSeed;
+    readonly producerSourceManifestSha256: string;
   },
   dependencies: FormalPreflightDependencies = createDefaultFormalPreflightDependencies(),
 ): Promise<FormalPreflightReport> {
@@ -196,7 +200,10 @@ export async function runFormalPreflight(
   }
 
   try {
-    const frozenInputs = await dependencies.readFrozenInputs(input.repositoryRoot);
+    const frozenInputs = await dependencies.readFrozenInputs(
+      input.repositoryRoot,
+      input.producerSourceManifestSha256,
+    );
     checks.push(passed('git-frozen-inputs-readable', 'git', {
       readable: true,
       inputNames: Object.keys(frozenInputs).sort(),
@@ -869,7 +876,16 @@ async function runCli(): Promise<void> {
       process.env['EVIDENCE_OUTPUT_DIR'] ??
       resolve(repositoryRoot, '.runtime/evidence/preflight-' + run.runId),
   );
-  const report = await runFormalPreflight({ repositoryRoot, outputDirectory, run });
+  const producerSourceManifestSha256 = readArgument('--producer-source-manifest-sha256');
+  if (producerSourceManifestSha256 === undefined) {
+    throw new Error('PRODUCER_SOURCE_MANIFEST_SHA256_REQUIRED');
+  }
+  const report = await runFormalPreflight({
+    repositoryRoot,
+    outputDirectory,
+    run,
+    producerSourceManifestSha256,
+  });
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');
   if (report.status !== 'PASSED') process.exitCode = 1;
 }

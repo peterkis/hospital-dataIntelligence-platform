@@ -2,10 +2,15 @@ import type {
   AbgFrozenInputKind,
   AbgProducerId,
 } from '../abg-coverage-matrix.js';
+import {
+  PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
+  PRODUCER_EVIDENCE_SCHEMA_VERSION,
+} from '../verification-contract-versions.js';
 
-export const PRODUCER_EVIDENCE_SCHEMA_VERSION = 'phase-01.producer-evidence.v2' as const;
-export const PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION =
-  'phase-01.producer-evidence-index.v2' as const;
+export {
+  PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
+  PRODUCER_EVIDENCE_SCHEMA_VERSION,
+};
 
 export const PRODUCER_EVIDENCE_STATUSES = ['PASSED', 'FAILED', 'BLOCKED'] as const;
 export type ProducerEvidenceStatus = (typeof PRODUCER_EVIDENCE_STATUSES)[number];

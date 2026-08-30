@@ -26,6 +26,7 @@ import type {
 const LOCK_SHA = 'b'.repeat(64);
 const GIT_SHA = 'a'.repeat(40);
 const RUN = createFormalRunSeed(9, () => '12345678-1234-1234-1234-123456789abc');
+const PRODUCER_SOURCE_MANIFEST_SHA256 = 'd'.repeat(64);
 const IDENTITY: FormalRunIdentity = { ...RUN, gitCommitSha: GIT_SHA };
 const roots: string[] = [];
 
@@ -195,8 +196,38 @@ describe('formal runtime lifecycle', () => {
       cleanupStatus: 'PASSED',
       terminalConclusionStatus: 'PASSED',
       sealEligibilityStatus: 'PASSED',
+      producerSourceManifestSha256: 'd'.repeat(64),
       failureCodes: [],
       sealPendingAtWrite: true,
+    });
+  });
+
+  it('retains the producer source manifest digest when finalization is unavailable', async () => {
+    const harness = await createHarness();
+    let sealInvoked = false;
+
+    const result = await run(harness, {
+      async executeBeforeCleanup() {
+        return { passed: true, value: {} };
+      },
+      async persistEvidenceBeforeCleanup() {},
+      async finalizeAfterCleanup() {
+        throw new Error('FINALIZATION_UNAVAILABLE');
+      },
+      async sealEvidence() {
+        sealInvoked = true;
+      },
+    });
+
+    expect(result.status).toBe('FAILED');
+    expect(result.finalization).toBeNull();
+    expect(sealInvoked).toBe(false);
+    const finalOutcome = await readJson(join(harness.outputDirectory, 'runtime', 'final-outcome.json'));
+    expect(finalOutcome).toMatchObject({
+      status: 'FAILED',
+      producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256,
+      terminalConclusionStatus: 'FAILED',
+      sealEligibilityStatus: 'FAILED',
     });
   });
 
@@ -308,6 +339,7 @@ async function run<T>(
     repositoryRoot: join(harness.root, 'repository'),
     outputDirectory: harness.outputDirectory,
     run: RUN,
+    producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256,
   }, callbacks, harness.dependencies);
 }
 
@@ -332,6 +364,7 @@ function terminalResult(status: 'PASSED' | 'FAILED', failureCodes: readonly stri
     status,
     terminalConclusionStatus: status,
     sealEligibilityStatus: status,
+    producerSourceManifestSha256: 'd'.repeat(64),
     failureCodes,
     value: {},
   } as const;

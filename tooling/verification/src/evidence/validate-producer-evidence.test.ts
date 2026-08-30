@@ -10,10 +10,18 @@ import {
 } from './protocol.js';
 import { parseJsonPointer } from './schema.js';
 import { validateProducerEvidence } from './validate-producer-evidence.js';
+import { CURRENT_EVIDENCE_CONTRACT_IDENTITY } from '../verification-contract-versions.js';
 
 const SHA256 = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 describe('producer evidence validation', () => {
+  it('uses the unified current contract versions for producer evidence', () => {
+    expect(PRODUCER_EVIDENCE_SCHEMA_VERSION).toBe('phase-01.producer-evidence.v2');
+    expect(CURRENT_EVIDENCE_CONTRACT_IDENTITY.producerEvidenceSchemaVersion).toBe(
+      PRODUCER_EVIDENCE_SCHEMA_VERSION,
+    );
+  });
+
   it('accepts a matrix-backed producer record with stable scenario and assertion identifiers', () => {
     const evidence = buildEvidence('ABG-01', 'static');
     expect(() => validateProducerEvidence(evidence)).not.toThrow();

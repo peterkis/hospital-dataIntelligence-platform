@@ -40,6 +40,11 @@ describe('ABG coverage matrix', () => {
       producerIds: ['formal-run'],
     });
     expect(entry?.evidenceSelectors).toHaveLength(2);
+    expect(entry?.requiredFrozenInputs).toContain('producerSourceManifestSha256');
+  });
+
+  it('treats the producer source manifest digest as a formal-run frozen input', () => {
+    expect(ABG_FROZEN_INPUT_KINDS).toContain('producerSourceManifestSha256');
   });
 
   it('has meaningful scenarios, gate-scoped assertions, controlled producers, and strict selectors', () => {

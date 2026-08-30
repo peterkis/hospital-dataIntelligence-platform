@@ -37,6 +37,8 @@ describe('formal terminal conclusion', () => {
       pruneCommandsInvoked: false,
       frozenInputsStableAfterCleanup: true,
       authorityIdentityStableAfterCleanup: true,
+      producerSourceManifestSha256: 'b'.repeat(64),
+      producerSourceManifestStableAfterCleanup: true,
       outputDirectoryExclusive: true,
       failureCodes: [],
       sealEligible: true,
@@ -95,6 +97,7 @@ describe('formal terminal conclusion', () => {
   it.each([
     ['frozenInputsStableAfterCleanup', 'FORMAL_TERMINAL_FROZEN_INPUTS_DRIFT'],
     ['authorityIdentityStableAfterCleanup', 'FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT'],
+    ['producerSourceManifestStableAfterCleanup', 'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DRIFT'],
     ['outputDirectoryExclusive', 'FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE'],
   ] as const)('fails seal eligibility when %s is false', (field, expectedCode) => {
     const conclusion = buildFormalTerminalConclusion({ ...validInput(), [field]: false });
@@ -103,6 +106,19 @@ describe('formal terminal conclusion', () => {
     expect(conclusion.sealEligible).toBe(false);
     expect(conclusion.assertions.sealEligibility.status).toBe('FAILED');
     expect(conclusion.failureCodes).toContain(expectedCode);
+  });
+
+  it('fails seal eligibility when the producer source manifest digest is unavailable', () => {
+    const conclusion = buildFormalTerminalConclusion({
+      ...validInput(),
+      producerSourceManifestSha256: null,
+    });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.failureCodes).toContain(
+      'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DIGEST_INVALID',
+    );
   });
 });
 
@@ -142,6 +158,8 @@ function validInput() {
     finalResources,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    producerSourceManifestSha256: 'b'.repeat(64),
+    producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,
     failureCodes: [] as readonly string[],
   };

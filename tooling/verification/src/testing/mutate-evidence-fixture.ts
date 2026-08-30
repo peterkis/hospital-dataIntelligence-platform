@@ -1,4 +1,5 @@
 import {
+  access,
   cp,
   mkdir,
   readFile,
@@ -6,6 +7,7 @@ import {
   unlink,
   writeFile,
 } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import {
   ABG_COVERAGE_MATRIX,
@@ -19,7 +21,10 @@ import { sha256 } from '../evidence/recorder.js';
 import type { ProducerEvidence } from '../evidence/protocol.js';
 import { validateProducerEvidence } from '../evidence/validate-producer-evidence.js';
 import { validateFormalAbgSummary } from '../formal-summary-validator.js';
-import { reviewFormalAbgEvidence } from '../review-formal-abg-evidence.js';
+import {
+  reviewFormalAbgEvidence,
+  type ReviewFormalAbgEvidenceDependencies,
+} from '../review-formal-abg-evidence.js';
 import {
   assertFormalRuntimeResourceOwned,
   assertSafeFormalCleanupCommand,
@@ -29,6 +34,7 @@ import {
   formalRuntimeLabels,
   type FormalRunIdentity,
 } from '../runtime/formal-runtime-contract.js';
+import { createSourceManifestBuilder } from '../provenance/source-manifest.js';
 import {
   rebuildFixtureManifest,
   type ValidEvidenceFixture,
@@ -150,6 +156,36 @@ export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   mutation('FINAL_OUTCOME_SEAL_STATUS_MISMATCH', 'Contradict seal eligibility in final-outcome.', 'independent-reviewer', 'FORMAL_FINAL_OUTCOME_SEAL_STATUS_MISMATCH'),
   mutation('RUN_PLAN_GIT_IDENTITY_MISMATCH', 'Make summary Git identity differ from the frozen run plan.', 'independent-reviewer', 'FORMAL_SUMMARY_GIT_COMMIT_MISMATCH'),
   mutation('TERMINAL_ASSERTION_BODY_MISMATCH', 'Forge the terminal lifecycle assertion actual body.', 'independent-reviewer', 'FORMAL_TERMINAL_LIFECYCLE_ASSERTION_INCONSISTENT'),
+  mutation('PRODUCER_SOURCE_MANIFEST_MISSING', 'Remove the producer source manifest.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_MISSING'),
+  mutation('PRODUCER_SOURCE_MANIFEST_DIGEST_TAMPERED', 'Tamper a producer source manifest entry digest.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH'),
+  mutation('PRODUCER_SOURCE_MANIFEST_SHA_FILE_TAMPERED', 'Tamper the producer source manifest digest sidecar.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_SHA256_MISMATCH'),
+  mutation('PRODUCER_SOURCE_MANIFEST_DUPLICATE_PATH', 'Duplicate a producer source manifest path.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_ENTRY_DUPLICATE'),
+  mutation('PRODUCER_SOURCE_MANIFEST_UNSORTED', 'Put producer source manifest entries out of order.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_ORDER_INVALID'),
+  mutation('PRODUCER_SOURCE_MANIFEST_PATH_TRAVERSAL', 'Use a parent traversal source path.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_PATH_UNSAFE'),
+  mutation('PRODUCER_SOURCE_MANIFEST_ABSOLUTE_PATH', 'Use an absolute producer source path.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_PATH_UNSAFE'),
+  mutation('PRODUCER_SOURCE_MANIFEST_SYMLINK', 'Replace the producer source manifest with a symlink.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_PATH_UNSAFE'),
+  mutation('PRODUCER_COMMIT_UNAVAILABLE', 'Reference a producer commit unavailable from the local object database.', 'independent-reviewer', 'PRODUCER_COMMIT_UNAVAILABLE'),
+  mutation('PRODUCER_SOURCE_BLOB_MISMATCH', 'Make a producer source blob identity disagree with Git.', 'independent-reviewer', 'PRODUCER_SOURCE_BLOB_ID_MISMATCH'),
+  mutation('PRODUCER_SOURCE_SHA_MISMATCH', 'Make a producer source digest disagree with the Git blob bytes.', 'independent-reviewer', 'PRODUCER_SOURCE_SHA256_MISMATCH'),
+  mutation('PRODUCER_SOURCE_FILE_MISSING_AT_COMMIT', 'Reference a source path absent at the producer commit.', 'independent-reviewer', 'PRODUCER_SOURCE_PATH_MISSING_AT_COMMIT'),
+  mutation('RUN_PLAN_SOURCE_MANIFEST_DIGEST_MISMATCH', 'Make run-plan source manifest identity disagree.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH'),
+  mutation('TERMINAL_SOURCE_MANIFEST_DIGEST_MISMATCH', 'Make terminal conclusion source manifest identity disagree.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH'),
+  mutation('SUMMARY_SOURCE_MANIFEST_DIGEST_MISMATCH', 'Make run summary source manifest identity disagree.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH'),
+  mutation('FINAL_OUTCOME_SOURCE_MANIFEST_DIGEST_MISMATCH', 'Make final outcome source manifest identity disagree.', 'independent-reviewer', 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH'),
+  mutation('MIXED_PRODUCER_EVIDENCE_SCHEMA_VERSIONS', 'Mix producer evidence schema versions.', 'independent-reviewer', 'REVIEWER_CONTRACT_VERSION_MIXED'),
+  mutation('MIXED_GATE_RESULT_SCHEMA_VERSIONS', 'Mix gate result schema versions.', 'independent-reviewer', 'REVIEWER_CONTRACT_VERSION_MIXED'),
+  mutation('UNKNOWN_RUN_SUMMARY_SCHEMA_VERSION', 'Use an unknown run summary schema version.', 'independent-reviewer', 'REVIEWER_CONTRACT_VERSION_UNKNOWN'),
+  mutation('UNKNOWN_TERMINAL_CONCLUSION_SCHEMA_VERSION', 'Use an unknown terminal conclusion schema version.', 'independent-reviewer', 'REVIEWER_CONTRACT_VERSION_UNKNOWN'),
+  mutation('REVIEWER_CONTRACT_INCOMPATIBLE', 'Present an incompatible evidence contract tuple.', 'independent-reviewer', 'REVIEWER_CONTRACT_INCOMPATIBLE'),
+  mutation('REVIEWER_CONTRACT_COMPATIBLE_BUT_DRIFTED', 'Keep schemas parseable while producer definitions drift.', 'independent-reviewer', 'REVIEWER_CONTRACT_COMPATIBLE_BUT_DRIFTED'),
+  mutation('REVIEWER_WORKTREE_DIRTY', 'Report the reviewer checkout as dirty.', 'independent-reviewer', 'REVIEWER_WORKTREE_DIRTY'),
+  mutation('COVERAGE_MATRIX_DEFINITION_DRIFT', 'Drift the producer coverage matrix definition.', 'independent-reviewer', 'COVERAGE_MATRIX_DEFINITION_DRIFT'),
+  mutation('PRODUCER_PROTOCOL_DEFINITION_DRIFT', 'Drift the producer evidence protocol definition.', 'independent-reviewer', 'PRODUCER_PROTOCOL_DEFINITION_DRIFT'),
+  mutation('GATE_PROOF_DEFINITION_DRIFT', 'Drift the gate proof definition.', 'independent-reviewer', 'GATE_PROOF_DEFINITION_DRIFT'),
+  mutation('TERMINAL_CONTRACT_DEFINITION_DRIFT', 'Drift the terminal contract definition.', 'independent-reviewer', 'TERMINAL_CONTRACT_DEFINITION_DRIFT'),
+  mutation('REVIEWER_SOURCE_MANIFEST_TAMPERED', 'Tamper the independently written reviewer source manifest.', 'independent-reviewer', 'REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH'),
+  mutation('REVIEW_OUTPUT_DIRECTORY_EXISTS', 'Reuse an existing provenance review output directory.', 'exclusive-output-guard', 'REVIEW_OUTPUT_ALREADY_EXISTS'),
+  mutation('EVIDENCE_EMBEDDED_SCRIPT_NOT_EXECUTED', 'Add an embedded script whose sentinel side effect must never execute.', 'independent-reviewer', 'MANIFEST_UNLISTED_FILE'),
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -360,6 +396,7 @@ async function executeMutation(
       return captureErrorCodes(() => reviewFormalAbgEvidence({
         evidenceDirectory: copy.evidenceDirectory,
         reviewOutputDirectory: copy.reviewOutputDirectory,
+        dependencies: context.fixture.reviewerDependencies,
       }));
     }
     case 'AR06-M043-RESULT-OVERWRITE':
@@ -400,7 +437,7 @@ async function executeMutation(
       return reviewerMutation(mutationId, context, async (copy) => {
         await writeFile(
           join(copy.evidenceDirectory, 'setup/01/stdout.log'),
-          'ar06-stdout-bare-configured-secret\n',
+          'password=ar06-stdout-bare-configured-secret\n',
           { flag: 'w' },
         );
         await rebuildFixtureManifest(copy.evidenceDirectory);
@@ -412,7 +449,7 @@ async function executeMutation(
       return reviewerMutation(mutationId, context, async (copy) => {
         await writeFile(
           join(copy.evidenceDirectory, 'setup/01/stderr.log'),
-          'ar06-stderr-bare-configured-secret\n',
+          'client_secret=ar06-stderr-bare-configured-secret\n',
           { flag: 'w' },
         );
         await rebuildFixtureManifest(copy.evidenceDirectory);
@@ -434,7 +471,7 @@ async function executeMutation(
       return reviewerMutation(mutationId, context, async (copy) => {
         await writeFile(
           join(copy.evidenceDirectory, 'malformed-secret-evidence.json'),
-          '{"diagnostic":"ar06-malformed-bare-configured-secret",',
+          'password=ar06-malformed-bare-configured-secret {',
           { flag: 'wx' },
         );
         await rebuildFixtureManifest(copy.evidenceDirectory);
@@ -609,6 +646,178 @@ async function executeMutation(
           record(assertions['terminalLifecycle'])['actual'] = { cleanupStatus: 'FAILED' };
         },
       );
+    case 'PRODUCER_SOURCE_MANIFEST_MISSING':
+      return reviewerMutation(mutationId, context, async (copy) => {
+        await unlink(join(copy.evidenceDirectory, 'provenance/producer-source-manifest.json'));
+        await rebuildFixtureManifest(copy.evidenceDirectory);
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_DIGEST_TAMPERED':
+      return sourceManifestMutation(mutationId, context, (manifest) => {
+        manifest['sourceFilesDigest'] = '0'.repeat(64);
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_SHA_FILE_TAMPERED':
+      return reviewerMutation(mutationId, context, async (copy) => {
+        await writeFile(
+          join(copy.evidenceDirectory, 'provenance/producer-source-manifest.sha256'),
+          `${'0'.repeat(64)}  producer-source-manifest.json\n`,
+          { flag: 'w' },
+        );
+        await rebuildFixtureManifest(copy.evidenceDirectory);
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_DUPLICATE_PATH':
+      return sourceManifestMutation(mutationId, context, (manifest) => {
+        const files = recordArray(manifest['sourceFiles']);
+        files.splice(1, 0, clone(files[0]!));
+        manifest['sourceFileCount'] = files.length;
+        manifest['sourceFilesDigest'] = digestCanonical(files);
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_UNSORTED':
+      return sourceManifestMutation(mutationId, context, (manifest) => {
+        const files = recordArray(manifest['sourceFiles']);
+        [files[0], files[1]] = [files[1]!, files[0]!];
+        manifest['sourceFilesDigest'] = digestCanonical(files);
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_PATH_TRAVERSAL':
+      return sourceManifestEntryMutation(mutationId, context, (entry) => {
+        entry['path'] = '../verification-contract-versions.ts';
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_ABSOLUTE_PATH':
+      return sourceManifestEntryMutation(mutationId, context, (entry) => {
+        entry['path'] = 'C:/validator-fixture/verification-contract-versions.ts';
+      });
+    case 'PRODUCER_SOURCE_MANIFEST_SYMLINK':
+      return reviewerMutation(mutationId, context, async () => undefined, undefined, {
+        git: {
+          ...context.fixture.reviewerDependencies.git,
+          async readBlob(root, commit, path) {
+            const blob = await context.fixture.reviewerDependencies.git.readBlob(root, commit, path);
+            return path === 'package.json' && blob !== null ? { ...blob, mode: '120000' } : blob;
+          },
+        },
+      });
+    case 'PRODUCER_COMMIT_UNAVAILABLE':
+      return sourceManifestMutation(mutationId, context, (manifest) => {
+        manifest['producerGitCommitSha'] = 'e'.repeat(40);
+      });
+    case 'PRODUCER_SOURCE_BLOB_MISMATCH':
+      return sourceManifestEntryMutation(mutationId, context, (entry) => {
+        entry['gitBlobOid'] = 'e'.repeat(40);
+      });
+    case 'PRODUCER_SOURCE_SHA_MISMATCH':
+      return sourceManifestEntryMutation(mutationId, context, (entry) => {
+        entry['sha256'] = 'e'.repeat(64);
+      });
+    case 'PRODUCER_SOURCE_FILE_MISSING_AT_COMMIT':
+      return reviewerMutation(
+        mutationId,
+        context,
+        async () => undefined,
+        undefined,
+        {
+          git: {
+            ...context.fixture.reviewerDependencies.git,
+            readBlob: async (root, commit, path) => path === 'package.json'
+              ? null
+              : context.fixture.reviewerDependencies.git.readBlob(root, commit, path),
+          },
+        },
+      );
+    case 'RUN_PLAN_SOURCE_MANIFEST_DIGEST_MISMATCH':
+      return lifecycleReviewerMutation(mutationId, context, 'run-plan.json', (plan) => {
+        plan['producerSourceManifestSha256'] = 'e'.repeat(64);
+      });
+    case 'TERMINAL_SOURCE_MANIFEST_DIGEST_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['producerSourceManifestSha256'] = 'e'.repeat(64); },
+      );
+    case 'SUMMARY_SOURCE_MANIFEST_DIGEST_MISMATCH':
+      return lifecycleReviewerMutation(mutationId, context, 'abg-results.json', (summary) => {
+        summary['producerSourceManifestSha256'] = 'e'.repeat(64);
+      });
+    case 'FINAL_OUTCOME_SOURCE_MANIFEST_DIGEST_MISMATCH':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/final-outcome.json',
+        (outcome) => { outcome['producerSourceManifestSha256'] = 'e'.repeat(64); },
+      );
+    case 'MIXED_PRODUCER_EVIDENCE_SCHEMA_VERSIONS':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'shared/static/producer-evidence.json',
+        (evidence) => { evidence['schemaVersion'] = 'phase-01.producer-evidence.v999'; },
+      );
+    case 'MIXED_GATE_RESULT_SCHEMA_VERSIONS':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'gates/ABG-01/producer/result.json',
+        (proof) => { proof['schemaVersion'] = 'phase-01.abg-gate-result.v999'; },
+      );
+    case 'UNKNOWN_RUN_SUMMARY_SCHEMA_VERSION':
+      return lifecycleReviewerMutation(mutationId, context, 'abg-results.json', (summary) => {
+        summary['schemaVersion'] = 'phase-01.abg-run.v999';
+      });
+    case 'UNKNOWN_TERMINAL_CONCLUSION_SCHEMA_VERSION':
+      return lifecycleReviewerMutation(
+        mutationId,
+        context,
+        'runtime/terminal-conclusion.json',
+        (terminal) => { terminal['schemaVersion'] = 'phase-01.formal-terminal-conclusion.v999'; },
+      );
+    case 'REVIEWER_CONTRACT_INCOMPATIBLE':
+      return lifecycleReviewerMutation(mutationId, context, 'abg-results.json', (summary) => {
+        summary['schemaVersion'] = 'phase-01.abg-run.v999';
+      });
+    case 'REVIEWER_CONTRACT_COMPATIBLE_BUT_DRIFTED':
+      return reviewerDefinitionDriftMutation(
+        mutationId,
+        context,
+        'tooling/verification/src/review-formal-abg-evidence.ts',
+      );
+    case 'REVIEWER_WORKTREE_DIRTY':
+      return reviewerWorktreeDirtyMutation(mutationId, context);
+    case 'COVERAGE_MATRIX_DEFINITION_DRIFT':
+      return reviewerDefinitionDriftMutation(
+        mutationId,
+        context,
+        'tooling/verification/src/abg-coverage-matrix.ts',
+      );
+    case 'PRODUCER_PROTOCOL_DEFINITION_DRIFT':
+      return reviewerDefinitionDriftMutation(
+        mutationId,
+        context,
+        'tooling/verification/src/evidence/protocol.ts',
+      );
+    case 'GATE_PROOF_DEFINITION_DRIFT':
+      return reviewerDefinitionDriftMutation(
+        mutationId,
+        context,
+        'tooling/verification/src/abg-gate-proof.ts',
+      );
+    case 'TERMINAL_CONTRACT_DEFINITION_DRIFT':
+      return reviewerDefinitionDriftMutation(
+        mutationId,
+        context,
+        'tooling/verification/src/runtime/formal-terminal-conclusion.ts',
+      );
+    case 'REVIEWER_SOURCE_MANIFEST_TAMPERED':
+      return reviewerSourceManifestTamperedMutation(mutationId, context);
+    case 'REVIEW_OUTPUT_DIRECTORY_EXISTS': {
+      const copy = await copyFixtureForMutation(mutationId, context);
+      await mkdir(copy.reviewOutputDirectory, { recursive: false });
+      return captureErrorCodes(() => reviewFormalAbgEvidence({
+        evidenceDirectory: copy.evidenceDirectory,
+        reviewOutputDirectory: copy.reviewOutputDirectory,
+        dependencies: context.fixture.reviewerDependencies,
+      }));
+    }
+    case 'EVIDENCE_EMBEDDED_SCRIPT_NOT_EXECUTED':
+      return embeddedScriptMutation(mutationId, context);
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
@@ -729,6 +938,174 @@ async function residualResourceMutation(
   );
 }
 
+async function sourceManifestMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  mutate: (manifest: Record<string, unknown>) => void,
+): Promise<readonly string[]> {
+  return reviewerMutation(mutationId, context, async (copy) => {
+    const manifest = await readJsonRecord(
+      copy.evidenceDirectory,
+      'provenance/producer-source-manifest.json',
+    );
+    mutate(manifest);
+    const bytes = Buffer.from(`${canonicalJsonValue(manifest)}\n`, 'utf8');
+    await writeFile(
+      join(copy.evidenceDirectory, 'provenance/producer-source-manifest.json'),
+      bytes,
+      { flag: 'w' },
+    );
+    await writeFile(
+      join(copy.evidenceDirectory, 'provenance/producer-source-manifest.sha256'),
+      `${sha256(bytes)}  producer-source-manifest.json\n`,
+      { flag: 'w' },
+    );
+    await rebuildFixtureManifest(copy.evidenceDirectory);
+  });
+}
+
+async function sourceManifestEntryMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  mutate: (entry: Record<string, unknown>) => void,
+): Promise<readonly string[]> {
+  return sourceManifestMutation(mutationId, context, (manifest) => {
+    const files = recordArray(manifest['sourceFiles']);
+    mutate(files[0]!);
+    manifest['sourceFilesDigest'] = digestCanonical(files);
+  });
+}
+
+async function reviewerDefinitionDriftMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  driftPath: string,
+): Promise<readonly string[]> {
+  const base = context.fixture.reviewerDependencies;
+  const state = await base.repository.readState(base.repositoryRoot);
+  const reviewerCommit = 'd'.repeat(40);
+  const driftedBytes = async (path: string): Promise<Uint8Array | null> => {
+    const source = await base.workspace.readSourceFile(base.repositoryRoot, path);
+    if (source.kind !== 'REGULAR' || source.bytes === undefined) return null;
+    return path === driftPath
+      ? Buffer.concat([Buffer.from(source.bytes), Buffer.from('\nreviewer-definition-drift\n')])
+      : source.bytes;
+  };
+  return reviewerMutation(mutationId, context, async () => undefined, undefined, {
+    repository: {
+      async readState() {
+        return { ...state, gitCommitSha: reviewerCommit, worktreeStatus: 'CLEAN' as const };
+      },
+    },
+    workspace: {
+      async readSourceFile(_root, path) {
+        const bytes = await driftedBytes(path);
+        return bytes === null
+          ? { kind: 'MISSING' as const }
+          : { kind: 'REGULAR' as const, bytes };
+      },
+    },
+    git: {
+      async commitExists(root, commit) {
+        return commit === reviewerCommit || base.git.commitExists(root, commit);
+      },
+      async readBlob(root, commit, path) {
+        if (commit !== reviewerCommit) return base.git.readBlob(root, commit, path);
+        const bytes = await driftedBytes(path);
+        return bytes === null ? null : { mode: '100644', oid: gitBlobOid(bytes), bytes };
+      },
+    },
+  });
+}
+
+async function reviewerWorktreeDirtyMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const base = context.fixture.reviewerDependencies;
+  const state = await base.repository.readState(base.repositoryRoot);
+  return reviewerMutation(mutationId, context, async () => undefined, undefined, {
+    repository: {
+      async readState() {
+        return { ...state, worktreeStatus: 'DIRTY' as const };
+      },
+    },
+  });
+}
+
+async function reviewerSourceManifestTamperedMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const base = context.fixture.reviewerDependencies;
+  const builder = createSourceManifestBuilder(base);
+  return reviewerMutation(mutationId, context, async () => undefined, undefined, {
+    sourceManifestBuilder: {
+      buildProducer: (root) => builder.buildProducer(root),
+      async buildReviewer(root) {
+        const manifest = await builder.buildReviewer(root);
+        return { ...manifest, sourceFilesDigest: '0'.repeat(64) };
+      },
+    },
+  });
+}
+
+async function embeddedScriptMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const unlisted = await copyFixtureForMutation(`${mutationId}-unlisted`, context);
+  const unlistedSentinel = join(unlisted.caseDirectory, 'unlisted-script-executed.txt');
+  await writeFile(
+    join(unlisted.evidenceDirectory, 'embedded-side-effect.cjs'),
+    `require('node:fs').writeFileSync(${JSON.stringify(unlistedSentinel)}, 'executed');\n`,
+    { flag: 'wx' },
+  );
+  const unlistedCodes = await reviewPreparedCopy(
+    unlisted,
+    context.fixture.reviewerDependencies,
+  );
+  if (await pathExists(unlistedSentinel)) return ['EVIDENCE_EMBEDDED_SCRIPT_EXECUTED'];
+
+  const listed = await copyFixtureForMutation(`${mutationId}-listed`, context);
+  const listedSentinel = join(listed.caseDirectory, 'listed-script-executed.txt');
+  await writeFile(
+    join(listed.evidenceDirectory, 'embedded-side-effect.cjs'),
+    `require('node:fs').writeFileSync(${JSON.stringify(listedSentinel)}, 'executed');\n`,
+    { flag: 'wx' },
+  );
+  await rebuildFixtureManifest(listed.evidenceDirectory);
+  const listedCodes = await reviewPreparedCopy(listed, context.fixture.reviewerDependencies);
+  if (await pathExists(listedSentinel)) return ['EVIDENCE_EMBEDDED_SCRIPT_EXECUTED'];
+  if (listedCodes.length > 0) return listedCodes;
+  return unlistedCodes;
+}
+
+async function reviewPreparedCopy(
+  copy: PhysicalFixtureCopy,
+  dependencies: ReviewFormalAbgEvidenceDependencies,
+): Promise<readonly string[]> {
+  const review = await reviewFormalAbgEvidence({
+    evidenceDirectory: copy.evidenceDirectory,
+    reviewOutputDirectory: copy.reviewOutputDirectory,
+    dependencies,
+  });
+  const findings = JSON.parse(await readFile(
+    join(copy.reviewOutputDirectory, 'review-findings.json'),
+    'utf8',
+  )) as { readonly findings: readonly { readonly code: string }[] };
+  return review.status === 'PASSED' ? [] : findings.findings.map((finding) => finding.code);
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function reviewerMutation(
   mutationId: string,
   context: MutationExecutionContext,
@@ -737,6 +1114,7 @@ async function reviewerMutation(
     readonly name: string;
     readonly value: string;
   },
+  dependencyOverrides: Partial<ReviewFormalAbgEvidenceDependencies> = {},
 ): Promise<readonly string[]> {
   const previousSecret = configuredSecret === undefined
     ? undefined
@@ -745,16 +1123,10 @@ async function reviewerMutation(
   try {
     const copy = await copyFixtureForMutation(mutationId, context);
     await mutate(copy);
-    const review = await reviewFormalAbgEvidence({
-      evidenceDirectory: copy.evidenceDirectory,
-      reviewOutputDirectory: copy.reviewOutputDirectory,
+    return reviewPreparedCopy(copy, {
+      ...context.fixture.reviewerDependencies,
+      ...dependencyOverrides,
     });
-    const findings = JSON.parse(await readFile(
-      join(copy.reviewOutputDirectory, 'review-findings.json'),
-      'utf8',
-    )) as { readonly findings: readonly { readonly code: string }[] };
-    if (review.status === 'PASSED') return [];
-    return findings.findings.map((finding) => finding.code);
   } finally {
     if (configuredSecret !== undefined) {
       if (previousSecret === undefined) delete process.env[configuredSecret.name];
@@ -929,6 +1301,32 @@ function stableErrorCode(error: unknown): string {
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function digestCanonical(value: unknown): string {
+  return sha256(Buffer.from(canonicalJsonValue(value), 'utf8'));
+}
+
+function gitBlobOid(bytes: Uint8Array): string {
+  const buffer = Buffer.from(bytes);
+  return createHash('sha1')
+    .update(Buffer.concat([Buffer.from(`blob ${buffer.byteLength}\0`, 'utf8'), buffer]))
+    .digest('hex');
+}
+
+function canonicalJsonValue(value: unknown): string {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJsonValue).join(',')}]`;
+  if (typeof value === 'object') {
+    const valueRecord = value as Record<string, unknown>;
+    return `{${Object.keys(valueRecord).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalJsonValue(valueRecord[key])}`,
+    ).join(',')}}`;
+  }
+  throw new Error('MUTATION_CANONICAL_JSON_VALUE_INVALID');
 }
 
 function record(value: unknown): Record<string, unknown> {

@@ -22,6 +22,7 @@ import {
 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ABG_GATES } from './abg-catalog.js';
+import { getAbgProducerProtocolIdentityDigest } from './abg-gate-proof.js';
 import {
   ABG_COVERAGE_MATRIX,
   ABG_FROZEN_INPUT_KINDS,
@@ -40,17 +41,41 @@ import {
   FORMAL_REQUIRED_SECRET_NAMES,
   FORMAL_RUNTIME_PORTS,
 } from './runtime/formal-runtime-contract.js';
+import {
+  CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+  EVIDENCE_MANIFEST_SCHEMA_VERSION,
+  GATE_RESULT_SCHEMA_VERSION,
+  REVIEW_FINDINGS_SCHEMA_VERSION,
+  REVIEW_MANIFEST_SCHEMA_VERSION,
+  REVIEW_SCHEMA_VERSION,
+  REVIEWER_TOOL_SCHEMA_VERSION,
+  RUN_PLAN_AUTHORITY_ID,
+  RUN_PLAN_SCHEMA_VERSION,
+  RUN_SUMMARY_SCHEMA_VERSION,
+  RUNTIME_OUTCOME_SCHEMA_VERSION,
+  TERMINAL_CONCLUSION_SCHEMA_VERSION,
+  type EvidenceContractIdentity,
+} from './verification-contract-versions.js';
+import {
+  assessReviewerCompatibility,
+  type EvidenceContractTuple,
+} from './provenance/reviewer-compatibility.js';
+import {
+  canonicalVerificationSourceManifestBytes,
+  createSourceManifestBuilder,
+  defaultSourceManifestDependencies,
+  sourceManifestSha256,
+  type GitObjectReader,
+  type RepositoryStateReader,
+  type SourceManifestBuilder,
+  type WorkspaceSourceReader,
+} from './provenance/source-manifest.js';
+import {
+  parseVerificationSourceManifest,
+  type ProducerVerificationSourceManifest,
+  type ReviewerVerificationSourceManifest,
+} from './provenance/source-manifest-schema.js';
 
-const REVIEW_SCHEMA_VERSION = 'phase-01.formal-abg-evidence-review.v1' as const;
-const REVIEW_FINDINGS_SCHEMA_VERSION =
-  'phase-01.formal-abg-evidence-review-findings.v1' as const;
-const REVIEWER_TOOL_SCHEMA_VERSION =
-  'phase-01.formal-abg-evidence-reviewer.v1' as const;
-const RUN_PLAN_SCHEMA_VERSION = 'phase-01.abg-run-plan.v3';
-const RUN_PLAN_AUTHORITY_ID = 'phase-01.repository-authoritative-plan.v2';
-const RUN_SUMMARY_SCHEMA_VERSION = 'phase-01.abg-run.v4';
-const GATE_RESULT_SCHEMA_VERSION = 'phase-01.abg-gate-result.v3' as const;
-const MANIFEST_SCHEMA_VERSION = 'phase-01.evidence-manifest.v1';
 const CONCLUSION_SCOPE =
   'Phase 01 POC executable architecture baseline only; not full POC or production readiness.';
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
@@ -78,6 +103,17 @@ export interface ReviewFormalAbgEvidenceInput {
   readonly reviewOutputDirectory: string;
   /** Test seam for proving that concurrent source mutation fails closed. */
   readonly beforeFinalSourceIdentityCapture?: () => Promise<void>;
+  /** Public test seam for Git/worktree/source identity without host-state coupling. */
+  readonly dependencies?: ReviewFormalAbgEvidenceDependencies;
+}
+
+export interface ReviewFormalAbgEvidenceDependencies {
+  readonly repositoryRoot: string;
+  readonly git: GitObjectReader;
+  readonly repository: RepositoryStateReader;
+  readonly workspace: WorkspaceSourceReader;
+  readonly clock: () => string;
+  readonly sourceManifestBuilder?: SourceManifestBuilder;
 }
 
 export interface ReviewFinding {
@@ -101,6 +137,20 @@ export interface FormalAbgEvidenceReview {
   readonly sourceManifestSha256: string | null;
   readonly sourceEvidenceDigestBefore: string;
   readonly sourceEvidenceDigestAfter: string;
+  readonly producerGitCommitSha: string | null;
+  readonly producerSourceManifestSha256: string | null;
+  readonly reviewerGitCommitSha: string | null;
+  readonly reviewerSourceManifestSha256: string | null;
+  readonly evidenceContractIdentity: EvidenceContractTuple | null;
+  readonly reviewerSupportedContractIdentity: EvidenceContractIdentity;
+  readonly evidenceIntegrityStatus: 'PASSED' | 'FAILED';
+  readonly producerProvenanceStatus: 'VERIFIED' | 'INVALID' | 'UNVERIFIABLE';
+  readonly reviewerContractStatus: 'EXACT' | 'COMPATIBLE' | 'INCOMPATIBLE';
+  readonly definitionDriftStatus: 'NONE' | 'DRIFTED' | 'UNRESOLVED';
+  readonly reviewerWorktreeStatus: 'CLEAN' | 'DIRTY' | 'UNAVAILABLE';
+  readonly reviewStatus: 'PASSED' | 'FAILED';
+  readonly terminalConclusionSchemaVersion: string | null;
+  readonly runtimeOutcomeSchemaVersion: string | null;
   readonly reviewedAt: string;
   readonly reviewerToolIdentity: ReviewerToolIdentity;
   readonly coverageMatrixDigest: string;
@@ -144,6 +194,25 @@ interface ManifestEntry {
 interface ManifestState {
   readonly entries: ReadonlyMap<string, ManifestEntry>;
   readonly sourceManifestSha256: string | null;
+}
+
+interface ProducerSourceManifestState {
+  readonly manifest: ProducerVerificationSourceManifest | null;
+  readonly sha256: string | null;
+}
+
+interface ContractExtractionState {
+  readonly identity: EvidenceContractTuple | null;
+  readonly terminalConclusionSchemaVersion: string | null;
+  readonly runtimeOutcomeSchemaVersion: string | null;
+  readonly complete: boolean;
+}
+
+interface ReviewerSourceCapture {
+  readonly manifest: ReviewerVerificationSourceManifest | null;
+  readonly sha256: string | null;
+  readonly gitCommitSha: string | null;
+  readonly worktreeStatus: 'CLEAN' | 'DIRTY' | 'UNAVAILABLE';
 }
 
 interface CurrentAuthorityIdentity {
@@ -233,27 +302,69 @@ export async function reviewFormalAbgEvidence(
 ): Promise<FormalAbgEvidenceReview> {
   const sourceDirectory = resolve(input.evidenceDirectory);
   const outputDirectory = resolve(input.reviewOutputDirectory);
-  await prepareExclusiveOutputDirectory(sourceDirectory, outputDirectory);
-
+  const dependencies = input.dependencies ?? defaultReviewDependencies();
   const checks = new ReviewChecks();
+
   const sourceEvidenceDigestBefore = await captureTreeIdentity(sourceDirectory);
   const snapshot = await scanEvidenceDirectory(sourceDirectory, checks);
   await validateEvidenceSecretLeaks(snapshot, checks);
+  const manifest = await validateManifest(snapshot, checks);
+  validateRequiredLifecycleEnvelope(snapshot, manifest, checks);
+  const producer = await validateProducerSourceManifest(snapshot, manifest, checks);
+  const contract = await extractEvidenceContractIdentity(snapshot, manifest, checks);
+  let producerProvenanceStatus = await verifyProducerProvenance(
+    producer.manifest,
+    dependencies,
+    checks,
+  );
+
   const currentIdentity = await readCurrentAuthorityIdentity();
   const reviewerToolIdentity = await readReviewerToolIdentity();
   validateCurrentDefinitions(currentIdentity, checks);
-  const manifest = await validateManifest(snapshot, checks);
-  const plan = await validateRunPlan(snapshot, manifest, currentIdentity, checks);
-  const summary = await validateRunSummary(
-    snapshot,
-    manifest,
-    plan,
-    currentIdentity,
+  const reviewerCapture = await captureReviewerSourceManifest(dependencies, checks);
+
+  if (
+    producer.manifest !== null &&
+    reviewerCapture.manifest !== null &&
+    producer.manifest.repositoryFullName !== reviewerCapture.manifest.repositoryFullName
+  ) {
+    checks.fail('PRODUCER_REPOSITORY_IDENTITY_MISMATCH', 'repositoryFullName');
+    producerProvenanceStatus = 'INVALID';
+  }
+  const drift = compareSourceDefinitions(
+    producer.manifest,
+    reviewerCapture.manifest,
     checks,
   );
-  if (summary !== null) {
-    await validateFormalLifecycle(snapshot, manifest, summary, checks);
-    await validateTopLevelRunIdentities(snapshot, manifest, summary, checks);
+  const compatibility = contract.identity === null
+    ? {
+        compatibilityLevel: 'INCOMPATIBLE' as const,
+      }
+    : assessReviewerCompatibility({
+      evidenceContractIdentity: contract.identity,
+        definitionsMatch: drift === 'NONE',
+      });
+  if (compatibility.compatibilityLevel === 'INCOMPATIBLE') {
+    checks.fail('REVIEWER_CONTRACT_VERSION_UNKNOWN', 'evidence-contract');
+    checks.fail('REVIEWER_CONTRACT_INCOMPATIBLE', 'evidence-contract');
+  } else if (compatibility.compatibilityLevel === 'COMPATIBLE') {
+    checks.fail('REVIEWER_CONTRACT_COMPATIBLE_BUT_DRIFTED', 'evidence-contract');
+  }
+
+  await validateProducerSourceManifestReferences(snapshot, producer, contract, checks);
+  if (compatibility.compatibilityLevel === 'EXACT') {
+    const plan = await validateRunPlan(snapshot, manifest, currentIdentity, checks);
+    const summary = await validateRunSummary(
+      snapshot,
+      manifest,
+      plan,
+      currentIdentity,
+      checks,
+    );
+    if (summary !== null) {
+      await validateFormalLifecycle(snapshot, manifest, summary, checks);
+      await validateTopLevelRunIdentities(snapshot, manifest, summary, checks);
+    }
   }
 
   await input.beforeFinalSourceIdentityCapture?.();
@@ -263,27 +374,599 @@ export async function reviewFormalAbgEvidence(
     'SOURCE_EVIDENCE_CHANGED_DURING_REVIEW',
     '.',
   );
+  const reviewerCaptureAfter = await captureReviewerSourceManifest(dependencies, checks);
+  const reviewerStability = validateReviewerCaptureStable(
+    reviewerCapture,
+    reviewerCaptureAfter,
+    checks,
+  );
+  await prepareExclusiveOutputDirectory(sourceDirectory, outputDirectory);
 
+  const reviewerWorktreeStatus = combineReviewerWorktreeStatus(
+    reviewerCapture.worktreeStatus,
+    reviewerCaptureAfter.worktreeStatus,
+  );
+  const definitionDriftStatus = producerProvenanceStatus === 'VERIFIED' &&
+      reviewerStability.sourceDefinitionsStable
+    ? drift
+    : 'UNRESOLVED';
+  const reviewerContractStatus = compatibility.compatibilityLevel === 'EXACT' &&
+      !reviewerStability.sourceDefinitionsStable
+    ? 'COMPATIBLE'
+    : compatibility.compatibilityLevel;
+  if (reviewerContractStatus !== 'EXACT') {
+    checks.fail('REVIEWER_CONTRACT_EXACT_MATCH_REQUIRED', 'evidence-contract');
+  }
   const findings = [...checks.findings];
   const findingsDigest = digestJson(findings);
   const failedCheckCount = findings.length;
+  const evidenceIntegrityStatus = findings.some((finding) =>
+    isEvidenceIntegrityFinding(finding.code, drift === 'DRIFTED'))
+    ? 'FAILED'
+    : 'PASSED';
+  const reviewPassed = failedCheckCount === 0 &&
+    evidenceIntegrityStatus === 'PASSED' &&
+    producerProvenanceStatus === 'VERIFIED' &&
+    reviewerContractStatus === 'EXACT' &&
+    definitionDriftStatus === 'NONE' &&
+    reviewerWorktreeStatus === 'CLEAN' &&
+    sourceEvidenceDigestBefore === sourceEvidenceDigestAfter;
   const review: FormalAbgEvidenceReview = {
     schemaVersion: REVIEW_SCHEMA_VERSION,
     sourceEvidenceDirectory: sourceDirectory,
     sourceManifestSha256: manifest.sourceManifestSha256,
     sourceEvidenceDigestBefore,
     sourceEvidenceDigestAfter,
-    reviewedAt: localNow(),
+    producerGitCommitSha: producer.manifest?.producerGitCommitSha ?? null,
+    producerSourceManifestSha256: producer.sha256,
+    reviewerGitCommitSha: reviewerCapture.manifest?.reviewerGitCommitSha ??
+      reviewerCapture.gitCommitSha,
+    reviewerSourceManifestSha256: reviewerCapture.sha256,
+    evidenceContractIdentity: contract.identity,
+    reviewerSupportedContractIdentity: CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+    evidenceIntegrityStatus,
+    producerProvenanceStatus,
+    reviewerContractStatus,
+    definitionDriftStatus,
+    reviewerWorktreeStatus,
+    reviewStatus: reviewPassed ? 'PASSED' : 'FAILED',
+    terminalConclusionSchemaVersion: contract.terminalConclusionSchemaVersion,
+    runtimeOutcomeSchemaVersion: contract.runtimeOutcomeSchemaVersion,
+    reviewedAt: dependencies.clock(),
     reviewerToolIdentity,
     coverageMatrixDigest: currentIdentity.coverageMatrixDigest,
-    status: failedCheckCount === 0 ? 'PASSED' : 'FAILED',
+    status: reviewPassed ? 'PASSED' : 'FAILED',
     checkCount: checks.checkCount,
     passedCheckCount: checks.checkCount - failedCheckCount,
     failedCheckCount,
     findingsDigest,
   };
-  await writeReviewOutputs(outputDirectory, review, findings);
+  await writeReviewOutputs(
+    outputDirectory,
+    review,
+    findings,
+    reviewerCapture.manifest,
+  );
   return review;
+}
+
+function defaultReviewDependencies(): ReviewFormalAbgEvidenceDependencies {
+  const sourceDependencies = defaultSourceManifestDependencies();
+  return {
+    repositoryRoot,
+    ...sourceDependencies,
+    sourceManifestBuilder: createSourceManifestBuilder(sourceDependencies),
+  };
+}
+
+function validateRequiredLifecycleEnvelope(
+  snapshot: EvidenceSnapshot,
+  manifest: ManifestState,
+  checks: ReviewChecks,
+): void {
+  for (const [path, code] of [
+    ['runtime/preflight.json', 'FORMAL_LIFECYCLE_PREFLIGHT_MISSING'],
+    ['runtime/resources-started.json', 'FORMAL_LIFECYCLE_RESOURCES_STARTED_MISSING'],
+    ['runtime/producer-evidence-snapshot.json', 'FORMAL_LIFECYCLE_PRODUCER_EVIDENCE_SNAPSHOT_MISSING'],
+    ['runtime/failure-summary.json', 'FORMAL_LIFECYCLE_FAILURE_SUMMARY_MISSING'],
+    ['runtime/resources-final.json', 'FORMAL_LIFECYCLE_RESOURCES_FINAL_MISSING'],
+    ['runtime/cleanup.json', 'FORMAL_LIFECYCLE_CLEANUP_MISSING'],
+    ['runtime/terminal-conclusion.json', 'FORMAL_LIFECYCLE_TERMINAL_CONCLUSION_MISSING'],
+    ['runtime/final-outcome.json', 'FORMAL_LIFECYCLE_FINAL_OUTCOME_MISSING'],
+  ] as const) {
+    if (!snapshot.files.has(path) || !manifest.entries.has(path)) checks.fail(code, path);
+  }
+}
+
+async function captureReviewerSourceManifest(
+  dependencies: ReviewFormalAbgEvidenceDependencies,
+  checks: ReviewChecks,
+): Promise<ReviewerSourceCapture> {
+  let gitCommitSha: string | null = null;
+  let worktreeStatus: ReviewerSourceCapture['worktreeStatus'] = 'UNAVAILABLE';
+  try {
+    const state = await dependencies.repository.readState(dependencies.repositoryRoot);
+    gitCommitSha = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/u.test(state.gitCommitSha)
+      ? state.gitCommitSha
+      : null;
+    if (gitCommitSha === null) {
+      checks.fail('REVIEWER_GIT_COMMIT_UNAVAILABLE', 'reviewer-repository');
+    }
+    worktreeStatus = state.worktreeStatus;
+    if (state.worktreeStatus === 'DIRTY') {
+      checks.fail('REVIEWER_WORKTREE_DIRTY', 'reviewer-repository');
+    } else if (state.worktreeStatus === 'UNAVAILABLE') {
+      checks.fail('REVIEWER_GIT_COMMIT_UNAVAILABLE', 'reviewer-repository');
+    }
+  } catch {
+    checks.fail('REVIEWER_GIT_COMMIT_UNAVAILABLE', 'reviewer-repository');
+  }
+  let built: ReviewerVerificationSourceManifest;
+  try {
+    const builder = dependencies.sourceManifestBuilder ?? createSourceManifestBuilder({
+      git: dependencies.git,
+      repository: dependencies.repository,
+      workspace: dependencies.workspace,
+      clock: dependencies.clock,
+    });
+    built = await builder.buildReviewer(dependencies.repositoryRoot);
+  } catch {
+    checks.fail('REVIEWER_SOURCE_MANIFEST_GENERATION_FAILED', 'reviewer-source-manifest');
+    return { manifest: null, sha256: null, gitCommitSha, worktreeStatus };
+  }
+  try {
+    const digest = sourceManifestSha256(built);
+    return {
+      manifest: built,
+      sha256: digest,
+      gitCommitSha: built.reviewerGitCommitSha,
+      worktreeStatus: built.reviewerWorktreeState,
+    };
+  } catch {
+    checks.fail('REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH', 'reviewer-source-manifest');
+    return { manifest: null, sha256: null, gitCommitSha, worktreeStatus };
+  }
+}
+
+function validateReviewerCaptureStable(
+  before: ReviewerSourceCapture,
+  after: ReviewerSourceCapture,
+  checks: ReviewChecks,
+): {
+  readonly repositoryStateStable: boolean;
+  readonly sourceDefinitionsStable: boolean;
+} {
+  const repositoryStateStable = before.gitCommitSha === after.gitCommitSha &&
+    before.worktreeStatus === after.worktreeStatus &&
+    before.manifest !== null &&
+    after.manifest !== null &&
+    before.manifest.repositoryFullName === after.manifest.repositoryFullName &&
+    before.manifest.reviewerGitCommitSha === after.manifest.reviewerGitCommitSha &&
+    before.manifest.reviewerBranch === after.manifest.reviewerBranch &&
+    before.manifest.reviewerWorktreeState === after.manifest.reviewerWorktreeState;
+  if (!repositoryStateStable) {
+    checks.fail(
+      'REVIEWER_REPOSITORY_STATE_CHANGED_DURING_REVIEW',
+      'reviewer-repository',
+    );
+  }
+  const sourceDefinitionsStable = before.manifest !== null &&
+    after.manifest !== null &&
+    jsonEqual(
+      reviewerDefinitionStableIdentity(before.manifest),
+      reviewerDefinitionStableIdentity(after.manifest),
+    );
+  if (!sourceDefinitionsStable) {
+    checks.fail('REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH', 'reviewer-source-manifest');
+    const changedPaths = changedReviewerSourcePaths(before.manifest, after.manifest);
+    if (changedPaths.length > 0) {
+      checks.fail('REVIEWER_TOOL_DEFINITION_DRIFT', changedPaths.join(','));
+    }
+  }
+  return { repositoryStateStable, sourceDefinitionsStable };
+}
+
+function reviewerDefinitionStableIdentity(
+  manifest: ReviewerVerificationSourceManifest,
+): Readonly<Record<string, unknown>> {
+  return {
+    schemaVersion: manifest.schemaVersion,
+    manifestRole: manifest.manifestRole,
+    reviewerContractIdentity: manifest.reviewerContractIdentity,
+    sourceFiles: manifest.sourceFiles,
+    sourceFileCount: manifest.sourceFileCount,
+    sourceFilesDigest: manifest.sourceFilesDigest,
+  };
+}
+
+function changedReviewerSourcePaths(
+  before: ReviewerVerificationSourceManifest | null,
+  after: ReviewerVerificationSourceManifest | null,
+): readonly string[] {
+  if (before === null || after === null) return [];
+  const beforeEntries = new Map(before.sourceFiles.map((entry) => [entry.path, entry]));
+  const afterEntries = new Map(after.sourceFiles.map((entry) => [entry.path, entry]));
+  return [...new Set([...beforeEntries.keys(), ...afterEntries.keys()])]
+    .filter((path) => {
+      const left = beforeEntries.get(path);
+      const right = afterEntries.get(path);
+      return left === undefined || right === undefined ||
+        left.role !== right.role || left.sha256 !== right.sha256;
+    })
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function combineReviewerWorktreeStatus(
+  before: ReviewerSourceCapture['worktreeStatus'],
+  after: ReviewerSourceCapture['worktreeStatus'],
+): ReviewerSourceCapture['worktreeStatus'] {
+  if (before === 'DIRTY' || after === 'DIRTY') return 'DIRTY';
+  return before === 'CLEAN' && after === 'CLEAN' ? 'CLEAN' : 'UNAVAILABLE';
+}
+
+async function validateProducerSourceManifest(
+  snapshot: EvidenceSnapshot,
+  manifest: ManifestState,
+  checks: ReviewChecks,
+): Promise<ProducerSourceManifestState> {
+  const path = 'provenance/producer-source-manifest.json';
+  const sidecarPath = 'provenance/producer-source-manifest.sha256';
+  checks.check(manifest.entries.has(path), 'PRODUCER_SOURCE_MANIFEST_MISSING', path);
+  checks.check(
+    manifest.entries.has(sidecarPath),
+    'PRODUCER_SOURCE_MANIFEST_SHA256_MISSING',
+    sidecarPath,
+  );
+  const bytes = await readSnapshotBytes(snapshot, path, checks, 'PRODUCER_SOURCE_MANIFEST_MISSING');
+  const sidecar = await readSnapshotBytes(
+    snapshot,
+    sidecarPath,
+    checks,
+    'PRODUCER_SOURCE_MANIFEST_SHA256_MISSING',
+  );
+  const digest = bytes === null ? null : sha256(bytes);
+  if (sidecar !== null && digest !== null) {
+    const match = /^([0-9a-f]{64})  producer-source-manifest\.json\r?\n$/u.exec(
+      sidecar.toString('utf8'),
+    );
+    checks.check(
+      match !== null && match[1] === digest,
+      'PRODUCER_SOURCE_MANIFEST_SHA256_MISMATCH',
+      sidecarPath,
+    );
+  }
+  if (bytes === null) return { manifest: null, sha256: digest };
+  let parsed: ProducerVerificationSourceManifest | null = null;
+  try {
+    const raw = JSON.parse(bytes.toString('utf8')) as unknown;
+    const rawRecord = asRecord(raw);
+    if (rawRecord !== null && rawRecord['producerWorktreeState'] !== 'CLEAN') {
+      checks.fail(
+        'PRODUCER_WORKTREE_NOT_CLEAN_AT_PRODUCTION',
+        path + '#/producerWorktreeState',
+      );
+    }
+    const candidate = parseVerificationSourceManifest(raw);
+    if (candidate.manifestRole !== 'PRODUCER') {
+      checks.fail('PRODUCER_SOURCE_MANIFEST_SCHEMA_UNSUPPORTED', path);
+    } else {
+      parsed = candidate;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const code = /^[A-Z0-9_]+/u.exec(message)?.[0] ?? '';
+    const supported = new Set([
+      'PRODUCER_SOURCE_MANIFEST_SCHEMA_UNSUPPORTED',
+      'PRODUCER_SOURCE_MANIFEST_PATH_UNSAFE',
+      'PRODUCER_SOURCE_MANIFEST_ENTRY_DUPLICATE',
+      'PRODUCER_SOURCE_MANIFEST_ORDER_INVALID',
+      'PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH',
+      'PRODUCER_COMMIT_INVALID',
+    ]);
+    const mapped = code === 'PRODUCER_SOURCE_MANIFEST_FIELD_INVALID' &&
+      message.endsWith(':sourceFilesDigest')
+      ? 'PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH'
+      : code === 'PRODUCER_SOURCE_MANIFEST_FIELD_INVALID' &&
+          message.endsWith(':producerGitCommitSha')
+      ? 'PRODUCER_COMMIT_INVALID'
+      : code;
+    checks.fail(
+      supported.has(mapped) ? mapped : 'PRODUCER_SOURCE_MANIFEST_SCHEMA_UNSUPPORTED',
+      path,
+    );
+  }
+  if (parsed !== null) {
+    checks.check(
+      digestJson(parsed.sourceFiles) === parsed.sourceFilesDigest,
+      'PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH',
+      path + '#/sourceFilesDigest',
+    );
+    checks.check(
+      canonicalVerificationSourceManifestBytes(parsed).equals(bytes),
+      'PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH',
+      path,
+    );
+    checks.check(
+      parsed.producerWorktreeState === 'CLEAN',
+      'PRODUCER_WORKTREE_NOT_CLEAN_AT_PRODUCTION',
+      path + '#/producerWorktreeState',
+    );
+  }
+  return { manifest: parsed, sha256: digest };
+}
+
+async function extractEvidenceContractIdentity(
+  snapshot: EvidenceSnapshot,
+  manifest: ManifestState,
+  checks: ReviewChecks,
+): Promise<ContractExtractionState> {
+  const manifestRecord = await readContractRecord(snapshot, 'manifest.json');
+  const plan = await readContractRecord(snapshot, 'run-plan.json');
+  const summary = await readContractRecord(snapshot, 'abg-results.json');
+  const terminal = await readContractRecord(snapshot, 'runtime/terminal-conclusion.json');
+  const outcome = await readContractRecord(snapshot, 'runtime/final-outcome.json');
+  const producerVersions = await collectContractVersions(
+    snapshot,
+    [...manifest.entries.keys()].filter((path) => path.endsWith('/producer-evidence.json')),
+  );
+  const indexVersions = await collectContractVersions(
+    snapshot,
+    [...manifest.entries.keys()].filter((path) => path.endsWith('producer-evidence-index.json')),
+  );
+  const gateVersions = await collectContractVersions(
+    snapshot,
+    [...manifest.entries.keys()].filter((path) => /^gates\/ABG-\d{2}\/producer\/result\.json$/u.test(path)),
+  );
+  const producerEvidenceSchemaVersion = uniqueContractVersion(
+    producerVersions,
+    'REVIEWER_CONTRACT_VERSION_MIXED',
+    checks,
+    'producer-evidence',
+  );
+  const producerEvidenceIndexSchemaVersion = uniqueContractVersion(
+    indexVersions,
+    'REVIEWER_CONTRACT_VERSION_MIXED',
+    checks,
+    'producer-evidence-index',
+  );
+  const gateResultSchemaVersion = uniqueContractVersion(
+    gateVersions,
+    'REVIEWER_CONTRACT_VERSION_MIXED',
+    checks,
+    'gate-results',
+  );
+  const values = {
+    runPlanSchemaVersion: stringField(plan ?? {}, 'schemaVersion'),
+    runPlanAuthorityId: stringField(plan ?? {}, 'authorityId'),
+    producerEvidenceSchemaVersion,
+    producerEvidenceIndexSchemaVersion,
+    gateResultSchemaVersion,
+    runSummarySchemaVersion: stringField(summary ?? {}, 'schemaVersion'),
+    terminalConclusionSchemaVersion: stringField(terminal ?? {}, 'schemaVersion'),
+    runtimeOutcomeSchemaVersion: stringField(outcome ?? {}, 'schemaVersion'),
+    evidenceManifestSchemaVersion: stringField(manifestRecord ?? {}, 'schemaVersion'),
+  };
+  const complete = Object.values(values).every((value) => typeof value === 'string');
+  if (!complete) checks.fail('EVIDENCE_CONTRACT_TUPLE_INCONSISTENT', 'evidence-contract');
+  return {
+    identity: complete ? values as EvidenceContractTuple : null,
+    terminalConclusionSchemaVersion: values.terminalConclusionSchemaVersion,
+    runtimeOutcomeSchemaVersion: values.runtimeOutcomeSchemaVersion,
+    complete,
+  };
+}
+
+async function readContractRecord(
+  snapshot: EvidenceSnapshot,
+  path: string,
+): Promise<Readonly<Record<string, unknown>> | null> {
+  const file = snapshot.files.get(path);
+  if (file === undefined) return null;
+  try {
+    return asRecord(JSON.parse((await readFile(file.absolutePath)).toString('utf8')) as unknown);
+  } catch {
+    return null;
+  }
+}
+
+async function collectContractVersions(
+  snapshot: EvidenceSnapshot,
+  paths: readonly string[],
+): Promise<readonly (string | null)[]> {
+  const versions: (string | null)[] = [];
+  for (const path of [...paths].sort()) {
+    const record = await readContractRecord(snapshot, path);
+    versions.push(record === null ? null : stringField(record, 'schemaVersion'));
+  }
+  return versions;
+}
+
+function uniqueContractVersion(
+  values: readonly (string | null)[],
+  mixedCode: string,
+  checks: ReviewChecks,
+  location: string,
+): string | null {
+  if (values.length === 0 || values.some((value) => value === null)) {
+    checks.fail('EVIDENCE_CONTRACT_TUPLE_INCONSISTENT', location);
+    return null;
+  }
+  const unique = new Set(values as readonly string[]);
+  if (unique.size !== 1) {
+    checks.fail(mixedCode, location);
+    return null;
+  }
+  return values[0]!;
+}
+
+async function verifyProducerProvenance(
+  manifest: ProducerVerificationSourceManifest | null,
+  dependencies: ReviewFormalAbgEvidenceDependencies,
+  checks: ReviewChecks,
+): Promise<'VERIFIED' | 'INVALID' | 'UNVERIFIABLE'> {
+  if (manifest === null) return 'INVALID';
+  if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/u.test(manifest.producerGitCommitSha)) {
+    checks.fail('PRODUCER_COMMIT_INVALID', 'producer-source-manifest');
+    return 'INVALID';
+  }
+  if (!await dependencies.git.commitExists(
+    dependencies.repositoryRoot,
+    manifest.producerGitCommitSha,
+  )) {
+    checks.fail('PRODUCER_COMMIT_UNAVAILABLE', manifest.producerGitCommitSha);
+    return 'UNVERIFIABLE';
+  }
+  let valid = true;
+  for (const entry of manifest.sourceFiles) {
+    let blob;
+    try {
+      blob = await dependencies.git.readBlob(
+        dependencies.repositoryRoot,
+        manifest.producerGitCommitSha,
+        entry.path,
+      );
+    } catch {
+      blob = null;
+    }
+    if (blob === null) {
+      checks.fail('PRODUCER_SOURCE_PATH_MISSING_AT_COMMIT', entry.path);
+      valid = false;
+      continue;
+    }
+    if (blob.mode !== '100644' && blob.mode !== '100755') {
+      checks.fail('PRODUCER_SOURCE_MANIFEST_PATH_UNSAFE', entry.path);
+      valid = false;
+    }
+    const bytes = Buffer.from(blob.bytes);
+    if (blob.oid !== entry.gitBlobOid) {
+      checks.fail('PRODUCER_SOURCE_BLOB_ID_MISMATCH', entry.path);
+      valid = false;
+    }
+    if (bytes.byteLength !== entry.byteLength) {
+      checks.fail('PRODUCER_SOURCE_BYTE_LENGTH_MISMATCH', entry.path);
+      valid = false;
+    }
+    if (sha256(bytes) !== entry.sha256) {
+      checks.fail('PRODUCER_SOURCE_SHA256_MISMATCH', entry.path);
+      valid = false;
+    }
+  }
+  return valid ? 'VERIFIED' : 'INVALID';
+}
+
+async function validateProducerSourceManifestReferences(
+  snapshot: EvidenceSnapshot,
+  producer: ProducerSourceManifestState,
+  contract: ContractExtractionState,
+  checks: ReviewChecks,
+): Promise<void> {
+  if (producer.manifest === null || producer.sha256 === null) return;
+  const expectedDigest = producer.sha256;
+  const expectedCommit = producer.manifest.producerGitCommitSha;
+  const references = [
+    ['run-plan.json', 'producerSourceManifestSha256'],
+    ['runtime/terminal-conclusion.json', 'producerSourceManifestSha256'],
+    ['abg-results.json', 'producerSourceManifestSha256'],
+    ['runtime/final-outcome.json', 'producerSourceManifestSha256'],
+  ] as const;
+  for (const [path, field] of references) {
+    const record = await readContractRecord(snapshot, path);
+    if (record !== null) {
+      checks.check(
+        record[field] === expectedDigest,
+        'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH',
+        path + '#/' + field,
+      );
+      if (path === 'run-plan.json') {
+        checks.check(record['producerSourceManifestPath'] === 'provenance/producer-source-manifest.json', 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH', path + '#/producerSourceManifestPath');
+        checks.check(record['producerGitCommitSha'] === expectedCommit, 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH', path + '#/producerGitCommitSha');
+        checks.check(jsonEqual(record['contractIdentity'], contract.identity), 'EVIDENCE_CONTRACT_TUPLE_INCONSISTENT', path + '#/contractIdentity');
+        const frozen = asRecord(record['frozenInputs']);
+        checks.check(frozen?.['producerSourceManifestSha256'] === expectedDigest, 'PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH', path + '#/frozenInputs/producerSourceManifestSha256');
+      }
+    } else {
+      checks.fail('PRODUCER_SOURCE_MANIFEST_CROSS_FILE_MISMATCH', path);
+    }
+  }
+  checks.check(
+    jsonEqual(producer.manifest.contractIdentity, contract.identity),
+    'EVIDENCE_CONTRACT_TUPLE_INCONSISTENT',
+    'provenance/producer-source-manifest.json#/contractIdentity',
+  );
+}
+
+function compareSourceDefinitions(
+  producer: ProducerVerificationSourceManifest | null,
+  reviewer: ReviewerVerificationSourceManifest | null,
+  checks: ReviewChecks,
+): 'NONE' | 'DRIFTED' | 'UNRESOLVED' {
+  if (producer === null || reviewer === null) return 'UNRESOLVED';
+  const producerEntries = new Map(producer.sourceFiles.map((entry) => [entry.path, entry]));
+  const reviewerEntries = new Map(reviewer.sourceFiles.map((entry) => [entry.path, entry]));
+  const paths = [...new Set([...producerEntries.keys(), ...reviewerEntries.keys()])].sort();
+  const changed = paths.filter((path) => {
+    const left = producerEntries.get(path);
+    const right = reviewerEntries.get(path);
+    return left === undefined || right === undefined ||
+      left.role !== right.role || left.sha256 !== right.sha256;
+  });
+  if (changed.length === 0) return 'NONE';
+  checks.fail('REVIEWER_DEFINITION_DRIFT', changed.join(','));
+  for (const path of changed) {
+    const role = producerEntries.get(path)?.role ?? reviewerEntries.get(path)?.role;
+    if (role === 'COVERAGE_MATRIX') {
+      checks.fail('COVERAGE_MATRIX_DEFINITION_DRIFT', path);
+    } else if (role !== undefined && [
+      'EVIDENCE_PROTOCOL', 'EVIDENCE_SCHEMA', 'EVIDENCE_RECORDER',
+      'EVIDENCE_ADAPTER', 'EVIDENCE_VALIDATOR',
+    ].includes(role)) {
+      checks.fail('PRODUCER_PROTOCOL_DEFINITION_DRIFT', path);
+    } else if (role === 'GATE_PROOF') {
+      checks.fail('GATE_PROOF_DEFINITION_DRIFT', path);
+    } else if (role !== undefined && [
+      'TERMINAL_CONTRACT', 'SUMMARY_VALIDATOR', 'RUNTIME_CONTRACT',
+    ].includes(role)) {
+      checks.fail('TERMINAL_CONTRACT_DEFINITION_DRIFT', path);
+    }
+    if (role === 'REVIEWER' || role === 'REVIEWER_COMPATIBILITY') {
+      checks.fail('REVIEWER_TOOL_DEFINITION_DRIFT', path);
+    }
+  }
+  return 'DRIFTED';
+}
+
+function isEvidenceIntegrityFinding(code: string, definitionsDrifted: boolean): boolean {
+  if (definitionsDrifted && [
+    'VALIDATION_DEFINITION_IDENTITY_MISMATCH',
+    'RUN_AUTHORITY_IDENTITY_MISMATCH',
+    'COVERAGE_MATRIX_DIGEST_MISMATCH',
+    'PRODUCER_PROTOCOL_DIGEST_MISMATCH',
+    'GATE_PROOF_COVERAGE_DIGEST_MISMATCH',
+  ].includes(code)) return false;
+  return ![
+    'PRODUCER_COMMIT_INVALID',
+    'PRODUCER_COMMIT_UNAVAILABLE',
+    'PRODUCER_SOURCE_PATH_MISSING_AT_COMMIT',
+    'PRODUCER_SOURCE_BLOB_ID_MISMATCH',
+    'PRODUCER_SOURCE_BYTE_LENGTH_MISMATCH',
+    'PRODUCER_SOURCE_SHA256_MISMATCH',
+    'PRODUCER_REPOSITORY_IDENTITY_MISMATCH',
+    'REVIEWER_GIT_COMMIT_UNAVAILABLE',
+    'REVIEWER_WORKTREE_DIRTY',
+    'REVIEWER_SOURCE_MANIFEST_GENERATION_FAILED',
+    'REVIEWER_SOURCE_MANIFEST_SHA256_MISMATCH',
+    'REVIEWER_REPOSITORY_STATE_CHANGED_DURING_REVIEW',
+    'REVIEWER_CONTRACT_EXACT_MATCH_REQUIRED',
+    'REVIEWER_CONTRACT_COMPATIBLE_BUT_DRIFTED',
+    'REVIEWER_CONTRACT_INCOMPATIBLE',
+    'REVIEWER_CONTRACT_VERSION_UNKNOWN',
+    'REVIEWER_DEFINITION_DRIFT',
+    'COVERAGE_MATRIX_DEFINITION_DRIFT',
+    'PRODUCER_PROTOCOL_DEFINITION_DRIFT',
+    'GATE_PROOF_DEFINITION_DRIFT',
+    'TERMINAL_CONTRACT_DEFINITION_DRIFT',
+    'REVIEWER_TOOL_DEFINITION_DRIFT',
+  ].includes(code);
 }
 
 function parseCliArguments(arguments_: readonly string[]): CliArguments | 'help' {
@@ -557,7 +1240,7 @@ async function validateManifest(
     : parseJsonRecord(manifestBytes, checks, 'MANIFEST_JSON_INVALID', 'manifest.json');
   if (manifest !== null) {
     checks.check(
-      manifest['schemaVersion'] === MANIFEST_SCHEMA_VERSION,
+      manifest['schemaVersion'] === EVIDENCE_MANIFEST_SCHEMA_VERSION,
       'MANIFEST_SCHEMA_VERSION_INVALID',
       'manifest.json',
     );
@@ -1861,17 +2544,21 @@ async function validateFormalLifecycle(
     producerProtocolEvidenceCountMinimum: 1,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,
   };
   const sealEligibilityActual = {
     producerEvidencePersistedBeforeCleanup,
     producerProtocolEvidenceCount,
+    producerSourceManifestSha256: summary.raw['producerSourceManifestSha256'],
     frozenInputsStableAfterCleanup: summary.raw['frozenInputsStableAfterCleanup'],
     authorityIdentityStableAfterCleanup: summary.raw['authorityIdentityStableAfterCleanup'],
+    producerSourceManifestStableAfterCleanup:
+      summary.raw['producerSourceManifestStableAfterCleanup'],
     outputDirectoryExclusive: summary.raw['outputDirectoryExclusive'],
   };
   if (terminal !== null) {
-    checks.check(terminal['schemaVersion'] === 'phase-01.formal-terminal-conclusion.v1', 'FORMAL_TERMINAL_CONCLUSION_SCHEMA_INVALID', 'runtime/terminal-conclusion.json');
+    checks.check(terminal['schemaVersion'] === TERMINAL_CONCLUSION_SCHEMA_VERSION, 'FORMAL_TERMINAL_CONCLUSION_SCHEMA_INVALID', 'runtime/terminal-conclusion.json');
     const terminalStartedAt = stringField(terminal, 'startedAt');
     const terminalCompletedAt = stringField(terminal, 'completedAt');
     checks.check(terminalStartedAt !== null && isLocalDateTime(terminalStartedAt), 'FORMAL_TERMINAL_STARTED_AT_INVALID', 'runtime/terminal-conclusion.json#/startedAt');
@@ -1904,6 +2591,7 @@ async function validateFormalLifecycle(
     checks.check(terminal['pruneCommandsInvoked'] === terminalLifecycleActual.pruneCommandsInvoked, 'FORMAL_TERMINAL_PRUNE_COMMAND_INVOKED', 'runtime/terminal-conclusion.json#/pruneCommandsInvoked');
     checks.check(terminal['frozenInputsStableAfterCleanup'] === summary.raw['frozenInputsStableAfterCleanup'], 'FORMAL_TERMINAL_FROZEN_INPUTS_DRIFT', 'runtime/terminal-conclusion.json#/frozenInputsStableAfterCleanup');
     checks.check(terminal['authorityIdentityStableAfterCleanup'] === summary.raw['authorityIdentityStableAfterCleanup'], 'FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT', 'runtime/terminal-conclusion.json#/authorityIdentityStableAfterCleanup');
+    checks.check(terminal['producerSourceManifestStableAfterCleanup'] === summary.raw['producerSourceManifestStableAfterCleanup'], 'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DRIFT', 'runtime/terminal-conclusion.json#/producerSourceManifestStableAfterCleanup');
     checks.check(terminal['outputDirectoryExclusive'] === summary.raw['outputDirectoryExclusive'], 'FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE', 'runtime/terminal-conclusion.json#/outputDirectoryExclusive');
     const terminalFailureCodes = parseStringArray(
       terminal['failureCodes'],
@@ -1953,7 +2641,7 @@ async function validateFormalLifecycle(
   checks.check(summary.raw['sealEligibilityStatus'] === 'PASSED', 'FORMAL_SUMMARY_SEAL_STATUS_NOT_PASSED', 'abg-results.json#/sealEligibilityStatus');
 
   if (finalOutcome !== null) {
-    checks.check(finalOutcome['schemaVersion'] === 'phase-01.formal-runtime-outcome.v2', 'FORMAL_FINAL_OUTCOME_SCHEMA_INVALID', 'runtime/final-outcome.json');
+    checks.check(finalOutcome['schemaVersion'] === RUNTIME_OUTCOME_SCHEMA_VERSION, 'FORMAL_FINAL_OUTCOME_SCHEMA_INVALID', 'runtime/final-outcome.json');
     checks.check(finalOutcome['status'] === summary.raw['status'], 'FORMAL_FINAL_OUTCOME_STATUS_MISMATCH', 'runtime/final-outcome.json#/status');
     checks.check(finalOutcome['cleanupStatus'] === summary.raw['cleanupStatus'], 'FORMAL_FINAL_OUTCOME_CLEANUP_STATUS_MISMATCH', 'runtime/final-outcome.json#/cleanupStatus');
     checks.check(finalOutcome['terminalConclusionStatus'] === summary.raw['terminalConclusionStatus'], 'FORMAL_FINAL_OUTCOME_TERMINAL_STATUS_MISMATCH', 'runtime/final-outcome.json#/terminalConclusionStatus');
@@ -2280,15 +2968,10 @@ function validateCurrentDefinitions(
 }
 
 async function readCurrentAuthorityIdentity(): Promise<CurrentAuthorityIdentity> {
-  const protocolIdentity = {
-    gateResultSchemaVersion: GATE_RESULT_SCHEMA_VERSION,
-    producerEvidenceSchemaVersion: PRODUCER_EVIDENCE_SCHEMA_VERSION,
-    producerEvidenceIndexSchemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
-  };
   return {
     coverageMatrixDigest: digestJson(ABG_COVERAGE_MATRIX),
     coverageMatrixSourceSha256: (await hashFile(join(repositoryRoot, 'tooling/verification/src/abg-coverage-matrix.ts'))).sha256,
-    producerProtocolIdentityDigest: digestJson(protocolIdentity),
+    producerProtocolIdentityDigest: getAbgProducerProtocolIdentityDigest(),
     producerProtocolSourceSha256: (await hashFile(join(repositoryRoot, 'tooling/verification/src/evidence/protocol.ts'))).sha256,
     gateProofSourceSha256: (await hashFile(join(repositoryRoot, 'tooling/verification/src/abg-gate-proof.ts'))).sha256,
   };
@@ -2309,6 +2992,7 @@ async function writeReviewOutputs(
   outputDirectory: string,
   review: FormalAbgEvidenceReview,
   findings: readonly ReviewFinding[],
+  reviewerSourceManifest: ReviewerVerificationSourceManifest | null,
 ): Promise<void> {
   const findingsValue = {
     schemaVersion: REVIEW_FINDINGS_SCHEMA_VERSION,
@@ -2318,22 +3002,60 @@ async function writeReviewOutputs(
     findingsDigest: review.findingsDigest,
     findings,
   };
-  await writeExclusiveJson(join(outputDirectory, 'review-findings.json'), findingsValue);
+  const outputFiles: Array<{
+    readonly path: string;
+    readonly mediaType: string;
+    readonly byteLength: number;
+    readonly sha256: string;
+  }> = [];
+  async function writeTracked(path: string, bytes: Buffer, mode = 0o600): Promise<void> {
+    await writeFile(join(outputDirectory, path), bytes, { flag: 'wx', mode });
+    outputFiles.push({
+      path,
+      mediaType: mediaTypeFor(path),
+      byteLength: bytes.byteLength,
+      sha256: sha256(bytes),
+    });
+  }
+  if (reviewerSourceManifest !== null) {
+    await mkdir(join(outputDirectory, 'provenance'), { recursive: false, mode: 0o700 });
+    const reviewerManifestBytes = canonicalVerificationSourceManifestBytes(reviewerSourceManifest);
+    await writeTracked('provenance/reviewer-source-manifest.json', reviewerManifestBytes);
+    await writeTracked(
+      'provenance/reviewer-source-manifest.sha256',
+      Buffer.from(
+        `${sha256(reviewerManifestBytes)}  reviewer-source-manifest.json\n`,
+        'utf8',
+      ),
+      0o400,
+    );
+  }
+  const findingsBytes = Buffer.from(JSON.stringify(findingsValue, null, 2) + '\n', 'utf8');
+  await writeTracked('review-findings.json', findingsBytes);
   const reviewBytes = Buffer.from(JSON.stringify(review, null, 2) + '\n', 'utf8');
-  await writeFile(join(outputDirectory, 'review.json'), reviewBytes, { flag: 'wx', mode: 0o600 });
-  await writeFile(
-    join(outputDirectory, 'review.sha256'),
-    sha256(reviewBytes) + '  review.json\n',
-    { flag: 'wx', mode: 0o400 },
+  await writeTracked('review.json', reviewBytes);
+  await writeTracked(
+    'review.sha256',
+    Buffer.from(sha256(reviewBytes) + '  review.json\n', 'utf8'),
+    0o400,
   );
-}
-
-async function writeExclusiveJson(path: string, value: unknown): Promise<void> {
-  await writeFile(path, JSON.stringify(value, null, 2) + '\n', {
-    encoding: 'utf8',
+  const reviewManifest = {
+    schemaVersion: REVIEW_MANIFEST_SCHEMA_VERSION,
+    files: [...outputFiles].sort((left, right) => left.path.localeCompare(right.path)),
+  };
+  const reviewManifestBytes = Buffer.from(
+    JSON.stringify(reviewManifest, null, 2) + '\n',
+    'utf8',
+  );
+  await writeFile(join(outputDirectory, 'review-manifest.json'), reviewManifestBytes, {
     flag: 'wx',
     mode: 0o600,
   });
+  await writeFile(
+    join(outputDirectory, 'review-manifest.sha256'),
+    sha256(reviewManifestBytes) + '  review-manifest.json\n',
+    { flag: 'wx', mode: 0o400 },
+  );
 }
 
 async function readSnapshotBytes(
@@ -2563,22 +3285,6 @@ function isLocalDateTime(value: string): boolean {
     instant.getUTCHours() === hour &&
     instant.getUTCMinutes() === minute &&
     instant.getUTCSeconds() === second;
-}
-
-function localNow(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date());
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((candidate) => candidate.type === type)?.value;
-  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}`;
 }
 
 function asRecord(value: unknown): Readonly<Record<string, unknown>> | null {

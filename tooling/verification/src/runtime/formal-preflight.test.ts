@@ -15,6 +15,7 @@ import {
 
 const GIT_SHA = 'a'.repeat(40);
 const LOCK_SHA = 'b'.repeat(64);
+const PRODUCER_SOURCE_MANIFEST_SHA256 = 'c'.repeat(64);
 const RUN = createFormalRunSeed(5, () => '12345678-1234-1234-1234-123456789abc');
 
 describe('formal ABG preflight', () => {
@@ -24,6 +25,10 @@ describe('formal ABG preflight', () => {
 
     expect(report.status).toBe('PASSED');
     expect(report.runIdentity).toEqual({ ...RUN, gitCommitSha: GIT_SHA });
+    expect(report.checks.find((check) => check.id === 'git-frozen-inputs-readable')?.observed)
+      .toMatchObject({
+        inputs: { producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256 },
+      });
     expect(report.secrets.every((secret) => secret.present)).toBe(true);
     for (const secret of Object.values(dependencies.environment)) {
       if (secret?.startsWith('formal-secret-') === true) {
@@ -161,6 +166,7 @@ async function execute(dependencies: FormalPreflightDependencies) {
     repositoryRoot: 'D:/repository',
     outputDirectory: 'D:/evidence/new-run',
     run: RUN,
+    producerSourceManifestSha256: PRODUCER_SOURCE_MANIFEST_SHA256,
   }, dependencies);
 }
 
@@ -251,8 +257,8 @@ function passingDependencies(): FormalPreflightDependencies {
     },
     environment,
     nodeVersion: 'v24.18.0',
-    async readFrozenInputs() {
-      return { gitCommitSha: GIT_SHA };
+    async readFrozenInputs(_repositoryRoot, producerSourceManifestSha256) {
+      return { gitCommitSha: GIT_SHA, producerSourceManifestSha256 };
     },
     now: () => '2026-08-27T12:00:00',
   };

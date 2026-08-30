@@ -32,8 +32,12 @@ import {
   parseJsonPointer,
 } from './evidence/schema.js';
 import { validateProducerEvidence } from './evidence/validate-producer-evidence.js';
+import {
+  CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+  GATE_RESULT_SCHEMA_VERSION,
+} from './verification-contract-versions.js';
 
-export const ABG_GATE_RESULT_SCHEMA_VERSION = 'phase-01.abg-gate-result.v3' as const;
+export const ABG_GATE_RESULT_SCHEMA_VERSION = GATE_RESULT_SCHEMA_VERSION;
 
 export interface AbgGateEvidenceRef {
   readonly artifactId: string;
@@ -91,11 +95,7 @@ export interface ValidateAbgGateResultInput {
   readonly expectedCoverageMatrixDigest?: string;
 }
 
-export const ABG_PRODUCER_PROTOCOL_IDENTITY = Object.freeze({
-  gateResultSchemaVersion: ABG_GATE_RESULT_SCHEMA_VERSION,
-  producerEvidenceSchemaVersion: PRODUCER_EVIDENCE_SCHEMA_VERSION,
-  producerEvidenceIndexSchemaVersion: PRODUCER_EVIDENCE_INDEX_SCHEMA_VERSION,
-});
+export const ABG_PRODUCER_PROTOCOL_IDENTITY = CURRENT_EVIDENCE_CONTRACT_IDENTITY;
 
 export function getAbgCoverageMatrixDigest(): string {
   return digestJson(ABG_COVERAGE_MATRIX);

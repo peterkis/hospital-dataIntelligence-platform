@@ -14,6 +14,7 @@ import {
 const RUN_ID = 'validator-test-run-0001';
 const RUN_SEQUENCE = 17;
 const DIGEST = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const SOURCE_MANIFEST_DIGEST = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
 describe('formal ABG summary validator', () => {
   it('accepts a complete gate-specific 40-gate summary', () => {
@@ -64,6 +65,43 @@ describe('formal ABG summary validator', () => {
       new RegExp(`^${code}$`, 'u'),
     );
   });
+
+  it('rejects a summary whose producer source manifest digest differs from the frozen plan', () => {
+    const summary = validSummary();
+    summary.producerSourceManifestSha256 = 'f'.repeat(64);
+
+    expect(() => validateFormalAbgSummary(summary, expectations())).toThrowError(
+      /^PRODUCER_SOURCE_MANIFEST_DIGEST_MISMATCH$/u,
+    );
+  });
+
+  it('rejects PASSED when the producer source manifest was not stable after cleanup', () => {
+    const summary = validSummary();
+    summary.producerSourceManifestStableAfterCleanup = false;
+
+    expect(() => validateFormalAbgSummary(summary, expectations())).toThrowError(
+      /^PRODUCER_SOURCE_MANIFEST_NOT_STABLE$/u,
+    );
+  });
+
+  it('rejects a frozen-input source manifest digest that disagrees with the top-level provenance', () => {
+    const summary = validSummary();
+    const inconsistentFrozenInputs = {
+      ...summary.frozenInputs,
+      producerSourceManifestSha256: 'e'.repeat(64),
+    };
+    summary.frozenInputs = inconsistentFrozenInputs;
+    summary.frozenInputsDigest = sha256(Buffer.from(canonicalJson(inconsistentFrozenInputs), 'utf8'));
+    const expected = {
+      ...expectations(),
+      frozenInputs: inconsistentFrozenInputs,
+      frozenInputsDigest: summary.frozenInputsDigest,
+    };
+
+    expect(() => validateFormalAbgSummary(summary, expected)).toThrowError(
+      /^FROZEN_INPUTS_SOURCE_MANIFEST_DIGEST_MISMATCH$/u,
+    );
+  });
 });
 
 function expectations(): FormalAbgSummaryValidationExpectations {
@@ -78,6 +116,7 @@ function expectations(): FormalAbgSummaryValidationExpectations {
     postgresImage: 'postgres:18.4',
     keycloakImage: 'quay.io/keycloak/keycloak:26.7.0',
     browserVersion: '1.61.0',
+    producerSourceManifestSha256: SOURCE_MANIFEST_DIGEST,
   };
   return {
     runSequence: RUN_SEQUENCE,
@@ -86,6 +125,7 @@ function expectations(): FormalAbgSummaryValidationExpectations {
     frozenInputsDigest: sha256(Buffer.from(canonicalJson(frozenInputs), 'utf8')),
     coverageMatrixDigest: getAbgCoverageMatrixDigest(),
     producerProtocolIdentityDigest: getAbgProducerProtocolIdentityDigest(),
+    producerSourceManifestSha256: SOURCE_MANIFEST_DIGEST,
     setupCommandDigests: [DIGEST],
   };
 }
@@ -162,6 +202,8 @@ function validSummary() {
     pruneCommandsInvoked: false,
     frozenInputsStableAfterCleanup: true,
     authorityIdentityStableAfterCleanup: true,
+    producerSourceManifestSha256: SOURCE_MANIFEST_DIGEST,
+    producerSourceManifestStableAfterCleanup: true,
     outputDirectoryExclusive: true,
     terminalConclusionStatus: 'PASSED',
     sealEligibilityStatus: 'PASSED',

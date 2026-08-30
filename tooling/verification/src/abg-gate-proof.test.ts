@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  ABG_PRODUCER_PROTOCOL_IDENTITY,
   assertDistinctGateEvidenceSelectorSets,
   produceAbgGateProof,
   validateAbgGateResult,
@@ -36,6 +37,20 @@ afterEach(async () => {
 });
 
 describe('ABG gate-specific proof', () => {
+  it('identifies the complete current evidence contract without changing accepted versions', () => {
+    expect(ABG_PRODUCER_PROTOCOL_IDENTITY).toEqual({
+      runPlanSchemaVersion: 'phase-01.abg-run-plan.v3',
+      runPlanAuthorityId: 'phase-01.repository-authoritative-plan.v2',
+      producerEvidenceSchemaVersion: 'phase-01.producer-evidence.v2',
+      producerEvidenceIndexSchemaVersion: 'phase-01.producer-evidence-index.v2',
+      gateResultSchemaVersion: 'phase-01.abg-gate-result.v3',
+      runSummarySchemaVersion: 'phase-01.abg-run.v4',
+      terminalConclusionSchemaVersion: 'phase-01.formal-terminal-conclusion.v1',
+      runtimeOutcomeSchemaVersion: 'phase-01.formal-runtime-outcome.v2',
+      evidenceManifestSchemaVersion: 'phase-01.evidence-manifest.v1',
+    });
+  });
+
   it('generates and validates 40 minimal, distinct gate proofs from explicit assertions', async () => {
     const fixture = await createFixture();
     const proofs: AbgGateResult[] = [];

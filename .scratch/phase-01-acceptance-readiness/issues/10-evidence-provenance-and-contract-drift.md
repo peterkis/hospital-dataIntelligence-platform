@@ -1,6 +1,6 @@
 # 10 — Evidence provenance 与契约漂移整改
 
-Status: ready-for-agent
+Status: claimed
 
 Blocked by: AR-09 — 终态生命周期与 ABG-40 语义整改
 
@@ -36,3 +36,30 @@ Blocked by: AR-09 — 终态生命周期与 ABG-40 语义整改
 ## Comments
 
 - 2026-08-30（AR-08 建立）：该 Ticket 只登记 provenance/契约漂移整改依赖；尚未修改 reviewer 或证据协议，等待 AR-09。
+- 2026-08-30（AR-10 修改前问题定义）：以下均为静态审阅识别的**当前设计缺口**，不是已经发生的正式证据事故：
+  1. 正式证据已经保存 producer Git SHA、部分 authority identity、协议版本和源文件摘要，但这些信息尚未形成一个完整、单独、可核验的 producer source manifest。
+  2. 当前 reviewer 会使用执行 reviewer 时当前 checkout 中的覆盖矩阵、协议和验证器代码来解释旧证据。
+  3. 当 producer commit 与 reviewer 当前 checkout 不同时，当前实现尚不能清晰区分 evidence 自身被篡改或内部不一致、producer provenance 无法核验、reviewer 不支持该 evidence contract、producer 定义与 reviewer 当前定义发生漂移，以及 reviewer 自身工作区或工具定义不稳定。
+  4. Reviewer 不得静默以当前源码替代 producer 运行时的权威定义。
+  5. 不得仅因为新 reviewer 能解析旧 JSON，就把定义已经漂移的 evidence 结论标为正式 `PASSED`。
+  6. Evidence 包不得携带并执行 producer 的 TypeScript、JavaScript、Shell 或其他代码。
+  7. AR-09 已经建立 terminal conclusion、ABG-40、summary v4 和 runtime outcome v2；AR-10 必须保持这些终态语义，不得退回 preliminary conclusion。
+- 2026-08-30（AR-10 开工基线）：以下命令在任何实现修改前执行；`git status --short` 无输出，当前分支为 `phase-01-acceptance-readiness`，本地与 `origin/phase-01-acceptance-readiness` 的差异为 `0 0`：
+
+  ```text
+  git status --short
+
+  git branch --show-current
+  phase-01-acceptance-readiness
+  git log -1 --oneline
+  f041f04 fix(verification): bind ABG-40 to terminal runtime lifecycle
+  git rev-parse HEAD
+  f041f048f2261dea68725cfcbea02e467e4e85c0
+  git remote -v
+  origin  https://github.com/peterkis/hospital-dataIntelligence-platform.git (fetch)
+  origin  https://github.com/peterkis/hospital-dataIntelligence-platform.git (push)
+  git rev-list --left-right --count origin/phase-01-acceptance-readiness...HEAD
+  0       0
+  ```
+
+- 2026-08-30（AR-10 实施边界）：AR-09 已 `resolved`，本 Ticket 已认领且为 current frontier。本轮只实施 producer/evidence/reviewer provenance、contract tuple/compatibility、definition drift、review output seal 与相应合成/对抗测试；不授权 AR-11、AR-12、AR-07、shared readiness 或正式 ABG。

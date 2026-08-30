@@ -46,6 +46,16 @@ import {
   type FormalTerminalConclusion,
 } from './runtime/formal-terminal-conclusion.js';
 import { validateFormalAbgSummary } from './formal-summary-validator.js';
+import {
+  buildProducerSourceManifest,
+  sourceManifestSha256,
+  verifyProducerSourceManifestStable,
+  writeProducerSourceManifest,
+} from './provenance/source-manifest.js';
+import {
+  EVIDENCE_MANIFEST_SCHEMA_VERSION,
+  RUN_SUMMARY_SCHEMA_VERSION,
+} from './verification-contract-versions.js';
 
 type GateStatus = 'PASSED' | 'FAILED';
 
@@ -92,11 +102,14 @@ let runId = run.runId;
 let startedAt = '';
 let frozenInputsDigest = '';
 let activeContext: FormalRuntimeContext | undefined;
+const producerSourceManifest = await buildProducerSourceManifest(repositoryRoot);
+const producerSourceManifestSha256 = sourceManifestSha256(producerSourceManifest);
 
 const lifecycle = await runFormalRuntimeLifecycle<PreCleanupExecutionState, Record<string, unknown>>({
   repositoryRoot,
   outputDirectory: requestedOutputDirectory,
   run,
+  producerSourceManifestSha256,
 }, {
   executeBeforeCleanup: executeFormalAbgBeforeCleanup,
   async persistEvidenceBeforeCleanup(context, outcome) {
@@ -156,7 +169,25 @@ async function executeFormalAbgBeforeCleanup(
   outputDirectory = context.outputDirectory;
   runId = context.identity.runId;
   startedAt = localNow();
-  const frozenPlan = await buildAuthoritativeRunPlan(repositoryRoot, context.identity.runSequence);
+  if (producerSourceManifest.producerGitCommitSha !== context.identity.gitCommitSha) {
+    throw new Error('FORMAL_PREFLIGHT_GIT_COMMIT_DRIFT');
+  }
+  const producerSourceManifestWrite = await writeProducerSourceManifest(
+    outputDirectory,
+    producerSourceManifest,
+  );
+  if (producerSourceManifestWrite.sha256 !== producerSourceManifestSha256) {
+    throw new Error('FORMAL_PREFLIGHT_PRODUCER_SOURCE_MANIFEST_DRIFT');
+  }
+  const frozenPlan = await buildAuthoritativeRunPlan(
+    repositoryRoot,
+    context.identity.runSequence,
+    {
+      path: producerSourceManifestWrite.relativePath,
+      sha256: producerSourceManifestWrite.sha256,
+      producerGitCommitSha: producerSourceManifest.producerGitCommitSha,
+    },
+  );
   plan = frozenPlan;
   if (frozenPlan.frozenInputs['gitCommitSha'] !== context.identity.gitCommitSha) {
     throw new Error('FORMAL_PREFLIGHT_GIT_COMMIT_DRIFT');
@@ -199,11 +230,18 @@ async function executeFormalAbgBeforeCleanup(
 
   if (setupFailure === null) {
     try {
-      assertFrozenInputsEqual(frozenPlan.frozenInputs, await readFrozenInputs(repositoryRoot));
+      assertFrozenInputsEqual(
+        frozenPlan.frozenInputs,
+        await readFrozenInputs(repositoryRoot, frozenPlan.producerSourceManifestSha256),
+      );
       assertAuthorityIdentityEqual(
         frozenPlan.authorityIdentity,
         await readVerificationAuthorityIdentity(repositoryRoot),
       );
+      if (!await verifyProducerSourceManifestStable(
+        outputDirectory,
+        frozenPlan.producerSourceManifestSha256,
+      )) throw new Error('FORMAL_SETUP_PRODUCER_SOURCE_MANIFEST_DRIFT');
     } catch (error) {
       setupFailure = errorMessage(error);
     }
@@ -252,9 +290,13 @@ async function finalizeFormalAbgAfterCleanup(
   const execution = outcome.execution?.value;
   let frozenInputsStableAfterCleanup = false;
   let authorityIdentityStableAfterCleanup = false;
+  let producerSourceManifestStableAfterCleanup = false;
   if (frozenPlan !== undefined) {
     try {
-      assertFrozenInputsEqual(frozenPlan.frozenInputs, await readFrozenInputs(repositoryRoot));
+      assertFrozenInputsEqual(
+        frozenPlan.frozenInputs,
+        await readFrozenInputs(repositoryRoot, frozenPlan.producerSourceManifestSha256),
+      );
       frozenInputsStableAfterCleanup = true;
     } catch {
       frozenInputsStableAfterCleanup = false;
@@ -268,6 +310,10 @@ async function finalizeFormalAbgAfterCleanup(
     } catch {
       authorityIdentityStableAfterCleanup = false;
     }
+    producerSourceManifestStableAfterCleanup = await verifyProducerSourceManifestStable(
+      context.outputDirectory,
+      frozenPlan.producerSourceManifestSha256,
+    );
   }
 
   const producerProtocolEvidenceCount = await readProducerProtocolEvidenceCount(context.outputDirectory);
@@ -293,6 +339,9 @@ async function finalizeFormalAbgAfterCleanup(
     finalResources: outcome.finalResources,
     frozenInputsStableAfterCleanup,
     authorityIdentityStableAfterCleanup,
+    producerSourceManifestSha256:
+      frozenPlan?.producerSourceManifestSha256 ?? producerSourceManifestSha256,
+    producerSourceManifestStableAfterCleanup,
     outputDirectoryExclusive: outcome.outputDirectoryExclusive,
     failureCodes: outcome.failureCodes,
   });
@@ -376,7 +425,7 @@ async function finalizeFormalAbgAfterCleanup(
       : []),
   ]);
   const summary = {
-    schemaVersion: 'phase-01.abg-run.v4',
+    schemaVersion: RUN_SUMMARY_SCHEMA_VERSION,
     runId: context.identity.runId,
     runSequence: context.identity.runSequence,
     gitCommitSha: context.identity.gitCommitSha,
@@ -388,6 +437,8 @@ async function finalizeFormalAbgAfterCleanup(
     producerProtocolIdentityDigest:
       frozenPlan?.authorityIdentity.producerProtocolIdentityDigest ?? null,
     authorityIdentity: frozenPlan?.authorityIdentity ?? null,
+    producerSourceManifestSha256:
+      frozenPlan?.producerSourceManifestSha256 ?? producerSourceManifestSha256,
     preflightStatus: outcome.preflight.status,
     setupStatus: execution?.setupStatus ?? 'FAILED',
     nonFormalGateStatus,
@@ -405,6 +456,7 @@ async function finalizeFormalAbgAfterCleanup(
     pruneCommandsInvoked: terminalConclusion.pruneCommandsInvoked,
     frozenInputsStableAfterCleanup,
     authorityIdentityStableAfterCleanup,
+    producerSourceManifestStableAfterCleanup,
     outputDirectoryExclusive: outcome.outputDirectoryExclusive,
     terminalConclusionStatus: terminalConclusion.status,
     sealEligibilityStatus: terminalConclusion.assertions.sealEligibility.status,
@@ -430,6 +482,7 @@ async function finalizeFormalAbgAfterCleanup(
       frozenInputsDigest: execution.frozenInputsDigest,
       coverageMatrixDigest: frozenPlan.authorityIdentity.coverageMatrixDigest,
       producerProtocolIdentityDigest: frozenPlan.authorityIdentity.producerProtocolIdentityDigest,
+      producerSourceManifestSha256: frozenPlan.producerSourceManifestSha256,
       setupCommandDigests: frozenPlan.setupCommands.map(commandDigest),
     });
   }
@@ -438,6 +491,7 @@ async function finalizeFormalAbgAfterCleanup(
     status: summaryStatus,
     terminalConclusionStatus: terminalConclusion.status,
     sealEligibilityStatus: terminalConclusion.assertions.sealEligibility.status,
+    producerSourceManifestSha256: terminalConclusion.producerSourceManifestSha256,
     failureCodes: summaryFailureCodes,
     value: summary,
   };
@@ -733,6 +787,14 @@ async function writeManifest(directory: string): Promise<void> {
   const names = (await collectFiles(directory))
     .filter((name) => !['manifest.json', 'manifest.sha256'].includes(name))
     .sort((left, right) => left.localeCompare(right));
+  for (const requiredProvenancePath of [
+    'provenance/producer-source-manifest.json',
+    'provenance/producer-source-manifest.sha256',
+  ]) {
+    if (!names.map((name) => name.replaceAll('\\', '/')).includes(requiredProvenancePath)) {
+      throw new Error('ABG_MANIFEST_REQUIRED_PROVENANCE_MISSING:' + requiredProvenancePath);
+    }
+  }
   const files = await Promise.all(names.map(async (name) => {
     const bytes = await readFile(join(directory, name));
     return {
@@ -743,7 +805,7 @@ async function writeManifest(directory: string): Promise<void> {
     };
   }));
   await writeExclusive(join(directory, 'manifest.json'), {
-    schemaVersion: 'phase-01.evidence-manifest.v1',
+    schemaVersion: EVIDENCE_MANIFEST_SCHEMA_VERSION,
     files,
   });
   const digest = sha256(await readFile(join(directory, 'manifest.json')));

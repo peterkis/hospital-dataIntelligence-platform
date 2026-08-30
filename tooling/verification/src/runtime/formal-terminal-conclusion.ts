@@ -5,11 +5,13 @@ import type {
   RuntimeResourceRecord,
   RuntimeResourceSnapshot,
 } from './formal-teardown.js';
+import { TERMINAL_CONCLUSION_SCHEMA_VERSION } from '../verification-contract-versions.js';
 
 export const FORMAL_TERMINAL_CONCLUSION_SCHEMA_VERSION =
-  'phase-01.formal-terminal-conclusion.v1' as const;
+  TERMINAL_CONCLUSION_SCHEMA_VERSION;
 
 type TerminalStatus = 'PASSED' | 'FAILED';
+const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 
 export interface FormalTerminalAssertion {
   readonly status: TerminalStatus;
@@ -41,6 +43,8 @@ export interface FormalTerminalConclusion {
   readonly pruneCommandsInvoked: boolean;
   readonly frozenInputsStableAfterCleanup: boolean;
   readonly authorityIdentityStableAfterCleanup: boolean;
+  readonly producerSourceManifestSha256: string | null;
+  readonly producerSourceManifestStableAfterCleanup: boolean;
   readonly outputDirectoryExclusive: boolean;
   readonly failureCodes: readonly string[];
   readonly sealEligible: boolean;
@@ -66,6 +70,8 @@ export interface BuildFormalTerminalConclusionInput {
   readonly finalResources: RuntimeResourceSnapshot;
   readonly frozenInputsStableAfterCleanup: boolean;
   readonly authorityIdentityStableAfterCleanup: boolean;
+  readonly producerSourceManifestSha256: string | null;
+  readonly producerSourceManifestStableAfterCleanup: boolean;
   readonly outputDirectoryExclusive: boolean;
   readonly failureCodes: readonly string[];
 }
@@ -125,6 +131,12 @@ export function buildFormalTerminalConclusion(
   if (pruneCommandsInvoked) lifecycleFailureCodes.push('FORMAL_TERMINAL_PRUNE_COMMAND_INVOKED');
 
   const sealFailureCodes: string[] = [];
+  if (
+    input.producerSourceManifestSha256 === null ||
+    !SHA256_PATTERN.test(input.producerSourceManifestSha256)
+  ) {
+    sealFailureCodes.push('FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DIGEST_INVALID');
+  }
   if (!input.producerEvidencePersistedBeforeCleanup) {
     sealFailureCodes.push('FORMAL_TERMINAL_PRODUCER_EVIDENCE_NOT_PERSISTED');
   }
@@ -136,6 +148,9 @@ export function buildFormalTerminalConclusion(
   }
   if (!input.authorityIdentityStableAfterCleanup) {
     sealFailureCodes.push('FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT');
+  }
+  if (!input.producerSourceManifestStableAfterCleanup) {
+    sealFailureCodes.push('FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DRIFT');
   }
   if (!input.outputDirectoryExclusive) {
     sealFailureCodes.push('FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE');
@@ -178,13 +193,16 @@ export function buildFormalTerminalConclusion(
       producerProtocolEvidenceCountMinimum: 1,
       frozenInputsStableAfterCleanup: true,
       authorityIdentityStableAfterCleanup: true,
+      producerSourceManifestStableAfterCleanup: true,
       outputDirectoryExclusive: true,
     },
     actual: {
       producerEvidencePersistedBeforeCleanup: input.producerEvidencePersistedBeforeCleanup,
       producerProtocolEvidenceCount: input.producerProtocolEvidenceCount,
+      producerSourceManifestSha256: input.producerSourceManifestSha256,
       frozenInputsStableAfterCleanup: input.frozenInputsStableAfterCleanup,
       authorityIdentityStableAfterCleanup: input.authorityIdentityStableAfterCleanup,
+      producerSourceManifestStableAfterCleanup: input.producerSourceManifestStableAfterCleanup,
       outputDirectoryExclusive: input.outputDirectoryExclusive,
     },
     failureCodes: unique(sealFailureCodes),
@@ -214,6 +232,8 @@ export function buildFormalTerminalConclusion(
     pruneCommandsInvoked,
     frozenInputsStableAfterCleanup: input.frozenInputsStableAfterCleanup,
     authorityIdentityStableAfterCleanup: input.authorityIdentityStableAfterCleanup,
+    producerSourceManifestSha256: input.producerSourceManifestSha256,
+    producerSourceManifestStableAfterCleanup: input.producerSourceManifestStableAfterCleanup,
     outputDirectoryExclusive: input.outputDirectoryExclusive,
     failureCodes: unique([...lifecycleFailureCodes, ...sealFailureCodes]),
     sealEligible,

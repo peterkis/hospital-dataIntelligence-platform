@@ -13,7 +13,11 @@ const execFileAsync = promisify(execFile);
  */
 export async function readFrozenInputs(
   repositoryRoot: string,
+  producerSourceManifestSha256: string,
 ): Promise<Readonly<Record<string, string>>> {
+  if (!/^[0-9a-f]{64}$/u.test(producerSourceManifestSha256)) {
+    throw new Error('PRODUCER_SOURCE_MANIFEST_SHA256_INVALID');
+  }
   const gitCommitSha = (await executeGit(repositoryRoot, ['rev-parse', 'HEAD'])).trim();
   const worktree = (await executeGit(repositoryRoot, ['status', '--porcelain=v1'])).trim();
   if (worktree.length > 0) throw new Error('ABG_WORKTREE_NOT_CLEAN');
@@ -71,6 +75,7 @@ export async function readFrozenInputs(
     postgresImage,
     keycloakImage,
     browserVersion,
+    producerSourceManifestSha256,
   };
 }
 

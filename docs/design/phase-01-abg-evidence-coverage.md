@@ -547,7 +547,7 @@ This is a derived view of tooling/verification/src/abg-coverage-matrix.ts. It de
 - Gate-scoped assertions: `ABG-40:formal-terminal-lifecycle-complete`, `ABG-40:formal-evidence-seal-eligible`
 - Producers: `formal-run`
 - Required references: `requestIds`, `principalIds`, `governanceObjectIds`, `versionIds`, `ruleVersions`, `frozenInputDigests`, `artifactDigests`
-- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`
+- Required frozen inputs: `browserVersion`, `fixtureIdentity`, `gitCommitSha`, `keycloakImage`, `lockfileSha256`, `migrationManifestSha256`, `nodeVersion`, `openapiSha256`, `postgresImage`, `producerSourceManifestSha256`
 - Failure policy: FAIL_CLOSED; every listed required condition fails closed.
 - Required selectors:
   - `formal-run` / `phase-01-formal-run-evidence` / `RUN-FORMAL-TERMINAL-LIFECYCLE` / `ABG-40:formal-terminal-lifecycle-complete` / `/scenarios/RUN-FORMAL-TERMINAL-LIFECYCLE/assertions/ABG-40:formal-terminal-lifecycle-complete/status` / expected `PASSED`

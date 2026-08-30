@@ -39,6 +39,7 @@ export const ABG_FROZEN_INPUT_KINDS = [
   'postgresImage',
   'keycloakImage',
   'browserVersion',
+  'producerSourceManifestSha256',
 ] as const;
 
 export type AbgFrozenInputKind = (typeof ABG_FROZEN_INPUT_KINDS)[number];
