@@ -972,6 +972,7 @@ async function validateRuntimeAuthorityProducerBinding(
     frozenInputs?.['runtimeAuthoritySha256'] === authoritySnapshot.runtimeAuthoritySha256 &&
     frozenInputs?.['runtimeAuthoritySemanticDigest'] ===
       authoritySnapshot.runtimeAuthoritySemanticDigest &&
+    producer.manifest.producerGitCommitSha === runGitCommitSha &&
     runGitCommitSha === authoritySnapshot.runIdentity.gitCommitSha;
   checks.check(
     referencesValid,

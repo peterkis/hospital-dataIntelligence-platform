@@ -272,6 +272,31 @@ describe('formal ABG provenance and compatibility review', () => {
       .toContain('PRODUCER_COMMIT_UNAVAILABLE');
   });
 
+  it('rejects authority binding across distinct valid producer and run commit SHAs', async () => {
+    const fixture = await createFormalEvidenceFixture();
+    const differentRunCommit = 'fedcba9876543210fedcba9876543210fedcba98';
+    await mutateJsonFile(fixture.evidenceDirectory, 'runtime/preflight.json', (preflight) => {
+      record(preflight['runIdentity'])['gitCommitSha'] = differentRunCommit;
+      for (const check of recordArray(preflight['checks'])) {
+        if (check['id'] === 'git-frozen-inputs-readable') {
+          const inputs = record(record(check['observed'])['inputs']);
+          inputs['gitCommitSha'] = differentRunCommit;
+        }
+      }
+    });
+    await mutateJsonFile(
+      fixture.evidenceDirectory,
+      'runtime/runtime-authority-snapshot.json',
+      (snapshot) => {
+        record(snapshot['runIdentity'])['gitCommitSha'] = differentRunCommit;
+      },
+    );
+    await rebuildManifest(fixture.evidenceDirectory);
+
+    expect(await reviewFailureCodes(fixture))
+      .toContain('FORMAL_RUNTIME_AUTHORITY_PRODUCER_BINDING_MISMATCH');
+  });
+
   it('rejects a resealed semantic authority fabrication that retains the producer entry byte digest', async () => {
     const fixture = await createFormalEvidenceFixture();
     let fabricatedSemanticDigest = '';
