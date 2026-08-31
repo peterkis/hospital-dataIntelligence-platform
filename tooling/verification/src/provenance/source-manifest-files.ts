@@ -65,6 +65,8 @@ const SOURCE_FILES = [
   ['tooling/verification/src/provenance/source-manifest-schema.ts', 'SOURCE_MANIFEST_DEFINITION'],
   ['tooling/verification/src/provenance/source-manifest.ts', 'SOURCE_MANIFEST_DEFINITION'],
   ['tooling/verification/src/provenance/verify-current-source-manifest.ts', 'SOURCE_MANIFEST_DEFINITION'],
+  ['tooling/verification/src/rebaseline/ar-12-execution-workspace.ts', 'ORCHESTRATOR'],
+  ['tooling/verification/src/rebaseline/ar-12-orchestrator.ts', 'ORCHESTRATOR'],
   ['tooling/verification/src/review-formal-abg-evidence.ts', 'REVIEWER'],
   ['tooling/verification/src/run-formal-abg.ts', 'ORCHESTRATOR'],
   ['tooling/verification/src/run-shared-abg-verification.ts', 'ORCHESTRATOR'],

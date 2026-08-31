@@ -6,6 +6,7 @@
   "scripts": {
     "report:abg-coverage": "tsx src/report-abg-coverage.ts --write",
     "test": "vitest run",
+    "test:ar12-composer": "vitest run src/rebaseline",
     "test:adversarial": "vitest run src/testing/adversarial-verification.test.ts",
     "test:lifecycle": "vitest run src/runtime src/evidence/recorder.test.ts",
     "test:podman-runtime": "vitest run src/runtime/podman-runtime-authority.test.ts src/runtime/podman-runtime-shell.test.ts src/runtime/formal-preflight.test.ts src/runtime/formal-teardown.test.ts src/runtime/formal-runtime-invariants.test.ts",

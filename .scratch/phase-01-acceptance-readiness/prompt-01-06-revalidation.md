@@ -299,3 +299,17 @@ Contract tuple：
 Closeout HEAD `4dca3cacfc98b77e2e805260703a912b0a069d17` 使用新的不可覆盖目录 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final`。init、命令 01 `npm ci --ignore-scripts --no-audit --no-fund` 与命令 02 `npm run check:runtime` 通过；命令 03 `npm run check:repo:layout` 以 exit `1` 失败，编排错误码为 `AR12_COMMAND_EXIT_UNEXPECTED`，其余 39 条命令未执行。
 
 直接原因是布局检查同时发现根 `package-lock.json` 与为 opening-HEAD 初始执行保留在仓库内的 `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout/package-lock.json`。失败证据保留于该目录的 `run-commands-result.json`、`failure-run-commands.json` 和 `commands/03-check-repo-layout/{command.json,stdout.log,stderr.log,result.json}`；目录不删除、不覆盖、不修补。该失败未触发架构停止线，但依任务规则仍使 AR-12 恢复 `claimed`、Current frontier 恢复 AR-12、AR-07 继续 `blocked`，不得宣称 AR-12 完成。
+
+## AR-12R-01 修改前根因确认
+
+开工 HEAD `0267bba32cc439d68863b7e6ee24e6386d2d9ce7` 的工作区为 `CLEAN`，与 `origin/phase-01-acceptance-readiness` 差异为 `0 0`。然而 opening-HEAD 初始执行使用的 clone 位于被验证仓库内部的 `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout`；Git 忽略 `.runtime` 只会隐藏状态噪声，不会把该目录移出仓库物理树。未修改的 `check-repo-layout.mjs` 会递归排除 `.git` 与 `node_modules` 后检查真实布局，因此在 Closeout HEAD 正确发现根 `package-lock.json` 和嵌套 execution clone 的第二份 `package-lock.json`。当前 `npm run check:repo:layout` 已连续两次以 exit `1`、同一 `ERR_ASSERTION` 和同一路径稳定复现。
+
+结论是：Git worktree clean 与物理 execution workspace 隔离是两个独立不变量；本次缺陷来自 clone 位置，而非 repo-layout 门禁。AR-12R-01 必须把后续 execution clone 限定到 repositoryRoot 外部并建立自污染预检，不得忽略 `.runtime`、降级第二 lockfile、只扫描 tracked files、删除门禁或在命令 03 前后临时搬移文件。既有 `.runtime/rebaseline/ar-12/20260830-db57406-precloseout-r4` 初始通过证据、其他初始尝试目录和 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final` 失败证据均保持不可覆盖；本段只记录根因，不表示 stale clone 已外移或完整 AR-12 已重跑。
+
+## AR-12R-01 execution workspace 受控外移记录
+
+stale execution clone `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout` 已在验证 repository identity、opening HEAD、分支和内容身份后，原子外移到 repository root 之外的隔离归档；为避免把机器相关信息写入受跟踪报告，本节不记录外部绝对路径。外移前后 tree digest 均为 `03c6f5f4f3afe50eb9864e71e179fc90d02b8fe66d5772932900d3360700f67f`。排他创建的恢复记录位于 `.runtime/rebaseline/ar-12/recovery/20260830-0267bba/execution-workspace-relocation.json`，用于绑定相对来源、目标路径摘要、预期与实际 HEAD、分支、外移状态及证据保留声明。
+
+外移没有改变既有执行证据：`precloseout`、`r2`、`r3`、`r4` 与 `final` 的 evidence content digests 均保持不变，特别是 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final` 的失败证据仍原样保留。当前 `npm run check:repo:layout` 已通过；`check-repo-layout.mjs` 未修改，仍执行原有物理布局、单 Git root 与单 lockfile 约束，命令 03 也未被跳过或降级。
+
+本记录只证明仓库内 stale execution clone 已安全外移并恢复当前布局门禁通过，不等同于重跑完整 AR-12，也不建立 client-visible、real-environment、shared-readiness 或 formal-ABG 证据。AR-12 继续保持 `claimed` 并作为 current frontier，AR-07 继续 `blocked`；本轮未启动真实服务，不得将 AR-12R-01 或 AR-12 表述为 `resolved` 或 `accepted`。

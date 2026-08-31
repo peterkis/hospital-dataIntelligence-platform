@@ -50,6 +50,20 @@ import {
   validRuntimeAuthorityMutationFixture,
 } from './ar11-runtime-mutation-support.js';
 import { parsePodmanRuntimeAuthority } from '../runtime/podman-runtime-authority.js';
+import {
+  assertAr12CommandPlanSafety,
+  createAr12CommandSpecs,
+} from '../rebaseline/ar-12-orchestrator.js';
+import {
+  AR12_EXECUTION_WORKSPACE_MARKER,
+  AR12_EXECUTION_WORKSPACE_SCHEMA_VERSION,
+  cleanupAr12ExecutionWorkspace,
+  defaultAr12ExecutionWorkspaceDependencies,
+  relocateStaleAr12ExecutionWorkspace,
+  resolveAr12ExecutionWorkspace,
+  verifyAr12ExecutionWorkspace,
+  type Ar12ExecutionWorkspaceMarker,
+} from '../rebaseline/ar-12-execution-workspace.js';
 
 export type MutationDetectionLayer =
   | 'producer-evidence-validator'
@@ -60,7 +74,11 @@ export type MutationDetectionLayer =
   | 'runtime-teardown-guard'
   | 'runtime-authority-validator'
   | 'formal-preflight-policy'
-  | 'runtime-lifecycle-guard';
+  | 'runtime-lifecycle-guard'
+  | 'ar12-workspace-guard'
+  | 'ar12-clone-identity-guard'
+  | 'ar12-relocation-guard'
+  | 'ar12-command-plan-guard';
 
 export interface EvidenceMutationCase {
   readonly mutationId: string;
@@ -89,7 +107,7 @@ const mutation = (
   expectedErrorCode: string,
 ): EvidenceMutationCase => ({ mutationId, description, detectionLayer, expectedErrorCode });
 
-export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+export const PRE_AR12_ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   mutation('AR06-M001-MISSING-ABG-01', 'Delete ABG-01.', 'formal-summary-validator', 'GATE_RESULT_COUNT_INVALID'),
   mutation('AR06-M002-MISSING-ABG-40', 'Delete ABG-40.', 'formal-summary-validator', 'GATE_RESULT_COUNT_INVALID'),
   mutation('AR06-M003-DUPLICATE-ABG-10', 'Duplicate ABG-10.', 'formal-summary-validator', 'GATE_ID_DUPLICATE'),
@@ -230,6 +248,24 @@ export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   mutation('UNRELATED_PODMAN_RESOURCE_REMOVED', 'Attempt cleanup of an unrelated Podman resource.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH'),
   mutation('PODMAN_PRUNE_ATTEMPT', 'Attempt a Podman prune during targeted cleanup.', 'runtime-teardown-guard', 'FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN'),
   mutation('RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP', 'Change runtime authority identity after cleanup.', 'runtime-authority-validator', 'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP'),
+] as const;
+
+export const AR12_EXECUTION_WORKSPACE_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+  mutation('AR12_EXECUTION_CLONE_INSIDE_REPOSITORY', 'Place the execution clone inside the repository.', 'ar12-workspace-guard', 'AR12_EXECUTION_WORKSPACE_INSIDE_REPOSITORY'),
+  mutation('AR12_EXECUTION_CLONE_INSIDE_RUNTIME', 'Place the execution clone below the repository runtime directory.', 'ar12-workspace-guard', 'AR12_EXECUTION_WORKSPACE_INSIDE_REPOSITORY'),
+  mutation('AR12_EXECUTION_CLONE_SYMLINK_ESCAPE', 'Resolve an apparently external root back into the repository through a reparse point.', 'ar12-workspace-guard', 'AR12_EXECUTION_WORKSPACE_SYMLINK_ESCAPE'),
+  mutation('AR12_EXECUTION_CLONE_ALREADY_EXISTS', 'Reuse an existing execution clone directory.', 'ar12-workspace-guard', 'AR12_EXECUTION_WORKSPACE_ALREADY_EXISTS'),
+  mutation('AR12_EXECUTION_CLONE_HEAD_MISMATCH', 'Observe a clone HEAD different from the opening commit.', 'ar12-clone-identity-guard', 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH'),
+  mutation('AR12_EXECUTION_CLONE_BRANCH_MISMATCH', 'Observe a clone branch different from the target branch.', 'ar12-clone-identity-guard', 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH'),
+  mutation('AR12_EXECUTION_CLONE_ORIGIN_MISMATCH', 'Observe a clone origin different from the source repository origin.', 'ar12-clone-identity-guard', 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH'),
+  mutation('AR12_STALE_CLONE_IDENTITY_MISMATCH', 'Attempt stale clone relocation with a mismatched identity.', 'ar12-relocation-guard', 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH'),
+  mutation('AR12_FAILED_EVIDENCE_DIRECTORY_DELETE_ATTEMPT', 'Attempt to clean up a failed evidence directory as an execution workspace.', 'ar12-workspace-guard', 'AR12_EXECUTION_WORKSPACE_INSIDE_EVIDENCE'),
+  mutation('AR12_REPO_LAYOUT_GATE_BYPASS_ATTEMPT', 'Remove the repository layout gate from the AR-12 command plan.', 'ar12-command-plan-guard', 'AR12_REPO_LAYOUT_GATE_BYPASS_FORBIDDEN'),
+] as const;
+
+export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+  ...PRE_AR12_ADVERSARIAL_MUTATION_CASES,
+  ...AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -999,9 +1035,275 @@ async function executeMutation(
         afterSemanticDigest: '0'.repeat(64),
       })));
     }
+    case 'AR12_EXECUTION_CLONE_INSIDE_REPOSITORY':
+      return ar12InsideRepositoryMutation(mutationId, context, false);
+    case 'AR12_EXECUTION_CLONE_INSIDE_RUNTIME':
+      return ar12InsideRepositoryMutation(mutationId, context, true);
+    case 'AR12_EXECUTION_CLONE_SYMLINK_ESCAPE':
+      return ar12SymlinkEscapeMutation(mutationId, context);
+    case 'AR12_EXECUTION_CLONE_ALREADY_EXISTS':
+      return ar12ExistingWorkspaceMutation(mutationId, context);
+    case 'AR12_EXECUTION_CLONE_HEAD_MISMATCH':
+      return ar12CloneIdentityMutation(mutationId, context, 'head');
+    case 'AR12_EXECUTION_CLONE_BRANCH_MISMATCH':
+      return ar12CloneIdentityMutation(mutationId, context, 'branch');
+    case 'AR12_EXECUTION_CLONE_ORIGIN_MISMATCH':
+      return ar12CloneIdentityMutation(mutationId, context, 'origin');
+    case 'AR12_STALE_CLONE_IDENTITY_MISMATCH':
+      return ar12StaleCloneIdentityMutation(mutationId, context);
+    case 'AR12_FAILED_EVIDENCE_DIRECTORY_DELETE_ATTEMPT':
+      return ar12FailedEvidenceDeleteMutation(mutationId, context);
+    case 'AR12_REPO_LAYOUT_GATE_BYPASS_ATTEMPT': {
+      const planWithoutRepositoryLayoutGate = createAr12CommandSpecs().filter(
+        (command) => command.id !== 'check-repo-layout',
+      );
+      return captureErrorCodes(() => Promise.resolve(
+        assertAr12CommandPlanSafety(planWithoutRepositoryLayoutGate),
+      ));
+    }
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
+}
+
+async function ar12InsideRepositoryMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  insideRuntime: boolean,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId);
+  const repositoryRoot = join(caseRoot, 'repository');
+  await mkdir(repositoryRoot, { recursive: true });
+  const configuredRoot = insideRuntime
+    ? join(repositoryRoot, '.runtime', 'execution')
+    : join(repositoryRoot, 'execution');
+  return captureErrorCodes(() => resolveAr12ExecutionWorkspace({
+    repositoryRoot,
+    runIdentity: 'mutation-run',
+    environment: { AR12_EXECUTION_WORKSPACE_ROOT: configuredRoot },
+  }));
+}
+
+async function ar12SymlinkEscapeMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId);
+  const repositoryRoot = join(caseRoot, 'repository');
+  const reportedExternalRoot = join(caseRoot, 'reported-external');
+  await mkdir(repositoryRoot, { recursive: true });
+  const dependencies = defaultAr12ExecutionWorkspaceDependencies();
+  const filesystem = {
+    ...dependencies.filesystem,
+    canonicalize: async (path: string) => {
+      if (path === reportedExternalRoot) return join(repositoryRoot, '.runtime');
+      if (path === join(reportedExternalRoot, 'mutation-run')) {
+        return join(repositoryRoot, '.runtime', 'mutation-run');
+      }
+      return dependencies.filesystem.canonicalize(path);
+    },
+  };
+  return captureErrorCodes(() => resolveAr12ExecutionWorkspace({
+    repositoryRoot,
+    runIdentity: 'mutation-run',
+    environment: { AR12_EXECUTION_WORKSPACE_ROOT: reportedExternalRoot },
+  }, { ...dependencies, filesystem }));
+}
+
+async function ar12ExistingWorkspaceMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId);
+  const repositoryRoot = join(caseRoot, 'repository');
+  const externalRoot = join(caseRoot, 'external');
+  await mkdir(repositoryRoot, { recursive: true });
+  await mkdir(join(externalRoot, 'mutation-run'), { recursive: true });
+  return captureErrorCodes(() => resolveAr12ExecutionWorkspace({
+    repositoryRoot,
+    runIdentity: 'mutation-run',
+    environment: { AR12_EXECUTION_WORKSPACE_ROOT: externalRoot },
+  }));
+}
+
+async function ar12CloneIdentityMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+  mismatch: 'head' | 'branch' | 'origin',
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId);
+  const externalRoot = join(caseRoot, 'external');
+  const workspacePath = join(externalRoot, 'mutation-run');
+  await mkdir(workspacePath, { recursive: true });
+  const marker: Ar12ExecutionWorkspaceMarker = {
+    schemaVersion: AR12_EXECUTION_WORKSPACE_SCHEMA_VERSION,
+    repositoryIdentity: 'example/hospital-data-intelligence-platform',
+    sourceRepositoryRootDigest: '0'.repeat(64),
+    openingGitCommitSha: '1'.repeat(40),
+    targetBranch: 'phase-01-acceptance-readiness',
+    runPurpose: 'AR-12 adversarial mutation',
+    createdAt: '2026-08-30T12:00:00.000Z',
+    externalWorkspaceRoot: externalRoot,
+    formalAcceptanceEligible: false,
+  };
+  await writeFile(
+    join(workspacePath, AR12_EXECUTION_WORKSPACE_MARKER),
+    `${JSON.stringify(marker)}\n`,
+    { flag: 'wx' },
+  );
+  const dependencies = defaultAr12ExecutionWorkspaceDependencies();
+  const observedIdentityOperations = new Set<string>();
+  const git = {
+    run: async (_cwd: string, arguments_: readonly string[]) => {
+      const command = arguments_.join(' ');
+      if (arguments_.includes('rev-parse') && arguments_.includes('HEAD')) {
+        observedIdentityOperations.add('head');
+        return { stdout: mismatch === 'head' ? `${'2'.repeat(40)}\n` : `${marker.openingGitCommitSha}\n`, stderr: '' };
+      }
+      if (arguments_.includes('branch') && arguments_.includes('--show-current')) {
+        observedIdentityOperations.add('branch');
+        return { stdout: mismatch === 'branch' ? 'wrong-branch\n' : `${marker.targetBranch}\n`, stderr: '' };
+      }
+      if (arguments_.includes('config') && arguments_.includes('remote.origin.url')) {
+        observedIdentityOperations.add('origin');
+        return {
+          stdout: mismatch === 'origin'
+            ? 'https://github.com/example/wrong-repository.git\n'
+            : 'https://github.com/example/hospital-data-intelligence-platform.git\n',
+          stderr: '',
+        };
+      }
+      if (arguments_.includes('status') && arguments_.includes('--porcelain=v1')) {
+        observedIdentityOperations.add('status');
+        return { stdout: '', stderr: '' };
+      }
+      throw new Error('AR12_MUTATION_UNEXPECTED_GIT_COMMAND:' + command);
+    },
+  };
+  const detected = await captureErrorCodes(() => verifyAr12ExecutionWorkspace(
+    workspacePath,
+    marker,
+    { ...dependencies, git },
+  ));
+  if (
+    observedIdentityOperations.size !== 4 ||
+    !observedIdentityOperations.has(mismatch === 'head' ? 'head' : mismatch)
+  ) {
+    throw new Error('AR12_MUTATION_GIT_IDENTITY_SEAM_NOT_EXERCISED:' + mismatch);
+  }
+  return detected;
+}
+
+async function ar12StaleCloneIdentityMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId);
+  const repositoryRoot = join(caseRoot, 'repository');
+  const staleWorktreesRoot = join(repositoryRoot, '.runtime', 'rebaseline', 'ar-12', 'worktrees');
+  const sourcePath = join(staleWorktreesRoot, 'known-stale');
+  const destinationPath = join(caseRoot, 'external-archive', 'known-stale');
+  await mkdir(join(sourcePath, '.git'), { recursive: true });
+  await writeFile(join(sourcePath, 'package-lock.json'), '{}\n', { flag: 'wx' });
+  const dependencies = defaultAr12ExecutionWorkspaceDependencies();
+  const filesystem = {
+    ...dependencies.filesystem,
+    rename: async () => {
+      throw new Error('AR12_MUTATION_UNEXPECTED_RENAME');
+    },
+  };
+  const observedIdentityOperations = new Map<string, number>();
+  const git = {
+    run: async (_cwd: string, arguments_: readonly string[]) => {
+      const command = arguments_.join(' ');
+      if (arguments_.includes('rev-parse') && arguments_.includes('HEAD')) {
+        observedIdentityOperations.set('head', (observedIdentityOperations.get('head') ?? 0) + 1);
+        return { stdout: `${'2'.repeat(40)}\n`, stderr: '' };
+      }
+      if (arguments_.includes('branch') && arguments_.includes('--show-current')) {
+        observedIdentityOperations.set('branch', (observedIdentityOperations.get('branch') ?? 0) + 1);
+        return { stdout: 'phase-01-acceptance-readiness\n', stderr: '' };
+      }
+      if (arguments_.includes('config') && arguments_.includes('remote.origin.url')) {
+        observedIdentityOperations.set('origin', (observedIdentityOperations.get('origin') ?? 0) + 1);
+        return { stdout: 'https://github.com/example/hospital-data-intelligence-platform.git\n', stderr: '' };
+      }
+      if (arguments_.includes('status') && arguments_.includes('--porcelain=v1')) {
+        observedIdentityOperations.set('status', (observedIdentityOperations.get('status') ?? 0) + 1);
+        return { stdout: '', stderr: '' };
+      }
+      throw new Error('AR12_MUTATION_UNEXPECTED_GIT_COMMAND:' + command);
+    },
+  };
+  const detected = await captureErrorCodes(() => relocateStaleAr12ExecutionWorkspace({
+    repositoryRoot,
+    sourcePath,
+    allowedStaleWorktreesRoot: staleWorktreesRoot,
+    destinationPath,
+    expectedHead: '1'.repeat(40),
+    expectedBranch: 'phase-01-acceptance-readiness',
+    failedFinalRunDirectory: join(
+      repositoryRoot,
+      '.runtime',
+      'rebaseline',
+      'ar-12',
+      '20260830-0267bba-final',
+    ),
+    initialRunEvidenceDirectories: [],
+    relocatedAt: '2026-08-30T12:30:00.000Z',
+  }, { ...dependencies, filesystem, git }));
+  if (
+    observedIdentityOperations.get('head') !== 2 ||
+    observedIdentityOperations.get('branch') !== 2 ||
+    observedIdentityOperations.get('origin') !== 2 ||
+    observedIdentityOperations.get('status') !== 2
+  ) {
+    throw new Error('AR12_MUTATION_STALE_IDENTITY_SEAM_NOT_EXERCISED');
+  }
+  return detected;
+}
+
+async function ar12FailedEvidenceDeleteMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId);
+  const repositoryRoot = join(caseRoot, 'repository');
+  const evidenceDirectory = join(caseRoot, 'failed-evidence');
+  await mkdir(repositoryRoot, { recursive: true });
+  await mkdir(evidenceDirectory, { recursive: true });
+  const dependencies = defaultAr12ExecutionWorkspaceDependencies();
+  const filesystem = {
+    ...dependencies.filesystem,
+    removeDirectory: async (_path: string) => {
+      throw new Error('AR12_MUTATION_UNEXPECTED_REMOVE');
+    },
+  };
+  const marker: Ar12ExecutionWorkspaceMarker = {
+    schemaVersion: AR12_EXECUTION_WORKSPACE_SCHEMA_VERSION,
+    repositoryIdentity: 'example/hospital-data-intelligence-platform',
+    sourceRepositoryRootDigest: '0'.repeat(64),
+    openingGitCommitSha: '1'.repeat(40),
+    targetBranch: 'phase-01-acceptance-readiness',
+    runPurpose: 'AR-12 adversarial cleanup mutation',
+    createdAt: '2026-08-30T12:00:00.000Z',
+    externalWorkspaceRoot: caseRoot,
+    formalAcceptanceEligible: false,
+  };
+  const git = {
+    run: async () => {
+      throw new Error('AR12_MUTATION_UNEXPECTED_GIT_COMMAND');
+    },
+  };
+  return captureErrorCodes(() => cleanupAr12ExecutionWorkspace(
+    evidenceDirectory,
+    marker,
+    {
+      repositoryRoot,
+      evidenceDirectories: [evidenceDirectory],
+    },
+    { ...dependencies, filesystem, git },
+  ));
 }
 
 async function summaryMutation(

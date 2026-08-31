@@ -9,7 +9,9 @@ import {
 } from './build-valid-evidence-fixture.js';
 import {
   ADVERSARIAL_MUTATION_CASES,
+  AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
   executeEvidenceMutation,
+  PRE_AR12_ADVERSARIAL_MUTATION_CASES,
   type MutationExecutionResult,
 } from './mutate-evidence-fixture.js';
 
@@ -52,15 +54,17 @@ afterAll(async () => {
     expect(basename(rootDirectory)).toMatch(/^hdi-ar06-adversarial-/u);
     await rm(rootDirectory, { recursive: true, force: true });
   }
-  expect(summary.mutationCount).toBeGreaterThanOrEqual(140);
+  expect(summary.mutationCount).toBeGreaterThanOrEqual(150);
   expect(summary.detectedCount).toBe(summary.mutationCount);
   expect(summary.survivedCount).toBe(0);
 }, 30_000);
 
 describe('AR-06 adversarial verification', () => {
-  it('retains all 110 AR-10 mutations and declares the 30 AR-11 runtime mutations', () => {
-    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(140);
-    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(140);
+  it('retains all 140 pre-AR-12 mutations and declares 10 execution-workspace mutations', () => {
+    expect(PRE_AR12_ADVERSARIAL_MUTATION_CASES).toHaveLength(140);
+    expect(AR12_EXECUTION_WORKSPACE_MUTATION_CASES).toHaveLength(10);
+    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(150);
+    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(150);
     expect(Object.fromEntries(ADVERSARIAL_MUTATION_CASES.map((mutation) => [
       mutation.mutationId,
       mutation.expectedErrorCode,
@@ -125,6 +129,16 @@ describe('AR-06 adversarial verification', () => {
       UNRELATED_PODMAN_RESOURCE_REMOVED: 'FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH',
       PODMAN_PRUNE_ATTEMPT: 'FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN',
       RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP: 'RUNTIME_AUTHORITY_DRIFT_AFTER_CLEANUP',
+      AR12_EXECUTION_CLONE_INSIDE_REPOSITORY: 'AR12_EXECUTION_WORKSPACE_INSIDE_REPOSITORY',
+      AR12_EXECUTION_CLONE_INSIDE_RUNTIME: 'AR12_EXECUTION_WORKSPACE_INSIDE_REPOSITORY',
+      AR12_EXECUTION_CLONE_SYMLINK_ESCAPE: 'AR12_EXECUTION_WORKSPACE_SYMLINK_ESCAPE',
+      AR12_EXECUTION_CLONE_ALREADY_EXISTS: 'AR12_EXECUTION_WORKSPACE_ALREADY_EXISTS',
+      AR12_EXECUTION_CLONE_HEAD_MISMATCH: 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH',
+      AR12_EXECUTION_CLONE_BRANCH_MISMATCH: 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH',
+      AR12_EXECUTION_CLONE_ORIGIN_MISMATCH: 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH',
+      AR12_STALE_CLONE_IDENTITY_MISMATCH: 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH',
+      AR12_FAILED_EVIDENCE_DIRECTORY_DELETE_ATTEMPT: 'AR12_EXECUTION_WORKSPACE_INSIDE_EVIDENCE',
+      AR12_REPO_LAYOUT_GATE_BYPASS_ATTEMPT: 'AR12_REPO_LAYOUT_GATE_BYPASS_FORBIDDEN',
     });
   });
 

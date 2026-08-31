@@ -30,6 +30,23 @@ afterEach(async () => {
 });
 
 describe('verification source manifest public seam', () => {
+  it('registers the AR-12 execution workspace and orchestrator as ordered authority sources', () => {
+    expect(VERIFICATION_SOURCE_FILES).toHaveLength(45);
+    expect(VERIFICATION_SOURCE_FILES).toEqual(expect.arrayContaining([
+      {
+        path: 'tooling/verification/src/rebaseline/ar-12-execution-workspace.ts',
+        role: 'ORCHESTRATOR',
+      },
+      {
+        path: 'tooling/verification/src/rebaseline/ar-12-orchestrator.ts',
+        role: 'ORCHESTRATOR',
+      },
+    ]));
+    expect(VERIFICATION_SOURCE_FILES.map(({ path }) => path)).toEqual(
+      [...VERIFICATION_SOURCE_FILES.map(({ path }) => path)].sort(),
+    );
+  });
+
   it('builds a deterministic producer identity from clean workspace bytes and the same commit blobs', async () => {
     const fixture = fixtureDependencies();
     const manifest = await buildProducerSourceManifest('repository-root', fixture.dependencies);
