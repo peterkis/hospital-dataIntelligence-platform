@@ -53,8 +53,9 @@ describe('ABG gate-specific proof', () => {
 
   it('generates and validates 40 minimal, distinct gate proofs from explicit assertions', async () => {
     const fixture = await createFixture();
-    const proofs: AbgGateResult[] = [];
-    for (const entry of ABG_COVERAGE_MATRIX) {
+    const [firstEntry, ...remainingEntries] = ABG_COVERAGE_MATRIX;
+    if (firstEntry === undefined) throw new Error('ABG_COVERAGE_MATRIX_EMPTY');
+    const generateAndValidate = async (entry: (typeof ABG_COVERAGE_MATRIX)[number]): Promise<AbgGateResult> => {
       const resultRelativePath = 'gates/' + entry.gateId + '/producer/result.json';
       const proof = await writeAbgGateProof({
         ...proofInput(fixture, entry.gateId),
@@ -70,8 +71,10 @@ describe('ABG gate-specific proof', () => {
         readdir(join(fixture.root, 'gates', entry.gateId, 'producer')),
       );
       expect(files).toEqual(['result.json']);
-      proofs.push(proof);
-    }
+      return proof;
+    };
+    const firstProof = await generateAndValidate(firstEntry);
+    const proofs = [firstProof, ...await Promise.all(remainingEntries.map(generateAndValidate))];
     expect(proofs).toHaveLength(40);
     expect(new Set(proofs.map(selectorSignature)).size).toBe(40);
     expect(() => assertDistinctGateEvidenceSelectorSets(proofs)).not.toThrow();

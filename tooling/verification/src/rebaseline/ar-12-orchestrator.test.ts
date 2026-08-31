@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -6,9 +7,11 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import {
   Ar12ExternalExecutionWorkspaceRunError,
+  ar12SummaryRepositoryBoundaryFields,
   ar12CliFailurePayload,
   assertAr12CommandPlanSafety,
   createAr12CommandSpecs,
+  captureAr12HistoryEvidenceSnapshot,
   isAr12OrchestratorDirectInvocation,
   isAr12AdversarialFloorSatisfied,
   parseAr12CliArguments,
@@ -16,6 +19,8 @@ import {
   runAr12InExternalExecutionWorkspace,
   runAfterAr12ExecutionWorkspaceGate,
   runAr12OrchestratorCli,
+  validateAr12RepositoryBoundaryArtifact,
+  verifyAr12RepositoryBoundary,
 } from './ar-12-orchestrator.js';
 import {
   Ar12ExecutionWorkspaceCreationError,
@@ -71,6 +76,205 @@ const EXPECTED_COMMAND_IDS = [
 ] as const;
 
 describe('AR-12 rebaseline orchestrator', () => {
+  it('verifies contamination, layout, and immutable history before finalization', async () => {
+    const opening = {
+      schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1' as const,
+      entries: [{
+        relativePath: '20260830-deadbee-final',
+        kind: 'DIRECTORY' as const,
+        fileCount: 1,
+        digest: 'b'.repeat(64),
+      }],
+      digest: 'a'.repeat(64),
+    };
+    const events: string[] = [];
+    const result = await verifyAr12RepositoryBoundary({
+      sourceRepositoryRoot: 'D:\\source',
+      outputRoot: 'D:\\evidence',
+      runDirectory: 'D:\\evidence\\run-01',
+      openingHistoryEvidence: opening,
+      checkedAt: '2026-08-31T12:00:00.000Z',
+    }, {
+      assertRepositoryNotContaminatedByExecutionWorkspace: async () => {
+        events.push('contamination');
+      },
+      verifyRepositoryLayout: async () => {
+        events.push('layout');
+      },
+      captureHistoryEvidenceSnapshot: async () => {
+        events.push('history');
+        return opening;
+      },
+    });
+    expect(events).toEqual(['contamination', 'layout', 'history']);
+    expect(result).toEqual({
+      schemaVersion: 'phase-01.ar-12-repository-boundary.v1',
+      repositoryContaminationGuard: 'PASSED',
+      repoLayoutStatus: 'PASSED',
+      historyEvidenceStable: true,
+      openingHistoryEvidenceDigest: 'a'.repeat(64),
+      endingHistoryEvidenceDigest: 'a'.repeat(64),
+      protectedHistoryEntryCount: 1,
+      checkedAt: '2026-08-31T12:00:00.000Z',
+    });
+
+    await expect(verifyAr12RepositoryBoundary({
+      sourceRepositoryRoot: 'D:\\source',
+      outputRoot: 'D:\\evidence',
+      runDirectory: 'D:\\evidence\\run-01',
+      openingHistoryEvidence: opening,
+      checkedAt: '2026-08-31T12:00:00.000Z',
+    }, {
+      assertRepositoryNotContaminatedByExecutionWorkspace: async () => {},
+      verifyRepositoryLayout: async () => {},
+      captureHistoryEvidenceSnapshot: async () => ({
+        ...opening,
+        digest: 'b'.repeat(64),
+      }),
+    })).rejects.toThrowError('AR12_HISTORY_EVIDENCE_DRIFT');
+  });
+
+  it('fingerprints protected history while excluding the current run directory', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hdi-ar12-history-'));
+    const outputRoot = join(root, 'evidence');
+    const historicalRun = join(outputRoot, '20260830-deadbee-final');
+    const recovery = join(outputRoot, 'recovery');
+    const currentRun = join(outputRoot, '20260831-cafebabe-final-r1');
+    try {
+      await mkdir(historicalRun, { recursive: true });
+      await mkdir(recovery);
+      await mkdir(currentRun);
+      const historicalSummaryBytes = '{"status":"FAILED"}\n';
+      await writeFile(join(historicalRun, 'summary.json'), historicalSummaryBytes);
+      const recoveryBytes = '{"status":"RECORDED"}\n';
+      await writeFile(join(recovery, 'receipt.json'), recoveryBytes);
+      await writeFile(join(currentRun, 'command.log'), 'current run\n');
+      const requirements = {
+        requiredDirectoryNames: ['20260830-deadbee-final', 'recovery'],
+        requiredFileSha256: {
+          '20260830-deadbee-final/summary.json': createHash('sha256')
+            .update(historicalSummaryBytes)
+            .digest('hex'),
+        },
+        recoveryArtifactRelativePath: 'recovery/receipt.json',
+        recoveryArtifactSha256: createHash('sha256').update(recoveryBytes).digest('hex'),
+        forbiddenRelativePath: 'worktrees/known-stale',
+      };
+
+      const opening = await captureAr12HistoryEvidenceSnapshot(outputRoot, currentRun, requirements);
+      expect(opening.entries.map((entry) => entry.relativePath)).toEqual([
+        '20260830-deadbee-final',
+        'recovery',
+      ]);
+
+      await writeFile(join(currentRun, 'command.log'), 'current run changed\n');
+      const currentRunChanged = await captureAr12HistoryEvidenceSnapshot(
+        outputRoot,
+        currentRun,
+        requirements,
+      );
+      expect(currentRunChanged.digest).toBe(opening.digest);
+
+      const unexpectedEmptyDirectory = join(historicalRun, 'unexpected-empty');
+      await mkdir(unexpectedEmptyDirectory);
+      const directoryChanged = await captureAr12HistoryEvidenceSnapshot(
+        outputRoot,
+        currentRun,
+        requirements,
+      );
+      expect(directoryChanged.digest).not.toBe(opening.digest);
+      await rm(unexpectedEmptyDirectory, { recursive: true });
+
+      await writeFile(join(historicalRun, 'summary.json'), '{"status":"DRIFTED"}\n');
+      await expect(captureAr12HistoryEvidenceSnapshot(
+        outputRoot,
+        currentRun,
+        requirements,
+      )).rejects.toThrowError('AR12_REQUIRED_HISTORY_ARTIFACT_IDENTITY_MISMATCH');
+      await writeFile(join(historicalRun, 'summary.json'), historicalSummaryBytes);
+
+      await writeFile(join(recovery, 'receipt.json'), '{"status":"DRIFTED"}\n');
+      await expect(captureAr12HistoryEvidenceSnapshot(
+        outputRoot,
+        currentRun,
+        requirements,
+      )).rejects.toThrowError('AR12_RECOVERY_ARTIFACT_IDENTITY_MISMATCH');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('projects only a fully passed repository boundary into required summary fields', () => {
+    expect(ar12SummaryRepositoryBoundaryFields({
+      schemaVersion: 'phase-01.ar-12-repository-boundary.v1',
+      repositoryContaminationGuard: 'PASSED',
+      repoLayoutStatus: 'PASSED',
+      historyEvidenceStable: true,
+      openingHistoryEvidenceDigest: 'a'.repeat(64),
+      endingHistoryEvidenceDigest: 'a'.repeat(64),
+      protectedHistoryEntryCount: 6,
+      checkedAt: '2026-08-31T12:00:00.000Z',
+    })).toEqual({
+      repositoryContaminationGuard: 'PASSED',
+      repoLayoutStatus: 'PASSED',
+      historyEvidenceStable: true,
+    });
+
+    expect(() => ar12SummaryRepositoryBoundaryFields({
+      schemaVersion: 'phase-01.ar-12-repository-boundary.v1',
+      repositoryContaminationGuard: 'PASSED',
+      repoLayoutStatus: 'PASSED',
+      historyEvidenceStable: false,
+      openingHistoryEvidenceDigest: 'a'.repeat(64),
+      endingHistoryEvidenceDigest: 'b'.repeat(64),
+      protectedHistoryEntryCount: 6,
+      checkedAt: '2026-08-31T12:00:00.000Z',
+    })).toThrowError('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+  });
+
+  it('rejects a repository boundary artifact whose bytes changed after command execution', () => {
+    const openingHistoryEvidence = {
+      schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1' as const,
+      entries: [{
+        relativePath: '20260830-deadbee-final',
+        kind: 'DIRECTORY' as const,
+        fileCount: 1,
+        digest: 'b'.repeat(64),
+      }],
+      digest: 'a'.repeat(64),
+    };
+    const result = {
+      schemaVersion: 'phase-01.ar-12-repository-boundary.v1' as const,
+      repositoryContaminationGuard: 'PASSED' as const,
+      repoLayoutStatus: 'PASSED' as const,
+      historyEvidenceStable: true,
+      openingHistoryEvidenceDigest: openingHistoryEvidence.digest,
+      endingHistoryEvidenceDigest: openingHistoryEvidence.digest,
+      protectedHistoryEntryCount: openingHistoryEvidence.entries.length,
+      checkedAt: '2026-08-31T12:00:00.000Z',
+    };
+    const artifactBytes = Buffer.from(JSON.stringify(result, null, 2) + '\n', 'utf8');
+    const expectedSha256 = createHash('sha256').update(artifactBytes).digest('hex');
+    expect(validateAr12RepositoryBoundaryArtifact({
+      result,
+      artifactBytes,
+      expectedSha256,
+      openingHistoryEvidence,
+    })).toEqual({
+      repositoryContaminationGuard: 'PASSED',
+      repoLayoutStatus: 'PASSED',
+      historyEvidenceStable: true,
+    });
+    expect(() => validateAr12RepositoryBoundaryArtifact({
+      result,
+      artifactBytes: Buffer.from(
+        JSON.stringify({ ...result, checkedAt: '2026-08-31T12:00:01.000Z' }, null, 2) + '\n',
+      ),
+      expectedSha256,
+      openingHistoryEvidence,
+    })).toThrowError('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+  });
+
   it('freezes all 42 commands and keeps repository layout as command 03', () => {
     const commands = createAr12CommandSpecs();
 
@@ -158,6 +362,7 @@ describe('AR-12 rebaseline orchestrator', () => {
     const init = parseAr12CliArguments([
       'init',
       '--repository-root', 'D:\\repository',
+      '--source-repository-root', 'D:\\source',
       '--output-root', 'D:\\evidence',
       '--run-directory', 'D:\\evidence\\run-01',
       '--expected-branch', 'phase-01-acceptance-readiness',

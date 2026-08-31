@@ -277,6 +277,10 @@ AR-12 execution workspace必须只位于仓库外部。可选`AR12_EXECUTION_WOR
 
 本修复不改变现行evidence contract tuple：`phase-01.abg-run-plan.v4`、`phase-01.repository-authoritative-plan.v3`、`phase-01.producer-evidence.v2`、`phase-01.producer-evidence-index.v2`、`phase-01.abg-gate-result.v3`、`phase-01.abg-run.v5`、`phase-01.formal-terminal-conclusion.v2`、`phase-01.formal-runtime-outcome.v3`和`phase-01.evidence-manifest.v1`保持不变。两个新的tracked AR-12编排模块以`ORCHESTRATOR`登记，使producer source manifest从AR-11时的43个文件扩展为45个文件；execution workspace路径与marker不进入contract tuple。遗留execution clone已按上述边界受控外移；recovery记录位于`.runtime/rebaseline/ar-12/recovery/20260830-0267bba/execution-workspace-relocation.json`，外移前后tree digest相同（`03c6f5f4…0700f67f`），五个既有evidence目录均保持不变，且未放宽的repository layout门禁现已通过。当前工作只修复execution workspace隔离并保留既有失败证据，不执行完整AR-12重基线、真实Podman/数据库/浏览器运行、shared readiness或正式ABG；AR-12继续为`claimed`，AR-07继续被AR-12阻断。
 
+AR-12每轮`init`还必须在创建当前run目录前确认规范列出的五个历史运行目录全部存在、失败final的六个关键artifact仍精确匹配AR-12R-01固定SHA-256、recovery artifact字节SHA-256仍为`735e5ea4…f86f75e`且旧`worktrees/db57406-precloseout`路径不存在，然后冻结output root中全部既有运行、recovery及其他历史项的物理身份，并把`opening-history-evidence.json`的SHA-256绑定进run context。历史身份按相对路径绑定文件字节、长度和目录结构；符号链接、Junction/reparse、hard-link leaf或其他非普通项失败关闭。当前run目录被精确排除，不能用当前证据增长制造伪漂移，也不能用空目录、路径改名或旧artifact替换绕过稳定性核验。
+
+`init`必须根据opening历史身份和冻结时间预先计算合法`repository-boundary-result.json`的精确字节SHA-256并写入先于命令创建的run context。42条命令全部通过后、`finalize`之前，编排器再次对source repository执行execution-workspace contamination guard和未放宽的`npm run check:repo:layout`权威命令，再重算历史身份。只有opening/ending历史身份逐字段相同且结果字节匹配该预绑定SHA，才排他写入`repository-boundary-result.json`，并把相同SHA写入随后创建的`run-commands-result.json`。`finalize`必须同时验证context与run-commands两条绑定并再次现时复核contamination、npm layout和历史身份，才在initial/final summary顶层显式写入`repositoryContaminationGuard: PASSED`、`repoLayoutStatus: PASSED`和`historyEvidenceStable: true`；缺失、篡改、布局失败或历史漂移均以稳定错误码失败关闭，不能由人工检查或用户可见说明替代summary机器契约。
+
 ### 8.3 不可覆盖与完整性
 
 证据编排器在运行结束后生成规范化`manifest.json`，其中按稳定路径排序列出除清单自身及`manifest.sha256`外每个产物的媒体类型、字节数和SHA-256；再将规范化清单字节的SHA-256写入`manifest.sha256`，该值就是证据包身份。清单和包身份完成后运行进入终态，任何文件不得覆盖、补写或删除；需要纠正、补跑或重新取证时必须创建新的运行身份，并通过显式关系指向被取代或补充的运行。

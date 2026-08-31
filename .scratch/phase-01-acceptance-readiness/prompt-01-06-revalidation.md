@@ -313,3 +313,9 @@ stale execution clone `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout` 
 外移没有改变既有执行证据：`precloseout`、`r2`、`r3`、`r4` 与 `final` 的 evidence content digests 均保持不变，特别是 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final` 的失败证据仍原样保留。当前 `npm run check:repo:layout` 已通过；`check-repo-layout.mjs` 未修改，仍执行原有物理布局、单 Git root 与单 lockfile 约束，命令 03 也未被跳过或降级。
 
 本记录只证明仓库内 stale execution clone 已安全外移并恢复当前布局门禁通过，不等同于重跑完整 AR-12，也不建立 client-visible、real-environment、shared-readiness 或 formal-ABG 证据。AR-12 继续保持 `claimed` 并作为 current frontier，AR-07 继续 `blocked`；本轮未启动真实服务，不得将 AR-12R-01 或 AR-12 表述为 `resolved` 或 `accepted`。
+
+## AR-12R-02 summary 契约失败与整改
+
+opening HEAD `1d1204aa228a38a2862f9d8eaa7fa3428be6eab7` 的全新 initial 目录为 `.runtime/rebaseline/ar-12/20260831-1d1204a-precloseout-r2`。权威 composer 返回 `PASSED`，实际达到 42/42 commands、14/14 standalone、verification 24 files / 559 tests、lifecycle 10/218、Podman fake runtime 5/173、provenance 4/94、adversarial 152 tests、150/150 mutations detected且0 survived、synthetic guard 8 passed / 3 expected skipped、teardown 6/6，Secret与副作用finding均为0；summary SHA-256为`be19b1557dc75dc2adae612fefdd5088116677acc3414f151feddf0d10ad2cff`。但是该summary没有序列化`repositoryContaminationGuard`、`repoLayoutStatus`和`historyEvidenceStable`三个任务强制字段，不能用运行外人工复核代替不可覆盖机器契约，因此本轮失败关闭，没有修改状态、创建Closeout提交或执行final。
+
+整改在`init`创建当前run前先强制核验五个指定历史目录、失败final六个关键artifact的AR-12R-01固定SHA-256、固定SHA-256的recovery artifact和旧stale clone路径缺失，再冻结output root中既有运行、recovery及其他历史项的物理身份；相对路径、目录结构、文件长度与字节摘要均被绑定，reparse/symlink、hard-link leaf和非普通项失败关闭，当前run目录被精确排除。opening snapshot及合法repository-boundary结果的预期字节SHA-256均在命令前绑定进run context。42条命令全部通过后，编排器再次执行source repository contamination guard、`npm run check:repo:layout`和历史身份比较，只有结果匹配预绑定SHA才排他写入repository-boundary artifact，并由run-commands result重复记录同一SHA；`finalize`同时验证两条绑定并再次现时执行三项复核后，才把三个必需字段写成`PASSED`、`PASSED`和`true`。任何缺失、漂移或篡改均失败关闭。本整改不改变evidence contract tuple，不执行完整AR-12重跑、真实服务、shared readiness、正式ABG或AR-07；必须在新的已提交候选上另行从头重跑。

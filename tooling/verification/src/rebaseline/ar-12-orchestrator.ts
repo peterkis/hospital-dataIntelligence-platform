@@ -65,6 +65,7 @@ type CommandSpec = Ar12CommandSpec;
 
 export interface Ar12InitializeInput {
   readonly repositoryRoot: string;
+  readonly sourceRepositoryRoot: string;
   readonly outputRoot: string;
   readonly runDirectory: string;
   readonly expectedBranch: string;
@@ -126,6 +127,165 @@ export interface Ar12ExternalExecutionWorkspaceRunResult {
   readonly terminalIdentity: Ar12ExecutionWorkspaceTerminalIdentity;
   readonly cleanupStatus: 'CLEANED';
   readonly runDirectory: string;
+}
+
+export interface Ar12RepositoryBoundaryResult {
+  readonly schemaVersion: 'phase-01.ar-12-repository-boundary.v1';
+  readonly repositoryContaminationGuard: 'PASSED';
+  readonly repoLayoutStatus: 'PASSED';
+  readonly historyEvidenceStable: boolean;
+  readonly openingHistoryEvidenceDigest: string;
+  readonly endingHistoryEvidenceDigest: string;
+  readonly protectedHistoryEntryCount: number;
+  readonly checkedAt: string;
+}
+
+export interface Ar12HistoryEvidenceSnapshot {
+  readonly schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1';
+  readonly entries: readonly {
+    readonly relativePath: string;
+    readonly kind: 'DIRECTORY' | 'FILE';
+    readonly fileCount: number;
+    readonly digest: string;
+  }[];
+  readonly digest: string;
+}
+
+export interface Ar12HistoryEvidenceRequirements {
+  readonly requiredDirectoryNames: readonly string[];
+  readonly requiredFileSha256: Readonly<Record<string, string>>;
+  readonly recoveryArtifactRelativePath: string;
+  readonly recoveryArtifactSha256: string;
+  readonly forbiddenRelativePath: string;
+}
+
+export interface Ar12RepositoryBoundaryInput {
+  readonly sourceRepositoryRoot: string;
+  readonly outputRoot: string;
+  readonly runDirectory: string;
+  readonly openingHistoryEvidence: Ar12HistoryEvidenceSnapshot;
+  readonly checkedAt: string;
+}
+
+export interface Ar12RepositoryBoundaryDependencies {
+  assertRepositoryNotContaminatedByExecutionWorkspace(repositoryRoot: string): Promise<void>;
+  verifyRepositoryLayout(repositoryRoot: string): Promise<void>;
+  captureHistoryEvidenceSnapshot(
+    outputRoot: string,
+    currentRunDirectory: string,
+  ): Promise<Ar12HistoryEvidenceSnapshot>;
+}
+
+export function ar12SummaryRepositoryBoundaryFields(
+  result: Ar12RepositoryBoundaryResult,
+): {
+  readonly repositoryContaminationGuard: 'PASSED';
+  readonly repoLayoutStatus: 'PASSED';
+  readonly historyEvidenceStable: true;
+} {
+  if (
+    result.schemaVersion !== 'phase-01.ar-12-repository-boundary.v1' ||
+    result.repositoryContaminationGuard !== 'PASSED' ||
+    result.repoLayoutStatus !== 'PASSED' ||
+    result.historyEvidenceStable !== true ||
+    !/^[0-9a-f]{64}$/u.test(result.openingHistoryEvidenceDigest) ||
+    result.endingHistoryEvidenceDigest !== result.openingHistoryEvidenceDigest ||
+    !Number.isSafeInteger(result.protectedHistoryEntryCount) ||
+    result.protectedHistoryEntryCount < 0 ||
+    Number.isNaN(Date.parse(result.checkedAt))
+  ) fail('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+  return {
+    repositoryContaminationGuard: 'PASSED',
+    repoLayoutStatus: 'PASSED',
+    historyEvidenceStable: true,
+  };
+}
+
+export function validateAr12RepositoryBoundaryArtifact(input: {
+  readonly result: Ar12RepositoryBoundaryResult;
+  readonly artifactBytes: Buffer;
+  readonly expectedSha256: unknown;
+  readonly openingHistoryEvidence: Ar12HistoryEvidenceSnapshot;
+}): ReturnType<typeof ar12SummaryRepositoryBoundaryFields> {
+  if (
+    typeof input.expectedSha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(input.expectedSha256) ||
+    sha256(input.artifactBytes) !== input.expectedSha256 ||
+    input.result.openingHistoryEvidenceDigest !== input.openingHistoryEvidence.digest ||
+    input.result.protectedHistoryEntryCount !== input.openingHistoryEvidence.entries.length
+  ) fail('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+  return ar12SummaryRepositoryBoundaryFields(input.result);
+}
+
+async function verifyAr12RepositoryLayout(repositoryRoot: string): Promise<void> {
+  const root = await assertPhysicalDirectory(repositoryRoot, 'AR12_REPOSITORY_ROOT_UNSAFE');
+  await assertSafeRegularFile(root, 'tooling/verification/src/check-repo-layout.mjs');
+  const modules = await loadAuthorityModules(root);
+  const runner = new modules.runner.SpawnRuntimeCommandRunner();
+  const invocation = await runtimeInvocation('npm', ['run', 'check:repo:layout'], root);
+  const result = await runner.run({
+    executable: invocation.executable,
+    args: invocation.args,
+    cwd: root,
+  });
+  const outputLines = result.stdout.trim().split(/\r?\n/u);
+  if (
+    result.exitCode !== 0 ||
+    result.signal !== null ||
+    outputLines.at(-1) !==
+      'Repository topology verified: 8 workspaces, one Git root, one npm lock.'
+  ) fail('AR12_REPOSITORY_LAYOUT_FAILED');
+}
+
+export async function verifyAr12RepositoryBoundary(
+  input: Ar12RepositoryBoundaryInput,
+  dependencies: Ar12RepositoryBoundaryDependencies = {
+    assertRepositoryNotContaminatedByExecutionWorkspace,
+    verifyRepositoryLayout: verifyAr12RepositoryLayout,
+    captureHistoryEvidenceSnapshot: captureAr12HistoryEvidenceSnapshot,
+  },
+): Promise<Ar12RepositoryBoundaryResult> {
+  if (
+    input.openingHistoryEvidence.schemaVersion !==
+      'phase-01.ar-12-history-evidence-snapshot.v1' ||
+    !/^[0-9a-f]{64}$/u.test(input.openingHistoryEvidence.digest) ||
+    Number.isNaN(Date.parse(input.checkedAt))
+  ) fail('AR12_HISTORY_EVIDENCE_SNAPSHOT_INVALID');
+  await dependencies.assertRepositoryNotContaminatedByExecutionWorkspace(
+    input.sourceRepositoryRoot,
+  );
+  await dependencies.verifyRepositoryLayout(input.sourceRepositoryRoot);
+  const endingHistoryEvidence = await dependencies.captureHistoryEvidenceSnapshot(
+    input.outputRoot,
+    input.runDirectory,
+  );
+  if (!exactJsonEqual(input.openingHistoryEvidence, endingHistoryEvidence)) {
+    fail('AR12_HISTORY_EVIDENCE_DRIFT');
+  }
+  return passedAr12RepositoryBoundaryResult(
+    input.openingHistoryEvidence,
+    input.checkedAt,
+  );
+}
+
+function passedAr12RepositoryBoundaryResult(
+  openingHistoryEvidence: Ar12HistoryEvidenceSnapshot,
+  checkedAt: string,
+): Ar12RepositoryBoundaryResult {
+  return {
+    schemaVersion: 'phase-01.ar-12-repository-boundary.v1',
+    repositoryContaminationGuard: 'PASSED',
+    repoLayoutStatus: 'PASSED',
+    historyEvidenceStable: true,
+    openingHistoryEvidenceDigest: openingHistoryEvidence.digest,
+    endingHistoryEvidenceDigest: openingHistoryEvidence.digest,
+    protectedHistoryEntryCount: openingHistoryEvidence.entries.length,
+    checkedAt,
+  };
+}
+
+function repositoryBoundaryArtifactBytes(result: Ar12RepositoryBoundaryResult): Buffer {
+  return Buffer.from(JSON.stringify(result, null, 2) + '\n', 'utf8');
 }
 
 export class Ar12ExternalExecutionWorkspaceRunError extends Error {
@@ -261,6 +421,7 @@ interface BaselineIdentity {
 interface RunContext {
   readonly schemaVersion: 'phase-01.ar-12-run-context.v1';
   readonly repositoryRoot: string;
+  readonly sourceRepositoryRoot: string;
   readonly outputRoot: string;
   readonly runDirectory: string;
   readonly expectedBranch: string;
@@ -269,6 +430,8 @@ interface RunContext {
   readonly baselineIdentitySha256: string;
   readonly commandPlanSha256: string;
   readonly producerSourceManifestSha256: string;
+  readonly openingHistoryEvidenceSha256: string;
+  readonly expectedRepositoryBoundaryResultSha256: string;
   readonly initializedAt: string;
 }
 
@@ -360,6 +523,36 @@ const DENIED_EXECUTABLES = [
 const BASELINE_FILE = 'baseline-identity.json';
 const PLAN_FILE = 'command-plan.json';
 const CONTEXT_FILE = 'run-context.json';
+const OPENING_HISTORY_EVIDENCE_FILE = 'opening-history-evidence.json';
+const REPOSITORY_BOUNDARY_FILE = 'repository-boundary-result.json';
+const AR12_HISTORY_EVIDENCE_REQUIREMENTS: Ar12HistoryEvidenceRequirements = {
+  requiredDirectoryNames: [
+    '20260830-db57406-precloseout',
+    '20260830-db57406-precloseout-r2',
+    '20260830-db57406-precloseout-r3',
+    '20260830-db57406-precloseout-r4',
+    '20260830-4dca3ca-final',
+  ],
+  requiredFileSha256: {
+    '20260830-4dca3ca-final/baseline-identity.json':
+      '9d1ab324ba388411316d7a8b043411356a9b5b28f0ce6302ee564a5665219779',
+    '20260830-4dca3ca-final/command-plan.json':
+      'd03e5f60568859a1939285d51f5a55eab6c13bcae9ab31a4ceafb80bf10faede',
+    '20260830-4dca3ca-final/init-result.json':
+      'c08768f3f6deb5af1a3ec70d26d46835c09c7763506f4a321a8ff4506c2f2de1',
+    '20260830-4dca3ca-final/run-context.json':
+      '7b9c7f674562a34a6e3b3b3a750a310d746b4cd8f98cbabea129f866cb0a9cd0',
+    '20260830-4dca3ca-final/run-commands-result.json':
+      '1130502d8e8b21a3cc7aff6a63ae0807f2d3738df65261d06b713bdb2a754652',
+    '20260830-4dca3ca-final/failure-run-commands.json':
+      'a914596a5b2df9372a3042af2df2cdad6d3216d0318a839e2ea20777f307994c',
+  },
+  recoveryArtifactRelativePath:
+    'recovery/20260830-0267bba/execution-workspace-relocation.json',
+  recoveryArtifactSha256:
+    '735e5ea48cdadecad043573c6e75f263b73f04b411465944fc4d7c215f86f75e',
+  forbiddenRelativePath: 'worktrees/db57406-precloseout',
+};
 const DENY_LOG_FILE = 'side-effect-invocations.log';
 const FIXED_ADVERSARIAL_SUMMARY = '.runtime/test-results/verification-adversarial-summary.json';
 const AR10_TAMPER_STANDALONE_SCRIPT = String.raw`
@@ -1055,6 +1248,143 @@ async function fingerprintTree(root: string): Promise<{ fileCount: number; diges
   return { fileCount: entries.length, digest: sha256(canonicalJson(entries)) };
 }
 
+export async function captureAr12HistoryEvidenceSnapshot(
+  outputRoot: string,
+  currentRunDirectory: string,
+  requirements: Ar12HistoryEvidenceRequirements = AR12_HISTORY_EVIDENCE_REQUIREMENTS,
+): Promise<Ar12HistoryEvidenceSnapshot> {
+  const physicalOutputRoot = await assertPhysicalDirectory(
+    outputRoot,
+    'AR12_HISTORY_EVIDENCE_ROOT_UNSAFE',
+  );
+  for (const directoryName of requirements.requiredDirectoryNames) {
+    if (!SAFE_ID_PATTERN.test(directoryName)) fail('AR12_REQUIRED_HISTORY_EVIDENCE_INVALID');
+    await assertPhysicalDirectory(
+      resolveInside(
+        physicalOutputRoot,
+        directoryName,
+        'AR12_REQUIRED_HISTORY_EVIDENCE_INVALID',
+      ),
+      'AR12_REQUIRED_HISTORY_EVIDENCE_MISSING',
+    );
+  }
+  for (const [relativePath, expectedSha256] of Object.entries(
+    requirements.requiredFileSha256,
+  )) {
+    const requiredArtifact = await assertSafeRegularFile(physicalOutputRoot, relativePath);
+    if (
+      !/^[0-9a-f]{64}$/u.test(expectedSha256) ||
+      sha256(await readFile(requiredArtifact)) !== expectedSha256
+    ) fail('AR12_REQUIRED_HISTORY_ARTIFACT_IDENTITY_MISMATCH');
+  }
+  const recoveryArtifact = await assertSafeRegularFile(
+    physicalOutputRoot,
+    requirements.recoveryArtifactRelativePath,
+  );
+  if (
+    !/^[0-9a-f]{64}$/u.test(requirements.recoveryArtifactSha256) ||
+    sha256(await readFile(recoveryArtifact)) !== requirements.recoveryArtifactSha256
+  ) fail('AR12_RECOVERY_ARTIFACT_IDENTITY_MISMATCH');
+  const forbiddenPath = resolveInside(
+    physicalOutputRoot,
+    requirements.forbiddenRelativePath,
+    'AR12_REQUIRED_HISTORY_EVIDENCE_INVALID',
+  );
+  try {
+    await lstat(forbiddenPath);
+    fail('AR12_STALE_EXECUTION_WORKSPACE_PRESENT');
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+  }
+  const currentRun = resolve(currentRunDirectory);
+  if (!samePath(dirname(currentRun), physicalOutputRoot)) {
+    fail('AR12_HISTORY_EVIDENCE_CURRENT_RUN_INVALID');
+  }
+  const entries: Array<Ar12HistoryEvidenceSnapshot['entries'][number]> = [];
+  const children = await readdir(physicalOutputRoot, { withFileTypes: true });
+  children.sort((left, right) => left.name.localeCompare(right.name, 'en'));
+  for (const child of children) {
+    const path = join(physicalOutputRoot, child.name);
+    if (samePath(path, currentRun)) continue;
+    const observed = await lstat(path);
+    if (observed.isSymbolicLink() || !samePath(path, await realpath(path))) {
+      fail('AR12_HISTORY_EVIDENCE_REPARSE_FORBIDDEN');
+    }
+    if (observed.isDirectory()) {
+      const fingerprint = await fingerprintHistoryTree(path);
+      entries.push({
+        relativePath: child.name,
+        kind: 'DIRECTORY',
+        fileCount: fingerprint.fileCount,
+        digest: fingerprint.digest,
+      });
+    } else if (observed.isFile()) {
+      if (observed.nlink !== 1) fail('AR12_HISTORY_EVIDENCE_HARDLINK_FORBIDDEN');
+      const bytes = await readFile(path);
+      entries.push({
+        relativePath: child.name,
+        kind: 'FILE',
+        fileCount: 1,
+        digest: sha256(bytes),
+      });
+    } else {
+      fail('AR12_HISTORY_EVIDENCE_NONREGULAR_ENTRY');
+    }
+  }
+  const digest = sha256(canonicalJson(entries));
+  return {
+    schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1',
+    entries,
+    digest,
+  };
+}
+
+async function fingerprintHistoryTree(
+  root: string,
+): Promise<{ readonly fileCount: number; readonly digest: string }> {
+  const physicalRoot = await assertPhysicalDirectory(root, 'AR12_HISTORY_EVIDENCE_ROOT_UNSAFE');
+  const entries: Array<
+    | { readonly path: string; readonly kind: 'DIRECTORY' }
+    | {
+        readonly path: string;
+        readonly kind: 'FILE';
+        readonly byteLength: number;
+        readonly sha256: string;
+      }
+  > = [];
+  let fileCount = 0;
+  const visit = async (directory: string): Promise<void> => {
+    const children = await readdir(directory, { withFileTypes: true });
+    children.sort((left, right) => left.name.localeCompare(right.name, 'en'));
+    for (const child of children) {
+      const path = join(directory, child.name);
+      const relativePath = relative(physicalRoot, path).split(sep).join('/');
+      const observed = await lstat(path);
+      if (observed.isSymbolicLink() || !samePath(path, await realpath(path))) {
+        fail('AR12_HISTORY_EVIDENCE_REPARSE_FORBIDDEN');
+      }
+      if (observed.isDirectory()) {
+        entries.push({ path: relativePath, kind: 'DIRECTORY' });
+        await visit(path);
+      } else if (observed.isFile()) {
+        if (observed.nlink !== 1) fail('AR12_HISTORY_EVIDENCE_HARDLINK_FORBIDDEN');
+        const bytes = await readFile(path);
+        entries.push({
+          path: relativePath,
+          kind: 'FILE',
+          byteLength: bytes.byteLength,
+          sha256: sha256(bytes),
+        });
+        fileCount += 1;
+      } else {
+        fail('AR12_HISTORY_EVIDENCE_NONREGULAR_ENTRY');
+      }
+    }
+  };
+  await visit(physicalRoot);
+  return { fileCount, digest: sha256(canonicalJson(entries)) };
+}
+
 async function buildProducerManifest(
   modules: AuthorityModules,
   repositoryRoot: string,
@@ -1261,8 +1591,19 @@ async function initialize(input: Ar12InitializeInput): Promise<void> {
     input.runDirectory,
     true,
   );
+  const sourceRepositoryRoot = await assertPhysicalDirectory(
+    input.sourceRepositoryRoot,
+    'AR12_SOURCE_REPOSITORY_ROOT_UNSAFE',
+  );
   const modules = await loadAuthorityModules(layout.repositoryRoot);
   const startedAt = new Date().toISOString();
+  const openingHistoryEvidence = await captureAr12HistoryEvidenceSnapshot(
+    layout.outputRoot,
+    layout.runDirectory,
+  );
+  const expectedRepositoryBoundaryResultSha256 = sha256(repositoryBoundaryArtifactBytes(
+    passedAr12RepositoryBoundaryResult(openingHistoryEvidence, startedAt),
+  ));
   await modules.recorder.createEvidenceOutputDirectory(layout.runDirectory);
   try {
     const captured = await captureBaselineIdentity(
@@ -1290,10 +1631,16 @@ async function initialize(input: Ar12InitializeInput): Promise<void> {
       PLAN_FILE,
       plan,
     );
+    const openingHistoryEvidenceWrite = await modules.recorder.writeRedactedJsonArtifact(
+      layout.runDirectory,
+      OPENING_HISTORY_EVIDENCE_FILE,
+      openingHistoryEvidence,
+    );
     await createDenyShims(modules.recorder, layout.runDirectory);
     const context: RunContext = {
       schemaVersion: 'phase-01.ar-12-run-context.v1',
       repositoryRoot: layout.repositoryRoot,
+      sourceRepositoryRoot,
       outputRoot: layout.outputRoot,
       runDirectory: layout.runDirectory,
       expectedBranch: input.expectedBranch,
@@ -1302,6 +1649,8 @@ async function initialize(input: Ar12InitializeInput): Promise<void> {
       baselineIdentitySha256: baselineWrite.sha256,
       commandPlanSha256: planWrite.sha256,
       producerSourceManifestSha256: manifestWrite.sha256,
+      openingHistoryEvidenceSha256: openingHistoryEvidenceWrite.sha256,
+      expectedRepositoryBoundaryResultSha256,
       initializedAt: new Date().toISOString(),
     };
     await modules.recorder.writeRedactedJsonArtifact(
@@ -1320,6 +1669,8 @@ async function initialize(input: Ar12InitializeInput): Promise<void> {
         baselineIdentitySha256: baselineWrite.sha256,
         commandPlanSha256: planWrite.sha256,
         producerSourceManifestSha256: manifestWrite.sha256,
+        openingHistoryEvidenceSha256: openingHistoryEvidenceWrite.sha256,
+        expectedRepositoryBoundaryResultSha256,
         commandCount: createCommandSpecs().length,
         completedAt: new Date().toISOString(),
       },
@@ -1343,6 +1694,7 @@ async function loadAndValidateRun(
   readonly context: RunContext;
   readonly baseline: BaselineIdentity;
   readonly plan: Record<string, unknown>;
+  readonly openingHistoryEvidence: Ar12HistoryEvidenceSnapshot;
 }> {
   const repository = await assertPhysicalDirectory(repositoryRoot, 'AR12_REPOSITORY_ROOT_UNSAFE');
   const run = await assertPhysicalDirectory(runDirectory, 'AR12_RUN_DIRECTORY_UNSAFE');
@@ -1351,25 +1703,49 @@ async function loadAndValidateRun(
   if (
     context.schemaVersion !== 'phase-01.ar-12-run-context.v1' ||
     !samePath(context.repositoryRoot, repository) ||
+    !samePath(
+      context.sourceRepositoryRoot,
+      await assertPhysicalDirectory(
+        context.sourceRepositoryRoot,
+        'AR12_SOURCE_REPOSITORY_ROOT_UNSAFE',
+      ),
+    ) ||
     !samePath(context.runDirectory, run)
   ) fail('AR12_RUN_CONTEXT_MISMATCH');
   await assertSafeRunLayout(repository, context.outputRoot, run, false);
-  const [baseline, plan, baselineBytes, planBytes] = await Promise.all([
+  const [
+    baseline,
+    plan,
+    openingHistoryEvidence,
+    baselineBytes,
+    planBytes,
+    openingHistoryEvidenceBytes,
+  ] = await Promise.all([
     readJsonFile<BaselineIdentity>(run, BASELINE_FILE),
     readJsonFile<Record<string, unknown>>(run, PLAN_FILE),
+    readJsonFile<Ar12HistoryEvidenceSnapshot>(run, OPENING_HISTORY_EVIDENCE_FILE),
     readFile(await assertSafeRegularFile(run, BASELINE_FILE)),
     readFile(await assertSafeRegularFile(run, PLAN_FILE)),
+    readFile(await assertSafeRegularFile(run, OPENING_HISTORY_EVIDENCE_FILE)),
   ]);
   if (
     sha256(baselineBytes) !== context.baselineIdentitySha256 ||
     sha256(planBytes) !== context.commandPlanSha256 ||
+    sha256(openingHistoryEvidenceBytes) !== context.openingHistoryEvidenceSha256 ||
+    !/^[0-9a-f]{64}$/u.test(context.expectedRepositoryBoundaryResultSha256) ||
+    sha256(repositoryBoundaryArtifactBytes(
+      passedAr12RepositoryBoundaryResult(openingHistoryEvidence, baseline.startedAt),
+    )) !== context.expectedRepositoryBoundaryResultSha256 ||
+    openingHistoryEvidence.schemaVersion !==
+      'phase-01.ar-12-history-evidence-snapshot.v1' ||
+    !/^[0-9a-f]{64}$/u.test(openingHistoryEvidence.digest) ||
     baseline.sourceManifestSha256 !== context.producerSourceManifestSha256 ||
     baseline.gitCommitSha !== context.expectedCommit ||
     baseline.branch !== context.expectedBranch ||
     baseline.orchestratorSha256 !== await currentOrchestratorSha256() ||
     !exactJsonEqual(plan, commandPlan(context.runKind))
   ) fail('AR12_RUN_ARTIFACT_IDENTITY_MISMATCH');
-  return { modules, context, baseline, plan };
+  return { modules, context, baseline, plan, openingHistoryEvidence };
 }
 
 function commandDirectory(ordinal: number, id: string): string {
@@ -1501,7 +1877,7 @@ async function runCommandsCore(
   options: Ar12RunCommandsOptions,
 ): Promise<void> {
   const loaded = await loadAndValidateRun(repositoryRoot, runDirectory);
-  const { modules, context, baseline } = loaded;
+  const { modules, context, baseline, openingHistoryEvidence } = loaded;
   const commands = createCommandSpecs();
   assertAr12CommandPlanSafety(commands);
   const runner = new modules.runner.SpawnRuntimeCommandRunner();
@@ -1529,6 +1905,7 @@ async function runCommandsCore(
     AR12_REAL_SERVICE_POLICY: 'FORBIDDEN',
   };
   const results: Record<string, unknown>[] = [];
+  let repositoryBoundaryResultSha256: string | null = null;
   const runState: {
     failure: { code: string; commandId: string; exitCode: number | null } | null;
   } = { failure: null };
@@ -1690,6 +2067,24 @@ async function runCommandsCore(
         }
       }
     });
+    if (runState.failure === null && results.length === commands.length) {
+      const repositoryBoundary = await verifyAr12RepositoryBoundary({
+        sourceRepositoryRoot: options.contaminationRepositoryRoot,
+        outputRoot: context.outputRoot,
+        runDirectory: context.runDirectory,
+        openingHistoryEvidence,
+        checkedAt: baseline.startedAt,
+      });
+      const repositoryBoundaryWrite = await modules.recorder.writeRedactedJsonArtifact(
+        context.runDirectory,
+        REPOSITORY_BOUNDARY_FILE,
+        repositoryBoundary,
+      );
+      if (
+        repositoryBoundaryWrite.sha256 !== context.expectedRepositoryBoundaryResultSha256
+      ) fail('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+      repositoryBoundaryResultSha256 = repositoryBoundaryWrite.sha256;
+    }
     await modules.recorder.writeRedactedJsonArtifact(
       context.runDirectory,
       'run-commands-result.json',
@@ -1703,6 +2098,7 @@ async function runCommandsCore(
         passedCommandCount: results.filter((item) => item['status'] === 'PASSED').length,
         failedCommandCount: results.filter((item) => item['status'] === 'FAILED').length,
         skippedCommandCount: commands.length - results.length,
+        repositoryBoundaryResultSha256,
         failure: runState.failure,
         completedAt: new Date().toISOString(),
       },
@@ -2136,12 +2532,56 @@ function buildStandaloneChecks(collected: readonly CollectedCommand[]): readonly
 
 async function finalizeCore(repositoryRoot: string, runDirectory: string): Promise<void> {
   const loaded = await loadAndValidateRun(repositoryRoot, runDirectory);
-  const { modules, context, baseline } = loaded;
+  const { modules, context, baseline, openingHistoryEvidence } = loaded;
   if (baseline.schemaVersion !== 'phase-01.ar-12-baseline-identity.v1') {
     fail('AR12_BASELINE_SCHEMA_INVALID');
   }
   const commands = createCommandSpecs();
   const failures: string[] = [];
+  let repositoryBoundaryResult: Ar12RepositoryBoundaryResult | null = null;
+  let repositoryBoundaryFields: {
+    readonly repositoryContaminationGuard: 'PASSED' | 'FAILED';
+    readonly repoLayoutStatus: 'PASSED' | 'FAILED';
+    readonly historyEvidenceStable: boolean;
+  } = {
+    repositoryContaminationGuard: 'FAILED',
+    repoLayoutStatus: 'FAILED',
+    historyEvidenceStable: false,
+  };
+  try {
+    const persistedRepositoryBoundaryResult = await readJsonFile<Ar12RepositoryBoundaryResult>(
+      context.runDirectory,
+      REPOSITORY_BOUNDARY_FILE,
+    );
+    const repositoryBoundaryBytes = await readFile(await assertSafeRegularFile(
+      context.runDirectory,
+      REPOSITORY_BOUNDARY_FILE,
+    ));
+    const runCommandsResult = await readJsonFile<Record<string, unknown>>(
+      context.runDirectory,
+      'run-commands-result.json',
+    );
+    const expectedBoundarySha256 = runCommandsResult['repositoryBoundaryResultSha256'];
+    if (expectedBoundarySha256 !== context.expectedRepositoryBoundaryResultSha256) {
+      fail('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+    }
+    validateAr12RepositoryBoundaryArtifact({
+      result: persistedRepositoryBoundaryResult,
+      artifactBytes: repositoryBoundaryBytes,
+      expectedSha256: context.expectedRepositoryBoundaryResultSha256,
+      openingHistoryEvidence,
+    });
+    repositoryBoundaryResult = await verifyAr12RepositoryBoundary({
+      sourceRepositoryRoot: context.sourceRepositoryRoot,
+      outputRoot: context.outputRoot,
+      runDirectory: context.runDirectory,
+      openingHistoryEvidence,
+      checkedAt: baseline.startedAt,
+    });
+    repositoryBoundaryFields = ar12SummaryRepositoryBoundaryFields(repositoryBoundaryResult);
+  } catch {
+    failures.push('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
+  }
   let endingIdentity: BaselineIdentity | null = null;
   let identityFailureCode: string | null = null;
   try {
@@ -2314,6 +2754,8 @@ async function finalizeCore(repositoryRoot: string, runDirectory: string): Promi
     realServicesStarted: false,
     sharedReadinessExecuted: false,
     formalAbgExecuted: false,
+    ...repositoryBoundaryFields,
+    repositoryBoundaryIdentity: repositoryBoundaryResult,
     baselineIdentity: baseline,
     endingIdentity,
     commandCount: commands.length,
@@ -2501,6 +2943,7 @@ export async function runAr12InExternalExecutionWorkspace(
 
     await dependencies.initialize({
       repositoryRoot: created.workspacePath,
+      sourceRepositoryRoot,
       outputRoot,
       runDirectory,
       expectedBranch: input.expectedBranch,
@@ -2666,7 +3109,7 @@ export function parseAr12CliArguments(args: readonly string[]): ParsedCli {
       '  npm run rebaseline:ar-12 -- --source-repository-root <path> --output-root <path> --run-dir <path> --expected-branch <branch> --expected-commit <sha> --run-kind <initial|final>',
       '',
       'Recovery-only low-level modes:',
-      '  npm run rebaseline:ar-12:recovery -- init --repository-root <external-clone> --output-root <path> --run-dir <path> --expected-branch <branch> --expected-commit <sha> --run-kind <initial|final>',
+      '  npm run rebaseline:ar-12:recovery -- init --repository-root <external-clone> --source-repository-root <source> --output-root <path> --run-dir <path> --expected-branch <branch> --expected-commit <sha> --run-kind <initial|final>',
       '  npm run rebaseline:ar-12:recovery -- run-commands --repository-root <external-clone> --source-repository-root <source> --run-dir <path>',
       '  npm run rebaseline:ar-12:recovery -- finalize --repository-root <external-clone> --run-dir <path>',
       '',
@@ -2757,6 +3200,7 @@ export async function runAr12OrchestratorCli(
     if (runKind !== 'initial' && runKind !== 'final') fail('AR12_RUN_KIND_INVALID');
     await dependencies.initialize({
       repositoryRoot,
+      sourceRepositoryRoot: requiredOption(parsed.options, '--source-repository-root'),
       outputRoot: requiredOption(parsed.options, '--output-root'),
       runDirectory,
       expectedBranch: requiredOption(parsed.options, '--expected-branch'),
