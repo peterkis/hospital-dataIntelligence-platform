@@ -10,6 +10,7 @@ import {
 import {
   ADVERSARIAL_MUTATION_CASES,
   AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
+  AR12_HISTORY_EVIDENCE_MUTATION_CASES,
   executeEvidenceMutation,
   PRE_AR12_ADVERSARIAL_MUTATION_CASES,
   type MutationExecutionResult,
@@ -54,17 +55,18 @@ afterAll(async () => {
     expect(basename(rootDirectory)).toMatch(/^hdi-ar06-adversarial-/u);
     await rm(rootDirectory, { recursive: true, force: true });
   }
-  expect(summary.mutationCount).toBeGreaterThanOrEqual(150);
+  expect(summary.mutationCount).toBeGreaterThanOrEqual(158);
   expect(summary.detectedCount).toBe(summary.mutationCount);
   expect(summary.survivedCount).toBe(0);
 }, 30_000);
 
 describe('AR-06 adversarial verification', () => {
-  it('retains all 140 pre-AR-12 mutations and declares 10 execution-workspace mutations', () => {
+  it('retains all 150 existing mutations and declares 8 history-contract mutations', () => {
     expect(PRE_AR12_ADVERSARIAL_MUTATION_CASES).toHaveLength(140);
     expect(AR12_EXECUTION_WORKSPACE_MUTATION_CASES).toHaveLength(10);
-    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(150);
-    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(150);
+    expect(AR12_HISTORY_EVIDENCE_MUTATION_CASES).toHaveLength(8);
+    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(158);
+    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(158);
     expect(Object.fromEntries(ADVERSARIAL_MUTATION_CASES.map((mutation) => [
       mutation.mutationId,
       mutation.expectedErrorCode,
@@ -139,6 +141,14 @@ describe('AR-06 adversarial verification', () => {
       AR12_STALE_CLONE_IDENTITY_MISMATCH: 'AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH',
       AR12_FAILED_EVIDENCE_DIRECTORY_DELETE_ATTEMPT: 'AR12_EXECUTION_WORKSPACE_INSIDE_EVIDENCE',
       AR12_REPO_LAYOUT_GATE_BYPASS_ATTEMPT: 'AR12_REPO_LAYOUT_GATE_BYPASS_FORBIDDEN',
+      AR12_REQUIRED_HISTORY_SIXTH_DIRECTORY_MISSING: 'AR12_HISTORY_REQUIRED_DIRECTORY_MISSING',
+      AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_MISSING: 'AR12_HISTORY_REQUIRED_ARTIFACT_MISSING',
+      AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_SHA_MISMATCH: 'AR12_HISTORY_REQUIRED_ARTIFACT_SHA256_MISMATCH',
+      AR12_REQUIRED_HISTORY_SIXTH_CLASSIFICATION_MISMATCH: 'AR12_HISTORY_CLASSIFICATION_MISMATCH',
+      AR12_REQUIRED_HISTORY_SUBSTITUTED_BY_EXTRA_DIRECTORY: 'AR12_HISTORY_EXTRA_DIRECTORY_CANNOT_SUBSTITUTE_REQUIRED',
+      AR12_REQUIRED_HISTORY_TREE_DRIFT: 'AR12_HISTORY_REQUIRED_DIRECTORY_TREE_DRIFT',
+      AR12_REQUIRED_HISTORY_RECOVERY_SHA_MISMATCH: 'AR12_RECOVERY_ARTIFACT_SHA256_MISMATCH',
+      AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED: 'AR12_STALE_EXECUTION_CLONE_REAPPEARED',
     });
   });
 

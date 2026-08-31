@@ -11,7 +11,6 @@ import {
   ar12CliFailurePayload,
   assertAr12CommandPlanSafety,
   createAr12CommandSpecs,
-  captureAr12HistoryEvidenceSnapshot,
   isAr12OrchestratorDirectInvocation,
   isAr12AdversarialFloorSatisfied,
   parseAr12CliArguments,
@@ -75,18 +74,62 @@ const EXPECTED_COMMAND_IDS = [
   'git-diff-check',
 ] as const;
 
+function fakeHistoryBaseline(digest = 'a'.repeat(64)) {
+  const classifications = [
+    'INIT_ONLY_HISTORY',
+    'DEPENDENCY_INSTALL_FAILURE_HISTORY',
+    'TOOL_DISCOVERY_FAILURE_HISTORY',
+    'INITIAL_REBASELINE_PASSED_HISTORY',
+    'CLOSEOUT_FINAL_FAILURE_HISTORY',
+    'SUMMARY_CONTRACT_FAILED_HISTORY',
+  ] as const;
+  return {
+    schemaVersion: 'phase-01.ar-12-history-evidence-baseline.v1' as const,
+    historyContractDigest: 'c'.repeat(64),
+    requiredHistoryCount: 6 as const,
+    requiredHistoryPassedCount: 6 as const,
+    requiredHistories: classifications.map((classification, index) => ({
+      historyId: `history-${index + 1}`,
+      relativeDirectory: `history-${index + 1}`,
+      classification,
+      formalAcceptanceEligible: false as const,
+      contractDisposition: classification === 'SUMMARY_CONTRACT_FAILED_HISTORY'
+        ? 'REJECTED' as const
+        : 'ACCEPTED' as const,
+      rejectionClassification: classification === 'SUMMARY_CONTRACT_FAILED_HISTORY'
+        ? 'SUMMARY_CONTRACT_FAILED_HISTORY' as const
+        : null,
+      directoryTreeDigest: 'f'.repeat(64),
+      fileCount: 1,
+      requiredArtifacts: [],
+      requiredArtifactStatus: 'PASSED' as const,
+    })),
+    recoveryArtifact: {
+      relativePath: 'recovery/receipt.json',
+      sha256: 'd'.repeat(64),
+      status: 'PASSED' as const,
+      treeDigestBefore: 'e'.repeat(64),
+      treeDigestAfter: 'e'.repeat(64),
+      failedFinalEvidencePreserved: true as const,
+    },
+    staleCloneStatus: 'ABSENT' as const,
+    requiredEntriesStatus: 'PASSED' as const,
+    discoveredAdditionalHistories: [],
+    entries: [{
+      relativePath: '20260830-deadbee-final',
+      kind: 'DIRECTORY' as const,
+      fileCount: 1,
+      digest: 'b'.repeat(64),
+    }],
+    historicalEvidenceSetDigest: digest,
+    digest,
+    capturedAt: '2026-08-31T12:00:00.000Z',
+  };
+}
+
 describe('AR-12 rebaseline orchestrator', () => {
   it('verifies contamination, layout, and immutable history before finalization', async () => {
-    const opening = {
-      schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1' as const,
-      entries: [{
-        relativePath: '20260830-deadbee-final',
-        kind: 'DIRECTORY' as const,
-        fileCount: 1,
-        digest: 'b'.repeat(64),
-      }],
-      digest: 'a'.repeat(64),
-    };
+    const opening = fakeHistoryBaseline();
     const events: string[] = [];
     const result = await verifyAr12RepositoryBoundary({
       sourceRepositoryRoot: 'D:\\source',
@@ -115,6 +158,10 @@ describe('AR-12 rebaseline orchestrator', () => {
       openingHistoryEvidenceDigest: 'a'.repeat(64),
       endingHistoryEvidenceDigest: 'a'.repeat(64),
       protectedHistoryEntryCount: 1,
+      historyEvidenceContractDigest: 'c'.repeat(64),
+      historicalEvidenceSetDigest: 'a'.repeat(64),
+      requiredHistoryCount: 6,
+      requiredHistoryPassedCount: 6,
       checkedAt: '2026-08-31T12:00:00.000Z',
     });
 
@@ -129,79 +176,10 @@ describe('AR-12 rebaseline orchestrator', () => {
       verifyRepositoryLayout: async () => {},
       captureHistoryEvidenceSnapshot: async () => ({
         ...opening,
+        historicalEvidenceSetDigest: 'b'.repeat(64),
         digest: 'b'.repeat(64),
       }),
-    })).rejects.toThrowError('AR12_HISTORY_EVIDENCE_DRIFT');
-  });
-
-  it('fingerprints protected history while excluding the current run directory', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'hdi-ar12-history-'));
-    const outputRoot = join(root, 'evidence');
-    const historicalRun = join(outputRoot, '20260830-deadbee-final');
-    const recovery = join(outputRoot, 'recovery');
-    const currentRun = join(outputRoot, '20260831-cafebabe-final-r1');
-    try {
-      await mkdir(historicalRun, { recursive: true });
-      await mkdir(recovery);
-      await mkdir(currentRun);
-      const historicalSummaryBytes = '{"status":"FAILED"}\n';
-      await writeFile(join(historicalRun, 'summary.json'), historicalSummaryBytes);
-      const recoveryBytes = '{"status":"RECORDED"}\n';
-      await writeFile(join(recovery, 'receipt.json'), recoveryBytes);
-      await writeFile(join(currentRun, 'command.log'), 'current run\n');
-      const requirements = {
-        requiredDirectoryNames: ['20260830-deadbee-final', 'recovery'],
-        requiredFileSha256: {
-          '20260830-deadbee-final/summary.json': createHash('sha256')
-            .update(historicalSummaryBytes)
-            .digest('hex'),
-        },
-        recoveryArtifactRelativePath: 'recovery/receipt.json',
-        recoveryArtifactSha256: createHash('sha256').update(recoveryBytes).digest('hex'),
-        forbiddenRelativePath: 'worktrees/known-stale',
-      };
-
-      const opening = await captureAr12HistoryEvidenceSnapshot(outputRoot, currentRun, requirements);
-      expect(opening.entries.map((entry) => entry.relativePath)).toEqual([
-        '20260830-deadbee-final',
-        'recovery',
-      ]);
-
-      await writeFile(join(currentRun, 'command.log'), 'current run changed\n');
-      const currentRunChanged = await captureAr12HistoryEvidenceSnapshot(
-        outputRoot,
-        currentRun,
-        requirements,
-      );
-      expect(currentRunChanged.digest).toBe(opening.digest);
-
-      const unexpectedEmptyDirectory = join(historicalRun, 'unexpected-empty');
-      await mkdir(unexpectedEmptyDirectory);
-      const directoryChanged = await captureAr12HistoryEvidenceSnapshot(
-        outputRoot,
-        currentRun,
-        requirements,
-      );
-      expect(directoryChanged.digest).not.toBe(opening.digest);
-      await rm(unexpectedEmptyDirectory, { recursive: true });
-
-      await writeFile(join(historicalRun, 'summary.json'), '{"status":"DRIFTED"}\n');
-      await expect(captureAr12HistoryEvidenceSnapshot(
-        outputRoot,
-        currentRun,
-        requirements,
-      )).rejects.toThrowError('AR12_REQUIRED_HISTORY_ARTIFACT_IDENTITY_MISMATCH');
-      await writeFile(join(historicalRun, 'summary.json'), historicalSummaryBytes);
-
-      await writeFile(join(recovery, 'receipt.json'), '{"status":"DRIFTED"}\n');
-      await expect(captureAr12HistoryEvidenceSnapshot(
-        outputRoot,
-        currentRun,
-        requirements,
-      )).rejects.toThrowError('AR12_RECOVERY_ARTIFACT_IDENTITY_MISMATCH');
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+    })).rejects.toThrowError('AR12_HISTORY_EVIDENCE_SET_DRIFT');
   });
 
   it('projects only a fully passed repository boundary into required summary fields', () => {
@@ -213,6 +191,10 @@ describe('AR-12 rebaseline orchestrator', () => {
       openingHistoryEvidenceDigest: 'a'.repeat(64),
       endingHistoryEvidenceDigest: 'a'.repeat(64),
       protectedHistoryEntryCount: 6,
+      historyEvidenceContractDigest: 'c'.repeat(64),
+      historicalEvidenceSetDigest: 'a'.repeat(64),
+      requiredHistoryCount: 6,
+      requiredHistoryPassedCount: 6,
       checkedAt: '2026-08-31T12:00:00.000Z',
     })).toEqual({
       repositoryContaminationGuard: 'PASSED',
@@ -228,21 +210,16 @@ describe('AR-12 rebaseline orchestrator', () => {
       openingHistoryEvidenceDigest: 'a'.repeat(64),
       endingHistoryEvidenceDigest: 'b'.repeat(64),
       protectedHistoryEntryCount: 6,
+      historyEvidenceContractDigest: 'c'.repeat(64),
+      historicalEvidenceSetDigest: 'a'.repeat(64),
+      requiredHistoryCount: 6,
+      requiredHistoryPassedCount: 6,
       checkedAt: '2026-08-31T12:00:00.000Z',
     })).toThrowError('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
   });
 
   it('rejects a repository boundary artifact whose bytes changed after command execution', () => {
-    const openingHistoryEvidence = {
-      schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1' as const,
-      entries: [{
-        relativePath: '20260830-deadbee-final',
-        kind: 'DIRECTORY' as const,
-        fileCount: 1,
-        digest: 'b'.repeat(64),
-      }],
-      digest: 'a'.repeat(64),
-    };
+    const openingHistoryEvidence = fakeHistoryBaseline();
     const result = {
       schemaVersion: 'phase-01.ar-12-repository-boundary.v1' as const,
       repositoryContaminationGuard: 'PASSED' as const,
@@ -251,6 +228,10 @@ describe('AR-12 rebaseline orchestrator', () => {
       openingHistoryEvidenceDigest: openingHistoryEvidence.digest,
       endingHistoryEvidenceDigest: openingHistoryEvidence.digest,
       protectedHistoryEntryCount: openingHistoryEvidence.entries.length,
+      historyEvidenceContractDigest: openingHistoryEvidence.historyContractDigest,
+      historicalEvidenceSetDigest: openingHistoryEvidence.historicalEvidenceSetDigest,
+      requiredHistoryCount: openingHistoryEvidence.requiredHistoryCount,
+      requiredHistoryPassedCount: openingHistoryEvidence.requiredHistoryPassedCount,
       checkedAt: '2026-08-31T12:00:00.000Z',
     };
     const artifactBytes = Buffer.from(JSON.stringify(result, null, 2) + '\n', 'utf8');
@@ -291,20 +272,20 @@ describe('AR-12 rebaseline orchestrator', () => {
     expect(commands.every((command) => Object.isFrozen(command))).toBe(true);
   });
 
-  it('requires at least 150 detected adversarial mutations with zero survivors', () => {
+  it('requires at least 158 detected adversarial mutations with zero survivors', () => {
     expect(isAr12AdversarialFloorSatisfied({
-      mutationCount: 149,
-      detectedCount: 149,
+      mutationCount: 157,
+      detectedCount: 157,
       survivedCount: 0,
     })).toBe(false);
     expect(isAr12AdversarialFloorSatisfied({
-      mutationCount: 150,
-      detectedCount: 150,
+      mutationCount: 158,
+      detectedCount: 158,
       survivedCount: 0,
     })).toBe(true);
     expect(isAr12AdversarialFloorSatisfied({
-      mutationCount: 150,
-      detectedCount: 149,
+      mutationCount: 158,
+      detectedCount: 157,
       survivedCount: 1,
     })).toBe(false);
   });
@@ -630,6 +611,7 @@ describe('AR-12 rebaseline orchestrator', () => {
       preflightAr12RunOutput: async (repositoryRoot) => {
         events.push(`output-preflight:${repositoryRoot}`);
       },
+      validateHistoryEvidencePreflight: async () => fakeHistoryBaseline(),
       createAr12ExecutionWorkspace: async (input) => {
         events.push(`create:${input.repositoryRoot}`);
         return {
@@ -750,6 +732,7 @@ describe('AR-12 rebaseline orchestrator', () => {
         preflightAr12RunOutput: async () => {
           events.push('output-preflight');
         },
+        validateHistoryEvidencePreflight: async () => fakeHistoryBaseline(),
         createAr12ExecutionWorkspace: async () => {
           events.push('create');
           return {
@@ -861,6 +844,7 @@ describe('AR-12 rebaseline orchestrator', () => {
         preflightAr12RunOutput: async () => {
           events.push('output-preflight');
         },
+        validateHistoryEvidencePreflight: async () => fakeHistoryBaseline(),
         createAr12ExecutionWorkspace: async () => {
           events.push('create');
           throw partialError;
@@ -973,6 +957,7 @@ describe('AR-12 rebaseline orchestrator', () => {
       }, {
         assertRepositoryNotContaminatedByExecutionWorkspace,
         preflightAr12RunOutput,
+        validateHistoryEvidencePreflight: async () => fakeHistoryBaseline(),
         createAr12ExecutionWorkspace: async (input) => createAr12ExecutionWorkspace(input, {
           ...base,
           git: {
@@ -1067,6 +1052,7 @@ describe('AR-12 rebaseline orchestrator', () => {
           events.push('output-preflight');
           throw new Error('AR12_RUN_DIRECTORY_ALREADY_EXISTS');
         },
+        validateHistoryEvidencePreflight: async () => fakeHistoryBaseline(),
         createAr12ExecutionWorkspace: async () => {
           events.push('must-not-create');
           throw new Error('create must not run');
@@ -1108,6 +1094,68 @@ describe('AR-12 rebaseline orchestrator', () => {
     expect(observedError).toMatchObject({ message: 'AR12_RUN_DIRECTORY_ALREADY_EXISTS' });
   });
 
+  it('rejects an invalid required-history contract before creating the run directory or external clone', async () => {
+    const events: string[] = [];
+    let observedError: unknown;
+    try {
+      await runAr12InExternalExecutionWorkspace({
+        sourceRepositoryRoot: 'D:\\source',
+        outputRoot: 'D:\\evidence',
+        runDirectory: 'D:\\evidence\\run-01',
+        expectedBranch: 'phase-01-acceptance-readiness',
+        expectedCommit: 'b'.repeat(40),
+        runKind: 'initial',
+      }, {
+        assertRepositoryNotContaminatedByExecutionWorkspace: async () => {
+          events.push('source-gate');
+        },
+        preflightAr12RunOutput: async () => {
+          events.push('output-preflight');
+        },
+        validateHistoryEvidencePreflight: async () => {
+          events.push('history-contract');
+          throw new Error('AR12_HISTORY_REQUIRED_DIRECTORY_MISSING');
+        },
+        createAr12ExecutionWorkspace: async () => {
+          events.push('must-not-create-clone');
+          throw new Error('clone must not be created');
+        },
+        loadAr12ExecutionWorkspaceMarker: async () => {
+          throw new Error('marker must not load');
+        },
+        initialize: async () => {
+          events.push('must-not-create-run-directory');
+        },
+        runCommands: async () => {
+          events.push('must-not-run-commands');
+        },
+        finalize: async () => {
+          events.push('must-not-finalize');
+        },
+        verifyAr12ExecutionWorkspace: async () => {
+          throw new Error('must not verify');
+        },
+        recordSuccessfulWorkspace: async () => {
+          events.push('must-not-record-success');
+        },
+        cleanupAr12ExecutionWorkspace: async () => {
+          events.push('must-not-clean');
+        },
+        retainAr12ExecutionWorkspaceAfterFailure: async () => {
+          throw new Error('must not retain');
+        },
+        recordRetainedWorkspace: async () => {
+          events.push('must-not-record-retention');
+        },
+      });
+    } catch (error) {
+      observedError = error;
+    }
+    expect(events).toEqual(['source-gate', 'output-preflight', 'history-contract']);
+    expect(observedError).toBeInstanceOf(Error);
+    expect(observedError).toMatchObject({ message: 'AR12_HISTORY_REQUIRED_DIRECTORY_MISSING' });
+  });
+
   it('does not write retention evidence when the run directory appears after preflight', async () => {
     const openingGitCommitSha = 'b'.repeat(40);
     const workspacePath = 'E:\\external\\run-01';
@@ -1146,6 +1194,7 @@ describe('AR-12 rebaseline orchestrator', () => {
         preflightAr12RunOutput: async () => {
           events.push('output-preflight-missing');
         },
+        validateHistoryEvidencePreflight: async () => fakeHistoryBaseline(),
         createAr12ExecutionWorkspace: async () => {
           events.push('create');
           return {

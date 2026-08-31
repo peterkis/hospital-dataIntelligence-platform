@@ -55,6 +55,14 @@ import {
   createAr12CommandSpecs,
 } from '../rebaseline/ar-12-orchestrator.js';
 import {
+  AR12_HISTORY_EVIDENCE_CONTRACT,
+  assertAr12HistoryEvidenceStable,
+  captureAr12HistoryEvidenceBaseline,
+  validateAr12HistoryEvidenceContract,
+  type Ar12HistoryClassification,
+  type Ar12HistoryEvidenceContract,
+} from '../rebaseline/ar-12-history-evidence-contract.js';
+import {
   AR12_EXECUTION_WORKSPACE_MARKER,
   AR12_EXECUTION_WORKSPACE_SCHEMA_VERSION,
   cleanupAr12ExecutionWorkspace,
@@ -78,7 +86,8 @@ export type MutationDetectionLayer =
   | 'ar12-workspace-guard'
   | 'ar12-clone-identity-guard'
   | 'ar12-relocation-guard'
-  | 'ar12-command-plan-guard';
+  | 'ar12-command-plan-guard'
+  | 'ar12-history-evidence-guard';
 
 export interface EvidenceMutationCase {
   readonly mutationId: string;
@@ -263,9 +272,21 @@ export const AR12_EXECUTION_WORKSPACE_MUTATION_CASES: readonly EvidenceMutationC
   mutation('AR12_REPO_LAYOUT_GATE_BYPASS_ATTEMPT', 'Remove the repository layout gate from the AR-12 command plan.', 'ar12-command-plan-guard', 'AR12_REPO_LAYOUT_GATE_BYPASS_FORBIDDEN'),
 ] as const;
 
+export const AR12_HISTORY_EVIDENCE_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+  mutation('AR12_REQUIRED_HISTORY_SIXTH_DIRECTORY_MISSING', 'Remove the required sixth history directory.', 'ar12-history-evidence-guard', 'AR12_HISTORY_REQUIRED_DIRECTORY_MISSING'),
+  mutation('AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_MISSING', 'Remove the required sixth historical Summary.', 'ar12-history-evidence-guard', 'AR12_HISTORY_REQUIRED_ARTIFACT_MISSING'),
+  mutation('AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_SHA_MISMATCH', 'Change the required sixth historical Summary bytes.', 'ar12-history-evidence-guard', 'AR12_HISTORY_REQUIRED_ARTIFACT_SHA256_MISMATCH'),
+  mutation('AR12_REQUIRED_HISTORY_SIXTH_CLASSIFICATION_MISMATCH', 'Reclassify the rejected sixth history as passed.', 'ar12-history-evidence-guard', 'AR12_HISTORY_CLASSIFICATION_MISMATCH'),
+  mutation('AR12_REQUIRED_HISTORY_SUBSTITUTED_BY_EXTRA_DIRECTORY', 'Replace the sixth required history with an extra directory.', 'ar12-history-evidence-guard', 'AR12_HISTORY_EXTRA_DIRECTORY_CANNOT_SUBSTITUTE_REQUIRED'),
+  mutation('AR12_REQUIRED_HISTORY_TREE_DRIFT', 'Change a required history tree after opening capture.', 'ar12-history-evidence-guard', 'AR12_HISTORY_REQUIRED_DIRECTORY_TREE_DRIFT'),
+  mutation('AR12_REQUIRED_HISTORY_RECOVERY_SHA_MISMATCH', 'Change the fixed recovery artifact bytes.', 'ar12-history-evidence-guard', 'AR12_RECOVERY_ARTIFACT_SHA256_MISMATCH'),
+  mutation('AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED', 'Recreate the forbidden stale execution clone path.', 'ar12-history-evidence-guard', 'AR12_STALE_EXECUTION_CLONE_REAPPEARED'),
+] as const;
+
 export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   ...PRE_AR12_ADVERSARIAL_MUTATION_CASES,
   ...AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
+  ...AR12_HISTORY_EVIDENCE_MUTATION_CASES,
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -1061,9 +1082,118 @@ async function executeMutation(
         assertAr12CommandPlanSafety(planWithoutRepositoryLayoutGate),
       ));
     }
+    case 'AR12_REQUIRED_HISTORY_SIXTH_DIRECTORY_MISSING':
+    case 'AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_MISSING':
+    case 'AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_SHA_MISMATCH':
+    case 'AR12_REQUIRED_HISTORY_SIXTH_CLASSIFICATION_MISMATCH':
+    case 'AR12_REQUIRED_HISTORY_SUBSTITUTED_BY_EXTRA_DIRECTORY':
+    case 'AR12_REQUIRED_HISTORY_TREE_DRIFT':
+    case 'AR12_REQUIRED_HISTORY_RECOVERY_SHA_MISMATCH':
+    case 'AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED':
+      return ar12HistoryEvidenceMutation(mutationId, context);
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
+}
+
+async function ar12HistoryEvidenceMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId.toLowerCase());
+  const outputRoot = join(caseRoot, 'ar-12');
+  const currentRun = join(outputRoot, 'current-run');
+  const summaryBytes = Buffer.from('{"status":"PASSED","formalAcceptanceEligible":false}\n');
+  const recoveryBytes = Buffer.from(JSON.stringify({
+    treeDigestBefore: 'a'.repeat(64),
+    treeDigestAfter: 'a'.repeat(64),
+    failedFinalRunDirectoryPreserved: true,
+  }) + '\n');
+  const contract = syntheticAr12HistoryContract(summaryBytes, recoveryBytes);
+  await mkdir(outputRoot, { recursive: true });
+  for (const entry of contract.requiredHistories) {
+    await mkdir(join(outputRoot, entry.relativeDirectory));
+  }
+  const sixth = contract.requiredHistories[5]!;
+  const sixthDirectory = join(outputRoot, sixth.relativeDirectory);
+  const summaryPath = join(sixthDirectory, 'ar-12-rebaseline-summary.json');
+  await writeFile(summaryPath, summaryBytes);
+  const recoveryPath = join(outputRoot, contract.recoveryArtifact.relativePath);
+  await mkdir(join(outputRoot, 'recovery', '20260830-0267bba'), { recursive: true });
+  await writeFile(recoveryPath, recoveryBytes);
+
+  switch (mutationId) {
+    case 'AR12_REQUIRED_HISTORY_SIXTH_DIRECTORY_MISSING':
+      await unlink(summaryPath);
+      await import('node:fs/promises').then(({ rmdir }) => rmdir(sixthDirectory));
+      break;
+    case 'AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_MISSING':
+      await unlink(summaryPath);
+      break;
+    case 'AR12_REQUIRED_HISTORY_SIXTH_SUMMARY_SHA_MISMATCH':
+      await writeFile(summaryPath, '{"status":"PASSED","tampered":true}\n');
+      break;
+    case 'AR12_REQUIRED_HISTORY_SIXTH_CLASSIFICATION_MISMATCH':
+      mutableHistoryEntry(contract, 5).classification = 'INITIAL_REBASELINE_PASSED_HISTORY';
+      return captureErrorCodes(() => Promise.resolve(validateAr12HistoryEvidenceContract(contract)));
+    case 'AR12_REQUIRED_HISTORY_SUBSTITUTED_BY_EXTRA_DIRECTORY':
+      await unlink(summaryPath);
+      await import('node:fs/promises').then(({ rmdir }) => rmdir(sixthDirectory));
+      await mkdir(join(outputRoot, '20260831-extra-history'));
+      break;
+    case 'AR12_REQUIRED_HISTORY_TREE_DRIFT': {
+      const opening = await captureAr12HistoryEvidenceBaseline(outputRoot, currentRun, contract);
+      await writeFile(join(sixthDirectory, 'drift.json'), '{}\n');
+      const ending = await captureAr12HistoryEvidenceBaseline(outputRoot, currentRun, contract);
+      return captureErrorCodes(() => Promise.resolve(assertAr12HistoryEvidenceStable(opening, ending)));
+    }
+    case 'AR12_REQUIRED_HISTORY_RECOVERY_SHA_MISMATCH':
+      await writeFile(recoveryPath, '{"tampered":true}\n');
+      break;
+    case 'AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED':
+      await mkdir(join(outputRoot, contract.staleCloneRelativePath), { recursive: true });
+      break;
+    default:
+      throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
+  }
+  return captureErrorCodes(() => captureAr12HistoryEvidenceBaseline(outputRoot, currentRun, contract));
+}
+
+type MutableAr12HistoryContract = {
+  schemaVersion: Ar12HistoryEvidenceContract['schemaVersion'];
+  requiredHistories: Array<{
+    historyId: string;
+    relativeDirectory: string;
+    classification: Ar12HistoryClassification;
+    required: true;
+    formalAcceptanceEligible: false;
+    requiredArtifacts: Array<{ relativePath: string; sha256?: string }>;
+  }>;
+  recoveryArtifact: { relativePath: string; sha256: string };
+  staleCloneRelativePath: string;
+};
+
+function syntheticAr12HistoryContract(
+  summaryBytes: Uint8Array,
+  recoveryBytes: Uint8Array,
+): MutableAr12HistoryContract {
+  const contract = JSON.parse(JSON.stringify(AR12_HISTORY_EVIDENCE_CONTRACT)) as MutableAr12HistoryContract;
+  for (const entry of contract.requiredHistories) entry.requiredArtifacts = [];
+  contract.requiredHistories[5]!.requiredArtifacts = [{
+    relativePath: 'ar-12-rebaseline-summary.json',
+    sha256: sha256(summaryBytes),
+  }];
+  contract.recoveryArtifact.sha256 = sha256(recoveryBytes);
+  return contract;
+}
+
+function mutableHistoryEntry(
+  contract: MutableAr12HistoryContract,
+  index: number,
+): MutableAr12HistoryContract['requiredHistories'][number] {
+  const entry = contract.requiredHistories[index];
+  if (entry === undefined) throw new Error('AR12_HISTORY_CONTRACT_INVALID');
+  return entry;
 }
 
 async function ar12InsideRepositoryMutation(

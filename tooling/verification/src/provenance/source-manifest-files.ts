@@ -29,7 +29,8 @@ export type VerificationSourceFileRole =
   | 'RUNTIME_AUTHORITY_LOADER'
   | 'RUNTIME_AUTHORITY_SCHEMA'
   | 'RUNTIME_RECEIPT'
-  | 'RUNTIME_SCRIPT';
+  | 'RUNTIME_SCRIPT'
+  | 'AR12_HISTORY_EVIDENCE_CONTRACT';
 
 export interface VerificationSourceFileDefinition {
   readonly path: string;
@@ -66,6 +67,7 @@ const SOURCE_FILES = [
   ['tooling/verification/src/provenance/source-manifest.ts', 'SOURCE_MANIFEST_DEFINITION'],
   ['tooling/verification/src/provenance/verify-current-source-manifest.ts', 'SOURCE_MANIFEST_DEFINITION'],
   ['tooling/verification/src/rebaseline/ar-12-execution-workspace.ts', 'ORCHESTRATOR'],
+  ['tooling/verification/src/rebaseline/ar-12-history-evidence-contract.ts', 'AR12_HISTORY_EVIDENCE_CONTRACT'],
   ['tooling/verification/src/rebaseline/ar-12-orchestrator.ts', 'ORCHESTRATOR'],
   ['tooling/verification/src/review-formal-abg-evidence.ts', 'REVIEWER'],
   ['tooling/verification/src/run-formal-abg.ts', 'ORCHESTRATOR'],

@@ -7,6 +7,7 @@
     "report:abg-coverage": "tsx src/report-abg-coverage.ts --write",
     "test": "vitest run",
     "test:ar12-composer": "vitest run src/rebaseline",
+    "test:ar12-history-contract": "vitest run src/rebaseline/ar-12-history-evidence-contract.test.ts src/rebaseline/ar-12-orchestrator.test.ts",
     "test:adversarial": "vitest run src/testing/adversarial-verification.test.ts",
     "test:lifecycle": "vitest run src/runtime src/evidence/recorder.test.ts",
     "test:podman-runtime": "vitest run src/runtime/podman-runtime-authority.test.ts src/runtime/podman-runtime-shell.test.ts src/runtime/formal-preflight.test.ts src/runtime/formal-teardown.test.ts src/runtime/formal-runtime-invariants.test.ts",
@@ -16,7 +17,8 @@
     "verify:phase-01:teardown": "node src/runtime/formal-teardown.ts",
     "verify:podman-runtime-authority": "tsx src/runtime/verify-podman-runtime-authority.ts --repository-root ../..",
     "verify:source-manifest": "tsx src/provenance/verify-current-source-manifest.ts",
-    "verify:abg-coverage": "tsx src/report-abg-coverage.ts --check"
+    "verify:abg-coverage": "tsx src/report-abg-coverage.ts --check",
+    "verify:ar12-history-evidence-contract": "tsx src/rebaseline/ar-12-history-evidence-contract.ts"
   },
   "dependencies": {
     "@hospital-data-intelligence/generated-api-client": "0.0.0",

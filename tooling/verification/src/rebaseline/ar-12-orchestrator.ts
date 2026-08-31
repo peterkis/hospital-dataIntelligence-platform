@@ -36,6 +36,12 @@ import {
   type CreateAr12ExecutionWorkspaceInput,
   type CreatedAr12ExecutionWorkspace,
 } from './ar-12-execution-workspace.js';
+import {
+  AR12_HISTORY_EVIDENCE_CONTRACT,
+  assertAr12HistoryEvidenceStable,
+  captureAr12HistoryEvidenceBaseline,
+  type Ar12HistoryEvidenceBaseline,
+} from './ar-12-history-evidence-contract.js';
 
 type RunKind = 'initial' | 'final';
 type CommandCategory =
@@ -137,27 +143,14 @@ export interface Ar12RepositoryBoundaryResult {
   readonly openingHistoryEvidenceDigest: string;
   readonly endingHistoryEvidenceDigest: string;
   readonly protectedHistoryEntryCount: number;
+  readonly historyEvidenceContractDigest: string;
+  readonly historicalEvidenceSetDigest: string;
+  readonly requiredHistoryCount: 6;
+  readonly requiredHistoryPassedCount: 6;
   readonly checkedAt: string;
 }
 
-export interface Ar12HistoryEvidenceSnapshot {
-  readonly schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1';
-  readonly entries: readonly {
-    readonly relativePath: string;
-    readonly kind: 'DIRECTORY' | 'FILE';
-    readonly fileCount: number;
-    readonly digest: string;
-  }[];
-  readonly digest: string;
-}
-
-export interface Ar12HistoryEvidenceRequirements {
-  readonly requiredDirectoryNames: readonly string[];
-  readonly requiredFileSha256: Readonly<Record<string, string>>;
-  readonly recoveryArtifactRelativePath: string;
-  readonly recoveryArtifactSha256: string;
-  readonly forbiddenRelativePath: string;
-}
+export type Ar12HistoryEvidenceSnapshot = Ar12HistoryEvidenceBaseline;
 
 export interface Ar12RepositoryBoundaryInput {
   readonly sourceRepositoryRoot: string;
@@ -192,6 +185,10 @@ export function ar12SummaryRepositoryBoundaryFields(
     result.endingHistoryEvidenceDigest !== result.openingHistoryEvidenceDigest ||
     !Number.isSafeInteger(result.protectedHistoryEntryCount) ||
     result.protectedHistoryEntryCount < 0 ||
+    !/^[0-9a-f]{64}$/u.test(result.historyEvidenceContractDigest) ||
+    !/^[0-9a-f]{64}$/u.test(result.historicalEvidenceSetDigest) ||
+    result.requiredHistoryCount !== 6 ||
+    result.requiredHistoryPassedCount !== 6 ||
     Number.isNaN(Date.parse(result.checkedAt))
   ) fail('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
   return {
@@ -212,7 +209,11 @@ export function validateAr12RepositoryBoundaryArtifact(input: {
     !/^[0-9a-f]{64}$/u.test(input.expectedSha256) ||
     sha256(input.artifactBytes) !== input.expectedSha256 ||
     input.result.openingHistoryEvidenceDigest !== input.openingHistoryEvidence.digest ||
-    input.result.protectedHistoryEntryCount !== input.openingHistoryEvidence.entries.length
+    input.result.protectedHistoryEntryCount !== input.openingHistoryEvidence.entries.length ||
+    input.result.historyEvidenceContractDigest !== input.openingHistoryEvidence.historyContractDigest ||
+    input.result.historicalEvidenceSetDigest !== input.openingHistoryEvidence.historicalEvidenceSetDigest ||
+    input.result.requiredHistoryCount !== input.openingHistoryEvidence.requiredHistoryCount ||
+    input.result.requiredHistoryPassedCount !== input.openingHistoryEvidence.requiredHistoryPassedCount
   ) fail('AR12_REPOSITORY_BOUNDARY_RESULT_INVALID');
   return ar12SummaryRepositoryBoundaryFields(input.result);
 }
@@ -247,7 +248,7 @@ export async function verifyAr12RepositoryBoundary(
 ): Promise<Ar12RepositoryBoundaryResult> {
   if (
     input.openingHistoryEvidence.schemaVersion !==
-      'phase-01.ar-12-history-evidence-snapshot.v1' ||
+      'phase-01.ar-12-history-evidence-baseline.v1' ||
     !/^[0-9a-f]{64}$/u.test(input.openingHistoryEvidence.digest) ||
     Number.isNaN(Date.parse(input.checkedAt))
   ) fail('AR12_HISTORY_EVIDENCE_SNAPSHOT_INVALID');
@@ -259,9 +260,7 @@ export async function verifyAr12RepositoryBoundary(
     input.outputRoot,
     input.runDirectory,
   );
-  if (!exactJsonEqual(input.openingHistoryEvidence, endingHistoryEvidence)) {
-    fail('AR12_HISTORY_EVIDENCE_DRIFT');
-  }
+  assertAr12HistoryEvidenceStable(input.openingHistoryEvidence, endingHistoryEvidence);
   return passedAr12RepositoryBoundaryResult(
     input.openingHistoryEvidence,
     input.checkedAt,
@@ -280,6 +279,10 @@ function passedAr12RepositoryBoundaryResult(
     openingHistoryEvidenceDigest: openingHistoryEvidence.digest,
     endingHistoryEvidenceDigest: openingHistoryEvidence.digest,
     protectedHistoryEntryCount: openingHistoryEvidence.entries.length,
+    historyEvidenceContractDigest: openingHistoryEvidence.historyContractDigest,
+    historicalEvidenceSetDigest: openingHistoryEvidence.historicalEvidenceSetDigest,
+    requiredHistoryCount: openingHistoryEvidence.requiredHistoryCount,
+    requiredHistoryPassedCount: openingHistoryEvidence.requiredHistoryPassedCount,
     checkedAt,
   };
 }
@@ -317,6 +320,10 @@ export interface Ar12ExternalExecutionWorkspaceDependencies {
     outputRoot: string,
     runDirectory: string,
   ): Promise<void>;
+  validateHistoryEvidencePreflight(
+    outputRoot: string,
+    runDirectory: string,
+  ): Promise<Ar12HistoryEvidenceBaseline>;
   createAr12ExecutionWorkspace(
     input: CreateAr12ExecutionWorkspaceInput,
   ): Promise<CreatedAr12ExecutionWorkspace>;
@@ -379,7 +386,7 @@ export function isAr12AdversarialFloorSatisfied(counts: {
   readonly detectedCount: number;
   readonly survivedCount: number;
 }): boolean {
-  return counts.mutationCount >= 150 &&
+  return counts.mutationCount >= 158 &&
     counts.detectedCount === counts.mutationCount &&
     counts.survivedCount === 0;
 }
@@ -524,35 +531,8 @@ const BASELINE_FILE = 'baseline-identity.json';
 const PLAN_FILE = 'command-plan.json';
 const CONTEXT_FILE = 'run-context.json';
 const OPENING_HISTORY_EVIDENCE_FILE = 'opening-history-evidence.json';
+const ENDING_HISTORY_EVIDENCE_FILE = 'ending-history-evidence.json';
 const REPOSITORY_BOUNDARY_FILE = 'repository-boundary-result.json';
-const AR12_HISTORY_EVIDENCE_REQUIREMENTS: Ar12HistoryEvidenceRequirements = {
-  requiredDirectoryNames: [
-    '20260830-db57406-precloseout',
-    '20260830-db57406-precloseout-r2',
-    '20260830-db57406-precloseout-r3',
-    '20260830-db57406-precloseout-r4',
-    '20260830-4dca3ca-final',
-  ],
-  requiredFileSha256: {
-    '20260830-4dca3ca-final/baseline-identity.json':
-      '9d1ab324ba388411316d7a8b043411356a9b5b28f0ce6302ee564a5665219779',
-    '20260830-4dca3ca-final/command-plan.json':
-      'd03e5f60568859a1939285d51f5a55eab6c13bcae9ab31a4ceafb80bf10faede',
-    '20260830-4dca3ca-final/init-result.json':
-      'c08768f3f6deb5af1a3ec70d26d46835c09c7763506f4a321a8ff4506c2f2de1',
-    '20260830-4dca3ca-final/run-context.json':
-      '7b9c7f674562a34a6e3b3b3a750a310d746b4cd8f98cbabea129f866cb0a9cd0',
-    '20260830-4dca3ca-final/run-commands-result.json':
-      '1130502d8e8b21a3cc7aff6a63ae0807f2d3738df65261d06b713bdb2a754652',
-    '20260830-4dca3ca-final/failure-run-commands.json':
-      'a914596a5b2df9372a3042af2df2cdad6d3216d0318a839e2ea20777f307994c',
-  },
-  recoveryArtifactRelativePath:
-    'recovery/20260830-0267bba/execution-workspace-relocation.json',
-  recoveryArtifactSha256:
-    '735e5ea48cdadecad043573c6e75f263b73f04b411465944fc4d7c215f86f75e',
-  forbiddenRelativePath: 'worktrees/db57406-precloseout',
-};
 const DENY_LOG_FILE = 'side-effect-invocations.log';
 const FIXED_ADVERSARIAL_SUMMARY = '.runtime/test-results/verification-adversarial-summary.json';
 const AR10_TAMPER_STANDALONE_SCRIPT = String.raw`
@@ -1251,138 +1231,9 @@ async function fingerprintTree(root: string): Promise<{ fileCount: number; diges
 export async function captureAr12HistoryEvidenceSnapshot(
   outputRoot: string,
   currentRunDirectory: string,
-  requirements: Ar12HistoryEvidenceRequirements = AR12_HISTORY_EVIDENCE_REQUIREMENTS,
+  contract = AR12_HISTORY_EVIDENCE_CONTRACT,
 ): Promise<Ar12HistoryEvidenceSnapshot> {
-  const physicalOutputRoot = await assertPhysicalDirectory(
-    outputRoot,
-    'AR12_HISTORY_EVIDENCE_ROOT_UNSAFE',
-  );
-  for (const directoryName of requirements.requiredDirectoryNames) {
-    if (!SAFE_ID_PATTERN.test(directoryName)) fail('AR12_REQUIRED_HISTORY_EVIDENCE_INVALID');
-    await assertPhysicalDirectory(
-      resolveInside(
-        physicalOutputRoot,
-        directoryName,
-        'AR12_REQUIRED_HISTORY_EVIDENCE_INVALID',
-      ),
-      'AR12_REQUIRED_HISTORY_EVIDENCE_MISSING',
-    );
-  }
-  for (const [relativePath, expectedSha256] of Object.entries(
-    requirements.requiredFileSha256,
-  )) {
-    const requiredArtifact = await assertSafeRegularFile(physicalOutputRoot, relativePath);
-    if (
-      !/^[0-9a-f]{64}$/u.test(expectedSha256) ||
-      sha256(await readFile(requiredArtifact)) !== expectedSha256
-    ) fail('AR12_REQUIRED_HISTORY_ARTIFACT_IDENTITY_MISMATCH');
-  }
-  const recoveryArtifact = await assertSafeRegularFile(
-    physicalOutputRoot,
-    requirements.recoveryArtifactRelativePath,
-  );
-  if (
-    !/^[0-9a-f]{64}$/u.test(requirements.recoveryArtifactSha256) ||
-    sha256(await readFile(recoveryArtifact)) !== requirements.recoveryArtifactSha256
-  ) fail('AR12_RECOVERY_ARTIFACT_IDENTITY_MISMATCH');
-  const forbiddenPath = resolveInside(
-    physicalOutputRoot,
-    requirements.forbiddenRelativePath,
-    'AR12_REQUIRED_HISTORY_EVIDENCE_INVALID',
-  );
-  try {
-    await lstat(forbiddenPath);
-    fail('AR12_STALE_EXECUTION_WORKSPACE_PRESENT');
-  } catch (error) {
-    if (!isMissing(error)) throw error;
-  }
-  const currentRun = resolve(currentRunDirectory);
-  if (!samePath(dirname(currentRun), physicalOutputRoot)) {
-    fail('AR12_HISTORY_EVIDENCE_CURRENT_RUN_INVALID');
-  }
-  const entries: Array<Ar12HistoryEvidenceSnapshot['entries'][number]> = [];
-  const children = await readdir(physicalOutputRoot, { withFileTypes: true });
-  children.sort((left, right) => left.name.localeCompare(right.name, 'en'));
-  for (const child of children) {
-    const path = join(physicalOutputRoot, child.name);
-    if (samePath(path, currentRun)) continue;
-    const observed = await lstat(path);
-    if (observed.isSymbolicLink() || !samePath(path, await realpath(path))) {
-      fail('AR12_HISTORY_EVIDENCE_REPARSE_FORBIDDEN');
-    }
-    if (observed.isDirectory()) {
-      const fingerprint = await fingerprintHistoryTree(path);
-      entries.push({
-        relativePath: child.name,
-        kind: 'DIRECTORY',
-        fileCount: fingerprint.fileCount,
-        digest: fingerprint.digest,
-      });
-    } else if (observed.isFile()) {
-      if (observed.nlink !== 1) fail('AR12_HISTORY_EVIDENCE_HARDLINK_FORBIDDEN');
-      const bytes = await readFile(path);
-      entries.push({
-        relativePath: child.name,
-        kind: 'FILE',
-        fileCount: 1,
-        digest: sha256(bytes),
-      });
-    } else {
-      fail('AR12_HISTORY_EVIDENCE_NONREGULAR_ENTRY');
-    }
-  }
-  const digest = sha256(canonicalJson(entries));
-  return {
-    schemaVersion: 'phase-01.ar-12-history-evidence-snapshot.v1',
-    entries,
-    digest,
-  };
-}
-
-async function fingerprintHistoryTree(
-  root: string,
-): Promise<{ readonly fileCount: number; readonly digest: string }> {
-  const physicalRoot = await assertPhysicalDirectory(root, 'AR12_HISTORY_EVIDENCE_ROOT_UNSAFE');
-  const entries: Array<
-    | { readonly path: string; readonly kind: 'DIRECTORY' }
-    | {
-        readonly path: string;
-        readonly kind: 'FILE';
-        readonly byteLength: number;
-        readonly sha256: string;
-      }
-  > = [];
-  let fileCount = 0;
-  const visit = async (directory: string): Promise<void> => {
-    const children = await readdir(directory, { withFileTypes: true });
-    children.sort((left, right) => left.name.localeCompare(right.name, 'en'));
-    for (const child of children) {
-      const path = join(directory, child.name);
-      const relativePath = relative(physicalRoot, path).split(sep).join('/');
-      const observed = await lstat(path);
-      if (observed.isSymbolicLink() || !samePath(path, await realpath(path))) {
-        fail('AR12_HISTORY_EVIDENCE_REPARSE_FORBIDDEN');
-      }
-      if (observed.isDirectory()) {
-        entries.push({ path: relativePath, kind: 'DIRECTORY' });
-        await visit(path);
-      } else if (observed.isFile()) {
-        if (observed.nlink !== 1) fail('AR12_HISTORY_EVIDENCE_HARDLINK_FORBIDDEN');
-        const bytes = await readFile(path);
-        entries.push({
-          path: relativePath,
-          kind: 'FILE',
-          byteLength: bytes.byteLength,
-          sha256: sha256(bytes),
-        });
-        fileCount += 1;
-      } else {
-        fail('AR12_HISTORY_EVIDENCE_NONREGULAR_ENTRY');
-      }
-    }
-  };
-  await visit(physicalRoot);
-  return { fileCount, digest: sha256(canonicalJson(entries)) };
+  return captureAr12HistoryEvidenceBaseline(outputRoot, currentRunDirectory, contract);
 }
 
 async function buildProducerManifest(
@@ -1737,7 +1588,7 @@ async function loadAndValidateRun(
       passedAr12RepositoryBoundaryResult(openingHistoryEvidence, baseline.startedAt),
     )) !== context.expectedRepositoryBoundaryResultSha256 ||
     openingHistoryEvidence.schemaVersion !==
-      'phase-01.ar-12-history-evidence-snapshot.v1' ||
+      'phase-01.ar-12-history-evidence-baseline.v1' ||
     !/^[0-9a-f]{64}$/u.test(openingHistoryEvidence.digest) ||
     baseline.sourceManifestSha256 !== context.producerSourceManifestSha256 ||
     baseline.gitCommitSha !== context.expectedCommit ||
@@ -2075,6 +1926,16 @@ async function runCommandsCore(
         openingHistoryEvidence,
         checkedAt: baseline.startedAt,
       });
+      const endingHistoryEvidence = await captureAr12HistoryEvidenceSnapshot(
+        context.outputRoot,
+        context.runDirectory,
+      );
+      assertAr12HistoryEvidenceStable(openingHistoryEvidence, endingHistoryEvidence);
+      await modules.recorder.writeRedactedJsonArtifact(
+        context.runDirectory,
+        ENDING_HISTORY_EVIDENCE_FILE,
+        endingHistoryEvidence,
+      );
       const repositoryBoundaryWrite = await modules.recorder.writeRedactedJsonArtifact(
         context.runDirectory,
         REPOSITORY_BOUNDARY_FILE,
@@ -2571,6 +2432,11 @@ async function finalizeCore(repositoryRoot: string, runDirectory: string): Promi
       expectedSha256: context.expectedRepositoryBoundaryResultSha256,
       openingHistoryEvidence,
     });
+    const persistedEndingHistoryEvidence = await readJsonFile<Ar12HistoryEvidenceBaseline>(
+      context.runDirectory,
+      ENDING_HISTORY_EVIDENCE_FILE,
+    );
+    assertAr12HistoryEvidenceStable(openingHistoryEvidence, persistedEndingHistoryEvidence);
     repositoryBoundaryResult = await verifyAr12RepositoryBoundary({
       sourceRepositoryRoot: context.sourceRepositoryRoot,
       outputRoot: context.outputRoot,
@@ -2755,6 +2621,12 @@ async function finalizeCore(repositoryRoot: string, runDirectory: string): Promi
     sharedReadinessExecuted: false,
     formalAbgExecuted: false,
     ...repositoryBoundaryFields,
+    historyEvidenceContractDigest: openingHistoryEvidence.historyContractDigest,
+    historicalEvidenceSetDigest: openingHistoryEvidence.historicalEvidenceSetDigest,
+    requiredHistoryCount: openingHistoryEvidence.requiredHistoryCount,
+    requiredHistoryPassedCount: openingHistoryEvidence.requiredHistoryPassedCount,
+    historyEvidenceBaselinePath: OPENING_HISTORY_EVIDENCE_FILE,
+    historyEvidenceFinalPath: ENDING_HISTORY_EVIDENCE_FILE,
     repositoryBoundaryIdentity: repositoryBoundaryResult,
     baselineIdentity: baseline,
     endingIdentity,
@@ -2888,6 +2760,7 @@ Ar12ExternalExecutionWorkspaceDependencies {
   return {
     assertRepositoryNotContaminatedByExecutionWorkspace,
     preflightAr12RunOutput,
+    validateHistoryEvidencePreflight: captureAr12HistoryEvidenceBaseline,
     createAr12ExecutionWorkspace,
     loadAr12ExecutionWorkspaceMarker,
     initialize,
@@ -2922,6 +2795,7 @@ export async function runAr12InExternalExecutionWorkspace(
     outputRoot,
     runDirectory,
   );
+  await dependencies.validateHistoryEvidencePreflight(outputRoot, runDirectory);
   let created: CreatedAr12ExecutionWorkspace | undefined;
   let marker: Ar12ExecutionWorkspaceMarker | undefined;
   let evidenceDirectoryOwned = false;

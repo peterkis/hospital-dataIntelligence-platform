@@ -319,3 +319,19 @@ stale execution clone `.runtime/rebaseline/ar-12/worktrees/db57406-precloseout` 
 opening HEAD `1d1204aa228a38a2862f9d8eaa7fa3428be6eab7` 的全新 initial 目录为 `.runtime/rebaseline/ar-12/20260831-1d1204a-precloseout-r2`。权威 composer 返回 `PASSED`，实际达到 42/42 commands、14/14 standalone、verification 24 files / 559 tests、lifecycle 10/218、Podman fake runtime 5/173、provenance 4/94、adversarial 152 tests、150/150 mutations detected且0 survived、synthetic guard 8 passed / 3 expected skipped、teardown 6/6，Secret与副作用finding均为0；summary SHA-256为`be19b1557dc75dc2adae612fefdd5088116677acc3414f151feddf0d10ad2cff`。但是该summary没有序列化`repositoryContaminationGuard`、`repoLayoutStatus`和`historyEvidenceStable`三个任务强制字段，不能用运行外人工复核代替不可覆盖机器契约，因此本轮失败关闭，没有修改状态、创建Closeout提交或执行final。
 
 整改在`init`创建当前run前先强制核验五个指定历史目录、失败final六个关键artifact的AR-12R-01固定SHA-256、固定SHA-256的recovery artifact和旧stale clone路径缺失，再冻结output root中既有运行、recovery及其他历史项的物理身份；相对路径、目录结构、文件长度与字节摘要均被绑定，reparse/symlink、hard-link leaf和非普通项失败关闭，当前run目录被精确排除。opening snapshot及合法repository-boundary结果的预期字节SHA-256均在命令前绑定进run context。42条命令全部通过后，编排器再次执行source repository contamination guard、`npm run check:repo:layout`和历史身份比较，只有结果匹配预绑定SHA才排他写入repository-boundary artifact，并由run-commands result重复记录同一SHA；`finalize`同时验证两条绑定并再次现时执行三项复核后，才把三个必需字段写成`PASSED`、`PASSED`和`true`。任何缺失、漂移或篡改均失败关闭。本整改不改变evidence contract tuple，不执行完整AR-12重跑、真实服务、shared readiness、正式ABG或AR-07；必须在新的已提交候选上另行从头重跑。
+
+## AR-12R-04 修改前根因记录（2026-08-31）
+
+- `historyEvidenceStable` 当前依赖通用目录发现和运行前后指纹；该机制不能证明指定历史目录必须存在。
+- 当前权威 `requiredDirectoryNames` 仅列出原五个目录，未显式要求 `.runtime/rebaseline/ar-12/20260831-1d1204a-precloseout-r2`。
+- 第六目录的不可覆盖 `ar-12-rebaseline-summary.json` SHA-256 为 `be19b1557dc75dc2adae612fefdd5088116677acc3414f151feddf0d10ad2cff`。其内部 `status=PASSED` 不能掩盖缺失 `repositoryContaminationGuard`、`repoLayoutStatus`、`historyEvidenceStable` 的 Summary 契约失败；历史分类必须为 `SUMMARY_CONTRACT_FAILED_HISTORY`，处置必须为 `REJECTED`。
+- 当前存在不能替代 required history contract。本修复不修改或重建该 Summary，不削弱 repo-layout、Summary validator 或不可覆盖 evidence 规则。
+- AR-12 继续 `claimed`，AR-07 继续 `blocked`；本轮不创建 Initial/Final 目录，不执行完整 AR-12、真实服务、shared readiness 或正式 ABG。
+
+### AR-12R-04 限定验证结果
+
+- 唯一 authority：`tooling/verification/src/rebaseline/ar-12-history-evidence-contract.ts`；六项 required 以稳定顺序显式冻结，额外发现不能替代任一 required entry。
+- 当前实际只读核验：`requiredHistoryCount=6`、`requiredHistoryPassedCount=6`、第六项 `SUMMARY_CONTRACT_FAILED_HISTORY / REJECTED`，contract digest `5feee8cea2b939d3a321911c207f6c1255a86155cfa69724ade6cba6c15dae14`，historical evidence set digest `412a548ebbe65861fd3cb0323810e0815193bb93ff313348aaecba16529f5367`；第六 Summary 与 Recovery SHA 均精确匹配，stale clone 为 `ABSENT`。
+- pre-run gate 在创建 Initial 目录和外部 execution clone 前失败关闭；opening baseline 与 finalize 使用同一 authority，并把contract/set digest、required count和baseline/final路径投影到AR-12 Summary审计字段。正式ABG contract tuple不变。
+- 验证通过：verification 25 files / 592 tests，history contract 2/42，lifecycle 10/218，provenance 4/94，Podman fake runtime 5/173，adversarial 158 mutations全部detected且0 survived；Podman authority、ABG coverage、repo layout、module boundaries和diff check均通过。
+- 本轮未创建AR-12 Initial/Final目录，未运行完整42命令或完整14项standalone，未启动真实服务，未执行shared readiness或正式ABG；原历史目录、Recovery artifact和原21个completion Ticket未修改。AR-12保持`claimed`，AR-07保持`blocked`。
