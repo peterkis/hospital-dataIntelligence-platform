@@ -6,7 +6,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 ## Objective
 
-在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 与 AR-08～AR-11 保持 `resolved`；AR-12 的 opening-HEAD 初始重基线通过，但 Closeout HEAD 最终重跑失败后已恢复为 `claimed` 并成为 current frontier。AR-07 继续 `blocked`，同时等待 AR-12 技术依赖与另行正式执行授权。
+在不改变领域规则、事务边界、数据库迁移、冻结 OpenAPI 或生成客户端的前提下，建立可审计的 Phase 01 验收整改顺序，并把本地实现完成、当前基线定向验证和正式验收三类结论分开记录。AR-01～AR-06 与 AR-08～AR-12 保持 `resolved`；AR-12R-05 opening-HEAD Initial 已完整通过，AR-07 技术依赖标记为 `satisfied`。AR-07 继续 `blocked`，Current frontier 为等待另行明确正式执行授权；Closeout HEAD Final 仍须独立确认该技术基线。
 
 ## Status semantics
 
@@ -29,7 +29,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 原 Phase 01 completion 的 21 个 Ticket 保持独立状态，必须依据新的正式 evidence 逐项关闭。
 - Prompt 1～Prompt 6 对应的 AR-01～AR-06 必须在 AR-09～AR-11 完成后的最新终态协议和 Podman 权威上由 AR-12 重新验证；不得只沿用旧提交评论。
 - `ready-for-agent` 表示 Ticket 已具备可执行规格，不会覆盖 `Blocked by` 依赖。依赖未满足时不得越过 current frontier。
-- AR-07 当前为 `blocked`；AR-12 Closeout HEAD 最终重跑失败后技术依赖未满足，且仍缺少另行给出的正式执行授权与正式环境运行。不得保持 `claimed`。
+- AR-07 当前为 `blocked`；AR-12R-05 Initial 已满足技术依赖，但仍缺少另行给出的正式执行授权与正式环境运行，且本任务不执行 AR-07。不得保持 `claimed`。
 
 ## Triage compatibility
 
@@ -43,7 +43,7 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 不启动 PostgreSQL、Keycloak 或 Chrome，不执行正式 ABG。
 - 不修改原 phase-01-completion Ticket 的历史正文或将其改为 resolved。
 - Markdown 覆盖报告只能从 TypeScript 覆盖矩阵生成或由其严格校验。
-- 每次只执行获得授权的 current frontier；本轮授权只覆盖 AR-12 的静态、单元、类型、构建、合成 fixture、fake/mock runtime 与列表重基线，不授权 AR-07、真实服务、shared readiness、独立正式 evidence acceptance 或正式 ABG。Closeout HEAD 最终重跑失败后 ledger frontier 已恢复为 AR-12；AR-07 继续 `blocked`。
+- 每次只执行获得授权的 current frontier；本轮授权只覆盖 AR-12 的静态、单元、类型、构建、合成 fixture、fake/mock runtime 与列表重基线，不授权 AR-07、真实服务、shared readiness、独立正式 evidence acceptance 或正式 ABG。AR-12R-05 Initial 通过后 ledger frontier 为等待单独授权的 AR-07；AR-07 继续 `blocked`。
 
 ## AR-10 provenance contract
 
@@ -67,9 +67,9 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 
 1. AR-01～AR-12 的状态、依赖、实现基线和重新验证要求在 spec、map 与 Ticket 中一致。
 2. Implementation、Verification 与 Formal acceptance 三层状态不得互相替代。
-3. AR-09～AR-11 完成后，AR-12 必须在新的冻结 HEAD 上重新验证 AR-01～AR-06 及新增整改，不得沿用旧提交结论；当前 Closeout HEAD 最终重跑失败，必须重新建立完整基线。
+3. AR-09～AR-11 完成后，AR-12 必须在新的冻结 HEAD 上重新验证 AR-01～AR-06 及新增整改，不得沿用旧提交结论；AR-12R-05 Initial 已在 `8f0999b0d1aa68c52a66660d795043fd547828f1` 重新建立完整基线，仍须由 Closeout HEAD Final 独立确认。
 4. Podman 工作包在 AR-11 完成后先保持 `ready-for-human`；HR-01 已在 AR-12 或正式运行前记录人工复核 `APPROVED`，工作包转为 `resolved` 只表示 AR-11 实现和人工设计复核完成，不表示真实环境验收、正式 ABG 或生产就绪。
-5. 只有 AR-12 的 Closeout HEAD 最终完整重跑通过后，AR-07 的技术依赖才可标记为 `satisfied`；即使届时技术依赖满足，也只有另行取得明确正式执行授权后，AR-07 才可解除阻断并在正式环境建立新的候选。当前未运行正式 ABG。
+5. AR-12 Initial 完整通过后可将 AR-07 的技术依赖暂记为 `satisfied`，但只有 Closeout HEAD Final 完整重跑通过后才能保留该结论；Final 失败必须恢复 AR-12/frontier。即使技术依赖满足，也只有另行取得明确正式执行授权后，AR-07 才可解除阻断并在正式环境建立新的候选。当前未运行正式 ABG。
 
 ## Comments
 
@@ -84,3 +84,4 @@ Scope: 本工作包只修正 Phase 01 验收工具链、场景与证据覆盖关
 - 2026-08-30（HR-01 人工复核）：仓库责任人对候选 `ab48a26463332d6639ab9c642377235e9c8d0062` 作出 `APPROVED` 决策，Podman 工作包及 runtime issue 转为 `resolved`。该结论只覆盖 AR-11 实现、合成失败关闭验证和人工设计复核；未执行真实环境验收或正式 ABG，不声称生产就绪。Podman human review prerequisite 已完成；AR-12 保持 `ready-for-agent` 且未开始，仍为 current frontier；AR-07 继续 `blocked`。
 - 2026-08-30（AR-12 初始 closeout）：在 opening HEAD `db57406592b5afe18ac2e95f3ddd0e1bf40173ea` 上完成 Prompt 1～6 与 AR-09～AR-11 当前技术重基线：42/42 允许命令、14/14 standalone、140/140 mutation detected、0 survived，Secret/副作用与结束身份核验均通过；summary SHA-256 `57c0c37368ccb4335754af70c018062b57395c2379c0c6270f4acd06b90b61e1`。该结果 `formalAcceptanceEligible=false`，没有启动真实服务、shared readiness 或正式 ABG，原 21 个 completion Ticket 未修改。AR-12 随 closeout 提交转为 `resolved`；AR-07 技术依赖标记 `satisfied` 但继续 `blocked`，current frontier 改为等待用户另行明确正式执行授权。Closeout SHA 仍须在 `.runtime` 新目录最终完整重跑，失败时按约定恢复 AR-12/frontier。
 - 2026-08-30（AR-12 final failure）：Closeout HEAD `4dca3cacfc98b77e2e805260703a912b0a069d17` 的最终重跑在 `npm run check:repo:layout` 失败，exit `1`，编排错误码 `AR12_COMMAND_EXIT_UNEXPECTED`；失败证据保留于 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final`。AR-12 以非覆盖历史恢复 `claimed`，Current frontier 恢复 AR-12，AR-07 继续 `blocked`；未执行真实服务、shared readiness 或正式 ABG。
+- 2026-09-01（AR-12R-05 Initial closeout）：opening HEAD `8f0999b0d1aa68c52a66660d795043fd547828f1` 的全新 Initial 完成42/42 commands、14/14 standalone、25 files / 596 verification tests、158/158 mutations detected且0 survivor；Summary SHA-256 `833f6c9369b505257db3bc72f331d7db0371f7e7e56f7f475dbd17bf158a956b`，history、contamination、layout、source、runtime authority与contract tuple均稳定。AR-12 转为 `resolved`，AR-07 技术依赖标记为 `satisfied` 但保持 `blocked`，Current frontier 改为等待另行正式执行授权；没有真实服务、shared readiness、正式 ABG或原21个completion Ticket修改。Closeout HEAD Final 仍须完整独立重跑。

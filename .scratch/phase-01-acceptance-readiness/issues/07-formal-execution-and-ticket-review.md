@@ -2,7 +2,7 @@
 
 Status: blocked
 
-Blocked by: AR-12 — Closeout HEAD 最终重跑失败；以及明确的正式执行授权与正式环境运行
+Blocked by: 明确的正式执行授权与正式环境运行；AR-12 技术依赖已由 2026-09-01 Initial 满足，等待 Closeout HEAD Final 确认
 
 ## What to build
 
@@ -21,3 +21,4 @@ Blocked by: AR-12 — Closeout HEAD 最终重跑失败；以及明确的正式�
 - 2026-08-30（AR-08 状态复核）：本 Ticket 从已认领执行状态重新归类为 `blocked by AR-12`。AR-09～AR-11 尚需解决终态 lifecycle/ABG-40、reviewer provenance/契约漂移以及 Podman authority/restart/Docker socket/partial-startup 问题，随后由 AR-12 统一重基线；正式候选与新 run identity 均未冻结，未运行新的正式 ABG，不得将本 Ticket 改为 `resolved`。
 - 2026-08-30（AR-12 初始 closeout）：opening HEAD `db57406592b5afe18ac2e95f3ddd0e1bf40173ea` 的 AR-12 技术重基线已通过，summary SHA-256 为 `57c0c37368ccb4335754af70c018062b57395c2379c0c6270f4acd06b90b61e1`；AR-12 技术依赖标记为 `satisfied`。本 Ticket 保持 `blocked`，唯一剩余阻断是用户另行明确授权正式执行并在正式环境建立新的 candidate/run identity。该技术结果 `formalAcceptanceEligible=false`，没有启动真实服务、shared readiness 或正式 ABG，也没有关闭或修改原 21 个 completion Ticket；本任务不得执行 AR-07。
 - 2026-08-30（AR-12 final failure）：Closeout HEAD `4dca3cacfc98b77e2e805260703a912b0a069d17` 的最终重跑在 `npm run check:repo:layout` 失败关闭，证据保留于 `.runtime/rebaseline/ar-12/20260830-4dca3ca-final`。因此 AR-12 恢复 `claimed`，技术依赖不再视为满足；本 Ticket 保持 `blocked`，仍不得执行。
+- 2026-09-01（AR-12R-05 Initial closeout）：opening HEAD `8f0999b0d1aa68c52a66660d795043fd547828f1` 的全新 Initial 通过完整42/42、14/14、158/158 mutations且0 survivor，Summary SHA-256 为 `833f6c9369b505257db3bc72f331d7db0371f7e7e56f7f475dbd17bf158a956b`；AR-12 技术依赖标记为 `satisfied`。本 Ticket 保持 `blocked`，Current frontier 为 `AR-07 — awaiting explicit formal execution authorization`；本任务不执行 AR-07，且 Closeout HEAD Final 仍须通过才能保留该技术结论。没有真实服务、shared readiness、正式 ABG或原21个completion Ticket修改。
