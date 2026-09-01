@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import {
   Ar12ExternalExecutionWorkspaceRunError,
+  ar12StandaloneSummaryFields,
   ar12SummaryRepositoryBoundaryFields,
   ar12CliFailurePayload,
   assertAr12CommandPlanSafety,
@@ -19,6 +20,7 @@ import {
   runAfterAr12ExecutionWorkspaceGate,
   runAr12OrchestratorCli,
   validateAr12RepositoryBoundaryArtifact,
+  validateAr12RebaselineSummary,
   verifyAr12RepositoryBoundary,
 } from './ar-12-orchestrator.js';
 import {
@@ -128,6 +130,58 @@ function fakeHistoryBaseline(digest = 'a'.repeat(64)) {
 }
 
 describe('AR-12 rebaseline orchestrator', () => {
+  it('publishes explicit standalone totals for the rebaseline summary', () => {
+    const standaloneChecks = Array.from({ length: 14 }, (_, index) => ({
+      id: index + 1,
+      status: 'PASSED',
+    }));
+
+    expect(ar12StandaloneSummaryFields(standaloneChecks)).toEqual({
+      standaloneCount: 14,
+      standalonePassedCount: 14,
+    });
+  });
+
+  it('rejects a rebaseline summary that omits standalone totals', () => {
+    const standaloneChecks = Array.from({ length: 14 }, (_, index) => ({
+      id: index + 1,
+      status: 'PASSED',
+    }));
+
+    expect(() => validateAr12RebaselineSummary({
+      status: 'PASSED',
+      standaloneChecks,
+    })).toThrowError('AR12_SUMMARY_STANDALONE_FIELDS_INVALID');
+  });
+
+  it('rejects standalone totals that disagree with the published checks', () => {
+    const standaloneChecks = Array.from({ length: 14 }, (_, index) => ({
+      id: index + 1,
+      status: 'PASSED',
+    }));
+
+    expect(() => validateAr12RebaselineSummary({
+      status: 'PASSED',
+      standaloneCount: 14,
+      standalonePassedCount: 13,
+      standaloneChecks,
+    })).toThrowError('AR12_SUMMARY_STANDALONE_FIELDS_INVALID');
+  });
+
+  it('rejects PASSED when fewer than all 14 standalone checks are published', () => {
+    const standaloneChecks = Array.from({ length: 13 }, (_, index) => ({
+      id: index + 1,
+      status: 'PASSED',
+    }));
+
+    expect(() => validateAr12RebaselineSummary({
+      status: 'PASSED',
+      standaloneCount: 13,
+      standalonePassedCount: 13,
+      standaloneChecks,
+    })).toThrowError('AR12_SUMMARY_STANDALONE_FIELDS_INVALID');
+  });
+
   it('verifies contamination, layout, and immutable history before finalization', async () => {
     const opening = fakeHistoryBaseline();
     const events: string[] = [];

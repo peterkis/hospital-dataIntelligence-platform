@@ -2391,6 +2391,46 @@ function buildStandaloneChecks(collected: readonly CollectedCommand[]): readonly
   });
 }
 
+export function ar12StandaloneSummaryFields(
+  standaloneChecks: readonly Readonly<Record<string, unknown>>[],
+): {
+  readonly standaloneCount: number;
+  readonly standalonePassedCount: number;
+} {
+  return {
+    standaloneCount: standaloneChecks.length,
+    standalonePassedCount: standaloneChecks.filter((item) => item['status'] === 'PASSED').length,
+  };
+}
+
+export function validateAr12RebaselineSummary(
+  summary: Readonly<Record<string, unknown>>,
+): void {
+  const standaloneCount = summary['standaloneCount'];
+  const standalonePassedCount = summary['standalonePassedCount'];
+  const standaloneChecks = summary['standaloneChecks'];
+  if (
+    typeof standaloneCount !== 'number' ||
+    !Number.isSafeInteger(standaloneCount) ||
+    typeof standalonePassedCount !== 'number' ||
+    !Number.isSafeInteger(standalonePassedCount) ||
+    !Array.isArray(standaloneChecks)
+  ) fail('AR12_SUMMARY_STANDALONE_FIELDS_INVALID');
+  const projected = ar12StandaloneSummaryFields(standaloneChecks);
+  if (
+    standaloneCount !== projected.standaloneCount ||
+    standalonePassedCount !== projected.standalonePassedCount
+  ) fail('AR12_SUMMARY_STANDALONE_FIELDS_INVALID');
+  const requiredStandaloneCount = Object.keys(STANDALONE_EXPECTATIONS).length;
+  if (
+    summary['status'] === 'PASSED' &&
+    (
+      standaloneCount !== requiredStandaloneCount ||
+      standalonePassedCount !== requiredStandaloneCount
+    )
+  ) fail('AR12_SUMMARY_STANDALONE_FIELDS_INVALID');
+}
+
 async function finalizeCore(repositoryRoot: string, runDirectory: string): Promise<void> {
   const loaded = await loadAndValidateRun(repositoryRoot, runDirectory);
   const { modules, context, baseline, openingHistoryEvidence } = loaded;
@@ -2671,6 +2711,7 @@ async function finalizeCore(repositoryRoot: string, runDirectory: string): Promi
       ...baseline.verificationAuthorityIdentity,
       stable: contractIdentityStable,
     },
+    ...ar12StandaloneSummaryFields(standaloneChecks),
     standaloneChecks,
     standaloneTeardownPassedCount:
       commandEvaluation.testCounts.standaloneTeardown?.testsPassed ?? 0,
@@ -2692,6 +2733,7 @@ async function finalizeCore(repositoryRoot: string, runDirectory: string): Promi
     status: passed ? 'PASSED' : 'FAILED',
     completedAt: new Date().toISOString(),
   };
+  validateAr12RebaselineSummary(summary);
   const summaryWrite = await modules.recorder.writeRedactedJsonArtifact(
     context.runDirectory,
     summaryName,
