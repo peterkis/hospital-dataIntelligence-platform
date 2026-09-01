@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,7 +7,10 @@ import { buildProducerFailureEvidence } from './adapters.js';
 import {
   createEvidenceItemFromFile,
   createEvidenceOutputDirectory,
+  createEvidenceSubdirectory,
+  ensureSafeDirectoryConcurrent,
   redactSensitiveText,
+  writeBinaryArtifact,
   writeProducerEvidence,
   writeRedactedJsonArtifact,
   writeRedactedTextArtifact,
@@ -68,7 +71,7 @@ describe('producer evidence recorder', () => {
       return;
     }
     await expect(writeRedactedTextArtifact(root, 'linked/escape.log', 'blocked')).rejects.toThrow(
-      'PRODUCER_EVIDENCE_PARENT_UNSAFE',
+      'PRODUCER_EVIDENCE_DIRECTORY_SYMLINK_FORBIDDEN',
     );
   });
 
@@ -144,7 +147,141 @@ describe('producer evidence recorder', () => {
       else process.env[name] = previous;
     }
   });
+
+  it('allows two concurrent tasks to create the same directory layer', async () => {
+    const root = await createRoot();
+    await expect(Promise.all([
+      createEvidenceSubdirectory(root, 'shared'),
+      createEvidenceSubdirectory(root, 'shared'),
+    ])).resolves.toEqual([join(root, 'shared'), join(root, 'shared')]);
+  });
+
+  it('allows many concurrent tasks to create the same multi-level directory', async () => {
+    const root = await createRoot();
+    const results = await Promise.all(Array.from({ length: 32 }, () =>
+      createEvidenceSubdirectory(root, 'shared/raw/commands')));
+    expect(new Set(results)).toEqual(new Set([join(root, 'shared/raw/commands')]));
+  });
+
+  it('allows concurrent sibling files after racing on one parent directory', async () => {
+    const root = await createRoot();
+    await Promise.all([
+      writeRedactedTextArtifact(root, 'shared/raw/first.log', 'first'),
+      writeRedactedTextArtifact(root, 'shared/raw/second.log', 'second'),
+    ]);
+    await expect(readFile(join(root, 'shared/raw/first.log'), 'utf8')).resolves.toBe('first');
+    await expect(readFile(join(root, 'shared/raw/second.log'), 'utf8')).resolves.toBe('second');
+  });
+
+  it('keeps same-file concurrent writes exclusive with no partial overwrite', async () => {
+    const root = await createRoot();
+    const results = await Promise.allSettled([
+      writeBinaryArtifact(root, 'shared/raw/exclusive.bin', Buffer.from('first-complete')),
+      writeBinaryArtifact(root, 'shared/raw/exclusive.bin', Buffer.from('second-complete')),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(String((results.find((result) => result.status === 'rejected') as PromiseRejectedResult).reason))
+      .toContain('PRODUCER_EVIDENCE_WRITE_ALREADY_EXISTS');
+    const bytes = await readFile(join(root, 'shared/raw/exclusive.bin'), 'utf8');
+    expect(['first-complete', 'second-complete']).toContain(bytes);
+  });
+
+  it('fails closed when an EEXIST object is a regular file', async () => {
+    const root = await createRoot();
+    await writeFile(join(root, 'shared'), 'not-a-directory', { flag: 'wx' });
+    await expect(createEvidenceSubdirectory(root, 'shared/raw')).rejects.toThrow(
+      'PRODUCER_EVIDENCE_DIRECTORY_EXISTING_NOT_DIRECTORY',
+    );
+  });
+
+  it('fails closed when an EEXIST object is a symlink or junction', async () => {
+    const root = await createRoot();
+    const external = await mkdtemp(join(tmpdir(), 'hdi-evidence-external-'));
+    roots.push(external);
+    if (!await createDirectoryLink(external, join(root, 'shared'))) return;
+    await expect(createEvidenceSubdirectory(root, 'shared/raw')).rejects.toThrow(
+      'PRODUCER_EVIDENCE_DIRECTORY_SYMLINK_FORBIDDEN',
+    );
+  });
+
+  it('fails closed when an intermediate parent directory is a symlink or junction', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'shared'));
+    const external = await mkdtemp(join(tmpdir(), 'hdi-evidence-external-'));
+    roots.push(external);
+    if (!await createDirectoryLink(external, join(root, 'shared/raw'))) return;
+    await expect(writeRedactedTextArtifact(root, 'shared/raw/escape.log', 'blocked')).rejects.toThrow(
+      'PRODUCER_EVIDENCE_DIRECTORY_SYMLINK_FORBIDDEN',
+    );
+  });
+
+  it('fails closed when a canonical directory path escapes the evidence root', async () => {
+    const root = await createRoot();
+    const external = await mkdtemp(join(tmpdir(), 'hdi-evidence-external-'));
+    roots.push(external);
+    await expect(ensureSafeDirectoryConcurrent(root, 'shared', {
+      async lstat() { return { isDirectory: () => true, isSymbolicLink: () => false }; },
+      async mkdir() { throw Object.assign(new Error('exists'), { code: 'EEXIST' }); },
+      async realpath() { return external; },
+    })).rejects.toThrow('PRODUCER_EVIDENCE_DIRECTORY_ESCAPES_ROOT');
+  });
+
+  it('accepts an already existing safe directory after canonical verification', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'shared'));
+    await expect(createEvidenceSubdirectory(root, 'shared')).resolves.toBe(join(root, 'shared'));
+  });
+
+  it('keeps the evidence output root exclusive even after subdirectories become concurrent-safe', async () => {
+    const root = await createRoot();
+    await expect(createEvidenceOutputDirectory(root)).rejects.toThrow(
+      'PRODUCER_EVIDENCE_OUTPUT_ALREADY_EXISTS',
+    );
+  });
+
+  it('regresses setup 03 shared/raw concurrency without serializing producers', async () => {
+    const first = await createRoot();
+    const second = await createRoot();
+    const firstDigests = await writeSyntheticSetup03Evidence(first);
+    const secondDigests = await writeSyntheticSetup03Evidence(second);
+    expect(firstDigests).toEqual(secondDigests);
+  });
+
+  it('survives 100 repeated concurrent shared/raw directory races without unexpected EEXIST', async () => {
+    for (let index = 0; index < 100; index += 1) {
+      const root = await createRoot();
+      await Promise.all([
+        writeRedactedTextArtifact(root, `shared/raw/commands/${index}-stdout.log`, 'stdout'),
+        writeRedactedTextArtifact(root, `shared/raw/commands/${index}-stderr.log`, 'stderr'),
+        writeRedactedJsonArtifact(root, `shared/raw/${index}-summary.json`, { index }),
+        writeRedactedJsonArtifact(root, `shared/producer-${index}/evidence.json`, { index }),
+      ]);
+    }
+  }, 30_000);
 });
+
+async function createDirectoryLink(target: string, path: string): Promise<boolean> {
+  try {
+    await symlink(target, path, process.platform === 'win32' ? 'junction' : 'dir');
+    return true;
+  } catch (error) {
+    const code = error instanceof Error && 'code' in error ? error.code : undefined;
+    expect(code).toBe('EPERM');
+    return false;
+  }
+}
+
+async function writeSyntheticSetup03Evidence(root: string): Promise<Readonly<Record<string, string>>> {
+  const writes = await Promise.all([
+    writeRedactedTextArtifact(root, 'shared/raw/commands/runtime.stdout.log', 'runtime-out'),
+    writeRedactedTextArtifact(root, 'shared/raw/commands/runtime.stderr.log', 'runtime-err'),
+    writeRedactedJsonArtifact(root, 'shared/raw/command-results.json', { status: 'PASSED' }),
+    writeRedactedJsonArtifact(root, 'shared/static/producer-evidence.json', { status: 'PASSED' }),
+    writeRedactedJsonArtifact(root, 'shared/database/producer-evidence.json', { status: 'PASSED' }),
+  ]);
+  return Object.fromEntries(writes.map((write) => [write.relativePath, write.sha256]));
+}
 
 async function createRoot(): Promise<string> {
   const parent = await mkdtemp(join(tmpdir(), 'hdi-evidence-root-'));

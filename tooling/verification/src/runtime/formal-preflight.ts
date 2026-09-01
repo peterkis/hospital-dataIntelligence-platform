@@ -20,6 +20,10 @@ import {
 } from './formal-wsl-host.ts';
 import { loadPodmanRuntimeAuthority } from './podman-runtime-authority.ts';
 import { PODMAN_RUNTIME_AUTHORITY_ID } from './podman-runtime-authority-schema.ts';
+import {
+  inspectPodmanMachineState,
+  type PodmanMachineInspectionResult,
+} from './podman-machine-inspection.ts';
 
 export type LoadedRuntimeAuthority = Awaited<ReturnType<typeof loadPodmanRuntimeAuthority>>;
 type RuntimeAuthority = LoadedRuntimeAuthority['authority'];
@@ -144,8 +148,7 @@ export interface FormalPreflightAuthorityIsolationObservation {
     readonly process: string | null;
   }[];
   readonly unexpectedContainerApiEndpoints: readonly string[];
-  readonly podmanConnections: readonly string[];
-  readonly podmanMachines: readonly string[];
+  readonly podmanMachineInspection: PodmanMachineInspectionResult;
   readonly rootlessSocketPaths: readonly string[];
   readonly otherWslBackends: readonly string[];
   readonly podmanSocket: {
@@ -710,13 +713,13 @@ export function evaluateFormalRuntimeAuthorityIsolation(
   addAbsence('container-api-tcp-absent', observation.forbiddenTcpListeners, 'FORMAL_PREFLIGHT_CONTAINER_API_TCP_PRESENT');
   addAbsence('container-api-endpoints-absent', [
     ...observation.unexpectedContainerApiEndpoints,
-    ...observation.podmanConnections,
+    ...observation.podmanMachineInspection.remoteConnections,
   ], 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT');
   addAbsence('second-runtime-authority-absent', [
-    ...observation.podmanMachines,
     ...observation.rootlessSocketPaths,
     ...observation.otherWslBackends,
   ], 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT');
+  checks.push(machineInspectionCheck(observation.podmanMachineInspection));
   addAbsence('runtime-isolation-inspection-complete', observation.inspectionFailures,
     'FORMAL_PREFLIGHT_AUTHORITY_ISOLATION_UNAVAILABLE');
 
@@ -784,6 +787,38 @@ export function evaluateFormalRuntimeAuthorityIsolation(
     'container-environment-testcontainers-host-override',
     'FORMAL_PREFLIGHT_TESTCONTAINERS_HOST_OVERRIDE_INVALID');
   return checks;
+}
+
+function machineInspectionCheck(
+  inspection: PodmanMachineInspectionResult,
+): FormalPreflightCheck {
+  switch (inspection.status) {
+    case 'NOT_APPLICABLE_NATIVE_ROOTFUL':
+    case 'NONE_REGISTERED':
+      return passed('podman-machine-inspection', 'podman', inspection);
+    case 'REGISTERED_MACHINE_PRESENT':
+    case 'RUNNING_MACHINE_PRESENT':
+      return failed(
+        'podman-machine-inspection',
+        'podman',
+        'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT',
+        inspection,
+      );
+    case 'REMOTE_CONNECTION_PRESENT':
+      return failed(
+        'podman-machine-inspection',
+        'podman',
+        'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT',
+        inspection,
+      );
+    case 'INSPECTION_FAILED':
+      return failed(
+        'podman-machine-inspection',
+        'podman',
+        'FORMAL_PREFLIGHT_MACHINE_INSPECTION_FAILED',
+        inspection,
+      );
+  }
 }
 
 function appendEnvironmentAbsenceCheck(
@@ -1122,16 +1157,10 @@ class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolation
     const forbiddenTcpListeners = listeners.filter((listener) => forbiddenPortSet.has(listener.port));
     const podmanTcpListeners = listeners.filter((listener) => listener.process?.includes('podman') === true)
       .map((listener) => `tcp://${listener.address}:${listener.port}`);
-    const podmanConnections = await inspectPodmanConnections(this.runner, failures);
-    const podmanMachines = await inspectPodmanMachines(
-      this.runner,
-      failures,
-      authority.podman.rootless,
-    );
+    const podmanMachineInspection = await inspectPodmanMachineState(this.runner, authority);
     const rootlessSocketPaths = await inspectRootlessPodmanSockets(failures);
     const socketPath = authority.podman.socketPath;
     const socketObservation = await inspectSocketPath(socketPath);
-    const podmanInfo = await inspectIsolationPodmanInfo(this.runner, failures);
     const otherWslBackends = await inspectRunningWslBackends(
       this.runner,
       authority.host.distribution,
@@ -1144,7 +1173,7 @@ class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolation
     const allowedEndpoint = authority.dockerExclusion.allowedCompatibilityEnvironment.DOCKER_HOST;
     const unexpectedContainerApiEndpoints = [...new Set([
       ...podmanTcpListeners,
-      ...podmanConnections.filter((endpoint) => endpoint !== allowedEndpoint),
+      ...podmanMachineInspection.remoteConnections.filter((endpoint) => endpoint !== allowedEndpoint),
       ...environmentRemoteEndpoints(this.environment, socketPath),
     ])];
     return {
@@ -1154,12 +1183,11 @@ class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolation
       forbiddenProcesses,
       forbiddenTcpListeners,
       unexpectedContainerApiEndpoints,
-      podmanConnections: podmanConnections.filter((endpoint) => endpoint !== allowedEndpoint),
-      podmanMachines,
+      podmanMachineInspection,
       rootlessSocketPaths,
       otherWslBackends,
       podmanSocket: {
-        path: podmanInfo.socketPath ?? '',
+        path: podmanMachineInspection.runtimeSocketPath ?? '',
         kind: socketObservation.kind,
         symbolicLink: socketObservation.symbolicLink,
         uid: socketObservation.uid,
@@ -1167,35 +1195,10 @@ class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolation
         mode: socketObservation.mode,
         systemdActive: podmanSocketActive.ok && podmanSocketActive.value.trim() === 'active',
         tcpEndpoints: podmanTcpListeners,
-        rootless: podmanInfo.rootless,
+        rootless: podmanMachineInspection.rootless,
       },
       inspectionFailures: [...new Set(failures)].sort(),
     };
-  }
-}
-
-async function inspectIsolationPodmanInfo(
-  runner: RuntimeCommandRunner,
-  failures: string[],
-): Promise<{ readonly socketPath: string | null; readonly rootless: boolean | null }> {
-  const result = await runText(runner, undefined, 'podman', ['info', '--format', 'json']);
-  if (!result.ok) {
-    failures.push('PODMAN_INFO_INSPECTION_FAILED');
-    return { socketPath: null, rootless: null };
-  }
-  try {
-    const value = JSON.parse(result.value) as unknown;
-    if (!isRecord(value)) throw new Error('INVALID');
-    const host = isRecord(value['host']) ? value['host'] : {};
-    const remoteSocket = isRecord(host['remoteSocket']) ? host['remoteSocket'] : {};
-    const security = isRecord(host['security']) ? host['security'] : {};
-    return {
-      socketPath: typeof remoteSocket['path'] === 'string' ? remoteSocket['path'] : null,
-      rootless: typeof security['rootless'] === 'boolean' ? security['rootless'] : null,
-    };
-  } catch {
-    failures.push('PODMAN_INFO_INSPECTION_INVALID');
-    return { socketPath: null, rootless: null };
   }
 }
 
@@ -1322,64 +1325,6 @@ async function inspectTcpListeners(
     const processMatch = /users:\(\("([^"]+)"/u.exec(line);
     return [{ address: match[1], port: Number(match[2]), process: processMatch?.[1] ?? null }];
   });
-}
-
-async function inspectPodmanConnections(
-  runner: RuntimeCommandRunner,
-  failures: string[],
-): Promise<readonly string[]> {
-  const result = await runText(runner, undefined, 'podman', ['system', 'connection', 'list', '--format', 'json']);
-  if (!result.ok) {
-    failures.push('PODMAN_CONNECTION_INSPECTION_FAILED');
-    return [];
-  }
-  try {
-    const values = JSON.parse(result.value) as unknown;
-    return Array.isArray(values) ? values.flatMap((value) => {
-      if (!isRecord(value)) return [];
-      const uri = value['URI'] ?? value['Uri'] ?? value['uri'];
-      return typeof uri === 'string' ? [uri] : [];
-    }) : [];
-  } catch {
-    failures.push('PODMAN_CONNECTION_INSPECTION_INVALID');
-    return [];
-  }
-}
-
-export async function inspectPodmanMachines(
-  runner: RuntimeCommandRunner,
-  failures: string[],
-  rootless: boolean,
-): Promise<readonly string[]> {
-  let result: Awaited<ReturnType<RuntimeCommandRunner['run']>>;
-  try {
-    result = await runner.run({
-      executable: 'podman',
-      args: ['machine', 'list', '--format', 'json'],
-    });
-  } catch {
-    failures.push('PODMAN_MACHINE_INSPECTION_FAILED');
-    return [];
-  }
-  if (result.exitCode !== 0) {
-    if (
-      !rootless &&
-      /cannot run command "podman machine list" as root/iu.test(result.stderr)
-    ) return [];
-    failures.push('PODMAN_MACHINE_INSPECTION_FAILED');
-    return [];
-  }
-  try {
-    const values = JSON.parse(result.stdout) as unknown;
-    return Array.isArray(values) ? values.flatMap((value) => {
-      if (!isRecord(value)) return [];
-      const name = value['Name'] ?? value['name'];
-      return typeof name === 'string' && name.length > 0 ? [name] : [];
-    }) : [];
-  } catch {
-    failures.push('PODMAN_MACHINE_INSPECTION_INVALID');
-    return [];
-  }
 }
 
 async function inspectRootlessPodmanSockets(failures: string[]): Promise<readonly string[]> {

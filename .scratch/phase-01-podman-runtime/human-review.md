@@ -116,3 +116,9 @@ Status: ready-for-human
 - Formal ABG acceptance: NOT PERFORMED
 - Production readiness: NOT CLAIMED
 - Next required gate: AR-12
+
+## AR-07R-01 semantic clarification
+
+- 原生Anolis rootful Podman使用本地`/run/podman/podman.sock`且不依赖Podman Machine；当冻结authority、实际`podman info`、无remote connection和受控machine command capability共同证明该事实时，Machine inspection为`NOT_APPLICABLE_NATIVE_ROOTFUL`，属于合法无Machine终态。
+- `NONE_REGISTERED`同样合法；任一registered/running Machine、remote connection、rootless socket、第二endpoint或无法解释的inspection继续失败关闭。Preflight与cleanup共用同一typed classifier，不再维护两套stderr/JSON语义。
+- WSL隔离继续检查running backend：普通发行版仅registered未running不失败，Docker Desktop、Podman Machine或其他额外running container backend失败关闭。该澄清不改变既有`APPROVED`范围；真实环境验收与正式ABG仍为`NOT PERFORMED`，production readiness仍为`NOT CLAIMED`。

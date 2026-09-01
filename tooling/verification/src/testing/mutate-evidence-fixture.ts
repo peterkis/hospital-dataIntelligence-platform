@@ -17,7 +17,12 @@ import {
   validateAbgGateResult,
   writeAbgGateProof,
 } from '../abg-gate-proof.js';
-import { sha256 } from '../evidence/recorder.js';
+import {
+  createEvidenceOutputDirectory,
+  createEvidenceSubdirectory,
+  sha256,
+  writeRedactedTextArtifact,
+} from '../evidence/recorder.js';
 import type { ProducerEvidence } from '../evidence/protocol.js';
 import { validateProducerEvidence } from '../evidence/validate-producer-evidence.js';
 import { validateFormalAbgSummary } from '../formal-summary-validator.js';
@@ -33,7 +38,14 @@ import {
 import {
   formalRuntimeLabels,
   type FormalRunIdentity,
+  type RuntimeCommandResult,
+  type RuntimeCommandRunner,
 } from '../runtime/formal-runtime-contract.js';
+import {
+  assertEquivalentPodmanMachineInspections,
+  inspectPodmanMachineState,
+  type PodmanMachineInspectionResult,
+} from '../runtime/podman-machine-inspection.js';
 import { createSourceManifestBuilder } from '../provenance/source-manifest.js';
 import {
   rebuildFixtureManifest,
@@ -87,7 +99,9 @@ export type MutationDetectionLayer =
   | 'ar12-clone-identity-guard'
   | 'ar12-relocation-guard'
   | 'ar12-command-plan-guard'
-  | 'ar12-history-evidence-guard';
+  | 'ar12-history-evidence-guard'
+  | 'evidence-recorder-guard'
+  | 'podman-machine-inspection';
 
 export interface EvidenceMutationCase {
   readonly mutationId: string;
@@ -283,10 +297,26 @@ export const AR12_HISTORY_EVIDENCE_MUTATION_CASES: readonly EvidenceMutationCase
   mutation('AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED', 'Recreate the forbidden stale execution clone path.', 'ar12-history-evidence-guard', 'AR12_STALE_EXECUTION_CLONE_REAPPEARED'),
 ] as const;
 
+export const AR07R01_ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+  mutation('EVIDENCE_PARENT_DIRECTORY_CONCURRENT_CREATE', 'Regress concurrent creation of one evidence parent.', 'evidence-recorder-guard', 'EVIDENCE_PARENT_DIRECTORY_CONCURRENT_CREATE'),
+  mutation('EVIDENCE_PARENT_DIRECTORY_EEXIST_FILE', 'Replace an evidence parent directory with a file.', 'evidence-recorder-guard', 'PRODUCER_EVIDENCE_DIRECTORY_EXISTING_NOT_DIRECTORY'),
+  mutation('EVIDENCE_PARENT_DIRECTORY_EEXIST_SYMLINK', 'Replace an evidence parent directory with a symlink.', 'evidence-recorder-guard', 'PRODUCER_EVIDENCE_DIRECTORY_SYMLINK_FORBIDDEN'),
+  mutation('EVIDENCE_SAME_FILE_CONCURRENT_WRITE', 'Race two immutable writes to the same evidence file.', 'evidence-recorder-guard', 'PRODUCER_EVIDENCE_WRITE_ALREADY_EXISTS'),
+  mutation('PODMAN_MACHINE_NATIVE_ROOTFUL_NOT_APPLICABLE', 'Misclassify native rootful Podman Machine as an inspection failure.', 'podman-machine-inspection', 'PODMAN_MACHINE_NATIVE_ROOTFUL_NOT_APPLICABLE'),
+  mutation('PODMAN_MACHINE_REGISTERED_PRESENT', 'Hide a registered stopped Podman Machine.', 'podman-machine-inspection', 'PODMAN_MACHINE_REGISTERED_PRESENT'),
+  mutation('PODMAN_MACHINE_RUNNING_PRESENT', 'Hide a running Podman Machine.', 'podman-machine-inspection', 'PODMAN_MACHINE_RUNNING_PRESENT'),
+  mutation('PODMAN_MACHINE_REMOTE_CONNECTION_PRESENT', 'Hide a remote Podman connection.', 'podman-machine-inspection', 'PODMAN_MACHINE_REMOTE_CONNECTION_PRESENT'),
+  mutation('PODMAN_MACHINE_MALFORMED_RESULT', 'Accept malformed Podman Machine JSON.', 'podman-machine-inspection', 'PODMAN_MACHINE_RESULT_MALFORMED'),
+  mutation('PODMAN_MACHINE_UNKNOWN_INSPECTION_FAILURE', 'Accept an unknown nonzero Podman Machine inspection failure.', 'podman-machine-inspection', 'PODMAN_MACHINE_COMMAND_FAILED'),
+  mutation('CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE', 'Fail cleanup solely because native rootful Machine is not applicable.', 'podman-machine-inspection', 'CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE'),
+  mutation('PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT', 'Classify the same Machine fixture differently in preflight and cleanup.', 'podman-machine-inspection', 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT'),
+] as const;
+
 export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   ...PRE_AR12_ADVERSARIAL_MUTATION_CASES,
   ...AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
   ...AR12_HISTORY_EVIDENCE_MUTATION_CASES,
+  ...AR07R01_ADVERSARIAL_MUTATION_CASES,
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -1007,9 +1037,16 @@ async function executeMutation(
       });
     case 'PODMAN_REMOTE_CONNECTION_PRESENT':
       return runSyntheticPreflightPolicyMutation(({ observation }) => {
-        mutableArray(observation.podmanConnections).push(
-          'ssh://runtime.example/run/podman/podman.sock',
-        );
+        Object.assign(observation, {
+          podmanMachineInspection: {
+            ...observation.podmanMachineInspection,
+            status: 'REMOTE_CONNECTION_PRESENT',
+            applicability: 'APPLICABLE',
+            machineCommandSupported: null,
+            remoteConnectionCount: 1,
+            remoteConnections: ['ssh://runtime.example/run/podman/podman.sock'],
+          },
+        });
       });
     case 'ROOTLESS_PODMAN_SOCKET_PRESENT':
       return runSyntheticPreflightPolicyMutation(({ observation }) => {
@@ -1091,6 +1128,20 @@ async function executeMutation(
     case 'AR12_REQUIRED_HISTORY_RECOVERY_SHA_MISMATCH':
     case 'AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED':
       return ar12HistoryEvidenceMutation(mutationId, context);
+    case 'EVIDENCE_PARENT_DIRECTORY_CONCURRENT_CREATE':
+    case 'EVIDENCE_PARENT_DIRECTORY_EEXIST_FILE':
+    case 'EVIDENCE_PARENT_DIRECTORY_EEXIST_SYMLINK':
+    case 'EVIDENCE_SAME_FILE_CONCURRENT_WRITE':
+      return evidenceDirectoryMutation(mutationId, context);
+    case 'PODMAN_MACHINE_NATIVE_ROOTFUL_NOT_APPLICABLE':
+    case 'PODMAN_MACHINE_REGISTERED_PRESENT':
+    case 'PODMAN_MACHINE_RUNNING_PRESENT':
+    case 'PODMAN_MACHINE_REMOTE_CONNECTION_PRESENT':
+    case 'PODMAN_MACHINE_MALFORMED_RESULT':
+    case 'PODMAN_MACHINE_UNKNOWN_INSPECTION_FAILURE':
+    case 'CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE':
+    case 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT':
+      return podmanMachineMutation(mutationId);
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
@@ -1157,6 +1208,189 @@ async function ar12HistoryEvidenceMutation(
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
   return captureErrorCodes(() => captureAr12HistoryEvidenceBaseline(outputRoot, currentRun, contract));
+}
+
+async function evidenceDirectoryMutation(
+  mutationId: string,
+  context: MutationExecutionContext,
+): Promise<readonly string[]> {
+  const caseRoot = join(context.mutationRootDirectory, mutationId.toLowerCase());
+  const evidenceRoot = join(caseRoot, 'evidence');
+  await mkdir(caseRoot, { recursive: true });
+  await createEvidenceOutputDirectory(evidenceRoot);
+  switch (mutationId) {
+    case 'EVIDENCE_PARENT_DIRECTORY_CONCURRENT_CREATE':
+      return captureRegressionInvariant(mutationId, async () => {
+        await Promise.all(Array.from({ length: 32 }, () =>
+          createEvidenceSubdirectory(evidenceRoot, 'shared/raw/commands')));
+      });
+    case 'EVIDENCE_PARENT_DIRECTORY_EEXIST_FILE':
+      await writeFile(join(evidenceRoot, 'shared'), 'not-a-directory', { flag: 'wx' });
+      return captureErrorCodes(() => createEvidenceSubdirectory(evidenceRoot, 'shared/raw'));
+    case 'EVIDENCE_PARENT_DIRECTORY_EEXIST_SYMLINK': {
+      const external = join(caseRoot, 'external');
+      await mkdir(external, { recursive: false });
+      await symlink(external, join(evidenceRoot, 'shared'), process.platform === 'win32' ? 'junction' : 'dir');
+      return captureErrorCodes(() => createEvidenceSubdirectory(evidenceRoot, 'shared/raw'));
+    }
+    case 'EVIDENCE_SAME_FILE_CONCURRENT_WRITE':
+      return captureErrorCodes(() => Promise.all([
+        writeRedactedTextArtifact(evidenceRoot, 'shared/raw/exclusive.log', 'first'),
+        writeRedactedTextArtifact(evidenceRoot, 'shared/raw/exclusive.log', 'second'),
+      ]));
+    default:
+      throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
+  }
+}
+
+async function podmanMachineMutation(mutationId: string): Promise<readonly string[]> {
+  switch (mutationId) {
+    case 'PODMAN_MACHINE_NATIVE_ROOTFUL_NOT_APPLICABLE': {
+      const inspection = await inspectMutationMachine({
+        machine: mutationCommandResult(
+          125,
+          '',
+          'Error: cannot run command "podman machine list" as root\n',
+        ),
+      });
+      return captureRegressionInvariant(mutationId, () => Promise.resolve(
+        assertMachineStatus(inspection, 'NOT_APPLICABLE_NATIVE_ROOTFUL'),
+      ));
+    }
+    case 'PODMAN_MACHINE_REGISTERED_PRESENT': {
+      const inspection = await inspectMutationMachine({
+        machine: mutationCommandResult(0, '[{"Name":"stopped","Running":false}]', ''),
+      });
+      return captureRegressionInvariant(mutationId, () => Promise.resolve(
+        assertMachineStatus(inspection, 'REGISTERED_MACHINE_PRESENT'),
+      ));
+    }
+    case 'PODMAN_MACHINE_RUNNING_PRESENT': {
+      const inspection = await inspectMutationMachine({
+        machine: mutationCommandResult(0, '[{"Name":"running","Running":true}]', ''),
+      });
+      return captureRegressionInvariant(mutationId, () => Promise.resolve(
+        assertMachineStatus(inspection, 'RUNNING_MACHINE_PRESENT'),
+      ));
+    }
+    case 'PODMAN_MACHINE_REMOTE_CONNECTION_PRESENT': {
+      const inspection = await inspectMutationMachine({
+        connections: mutationCommandResult(
+          0,
+          '[{"URI":"ssh://remote/run/podman/podman.sock"}]',
+          '',
+        ),
+      });
+      return captureRegressionInvariant(mutationId, () => Promise.resolve(
+        assertMachineStatus(inspection, 'REMOTE_CONNECTION_PRESENT'),
+      ));
+    }
+    case 'PODMAN_MACHINE_MALFORMED_RESULT': {
+      const inspection = await inspectMutationMachine({
+        machine: mutationCommandResult(0, '{broken', ''),
+      });
+      return [inspection.failureCode ?? 'PODMAN_MACHINE_MALFORMED_RESULT_NOT_DETECTED'];
+    }
+    case 'PODMAN_MACHINE_UNKNOWN_INSPECTION_FAILURE': {
+      const inspection = await inspectMutationMachine({
+        machine: mutationCommandResult(42, '', 'unknown failure'),
+      });
+      return [inspection.failureCode ?? 'PODMAN_MACHINE_UNKNOWN_FAILURE_NOT_DETECTED'];
+    }
+    case 'CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE': {
+      const inspection = await inspectMutationMachine({
+        machine: mutationCommandResult(
+          125,
+          '',
+          'Error: cannot run command "podman machine list" as root\n',
+        ),
+      });
+      return captureRegressionInvariant(mutationId, () => Promise.resolve(
+        assertMachineStatus(inspection, 'NOT_APPLICABLE_NATIVE_ROOTFUL'),
+      ));
+    }
+    case 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT': {
+      const preflight = await inspectMutationMachine({});
+      const cleanup: PodmanMachineInspectionResult = {
+        ...preflight,
+        status: 'INSPECTION_FAILED',
+        applicability: 'UNKNOWN',
+        failureCode: 'PODMAN_MACHINE_COMMAND_FAILED',
+      };
+      return captureErrorCodes(() => Promise.resolve(
+        assertEquivalentPodmanMachineInspections(preflight, cleanup),
+      ));
+    }
+    default:
+      throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
+  }
+}
+
+interface MutationMachineRunnerOptions {
+  readonly connections?: RuntimeCommandResult;
+  readonly machine?: RuntimeCommandResult;
+}
+
+async function inspectMutationMachine(
+  options: MutationMachineRunnerOptions,
+): Promise<PodmanMachineInspectionResult> {
+  return inspectPodmanMachineState(
+    mutationMachineRunner(options),
+    validRuntimeAuthorityMutationFixture().loaded.authority,
+    () => '2026-09-01T12:04:15',
+  );
+}
+
+function mutationMachineRunner(options: MutationMachineRunnerOptions): RuntimeCommandRunner {
+  const authority = validRuntimeAuthorityMutationFixture().loaded.authority;
+  return {
+    async run(command) {
+      if (command.args[0] === 'info') {
+        return mutationCommandResult(0, JSON.stringify({
+          host: {
+            remoteSocket: { path: authority.podman.socketPath },
+            security: { rootless: false },
+          },
+        }), '');
+      }
+      if (command.args[0] === 'system') {
+        return options.connections ?? mutationCommandResult(0, '[]', '');
+      }
+      if (command.args[0] === 'machine') {
+        return options.machine ?? mutationCommandResult(0, '[]', '');
+      }
+      throw new Error('MUTATION_MACHINE_COMMAND_UNEXPECTED');
+    },
+  };
+}
+
+function mutationCommandResult(
+  exitCode: number,
+  stdout: string,
+  stderr: string,
+): RuntimeCommandResult {
+  return { exitCode, signal: null, stdout, stderr };
+}
+
+function assertMachineStatus(
+  inspection: PodmanMachineInspectionResult,
+  expected: PodmanMachineInspectionResult['status'],
+): void {
+  if (inspection.status !== expected) {
+    throw new Error('PODMAN_MACHINE_CLASSIFICATION_INCONSISTENT');
+  }
+}
+
+async function captureRegressionInvariant(
+  detectionCode: string,
+  action: () => Promise<unknown>,
+): Promise<readonly string[]> {
+  try {
+    await action();
+    return [detectionCode];
+  } catch (error) {
+    return [stableErrorCode(error)];
+  }
 }
 
 type MutableAr12HistoryContract = {

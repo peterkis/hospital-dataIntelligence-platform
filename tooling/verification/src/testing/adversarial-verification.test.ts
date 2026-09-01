@@ -9,6 +9,7 @@ import {
 } from './build-valid-evidence-fixture.js';
 import {
   ADVERSARIAL_MUTATION_CASES,
+  AR07R01_ADVERSARIAL_MUTATION_CASES,
   AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
   AR12_HISTORY_EVIDENCE_MUTATION_CASES,
   executeEvidenceMutation,
@@ -55,18 +56,19 @@ afterAll(async () => {
     expect(basename(rootDirectory)).toMatch(/^hdi-ar06-adversarial-/u);
     await rm(rootDirectory, { recursive: true, force: true });
   }
-  expect(summary.mutationCount).toBeGreaterThanOrEqual(158);
+  expect(summary.mutationCount).toBeGreaterThanOrEqual(170);
   expect(summary.detectedCount).toBe(summary.mutationCount);
   expect(summary.survivedCount).toBe(0);
 }, 30_000);
 
 describe('AR-06 adversarial verification', () => {
-  it('retains all 150 existing mutations and declares 8 history-contract mutations', () => {
+  it('retains all 158 existing mutations and declares 12 AR-07R-01 mutations', () => {
     expect(PRE_AR12_ADVERSARIAL_MUTATION_CASES).toHaveLength(140);
     expect(AR12_EXECUTION_WORKSPACE_MUTATION_CASES).toHaveLength(10);
     expect(AR12_HISTORY_EVIDENCE_MUTATION_CASES).toHaveLength(8);
-    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(158);
-    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(158);
+    expect(AR07R01_ADVERSARIAL_MUTATION_CASES).toHaveLength(12);
+    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(170);
+    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(170);
     expect(Object.fromEntries(ADVERSARIAL_MUTATION_CASES.map((mutation) => [
       mutation.mutationId,
       mutation.expectedErrorCode,
@@ -149,6 +151,18 @@ describe('AR-06 adversarial verification', () => {
       AR12_REQUIRED_HISTORY_TREE_DRIFT: 'AR12_HISTORY_REQUIRED_DIRECTORY_TREE_DRIFT',
       AR12_REQUIRED_HISTORY_RECOVERY_SHA_MISMATCH: 'AR12_RECOVERY_ARTIFACT_SHA256_MISMATCH',
       AR12_REQUIRED_HISTORY_STALE_CLONE_REAPPEARED: 'AR12_STALE_EXECUTION_CLONE_REAPPEARED',
+      EVIDENCE_PARENT_DIRECTORY_CONCURRENT_CREATE: 'EVIDENCE_PARENT_DIRECTORY_CONCURRENT_CREATE',
+      EVIDENCE_PARENT_DIRECTORY_EEXIST_FILE: 'PRODUCER_EVIDENCE_DIRECTORY_EXISTING_NOT_DIRECTORY',
+      EVIDENCE_PARENT_DIRECTORY_EEXIST_SYMLINK: 'PRODUCER_EVIDENCE_DIRECTORY_SYMLINK_FORBIDDEN',
+      EVIDENCE_SAME_FILE_CONCURRENT_WRITE: 'PRODUCER_EVIDENCE_WRITE_ALREADY_EXISTS',
+      PODMAN_MACHINE_NATIVE_ROOTFUL_NOT_APPLICABLE: 'PODMAN_MACHINE_NATIVE_ROOTFUL_NOT_APPLICABLE',
+      PODMAN_MACHINE_REGISTERED_PRESENT: 'PODMAN_MACHINE_REGISTERED_PRESENT',
+      PODMAN_MACHINE_RUNNING_PRESENT: 'PODMAN_MACHINE_RUNNING_PRESENT',
+      PODMAN_MACHINE_REMOTE_CONNECTION_PRESENT: 'PODMAN_MACHINE_REMOTE_CONNECTION_PRESENT',
+      PODMAN_MACHINE_MALFORMED_RESULT: 'PODMAN_MACHINE_RESULT_MALFORMED',
+      PODMAN_MACHINE_UNKNOWN_INSPECTION_FAILURE: 'PODMAN_MACHINE_COMMAND_FAILED',
+      CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE: 'CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE',
+      PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT: 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT',
     });
   });
 

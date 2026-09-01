@@ -283,6 +283,14 @@ AR-12每轮必须在创建当前run目录和外部execution clone之前，由唯
 
 `init`必须根据opening历史身份和冻结时间预先计算合法`repository-boundary-result.json`的精确字节SHA-256并写入先于命令创建的run context。42条命令全部通过后、`finalize`之前，编排器再次对source repository执行execution-workspace contamination guard和未放宽的`npm run check:repo:layout`权威命令，再重算历史身份。只有opening/ending历史身份逐字段相同且结果字节匹配该预绑定SHA，才排他写入`repository-boundary-result.json`，并把相同SHA写入随后创建的`run-commands-result.json`。`finalize`必须同时验证context与run-commands两条绑定并再次现时复核contamination、npm layout和历史身份，才在initial/final summary顶层显式写入`repositoryContaminationGuard: PASSED`、`repoLayoutStatus: PASSED`和`historyEvidenceStable: true`；缺失、篡改、布局失败或历史漂移均以稳定错误码失败关闭，不能由人工检查或用户可见说明替代summary机器契约。
 
+### 8.2.5 正式 evidence 并发目录与原生 Podman Machine 语义
+
+正式 evidence 根目录继续采用排他创建，已存在即失败；每个文件继续使用`wx`，同一路径并发写入只能有一个成功。根目录以下的受控目录则由一个共享primitive逐段确保：并发`mkdir`得到`EEXIST`后必须重新`lstat`，只接受非symlink普通目录，再以`realpath`证明规范路径仍在evidence root内。文件、symlink/Junction、父目录替换、规范路径逃逸、权限错误和其他非`EEXIST`错误均使用稳定错误码失败关闭。Shared runner保留`Promise.all`并发，不通过串行化producer或吞掉全部`EEXIST`规避竞态。
+
+Preflight与cleanup通过同一typed Podman Machine inspection实现解释`podman info`、本地/远程connection、machine command能力和冻结runtime authority。结果只允许`NOT_APPLICABLE_NATIVE_ROOTFUL`、`NONE_REGISTERED`、`REGISTERED_MACHINE_PRESENT`、`RUNNING_MACHINE_PRESENT`、`REMOTE_CONNECTION_PRESENT`或`INSPECTION_FAILED`。冻结Anolis本地rootful Podman、`/run/podman/podman.sock`、无remote connection且machine command明确报告rootful不适用时，分类为`NOT_APPLICABLE_NATIVE_ROOTFUL`，它与`NONE_REGISTERED`都可满足该项cleanup终态；该判断同时依赖authority、实际`podman info`、connection结果、退出状态和受控capability签名，不能只依赖stderr片段。任一registered/running machine、remote connection、rootless或第二socket/endpoint继续失败；malformed JSON、权限错误、未知非零退出或本地/远程事实无法判定统一为`INSPECTION_FAILED`。
+
+WSL后端继续只根据`wsl.exe --list --running --quiet`判断正式运行期间的额外running backend；仅registered但未运行的普通发行版不构成运行中第二backend。当前Anolis必须是唯一预期运行主体，Docker Desktop、Podman Machine或其他额外running container backend仍失败关闭。
+
 ### 8.3 不可覆盖与完整性
 
 证据编排器在运行结束后生成规范化`manifest.json`，其中按稳定路径排序列出除清单自身及`manifest.sha256`外每个产物的媒体类型、字节数和SHA-256；再将规范化清单字节的SHA-256写入`manifest.sha256`，该值就是证据包身份。清单和包身份完成后运行进入终态，任何文件不得覆盖、补写或删除；需要纠正、补跑或重新取证时必须创建新的运行身份，并通过显式关系指向被取代或补充的运行。
@@ -303,7 +311,7 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 4. `phase-01.abg-run.v5` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、runtime authority字节/语义摘要及cleanup后稳定性、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
 5. fixture 在 Manifest 前写入一致且 `sealPendingAtWrite: true` 的 final outcome。独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、完整 lifecycle、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
 
-`npm run test:verification:adversarial`保留AR-11结束时的全部140个互不依赖mutation和既有10个AR-12 execution workspace隔离mutation，并新增8个required-history mutation：第六目录缺失、第六Summary缺失、Summary SHA错配、classification错配、额外目录替代、required tree漂移、recovery SHA漂移和stale clone复现，总数不得少于158。既有范围继续覆盖缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup越权、完整终态lifecycle、secret泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift、reviewer工作区状态及AR-11 runtime authority回归。其中`placeholder`、`UNKNOWN`、`N/A`与空字符串分别作为独立mutation，另以malformed JSON中的裸配置secret证明解析失败也不会绕过泄漏扫描；带明显副作用的evidence内脚本只作为不可信普通字节读取，reviewer不执行它。每项都声明稳定mutationId、检测层和期望错误码，并把实际结果写入被根`.gitignore`的`.runtime/test-results/verification-adversarial-summary.json`。通过条件是`mutationCount >= 158`、`detectedCount = mutationCount`、`survivedCount = 0`；不得删除原150项，也不得通过更新snapshot、吞掉异常或依赖测试执行顺序改变结论。
+`npm run test:verification:adversarial`保留AR-11结束时的全部140个互不依赖mutation、既有10个AR-12 execution workspace隔离mutation和8个required-history mutation，并新增12个AR-07R-01 mutation，覆盖evidence父目录并发创建、EEXIST文件/symlink、同文件并发写、原生rootful Machine不适用、registered/running Machine、remote connection、malformed/unknown inspection、cleanup false failure及preflight/cleanup分类漂移，总数不得少于170。既有范围继续覆盖缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup越权、完整终态lifecycle、secret泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift、reviewer工作区状态及AR-11 runtime authority回归。其中`placeholder`、`UNKNOWN`、`N/A`与空字符串分别作为独立mutation，另以malformed JSON中的裸配置secret证明解析失败也不会绕过泄漏扫描；带明显副作用的evidence内脚本只作为不可信普通字节读取，reviewer不执行它。每项都声明稳定mutationId、检测层和期望错误码，并把实际结果写入被根`.gitignore`的`.runtime/test-results/verification-adversarial-summary.json`。通过条件是`mutationCount >= 170`、`detectedCount = mutationCount`、`survivedCount = 0`；不得删除原158项，也不得通过更新snapshot、吞掉异常或依赖测试执行顺序改变结论。
 
 关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
 

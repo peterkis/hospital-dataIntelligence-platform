@@ -45,6 +45,7 @@ import type {
   LoadedPodmanRuntimeAuthority,
   PodmanRuntimeAuthority,
 } from './podman-runtime-authority-schema.ts';
+import type { PodmanMachineInspectionResult } from './podman-machine-inspection.ts';
 
 export type RuntimeResourceType = 'process' | 'container' | 'volume' | 'network';
 
@@ -156,6 +157,7 @@ export interface FormalCleanupReport {
   readonly partialStartupRecoveryFindings?: readonly string[];
   readonly persistenceFindings?: readonly string[];
   readonly residualCounts?: Readonly<Record<RuntimeResourceType, number>>;
+  readonly podmanMachineInspection?: PodmanMachineInspectionResult;
 }
 
 export interface FormalTeardownTerminalState {
@@ -456,8 +458,10 @@ export async function performFormalTeardown(
   }
   let sharedIsolationInspectionComplete = false;
   let sharedIsolationFindings: readonly string[] = [];
+  let podmanMachineInspection: PodmanMachineInspectionResult | undefined;
   try {
     const observation = await dependencies.authorityIsolation.inspect(input.runtimeAuthority.authority);
+    podmanMachineInspection = observation.podmanMachineInspection;
     sharedIsolationFindings = evaluateFormalRuntimeAuthorityIsolation(
       observation,
       dependencies.environment,
@@ -596,6 +600,7 @@ export async function performFormalTeardown(
     partialStartupRecoveryFindings: terminalState.partialStartupRecoveryFindings,
     persistenceFindings: terminalState.persistenceFindings,
     residualCounts,
+    ...(podmanMachineInspection === undefined ? {} : { podmanMachineInspection }),
   };
   return { cleanup, finalResources };
 }
@@ -1025,36 +1030,6 @@ export class PodmanCliFormalTeardownAdapter implements FormalTeardownAdapter {
         authority.dockerExclusion.forbiddenTcpPorts.includes(port) ||
         /\b(?:dockerd|docker-proxy|podman)\b/u.test(line)
       ) dockerSecondAuthorityFindings.push(`listener:${endpoint ?? 'unknown'}`);
-    }
-    const connectionResult = await this.runner.run({
-      executable: 'podman',
-      args: ['system', 'connection', 'list', '--format', 'json'],
-    });
-    if (connectionResult.exitCode !== 0) {
-      throw new Error('FORMAL_CLEANUP_CONNECTION_INSPECTION_FAILED');
-    }
-    const connectionValues = JSON.parse(connectionResult.stdout) as unknown;
-    if (!Array.isArray(connectionValues)) throw new Error('FORMAL_CLEANUP_CONNECTION_INSPECTION_INVALID');
-    for (const value of connectionValues) {
-      if (!isRecord(value)) continue;
-      const endpoint = value['URI'] ?? value['Uri'] ?? value['uri'];
-      if (typeof endpoint === 'string' && endpoint !== allowedEndpoint) {
-        dockerSecondAuthorityFindings.push(`connection:${endpoint}`);
-      }
-    }
-    const machineResult = await this.runner.run({
-      executable: 'podman',
-      args: ['machine', 'list', '--format', 'json'],
-    });
-    if (machineResult.exitCode !== 0) throw new Error('FORMAL_CLEANUP_MACHINE_INSPECTION_FAILED');
-    const machineValues = JSON.parse(machineResult.stdout) as unknown;
-    if (!Array.isArray(machineValues)) throw new Error('FORMAL_CLEANUP_MACHINE_INSPECTION_INVALID');
-    for (const value of machineValues) {
-      if (!isRecord(value)) continue;
-      const name = value['Name'] ?? value['name'];
-      if (typeof name === 'string' && name.length > 0) {
-        dockerSecondAuthorityFindings.push(`machine:${name}`);
-      }
     }
     try {
       const users = await readdir('/run/user', { withFileTypes: true });

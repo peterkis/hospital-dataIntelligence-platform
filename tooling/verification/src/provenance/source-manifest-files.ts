@@ -28,6 +28,7 @@ export type VerificationSourceFileRole =
   | 'RUNTIME_AUTHORITY'
   | 'RUNTIME_AUTHORITY_LOADER'
   | 'RUNTIME_AUTHORITY_SCHEMA'
+  | 'PODMAN_MACHINE_INSPECTION'
   | 'RUNTIME_RECEIPT'
   | 'RUNTIME_SCRIPT'
   | 'AR12_HISTORY_EVIDENCE_CONTRACT';
@@ -79,6 +80,7 @@ const SOURCE_FILES = [
   ['tooling/verification/src/runtime/formal-terminal-conclusion.ts', 'TERMINAL_CONTRACT'],
   ['tooling/verification/src/runtime/formal-wsl-envelope.ts', 'WSL_ENVELOPE'],
   ['tooling/verification/src/runtime/formal-wsl-host.ts', 'WSL_HOST'],
+  ['tooling/verification/src/runtime/podman-machine-inspection.ts', 'PODMAN_MACHINE_INSPECTION'],
   ['tooling/verification/src/runtime/podman-runtime-authority-schema.ts', 'RUNTIME_AUTHORITY_SCHEMA'],
   ['tooling/verification/src/runtime/podman-runtime-authority.ts', 'RUNTIME_AUTHORITY_LOADER'],
   ['tooling/verification/src/runtime/verify-podman-runtime-authority.ts', 'RUNTIME_AUTHORITY_LOADER'],

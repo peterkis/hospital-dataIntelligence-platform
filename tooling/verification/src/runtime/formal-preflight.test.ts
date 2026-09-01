@@ -13,7 +13,6 @@ import {
 import {
   isRepositoryPodmanResource,
   inspectRpmNevra,
-  inspectPodmanMachines,
   inspectRunningWslBackends,
   parseRegisteredWslBackends,
   parsePodmanContainerRestartPolicy,
@@ -22,6 +21,7 @@ import {
   type FormalPreflightAuthorityIsolationObservation,
   type FormalPreflightDependencies,
 } from './formal-preflight.js';
+import { inspectPodmanMachineState } from './podman-machine-inspection.js';
 import type { PodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
 
 const GIT_SHA = 'a'.repeat(40);
@@ -396,11 +396,25 @@ describe('formal ABG preflight', () => {
     }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT'],
     ['remote Podman connection', (value: FormalPreflightAuthorityIsolationObservation) => ({
       ...value,
-      podmanConnections: ['ssh://runtime.example/run/podman/podman.sock'],
+      podmanMachineInspection: {
+        ...value.podmanMachineInspection,
+        status: 'REMOTE_CONNECTION_PRESENT' as const,
+        applicability: 'APPLICABLE' as const,
+        machineCommandSupported: null,
+        remoteConnectionCount: 1,
+        remoteConnections: ['ssh://runtime.example/run/podman/podman.sock'],
+      },
     }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_ENDPOINT_PRESENT'],
     ['Podman machine', (value: FormalPreflightAuthorityIsolationObservation) => ({
       ...value,
-      podmanMachines: ['podman-machine-default'],
+      podmanMachineInspection: {
+        ...value.podmanMachineInspection,
+        status: 'REGISTERED_MACHINE_PRESENT' as const,
+        applicability: 'APPLICABLE' as const,
+        machineCommandSupported: true,
+        registeredMachineCount: 1,
+        registeredMachines: ['podman-machine-default'],
+      },
     }), 'FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT'],
     ['rootless socket', (value: FormalPreflightAuthorityIsolationObservation) => ({
       ...value,
@@ -445,12 +459,23 @@ describe('formal ABG preflight', () => {
     expect(errorCodes(report)).not.toContain('FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT');
   });
 
-  it('treats the native rootful Podman machine rejection as no machine authority', async () => {
+  it('classifies the sequence 10 native rootful Podman subject as not applicable', async () => {
     const commands: RuntimeCommandSpec[] = [];
     const failures: string[] = [];
     const runner: RuntimeCommandRunner = {
       async run(command) {
         commands.push(command);
+        if (command.args[0] === 'info') {
+          return {
+            exitCode: 0,
+            signal: null,
+            stdout: JSON.stringify({ host: { remoteSocket: { path: '/run/podman/podman.sock' }, security: { rootless: false } } }),
+            stderr: '',
+          };
+        }
+        if (command.args[0] === 'system') {
+          return { exitCode: 0, signal: null, stdout: '[]', stderr: '' };
+        }
         return {
           exitCode: 125,
           signal: null,
@@ -460,12 +485,20 @@ describe('formal ABG preflight', () => {
       },
     };
 
-    await expect(inspectPodmanMachines(runner, failures, false)).resolves.toEqual([]);
+    await expect(inspectPodmanMachineState(runner, TEST_AUTHORITY, () =>
+      '2026-09-01T12:04:15')).resolves.toMatchObject({
+      status: 'NOT_APPLICABLE_NATIVE_ROOTFUL',
+      registeredMachineCount: 0,
+      runningMachineCount: 0,
+      remoteConnectionCount: 0,
+      failureCode: null,
+    });
     expect(failures).toEqual([]);
-    expect(commands).toEqual([{
-      executable: 'podman',
-      args: ['machine', 'list', '--format', 'json'],
-    }]);
+    expect(commands.map((command) => command.args)).toEqual([
+      ['info', '--format', 'json'],
+      ['system', 'connection', 'list', '--format', 'json'],
+      ['machine', 'list', '--format', 'json'],
+    ]);
   });
 
   it('inspects only concurrently running WSL backends for a second authority', async () => {
@@ -813,8 +846,7 @@ function passingIsolationObservation(): FormalPreflightAuthorityIsolationObserva
     forbiddenProcesses: [],
     forbiddenTcpListeners: [],
     unexpectedContainerApiEndpoints: [],
-    podmanConnections: [],
-    podmanMachines: [],
+    podmanMachineInspection: nativeRootfulMachineInspection(),
     rootlessSocketPaths: [],
     otherWslBackends: [],
     podmanSocket: {
@@ -829,6 +861,25 @@ function passingIsolationObservation(): FormalPreflightAuthorityIsolationObserva
       rootless: false,
     },
     inspectionFailures: [],
+  };
+}
+
+function nativeRootfulMachineInspection() {
+  return {
+    status: 'NOT_APPLICABLE_NATIVE_ROOTFUL' as const,
+    applicability: 'NOT_APPLICABLE' as const,
+    nativeRuntime: true,
+    rootless: false,
+    runtimeSocketPath: '/run/podman/podman.sock',
+    machineCommandSupported: false,
+    registeredMachineCount: 0,
+    runningMachineCount: 0,
+    remoteConnectionCount: 0,
+    registeredMachines: [],
+    runningMachines: [],
+    remoteConnections: [],
+    failureCode: null,
+    observedAt: '2026-09-01T12:04:15',
   };
 }
 

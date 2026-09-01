@@ -56,22 +56,45 @@ export async function createEvidenceSubdirectory(
   rootDirectory: string,
   relativeDirectory: string,
 ): Promise<string> {
+  return ensureSafeDirectoryConcurrent(rootDirectory, relativeDirectory);
+}
+
+interface EvidenceDirectoryStat {
+  isDirectory(): boolean;
+  isSymbolicLink(): boolean;
+}
+
+export interface EvidenceDirectoryDependencies {
+  lstat(path: string): Promise<EvidenceDirectoryStat>;
+  mkdir(path: string): Promise<void>;
+  realpath(path: string): Promise<string>;
+}
+
+const NODE_EVIDENCE_DIRECTORY_DEPENDENCIES: EvidenceDirectoryDependencies = {
+  lstat,
+  async mkdir(path) {
+    await mkdir(path, { recursive: false, mode: 0o700 });
+  },
+  realpath,
+};
+
+/**
+ * Concurrently idempotent only for safe directories below an already existing
+ * evidence root. The evidence root itself and every evidence file retain their
+ * exclusive-creation semantics.
+ */
+export async function ensureSafeDirectoryConcurrent(
+  rootDirectory: string,
+  relativeDirectory: string,
+  dependencies: EvidenceDirectoryDependencies = NODE_EVIDENCE_DIRECTORY_DEPENDENCIES,
+): Promise<string> {
   assertSafeRelativePath(relativeDirectory, 'PRODUCER_EVIDENCE_DIRECTORY_PATH_INVALID');
   const root = await assertSafeEvidenceRoot(rootDirectory);
   const output = resolveInside(root, relativeDirectory);
-  const parts = relativeDirectory.split('/');
   let current = root;
-  for (const part of parts) {
+  for (const part of relativeDirectory.split('/')) {
     current = join(current, part);
-    try {
-      const stat = await lstat(current);
-      if (!stat.isDirectory() || stat.isSymbolicLink()) {
-        throw new Error('PRODUCER_EVIDENCE_DIRECTORY_UNSAFE:' + relativeDirectory);
-      }
-    } catch (error) {
-      if (!isMissing(error)) throw error;
-      await mkdir(current, { recursive: false, mode: 0o700 });
-    }
+    await ensureSafeDirectorySegment(root, current, relativeDirectory, dependencies);
   }
   return output;
 }
@@ -295,18 +318,76 @@ async function ensureSafeParentDirectories(
 ): Promise<void> {
   const parts = relativePath.split('/');
   parts.pop();
-  let current = rootDirectory;
-  for (const part of parts) {
-    current = join(current, part);
-    try {
-      const stat = await lstat(current);
-      if (!stat.isDirectory() || stat.isSymbolicLink()) {
-        throw new Error('PRODUCER_EVIDENCE_PARENT_UNSAFE:' + relativePath);
-      }
-    } catch (error) {
-      if (!isMissing(error)) throw error;
-      await mkdir(current, { recursive: false, mode: 0o700 });
+  if (parts.length === 0) return;
+  await ensureSafeDirectoryConcurrent(rootDirectory, parts.join('/'));
+}
+
+async function ensureSafeDirectorySegment(
+  root: string,
+  directory: string,
+  relativeDirectory: string,
+  dependencies: EvidenceDirectoryDependencies,
+): Promise<void> {
+  let stat: EvidenceDirectoryStat;
+  try {
+    stat = await dependencies.lstat(directory);
+  } catch (error) {
+    if (!isMissing(error)) {
+      throw new Error(
+        'PRODUCER_EVIDENCE_DIRECTORY_CREATE_FAILED:' + relativeDirectory,
+        { cause: error },
+      );
     }
+    try {
+      await dependencies.mkdir(directory);
+    } catch (mkdirError) {
+      if (!isAlreadyExists(mkdirError)) {
+        throw new Error(
+          'PRODUCER_EVIDENCE_DIRECTORY_CREATE_FAILED:' + relativeDirectory,
+          { cause: mkdirError },
+        );
+      }
+    }
+    try {
+      stat = await dependencies.lstat(directory);
+    } catch (verificationError) {
+      throw new Error(
+        'PRODUCER_EVIDENCE_DIRECTORY_CREATE_FAILED:' + relativeDirectory,
+        { cause: verificationError },
+      );
+    }
+  }
+  if (stat.isSymbolicLink()) {
+    throw new Error('PRODUCER_EVIDENCE_DIRECTORY_SYMLINK_FORBIDDEN:' + relativeDirectory);
+  }
+  if (!stat.isDirectory()) {
+    throw new Error('PRODUCER_EVIDENCE_DIRECTORY_EXISTING_NOT_DIRECTORY:' + relativeDirectory);
+  }
+  let canonicalDirectory: string;
+  try {
+    canonicalDirectory = await dependencies.realpath(directory);
+  } catch (error) {
+    throw new Error(
+      'PRODUCER_EVIDENCE_DIRECTORY_CREATE_FAILED:' + relativeDirectory,
+      { cause: error },
+    );
+  }
+  assertCanonicalPathInsideRoot(root, canonicalDirectory, relativeDirectory);
+}
+
+function assertCanonicalPathInsideRoot(
+  root: string,
+  canonicalDirectory: string,
+  relativeDirectory: string,
+): void {
+  const relativeDirectoryPath = relative(root, canonicalDirectory);
+  if (
+    relativeDirectoryPath === '' ||
+    relativeDirectoryPath === '..' ||
+    relativeDirectoryPath.startsWith('..' + sep) ||
+    isAbsolute(relativeDirectoryPath)
+  ) {
+    throw new Error('PRODUCER_EVIDENCE_DIRECTORY_ESCAPES_ROOT:' + relativeDirectory);
   }
 }
 

@@ -31,7 +31,7 @@ afterEach(async () => {
 
 describe('verification source manifest public seam', () => {
   it('registers the AR-12 workspace, history contract, and orchestrator as ordered authority sources', () => {
-    expect(VERIFICATION_SOURCE_FILES).toHaveLength(46);
+    expect(VERIFICATION_SOURCE_FILES).toHaveLength(47);
     expect(VERIFICATION_SOURCE_FILES).toEqual(expect.arrayContaining([
       {
         path: 'tooling/verification/src/rebaseline/ar-12-execution-workspace.ts',
