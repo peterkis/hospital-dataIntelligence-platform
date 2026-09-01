@@ -704,7 +704,7 @@ export function evaluateFormalRuntimeAuthorityIsolation(
     unit.loadState !== 'not-found' ||
     unit.activeState !== 'inactive' ||
     unit.subState === 'listening' ||
-    !['disabled', 'not-found'].includes(unit.unitFileState),
+    !['', 'disabled', 'not-found'].includes(unit.unitFileState),
   ), 'FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT');
   addAbsence('docker-processes-absent', observation.forbiddenProcesses, 'FORMAL_PREFLIGHT_DOCKER_PROCESS_PRESENT');
   addAbsence('container-api-tcp-absent', observation.forbiddenTcpListeners, 'FORMAL_PREFLIGHT_CONTAINER_API_TCP_PRESENT');
@@ -1117,12 +1117,16 @@ class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolation
     const podmanTcpListeners = listeners.filter((listener) => listener.process?.includes('podman') === true)
       .map((listener) => `tcp://${listener.address}:${listener.port}`);
     const podmanConnections = await inspectPodmanConnections(this.runner, failures);
-    const podmanMachines = await inspectPodmanMachines(this.runner, failures);
+    const podmanMachines = await inspectPodmanMachines(
+      this.runner,
+      failures,
+      authority.podman.rootless,
+    );
     const rootlessSocketPaths = await inspectRootlessPodmanSockets(failures);
     const socketPath = authority.podman.socketPath;
     const socketObservation = await inspectSocketPath(socketPath);
     const podmanInfo = await inspectIsolationPodmanInfo(this.runner, failures);
-    const otherWslBackends = await inspectRegisteredWslBackends(
+    const otherWslBackends = await inspectRunningWslBackends(
       this.runner,
       authority.host.distribution,
       failures,
@@ -1189,12 +1193,17 @@ async function inspectIsolationPodmanInfo(
   }
 }
 
-async function inspectRegisteredWslBackends(
+export async function inspectRunningWslBackends(
   runner: RuntimeCommandRunner,
   expectedDistribution: string,
   failures: string[],
 ): Promise<readonly string[]> {
-  const result = await runText(runner, undefined, 'wsl.exe', ['--list', '--quiet']);
+  const result = await runText(
+    runner,
+    undefined,
+    'wsl.exe',
+    ['--list', '--running', '--quiet'],
+  );
   if (!result.ok) {
     failures.push('WSL_REGISTERED_BACKEND_INSPECTION_FAILED');
     return [];
@@ -1331,17 +1340,31 @@ async function inspectPodmanConnections(
   }
 }
 
-async function inspectPodmanMachines(
+export async function inspectPodmanMachines(
   runner: RuntimeCommandRunner,
   failures: string[],
+  rootless: boolean,
 ): Promise<readonly string[]> {
-  const result = await runText(runner, undefined, 'podman', ['machine', 'list', '--format', 'json']);
-  if (!result.ok) {
+  let result: Awaited<ReturnType<RuntimeCommandRunner['run']>>;
+  try {
+    result = await runner.run({
+      executable: 'podman',
+      args: ['machine', 'list', '--format', 'json'],
+    });
+  } catch {
+    failures.push('PODMAN_MACHINE_INSPECTION_FAILED');
+    return [];
+  }
+  if (result.exitCode !== 0) {
+    if (
+      !rootless &&
+      /cannot run command "podman machine list" as root/iu.test(result.stderr)
+    ) return [];
     failures.push('PODMAN_MACHINE_INSPECTION_FAILED');
     return [];
   }
   try {
-    const values = JSON.parse(result.value) as unknown;
+    const values = JSON.parse(result.stdout) as unknown;
     return Array.isArray(values) ? values.flatMap((value) => {
       if (!isRecord(value)) return [];
       const name = value['Name'] ?? value['name'];

@@ -11,6 +11,8 @@ import {
 import {
   isRepositoryPodmanResource,
   inspectRpmNevra,
+  inspectPodmanMachines,
+  inspectRunningWslBackends,
   parseRegisteredWslBackends,
   parsePodmanContainerRestartPolicy,
   runFormalPreflight,
@@ -397,6 +399,78 @@ describe('formal ABG preflight', () => {
         },
       },
     }, errorCode);
+  });
+
+  it('accepts absent Docker units when Anolis reports an empty unit-file state', async () => {
+    const dependencies = passingDependencies();
+    const baseline = await dependencies.authorityIsolation.inspect();
+    const report = await execute({
+      ...dependencies,
+      authorityIsolation: {
+        async inspect() {
+          return {
+            ...baseline,
+            systemdUnits: baseline.systemdUnits.map((unit) => ({
+              ...unit,
+              unitFileState: '',
+            })),
+          };
+        },
+      },
+    });
+
+    expect(report.status).toBe('PASSED');
+    expect(errorCodes(report)).not.toContain('FORMAL_PREFLIGHT_DOCKER_SYSTEMD_UNIT_PRESENT');
+  });
+
+  it('treats the native rootful Podman machine rejection as no machine authority', async () => {
+    const commands: RuntimeCommandSpec[] = [];
+    const failures: string[] = [];
+    const runner: RuntimeCommandRunner = {
+      async run(command) {
+        commands.push(command);
+        return {
+          exitCode: 125,
+          signal: null,
+          stdout: '',
+          stderr: 'Error: cannot run command "podman machine list" as root\n',
+        };
+      },
+    };
+
+    await expect(inspectPodmanMachines(runner, failures, false)).resolves.toEqual([]);
+    expect(failures).toEqual([]);
+    expect(commands).toEqual([{
+      executable: 'podman',
+      args: ['machine', 'list', '--format', 'json'],
+    }]);
+  });
+
+  it('inspects only concurrently running WSL backends for a second authority', async () => {
+    const commands: RuntimeCommandSpec[] = [];
+    const failures: string[] = [];
+    const runner: RuntimeCommandRunner = {
+      async run(command) {
+        commands.push(command);
+        return {
+          exitCode: 0,
+          signal: null,
+          stdout: 'Anolis-8.9-HDI-POC\0\r\n',
+          stderr: '',
+        };
+      },
+    };
+
+    await expect(inspectRunningWslBackends(
+      runner,
+      'Anolis-8.9-HDI-POC',
+      failures,
+    )).resolves.toEqual([]);
+    expect(failures).toEqual([]);
+    expect(commands).toEqual([{
+      executable: 'wsl.exe',
+      args: ['--list', '--running', '--quiet'],
+    }]);
   });
 
   it.each([
