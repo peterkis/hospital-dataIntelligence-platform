@@ -1079,10 +1079,16 @@ export function createFormalRuntimeAuthorityIsolationAdapter(
 }
 
 class HostAuthorityIsolationAdapter implements FormalPreflightAuthorityIsolationAdapter {
+  private readonly runner: RuntimeCommandRunner;
+  private readonly environment: Readonly<NodeJS.ProcessEnv>;
+
   constructor(
-    private readonly runner: RuntimeCommandRunner,
-    private readonly environment: Readonly<NodeJS.ProcessEnv>,
-  ) {}
+    runner: RuntimeCommandRunner,
+    environment: Readonly<NodeJS.ProcessEnv>,
+  ) {
+    this.runner = runner;
+    this.environment = environment;
+  }
 
   async inspect(authority?: RuntimeAuthority): Promise<FormalPreflightAuthorityIsolationObservation> {
     if (authority === undefined) throw new Error('FORMAL_PREFLIGHT_RUNTIME_AUTHORITY_REQUIRED');

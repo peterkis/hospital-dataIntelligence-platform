@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   FORMAL_REQUIRED_SECRET_NAMES,
@@ -30,6 +32,26 @@ const RUNTIME_AUTHORITY_SEMANTIC_DIGEST = 'f'.repeat(64);
 const RUN = createFormalRunSeed(5, () => '12345678-1234-1234-1234-123456789abc');
 
 describe('formal ABG preflight', () => {
+  it('loads through the frozen formal Node loader', () => {
+    const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+    const result = spawnSync(process.execPath, [
+      '--loader',
+      './tooling/verification/node-ts-loader.mjs',
+      '--input-type=module',
+      '-e',
+      'await import("./tooling/verification/src/runtime/formal-preflight.ts");',
+    ], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+    });
+
+    expect({ status: result.status, signal: result.signal, stderr: result.stderr }).toEqual({
+      status: 0,
+      signal: null,
+      stderr: expect.any(String),
+    });
+  });
+
   it('passes a fully matching injected environment without exposing secret values', async () => {
     const dependencies = passingDependencies();
     const report = await execute(dependencies);
