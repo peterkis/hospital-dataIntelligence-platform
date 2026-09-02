@@ -8,7 +8,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   ABG_COVERAGE_MATRIX,
   type AbgProducerId,
@@ -84,6 +84,20 @@ import {
   verifyAr12ExecutionWorkspace,
   type Ar12ExecutionWorkspaceMarker,
 } from '../rebaseline/ar-12-execution-workspace.js';
+import {
+  assertAuthoritativeCommandPlanSafety,
+  buildAuthoritativeCommandPlan,
+} from '../authoritative-abg-plan.js';
+import {
+  assertSharedAbgCommandPlanSafety,
+  buildSharedAbgCommandPlan,
+  type SharedCommand,
+} from '../shared-abg-command-plan.js';
+import {
+  createDeterministicChildEnvironment,
+  REPOSITORY_NODE_LOADER_PATH,
+} from '../runtime/node-command-boundary.js';
+import { databaseAuthorityChildEnvironment } from '../check-database-authority.js';
 
 export type MutationDetectionLayer =
   | 'producer-evidence-validator'
@@ -101,7 +115,10 @@ export type MutationDetectionLayer =
   | 'ar12-command-plan-guard'
   | 'ar12-history-evidence-guard'
   | 'evidence-recorder-guard'
-  | 'podman-machine-inspection';
+  | 'podman-machine-inspection'
+  | 'formal-command-boundary'
+  | 'shared-command-boundary'
+  | 'database-authority-boundary';
 
 export interface EvidenceMutationCase {
   readonly mutationId: string;
@@ -312,11 +329,23 @@ export const AR07R01_ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[]
   mutation('PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT', 'Classify the same Machine fixture differently in preflight and cleanup.', 'podman-machine-inspection', 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT'),
 ] as const;
 
+export const AR07R03_ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+  mutation('FORMAL_SETUP_RELATIVE_NODE_OPTIONS_LEAK', 'Reintroduce relative NODE_OPTIONS in formal setup.', 'formal-command-boundary', 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN'),
+  mutation('FORMAL_GATE_RELATIVE_NODE_OPTIONS_LEAK', 'Reintroduce relative NODE_OPTIONS in a gate producer.', 'formal-command-boundary', 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN'),
+  mutation('SHARED_DATABASE_AUTHORITY_NODE_OPTIONS_LEAK', 'Leak NODE_OPTIONS into database authority.', 'shared-command-boundary', 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN'),
+  mutation('SHARED_INTEGRATION_NODE_OPTIONS_LEAK', 'Leak NODE_OPTIONS into workspace Vitest.', 'shared-command-boundary', 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN'),
+  mutation('WORKSPACE_LOADER_RESOLVED_FROM_CHILD_CWD', 'Allow a workspace child cwd to resolve the repository loader.', 'shared-command-boundary', 'WORKSPACE_LOADER_RESOLVED_FROM_CHILD_CWD'),
+  mutation('TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER', 'Launch a registered TypeScript entry without explicit loader argv.', 'shared-command-boundary', 'REPOSITORY_TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER'),
+  mutation('LOADER_ABSOLUTE_HOST_PATH_IN_FROZEN_PLAN', 'Write an absolute host loader path into the frozen plan.', 'formal-command-boundary', 'REPOSITORY_NODE_LOADER_PATH_INVALID'),
+  mutation('DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION', 'Pass the repository loader into Kysely verification.', 'database-authority-boundary', 'DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION'),
+] as const;
+
 export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   ...PRE_AR12_ADVERSARIAL_MUTATION_CASES,
   ...AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
   ...AR12_HISTORY_EVIDENCE_MUTATION_CASES,
   ...AR07R01_ADVERSARIAL_MUTATION_CASES,
+  ...AR07R03_ADVERSARIAL_MUTATION_CASES,
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -1142,9 +1171,117 @@ async function executeMutation(
     case 'CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE':
     case 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT':
       return podmanMachineMutation(mutationId);
+    case 'FORMAL_SETUP_RELATIVE_NODE_OPTIONS_LEAK':
+    case 'FORMAL_GATE_RELATIVE_NODE_OPTIONS_LEAK':
+    case 'LOADER_ABSOLUTE_HOST_PATH_IN_FROZEN_PLAN':
+      return formalNodeCommandMutation(mutationId);
+    case 'SHARED_DATABASE_AUTHORITY_NODE_OPTIONS_LEAK':
+    case 'SHARED_INTEGRATION_NODE_OPTIONS_LEAK':
+    case 'TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER':
+      return sharedNodeCommandMutation(mutationId);
+    case 'WORKSPACE_LOADER_RESOLVED_FROM_CHILD_CWD':
+      return workspaceLoaderEnvironmentMutation(mutationId);
+    case 'DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION':
+      return databaseAuthorityEnvironmentMutation(mutationId);
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
+}
+
+const mutationRepositoryRoot = resolve(import.meta.dirname, '../../../..');
+
+async function formalNodeCommandMutation(mutationId: string): Promise<readonly string[]> {
+  const plan = await buildAuthoritativeCommandPlan(mutationRepositoryRoot);
+  const mutablePlan = {
+    setupCommands: [...plan.setupCommands],
+    gates: [...plan.gates],
+  };
+  if (mutationId === 'FORMAL_SETUP_RELATIVE_NODE_OPTIONS_LEAK') {
+    mutablePlan.setupCommands[2] = {
+      ...mutablePlan.setupCommands[2]!,
+      environment: { NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs' },
+    };
+  } else if (mutationId === 'FORMAL_GATE_RELATIVE_NODE_OPTIONS_LEAK') {
+    mutablePlan.gates[0] = {
+      ...mutablePlan.gates[0]!,
+      environment: { NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs' },
+    };
+  } else if (mutationId === 'LOADER_ABSOLUTE_HOST_PATH_IN_FROZEN_PLAN') {
+    mutablePlan.gates[0] = {
+      ...mutablePlan.gates[0]!,
+      args: [
+        '--loader',
+        '/mnt/d/Projects/Hospital-DataIntelligence-Platform/tooling/verification/node-ts-loader.mjs',
+        mutablePlan.gates[0]!.args[2]!,
+      ],
+    };
+  } else {
+    throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
+  }
+  return captureErrorCodes(() =>
+    assertAuthoritativeCommandPlanSafety(mutationRepositoryRoot, mutablePlan));
+}
+
+async function sharedNodeCommandMutation(mutationId: string): Promise<readonly string[]> {
+  const commands = [...await buildSharedAbgCommandPlan(mutationRepositoryRoot)];
+  const id = mutationId === 'SHARED_DATABASE_AUTHORITY_NODE_OPTIONS_LEAK'
+    ? 'database-authority'
+    : mutationId === 'SHARED_INTEGRATION_NODE_OPTIONS_LEAK'
+      ? 'integration'
+      : 'live';
+  const index = commands.findIndex((command) => command.id === id);
+  const command = commands[index];
+  if (command === undefined) throw new Error('SHARED_COMMAND_PLAN_INVALID');
+  commands[index] = mutationId === 'TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER'
+    ? { ...command, args: [command.args[2]!] }
+    : {
+      ...command,
+      environment: { NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs' },
+    };
+  return captureErrorCodes(() => assertSharedAbgCommandPlanSafety(
+    mutationRepositoryRoot,
+    commands as readonly SharedCommand[],
+  ));
+}
+
+async function workspaceLoaderEnvironmentMutation(
+  mutationId: string,
+): Promise<readonly string[]> {
+  return captureRegressionInvariant(mutationId, () => {
+    const environment = createDeterministicChildEnvironment({
+      inheritedEnvironment: {
+        NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs',
+        PATH: 'controlled-path',
+      },
+      nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+    });
+    if (environment['NODE_OPTIONS'] !== undefined) {
+      throw new Error('SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN');
+    }
+    const contaminatedChildTarget = join(
+      'apps/governance-api',
+      REPOSITORY_NODE_LOADER_PATH,
+    ).replaceAll('\\', '/');
+    if (!contaminatedChildTarget.endsWith(
+      'apps/governance-api/tooling/verification/node-ts-loader.mjs',
+    )) throw new Error('WORKSPACE_LOADER_MUTATION_INVALID');
+    return Promise.resolve();
+  });
+}
+
+async function databaseAuthorityEnvironmentMutation(
+  mutationId: string,
+): Promise<readonly string[]> {
+  return captureRegressionInvariant(mutationId, () => {
+    const environment = databaseAuthorityChildEnvironment({
+      NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs',
+      npm_execpath: 'locked-npm-cli.js',
+    });
+    if (environment['NODE_OPTIONS'] !== undefined) {
+      throw new Error('DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION');
+    }
+    return Promise.resolve();
+  });
 }
 
 async function ar12HistoryEvidenceMutation(

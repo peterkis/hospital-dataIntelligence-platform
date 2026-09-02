@@ -10,6 +10,7 @@ import {
 import {
   ADVERSARIAL_MUTATION_CASES,
   AR07R01_ADVERSARIAL_MUTATION_CASES,
+  AR07R03_ADVERSARIAL_MUTATION_CASES,
   AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
   AR12_HISTORY_EVIDENCE_MUTATION_CASES,
   executeEvidenceMutation,
@@ -56,19 +57,20 @@ afterAll(async () => {
     expect(basename(rootDirectory)).toMatch(/^hdi-ar06-adversarial-/u);
     await rm(rootDirectory, { recursive: true, force: true });
   }
-  expect(summary.mutationCount).toBeGreaterThanOrEqual(170);
+  expect(summary.mutationCount).toBeGreaterThanOrEqual(178);
   expect(summary.detectedCount).toBe(summary.mutationCount);
   expect(summary.survivedCount).toBe(0);
 }, 30_000);
 
 describe('AR-06 adversarial verification', () => {
-  it('retains all 158 existing mutations and declares 12 AR-07R-01 mutations', () => {
+  it('retains all 170 existing mutations and declares 8 AR-07R-03 mutations', () => {
     expect(PRE_AR12_ADVERSARIAL_MUTATION_CASES).toHaveLength(140);
     expect(AR12_EXECUTION_WORKSPACE_MUTATION_CASES).toHaveLength(10);
     expect(AR12_HISTORY_EVIDENCE_MUTATION_CASES).toHaveLength(8);
     expect(AR07R01_ADVERSARIAL_MUTATION_CASES).toHaveLength(12);
-    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(170);
-    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(170);
+    expect(AR07R03_ADVERSARIAL_MUTATION_CASES).toHaveLength(8);
+    expect(ADVERSARIAL_MUTATION_CASES).toHaveLength(178);
+    expect(new Set(ADVERSARIAL_MUTATION_CASES.map((mutation) => mutation.mutationId)).size).toBe(178);
     expect(Object.fromEntries(ADVERSARIAL_MUTATION_CASES.map((mutation) => [
       mutation.mutationId,
       mutation.expectedErrorCode,
@@ -163,6 +165,14 @@ describe('AR-06 adversarial verification', () => {
       PODMAN_MACHINE_UNKNOWN_INSPECTION_FAILURE: 'PODMAN_MACHINE_COMMAND_FAILED',
       CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE: 'CLEANUP_NATIVE_ROOTFUL_MACHINE_FALSE_FAILURE',
       PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT: 'PREFLIGHT_CLEANUP_MACHINE_CLASSIFICATION_DRIFT',
+      FORMAL_SETUP_RELATIVE_NODE_OPTIONS_LEAK: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      FORMAL_GATE_RELATIVE_NODE_OPTIONS_LEAK: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      SHARED_DATABASE_AUTHORITY_NODE_OPTIONS_LEAK: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      SHARED_INTEGRATION_NODE_OPTIONS_LEAK: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      WORKSPACE_LOADER_RESOLVED_FROM_CHILD_CWD: 'WORKSPACE_LOADER_RESOLVED_FROM_CHILD_CWD',
+      TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER: 'REPOSITORY_TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER',
+      LOADER_ABSOLUTE_HOST_PATH_IN_FROZEN_PLAN: 'REPOSITORY_NODE_LOADER_PATH_INVALID',
+      DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION: 'DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION',
     });
   });
 

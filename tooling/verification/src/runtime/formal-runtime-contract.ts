@@ -5,6 +5,7 @@ import type {
   LoadedPodmanRuntimeAuthority,
   PodmanRuntimeAuthority,
 } from './podman-runtime-authority-schema.js';
+import { createDeterministicChildEnvironment } from './node-command-boundary.js';
 
 export function formalRuntimeAuthority(repositoryRoot?: string): LoadedPodmanRuntimeAuthority {
   return repositoryRoot === undefined
@@ -83,7 +84,11 @@ export class SpawnRuntimeCommandRunner implements RuntimeCommandRunner {
     return new Promise<RuntimeCommandResult>((resolveRun, rejectRun) => {
       const child = spawn(command.executable, [...command.args], {
         ...(command.cwd === undefined ? {} : { cwd: command.cwd }),
-        env: { ...process.env, ...command.environment },
+        env: createDeterministicChildEnvironment({
+          inheritedEnvironment: process.env,
+          commandEnvironment: command.environment,
+          nodeOptionsForbiddenCode: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+        }),
         shell: false,
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],

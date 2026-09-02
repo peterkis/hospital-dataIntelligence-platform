@@ -57,4 +57,53 @@ describe('formal runtime contract authority loading', () => {
     expect(() => contract.formalRuntimeAuthority()).toThrowError('RUNTIME_AUTHORITY_MISSING');
     expect(loadCount).toBe(1);
   });
+
+  it('strips inherited relative NODE_OPTIONS from a spawned child and preserves required values', async () => {
+    const previousNodeOptions = process.env['NODE_OPTIONS'];
+    const previousRunId = process.env['ABG_RUN_ID'];
+    const previousSecret = process.env['HDI_POSTGRES_PASSWORD'];
+    process.env['NODE_OPTIONS'] = '--loader=./tooling/verification/node-ts-loader.mjs';
+    process.env['ABG_RUN_ID'] = 'formal-environment-test';
+    process.env['HDI_POSTGRES_PASSWORD'] = 'retained-formal-secret';
+    try {
+      const { SpawnRuntimeCommandRunner } = await import('./formal-runtime-contract.js');
+      const result = await new SpawnRuntimeCommandRunner().run({
+        executable: process.execPath,
+        args: ['-e', [
+          'process.stdout.write(JSON.stringify({',
+          'nodeOptions:process.env.NODE_OPTIONS??null,',
+          'runId:process.env.ABG_RUN_ID,',
+          'secret:process.env.HDI_POSTGRES_PASSWORD,',
+          'injected:process.env.FORMAL_TEST_INJECTED',
+          '}))',
+        ].join('')],
+        environment: { FORMAL_TEST_INJECTED: 'preserved' },
+      });
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({
+        nodeOptions: null,
+        runId: 'formal-environment-test',
+        secret: 'retained-formal-secret',
+        injected: 'preserved',
+      });
+    } finally {
+      restoreEnvironment('NODE_OPTIONS', previousNodeOptions);
+      restoreEnvironment('ABG_RUN_ID', previousRunId);
+      restoreEnvironment('HDI_POSTGRES_PASSWORD', previousSecret);
+    }
+  });
+
+  it('rejects command-declared NODE_OPTIONS before spawning', async () => {
+    const { SpawnRuntimeCommandRunner } = await import('./formal-runtime-contract.js');
+    await expect(new SpawnRuntimeCommandRunner().run({
+      executable: process.execPath,
+      args: ['-e', 'process.exit(0)'],
+      environment: { NODE_OPTIONS: '--loader=relative-loader.mjs' },
+    })).rejects.toThrow('FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN');
+  });
 });
+
+function restoreEnvironment(name: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}

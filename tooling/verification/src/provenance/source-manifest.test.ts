@@ -31,7 +31,7 @@ afterEach(async () => {
 
 describe('verification source manifest public seam', () => {
   it('registers the AR-12 workspace, history contract, and orchestrator as ordered authority sources', () => {
-    expect(VERIFICATION_SOURCE_FILES).toHaveLength(47);
+    expect(VERIFICATION_SOURCE_FILES).toHaveLength(51);
     expect(VERIFICATION_SOURCE_FILES).toEqual(expect.arrayContaining([
       {
         path: 'tooling/verification/src/rebaseline/ar-12-execution-workspace.ts',
@@ -44,6 +44,22 @@ describe('verification source manifest public seam', () => {
       {
         path: 'tooling/verification/src/rebaseline/ar-12-orchestrator.ts',
         role: 'ORCHESTRATOR',
+      },
+      {
+        path: 'tooling/verification/src/formal-command-executor.ts',
+        role: 'NODE_COMMAND_BOUNDARY',
+      },
+      {
+        path: 'tooling/verification/src/runtime/node-command-boundary.ts',
+        role: 'NODE_COMMAND_BOUNDARY',
+      },
+      {
+        path: 'tooling/verification/src/shared-abg-command-plan.ts',
+        role: 'NODE_COMMAND_BOUNDARY',
+      },
+      {
+        path: 'tooling/verification/src/shared-command-executor.ts',
+        role: 'NODE_COMMAND_BOUNDARY',
       },
     ]));
     expect(VERIFICATION_SOURCE_FILES.map(({ path }) => path)).toEqual(

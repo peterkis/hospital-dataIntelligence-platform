@@ -12,6 +12,12 @@ import {
   RUN_PLAN_AUTHORITY_ID,
   RUN_PLAN_SCHEMA_VERSION,
 } from './verification-contract-versions.js';
+import {
+  assertCommandEnvironmentDoesNotDeclareNodeOptions,
+  assertRepositoryTypeScriptCommand,
+  commandContainsRepositoryLoader,
+  repositoryTypeScriptCommand,
+} from './runtime/node-command-boundary.js';
 
 export { readFrozenInputs } from './frozen-inputs.js';
 
@@ -56,6 +62,11 @@ export interface VerificationAuthorityIdentity {
   readonly gateProofSourceSha256: string;
 }
 
+export interface AuthoritativeCommandPlan {
+  readonly setupCommands: readonly AuthoritativeCommandSpec[];
+  readonly gates: readonly AuthoritativeGateCommandSpec[];
+}
+
 export async function buildAuthoritativeRunPlan(
   repositoryRoot: string,
   runSequence: number,
@@ -65,6 +76,7 @@ export async function buildAuthoritativeRunPlan(
   if (frozenInputs['gitCommitSha'] !== producerSourceManifest.producerGitCommitSha) {
     throw new Error('PRODUCER_SOURCE_MANIFEST_GIT_COMMIT_MISMATCH');
   }
+  const commands = await buildAuthoritativeCommandPlan(repositoryRoot);
   return {
     schemaVersion: RUN_PLAN_SCHEMA_VERSION,
     authorityId: RUN_PLAN_AUTHORITY_ID,
@@ -77,32 +89,65 @@ export async function buildAuthoritativeRunPlan(
     runtimeAuthoritySemanticDigest: requireFrozenInput(frozenInputs, 'runtimeAuthoritySemanticDigest'),
     frozenInputs,
     authorityIdentity: await readVerificationAuthorityIdentity(repositoryRoot),
+    setupCommands: commands.setupCommands,
+    gates: commands.gates,
+  };
+}
+
+export async function buildAuthoritativeCommandPlan(
+  repositoryRoot: string,
+): Promise<AuthoritativeCommandPlan> {
+  const sharedRunner = await repositoryTypeScriptCommand(
+    repositoryRoot,
+    'tooling/verification/src/run-shared-abg-verification.ts',
+  );
+  const gateProducer = await repositoryTypeScriptCommand(
+    repositoryRoot,
+    'tooling/verification/src/produce-abg-gate.ts',
+  );
+  const plan: AuthoritativeCommandPlan = {
     setupCommands: [
-      {
-        executable: 'npm',
-        args: ['ci'],
-      },
+      { executable: 'npm', args: ['ci'] },
       {
         executable: 'bash',
         args: ['phase-plan/environment/anolis-8.9-wsl2/bootstrap-phase-01-runtime.sh'],
       },
-      {
-        executable: 'node',
-        args: ['tooling/verification/src/run-shared-abg-verification.ts'],
-        environment: {
-          NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs',
-        },
-      },
+      sharedRunner,
     ],
-    gates: ABG_GATES.map((gate) => ({
-      gateId: gate.gateId,
-      executable: 'node',
-      args: ['tooling/verification/src/produce-abg-gate.ts'],
-      environment: {
-        NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs',
-      },
-    })),
+    gates: ABG_GATES.map((gate) => ({ gateId: gate.gateId, ...gateProducer })),
   };
+  await assertAuthoritativeCommandPlanSafety(repositoryRoot, plan);
+  return plan;
+}
+
+export async function assertAuthoritativeCommandPlanSafety(
+  repositoryRoot: string,
+  plan: AuthoritativeCommandPlan,
+): Promise<void> {
+  if (plan.setupCommands.length !== 3 || plan.gates.length !== ABG_GATES.length) {
+    throw new Error('FORMAL_COMMAND_PLAN_INVALID');
+  }
+  const expectedGateIds = ABG_GATES.map((gate) => gate.gateId);
+  if (plan.gates.map((gate) => gate.gateId).join('\0') !== expectedGateIds.join('\0')) {
+    throw new Error('FORMAL_COMMAND_PLAN_INVALID');
+  }
+  for (const command of [...plan.setupCommands, ...plan.gates]) {
+    assertCommandEnvironmentDoesNotDeclareNodeOptions(
+      command.environment,
+      'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+    );
+    const directTypeScriptEntry = command.executable === 'node' &&
+      command.args.some((argument) => argument.endsWith('.ts'));
+    if (directTypeScriptEntry) {
+      await assertRepositoryTypeScriptCommand(repositoryRoot, command);
+    } else if (commandContainsRepositoryLoader(command)) {
+      throw new Error('FORMAL_COMMAND_NODE_LOADER_CONTAMINATION');
+    }
+  }
+}
+
+export function authoritativeCommandDigest(command: AuthoritativeCommandSpec): string {
+  return sha256(Buffer.from(canonicalJson(command), 'utf8'));
 }
 
 function requireFrozenInput(

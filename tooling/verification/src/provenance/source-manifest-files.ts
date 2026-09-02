@@ -23,6 +23,7 @@ export type VerificationSourceFileRole =
   | 'RUNTIME_TEARDOWN'
   | 'WSL_ENVELOPE'
   | 'WSL_HOST'
+  | 'NODE_COMMAND_BOUNDARY'
   | 'NODE_LOADER'
   | 'PACKAGE_DEFINITION'
   | 'RUNTIME_AUTHORITY'
@@ -59,6 +60,7 @@ const SOURCE_FILES = [
   ['tooling/verification/src/evidence/recorder.ts', 'EVIDENCE_RECORDER'],
   ['tooling/verification/src/evidence/schema.ts', 'EVIDENCE_SCHEMA'],
   ['tooling/verification/src/evidence/validate-producer-evidence.ts', 'EVIDENCE_VALIDATOR'],
+  ['tooling/verification/src/formal-command-executor.ts', 'NODE_COMMAND_BOUNDARY'],
   ['tooling/verification/src/formal-summary-validator.ts', 'SUMMARY_VALIDATOR'],
   ['tooling/verification/src/frozen-inputs.ts', 'FROZEN_INPUTS'],
   ['tooling/verification/src/produce-abg-gate.ts', 'PRODUCER'],
@@ -80,10 +82,13 @@ const SOURCE_FILES = [
   ['tooling/verification/src/runtime/formal-terminal-conclusion.ts', 'TERMINAL_CONTRACT'],
   ['tooling/verification/src/runtime/formal-wsl-envelope.ts', 'WSL_ENVELOPE'],
   ['tooling/verification/src/runtime/formal-wsl-host.ts', 'WSL_HOST'],
+  ['tooling/verification/src/runtime/node-command-boundary.ts', 'NODE_COMMAND_BOUNDARY'],
   ['tooling/verification/src/runtime/podman-machine-inspection.ts', 'PODMAN_MACHINE_INSPECTION'],
   ['tooling/verification/src/runtime/podman-runtime-authority-schema.ts', 'RUNTIME_AUTHORITY_SCHEMA'],
   ['tooling/verification/src/runtime/podman-runtime-authority.ts', 'RUNTIME_AUTHORITY_LOADER'],
   ['tooling/verification/src/runtime/verify-podman-runtime-authority.ts', 'RUNTIME_AUTHORITY_LOADER'],
+  ['tooling/verification/src/shared-abg-command-plan.ts', 'NODE_COMMAND_BOUNDARY'],
+  ['tooling/verification/src/shared-command-executor.ts', 'NODE_COMMAND_BOUNDARY'],
   ['tooling/verification/src/verification-contract-versions.ts', 'CONTRACT_VERSION'],
   ['tooling/verification/src/verify-phase-01-live.ts', 'PRODUCER'],
 ] as const satisfies readonly (readonly [string, VerificationSourceFileRole])[];

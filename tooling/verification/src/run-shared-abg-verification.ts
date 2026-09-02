@@ -36,22 +36,14 @@ import {
 } from './evidence/protocol.js';
 import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
 import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
-
-interface SharedCommand {
-  readonly id: string;
-  readonly producerIds: readonly AbgProducerId[];
-  readonly executable: string;
-  readonly args: readonly string[];
-  readonly environment?: Readonly<Record<string, string>>;
-}
-
-interface CommandResult {
-  readonly id: string;
-  readonly producerIds: readonly AbgProducerId[];
-  readonly exitCode: number | null;
-  readonly elapsedMilliseconds: number;
-  readonly error: string | null;
-}
+import { createDeterministicChildEnvironment } from './runtime/node-command-boundary.js';
+import {
+  executeSharedCommand,
+  type SharedCommandResult,
+} from './shared-command-executor.js';
+import {
+  buildSharedAbgCommandPlan,
+} from './shared-abg-command-plan.js';
 
 interface RunningApplication {
   readonly child: ChildProcess;
@@ -69,51 +61,11 @@ const runId = process.env['ABG_RUN_ID'] ?? randomUUID();
 const runSequence = parsePositiveInteger(process.env['ABG_RUN_SEQUENCE'] ?? '1');
 const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
 const runtimeEventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
-const commands: readonly SharedCommand[] = [
-  { id: 'runtime', producerIds: ['static'], executable: 'npm', args: ['run', 'check:runtime'] },
-  { id: 'repo-layout', producerIds: ['static'], executable: 'npm', args: ['run', 'check:repo:layout'] },
-  {
-    id: 'module-boundaries',
-    producerIds: ['static'],
-    executable: 'npm',
-    args: ['run', 'check:module-boundaries'],
-  },
-  {
-    id: 'database-authority',
-    producerIds: ['database'],
-    executable: 'npm',
-    args: ['run', 'check:database-authority'],
-  },
-  { id: 'typecheck', producerIds: ['static'], executable: 'npm', args: ['run', 'typecheck'] },
-  { id: 'build', producerIds: ['static'], executable: 'npm', args: ['run', 'build'] },
-  { id: 'contract-lint', producerIds: ['static'], executable: 'npm', args: ['run', 'contract:lint'] },
-  {
-    id: 'integration',
-    producerIds: ['database', 'integration', 'fault', 'consumer', 'capacity'],
-    executable: 'npm',
-    args: [
-      'exec', '--workspace', '@hospital-data-intelligence/governance-api', '--',
-      'vitest', 'run', 'src/composition/phase-01-vertical-slice.integration.test.ts',
-      '--reporter=json',
-    ],
-  },
-  {
-    id: 'live',
-    producerIds: ['live'],
-    executable: 'node',
-    args: ['tooling/verification/src/verify-phase-01-live.ts'],
-  },
-  {
-    id: 'browser',
-    producerIds: ['browser'],
-    executable: 'node',
-    args: ['tests/e2e/run-playwright.ts'],
-  },
-];
+const commands = await buildSharedAbgCommandPlan(repositoryRoot);
 
 await createEvidenceOutputDirectory(sharedDirectory);
 const stagingDirectory = await mkdtemp(join(tmpdir(), 'hdi-phase01-shared-'));
-const commandResults: CommandResult[] = [];
+const commandResults: SharedCommandResult[] = [];
 let application: RunningApplication | undefined;
 let orchestrationFailure: string | null = null;
 
@@ -141,7 +93,15 @@ try {
         break;
       }
     }
-    const result = await execute(command, stagingDirectory);
+    const result = await executeSharedCommand({
+      command,
+      repositoryRoot,
+      stagingDirectory,
+      sharedDirectory,
+      runId,
+      inheritedEnvironment: process.env,
+      recordRuntimeProcess,
+    });
     commandResults.push(result);
     if (command.id === 'integration') {
       await preserveIntegrationAttachments(stagingDirectory);
@@ -370,7 +330,9 @@ async function createEvidenceItemIfPresent(input: {
   }
 }
 
-function staticOutcomes(results: readonly CommandResult[]): Readonly<Record<string, MatrixAssertionOutcome>> {
+function staticOutcomes(
+  results: readonly SharedCommandResult[],
+): Readonly<Record<string, MatrixAssertionOutcome>> {
   const passed = (id: string) => results.find((result) => result.id === id)?.exitCode === 0;
   return {
     'ABG-01:repository-runtime-lockfile-topology': outcome(
@@ -474,66 +436,6 @@ function isObservation(value: unknown): value is ProducerAssertionObservation {
     Array.isArray(value['governanceObjectIds']) &&
     Array.isArray(value['versionIds']) &&
     Array.isArray(value['ruleVersions']);
-}
-
-async function execute(command: SharedCommand, stagingDirectory: string): Promise<CommandResult> {
-  const started = performance.now();
-  const environment: Record<string, string> = { ...command.environment };
-  if (command.id === 'integration') {
-    environment['PHASE01_INTEGRATION_EVIDENCE_PATH'] = join(
-      stagingDirectory,
-      'integration-observations.json',
-    );
-    environment['VITEST_OUTPUT_FILE'] = join(stagingDirectory, 'vitest-results.json');
-    environment['NO_COLOR'] = '1';
-  }
-  const args = command.id === 'integration'
-    ? [...command.args, '--outputFile=' + environment['VITEST_OUTPUT_FILE']]
-    : command.args;
-  if (command.id === 'live') {
-    environment['EVIDENCE_OUTPUT_DIR'] = join(stagingDirectory, 'live');
-  }
-  if (command.id === 'browser') {
-    environment['PHASE01_E2E_RUN_ID'] = 'abg-' + runId;
-    environment['PHASE01_E2E_BROWSER'] = 'chrome';
-  }
-  const child = spawn(command.executable, args, {
-    cwd: repositoryRoot,
-    env: { ...process.env, ...environment },
-    shell: false,
-    windowsHide: true,
-  });
-  await recordRuntimeProcess('STARTED', child, 'producer-' + command.id);
-  const stdout: Buffer[] = [];
-  const stderr: Buffer[] = [];
-  child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
-  child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
-  const completion = await new Promise<{ readonly exitCode: number | null; readonly error: string | null }>(
-    (resolveCompletion) => {
-      child.once('error', (error) => resolveCompletion({ exitCode: null, error: errorMessage(error) }));
-      child.once('close', (exitCode) => resolveCompletion({ exitCode, error: null }));
-    },
-  );
-  await Promise.all([
-    writeRedactedTextArtifact(
-      sharedDirectory,
-      'raw/commands/' + command.id + '.stdout.log',
-      Buffer.concat(stdout).toString('utf8'),
-    ),
-    writeRedactedTextArtifact(
-      sharedDirectory,
-      'raw/commands/' + command.id + '.stderr.log',
-      Buffer.concat(stderr).toString('utf8'),
-    ),
-  ]);
-  await recordRuntimeProcess('STOPPED', child, 'producer-' + command.id);
-  return {
-    id: command.id,
-    producerIds: command.producerIds,
-    exitCode: completion.exitCode,
-    elapsedMilliseconds: Math.round(performance.now() - started),
-    error: completion.error,
-  };
 }
 
 async function preserveIntegrationAttachments(stagingDirectory: string): Promise<void> {
@@ -666,8 +568,9 @@ async function startApplication(): Promise<RunningApplication> {
   ]);
   const child = spawn(process.execPath, ['apps/governance-api/dist/main.js'], {
     cwd: repositoryRoot,
-    env: {
-      ...process.env,
+    env: createDeterministicChildEnvironment({
+      inheritedEnvironment: process.env,
+      injectedEnvironment: {
       DATABASE_URL: 'postgresql://hdi_phase01:' + postgresPassword + '@' +
         runtimeBindAddress + ':' + runtimePorts.postgresRuntime + '/hdi_phase01',
       KEYCLOAK_ISSUER_URL: `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`,
@@ -680,7 +583,9 @@ async function startApplication(): Promise<RunningApplication> {
       ADMIN_STATIC_ROOT: join(repositoryRoot, 'apps/admin-web/dist'),
       HOST: runtimeBindAddress,
       PORT: String(runtimePorts.governanceApi),
-    },
+      },
+      nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+    }),
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -792,7 +697,7 @@ async function waitForPort(port: number, child: ChildProcess): Promise<void> {
 
 function producerProcessStatus(
   producerId: Exclude<AbgProducerId, 'formal-run'>,
-  results: readonly CommandResult[],
+  results: readonly SharedCommandResult[],
 ): 'PASSED' | 'FAILED' {
   const relevant = results.filter((result) => result.producerIds.includes(producerId));
   if (relevant.length === 0 || relevant.some((result) => result.exitCode !== 0)) return 'FAILED';
@@ -803,7 +708,7 @@ function producerProcessStatus(
 
 function producerCommandIdentity(
   producerId: Exclude<AbgProducerId, 'formal-run'>,
-  results: readonly CommandResult[],
+  results: readonly SharedCommandResult[],
 ) {
   const commandIds = results
     .filter((result) => result.producerIds.includes(producerId))

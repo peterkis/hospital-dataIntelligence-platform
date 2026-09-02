@@ -1,6 +1,5 @@
-import { spawn } from 'node:child_process';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 import {
   assertDistinctGateEvidenceSelectorSets,
   getAbgCoverageMatrixDigest,
@@ -11,6 +10,7 @@ import {
 import { ABG_GATES, type AbgGateDefinition } from './abg-catalog.js';
 import {
   buildAuthoritativeRunPlan,
+  authoritativeCommandDigest,
   readFrozenInputs,
   readVerificationAuthorityIdentity,
   type AuthoritativeCommandSpec,
@@ -46,6 +46,7 @@ import {
   buildFormalTerminalConclusion,
   type FormalTerminalConclusion,
 } from './runtime/formal-terminal-conclusion.js';
+import { executeFormalCommand } from './formal-command-executor.js';
 import { validateFormalAbgSummary } from './formal-summary-validator.js';
 import {
   buildProducerSourceManifest,
@@ -53,6 +54,7 @@ import {
   verifyProducerSourceManifestStable,
   writeProducerSourceManifest,
 } from './provenance/source-manifest.js';
+import { REPOSITORY_NODE_LOADER_PATH } from './runtime/node-command-boundary.js';
 import {
   EVIDENCE_MANIFEST_SCHEMA_VERSION,
   RUN_SUMMARY_SCHEMA_VERSION,
@@ -209,10 +211,11 @@ async function executeFormalAbgBeforeCleanup(
   let setupFailure: string | null = null;
   for (const [index, command] of frozenPlan.setupCommands.entries()) {
     context.throwIfAborted();
-    const execution = await executeCommand(
+    const execution = await executeFormalCommand({
+      repositoryRoot,
       command,
-      join(outputDirectory, 'setup', String(index + 1).padStart(2, '0')),
-      {
+      evidenceDirectory: join(outputDirectory, 'setup', String(index + 1).padStart(2, '0')),
+      injectedEnvironment: {
         ABG_RUN_ID: runId,
         ABG_RUN_SEQUENCE: String(frozenPlan.runSequence),
         ABG_RUNTIME_NAMESPACE: context.identity.runtimeNamespace,
@@ -224,7 +227,8 @@ async function executeFormalAbgBeforeCleanup(
         ABG_SHARED_EVIDENCE_DIR: join(outputDirectory, 'shared'),
         ABG_RUNTIME_EVENT_DIR: context.runtimeEventDirectory,
       },
-    );
+      context: activeContext,
+    });
     setupResults.push({
       ordinal: index + 1,
       commandDigest: commandDigest(command),
@@ -544,13 +548,19 @@ async function executeGate(input: {
   const gateDirectory = join(outputDirectory, 'gates', input.gate.gateId);
   const resultRelativePath = 'gates/' + input.gate.gateId + '/producer/result.json';
   const resultPath = join(outputDirectory, resultRelativePath);
-  const execution = await executeCommand(command, gateDirectory, {
-    ABG_RUN_ID: input.runId,
-    ABG_RUN_SEQUENCE: String(input.runSequence),
-    ABG_GATE_ID: input.gate.gateId,
-    ABG_GATE_RESULT_PATH: resultPath,
-    ABG_FORMAL_EVIDENCE_ROOT: outputDirectory,
-    ABG_PRODUCER_EVIDENCE_INDEX_PATH: input.producerEvidenceIndexRelativePath,
+  const execution = await executeFormalCommand({
+    repositoryRoot,
+    command,
+    evidenceDirectory: gateDirectory,
+    injectedEnvironment: {
+      ABG_RUN_ID: input.runId,
+      ABG_RUN_SEQUENCE: String(input.runSequence),
+      ABG_GATE_ID: input.gate.gateId,
+      ABG_GATE_RESULT_PATH: resultPath,
+      ABG_FORMAL_EVIDENCE_ROOT: outputDirectory,
+      ABG_PRODUCER_EVIDENCE_INDEX_PATH: input.producerEvidenceIndexRelativePath,
+    },
+    context: activeContext,
   });
   try {
     if (execution.exitCode !== 0) {
@@ -645,9 +655,21 @@ async function writeFormalProducerEvidence(
     processStatus: terminalConclusion.status,
     commandIdentity: {
       executable: 'node',
-      arguments: ['tooling/verification/src/run-formal-abg.ts'],
+      arguments: [
+        '--loader',
+        REPOSITORY_NODE_LOADER_PATH,
+        'tooling/verification/src/run-formal-abg.ts',
+      ],
       workingDirectory: 'repository-root',
-      commandDigest: sha256(Buffer.from('tooling/verification/src/run-formal-abg.ts', 'utf8')),
+      commandDigest: authoritativeCommandDigest({
+        executable: 'node',
+        args: [
+          '--loader',
+          REPOSITORY_NODE_LOADER_PATH,
+          'tooling/verification/src/run-formal-abg.ts',
+        ],
+        workingDirectory: '.',
+      }),
     },
     environmentRefs: environmentReferenceDigest(process.env, ['CI', 'NODE_ENV', 'TZ']),
     frozenInputRefs: parseFrozenInputRefs(plan?.frozenInputs),
@@ -709,62 +731,6 @@ async function writeFormalProducerEvidence(
       formalIndexEntry,
     ],
   });
-}
-
-async function executeCommand(
-  command: AuthoritativeCommandSpec,
-  evidenceDirectory: string,
-  injectedEnvironment: Readonly<Record<string, string>>,
-): Promise<{ readonly exitCode: number | null; readonly elapsedMilliseconds: number }> {
-  await mkdir(evidenceDirectory, { recursive: true });
-  const started = performance.now();
-  const workingDirectory = resolveInsideRepository(command.workingDirectory ?? '.');
-  const child = spawn(command.executable, [...command.args], {
-    cwd: workingDirectory,
-    env: { ...process.env, ...command.environment, ...injectedEnvironment },
-    shell: false,
-    windowsHide: true,
-  });
-  const untrack = activeContext?.trackChild(child);
-  let forceKill: NodeJS.Timeout | undefined;
-  const abort = () => {
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill('SIGTERM');
-      forceKill = setTimeout(() => {
-        if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
-      }, 5_000);
-      forceKill.unref();
-    }
-  };
-  activeContext?.signal.addEventListener('abort', abort, { once: true });
-  if (activeContext?.signal.aborted === true) abort();
-  const stdout: Buffer[] = [];
-  const stderr: Buffer[] = [];
-  child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
-  child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
-  const completion = await new Promise<{
-    readonly exitCode: number | null;
-    readonly spawnError: Error | null;
-  }>((resolveExit) => {
-    child.once('error', (error) => resolveExit({ exitCode: null, spawnError: error }));
-    child.once('close', (exitCode) => resolveExit({ exitCode, spawnError: null }));
-  });
-  try {
-    await Promise.all([
-      writeRedactedTextArtifact(evidenceDirectory, 'stdout.log', Buffer.concat(stdout).toString('utf8')),
-      writeRedactedTextArtifact(evidenceDirectory, 'stderr.log', Buffer.concat(stderr).toString('utf8')),
-    ]);
-  } finally {
-    if (forceKill !== undefined) clearTimeout(forceKill);
-    activeContext?.signal.removeEventListener('abort', abort);
-    untrack?.();
-  }
-  if (completion.spawnError !== null) throw completion.spawnError;
-  activeContext?.throwIfAborted();
-  return {
-    exitCode: completion.exitCode,
-    elapsedMilliseconds: Math.round(performance.now() - started),
-  };
 }
 
 function commandForGate(gate: AbgGateDefinition): AuthoritativeCommandSpec {
@@ -880,16 +846,7 @@ async function writeExclusiveBytes(path: string, value: Uint8Array): Promise<voi
 }
 
 function commandDigest(command: AuthoritativeCommandSpec): string {
-  return sha256(Buffer.from(canonicalJson(command), 'utf8'));
-}
-
-function resolveInsideRepository(path: string): string {
-  const resolved = resolve(repositoryRoot, path);
-  const relativePath = relative(repositoryRoot, resolved);
-  if (relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
-    throw new Error('ABG_COMMAND_WORKDIR_OUTSIDE_REPOSITORY');
-  }
-  return resolved;
+  return authoritativeCommandDigest(command);
 }
 
 function mediaType(path: string): string {
