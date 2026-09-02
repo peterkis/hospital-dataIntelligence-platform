@@ -99,6 +99,43 @@ describe('repository Node command boundary', () => {
     expect(environment['NODE_OPTIONS']).toBeUndefined();
   });
 
+  it.each(['DATABASE_URL', 'database_url', 'Database_Url'])(
+    'removes inherited %s case-insensitively and allows only an authorized canonical injection',
+    (name) => {
+      const inherited = { [name]: 'postgresql://wrong-target/wrong' };
+      const isolated = createDeterministicChildEnvironment({
+        inheritedEnvironment: inherited,
+        nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      });
+      expect(Object.keys(isolated).some((key) => key.toUpperCase() === 'DATABASE_URL'))
+        .toBe(false);
+      const canonical = 'postgresql://hdi_phase01:password@127.0.0.1:55432/hdi_phase01';
+      const injected = createDeterministicChildEnvironment({
+        inheritedEnvironment: inherited,
+        injectedEnvironment: { DATABASE_URL: canonical },
+        nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+        databaseUrlInjectionAuthorized: true,
+      });
+      expect(injected['DATABASE_URL']).toBe(canonical);
+      expect(Object.keys(injected).filter((key) => key.toUpperCase() === 'DATABASE_URL'))
+        .toEqual(['DATABASE_URL']);
+    },
+  );
+
+  it('rejects direct and unauthorized DATABASE_URL declarations', () => {
+    expect(() => createDeterministicChildEnvironment({
+      inheritedEnvironment: {},
+      commandEnvironment: { database_url: 'postgresql://forbidden' },
+      nodeOptionsForbiddenCode: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+    })).toThrow('FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN');
+    expect(() => createDeterministicChildEnvironment({
+      inheritedEnvironment: {},
+      injectedEnvironment: { DATABASE_URL: 'postgresql://unauthorized' },
+      nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      databaseUrlInjectionUnauthorizedCode: 'SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED',
+    })).toThrow('SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED');
+  });
+
   it.each([
     ['FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN', 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN'],
     ['SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN', 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN'],

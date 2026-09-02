@@ -121,6 +121,7 @@ export function runDatabaseTypeVerification(input: {
   readonly spawn?: DatabaseAuthoritySpawn;
 }): void {
   assert.ok(input.npmCli, 'npm_execpath is required for database type verification.');
+  const databaseUrl = requireDatabaseAuthorityDatabaseUrl(input.inheritedEnvironment);
   const spawn = input.spawn ?? ((executable, args, options) =>
     spawnSync(executable, args, options));
   const generatedTypeVerification = spawn(
@@ -143,8 +144,14 @@ export function runDatabaseTypeVerification(input: {
     0,
     [
       'Generated database types drift from the migrated PostgreSQL schema.',
-      generatedTypeVerification.stdout,
-      generatedTypeVerification.stderr,
+      redactDatabaseAuthorityOutput(
+        String(generatedTypeVerification.stdout ?? ''),
+        databaseUrl,
+      ),
+      redactDatabaseAuthorityOutput(
+        String(generatedTypeVerification.stderr ?? ''),
+        databaseUrl,
+      ),
     ].filter(Boolean).join('\n'),
   );
 }
@@ -152,9 +159,44 @@ export function runDatabaseTypeVerification(input: {
 export function databaseAuthorityChildEnvironment(
   inheritedEnvironment: Readonly<NodeJS.ProcessEnv>,
 ): NodeJS.ProcessEnv {
-  return Object.fromEntries(Object.entries(inheritedEnvironment).filter(
-    ([name, value]) => name.toUpperCase() !== 'NODE_OPTIONS' && value !== undefined,
+  const databaseUrl = requireDatabaseAuthorityDatabaseUrl(inheritedEnvironment);
+  const environment = Object.fromEntries(Object.entries(inheritedEnvironment).filter(
+    ([name, value]) =>
+      name.toUpperCase() !== 'NODE_OPTIONS' &&
+      name.toUpperCase() !== 'DATABASE_URL' &&
+      value !== undefined,
   ));
+  environment['DATABASE_URL'] = databaseUrl;
+  return environment;
+}
+
+export function requireDatabaseAuthorityDatabaseUrl(
+  environment: Readonly<NodeJS.ProcessEnv>,
+): string {
+  const matches = Object.entries(environment).filter(
+    ([name]) => name.toUpperCase() === 'DATABASE_URL',
+  );
+  if (matches.length !== 1 || (matches[0]?.[1] ?? '').length === 0) {
+    throw new Error('DATABASE_AUTHORITY_DATABASE_URL_MISSING');
+  }
+  return matches[0]![1]!;
+}
+
+function redactDatabaseAuthorityOutput(value: string, databaseUrl: string): string {
+  const json = JSON.stringify(databaseUrl);
+  const variants = [...new Set([
+    databaseUrl,
+    encodeURIComponent(databaseUrl),
+    json,
+    json.slice(1, -1),
+    Buffer.from(databaseUrl, 'utf8').toString('base64'),
+    Buffer.from(databaseUrl, 'utf8').toString('base64url'),
+    `'${databaseUrl.replaceAll("'", `'"'"'`)}'`,
+    `'${databaseUrl.replaceAll("'", "''")}'`,
+  ])].sort((left, right) => right.length - left.length);
+  let redacted = value;
+  for (const variant of variants) redacted = redacted.replaceAll(variant, '[REDACTED]');
+  return redacted.replace(/\bpostgres(?:ql)?:\/\/[^\s"'`]+/giu, '[REDACTED]');
 }
 
 function collectTypeScriptFiles(directory: string): readonly string[] {

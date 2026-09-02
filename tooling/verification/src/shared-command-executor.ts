@@ -4,7 +4,19 @@ import {
   writeRedactedTextArtifact,
 } from './evidence/recorder.js';
 import { createDeterministicChildEnvironment } from './runtime/node-command-boundary.js';
-import type { SharedCommand } from './shared-abg-command-plan.js';
+import { assertFormalRuntimeDatabaseTarget } from './runtime/formal-runtime-database-connection.js';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
+import type { PodmanRuntimeAuthority } from './runtime/podman-runtime-authority-schema.js';
+import {
+  assertSharedRuntimeEnvironmentBindingDeclaration,
+  type SharedCommand,
+  type SharedRuntimeEnvironmentBinding,
+} from './shared-abg-command-plan.js';
+
+export type SharedRuntimeEnvironmentBindings = Readonly<Partial<Record<
+  SharedRuntimeEnvironmentBinding,
+  Readonly<Record<string, string>>
+>>>;
 
 export interface SharedCommandResult {
   readonly id: string;
@@ -21,6 +33,7 @@ export async function executeSharedCommand(input: {
   readonly sharedDirectory: string;
   readonly runId: string;
   readonly inheritedEnvironment: Readonly<NodeJS.ProcessEnv>;
+  readonly runtimeEnvironmentBindings: SharedRuntimeEnvironmentBindings;
   readonly recordRuntimeProcess?: (
     event: 'STARTED' | 'STOPPED',
     child: ChildProcess,
@@ -28,7 +41,12 @@ export async function executeSharedCommand(input: {
   ) => Promise<void>;
 }): Promise<SharedCommandResult> {
   const started = performance.now();
-  const environment: Record<string, string> = { ...input.command.environment };
+  const runtimeEnvironment = resolveSharedRuntimeEnvironmentBindings(
+    input.command,
+    input.runtimeEnvironmentBindings,
+    loadPodmanRuntimeAuthority(input.repositoryRoot).authority,
+  );
+  const environment: Record<string, string> = { ...runtimeEnvironment };
   if (input.command.id === 'integration') {
     environment['PHASE01_INTEGRATION_EVIDENCE_PATH'] = join(
       input.stagingDirectory,
@@ -54,6 +72,13 @@ export async function executeSharedCommand(input: {
       commandEnvironment: input.command.environment,
       injectedEnvironment: environment,
       nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      databaseUrlDeclarationForbiddenCode:
+        'SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
+      databaseUrlInjectionAuthorized: input.command.runtimeEnvironmentBindings?.includes(
+        'FORMAL_RUNTIME_DATABASE_URL',
+      ) === true,
+      databaseUrlInjectionUnauthorizedCode:
+        'SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED',
     }),
     shell: false,
     windowsHide: true,
@@ -78,11 +103,13 @@ export async function executeSharedCommand(input: {
       input.sharedDirectory,
       'raw/commands/' + input.command.id + '.stdout.log',
       Buffer.concat(stdout).toString('utf8'),
+      { sensitiveValues: databaseUrlValues(runtimeEnvironment) },
     ),
     writeRedactedTextArtifact(
       input.sharedDirectory,
       'raw/commands/' + input.command.id + '.stderr.log',
       Buffer.concat(stderr).toString('utf8'),
+      { sensitiveValues: databaseUrlValues(runtimeEnvironment) },
     ),
   ]);
   await input.recordRuntimeProcess?.('STOPPED', child, 'producer-' + input.command.id);
@@ -93,4 +120,55 @@ export async function executeSharedCommand(input: {
     elapsedMilliseconds: Math.round(performance.now() - started),
     error: completion.error,
   };
+}
+
+export function resolveSharedRuntimeEnvironmentBindings(
+  command: SharedCommand,
+  bindings: SharedRuntimeEnvironmentBindings,
+  runtimeAuthority: PodmanRuntimeAuthority,
+): Readonly<Record<string, string>> {
+  assertSharedRuntimeEnvironmentBindingDeclaration(command);
+  const requested = command.runtimeEnvironmentBindings ?? [];
+  const environment: Record<string, string> = {};
+  const environmentNames = new Set<string>();
+  for (const binding of requested) {
+    const values = bindings[binding];
+    if (values === undefined) {
+      throw new Error(
+        binding === 'FORMAL_RUNTIME_DATABASE_URL'
+          ? 'SHARED_RUNTIME_DATABASE_BINDING_MISSING'
+          : 'SHARED_RUNTIME_ENVIRONMENT_BINDING_MISSING',
+      );
+    }
+    for (const [name, value] of Object.entries(values)) {
+      const canonicalName = name.toUpperCase();
+      if (environmentNames.has(canonicalName)) {
+        throw new Error('SHARED_RUNTIME_ENVIRONMENT_BINDING_VALUE_DUPLICATE');
+      }
+      if (
+        canonicalName === 'DATABASE_URL' &&
+        binding !== 'FORMAL_RUNTIME_DATABASE_URL'
+      ) {
+        throw new Error('SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED');
+      }
+      environmentNames.add(canonicalName);
+      environment[canonicalName === 'DATABASE_URL' ? 'DATABASE_URL' : name] = value;
+    }
+  }
+  const databaseUrl = environment['DATABASE_URL'];
+  if (
+    requested.includes('FORMAL_RUNTIME_DATABASE_URL') &&
+    (databaseUrl === undefined || databaseUrl.length === 0)
+  ) {
+    throw new Error('SHARED_RUNTIME_DATABASE_BINDING_MISSING');
+  }
+  if (databaseUrl !== undefined) {
+    assertFormalRuntimeDatabaseTarget(databaseUrl, runtimeAuthority);
+  }
+  return Object.freeze(environment);
+}
+
+function databaseUrlValues(environment: Readonly<Record<string, string>>): readonly string[] {
+  const value = environment['DATABASE_URL'];
+  return value === undefined ? [] : [value];
 }

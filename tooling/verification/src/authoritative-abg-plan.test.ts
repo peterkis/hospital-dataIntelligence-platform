@@ -36,6 +36,8 @@ describe('authoritative ABG command plan loader boundary', () => {
       });
     }
     expect(JSON.stringify(plan)).not.toContain('NODE_OPTIONS');
+    expect(JSON.stringify(plan)).not.toContain('DATABASE_URL');
+    expect(JSON.stringify(plan)).not.toContain('postgresql://');
     expect(JSON.stringify(plan)).not.toMatch(/(?:\/mnt\/[a-z]\/|[A-Za-z]:\\)/u);
   });
 
@@ -58,6 +60,16 @@ describe('authoritative ABG command plan loader boundary', () => {
     };
     await expect(assertAuthoritativeCommandPlanSafety(repositoryRoot, plan))
       .rejects.toThrow('FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN');
+  });
+
+  it('fails closed for command-declared DATABASE_URL in any casing', async () => {
+    const plan = await mutablePlan();
+    plan.setupCommands[0] = {
+      ...plan.setupCommands[0]!,
+      environment: { Database_Url: 'postgresql://forbidden' },
+    };
+    await expect(assertAuthoritativeCommandPlanSafety(repositoryRoot, plan))
+      .rejects.toThrow('FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN');
   });
 
   it('rejects loader drift and a script path escape', async () => {

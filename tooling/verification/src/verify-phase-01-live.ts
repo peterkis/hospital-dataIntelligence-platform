@@ -26,6 +26,7 @@ import {
 } from './evidence/recorder.js';
 import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
 import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
+import { createDeterministicChildEnvironment } from './runtime/node-command-boundary.js';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot).authority;
@@ -630,8 +631,9 @@ async function startConsumer(options: {
 }): Promise<RunningConsumer> {
   const child = spawn(process.execPath, [CONSUMER_MAIN], {
     cwd: process.cwd(),
-    env: {
-      ...process.env,
+    env: createDeterministicChildEnvironment({
+      inheritedEnvironment: process.env,
+      injectedEnvironment: {
       GOVERNANCE_API_BASE_URL: API_BASE_URL,
       SIM_CONSUMER_STATE_DIRECTORY: options.stateDirectory,
       KEYCLOAK_TOKEN_ENDPOINT: `${KEYCLOAK_ISSUER_URL}/protocol/openid-connect/token`,
@@ -641,7 +643,11 @@ async function startConsumer(options: {
       SIM_CONSUMER_NOTIFICATION_AUTHORIZATION: options.notificationAuthorization,
       HOST: runtimeBindAddress,
       PORT: String(options.port),
-    },
+      },
+      nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      databaseUrlDeclarationForbiddenCode:
+        'SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
+    }),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const stdout: Buffer[] = [];

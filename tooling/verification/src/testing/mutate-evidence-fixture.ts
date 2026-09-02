@@ -8,6 +8,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import {
   ABG_COVERAGE_MATRIX,
@@ -22,6 +23,7 @@ import {
   createEvidenceSubdirectory,
   sha256,
   writeRedactedTextArtifact,
+  redactSensitiveText,
 } from '../evidence/recorder.js';
 import type { ProducerEvidence } from '../evidence/protocol.js';
 import { validateProducerEvidence } from '../evidence/validate-producer-evidence.js';
@@ -93,11 +95,19 @@ import {
   buildSharedAbgCommandPlan,
   type SharedCommand,
 } from '../shared-abg-command-plan.js';
+import { resolveSharedRuntimeEnvironmentBindings } from '../shared-command-executor.js';
 import {
   createDeterministicChildEnvironment,
   REPOSITORY_NODE_LOADER_PATH,
 } from '../runtime/node-command-boundary.js';
-import { databaseAuthorityChildEnvironment } from '../check-database-authority.js';
+import {
+  databaseAuthorityChildEnvironment,
+  runDatabaseTypeVerification,
+} from '../check-database-authority.js';
+import {
+  buildFormalRuntimeDatabaseUrl,
+} from '../runtime/formal-runtime-database-connection.js';
+import { loadPodmanRuntimeAuthority } from '../runtime/podman-runtime-authority.js';
 
 export type MutationDetectionLayer =
   | 'producer-evidence-validator'
@@ -340,12 +350,26 @@ export const AR07R03_ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[]
   mutation('DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION', 'Pass the repository loader into Kysely verification.', 'database-authority-boundary', 'DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION'),
 ] as const;
 
+export const AR07R05_ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
+  mutation('FORMAL_OPERATOR_DATABASE_URL_INHERITED', 'Inherit an operator DATABASE_URL into a formal child.', 'formal-command-boundary', 'FORMAL_OPERATOR_DATABASE_URL_INHERITED'),
+  mutation('SHARED_DATABASE_AUTHORITY_DATABASE_URL_MISSING', 'Omit the database-authority runtime binding.', 'shared-command-boundary', 'SHARED_RUNTIME_DATABASE_BINDING_MISSING'),
+  mutation('SHARED_DATABASE_AUTHORITY_DATABASE_URL_WRONG_TARGET', 'Bind database authority to a non-authority target.', 'database-authority-boundary', 'FORMAL_RUNTIME_DATABASE_TARGET_INVALID'),
+  mutation('SHARED_DATABASE_URL_INJECTED_TO_INTEGRATION', 'Inject the runtime database URL into integration.', 'shared-command-boundary', 'SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED'),
+  mutation('SHARED_DATABASE_URL_INJECTED_TO_STATIC_COMMAND', 'Inject the runtime database URL into a static command.', 'shared-command-boundary', 'SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED'),
+  mutation('DATABASE_AUTHORITY_DATABASE_URL_DROPPED_AT_NESTED_NPM', 'Drop DATABASE_URL before nested npm.', 'database-authority-boundary', 'DATABASE_AUTHORITY_DATABASE_URL_MISSING'),
+  mutation('DATABASE_AUTHORITY_DATABASE_URL_DOUBLE_ENCODED', 'Double encode the runtime database password.', 'database-authority-boundary', 'DATABASE_AUTHORITY_DATABASE_URL_DOUBLE_ENCODED'),
+  mutation('DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_LOG', 'Leak the runtime database URL into a persisted log.', 'evidence-recorder-guard', 'DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_LOG'),
+  mutation('DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_COMMAND_IDENTITY', 'Put the runtime database URL in command identity.', 'shared-command-boundary', 'DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_COMMAND_IDENTITY'),
+  mutation('BOOTSTRAP_CHILD_EXPORT_ASSUMED_BY_PARENT', 'Assume a bootstrap child export reaches its parent.', 'database-authority-boundary', 'DATABASE_AUTHORITY_DATABASE_URL_MISSING'),
+] as const;
+
 export const ADVERSARIAL_MUTATION_CASES: readonly EvidenceMutationCase[] = [
   ...PRE_AR12_ADVERSARIAL_MUTATION_CASES,
   ...AR12_EXECUTION_WORKSPACE_MUTATION_CASES,
   ...AR12_HISTORY_EVIDENCE_MUTATION_CASES,
   ...AR07R01_ADVERSARIAL_MUTATION_CASES,
   ...AR07R03_ADVERSARIAL_MUTATION_CASES,
+  ...AR07R05_ADVERSARIAL_MUTATION_CASES,
 ] as const;
 
 export async function executeEvidenceMutation(
@@ -1183,6 +1207,17 @@ async function executeMutation(
       return workspaceLoaderEnvironmentMutation(mutationId);
     case 'DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION':
       return databaseAuthorityEnvironmentMutation(mutationId);
+    case 'FORMAL_OPERATOR_DATABASE_URL_INHERITED':
+    case 'SHARED_DATABASE_AUTHORITY_DATABASE_URL_MISSING':
+    case 'SHARED_DATABASE_AUTHORITY_DATABASE_URL_WRONG_TARGET':
+    case 'SHARED_DATABASE_URL_INJECTED_TO_INTEGRATION':
+    case 'SHARED_DATABASE_URL_INJECTED_TO_STATIC_COMMAND':
+    case 'DATABASE_AUTHORITY_DATABASE_URL_DROPPED_AT_NESTED_NPM':
+    case 'DATABASE_AUTHORITY_DATABASE_URL_DOUBLE_ENCODED':
+    case 'DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_LOG':
+    case 'DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_COMMAND_IDENTITY':
+    case 'BOOTSTRAP_CHILD_EXPORT_ASSUMED_BY_PARENT':
+      return ar07r05DatabaseUrlMutation(mutationId);
     default:
       throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
   }
@@ -1276,12 +1311,130 @@ async function databaseAuthorityEnvironmentMutation(
     const environment = databaseAuthorityChildEnvironment({
       NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs',
       npm_execpath: 'locked-npm-cli.js',
+      DATABASE_URL: 'postgresql://hdi_phase01:password@127.0.0.1:55432/hdi_phase01',
     });
     if (environment['NODE_OPTIONS'] !== undefined) {
       throw new Error('DATABASE_AUTHORITY_KYSELY_LOADER_CONTAMINATION');
     }
     return Promise.resolve();
   });
+}
+
+async function ar07r05DatabaseUrlMutation(
+  mutationId: string,
+): Promise<readonly string[]> {
+  const authority = loadPodmanRuntimeAuthority(mutationRepositoryRoot).authority;
+  const canonicalUrl = buildFormalRuntimeDatabaseUrl(authority, 'mutation@password%40');
+  switch (mutationId) {
+    case 'FORMAL_OPERATOR_DATABASE_URL_INHERITED':
+      return captureRegressionInvariant(mutationId, () => {
+        const environment = createDeterministicChildEnvironment({
+          inheritedEnvironment: { Database_Url: 'postgresql://operator-wrong-target' },
+          nodeOptionsForbiddenCode: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+        });
+        if (Object.keys(environment).some((name) => name.toUpperCase() === 'DATABASE_URL')) {
+          throw new Error(mutationId);
+        }
+        return Promise.resolve();
+      });
+    case 'SHARED_DATABASE_AUTHORITY_DATABASE_URL_MISSING': {
+      const command = (await buildSharedAbgCommandPlan(mutationRepositoryRoot)).find(
+        (candidate) => candidate.id === 'database-authority',
+      )!;
+      return captureErrorCodes(() => Promise.resolve(
+        resolveSharedRuntimeEnvironmentBindings(command, {}, authority),
+      ));
+    }
+    case 'SHARED_DATABASE_AUTHORITY_DATABASE_URL_WRONG_TARGET': {
+      const command = (await buildSharedAbgCommandPlan(mutationRepositoryRoot)).find(
+        (candidate) => candidate.id === 'database-authority',
+      )!;
+      return captureErrorCodes(() => Promise.resolve(
+        resolveSharedRuntimeEnvironmentBindings(command, {
+          FORMAL_RUNTIME_DATABASE_URL: {
+            DATABASE_URL:
+              'postgresql://hdi_phase01:password@external.example:55432/hdi_phase01',
+          },
+        }, authority),
+      ));
+    }
+    case 'SHARED_DATABASE_URL_INJECTED_TO_INTEGRATION':
+    case 'SHARED_DATABASE_URL_INJECTED_TO_STATIC_COMMAND': {
+      const commands = [...await buildSharedAbgCommandPlan(mutationRepositoryRoot)];
+      const id = mutationId === 'SHARED_DATABASE_URL_INJECTED_TO_INTEGRATION'
+        ? 'integration'
+        : 'runtime';
+      const index = commands.findIndex((command) => command.id === id);
+      commands[index] = {
+        ...commands[index]!,
+        runtimeEnvironmentBindings: ['FORMAL_RUNTIME_DATABASE_URL'],
+      };
+      return captureErrorCodes(() => assertSharedAbgCommandPlanSafety(
+        mutationRepositoryRoot,
+        commands,
+      ));
+    }
+    case 'DATABASE_AUTHORITY_DATABASE_URL_DROPPED_AT_NESTED_NPM':
+      return captureErrorCodes(() => Promise.resolve(runDatabaseTypeVerification({
+        repositoryRoot: mutationRepositoryRoot,
+        npmCli: 'locked-npm-cli.js',
+        inheritedEnvironment: {},
+        spawn: () => { throw new Error('NESTED_NPM_MUST_NOT_START'); },
+      })));
+    case 'BOOTSTRAP_CHILD_EXPORT_ASSUMED_BY_PARENT': {
+      const parentEnvironment = createDeterministicChildEnvironment({
+        inheritedEnvironment: { PATH: process.env['PATH'] },
+        nodeOptionsForbiddenCode: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      });
+      const child = spawnSync(
+        process.execPath,
+        ['-e', "process.env.DATABASE_URL='postgresql://child-only';"],
+        { env: parentEnvironment, encoding: 'utf8' },
+      );
+      if (child.status !== 0) return ['BOOTSTRAP_CHILD_EXPORT_PROBE_FAILED'];
+      return captureErrorCodes(() => Promise.resolve(runDatabaseTypeVerification({
+        repositoryRoot: mutationRepositoryRoot,
+        npmCli: 'locked-npm-cli.js',
+        inheritedEnvironment: parentEnvironment,
+        spawn: () => { throw new Error('NESTED_NPM_MUST_NOT_START'); },
+      })));
+    }
+    case 'DATABASE_AUTHORITY_DATABASE_URL_DOUBLE_ENCODED':
+      return captureRegressionInvariant(mutationId, () => {
+        const rawPassword = 'literal%40value';
+        const url = buildFormalRuntimeDatabaseUrl(authority, rawPassword);
+        if (
+          !url.includes('literal%2540value') ||
+          url.includes('literal%252540value') ||
+          decodeURIComponent(new URL(url).password) !== rawPassword
+        ) throw new Error(mutationId);
+        return Promise.resolve();
+      });
+    case 'DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_LOG':
+      return captureRegressionInvariant(mutationId, () => {
+        const variants = [
+          canonicalUrl,
+          encodeURIComponent(canonicalUrl),
+          JSON.stringify(canonicalUrl),
+          Buffer.from(canonicalUrl).toString('base64'),
+          Buffer.from(canonicalUrl).toString('base64url'),
+        ];
+        const redacted = redactSensitiveText(variants.join('\n'), {
+          sensitiveValues: [canonicalUrl],
+        });
+        if (variants.some((variant) => redacted.includes(variant))) {
+          throw new Error(mutationId);
+        }
+        return Promise.resolve();
+      });
+    case 'DATABASE_AUTHORITY_DATABASE_URL_LEAK_IN_COMMAND_IDENTITY':
+      return captureRegressionInvariant(mutationId, async () => {
+        const commands = await buildSharedAbgCommandPlan(mutationRepositoryRoot);
+        if (JSON.stringify(commands).includes(canonicalUrl)) throw new Error(mutationId);
+      });
+    default:
+      throw new Error(`MUTATION_NOT_IMPLEMENTED:${mutationId}`);
+  }
 }
 
 async function ar12HistoryEvidenceMutation(

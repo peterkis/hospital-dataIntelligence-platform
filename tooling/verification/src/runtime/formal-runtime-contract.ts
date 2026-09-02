@@ -88,6 +88,8 @@ export class SpawnRuntimeCommandRunner implements RuntimeCommandRunner {
           inheritedEnvironment: process.env,
           commandEnvironment: command.environment,
           nodeOptionsForbiddenCode: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+          databaseUrlDeclarationForbiddenCode:
+            'FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
         }),
         shell: false,
         windowsHide: true,

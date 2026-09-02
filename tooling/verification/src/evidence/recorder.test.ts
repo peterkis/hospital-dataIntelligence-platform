@@ -148,6 +148,53 @@ describe('producer evidence recorder', () => {
     }
   });
 
+  it('redacts canonical database URLs and their encoded, escaped, base64, and shell forms', async () => {
+    const root = await createRoot();
+    const passwordName = 'HDI_POSTGRES_PASSWORD';
+    const previous = process.env[passwordName];
+    const previousDatabaseUrl = process.env['DATABASE_URL'];
+    const password = 'reserved@:/?#%[] +医院';
+    const url = 'postgresql://hdi_phase01:' + encodeURIComponent(password) +
+      '@127.0.0.1:55432/hdi_phase01';
+    process.env[passwordName] = password;
+    process.env['DATABASE_URL'] = url;
+    try {
+      const subjects = [
+        password,
+        encodeURIComponent(password),
+        url,
+        encodeURIComponent(url),
+        JSON.stringify(url),
+        Buffer.from(url, 'utf8').toString('base64'),
+        Buffer.from(url, 'utf8').toString('base64url'),
+        `'${url.replaceAll("'", `'"'"'`)}'`,
+        `'${url.replaceAll("'", "''")}'`,
+      ];
+      const redacted = redactSensitiveText(subjects.join('\n'), {
+        sensitiveValues: [url],
+      });
+      for (const subject of subjects) expect(redacted).not.toContain(subject);
+      await writeRedactedTextArtifact(root, 'raw/database-error.log', subjects.join('\n'), {
+        sensitiveValues: [url],
+      });
+      const persisted = await readFile(join(root, 'raw/database-error.log'), 'utf8');
+      expect(persisted).not.toContain(url);
+      expect(persisted).not.toContain(encodeURIComponent(url));
+      expect(persisted).not.toContain(Buffer.from(url).toString('base64'));
+      expect(persisted).toContain('[REDACTED]');
+      await writeRedactedJsonArtifact(root, 'raw/database-error.json', {
+        encodedConnection: Buffer.from(url).toString('base64url'),
+      });
+      const persistedJson = await readFile(join(root, 'raw/database-error.json'), 'utf8');
+      expect(persistedJson).not.toContain(Buffer.from(url).toString('base64url'));
+    } finally {
+      if (previous === undefined) delete process.env[passwordName];
+      else process.env[passwordName] = previous;
+      if (previousDatabaseUrl === undefined) delete process.env['DATABASE_URL'];
+      else process.env['DATABASE_URL'] = previousDatabaseUrl;
+    }
+  });
+
   it('allows two concurrent tasks to create the same directory layer', async () => {
     const root = await createRoot();
     await expect(Promise.all([

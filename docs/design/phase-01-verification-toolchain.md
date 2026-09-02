@@ -6,7 +6,7 @@
 
 容器运行时补充状态：ADR-0111已确认rootful Podman为唯一现行容器运行时；AR-11进一步把唯一机器可读运行权威收敛到`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`（`schemaVersion: 3`、`authorityId: phase-01.podman-runtime-authority.v1`）。受管容器只用host network和冻结回环端口，Docker/Compose不再进入执行路径。AR-11只建立代码、协议和合成测试就绪，不等于当前真实Anolis/Podman环境验收。
 
-更新日期：2026-08-30
+更新日期：2026-09-02
 
 ## 1. 目标与适用范围
 
@@ -299,6 +299,25 @@ Sequence 11在正确Anolis WSL中的dry preflight为59/59 `PASSED`；setup 03已
 
 Formal与shared所有子进程从父环境复制现行正式运行所需的PATH、HOME、npm环境、required secrets、`ABG_*`身份、精确Podman compatibility `DOCKER_HOST`及其他受控值，但在合并命令环境前删除继承的`NODE_OPTIONS`；命令定义试图重新声明该变量时分别以`FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN`或`SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN`失败关闭。Database authority在nested npm workspace边界再次删除`NODE_OPTIONS`，仍从仓库根使用当前`npm_execpath`执行精确`db:types:verify`和governance-api workspace，保留原exit code及stdout/stderr失败关闭，不让Kysely使用仓库loader，也不对`ERR_MODULE_NOT_FOUND`特判放行。命令argv与`workingDirectory`继续进入command digest；这是命令内容修复，不改变run plan或其他reader-visible evidence schema，因此现行contract tuple保持不变。四个新增命令边界源文件以`NODE_COMMAND_BOUNDARY`角色进入producer source manifest，使AR-07R-01候选的47个冻结源文件扩展为51个。
 
+### 8.2.7 Formal shared producer运行时数据库连接绑定
+
+Sequence 12在Anolis WSL中的dry preflight为59/59 `PASSED`，setup 03也继续证明Evidence并发目录、显式loader和Machine cleanup修复有效，cleanup为`PASSED`。该次失败的精确调用链为：Setup 02 bootstrap在自己的Shell子进程内导出`DATABASE_URL`，子进程环境不能回流到formal runner父进程；Setup 03启动新的shared runner，shared plan又在Live之前执行`database-authority`，而旧`startApplication()`只在Live阶段构造连接串。因此nested `db:types:verify`没有收到`DATABASE_URL`。这属于运行时连接环境绑定缺口，不是Schema、migration、Kysely配置、loader或数据库业务规则失败；sequence 12保持`FAILED_HISTORY`且不得修补或复用。
+
+唯一连接构造权威是`runtime/formal-runtime-database-connection.ts`。用户名和数据库固定为`hdi_phase01`，host与port只取已加载frozen runtime authority的`network.bindAddress`和`network.ports.postgresRuntime`，原始`HDI_POSTGRES_PASSWORD`只在builder内部使用`encodeURIComponent`编码一次。Builder拒绝空密码；target assertion拒绝外部host、integration端口55433、query、fragment、SSL参数、Unix socket fallback和任何非固定身份。安全descriptor只包含protocol、username、host、port、database及`passwordPresent`，不得返回密码、编码密码或完整URL。
+
+Shared plan只冻结binding名称，不冻结值；严格矩阵如下：
+
+| command | runtime bindings | `DATABASE_URL` |
+|---|---|---|
+| `database-authority` | `FORMAL_RUNTIME_DATABASE_URL` | 同一canonical URL |
+| `live` | `FORMAL_RUNTIME_DATABASE_URL`, `FORMAL_LIVE_RUNTIME` | 同一canonical URL，用于live直接数据库闭环 |
+| `browser` | `FORMAL_BROWSER_RUNTIME` | 不注入 |
+| runtime/repo-layout/module-boundaries/typecheck/build/contract-lint/integration | 无 | 不注入 |
+
+Formal和shared确定性子进程环境都按大小写不敏感规则删除继承的`DATABASE_URL`。`command.environment`直接声明该名称分别以`FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN`或`SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN`失败；shared只有经过矩阵验证的database binding可把canonical值注入，缺失、未注册、重复或未授权绑定均失败关闭。Integration继续使用独立Testcontainers PostgreSQL 55433，不获得runtime连接；browser和static命令也不得获得。`startApplication()`复用同一canonical URL，shared runner不再通过修改`process.env['DATABASE_URL']`建立调用顺序依赖；live和browser所需的非数据库运行时值也分别通过显式binding提供。
+
+Database authority在启动nested npm前强制验证`DATABASE_URL`存在且非空，缺失时抛出`DATABASE_AUTHORITY_DATABASE_URL_MISSING`；随后从仓库根以当前`npm_execpath`执行精确governance-api workspace的`db:types:verify`，继续删除`NODE_OPTIONS`并原样保留canonical连接环境。非零Kysely结果仍失败关闭。所有stdout/stderr在写入evidence前对完整PostgreSQL URL、原始和编码密码、URL编码、JSON转义、Base64/Base64url及Shell/PowerShell引用形式执行脱敏；command plan、command identity、environment reference和runtime event只保存非敏感名称、身份或摘要，不保存连接值。
+
 ### 8.3 不可覆盖与完整性
 
 证据编排器在运行结束后生成规范化`manifest.json`，其中按稳定路径排序列出除清单自身及`manifest.sha256`外每个产物的媒体类型、字节数和SHA-256；再将规范化清单字节的SHA-256写入`manifest.sha256`，该值就是证据包身份。清单和包身份完成后运行进入终态，任何文件不得覆盖、补写或删除；需要纠正、补跑或重新取证时必须创建新的运行身份，并通过显式关系指向被取代或补充的运行。
@@ -319,7 +338,7 @@ AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `
 4. `phase-01.abg-run.v5` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、runtime authority字节/语义摘要及cleanup后稳定性、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
 5. fixture 在 Manifest 前写入一致且 `sealPendingAtWrite: true` 的 final outcome。独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、完整 lifecycle、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
 
-`npm run test:verification:adversarial`保留AR-11结束时的全部140个互不依赖mutation、既有10个AR-12 execution workspace隔离mutation、8个required-history mutation和12个AR-07R-01 mutation，并新增8个AR-07R-03 loader/child-environment mutation，覆盖formal setup/gate相对`NODE_OPTIONS`泄漏、shared database/integration泄漏、workspace child cwd解析、缺少显式loader、frozen plan绝对loader路径和Kysely loader污染；总数不得少于178。既有范围继续覆盖evidence父目录并发创建、Machine分类、缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup越权、完整终态lifecycle、secret泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift、reviewer工作区状态及AR-11 runtime authority回归。其中`placeholder`、`UNKNOWN`、`N/A`与空字符串分别作为独立mutation，另以malformed JSON中的裸配置secret证明解析失败也不会绕过泄漏扫描；带明显副作用的evidence内脚本只作为不可信普通字节读取，reviewer不执行它。每项都声明稳定mutationId、检测层和期望错误码，并把实际结果写入被根`.gitignore`的`.runtime/test-results/verification-adversarial-summary.json`。通过条件是`mutationCount >= 178`、`detectedCount = mutationCount`、`survivedCount = 0`；不得删除原170项，也不得通过更新snapshot、吞掉异常或依赖测试执行顺序改变结论。
+`npm run test:verification:adversarial`保留AR-11结束时的全部140个互不依赖mutation、既有10个AR-12 execution workspace隔离mutation、8个required-history mutation、12个AR-07R-01 mutation和8个AR-07R-03 loader/child-environment mutation，并新增10个AR-07R-05 runtime database binding mutation。新增范围覆盖操作员`DATABASE_URL`继承、database-authority binding缺失/错误target、runtime URL误注入integration/static、nested npm丢失、双重编码、日志与command identity泄漏及错误假设bootstrap子进程export会回流父进程；总数不得少于188。既有范围继续覆盖evidence父目录并发创建、Machine分类、缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup越权、完整终态lifecycle、secret泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift、reviewer工作区状态及AR-11 runtime authority回归。其中`placeholder`、`UNKNOWN`、`N/A`与空字符串分别作为独立mutation，另以malformed JSON中的裸配置secret证明解析失败也不会绕过泄漏扫描；带明显副作用的evidence内脚本只作为不可信普通字节读取，reviewer不执行它。每项都声明稳定mutationId、检测层和期望错误码，并把实际结果写入被根`.gitignore`的`.runtime/test-results/verification-adversarial-summary.json`。通过条件是`mutationCount >= 188`、`detectedCount = mutationCount`、`survivedCount = 0`；不得删除原178项，也不得通过更新snapshot、吞掉异常或依赖测试执行顺序改变结论。
 
 关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
 

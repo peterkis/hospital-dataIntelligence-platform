@@ -30,8 +30,8 @@ afterEach(async () => {
 });
 
 describe('verification source manifest public seam', () => {
-  it('registers the AR-12 workspace, history contract, and orchestrator as ordered authority sources', () => {
-    expect(VERIFICATION_SOURCE_FILES).toHaveLength(51);
+  it('registers AR-12 and runtime database connection boundaries as ordered authority sources', () => {
+    expect(VERIFICATION_SOURCE_FILES).toHaveLength(52);
     expect(VERIFICATION_SOURCE_FILES).toEqual(expect.arrayContaining([
       {
         path: 'tooling/verification/src/rebaseline/ar-12-execution-workspace.ts',
@@ -52,6 +52,10 @@ describe('verification source manifest public seam', () => {
       {
         path: 'tooling/verification/src/runtime/node-command-boundary.ts',
         role: 'NODE_COMMAND_BOUNDARY',
+      },
+      {
+        path: 'tooling/verification/src/runtime/formal-runtime-database-connection.ts',
+        role: 'RUNTIME_DATABASE_CONNECTION_BOUNDARY',
       },
       {
         path: 'tooling/verification/src/shared-abg-command-plan.ts',

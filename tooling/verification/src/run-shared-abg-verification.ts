@@ -36,9 +36,14 @@ import {
 } from './evidence/protocol.js';
 import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
 import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
+import {
+  assertFormalRuntimeDatabaseTarget,
+  buildFormalRuntimeDatabaseUrl,
+} from './runtime/formal-runtime-database-connection.js';
 import { createDeterministicChildEnvironment } from './runtime/node-command-boundary.js';
 import {
   executeSharedCommand,
+  type SharedRuntimeEnvironmentBindings,
   type SharedCommandResult,
 } from './shared-command-executor.js';
 import {
@@ -50,6 +55,7 @@ interface RunningApplication {
   readonly stdout: Buffer[];
   readonly stderr: Buffer[];
   readonly startupMilliseconds: number;
+  readonly databaseUrl: string;
 }
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -62,6 +68,36 @@ const runSequence = parsePositiveInteger(process.env['ABG_RUN_SEQUENCE'] ?? '1')
 const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
 const runtimeEventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
 const commands = await buildSharedAbgCommandPlan(repositoryRoot);
+const canonicalDatabaseUrl = buildFormalRuntimeDatabaseUrl(
+  runtimeAuthority,
+  process.env['HDI_POSTGRES_PASSWORD'] ?? '',
+);
+assertFormalRuntimeDatabaseTarget(canonicalDatabaseUrl, runtimeAuthority);
+const realmImportPath = join(
+  repositoryRoot,
+  '.runtime/abg-runtime',
+  runId,
+  'keycloak-import/hdi-phase01-realm.json',
+);
+const notificationTargets = buildNotificationTargets();
+const runtimeEnvironmentBindings: SharedRuntimeEnvironmentBindings = Object.freeze({
+  FORMAL_RUNTIME_DATABASE_URL: Object.freeze({
+    DATABASE_URL: canonicalDatabaseUrl,
+  }),
+  FORMAL_LIVE_RUNTIME: Object.freeze({
+    KEYCLOAK_ISSUER_URL:
+      `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`,
+    KEYCLOAK_REALM_IMPORT_PATH: realmImportPath,
+    GOVERNANCE_API_BASE_URL:
+      `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`,
+    SIM_CONSUMER_NOTIFICATION_TARGETS_JSON: notificationTargets,
+  }),
+  FORMAL_BROWSER_RUNTIME: Object.freeze({
+    PHASE01_E2E_BASE_URL:
+      `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`,
+    PHASE01_E2E_PASSWORD: requireEnvironment('HDI_OWNER_PASSWORD'),
+  }),
+});
 
 await createEvidenceOutputDirectory(sharedDirectory);
 const stagingDirectory = await mkdtemp(join(tmpdir(), 'hdi-phase01-shared-'));
@@ -73,7 +109,7 @@ try {
   for (const command of commands) {
     if (command.id === 'live') {
       try {
-        application = await startApplication();
+        application = await startApplication(canonicalDatabaseUrl, notificationTargets);
         commandResults.push({
           id: 'application',
           producerIds: ['live'],
@@ -100,6 +136,7 @@ try {
       sharedDirectory,
       runId,
       inheritedEnvironment: process.env,
+      runtimeEnvironmentBindings,
       recordRuntimeProcess,
     });
     commandResults.push(result);
@@ -139,7 +176,7 @@ await writeRedactedJsonArtifact(sharedDirectory, 'raw/command-results.json', {
   runId,
   runSequence,
   commands: commandResults,
-});
+}, { sensitiveValues: [canonicalDatabaseUrl] });
 
 const frozenInputRefs = parseFrozenInputRefs(parseJsonEnvironment('ABG_FROZEN_INPUTS_JSON'));
 const producerStatuses = Object.fromEntries(
@@ -485,9 +522,16 @@ async function copyRedactedDirectory(sourceDirectory: string, targetDirectory: s
       if (!entry.isFile()) continue;
       const text = await readFile(source, 'utf8');
       if (entry.name.endsWith('.json')) {
-        await writeRedactedJsonArtifact(sharedDirectory, target, JSON.parse(text) as unknown);
+        await writeRedactedJsonArtifact(
+          sharedDirectory,
+          target,
+          JSON.parse(text) as unknown,
+          { sensitiveValues: [canonicalDatabaseUrl] },
+        );
       } else {
-        await writeRedactedTextArtifact(sharedDirectory, target, text);
+        await writeRedactedTextArtifact(sharedDirectory, target, text, {
+          sensitiveValues: [canonicalDatabaseUrl],
+        });
       }
     }
   } catch (error) {
@@ -501,6 +545,7 @@ async function copyRedactedJsonIfPresent(source: string, relativePath: string): 
       sharedDirectory,
       relativePath,
       JSON.parse(await readFile(source, 'utf8')) as unknown,
+      { sensitiveValues: [canonicalDatabaseUrl] },
     );
   } catch (error) {
     if (!isMissing(error)) throw error;
@@ -544,35 +589,18 @@ async function findFile(directory: string, targetName: string): Promise<string |
   return undefined;
 }
 
-async function startApplication(): Promise<RunningApplication> {
+async function startApplication(
+  databaseUrl: string,
+  notificationTargets: string,
+): Promise<RunningApplication> {
   const started = performance.now();
-  const notificationAuthorization = requireEnvironment('HDI_SIM_CONSUMER_NOTIFICATION_AUTHORIZATION');
-  const postgresPassword = encodeURIComponent(requireEnvironment('HDI_POSTGRES_PASSWORD'));
-  const realmImportPath = join(
-    repositoryRoot,
-    '.runtime/abg-runtime',
-    runId,
-    'keycloak-import/hdi-phase01-realm.json',
-  );
-  const notificationTargets = JSON.stringify([
-    {
-      servicePrincipalId: '40000000-0000-7000-8000-000000000002',
-      url: `http://${runtimeBindAddress}:${runtimePorts.consumerA}/v1/release-notifications`,
-      authorizationHeader: notificationAuthorization,
-    },
-    {
-      servicePrincipalId: '40000000-0000-7000-8000-000000000003',
-      url: `http://${runtimeBindAddress}:${runtimePorts.consumerB}/v1/release-notifications`,
-      authorizationHeader: notificationAuthorization,
-    },
-  ]);
+  assertFormalRuntimeDatabaseTarget(databaseUrl, runtimeAuthority);
   const child = spawn(process.execPath, ['apps/governance-api/dist/main.js'], {
     cwd: repositoryRoot,
     env: createDeterministicChildEnvironment({
       inheritedEnvironment: process.env,
       injectedEnvironment: {
-      DATABASE_URL: 'postgresql://hdi_phase01:' + postgresPassword + '@' +
-        runtimeBindAddress + ':' + runtimePorts.postgresRuntime + '/hdi_phase01',
+      DATABASE_URL: databaseUrl,
       KEYCLOAK_ISSUER_URL: `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`,
       KEYCLOAK_BROWSER_CLIENT_ID: 'hdi-governance-browser',
       KEYCLOAK_BROWSER_CLIENT_SECRET: requireEnvironment('HDI_BROWSER_CLIENT_SECRET'),
@@ -585,6 +613,11 @@ async function startApplication(): Promise<RunningApplication> {
       PORT: String(runtimePorts.governanceApi),
       },
       nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      databaseUrlDeclarationForbiddenCode:
+        'SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
+      databaseUrlInjectionAuthorized: true,
+      databaseUrlInjectionUnauthorizedCode:
+        'SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED',
     }),
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
@@ -598,6 +631,7 @@ async function startApplication(): Promise<RunningApplication> {
     stdout,
     stderr,
     startupMilliseconds: 0,
+    databaseUrl,
   };
   try {
     await recordRuntimeProcess('STARTED', child, 'governance-api');
@@ -606,17 +640,6 @@ async function startApplication(): Promise<RunningApplication> {
     await stopApplication(running).catch(() => undefined);
     throw error;
   }
-  process.env['DATABASE_URL'] = 'postgresql://hdi_phase01:' + postgresPassword + '@' +
-    runtimeBindAddress + ':' + runtimePorts.postgresRuntime + '/hdi_phase01';
-  process.env['KEYCLOAK_ISSUER_URL'] =
-    `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`;
-  process.env['KEYCLOAK_REALM_IMPORT_PATH'] = realmImportPath;
-  process.env['GOVERNANCE_API_BASE_URL'] =
-    `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`;
-  process.env['PHASE01_E2E_BASE_URL'] =
-    `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`;
-  process.env['PHASE01_E2E_PASSWORD'] = requireEnvironment('HDI_OWNER_PASSWORD');
-  process.env['SIM_CONSUMER_NOTIFICATION_TARGETS_JSON'] = notificationTargets;
   return {
     ...running,
     startupMilliseconds: Math.round(performance.now() - started),
@@ -631,12 +654,14 @@ async function stopApplication(application: RunningApplication | undefined): Pro
       writeRedactedTextArtifact(
         sharedDirectory,
         'raw/application.stdout.log',
-        Buffer.concat(application.stdout).toString('utf8'),
+      Buffer.concat(application.stdout).toString('utf8'),
+      { sensitiveValues: [application.databaseUrl] },
       ),
       writeRedactedTextArtifact(
         sharedDirectory,
         'raw/application.stderr.log',
-        Buffer.concat(application.stderr).toString('utf8'),
+      Buffer.concat(application.stderr).toString('utf8'),
+      { sensitiveValues: [application.databaseUrl] },
       ),
     ]);
   } catch (error) {
@@ -655,6 +680,24 @@ async function stopApplication(application: RunningApplication | undefined): Pro
     failures.push(error);
   }
   if (failures.length > 0) throw new AggregateError(failures, 'GOVERNANCE_APPLICATION_STOP_FAILED');
+}
+
+function buildNotificationTargets(): string {
+  const notificationAuthorization = requireEnvironment(
+    'HDI_SIM_CONSUMER_NOTIFICATION_AUTHORIZATION',
+  );
+  return JSON.stringify([
+    {
+      servicePrincipalId: '40000000-0000-7000-8000-000000000002',
+      url: `http://${runtimeBindAddress}:${runtimePorts.consumerA}/v1/release-notifications`,
+      authorizationHeader: notificationAuthorization,
+    },
+    {
+      servicePrincipalId: '40000000-0000-7000-8000-000000000003',
+      url: `http://${runtimeBindAddress}:${runtimePorts.consumerB}/v1/release-notifications`,
+      authorizationHeader: notificationAuthorization,
+    },
+  ]);
 }
 
 async function recordRuntimeProcess(

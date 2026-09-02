@@ -13,6 +13,7 @@ import {
   RUN_PLAN_SCHEMA_VERSION,
 } from './verification-contract-versions.js';
 import {
+  assertCommandEnvironmentDoesNotDeclareDatabaseUrl,
   assertCommandEnvironmentDoesNotDeclareNodeOptions,
   assertRepositoryTypeScriptCommand,
   commandContainsRepositoryLoader,
@@ -135,6 +136,10 @@ export async function assertAuthoritativeCommandPlanSafety(
     assertCommandEnvironmentDoesNotDeclareNodeOptions(
       command.environment,
       'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+    );
+    assertCommandEnvironmentDoesNotDeclareDatabaseUrl(
+      command.environment,
+      'FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
     );
     const directTypeScriptEntry = command.executable === 'node' &&
       command.args.some((argument) => argument.endsWith('.ts'));

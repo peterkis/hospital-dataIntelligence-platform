@@ -32,6 +32,7 @@ import { validateProducerEvidence } from './validate-producer-evidence.js';
 
 const REDACTED = '[REDACTED]';
 const SENSITIVE_VALUE_PATTERNS = [
+  /\bpostgres(?:ql)?:\/\/[^\s"'`]+/giu,
   /(\b(?:access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|password)\s*[=:]\s*)[^\s,;]+/giu,
   /\bBearer\s+[A-Za-z0-9._~+/-]+/giu,
   /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/gu,
@@ -179,11 +180,12 @@ export async function writeRedactedTextArtifact(
   rootDirectory: string,
   relativePath: string,
   text: string,
+  options: SensitiveTextRedactionOptions = {},
 ): Promise<{ readonly relativePath: string; readonly sha256: string }> {
   return writeBytesExclusive(
     rootDirectory,
     relativePath,
-    Buffer.from(redactSensitiveText(text), 'utf8'),
+    Buffer.from(redactSensitiveText(text, options), 'utf8'),
   );
 }
 
@@ -199,8 +201,9 @@ export async function writeRedactedJsonArtifact(
   rootDirectory: string,
   relativePath: string,
   value: unknown,
+  options: SensitiveTextRedactionOptions = {},
 ): Promise<{ readonly relativePath: string; readonly sha256: string }> {
-  const redacted = redactSensitiveValue(value);
+  const redacted = redactSensitiveValue(value, options);
   assertJsonSafe(redacted, 'PRODUCER_EVIDENCE_REDACTED_JSON_INVALID');
   return writeBytesExclusive(
     rootDirectory,
@@ -209,28 +212,64 @@ export async function writeRedactedJsonArtifact(
   );
 }
 
-export function redactSensitiveText(value: string): string {
-  let redacted = SENSITIVE_VALUE_PATTERNS.reduce(
-    (result, pattern) => result.replace(pattern, REDACTED),
-    value,
-  );
+export interface SensitiveTextRedactionOptions {
+  readonly sensitiveValues?: readonly string[];
+}
+
+export function redactSensitiveText(
+  value: string,
+  options: SensitiveTextRedactionOptions = {},
+): string {
   // 正式运行只记录变量是否存在。原值即使未带 password/secret 前缀，也不得进入日志。
   const configuredSecrets = FORMAL_REQUIRED_SECRET_NAMES
     .map((name) => process.env[name])
-    .filter((secret): secret is string => secret !== undefined && secret.length > 0)
-    .sort((left, right) => right.length - left.length);
-  for (const secret of configuredSecrets) redacted = redacted.replaceAll(secret, REDACTED);
+    .filter((secret): secret is string => secret !== undefined && secret.length > 0);
+  const configuredDatabaseUrls = Object.entries(process.env)
+    .filter(([name, item]) => name.toUpperCase() === 'DATABASE_URL' && Boolean(item))
+    .map(([, item]) => item as string);
+  const sensitiveVariants = [...new Set(
+    [...configuredSecrets, ...configuredDatabaseUrls, ...(options.sensitiveValues ?? [])]
+      .flatMap(sensitiveValueVariants)
+      .filter((candidate) => candidate.length > 0),
+  )].sort((left, right) => right.length - left.length);
+  let redacted = value;
+  for (const sensitive of sensitiveVariants) {
+    redacted = redacted.replaceAll(sensitive, REDACTED);
+  }
+  redacted = SENSITIVE_VALUE_PATTERNS.reduce(
+    (result, pattern) => result.replace(pattern, REDACTED),
+    redacted,
+  );
   return redacted;
 }
 
-export function redactSensitiveValue(value: unknown): JsonValue {
+function sensitiveValueVariants(value: string): readonly string[] {
+  const json = JSON.stringify(value);
+  const base64 = Buffer.from(value, 'utf8').toString('base64');
+  return [
+    value,
+    encodeURIComponent(value),
+    json,
+    json.slice(1, -1),
+    base64,
+    Buffer.from(value, 'utf8').toString('base64url'),
+    `'${value.replaceAll("'", `'"'"'`)}'`,
+    `'${value.replaceAll("'", "''")}'`,
+    `"${value.replaceAll('"', '\\"')}"`,
+  ];
+}
+
+export function redactSensitiveValue(
+  value: unknown,
+  options: SensitiveTextRedactionOptions = {},
+): JsonValue {
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
-  if (typeof value === 'string') return redactSensitiveText(value);
-  if (Array.isArray(value)) return value.map((item) => redactSensitiveValue(item));
+  if (typeof value === 'string') return redactSensitiveText(value, options);
+  if (Array.isArray(value)) return value.map((item) => redactSensitiveValue(item, options));
   if (typeof value === 'object' && value !== null) {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [
       key,
-      isSensitiveEnvironmentName(key) ? REDACTED : redactSensitiveValue(item),
+      isSensitiveEnvironmentName(key) ? REDACTED : redactSensitiveValue(item, options),
     ]));
   }
   return String(value);

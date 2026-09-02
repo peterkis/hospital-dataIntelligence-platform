@@ -81,6 +81,15 @@ export function assertCommandEnvironmentDoesNotDeclareNodeOptions(
   }
 }
 
+export function assertCommandEnvironmentDoesNotDeclareDatabaseUrl(
+  environment: Readonly<Record<string, string>> | undefined,
+  errorCode: string,
+): void {
+  if (environment !== undefined && hasEnvironmentKey(environment, 'DATABASE_URL')) {
+    throw new Error(errorCode);
+  }
+}
+
 export function createDeterministicChildEnvironment(input: {
   readonly inheritedEnvironment: Readonly<NodeJS.ProcessEnv>;
   readonly commandEnvironment?: Readonly<Record<string, string>> | undefined;
@@ -88,6 +97,11 @@ export function createDeterministicChildEnvironment(input: {
   readonly nodeOptionsForbiddenCode:
     | 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN'
     | 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN';
+  readonly databaseUrlDeclarationForbiddenCode?:
+    | 'FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN'
+    | 'SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN';
+  readonly databaseUrlInjectionAuthorized?: boolean;
+  readonly databaseUrlInjectionUnauthorizedCode?: string;
 }): NodeJS.ProcessEnv {
   assertCommandEnvironmentDoesNotDeclareNodeOptions(
     input.commandEnvironment,
@@ -97,13 +111,41 @@ export function createDeterministicChildEnvironment(input: {
     input.injectedEnvironment,
     input.nodeOptionsForbiddenCode,
   );
+  const databaseUrlDeclarationForbiddenCode =
+    input.databaseUrlDeclarationForbiddenCode ??
+    (input.nodeOptionsForbiddenCode === 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN'
+      ? 'FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN'
+      : 'SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN');
+  assertCommandEnvironmentDoesNotDeclareDatabaseUrl(
+    input.commandEnvironment,
+    databaseUrlDeclarationForbiddenCode,
+  );
+  const injectedDatabaseUrl = findEnvironmentEntry(input.injectedEnvironment, 'DATABASE_URL');
+  if (injectedDatabaseUrl !== undefined && input.databaseUrlInjectionAuthorized !== true) {
+    throw new Error(
+      input.databaseUrlInjectionUnauthorizedCode ?? databaseUrlDeclarationForbiddenCode,
+    );
+  }
   const environment: NodeJS.ProcessEnv = {};
   for (const [name, value] of Object.entries(input.inheritedEnvironment)) {
-    if (name.toUpperCase() !== 'NODE_OPTIONS' && value !== undefined) {
+    if (
+      name.toUpperCase() !== 'NODE_OPTIONS' &&
+      name.toUpperCase() !== 'DATABASE_URL' &&
+      value !== undefined
+    ) {
       environment[name] = value;
     }
   }
-  Object.assign(environment, input.commandEnvironment, input.injectedEnvironment);
+  Object.assign(environment, input.commandEnvironment);
+  if (input.injectedEnvironment !== undefined) {
+    for (const [name, value] of Object.entries(input.injectedEnvironment)) {
+      if (name.toUpperCase() === 'DATABASE_URL') {
+        environment['DATABASE_URL'] = value;
+      } else {
+        environment[name] = value;
+      }
+    }
+  }
   return environment;
 }
 
@@ -200,5 +242,24 @@ function samePath(left: string, right: string): boolean {
 }
 
 function hasNodeOptionsKey(environment: Readonly<Record<string, string>>): boolean {
-  return Object.keys(environment).some((name) => name.toUpperCase() === 'NODE_OPTIONS');
+  return hasEnvironmentKey(environment, 'NODE_OPTIONS');
+}
+
+function hasEnvironmentKey(
+  environment: Readonly<Record<string, string>>,
+  expectedName: string,
+): boolean {
+  return Object.keys(environment).some((name) => name.toUpperCase() === expectedName);
+}
+
+function findEnvironmentEntry(
+  environment: Readonly<Record<string, string>> | undefined,
+  expectedName: string,
+): readonly [string, string] | undefined {
+  if (environment === undefined) return undefined;
+  const matches = Object.entries(environment).filter(
+    ([name]) => name.toUpperCase() === expectedName,
+  );
+  if (matches.length > 1) throw new Error('CHILD_ENVIRONMENT_NAME_DUPLICATE:' + expectedName);
+  return matches[0];
 }

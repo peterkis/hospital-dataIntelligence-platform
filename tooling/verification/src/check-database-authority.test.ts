@@ -7,27 +7,34 @@ import {
   DATABASE_AUTHORITY_VERIFY_SCRIPT,
   DATABASE_AUTHORITY_WORKSPACE,
   databaseAuthorityChildEnvironment,
+  requireDatabaseAuthorityDatabaseUrl,
   runDatabaseTypeVerification,
   type DatabaseAuthoritySpawn,
 } from './check-database-authority.js';
 import { executeFormalCommand } from './formal-command-executor.js';
+import { buildFormalRuntimeDatabaseUrl } from './runtime/formal-runtime-database-connection.js';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
+const canonicalDatabaseUrl =
+  'postgresql://hdi_phase01:synthetic-password@127.0.0.1:55432/hdi_phase01';
 
 describe('database authority nested workspace command boundary', () => {
-  it('removes inherited NODE_OPTIONS and preserves npm, PATH, and required secrets', () => {
+  it('removes inherited NODE_OPTIONS and preserves the canonical database URL, npm, PATH, and required secrets', () => {
     const environment = databaseAuthorityChildEnvironment({
       PATH: 'controlled-path',
       npm_execpath: 'controlled-npm-cli',
       NODE_OPTIONS: '--loader=./tooling/verification/node-ts-loader.mjs',
       HDI_POSTGRES_PASSWORD: 'retained-secret',
       ABG_RUN_ID: 'formal-run-id',
+      DATABASE_URL: canonicalDatabaseUrl,
     });
     expect(environment).toMatchObject({
       PATH: 'controlled-path',
       npm_execpath: 'controlled-npm-cli',
       HDI_POSTGRES_PASSWORD: 'retained-secret',
       ABG_RUN_ID: 'formal-run-id',
+      DATABASE_URL: canonicalDatabaseUrl,
     });
     expect(environment['NODE_OPTIONS']).toBeUndefined();
   });
@@ -44,6 +51,7 @@ describe('database authority nested workspace command boundary', () => {
       inheritedEnvironment: {
         NODE_OPTIONS: '--loader=relative-loader.mjs',
         PATH: 'controlled-path',
+        DATABASE_URL: canonicalDatabaseUrl,
       },
       spawn,
     });
@@ -59,21 +67,90 @@ describe('database authority nested workspace command boundary', () => {
     ]);
     expect(options).toMatchObject({ cwd: 'repository-root', encoding: 'utf8' });
     expect(options.env['NODE_OPTIONS']).toBeUndefined();
+    expect(options.env['DATABASE_URL']).toBe(canonicalDatabaseUrl);
+  });
+
+  it('fails with a stable code before nested npm when DATABASE_URL is missing or empty', () => {
+    expect(() => requireDatabaseAuthorityDatabaseUrl({}))
+      .toThrow('DATABASE_AUTHORITY_DATABASE_URL_MISSING');
+    expect(() => runDatabaseTypeVerification({
+      repositoryRoot: 'repository-root',
+      npmCli: 'locked-npm-cli.js',
+      inheritedEnvironment: { DATABASE_URL: '' },
+      spawn: () => { throw new Error('nested npm must not start'); },
+    })).toThrow('DATABASE_AUTHORITY_DATABASE_URL_MISSING');
   });
 
   it('passes only on exit zero and fails closed with original output on nonzero exit', () => {
     expect(() => runDatabaseTypeVerification({
       repositoryRoot: 'repository-root',
       npmCli: 'locked-npm-cli.js',
-      inheritedEnvironment: {},
+      inheritedEnvironment: { DATABASE_URL: canonicalDatabaseUrl },
       spawn: () => ({ status: 0, stdout: 'verified', stderr: '' }),
     })).not.toThrow();
     expect(() => runDatabaseTypeVerification({
       repositoryRoot: 'repository-root',
       npmCli: 'locked-npm-cli.js',
-      inheritedEnvironment: {},
+      inheritedEnvironment: { DATABASE_URL: canonicalDatabaseUrl },
       spawn: () => ({ status: 7, stdout: 'verify-stdout', stderr: 'verify-stderr' }),
     })).toThrow(/verify-stdout[\s\S]*verify-stderr/u);
+  });
+
+  it('redacts a failed nested npm connection string without changing the failure', () => {
+    expect(() => runDatabaseTypeVerification({
+      repositoryRoot: 'repository-root',
+      npmCli: 'locked-npm-cli.js',
+      inheritedEnvironment: { DATABASE_URL: canonicalDatabaseUrl },
+      spawn: () => ({
+        status: 7,
+        stdout: '',
+        stderr: 'connection failed: ' + canonicalDatabaseUrl,
+      }),
+    })).toThrow(/\[REDACTED\]/u);
+    try {
+      runDatabaseTypeVerification({
+        repositoryRoot: 'repository-root',
+        npmCli: 'locked-npm-cli.js',
+        inheritedEnvironment: { DATABASE_URL: canonicalDatabaseUrl },
+        spawn: () => ({ status: 7, stdout: '', stderr: canonicalDatabaseUrl }),
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain(canonicalDatabaseUrl);
+    }
+  });
+
+  it('regresses the sequence 12 missing-DATABASE_URL stderr with the canonical binding', async () => {
+    const sequence12StderrSubject = await readFile(
+      resolve(
+        repositoryRoot,
+        'tooling/verification/src/testing/fixtures/' +
+          'sequence-12-database-authority-stderr.subject.txt',
+      ),
+      'utf8',
+    );
+    expect(sequence12StderrSubject).toContain(
+      "Environment variable 'DATABASE_URL' could not be found.",
+    );
+    expect(sequence12StderrSubject).not.toContain('ERR_MODULE_NOT_FOUND');
+    expect(sequence12StderrSubject).not.toContain('EEXIST');
+
+    const authority = loadPodmanRuntimeAuthority(repositoryRoot).authority;
+    const canonical = buildFormalRuntimeDatabaseUrl(authority, 'sequence12@regression%');
+    let observedEnvironment: NodeJS.ProcessEnv | undefined;
+    expect(() => runDatabaseTypeVerification({
+      repositoryRoot,
+      npmCli: 'locked-npm-cli.js',
+      inheritedEnvironment: {
+        DATABASE_URL: canonical,
+        NODE_OPTIONS: '--loader=relative-loader.mjs',
+      },
+      spawn: (_executable, _args, options) => {
+        observedEnvironment = options.env;
+        return { status: 0, stdout: 'verified', stderr: '' };
+      },
+    })).not.toThrow();
+    expect(observedEnvironment?.['DATABASE_URL']).toBe(canonical);
+    expect(observedEnvironment?.['NODE_OPTIONS']).toBeUndefined();
   });
 
   it('executes the formal setup 03, shared command, and nested npm workspace production chain', async () => {
@@ -86,16 +163,31 @@ describe('database authority nested workspace command boundary', () => {
     );
     const sharedRunnerPath = join(fixtureRoot, 'synthetic-shared-runner.ts');
     const workspaceDirectory = join(fixtureRoot, 'apps/governance-api');
+    const runtimeAuthorityPath = join(
+      fixtureRoot,
+      'phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json',
+    );
     const requiredSecret = 'synthetic-retained-secret-value';
+    const runtimeDatabaseUrl =
+      'postgresql://hdi_phase01:synthetic-retained-secret-value@127.0.0.1:55432/hdi_phase01';
     const originalNodeOptions = process.env['NODE_OPTIONS'];
     const originalRequiredSecret = process.env['HDI_POSTGRES_PASSWORD'];
+    const originalDatabaseUrl = process.env['DATABASE_URL'];
     try {
       await Promise.all([
         mkdir(dirname(loaderPath), { recursive: true }),
         mkdir(dirname(databaseSubjectPath), { recursive: true }),
         mkdir(workspaceDirectory, { recursive: true }),
+        mkdir(dirname(runtimeAuthorityPath), { recursive: true }),
       ]);
       await copyFile(resolve(repositoryRoot, 'tooling/verification/node-ts-loader.mjs'), loaderPath);
+      await copyFile(
+        resolve(
+          repositoryRoot,
+          'phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json',
+        ),
+        runtimeAuthorityPath,
+      );
       const databaseAuthorityModule = pathToFileURL(
         resolve(repositoryRoot, 'tooling/verification/src/check-database-authority.ts'),
       ).href;
@@ -128,11 +220,13 @@ describe('database authority nested workspace command boundary', () => {
           "  runId: process.env.ABG_RUN_ID ?? null,",
           `  secretPresent: process.env.HDI_POSTGRES_PASSWORD === ${JSON.stringify(requiredSecret)},`,
           "  dockerHost: process.env.DOCKER_HOST ?? null,",
+          `  databaseUrlPresent: process.env.DATABASE_URL === ${JSON.stringify(runtimeDatabaseUrl)},`,
           "};",
           "writeFileSync(process.env.SYNTHETIC_OBSERVATION_PATH, JSON.stringify(observation));",
           "process.stdout.write(JSON.stringify(observation) + '\\n');",
           "if (!observation.cwdIsWorkspace || observation.nodeOptions !== null ||",
-          "    !observation.secretPresent || !observation.runId || !observation.dockerHost) {",
+          "    !observation.secretPresent || !observation.runId || !observation.dockerHost ||",
+          "    !observation.databaseUrlPresent) {",
           "  process.exitCode = 19;",
           "}",
         ].join('\n')),
@@ -162,12 +256,16 @@ describe('database authority nested workspace command boundary', () => {
           "    executable: process.execPath,",
           "    args: [process.env.SYNTHETIC_NPM_CLI, 'run', 'check:database-authority'],",
           "    workingDirectory: '.',",
+          "    runtimeEnvironmentBindings: ['FORMAL_RUNTIME_DATABASE_URL'],",
           "  },",
           "  repositoryRoot: process.cwd(),",
           "  stagingDirectory,",
           "  sharedDirectory,",
           "  runId: process.env.ABG_RUN_ID ?? 'missing-run-id',",
           "  inheritedEnvironment: process.env,",
+          "  runtimeEnvironmentBindings: {",
+          "    FORMAL_RUNTIME_DATABASE_URL: { DATABASE_URL: process.env.SYNTHETIC_DATABASE_URL },",
+          "  },",
           "});",
           "process.stdout.write(JSON.stringify(result) + '\\n');",
           "if (result.exitCode !== 0) process.exitCode = result.exitCode ?? 20;",
@@ -176,6 +274,8 @@ describe('database authority nested workspace command boundary', () => {
 
       process.env['NODE_OPTIONS'] = '--loader=./tooling/verification/node-ts-loader.mjs';
       process.env['HDI_POSTGRES_PASSWORD'] = requiredSecret;
+      process.env['DATABASE_URL'] =
+        'postgresql://wrong:wrong@external.invalid:9999/wrong';
       const execution = await executeFormalCommand({
         repositoryRoot: fixtureRoot,
         command: {
@@ -198,19 +298,22 @@ describe('database authority nested workspace command boundary', () => {
             'node_modules/npm/bin/npm-cli.js',
           ),
           SYNTHETIC_OBSERVATION_PATH: join(fixtureRoot, 'workspace-observation.json'),
+          SYNTHETIC_DATABASE_URL: runtimeDatabaseUrl,
         },
       });
 
-      const [formalStdout, formalStderr] = await Promise.all([
+      const [formalStdout, formalStderr, databaseStdout, databaseStderr] = await Promise.all([
         readFile(join(formalEvidence, 'stdout.log'), 'utf8'),
         readFile(join(formalEvidence, 'stderr.log'), 'utf8'),
-      ]);
-      expect(execution.exitCode, formalStdout + formalStderr).toBe(0);
-      const [databaseStdout, databaseStderr, workspaceObservationBytes] = await Promise.all([
         readFile(join(fixtureRoot, 'shared-evidence/raw/commands/database-authority.stdout.log'), 'utf8'),
         readFile(join(fixtureRoot, 'shared-evidence/raw/commands/database-authority.stderr.log'), 'utf8'),
-        readFile(join(fixtureRoot, 'workspace-observation.json'), 'utf8'),
       ]);
+      expect(execution.exitCode, formalStdout + formalStderr + databaseStdout + databaseStderr)
+        .toBe(0);
+      const workspaceObservationBytes = await readFile(
+        join(fixtureRoot, 'workspace-observation.json'),
+        'utf8',
+      );
       const workspaceObservation = JSON.parse(workspaceObservationBytes) as Readonly<
         Record<string, unknown>
       >;
@@ -224,13 +327,20 @@ describe('database authority nested workspace command boundary', () => {
         runId: 'synthetic-sequence-11-regression',
         secretPresent: true,
         dockerHost: 'unix:///controlled/podman.sock',
+        databaseUrlPresent: true,
       });
       expect(databaseStderr).not.toContain('ERR_MODULE_NOT_FOUND');
+      expect(formalStdout).not.toContain(runtimeDatabaseUrl);
+      expect(formalStderr).not.toContain(runtimeDatabaseUrl);
+      expect(databaseStdout).not.toContain(runtimeDatabaseUrl);
+      expect(databaseStderr).not.toContain(runtimeDatabaseUrl);
     } finally {
       if (originalNodeOptions === undefined) delete process.env['NODE_OPTIONS'];
       else process.env['NODE_OPTIONS'] = originalNodeOptions;
       if (originalRequiredSecret === undefined) delete process.env['HDI_POSTGRES_PASSWORD'];
       else process.env['HDI_POSTGRES_PASSWORD'] = originalRequiredSecret;
+      if (originalDatabaseUrl === undefined) delete process.env['DATABASE_URL'];
+      else process.env['DATABASE_URL'] = originalDatabaseUrl;
       await rm(fixtureRoot, { recursive: true, force: true });
     }
   }, 30_000);

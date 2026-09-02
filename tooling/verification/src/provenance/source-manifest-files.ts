@@ -17,6 +17,7 @@ export type VerificationSourceFileRole =
   | 'SOURCE_MANIFEST_DEFINITION'
   | 'REVIEWER_COMPATIBILITY'
   | 'RUNTIME_CONTRACT'
+  | 'RUNTIME_DATABASE_CONNECTION_BOUNDARY'
   | 'RUNTIME_CONTROLLER'
   | 'TERMINAL_CONTRACT'
   | 'RUNTIME_PREFLIGHT'
@@ -78,6 +79,7 @@ const SOURCE_FILES = [
   ['tooling/verification/src/runtime/formal-preflight.ts', 'RUNTIME_PREFLIGHT'],
   ['tooling/verification/src/runtime/formal-runtime-contract.ts', 'RUNTIME_CONTRACT'],
   ['tooling/verification/src/runtime/formal-runtime-controller.ts', 'RUNTIME_CONTROLLER'],
+  ['tooling/verification/src/runtime/formal-runtime-database-connection.ts', 'RUNTIME_DATABASE_CONNECTION_BOUNDARY'],
   ['tooling/verification/src/runtime/formal-teardown.ts', 'RUNTIME_TEARDOWN'],
   ['tooling/verification/src/runtime/formal-terminal-conclusion.ts', 'TERMINAL_CONTRACT'],
   ['tooling/verification/src/runtime/formal-wsl-envelope.ts', 'WSL_ENVELOPE'],

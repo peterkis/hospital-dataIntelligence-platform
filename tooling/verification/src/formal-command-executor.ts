@@ -33,6 +33,8 @@ export async function executeFormalCommand(input: {
       commandEnvironment: input.command.environment,
       injectedEnvironment: input.injectedEnvironment,
       nodeOptionsForbiddenCode: 'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      databaseUrlDeclarationForbiddenCode:
+        'FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
     }),
     shell: false,
     windowsHide: true,

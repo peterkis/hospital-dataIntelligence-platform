@@ -51,6 +51,28 @@ describe('shared ABG child command plan', () => {
       .toEqual(['exec', '--workspace', '@hospital-data-intelligence/governance-api', '--']);
   });
 
+  it('declares the strict least-privilege runtime binding matrix without values', async () => {
+    const commands = await buildSharedAbgCommandPlan(repositoryRoot);
+    expect(commands.find((command) => command.id === 'database-authority')
+      ?.runtimeEnvironmentBindings).toEqual(['FORMAL_RUNTIME_DATABASE_URL']);
+    expect(commands.find((command) => command.id === 'live')
+      ?.runtimeEnvironmentBindings).toEqual([
+        'FORMAL_RUNTIME_DATABASE_URL',
+        'FORMAL_LIVE_RUNTIME',
+      ]);
+    expect(commands.find((command) => command.id === 'browser')
+      ?.runtimeEnvironmentBindings).toEqual(['FORMAL_BROWSER_RUNTIME']);
+    for (const id of [
+      'runtime', 'repo-layout', 'module-boundaries', 'typecheck', 'build',
+      'contract-lint', 'integration',
+    ]) {
+      expect(commands.find((command) => command.id === id)?.runtimeEnvironmentBindings)
+        .toBeUndefined();
+    }
+    expect(JSON.stringify(commands)).not.toContain('postgresql://');
+    expect(JSON.stringify(commands)).not.toContain('HDI_POSTGRES_PASSWORD');
+  });
+
   it('fails closed for NODE_OPTIONS leakage and loader contamination', async () => {
     const commands = await mutableCommands();
     const databaseIndex = commands.findIndex((command) => command.id === 'database-authority');
@@ -80,6 +102,34 @@ describe('shared ABG child command plan', () => {
     };
     await expect(assertSharedAbgCommandPlanSafety(repositoryRoot, commands))
       .rejects.toThrow('REPOSITORY_TYPESCRIPT_ENTRY_WITHOUT_EXPLICIT_LOADER');
+  });
+
+  it('fails closed for direct, duplicate, and unauthorized database bindings', async () => {
+    const direct = await mutableCommands();
+    direct[0] = { ...direct[0]!, environment: { Database_Url: 'forbidden' } };
+    await expect(assertSharedAbgCommandPlanSafety(repositoryRoot, direct))
+      .rejects.toThrow('SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN');
+
+    const duplicate = await mutableCommands();
+    const databaseIndex = duplicate.findIndex((command) => command.id === 'database-authority');
+    duplicate[databaseIndex] = {
+      ...duplicate[databaseIndex]!,
+      runtimeEnvironmentBindings: [
+        'FORMAL_RUNTIME_DATABASE_URL',
+        'FORMAL_RUNTIME_DATABASE_URL',
+      ],
+    };
+    await expect(assertSharedAbgCommandPlanSafety(repositoryRoot, duplicate))
+      .rejects.toThrow('SHARED_RUNTIME_ENVIRONMENT_BINDING_DUPLICATE');
+
+    const unauthorized = await mutableCommands();
+    const integrationIndex = unauthorized.findIndex((command) => command.id === 'integration');
+    unauthorized[integrationIndex] = {
+      ...unauthorized[integrationIndex]!,
+      runtimeEnvironmentBindings: ['FORMAL_RUNTIME_DATABASE_URL'],
+    };
+    await expect(assertSharedAbgCommandPlanSafety(repositoryRoot, unauthorized))
+      .rejects.toThrow('SHARED_RUNTIME_DATABASE_BINDING_UNAUTHORIZED');
   });
 });
 
