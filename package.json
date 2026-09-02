@@ -30,7 +30,7 @@
     "verify:verification-source-manifest": "npm run verify:source-manifest --workspace @hospital-data-intelligence/verification-tooling -- ../..",
     "verify:abg-coverage": "npm run verify:abg-coverage --workspace @hospital-data-intelligence/verification-tooling",
     "check": "npm run check:runtime && npm run check:repo:layout && npm run check:module-boundaries && npm run check:database-authority",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "tsc -p tooling/prototype/tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
     "build": "npm run build --workspace @hospital-data-intelligence/generated-api-client && npm run build --workspace @hospital-data-intelligence/admin-web && npm run build --workspace @hospital-data-intelligence/governance-api && npm run build --workspace @hospital-data-intelligence/sim-consumer",
     "contract:generate": "npm run contract:generate --workspace @hospital-data-intelligence/governance-api",
     "contract:generate-client": "npm run contract:generate --workspace @hospital-data-intelligence/generated-api-client",
@@ -45,6 +45,11 @@
     "test:verification:podman-runtime": "npm run test:podman-runtime --workspace @hospital-data-intelligence/verification-tooling",
     "test:verification:provenance": "npm run test:provenance --workspace @hospital-data-intelligence/verification-tooling",
     "verify:podman-runtime-authority": "npm run verify:podman-runtime-authority --workspace @hospital-data-intelligence/verification-tooling",
+    "prototype:db:check": "node --env-file-if-exists=.env.prototype.local tooling/prototype/check-database.mjs",
+    "prototype:db:migrate": "node --env-file-if-exists=.env.prototype.local tooling/runtime/apply-migrations.mjs db/migrations",
+    "prototype:db:seed": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/seed-prototype.ts",
+    "prototype:smoke": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/run-core-flow.ts",
+    "prototype:validate": "npm run prototype:db:check && npm run prototype:db:migrate && npm run prototype:db:seed && npm run prototype:smoke",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
