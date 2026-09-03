@@ -53,6 +53,10 @@
     "prototype:api:start": "node --env-file-if-exists=.env.prototype.local --import tsx apps/governance-api/src/prototype-main.ts",
     "prototype:http:smoke": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/run-http-flow.ts",
     "prototype:http:validate": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/validate-http-flow.ts",
+    "prototype:ui:build": "npm run build:prototype --workspace @hospital-data-intelligence/admin-web",
+    "prototype:ui:start": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/start-ui.ts",
+    "prototype:ui:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-ui.ts",
+    "prototype:demo": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/start-ui.ts --demo",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

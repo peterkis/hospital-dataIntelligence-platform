@@ -15,6 +15,10 @@ import {
   PROTOTYPE_DATABASE_POOL_CLOSED_EVENT,
   closePrototypeResources,
 } from './prototype-lifecycle.js';
+import {
+  createPrototypeContext,
+  resolvePrototypeAdminStaticRoot,
+} from './prototype-context.js';
 
 process.env['TZ'] = 'Asia/Shanghai';
 
@@ -26,6 +30,10 @@ const authentication = createPrototypeAuthentication({
   prototypeMode: process.env['PROTOTYPE_MODE'],
 });
 assertNoProductionFaultConfiguration(process.env);
+const prototypeAdminRoot = resolvePrototypeAdminStaticRoot(
+  process.env['PROTOTYPE_UI'],
+  resolve(import.meta.dirname, '../../admin-web/dist-prototype'),
+);
 
 const databaseUrl = requireEnvironment('DATABASE_URL');
 const databaseHandle = createDatabase({
@@ -55,6 +63,7 @@ try {
     () => notificationTransport.publicationCommitted(),
   );
   application = await buildApplication({
+    ...(prototypeAdminRoot ? { adminStaticRoot: prototypeAdminRoot } : {}),
     phase01: {
       verticalSlice,
       transactionRunner,
@@ -63,6 +72,11 @@ try {
       now: nowInAsiaShanghai,
     },
   });
+  application.get(
+    '/prototype/context',
+    { schema: { hide: true } },
+    async () => createPrototypeContext(nowInAsiaShanghai()),
+  );
   await application.listen({ host, port });
   safeDevelopmentLog({
     event: 'PROTOTYPE_API_STARTED',

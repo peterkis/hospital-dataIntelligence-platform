@@ -8,6 +8,7 @@ const repositoryRoot = resolve(import.meta.dirname, '../..');
 const host = process.env['HOST'] ?? '127.0.0.1';
 const port = parsePort(process.env['PORT'] ?? '3000');
 const baseUrl = `http://${host}:${port}`;
+const validateUi = process.env['PROTOTYPE_UI_VALIDATION'] === 'true';
 let apiProcess: ChildProcess | undefined;
 let apiProcessExited = false;
 let apiProcessGracefullyStopped = false;
@@ -16,6 +17,8 @@ let persistenceBefore: PrototypePersistenceTotals | undefined;
 let persistenceObserved = false;
 let httpSmokePassed = false;
 let databasePoolClosed = false;
+let uiBuildPassed = false;
+let uiResourcesPassed = false;
 
 try {
   if (await isPortAcceptingConnections(host, port)) {
@@ -32,6 +35,15 @@ try {
     'tsx',
     'tooling/prototype/seed-prototype.ts',
   ]);
+  if (validateUi) {
+    await runNode(
+      'PROTOTYPE_UI_BUILD',
+      [resolve(repositoryRoot, 'node_modules/vite/bin/vite.js'), 'build', '--mode', 'prototype'],
+      { VITE_ADMIN_MODE: 'prototype' },
+      resolve(repositoryRoot, 'apps/admin-web'),
+    );
+    uiBuildPassed = true;
+  }
   persistenceBefore = await readPrototypePersistenceTotals();
 
   apiProcess = spawn(
@@ -44,6 +56,7 @@ try {
         HOST: host,
         PORT: String(port),
         PROTOTYPE_MODE: 'true',
+        ...(validateUi ? { PROTOTYPE_UI: 'true' } : {}),
       },
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       windowsHide: true,
@@ -62,6 +75,11 @@ try {
     }
   });
   await waitForHealth(apiProcess, `${baseUrl}/health`, 20_000);
+
+  if (validateUi) {
+    await validatePrototypeUiResources(baseUrl);
+    uiResourcesPassed = true;
+  }
 
   await runNode('HTTP_SMOKE', [
     '--import',
@@ -108,7 +126,9 @@ try {
       process.exitCode = 1;
     }
   }
-  if (!apiProcessExited || !apiProcessGracefullyStopped || !databasePoolClosed || !portReleased) {
+  if (apiProcess && (
+    !apiProcessExited || !apiProcessGracefullyStopped || !databasePoolClosed || !portReleased
+  )) {
     process.stderr.write(`${JSON.stringify({
       status: 'FAILED',
       errorCode: !apiProcessExited
@@ -136,6 +156,7 @@ if (process.exitCode !== 1) {
     databasePoolClosed,
     consumerProcessStarted: false,
     persistenceObserved,
+    ...(validateUi ? { uiBuildPassed, uiResourcesPassed } : {}),
   })}\n`);
 }
 
@@ -196,10 +217,11 @@ async function runNode(
   step: string,
   arguments_: readonly string[],
   environment?: Readonly<Record<string, string>>,
+  workingDirectory = repositoryRoot,
 ): Promise<void> {
   await new Promise<void>((resolvePromise, reject) => {
     const child = spawn(process.execPath, arguments_, {
-      cwd: repositoryRoot,
+      cwd: workingDirectory,
       env: { ...process.env, ...environment },
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -212,6 +234,50 @@ async function runNode(
       else reject(new Error(`PROTOTYPE_STEP_FAILED:${step}:${code ?? signal ?? 'UNKNOWN'}`));
     });
   });
+}
+
+async function validatePrototypeUiResources(targetBaseUrl: string): Promise<void> {
+  const contextResponse = await fetch(`${targetBaseUrl}/prototype/context`, {
+    headers: { accept: 'application/json' },
+  });
+  if (!contextResponse.ok) throw new Error('PROTOTYPE_CONTEXT_UNAVAILABLE');
+  const contextText = await contextResponse.text();
+  if (/DATABASE_URL|password|connectionString/u.test(contextText)) {
+    throw new Error('PROTOTYPE_CONTEXT_CREDENTIAL_EXPOSURE');
+  }
+  const context = JSON.parse(contextText) as {
+    readonly mode?: unknown;
+    readonly timeZone?: unknown;
+    readonly currentLocalDateTime?: unknown;
+  };
+  if (
+    context.mode !== 'PROTOTYPE_SYNTHETIC' ||
+    context.timeZone !== 'Asia/Shanghai' ||
+    typeof context.currentLocalDateTime !== 'string' ||
+    /[Zz]|[+-]\d{2}:\d{2}$/u.test(context.currentLocalDateTime)
+  ) {
+    throw new Error('PROTOTYPE_CONTEXT_TIME_CONTRACT_INVALID');
+  }
+
+  const adminResponse = await fetch(`${targetBaseUrl}/admin/`);
+  if (!adminResponse.ok) throw new Error('PROTOTYPE_UI_INDEX_UNAVAILABLE');
+  const html = await adminResponse.text();
+  const assetPaths = [...html.matchAll(/(?:src|href)="(\/admin\/assets\/[^"]+)"/gu)]
+    .map((match) => match[1])
+    .filter((path): path is string => typeof path === 'string');
+  if (assetPaths.length < 2) throw new Error('PROTOTYPE_UI_ASSET_MANIFEST_INVALID');
+  const assetContents = await Promise.all(assetPaths.map(async (path) => {
+    const response = await fetch(`${targetBaseUrl}${path}`);
+    if (!response.ok) throw new Error('PROTOTYPE_UI_ASSET_UNAVAILABLE');
+    return { path, content: await response.text() };
+  }));
+  const javascript = assetContents
+    .filter((asset) => asset.path.endsWith('.js'))
+    .map((asset) => asset.content)
+    .join('\n');
+  if (!javascript || javascript.includes('/auth/session')) {
+    throw new Error('PROTOTYPE_UI_FORMAL_AUTH_REFERENCE_DETECTED');
+  }
 }
 
 async function waitForHealth(
