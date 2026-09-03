@@ -11,7 +11,6 @@ describe('prototype synthetic authentication', () => {
       host: '127.0.0.1',
       nodeEnvironment: 'development',
       prototypeMode: 'true',
-      remoteAccessApproved: undefined,
     });
     const application = Fastify();
     application.get('/', async (request) => authentication.resolvePrincipal(request));
@@ -38,7 +37,6 @@ describe('prototype synthetic authentication', () => {
       host: '127.0.0.1',
       nodeEnvironment: 'development',
       prototypeMode: 'true',
-      remoteAccessApproved: undefined,
     });
     const application = Fastify();
     application.get('/', async (request) => authentication.resolvePrincipal(request));
@@ -64,7 +62,6 @@ describe('prototype synthetic authentication', () => {
       host: '127.0.0.1',
       nodeEnvironment: 'development',
       prototypeMode: 'true',
-      remoteAccessApproved: undefined,
     });
     const application = Fastify();
     application.post('/', async (request) => authentication.resolvePrincipal(request));
@@ -88,7 +85,6 @@ describe('prototype synthetic authentication', () => {
       host: '127.0.0.1',
       nodeEnvironment: 'development',
       prototypeMode: 'true',
-      remoteAccessApproved: undefined,
     });
     const application = Fastify();
     application.post('/', async (request) => authentication.resolvePrincipal(request));
@@ -110,13 +106,25 @@ describe('prototype synthetic authentication', () => {
   it.each([
     [{ prototypeMode: 'false', nodeEnvironment: 'development' }, 'PROTOTYPE_MODE_REQUIRED'],
     [{ prototypeMode: 'true', nodeEnvironment: 'production' }, 'PROTOTYPE_PRODUCTION_FORBIDDEN'],
-    [{ prototypeMode: 'true', nodeEnvironment: 'development', host: '0.0.0.0' }, 'PROTOTYPE_REMOTE_ACCESS_APPROVAL_REQUIRED'],
+    [{ prototypeMode: 'true', nodeEnvironment: 'development', host: '0.0.0.0' }, 'PROTOTYPE_LOOPBACK_BIND_REQUIRED'],
   ])('fails closed for unsafe runtime configuration', (runtime, expected) => {
     expect(() => createPrototypeAuthentication({
       host: 'host' in runtime ? runtime.host : '127.0.0.1',
       nodeEnvironment: runtime.nodeEnvironment,
       prototypeMode: runtime.prototypeMode,
-      remoteAccessApproved: undefined,
     })).toThrowError(expected);
+  });
+
+  it('rejects a non-loopback startup even when the removed approval variable is present', () => {
+    process.env['PROTOTYPE_REMOTE_ACCESS_APPROVED'] = 'true';
+    try {
+      expect(() => createPrototypeAuthentication({
+        host: '192.0.2.10',
+        nodeEnvironment: 'development',
+        prototypeMode: 'true',
+      })).toThrowError('PROTOTYPE_LOOPBACK_BIND_REQUIRED');
+    } finally {
+      delete process.env['PROTOTYPE_REMOTE_ACCESS_APPROVED'];
+    }
   });
 });

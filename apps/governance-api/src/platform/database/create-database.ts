@@ -5,6 +5,8 @@ import { parseLocalDateTime } from '../local-datetime/local-datetime.js';
 
 const POSTGRES_INT8_OID = 20;
 const POSTGRES_NUMERIC_OID = 1700;
+const POSTGRES_DATE_OID = 1082;
+const POSTGRES_TIME_WITHOUT_TIME_ZONE_OID = 1083;
 const POSTGRES_TIMESTAMP_WITHOUT_TIME_ZONE_OID = 1114;
 
 function decodePostgresLocalDateTime(value: string) {
@@ -16,6 +18,8 @@ function decodePostgresLocalDateTime(value: string) {
 
 postgresTypes.setTypeParser(POSTGRES_INT8_OID, (value) => value);
 postgresTypes.setTypeParser(POSTGRES_NUMERIC_OID, (value) => value);
+postgresTypes.setTypeParser(POSTGRES_DATE_OID, (value) => value);
+postgresTypes.setTypeParser(POSTGRES_TIME_WITHOUT_TIME_ZONE_OID, (value) => value);
 postgresTypes.setTypeParser(
   POSTGRES_TIMESTAMP_WITHOUT_TIME_ZONE_OID,
   decodePostgresLocalDateTime,

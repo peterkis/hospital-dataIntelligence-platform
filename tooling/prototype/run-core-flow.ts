@@ -339,7 +339,7 @@ try {
   })}\n`);
   process.exitCode = 1;
 } finally {
-  await databaseHandle.close().catch(() => undefined);
+  await databaseHandle.close();
 }
 
 function asiaShanghaiLocalDateTime(value: Date): string {

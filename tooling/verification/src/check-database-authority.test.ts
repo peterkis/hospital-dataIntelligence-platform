@@ -6,7 +6,9 @@ import { describe, expect, it } from 'vitest';
 import {
   DATABASE_AUTHORITY_VERIFY_SCRIPT,
   DATABASE_AUTHORITY_WORKSPACE,
+  assertMigrationDateTimeTypesAllowed,
   databaseAuthorityChildEnvironment,
+  findForbiddenDatabaseColumns,
   requireDatabaseAuthorityDatabaseUrl,
   runDatabaseTypeVerification,
   type DatabaseAuthoritySpawn,
@@ -18,6 +20,57 @@ import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.j
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const canonicalDatabaseUrl =
   'postgresql://hdi_phase01:synthetic-password@127.0.0.1:55432/hdi_phase01';
+
+describe('database local date-time type authority', () => {
+  it.each([
+    ['timestamp precision', 'create table platform.example (value timestamp(6) with time zone);'],
+    ['timestamp alias', 'create table platform.example (value timestamptz);'],
+    ['time precision', 'create table platform.example (value time(3) with time zone);'],
+    ['time alias', 'create table platform.example (value timetz);'],
+    ['time-zone range', 'create table platform.example (value tstzrange);'],
+    ['time-zone multirange', 'create table platform.example (value tstzmultirange);'],
+  ])('rejects the %s SQL spelling', (_case, source) => {
+    expect(() => assertMigrationDateTimeTypesAllowed('0001_example.sql', source))
+      .toThrow(/0001_example\.sql contains/u);
+  });
+
+  it('allows the project-owned date and local date-time SQL types', () => {
+    expect(() => assertMigrationDateTimeTypesAllowed('0001_example.sql', `
+      create table platform.example (
+        local_date date,
+        local_time time(6) without time zone,
+        local_timestamp timestamp(6) without time zone,
+        local_period tsrange
+      );
+    `)).not.toThrow();
+  });
+
+  it('queries owned PostgreSQL schemas and returns only safe forbidden column facts', async () => {
+    const calls: Array<{ queryText: string; values: readonly unknown[] }> = [];
+    const findings = await findForbiddenDatabaseColumns(async (queryText, values) => {
+      calls.push({ queryText, values });
+      return {
+        rows: [{
+          schemaName: 'price_list',
+          tableName: 'unsafe_example',
+          columnName: 'recorded_at',
+          dataType: 'timestamp(6) with time zone',
+        }],
+      };
+    }, ['platform', 'price_list']);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.queryText).toContain('pg_catalog.pg_attribute');
+    expect(calls[0]?.values).toEqual([['platform', 'price_list']]);
+    expect(findings).toEqual([{
+      schemaName: 'price_list',
+      tableName: 'unsafe_example',
+      columnName: 'recorded_at',
+      dataType: 'timestamp(6) with time zone',
+    }]);
+    expect(JSON.stringify(findings)).not.toContain('postgresql://');
+  });
+});
 
 describe('database authority nested workspace command boundary', () => {
   it('removes inherited NODE_OPTIONS and preserves the canonical database URL, npm, PATH, and required secrets', () => {

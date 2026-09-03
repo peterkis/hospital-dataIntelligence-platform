@@ -13,7 +13,7 @@ The implementation baseline is `905614ebf38fe74fdf66461c34535d6b0639f761`. The t
 | Entry point | `apps/governance-api/src/prototype-main.ts` |
 | Default listen address | `127.0.0.1:3000` |
 | Required mode | `PROTOTYPE_MODE=true` and `NODE_ENV!=production` |
-| Remote binding | Any `HOST` other than `127.0.0.1` additionally requires `PROTOTYPE_REMOTE_ACCESS_APPROVED=true` |
+| Remote binding | Forbidden. The prototype entry point accepts only `127.0.0.1`; there is no approval escape hatch. |
 | Authentication mode | `authenticationMode=PROTOTYPE_SYNTHETIC` |
 | Principal selection | `x-prototype-principal-code` maps only `prototype-owner`, `prototype-reviewer`, and `prototype-final-owner` to the fixed PV-001 database principals |
 | Prototype CSRF | Every write requires the fixed, non-sensitive prototype CSRF guard value in `x-csrf-token`; it prevents accidental calls and is not a production security mechanism |
@@ -42,6 +42,8 @@ The implementation baseline is `905614ebf38fe74fdf66461c34535d6b0639f761`. The t
 12. Query the corresponding price-resolution audit event.
 
 The independently specified synthetic expected resolution is `24.6800 CNY`. The runner fails immediately unless the response is `SUCCEEDED`, the amount is exactly `24.6800`, and the currency is `CNY`.
+
+`Asia/Shanghai` is the only business-time meaning. All API and domain `LocalDateTime` values remain offset-free strings, PostgreSQL business fields use date/time types without time zone, and JavaScript `Date` is only a temporary current-time source that is explicitly formatted before crossing a boundary. Price resolution uses the published price-list response's `recordedFrom` as `recordAsOf`, so a workflow taking longer than eight seconds cannot query before its own publication record time.
 
 ## Rejection scenarios
 
@@ -88,7 +90,7 @@ All business mutations use the existing HTTP routes, transaction runner, workflo
 - The first HTTP rejection probe returned 500 because the prototype fetch wrapper replaced headers from the generated client's `Request` object. Preserving the original request headers before adding `x-prototype-principal-code` restored the required 403 CSRF response.
 - The first complete HTTP flow reached audit query with HTTP 200 but an empty body because the existing audit route omitted `return result`. Returning the already-authorized query result made the generated client observe the audit record.
 - Windows `SIGTERM` does not provide a reliable graceful child shutdown seam. The prototype validator now uses an IPC-only shutdown message and retains process termination only as a bounded fallback.
-- A failed HTTP final approval left the fixed price-list release as an `AWAITING_FINAL` draft. It was completed through the existing generated-client HTTP approval route; no draft or failure evidence was deleted. Both runners retain the domain-required fixed price-list code. The database runner uses a synthetic base time 30 seconds in the past; the HTTP runner places service occurrence immediately before the request and `recordAsOf` after the just-completed publication.
+- A failed HTTP final approval left the fixed price-list release as an `AWAITING_FINAL` draft. It was completed through the existing generated-client HTTP approval route; no draft or failure evidence was deleted. Both runners retain the domain-required fixed price-list code. The database runner uses a synthetic base time 30 seconds in the past; the HTTP runner keeps the service occurrence before the flow and takes `recordAsOf` from the just-published price-list response.
 
 ## Known unverified scope
 
@@ -98,3 +100,5 @@ All business mutations use the existing HTTP routes, transaction runner, workflo
 - Browser behavior, Chrome, Playwright, management UI, production data, real hospital integrations, production security, availability, performance, capacity, backup, disaster recovery, and deployment certification.
 
 No Keycloak, Podman, Docker, Chrome, Playwright, formal ABG, AR-07, or Sequence 10–13 command is part of this prototype validation.
+
+This result remains a synthetic prototype observation, not formal acceptance or production readiness.

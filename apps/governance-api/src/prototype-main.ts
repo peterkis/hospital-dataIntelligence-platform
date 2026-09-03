@@ -11,6 +11,10 @@ import { createDatabase } from './platform/database/create-database.js';
 import { assertNoProductionFaultConfiguration } from './platform/fault-injection/controlled-faults.js';
 import { createTransactionRunner } from './platform/transaction/transaction-runner.js';
 import { assertPrototypeDatabaseReady } from './prototype-readiness.js';
+import {
+  PROTOTYPE_DATABASE_POOL_CLOSED_EVENT,
+  closePrototypeResources,
+} from './prototype-lifecycle.js';
 
 process.env['TZ'] = 'Asia/Shanghai';
 
@@ -20,7 +24,6 @@ const authentication = createPrototypeAuthentication({
   host,
   nodeEnvironment: process.env['NODE_ENV'],
   prototypeMode: process.env['PROTOTYPE_MODE'],
-  remoteAccessApproved: process.env['PROTOTYPE_REMOTE_ACCESS_APPROVED'],
 });
 assertNoProductionFaultConfiguration(process.env);
 
@@ -73,11 +76,19 @@ try {
     syntheticPrincipalCount: readiness.syntheticPrincipalCount,
   });
 } catch (error) {
-  await application?.close().catch(() => undefined);
-  await databaseHandle.close().catch(() => undefined);
+  let resourceCloseError: unknown;
+  try {
+    await closePrototypeResources({ application, database: databaseHandle });
+  } catch (closeError) {
+    resourceCloseError = closeError;
+  }
+  application = undefined;
   safeDevelopmentLog({
     event: 'PROTOTYPE_API_START_FAILED',
     errorCode: safeErrorCode(error, 'PROTOTYPE_API_START_FAILED'),
+    resourceCloseErrorCode: resourceCloseError
+      ? safeErrorCode(resourceCloseError, 'PROTOTYPE_RESOURCE_CLOSE_FAILED')
+      : null,
   });
   process.exitCode = 1;
 }
@@ -88,10 +99,27 @@ async function closeApplication(
   if (closing) return;
   closing = true;
   safeDevelopmentLog({ event: 'PROTOTYPE_API_STOPPING', reason });
-  await application?.close().catch(() => undefined);
-  await databaseHandle.close().catch(() => undefined);
-  safeDevelopmentLog({ event: 'PROTOTYPE_API_STOPPED' });
-  if (process.connected) process.disconnect();
+  try {
+    await closePrototypeResources({
+      application,
+      database: databaseHandle,
+      onResourcesClosed() {
+        if (typeof process.send === 'function') {
+          process.send({ event: PROTOTYPE_DATABASE_POOL_CLOSED_EVENT });
+        }
+      },
+    });
+    safeDevelopmentLog({ event: 'PROTOTYPE_API_STOPPED' });
+    process.exitCode = 0;
+  } catch (error) {
+    safeDevelopmentLog({
+      event: 'PROTOTYPE_API_STOP_FAILED',
+      errorCode: safeErrorCode(error, 'PROTOTYPE_RESOURCE_CLOSE_FAILED'),
+    });
+    process.exitCode = 1;
+  } finally {
+    if (process.connected) process.disconnect();
+  }
 }
 
 if (application) {

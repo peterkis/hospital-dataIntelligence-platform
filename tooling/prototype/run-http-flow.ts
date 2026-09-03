@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { createGovernanceApiClient } from '../../packages/generated-api-client/src/index.js';
+import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
 import { PROTOTYPE_CSRF_TOKEN } from '../../apps/governance-api/src/platform/authentication/prototype-authentication.js';
 import { PROTOTYPE_FIXTURE } from './prototype-fixture.js';
+import { buildPriceResolutionTimes } from './http-flow-time.js';
 
 const baseUrl = process.env['PROTOTYPE_API_BASE_URL'] ?? 'http://127.0.0.1:3000';
 const runSuffix = randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
@@ -266,6 +267,10 @@ try {
   if (publishedPriceList.governanceStatus !== 'PUBLISHED' || !publishedPriceList.governanceReleaseId) {
     throw new Error('HTTP_PRICE_LIST_PUBLICATION_MISSING');
   }
+  const priceResolutionTimes = buildPriceResolutionTimes(
+    baseTime,
+    publishedPriceList.recordedFrom,
+  );
 
   const resolution = requireData(
     await owner.POST('/v1/phase-01/price-resolutions', {
@@ -278,8 +283,8 @@ try {
         priceListId: publishedPriceList.priceListId,
         campusId: PROTOTYPE_FIXTURE.campusId,
         encounterType: 'OUTPATIENT',
-        serviceOccurredAt: at(-1),
-        recordAsOf: at(8),
+        serviceOccurredAt: priceResolutionTimes.serviceOccurredAt,
+        recordAsOf: priceResolutionTimes.recordAsOf,
         quantity: '2',
       },
     }),

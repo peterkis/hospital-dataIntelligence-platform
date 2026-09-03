@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { Pool } from 'pg';
 
 interface TableOwnership {
   readonly schemas: Readonly<Record<string, string>>;
@@ -34,7 +35,19 @@ export type DatabaseAuthoritySpawn = (
   options: { readonly cwd: string; readonly encoding: 'utf8'; readonly env: NodeJS.ProcessEnv },
 ) => DatabaseAuthoritySpawnResult;
 
-export function runDatabaseAuthorityCheck(): void {
+export interface ForbiddenDatabaseColumn {
+  readonly schemaName: string;
+  readonly tableName: string;
+  readonly columnName: string;
+  readonly dataType: string;
+}
+
+export type DatabaseCatalogQuery = (
+  queryText: string,
+  values: readonly unknown[],
+) => Promise<{ readonly rows: readonly Record<string, unknown>[] }>;
+
+export async function runDatabaseAuthorityCheck(): Promise<void> {
   const ownership = JSON.parse(
     readFileSync(join(ROOT, 'db/table-ownership.json'), 'utf8'),
   ) as TableOwnership;
@@ -53,11 +66,30 @@ export function runDatabaseAuthorityCheck(): void {
   const migrationManifest = migrationFiles.map((name) => {
     const bytes = readFileSync(join(MIGRATIONS, name));
     const source = bytes.toString('utf8');
-    assert.equal(/\btimestamp\s+with\s+time\s+zone\b/iu.test(source), false, `${name} contains timestamp with time zone`);
-    assert.equal(/\btimestamptz\b/iu.test(source), false, `${name} contains timestamptz`);
-    assert.equal(/\btime\s+with\s+time\s+zone\b/iu.test(source), false, `${name} contains time with time zone`);
+    assertMigrationDateTimeTypesAllowed(name, source);
     return { file: name, sha256: createHash('sha256').update(bytes).digest('hex') };
   });
+
+  const databaseUrl = requireDatabaseAuthorityDatabaseUrl(process.env);
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    application_name: 'hdi-database-authority-time-contract',
+    max: 1,
+  });
+  let forbiddenDatabaseColumns: readonly ForbiddenDatabaseColumn[];
+  try {
+    forbiddenDatabaseColumns = await findForbiddenDatabaseColumns(
+      (queryText, values) => pool.query(queryText, [...values]),
+      Object.keys(ownership.schemas),
+    );
+  } finally {
+    await pool.end();
+  }
+  assert.equal(
+    forbiddenDatabaseColumns.length,
+    0,
+    `Governance schemas contain forbidden date/time types: ${JSON.stringify(forbiddenDatabaseColumns)}`,
+  );
 
   const generatedTypes = readFileSync(GENERATED_TYPES, 'utf8');
   for (const { file } of migrationManifest) {
@@ -109,9 +141,56 @@ export function runDatabaseAuthorityCheck(): void {
   process.stdout.write(`${JSON.stringify({
     gate: 'database-authority',
     migrationCount: migrationManifest.length,
+    forbiddenDatabaseTypeCount: forbiddenDatabaseColumns.length,
     schemaFingerprint,
     status: 'PASSED',
   })}\n`);
+}
+
+export function assertMigrationDateTimeTypesAllowed(fileName: string, source: string): void {
+  const forbiddenPatterns: readonly (readonly [RegExp, string])[] = [
+    [/\btimestamp\s*(?:\(\s*\d+\s*\)\s*)?with\s+time\s+zone\b/iu, 'timestamp with time zone'],
+    [/\btimestamptz\b/iu, 'timestamptz'],
+    [/\btime\s*(?:\(\s*\d+\s*\)\s*)?with\s+time\s+zone\b/iu, 'time with time zone'],
+    [/\btimetz\b/iu, 'timetz'],
+    [/\btstzrange\b/iu, 'tstzrange'],
+    [/\btstzmultirange\b/iu, 'tstzmultirange'],
+  ];
+  for (const [pattern, typeName] of forbiddenPatterns) {
+    assert.equal(pattern.test(source), false, `${fileName} contains ${typeName}`);
+  }
+}
+
+export async function findForbiddenDatabaseColumns(
+  query: DatabaseCatalogQuery,
+  schemaNames: readonly string[],
+): Promise<readonly ForbiddenDatabaseColumn[]> {
+  const result = await query(`
+    select
+      namespace.nspname as "schemaName",
+      relation.relname as "tableName",
+      attribute.attname as "columnName",
+      pg_catalog.format_type(attribute.atttypid, attribute.atttypmod) as "dataType"
+    from pg_catalog.pg_attribute as attribute
+    inner join pg_catalog.pg_class as relation
+      on relation.oid = attribute.attrelid
+    inner join pg_catalog.pg_namespace as namespace
+      on namespace.oid = relation.relnamespace
+    inner join pg_catalog.pg_type as data_type
+      on data_type.oid = attribute.atttypid
+    where namespace.nspname::text = any($1::text[])
+      and relation.relkind in ('r', 'p', 'v', 'm', 'f')
+      and attribute.attnum > 0
+      and not attribute.attisdropped
+      and data_type.typname in ('timestamptz', 'timetz', 'tstzrange', 'tstzmultirange')
+    order by namespace.nspname, relation.relname, attribute.attname
+  `, [schemaNames]);
+  return result.rows.map((row) => ({
+    schemaName: safeCatalogIdentifier(row['schemaName']),
+    tableName: safeCatalogIdentifier(row['tableName']),
+    columnName: safeCatalogIdentifier(row['columnName']),
+    dataType: safeCatalogType(row['dataType']),
+  }));
 }
 
 export function runDatabaseTypeVerification(input: {
@@ -208,6 +287,23 @@ function collectTypeScriptFiles(directory: string): readonly string[] {
   });
 }
 
+function safeCatalogIdentifier(value: unknown): string {
+  if (typeof value !== 'string' || !/^[a-z_][a-z0-9_]*$/u.test(value)) {
+    throw new Error('DATABASE_CATALOG_IDENTIFIER_INVALID');
+  }
+  return value;
+}
+
+function safeCatalogType(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    !/^(?:timestamp|time)(?:\(\d+\))? with time zone$|^(?:timestamptz|timetz|tstzrange|tstzmultirange)$/u.test(value)
+  ) {
+    throw new Error('DATABASE_CATALOG_TYPE_INVALID');
+  }
+  return value;
+}
+
 if (resolve(process.argv[1] ?? '') === resolve(fileURLToPath(import.meta.url))) {
-  runDatabaseAuthorityCheck();
+  await runDatabaseAuthorityCheck();
 }

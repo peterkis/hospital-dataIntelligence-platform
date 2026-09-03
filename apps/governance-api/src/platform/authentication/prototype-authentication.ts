@@ -15,7 +15,6 @@ export function createPrototypeAuthentication(options: {
   readonly host: string;
   readonly nodeEnvironment: string | undefined;
   readonly prototypeMode: string | undefined;
-  readonly remoteAccessApproved: string | undefined;
 }): PrototypeAuthentication {
   assertPrototypeRuntimeConfiguration(options);
   const principals = new Map<string, string>(
@@ -44,15 +43,12 @@ export function assertPrototypeRuntimeConfiguration(options: {
   readonly host: string;
   readonly nodeEnvironment: string | undefined;
   readonly prototypeMode: string | undefined;
-  readonly remoteAccessApproved: string | undefined;
 }): void {
   if (options.prototypeMode !== 'true') throw new Error('PROTOTYPE_MODE_REQUIRED');
   if (options.nodeEnvironment?.toLowerCase() === 'production') {
     throw new Error('PROTOTYPE_PRODUCTION_FORBIDDEN');
   }
-  if (options.host !== '127.0.0.1' && options.remoteAccessApproved !== 'true') {
-    throw new Error('PROTOTYPE_REMOTE_ACCESS_APPROVAL_REQUIRED');
-  }
+  if (options.host !== '127.0.0.1') throw new Error('PROTOTYPE_LOOPBACK_BIND_REQUIRED');
 }
 
 function singleHeader(value: string | readonly string[] | undefined): string | undefined {

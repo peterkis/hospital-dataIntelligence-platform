@@ -6,6 +6,12 @@ This record is only for a database-backed business prototype. It is not formal a
 
 The prototype uses synthetic data only. It does not start or validate Keycloak, Podman, Docker, Chrome, Playwright, an HTTP server, notification consumers, formal preflight, shared/formal ABG, or AR-07.
 
+## Local date-time contract
+
+`Asia/Shanghai` is the only business-time meaning in this prototype. Project-owned PostgreSQL schemas use `date`, `time without time zone`, `timestamp without time zone`, and `tsrange`; they must contain zero time-zone-aware date/time or range columns. The database driver returns date, local-time, and local-timestamp values as strings. A JavaScript `Date` never crosses an API, domain, or database business-field boundary.
+
+`prototype:db:check` and `check:database-authority` query the actual PostgreSQL Catalog for the project-owned schemas and fail unless the forbidden-type count is zero. Any finding is limited to the safe schema, table, column, and type names; connection URLs and passwords are never output.
+
 ## Prototype result
 
 | Observation | Result |
@@ -39,3 +45,5 @@ The prototype uses synthetic data only. It does not start or validate Keycloak, 
 - Production readiness, deployment certification, security hardening, availability, performance, capacity, backup, disaster recovery, and production data behavior.
 - Keycloak authentication, browser behavior, HTTP routing, notification delivery, and simulated consumers.
 - PostgreSQL minor-version conformance and extension governance beyond what the existing migrations enforce.
+
+These prototype observations remain outside formal acceptance and do not establish production readiness.

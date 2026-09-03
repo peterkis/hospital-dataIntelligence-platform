@@ -102,7 +102,6 @@ describe('governance API composition root', () => {
       host: '127.0.0.1',
       nodeEnvironment: 'development',
       prototypeMode: 'true',
-      remoteAccessApproved: undefined,
     });
     const phase01 = {
       resolvePrincipal: authentication.resolvePrincipal,

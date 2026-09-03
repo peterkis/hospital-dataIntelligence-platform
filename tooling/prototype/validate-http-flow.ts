@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { resolve } from 'node:path';
 import { createDatabase } from '../../apps/governance-api/src/platform/database/create-database.js';
+import { PROTOTYPE_DATABASE_POOL_CLOSED_EVENT } from '../../apps/governance-api/src/prototype-lifecycle.js';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const host = process.env['HOST'] ?? '127.0.0.1';
@@ -14,6 +15,7 @@ let portReleased = false;
 let persistenceBefore: PrototypePersistenceTotals | undefined;
 let persistenceObserved = false;
 let httpSmokePassed = false;
+let databasePoolClosed = false;
 
 try {
   if (await isPortAcceptingConnections(host, port)) {
@@ -49,6 +51,16 @@ try {
   );
   apiProcess.stdout?.on('data', (chunk: Buffer) => process.stdout.write(chunk));
   apiProcess.stderr?.on('data', (chunk: Buffer) => process.stderr.write(chunk));
+  apiProcess.on('message', (message) => {
+    if (
+      typeof message === 'object' &&
+      message !== null &&
+      'event' in message &&
+      message.event === PROTOTYPE_DATABASE_POOL_CLOSED_EVENT
+    ) {
+      databasePoolClosed = true;
+    }
+  });
   await waitForHealth(apiProcess, `${baseUrl}/health`, 20_000);
 
   await runNode('HTTP_SMOKE', [
@@ -96,16 +108,19 @@ try {
       process.exitCode = 1;
     }
   }
-  if (!apiProcessExited || !apiProcessGracefullyStopped || !portReleased) {
+  if (!apiProcessExited || !apiProcessGracefullyStopped || !databasePoolClosed || !portReleased) {
     process.stderr.write(`${JSON.stringify({
       status: 'FAILED',
       errorCode: !apiProcessExited
         ? 'PROTOTYPE_API_PROCESS_DID_NOT_EXIT'
         : !apiProcessGracefullyStopped
           ? 'PROTOTYPE_API_DID_NOT_STOP_GRACEFULLY'
-          : 'PROTOTYPE_PORT_NOT_RELEASED',
+          : !databasePoolClosed
+            ? 'PROTOTYPE_DATABASE_POOL_CLOSE_NOT_CONFIRMED'
+            : 'PROTOTYPE_PORT_NOT_RELEASED',
       apiProcessExited,
       apiProcessGracefullyStopped,
+      databasePoolClosed,
       portReleased,
     })}\n`);
     process.exitCode = 1;
@@ -118,7 +133,7 @@ if (process.exitCode !== 1) {
     apiProcessExited,
     apiProcessGracefullyStopped,
     portReleased,
-    databasePoolClosed: true,
+    databasePoolClosed,
     consumerProcessStarted: false,
     persistenceObserved,
   })}\n`);

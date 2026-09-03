@@ -139,7 +139,7 @@ try {
   process.exitCode = 1;
 } finally {
   client?.release();
-  await pool.end().catch(() => undefined);
+  await pool.end();
 }
 
 async function verifyFixture(client: pg.PoolClient): Promise<void> {
