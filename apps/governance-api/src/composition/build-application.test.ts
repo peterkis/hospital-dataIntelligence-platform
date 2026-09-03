@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { KeycloakAuthentication } from '../platform/authentication/keycloak-authentication.js';
+import { createPrototypeAuthentication } from '../platform/authentication/prototype-authentication.js';
+import type { Phase01HttpDependencies } from '../platform/fastify/register-phase-01-routes.js';
 import { buildApplication } from './build-application.js';
 
 let application: FastifyInstance | undefined;
@@ -92,6 +94,45 @@ describe('governance API composition root', () => {
       code: 'code-1',
       state: '12345678901234567890123456789012',
       authorizationResponseIssuer: 'http://keycloak.example/realms/hdi',
+    });
+  });
+
+  it('maps an incorrect prototype CSRF guard to the declared 403 contract', async () => {
+    const authentication = createPrototypeAuthentication({
+      host: '127.0.0.1',
+      nodeEnvironment: 'development',
+      prototypeMode: 'true',
+      remoteAccessApproved: undefined,
+    });
+    const phase01 = {
+      resolvePrincipal: authentication.resolvePrincipal,
+      now: () => '2026-09-03T17:30:00',
+    } as unknown as Phase01HttpDependencies;
+    application = await buildApplication({ phase01 });
+
+    const response = await application.inject({
+      method: 'POST',
+      url: '/v1/phase-01/charge-item-drafts',
+      headers: {
+        'x-prototype-principal-code': 'prototype-owner',
+        'x-csrf-token': 'prototype-csrf-guard-incorrect-value',
+      },
+      payload: {
+        governanceObjectId: '70000000-0000-7000-8000-000000000005',
+        internalCode: 'PROTOTYPE-SYNTHETIC-HTTP-FEE-CSRF',
+        formalName: 'PROTOTYPE SYNTHETIC HTTP CHARGE ITEM CSRF',
+        serviceDefinition: 'PROTOTYPE SYNTHETIC HTTP CSRF REJECTION',
+        billingUnitCode: 'TIMES',
+        chargingMethodCode: 'COUNT',
+        businessValidFrom: '2026-09-03T17:29:00',
+        businessValidTo: null,
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      code: 'PROTOTYPE_CSRF_FORBIDDEN',
+      requestId: expect.any(String),
     });
   });
 });

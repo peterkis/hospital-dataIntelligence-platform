@@ -1091,6 +1091,7 @@ export async function registerPhase01Routes(
           })),
         };
       });
+      return result;
     },
   );
 

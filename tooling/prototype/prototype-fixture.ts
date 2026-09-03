@@ -1,8 +1,1 @@
-export const PROTOTYPE_FIXTURE = {
-  actorPrincipalId: '70000000-0000-7000-8000-000000000001',
-  reviewerPrincipalId: '70000000-0000-7000-8000-000000000002',
-  approverPrincipalId: '70000000-0000-7000-8000-000000000003',
-  campusId: '70000000-0000-7000-8000-000000000004',
-  chargeCatalogObjectId: '70000000-0000-7000-8000-000000000005',
-  priceListObjectId: '70000000-0000-7000-8000-000000000006',
-} as const;
+export { PROTOTYPE_FIXTURE } from '../../apps/governance-api/src/prototype-fixture.js';

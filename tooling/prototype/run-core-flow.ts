@@ -43,7 +43,7 @@ try {
   const verticalSlice = createPhase01VerticalSlice(transactionRunner);
   const workflow = createWorkflowApplication(transactionRunner);
   const runSuffix = randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
-  const baseTime = new Date();
+  const baseTime = new Date(Date.now() - 30_000);
   const at = (seconds: number) => asiaShanghaiLocalDateTime(new Date(baseTime.getTime() + seconds * 1000));
   const requestContext = (principalId: string, action: string, seconds: number) => ({
     actorPrincipalId: principalId,

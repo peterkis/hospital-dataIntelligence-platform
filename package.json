@@ -50,6 +50,9 @@
     "prototype:db:seed": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/seed-prototype.ts",
     "prototype:smoke": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/run-core-flow.ts",
     "prototype:validate": "npm run prototype:db:check && npm run prototype:db:migrate && npm run prototype:db:seed && npm run prototype:smoke",
+    "prototype:api:start": "node --env-file-if-exists=.env.prototype.local --import tsx apps/governance-api/src/prototype-main.ts",
+    "prototype:http:smoke": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/run-http-flow.ts",
+    "prototype:http:validate": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/validate-http-flow.ts",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
