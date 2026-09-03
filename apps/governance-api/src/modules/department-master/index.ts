@@ -388,3 +388,5 @@ const operationalViews = new Set<DepartmentHierarchyViewType>(['ADMINISTRATIVE',
 async function nextUuid(db: Transaction<DB>): Promise<string> { return (await db.selectNoFrom((e) => e.fn<string>('uuidv7', []).as('id')).executeTakeFirstOrThrow()).id; }
 
 export * from './department-audit.js';
+export * from './department-contracts.js';
+export * from './read-model.js';
