@@ -62,7 +62,7 @@
     "prototype:ui:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-ui.ts",
     "prototype:demo:prepare": "npm run prototype:db:check && npm run prototype:db:migrate && npm run prototype:db:seed && tsx --env-file-if-exists=.env.prototype.local tooling/prototype/demo-reset.ts",
     "prototype:demo": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/start-ui.ts --demo",
-    "test": "npm run test --workspaces --if-present"
+    "test": "node tooling/test/run-root-tests.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

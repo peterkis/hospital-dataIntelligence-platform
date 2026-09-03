@@ -110,8 +110,9 @@ export function createScopedModules(
   const chargeCatalog = createChargeCatalogModule(transaction);
   const emergencyControl = createEmergencyControlModule(transaction, context);
   const priceList = createPriceListModule(transaction, chargeCatalog, emergencyControl);
+  const audit = createAuditModule(transaction, context);
   return {
-    audit: createAuditModule(transaction, context),
+    audit,
     batchImport: createBatchImportModule(transaction, context),
     authorization: createAuthorizationModule(
       transaction,
@@ -119,7 +120,7 @@ export function createScopedModules(
       authorizationDecisionDatabase,
     ),
     chargeCatalog,
-    departmentMaster: createDepartmentMasterModule(transaction),
+    departmentMaster: createDepartmentMasterModule(transaction, audit, context),
     priceList,
     priceResolution: createPriceResolutionModule(transaction, priceList),
     emergencyControl,

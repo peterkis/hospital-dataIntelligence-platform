@@ -15,6 +15,7 @@ import {
   DEPARTMENT_HIERARCHY_PROJECTION_TYPE,
   DEPARTMENT_MASTER_PROJECTION_TYPE,
   DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+  createDepartmentGovernanceAudit,
   type DepartmentMasterModule,
 } from '../department-master/index.js';
 import {
@@ -156,6 +157,13 @@ export function createWorkflowApplication(
           afterHash: actualHash,
           authorityScope: 'VERSIONED_APPROVAL',
         });
+        if (command.entityType === 'DEPARTMENT_VERSION') {
+          await createDepartmentGovernanceAudit(modules.audit, context).departmentSubmitted({
+            governanceObjectId: command.governanceObjectId,
+            departmentVersionId: command.entityVersionId,
+            workflowInstanceId: submitted.changeRequestId,
+          });
+        }
         return submitted;
       });
     },
@@ -235,6 +243,24 @@ export function createWorkflowApplication(
           afterHash: actualHash,
           authorityScope: command.stageType,
         });
+        if (entityType === 'DEPARTMENT_VERSION') {
+          const departmentAudit = createDepartmentGovernanceAudit(modules.audit, context);
+          if (command.stageType === 'PROFESSIONAL_REVIEW') {
+            await departmentAudit.departmentReviewed({
+              governanceObjectId: decided.governanceObjectId,
+              departmentVersionId: decided.entityVersionId,
+              reviewResult: command.actionResult,
+              reviewer: context.actorPrincipalId,
+              reason: command.reason,
+            });
+          } else if (command.stageType === 'OWNER_FINAL_APPROVAL' && command.actionResult === 'APPROVED') {
+            await departmentAudit.departmentApproved({
+              governanceObjectId: decided.governanceObjectId,
+              departmentVersionId: decided.entityVersionId,
+              approver: context.actorPrincipalId,
+            });
+          }
+        }
         const publication =
           decided.requestStatus === 'APPROVED'
             ? await publishApprovedDraft(modules, context, decided, entityType)

@@ -63,7 +63,8 @@ try {
       throw new Error('PROBE_ROLLBACK');
     });
   } catch (error) { if (!(error instanceof Error) || error.message !== 'PROBE_ROLLBACK') throw error; }
-  checks['publicationTransactionRollback'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', publishCode).executeTakeFirst());
+  checks['publicationTransactionRollback'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', publishCode).executeTakeFirst())
+    && await countAuditEventsByRequest(`PV005-${suffix}-PUBLISH-ROLLBACK`) === 0;
 
   const workflowCode = `PV005-WORKFLOW-${suffix}`;
   try {
@@ -81,10 +82,16 @@ try {
       const approved = await workflow.act(context('WORKFLOW-APPROVE', PROTOTYPE_FIXTURE.approverPrincipalId), { changeRequestId: submitted.changeRequestId, stageType: 'OWNER_FINAL_APPROVAL', actionResult: 'APPROVED', reason: 'PROTOTYPE SYNTHETIC OWNER APPROVAL', seenContentDigest: draft.contentHash.toString('hex'), campusId: null });
       const published = await submitModules.departmentMaster.getDepartmentVersion({ governanceObjectId: DEPARTMENT_OBJECT, departmentId: draft.departmentId, departmentVersionId: draft.id });
       checks['workflowAtomicPublicationObserved'] = approved.publication !== null && published.governanceStatus === 'PUBLISHED' && published.releaseId === approved.publication.releaseId;
+      const departmentAuditEvents = await transaction.selectFrom('audit.audit_event').select(['action', 'event_payload', 'occurred_at', 'recorded_at']).where('correlation_id', '=', `PV005-${suffix}`).where('action', 'like', 'DEPARTMENT_%').execute();
+      const actions = new Set(departmentAuditEvents.map((event) => event.action));
+      checks['workflowDepartmentAuditEventsObserved'] = ['DEPARTMENT_CREATED', 'DEPARTMENT_VERSION_CREATED', 'DEPARTMENT_SUBMITTED', 'DEPARTMENT_REVIEWED', 'DEPARTMENT_APPROVED', 'DEPARTMENT_PUBLISHED'].every((action) => actions.has(action));
+      checks['departmentAuditPayloadMinimal'] = departmentAuditEvents.every((event) => event.event_payload !== null && !/DATABASE_URL|password|token|Cookie|Secret|request_body/iu.test(JSON.stringify(event.event_payload)));
+      checks['departmentAuditLocalDateTimes'] = departmentAuditEvents.every((event) => isLocalDateTime(event.occurred_at) && event.recorded_at !== null && isLocalDateTime(event.recorded_at));
       throw new Error('PROBE_ROLLBACK');
     });
   } catch (error) { if (!(error instanceof Error) || error.message !== 'PROBE_ROLLBACK') throw error; }
-  checks['workflowPublicationRollbackClean'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', workflowCode).executeTakeFirst());
+  checks['workflowPublicationRollbackClean'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', workflowCode).executeTakeFirst())
+    && await countAuditEventsByCorrelation(`PV005-${suffix}`) === 0;
 
   const failureCode = `PV005-AUDIT-FAIL-${suffix}`;
   configureControlledPublicationFault('AUDIT_EVENT_WRITTEN');
@@ -97,15 +104,29 @@ try {
       await modules.audit.append({ auditStreamId: DEPARTMENT_OBJECT, governanceObjectId: DEPARTMENT_OBJECT, entityType: 'DEPARTMENT_VERSION', stableEntityId: draft.departmentId, entityVersionId: draft.id, action: 'PUBLISHED', afterHash: draft.contentHash, authorityScope: 'PROBE' });
     });
   } catch { /* expected controlled fault */ } finally { configureControlledPublicationFault(null); }
-  checks['auditFailureRollback'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', failureCode).executeTakeFirst());
+  checks['auditFailureRollback'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', failureCode).executeTakeFirst())
+    && await countAuditEventsByRequest(`PV005-${suffix}-AUDIT-FAILURE`) === 0;
 
   await runner.run(context('MAPPING'), async (modules) => {
     const mapping = await modules.departmentMaster.addSourceMapping({ governanceObjectId: DEPARTMENT_OBJECT, departmentId: '72000000-0000-7000-8000-000000000003', sourceSystem: 'LIS', sourceDepartmentCode: `PROBE-${suffix}`, sourceDepartmentName: '检验探针', matchMethod: 'MANUAL' });
     const confirmed = await modules.departmentMaster.confirmSourceMapping({ governanceObjectId: DEPARTMENT_OBJECT, mappingId: mapping.id });
     checks['mappingPendingToConfirmed'] = confirmed.mappingStatus === 'CONFIRMED';
-    try { await modules.departmentMaster.rejectSourceMapping({ governanceObjectId: DEPARTMENT_OBJECT, mappingId: mapping.id }); } catch (error) { checks['mappingTerminalImmutable'] = error instanceof Error && error.message === 'DEPARTMENT_SOURCE_MAPPING_TRANSITION_INVALID'; }
+    checks['mappingConfirmationAudited'] = (await modules.audit.query({ governanceObjectId: DEPARTMENT_OBJECT, action: 'DEPARTMENT_SOURCE_MAPPING_CONFIRMED', requestId: `PV005-${suffix}-MAPPING`, limit: 10 })).length === 1;
+    try { await modules.departmentMaster.rejectSourceMapping({ governanceObjectId: DEPARTMENT_OBJECT, mappingId: mapping.id, reason: 'PROTOTYPE SYNTHETIC TERMINAL TRANSITION PROBE' }); } catch (error) { checks['mappingTerminalImmutable'] = error instanceof Error && error.message === 'DEPARTMENT_SOURCE_MAPPING_TRANSITION_INVALID'; }
     throw new Error('PROBE_ROLLBACK');
   }).catch((error) => { if (!(error instanceof Error) || error.message !== 'PROBE_ROLLBACK') throw error; });
+
+  const campusChangeCode = `PV005-CAMPUS-${suffix}`;
+  await runner.run(context('CAMPUS-CHANGE'), async (modules) => {
+    const department = await modules.departmentMaster.createDepartment({ ...departmentContent, governanceObjectId: DEPARTMENT_OBJECT, departmentCode: campusChangeCode, recordedFrom: '2026-09-03T14:00:00', actorPrincipalId: PROTOTYPE_FIXTURE.actorPrincipalId });
+    await modules.departmentMaster.recordDepartmentCampusAssignment({ governanceObjectId: DEPARTMENT_OBJECT, departmentId: department.departmentId, campusId: '71000000-0000-7000-8000-000000000001', businessValidFrom: '2026-09-01T00:00:00', businessValidTo: null, recordedFrom: '2026-09-03T14:10:00', actorPrincipalId: PROTOTYPE_FIXTURE.actorPrincipalId });
+    await modules.departmentMaster.recordDepartmentCampusAssignment({ governanceObjectId: DEPARTMENT_OBJECT, departmentId: department.departmentId, campusId: '71000000-0000-7000-8000-000000000001', businessValidFrom: '2026-10-01T00:00:00', businessValidTo: null, recordedFrom: '2026-09-03T14:20:00', actorPrincipalId: PROTOTYPE_FIXTURE.actorPrincipalId });
+    const changed = await modules.audit.query({ governanceObjectId: DEPARTMENT_OBJECT, action: 'DEPARTMENT_CAMPUS_CHANGED', requestId: `PV005-${suffix}-CAMPUS-CHANGE`, limit: 10 });
+    checks['campusChangeAudited'] = changed.length === 1 && 'oldAssignment' in changed[0]!.payload && 'newAssignment' in changed[0]!.payload;
+    throw new Error('PROBE_ROLLBACK');
+  }).catch((error) => { if (!(error instanceof Error) || error.message !== 'PROBE_ROLLBACK') throw error; });
+  checks['campusChangeRollbackClean'] = !(await database.selectFrom('department_master.department').select('department_id').where('department_code', '=', campusChangeCode).executeTakeFirst())
+    && await countAuditEventsByRequest(`PV005-${suffix}-CAMPUS-CHANGE`) === 0;
 
   await runner.run(context('SCOPE'), async (modules) => {
     try { await modules.departmentMaster.getDepartmentVersion({ governanceObjectId: ADMIN_HIERARCHY_OBJECT, departmentId: '72000000-0000-7000-8000-000000000001', departmentVersionId: '72100000-0000-7000-8000-000000000001' }); }
@@ -128,4 +149,7 @@ try {
 
 async function countVersions(departmentId: string): Promise<string> { return (await database.selectFrom('department_master.department_version').select(({ fn }) => fn.countAll<string>().as('count')).where('department_id', '=', departmentId).executeTakeFirstOrThrow()).count; }
 async function countHierarchyVersions(): Promise<string> { return (await database.selectFrom('department_master.department_hierarchy_view_version').select(({ fn }) => fn.countAll<string>().as('count')).where('department_hierarchy_view_id', '=', ADMIN_VIEW).executeTakeFirstOrThrow()).count; }
+async function countAuditEventsByRequest(requestId: string): Promise<number> { return Number((await database.selectFrom('audit.audit_event').select(({ fn }) => fn.countAll<string>().as('count')).where('request_id', '=', requestId).executeTakeFirstOrThrow()).count); }
+async function countAuditEventsByCorrelation(correlationId: string): Promise<number> { return Number((await database.selectFrom('audit.audit_event').select(({ fn }) => fn.countAll<string>().as('count')).where('correlation_id', '=', correlationId).executeTakeFirstOrThrow()).count); }
+function isLocalDateTime(value: string): boolean { return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/u.test(value); }
 function requireEnvironment(name: string): string { const value = process.env[name]; if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`); return value; }

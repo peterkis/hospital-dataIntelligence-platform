@@ -68,10 +68,18 @@ export interface AuditAuditEvent {
   current_hash: Buffer;
   entity_type: string;
   entity_version_id: string | null;
+  /**
+   * Minimal business facts for typed governance events; credentials and complete request bodies are forbidden.
+   */
+  event_payload: Json | null;
   event_payload_hash: Buffer;
   governance_object_id: string;
   occurred_at: string;
   previous_hash: Buffer;
+  /**
+   * Asia/Shanghai local database time at which the audit event was durably recorded.
+   */
+  recorded_at: string | null;
   request_id: string;
   stable_entity_id: string;
 }
