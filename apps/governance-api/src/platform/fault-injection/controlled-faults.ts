@@ -25,10 +25,15 @@ export type ControlledPublicationFaultPoint =
   (typeof CONTROLLED_PUBLICATION_FAULT_POINTS)[number];
 
 let activeFaultPoint: ControlledPublicationFaultPoint | null = null;
+let remainingMatchingHits = 0;
 
-export function configureControlledPublicationFault(point: string | null): void {
+export function configureControlledPublicationFault(
+  point: string | null,
+  hitsBeforeFailure = 0,
+): void {
   if (point === null) {
     activeFaultPoint = null;
+    remainingMatchingHits = 0;
     return;
   }
   if (process.env['NODE_ENV'] !== 'test') {
@@ -37,11 +42,20 @@ export function configureControlledPublicationFault(point: string | null): void 
   if (!CONTROLLED_PUBLICATION_FAULT_POINTS.includes(point as ControlledPublicationFaultPoint)) {
     throw new Error('CONTROLLED_FAULT_POINT_UNKNOWN');
   }
+  if (!Number.isSafeInteger(hitsBeforeFailure) || hitsBeforeFailure < 0) {
+    throw new Error('CONTROLLED_FAULT_HIT_COUNT_INVALID');
+  }
   activeFaultPoint = point as ControlledPublicationFaultPoint;
+  remainingMatchingHits = hitsBeforeFailure;
 }
 
 export function hitControlledPublicationFault(point: ControlledPublicationFaultPoint): void {
-  if (activeFaultPoint === point) throw new Error(`CONTROLLED_PUBLICATION_FAULT:${point}`);
+  if (activeFaultPoint !== point) return;
+  if (remainingMatchingHits > 0) {
+    remainingMatchingHits -= 1;
+    return;
+  }
+  throw new Error(`CONTROLLED_PUBLICATION_FAULT:${point}`);
 }
 
 export function isControlledFaultActive(point: ControlledPublicationFaultPoint): boolean {

@@ -5,6 +5,7 @@ import type { CampusReferenceReader } from '../../platform/campus/campus-referen
 import { canonicalSha256, digestHex } from '../../platform/hashing/canonical-hash.js';
 import { LOCAL_DATE_TIME_JSON_PATTERN, parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
 import type { RequestContext } from '../../platform/transaction/transaction-runner.js';
+import { hitControlledPublicationFault } from '../../platform/fault-injection/controlled-faults.js';
 import type { AuditEventService } from '../audit/index.js';
 import {
   createDepartmentGovernanceAudit,
@@ -59,6 +60,11 @@ export interface DepartmentVersion extends DepartmentVersionContent {
   readonly id: string; readonly departmentId: string; readonly versionNo: string;
   readonly governanceStatus: 'DRAFT' | 'PUBLISHED'; readonly recordedFrom: string;
   readonly recordedTo: string | null; readonly releaseId: string | null; readonly contentHash: Buffer;
+}
+export interface DepartmentIdentity {
+  readonly id: string;
+  readonly governanceObjectId: string;
+  readonly departmentCode: string;
 }
 export interface DepartmentSourceMapping {
   readonly id: string; readonly departmentId: string; readonly sourceSystem: string;
@@ -115,7 +121,9 @@ export interface PreparedHierarchyPublication { readonly hierarchyViewId: string
 export interface DepartmentMasterModule {
   createDepartment(command: DepartmentVersionContent & { readonly governanceObjectId: string; readonly departmentCode: string; readonly recordedFrom: string; readonly actorPrincipalId: string }): Promise<DepartmentVersion>;
   createDepartmentVersion(command: DepartmentVersionContent & { readonly governanceObjectId: string; readonly departmentId: string; readonly recordedFrom: string; readonly actorPrincipalId: string }): Promise<DepartmentVersion>;
+  getDepartmentIdentity(command: { readonly governanceObjectId: string; readonly departmentId: string }): Promise<DepartmentIdentity>;
   getDepartmentVersion(command: { readonly governanceObjectId: string; readonly departmentId: string; readonly departmentVersionId: string }): Promise<DepartmentVersion>;
+  listDepartmentVersions(command: { readonly governanceObjectId: string; readonly departmentId: string }): Promise<readonly DepartmentVersion[]>;
   updateDepartmentDraft(command: DepartmentVersionContent & { readonly governanceObjectId: string; readonly departmentId: string; readonly departmentVersionId: string; readonly actorPrincipalId: string }): Promise<DepartmentVersion>;
   prepareDepartmentPublication(command: { readonly governanceObjectId: string; readonly departmentId: string; readonly departmentVersionId: string }): Promise<PreparedDepartmentPublication>;
   confirmDepartmentPublication(command: { readonly governanceObjectId: string; readonly departmentId: string; readonly departmentVersionId: string; readonly releaseId: string; readonly recordedFrom: string; readonly actorPrincipalId: string }): Promise<void>;
@@ -166,7 +174,28 @@ export function createDepartmentMasterModule(
       await governanceAudit.departmentVersionCreated({ governanceObjectId: command.governanceObjectId, departmentId: command.departmentId, departmentVersionId: versionId, versionNo, contentHash: hash });
       return getVersion(database, command.governanceObjectId, command.departmentId, versionId);
     },
+    async getDepartmentIdentity(command) {
+      const row = await requireDepartment(
+        database,
+        command.governanceObjectId,
+        command.departmentId,
+      );
+      return {
+        id: row.department_id,
+        governanceObjectId: row.governance_object_id,
+        departmentCode: row.department_code,
+      };
+    },
     getDepartmentVersion(command) { return getVersion(database, command.governanceObjectId, command.departmentId, command.departmentVersionId); },
+    async listDepartmentVersions(command) {
+      await requireDepartment(database, command.governanceObjectId, command.departmentId);
+      return (await database
+        .selectFrom('department_master.department_version')
+        .selectAll()
+        .where('department_id', '=', command.departmentId)
+        .orderBy('version_no')
+        .execute()).map(toVersion);
+    },
     async updateDepartmentDraft(command) {
       validateDepartmentVersionContent(command); assertEvolutionSupported(command.businessStatus);
       const current = await getVersion(database, command.governanceObjectId, command.departmentId, command.departmentVersionId, true);
@@ -199,6 +228,7 @@ export function createDepartmentMasterModule(
       if (old && closed.numUpdatedRows !== 1n) throw new Error('DEPARTMENT_PROJECTION_CURRENT_NOT_FOUND');
       if (!old && closed.numUpdatedRows !== 0n) throw new Error('DEPARTMENT_PROJECTION_STATE_CONFLICT');
       await database.insertInto('department_master.department_published_projection').values({ department_id: snapshot.departmentId, department_version_id: snapshot.departmentVersionId, department_code: snapshot.departmentCode, standard_name: snapshot.standardName, department_type: snapshot.departmentType, subject_mapping_applicability: snapshot.subjectMappingApplicability, campuses: sql`${JSON.stringify(snapshot.campuses)}::jsonb`, hierarchies: sql`${JSON.stringify(snapshot.hierarchies)}::jsonb`, quality_score: snapshot.qualityScore, published_release_id: snapshot.publishedReleaseId, published_at: snapshot.publishedAt, content_hash: snapshot.contentHash }).execute();
+      hitControlledPublicationFault('DOMAIN_CANDIDATE_CONFIRMED');
       await governanceAudit.departmentPublished({ governanceObjectId: command.governanceObjectId, departmentVersionId: command.departmentVersionId, releaseId: command.releaseId, publishedAt: command.recordedFrom, contentHash: version.contentHash });
     },
     async addAlias(command) { await requireDepartment(database, command.governanceObjectId, command.departmentId); await database.insertInto('department_master.department_alias').values({ department_id: command.departmentId, source_system: command.sourceSystem, source_code: command.sourceCode, source_name: command.sourceName, mapping_status: 'CONFIRMED', confidence_score: command.confidenceScore }).execute(); },
@@ -388,5 +418,6 @@ const operationalViews = new Set<DepartmentHierarchyViewType>(['ADMINISTRATIVE',
 async function nextUuid(db: Transaction<DB>): Promise<string> { return (await db.selectNoFrom((e) => e.fn<string>('uuidv7', []).as('id')).executeTakeFirstOrThrow()).id; }
 
 export * from './department-audit.js';
+export * from './application.js';
 export * from './department-contracts.js';
 export * from './read-model.js';

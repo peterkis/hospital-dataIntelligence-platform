@@ -20,10 +20,13 @@ const publishedSource: DepartmentPublishedReadSource = {
     publishedReleaseId: '75000000-0000-7000-8000-000000000001',
     publishedAt: '2026-09-03T16:00:00.123456',
     contentHash,
+    versionNo: '1',
   },
   versionSnapshot: {
     shortName: '呼吸科',
     lifecycleStatus: 'ACTIVE',
+    businessValidFrom: '2026-09-01T00:00:00',
+    businessValidTo: null,
   },
   campusSnapshot: [{
     campusId: '71000000-0000-7000-8000-000000000001',
@@ -43,6 +46,11 @@ const publishedSource: DepartmentPublishedReadSource = {
     sourceName: '呼吸科',
     mappingStatus: 'CONFIRMED',
   }],
+  qualitySnapshot: {
+    completenessScore: '100.00',
+    uniquenessScore: '100.00',
+    standardizationScore: '97.00',
+  },
 };
 
 describe('department published read model contract', () => {
@@ -67,9 +75,15 @@ describe('department published read model contract', () => {
       }],
       sourceMappings: [{ sourceSystem: 'HIS', sourceCode: 'HIS-RESP', sourceName: '呼吸科', mappingStatus: 'CONFIRMED' }],
       qualityScore: '98.50',
+      completenessScore: '100.00',
+      uniquenessScore: '100.00',
+      standardizationScore: '97.00',
       publishedReleaseId: '75000000-0000-7000-8000-000000000001',
       publishedAt: '2026-09-03T16:00:00.123456',
       contentHash: '7f'.repeat(32),
+      versionNo: '1',
+      businessValidFrom: '2026-09-01T00:00:00',
+      businessValidTo: null,
     });
   });
 

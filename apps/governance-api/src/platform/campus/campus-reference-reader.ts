@@ -1,4 +1,4 @@
-import type { Transaction } from 'kysely';
+import type { Kysely, Transaction } from 'kysely';
 import type { DB } from '../database/database-types.generated.js';
 
 export interface CampusReferenceReader {
@@ -13,7 +13,7 @@ export interface CampusReference {
 }
 
 export function createCampusReferenceReader(
-  database: Transaction<DB>,
+  database: Kysely<DB> | Transaction<DB>,
 ): CampusReferenceReader {
   async function getReferences(campusIds: readonly string[]): Promise<readonly CampusReference[]> {
     if (campusIds.length === 0) return [];

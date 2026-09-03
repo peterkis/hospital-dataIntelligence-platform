@@ -123,3 +123,7 @@ DTO 禁止出现 `created_at`、`recorded_to`、`internal_version_id`、SQL、�
 ## 9. Frozen Boundary
 
 PV-005-B 只能在本文件和 `department-contracts.ts` 冻结的应用边界上增加传输适配。不得把数据库 Entity、当前层级查询、Workflow 详情或任意 SQL filter 作为 REST 契约，也不得借 HTTP 路由增加未列入允许清单的直接写命令。
+
+### PV-005-A.4-R1 非语义变更澄清
+
+本节不改变上述冻结 Command、权限或 DTO。`ApproveDepartment(APPROVED)` 是现有生产组合中的实际原子批准发布动作：Owner 最终批准、`PUBLISH` 权限校验、Release、科室版本发布、Projection 和 Audit 在同一事务内完成。`PublishDepartment` 只确认该原子事务已经形成的发布后置条件，不形成第二个发布事务或修复入口。`ConfirmSourceMapping` 继续使用 `REVIEW`，不新增独立权限。
