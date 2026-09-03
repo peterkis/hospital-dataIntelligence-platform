@@ -7,7 +7,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { sql, type Kysely } from 'kysely';
-import type { ResolvedPrincipal } from '../fastify/register-phase-01-routes.js';
+import type { ResolvedPrincipal } from '../fastify/request-context.js';
 import type { DB } from '../database/database-types.generated.js';
 
 const SESSION_COOKIE_NAME = '__Host-hdi-session';

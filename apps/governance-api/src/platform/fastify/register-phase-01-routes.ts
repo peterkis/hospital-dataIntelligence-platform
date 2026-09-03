@@ -1,15 +1,15 @@
-import { randomUUID } from 'node:crypto';
 import {
   Type,
   type TypeBoxTypeProvider,
 } from '@fastify/type-provider-typebox';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import type { Static } from 'typebox';
 import type { TransactionRunner } from '../transaction/transaction-runner.js';
+import { LOCAL_DATE_TIME_JSON_PATTERN } from '../local-datetime/local-datetime.js';
 import {
-  LOCAL_DATE_TIME_JSON_PATTERN,
-  parseLocalDateTime,
-} from '../local-datetime/local-datetime.js';
+  createHttpRequestContext as createRequestContext,
+  type HttpRequestContextDependencies,
+} from './request-context.js';
 import type { ScopedModules } from '../../composition/create-scoped-modules.js';
 import type { Phase01VerticalSlice } from '../../composition/phase-01-vertical-slice.js';
 import type { ObjectPermissionCode } from '../../modules/authorization/index.js';
@@ -634,17 +634,10 @@ const ErrorResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 
-export interface ResolvedPrincipal {
-  readonly principalId: string;
-  readonly principalKind: 'PERSON' | 'SERVICE';
-}
-
-export interface Phase01HttpDependencies {
+export interface Phase01HttpDependencies extends HttpRequestContextDependencies {
   readonly verticalSlice: Phase01VerticalSlice;
   readonly transactionRunner: TransactionRunner<ScopedModules>;
   readonly workflowApplication: WorkflowApplication;
-  resolvePrincipal(request: FastifyRequest): Promise<ResolvedPrincipal>;
-  now(): string;
 }
 
 export async function registerPhase01Routes(
@@ -1993,28 +1986,6 @@ function requireRuntime(
 ): Phase01HttpDependencies {
   if (!dependencies) throw new Error('PHASE_01_RUNTIME_NOT_CONFIGURED');
   return dependencies;
-}
-
-async function createRequestContext(
-  request: FastifyRequest,
-  dependencies: Phase01HttpDependencies,
-  requiredKind: 'PERSON' | 'SERVICE',
-) {
-  const principal = await dependencies.resolvePrincipal(request);
-  if (principal.principalKind !== requiredKind) throw new Error('PRINCIPAL_KIND_FORBIDDEN');
-  const occurredAt = parseLocalDateTime(dependencies.now());
-  const requestId = headerValue(request, 'x-request-id') ?? request.id ?? randomUUID();
-  return {
-    actorPrincipalId: principal.principalId,
-    requestId,
-    correlationId: headerValue(request, 'x-correlation-id') ?? requestId,
-    occurredAt,
-  };
-}
-
-function headerValue(request: FastifyRequest, name: string): string | undefined {
-  const value = request.headers[name];
-  return Array.isArray(value) ? value[0] : value;
 }
 
 export type ResolvePriceBody = Static<typeof ResolvePriceBodySchema>;

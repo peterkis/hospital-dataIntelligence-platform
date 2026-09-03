@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
-import type { ResolvedPrincipal } from '../fastify/register-phase-01-routes.js';
+import type { ResolvedPrincipal } from '../fastify/request-context.js';
 import { PROTOTYPE_PRINCIPALS } from '../../prototype-fixture.js';
 
 export const PROTOTYPE_AUTHENTICATION_MODE = 'PROTOTYPE_SYNTHETIC' as const;

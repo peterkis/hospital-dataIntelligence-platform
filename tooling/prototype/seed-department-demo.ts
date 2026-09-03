@@ -7,16 +7,16 @@ const HOSPITAL_NAME = 'HDI Demo Hospital';
 const BUSINESS_VALID_FROM = '2026-09-01T00:00:00';
 const RECORDED_FROM = '2026-09-03T09:00:00';
 const QUALITY_CALCULATED_AT = '2026-09-03T09:30:00';
-const DEPARTMENT_GOVERNANCE_OBJECT_ID = '74000000-0000-7000-8000-000000000001';
+const DEPARTMENT_GOVERNANCE_OBJECT_ID = PROTOTYPE_FIXTURE.departmentMasterObjectId;
 
 const campuses = [
-  ['71000000-0000-7000-8000-000000000001', 'HDI-DEMO-HQ', '总部院区'],
-  ['71000000-0000-7000-8000-000000000002', 'HDI-DEMO-HITECH', '高新院区'],
+  [PROTOTYPE_FIXTURE.departmentHeadquartersCampusId, 'HDI-DEMO-HQ', '总部院区'],
+  [PROTOTYPE_FIXTURE.departmentHighTechCampusId, 'HDI-DEMO-HITECH', '高新院区'],
 ] as const;
 
 const departments = [
   {
-    id: '72000000-0000-7000-8000-000000000001',
+    id: PROTOTYPE_FIXTURE.respiratoryDepartmentId,
     versionId: '72100000-0000-7000-8000-000000000001',
     code: 'DEP-00001',
     standardName: '呼吸与危重症医学科',
@@ -470,12 +470,12 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
         where enabled = true and source_code in ('HIS', 'EMR', 'LIS', 'PACS', 'PERFORMANCE')) as sources_created,
       (select count(*)::int = 2 from platform.campus
         where campus_id in (
-          '71000000-0000-7000-8000-000000000001'::uuid,
-          '71000000-0000-7000-8000-000000000002'::uuid
+          $1::uuid,
+          $2::uuid
         ) and display_name in ('总部院区', '高新院区')) as campuses_created,
       (select count(*)::int = 3 from department_master.department
         where department_code in ('DEP-00001', 'DEP-00002', 'DEP-00003')
-          and governance_object_id = '74000000-0000-7000-8000-000000000001') as department_created,
+          and governance_object_id = $3::uuid) as department_created,
       (select count(*)::int = 3 from department_master.department_version
         where department_version_id in (
           '72100000-0000-7000-8000-000000000001'::uuid,
@@ -494,7 +494,7 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
         where department_quality_score_id::text like '72400000-0000-7000-8000-%') as quality_score_created,
       (select count(*)::int = 6 from platform.governance_object
         where governance_object_id in (
-          '74000000-0000-7000-8000-000000000001'::uuid,
+          $3::uuid,
           '74100000-0000-7000-8000-000000000001'::uuid,
           '74100000-0000-7000-8000-000000000002'::uuid,
           '74100000-0000-7000-8000-000000000003'::uuid,
@@ -506,8 +506,12 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
       (select count(distinct department_id)::int = 2
         from department_master.department_campus_assignment
         where campus_id in (
-          '71000000-0000-7000-8000-000000000001'::uuid,
-          '71000000-0000-7000-8000-000000000002'::uuid
+          $1::uuid,
+          $2::uuid
+        ) and department_campus_assignment_id in (
+          '72500000-0000-7000-8000-000000000001'::uuid,
+          '72500000-0000-7000-8000-000000000002'::uuid,
+          '72500000-0000-7000-8000-000000000003'::uuid
         )) as campus_assignments_share_stable_departments,
       (select count(*)::int = 5 from department_master.department_hierarchy_view
         where view_type in ('ADMINISTRATIVE', 'OPERATIONAL', 'MEDICAL_RECORD', 'FINANCE', 'STATISTICAL')) as hierarchy_views_registered,
@@ -538,7 +542,11 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
           and table_name = 'department_version'
           and column_name in ('parent_department_id', 'hierarchy_level', 'tree_path')
       ) as no_generic_parent_on_department_version
-  `);
+  `, [
+    PROTOTYPE_FIXTURE.departmentHeadquartersCampusId,
+    PROTOTYPE_FIXTURE.departmentHighTechCampusId,
+    PROTOTYPE_FIXTURE.departmentMasterObjectId,
+  ]);
   const checks = result.rows[0] as Record<string, boolean> | undefined;
   if (!checks || Object.values(checks).some((value) => value !== true)) {
     throw new Error('DEPARTMENT_DEMO_SEED_VERIFICATION_FAILED');

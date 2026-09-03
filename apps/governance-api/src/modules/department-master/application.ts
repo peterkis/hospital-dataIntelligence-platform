@@ -206,7 +206,7 @@ export function createDepartmentGovernanceApplication<Scope extends DepartmentAp
               departmentCode: identity.departmentCode,
               standardName: version.standardName,
               status: pendingStatus(entry.request.requestStatus),
-              submittedAt: departmentDtoLocalDateTime(entry.submittedAt),
+              submittedAt: pendingReviewSubmittedAt(entry.submittedAt),
               contentHash: version.contentHash.toString('hex'),
             });
           }
@@ -556,6 +556,10 @@ async function mapDepartmentApplicationErrors<Result>(
   } catch (error) {
     return mapDepartmentApplicationError(error);
   }
+}
+
+function pendingReviewSubmittedAt(value: string) {
+  return departmentDtoLocalDateTime(value.replace(/\.[0-9]{1,6}$/u, ''));
 }
 
 const departmentErrorMap: Readonly<Record<string, DepartmentContractError['code']>> = {

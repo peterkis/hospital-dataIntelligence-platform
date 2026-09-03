@@ -5,6 +5,10 @@ export const PROTOTYPE_FIXTURE = {
   campusId: '70000000-0000-7000-8000-000000000004',
   chargeCatalogObjectId: '70000000-0000-7000-8000-000000000005',
   priceListObjectId: '70000000-0000-7000-8000-000000000006',
+  departmentMasterObjectId: '74000000-0000-7000-8000-000000000001',
+  departmentHeadquartersCampusId: '71000000-0000-7000-8000-000000000001',
+  departmentHighTechCampusId: '71000000-0000-7000-8000-000000000002',
+  respiratoryDepartmentId: '72000000-0000-7000-8000-000000000001',
 } as const;
 
 export const PROTOTYPE_PRINCIPALS = [

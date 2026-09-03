@@ -12,6 +12,7 @@ import {
 } from '../platform/fastify/register-phase-01-routes.js';
 import type { KeycloakAuthentication } from '../platform/authentication/keycloak-authentication.js';
 import { registerAuthenticationRoutes } from '../platform/fastify/register-authentication-routes.js';
+import { mapHttpError } from '../platform/fastify/map-http-error.js';
 import { PHASE_01_PROJECTION_CONTRACTS } from './create-scoped-modules.js';
 
 const HealthResponseSchema = Type.Object(
@@ -65,14 +66,17 @@ export async function buildApplication(options?: {
   // so authentication and governance errors cannot fall through to Fastify's
   // default 500 response.
   application.setErrorHandler((error, request, reply) => {
-    const mapped = mapError(error);
+    const mapped = mapHttpError(error);
     void reply.code(mapped.statusCode).send({
       code: mapped.code,
       requestId: request.id,
     });
   });
   for (const contract of PHASE_01_PROJECTION_CONTRACTS) {
-    application.addSchema(contract.schema);
+    const schemaId = (contract.schema as { readonly $id?: unknown }).$id;
+    if (typeof schemaId === 'string' && schemaId.length > 0) {
+      application.addSchema(contract.schema);
+    }
   }
 
   application.get(
@@ -108,60 +112,4 @@ export async function buildApplication(options?: {
   }
 
   return application;
-}
-
-function mapError(error: unknown): {
-  readonly statusCode: 400 | 401 | 403 | 404 | 409 | 500 | 503;
-  readonly code: string;
-} {
-  if (!(error instanceof Error)) return { statusCode: 500, code: 'INTERNAL_ERROR' };
-  const candidate = error as Error & { code?: string; validation?: unknown };
-  if (candidate.validation) return { statusCode: 400, code: 'REQUEST_SCHEMA_INVALID' };
-  if (candidate.message === 'PHASE_01_RUNTIME_NOT_CONFIGURED') {
-    return { statusCode: 503, code: candidate.message };
-  }
-  if (candidate.message === 'AUTHENTICATION_RUNTIME_NOT_CONFIGURED') {
-    return { statusCode: 503, code: candidate.message };
-  }
-  if (
-    candidate.message.includes('UNAUTHENTICATED') ||
-    candidate.message.includes('TOKEN_') ||
-    candidate.message === 'EXTERNAL_IDENTITY_UNBOUND'
-  ) {
-    return { statusCode: 401, code: candidate.message };
-  }
-  if (candidate.message.endsWith('_FORBIDDEN')) return { statusCode: 403, code: candidate.message };
-  if (candidate.message.endsWith('_APPROVAL_WORKFLOW_REQUIRED')) {
-    return { statusCode: 409, code: candidate.message };
-  }
-  if (candidate.message.includes('NOT_FOUND') || candidate.message.includes('NOT_AVAILABLE')) {
-    return { statusCode: 404, code: candidate.message };
-  }
-  if (
-    candidate.code === '23505' ||
-    candidate.code === '23P01' ||
-    candidate.code === '55000' ||
-    candidate.message.includes('CONFLICT') ||
-    candidate.message.includes('GAP') ||
-    candidate.message.includes('IMMUTABLE')
-  ) {
-    return {
-      statusCode: 409,
-      code:
-        candidate.code === '23505'
-          ? 'UNIQUE_CONSTRAINT_CONFLICT'
-          : candidate.code === '55000'
-            ? 'IMMUTABLE_RECORD_CONFLICT'
-            : candidate.message,
-    };
-  }
-  if (
-    candidate.code === '23514' ||
-    candidate.message.endsWith('_INVALID') ||
-    candidate.message.includes('MISMATCH') ||
-    candidate.message.includes('REQUIRED')
-  ) {
-    return { statusCode: 400, code: candidate.message };
-  }
-  return { statusCode: 500, code: 'INTERNAL_ERROR' };
 }

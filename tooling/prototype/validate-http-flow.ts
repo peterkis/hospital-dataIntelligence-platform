@@ -3,12 +3,14 @@ import { createConnection } from 'node:net';
 import { resolve } from 'node:path';
 import { createDatabase } from '../../apps/governance-api/src/platform/database/create-database.js';
 import { PROTOTYPE_DATABASE_POOL_CLOSED_EVENT } from '../../apps/governance-api/src/prototype-lifecycle.js';
+import { PROTOTYPE_FIXTURE } from './prototype-fixture.js';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const host = process.env['HOST'] ?? '127.0.0.1';
 const port = parsePort(process.env['PORT'] ?? '3000');
 const baseUrl = `http://${host}:${port}`;
 const validateUi = process.env['PROTOTYPE_UI_VALIDATION'] === 'true';
+let validationFlow: 'phase-01' | 'department' | undefined;
 let apiProcess: ChildProcess | undefined;
 let apiProcessExited = false;
 let apiProcessGracefullyStopped = false;
@@ -19,8 +21,12 @@ let httpSmokePassed = false;
 let databasePoolClosed = false;
 let uiBuildPassed = false;
 let uiResourcesPassed = false;
+let departmentPersistenceBefore: DepartmentPrefixSnapshot | undefined;
+let departmentSmokeResult: DepartmentHttpSmokeResult | undefined;
+let departmentPersistenceResult: DepartmentPersistenceResult | undefined;
 
 try {
+  validationFlow = parseValidationFlow(process.argv.slice(2));
   if (await isPortAcceptingConnections(host, port)) {
     throw new Error('PROTOTYPE_PORT_ALREADY_IN_USE');
   }
@@ -35,7 +41,14 @@ try {
     'tsx',
     'tooling/prototype/seed-prototype.ts',
   ]);
-  if (validateUi) {
+  if (validationFlow === 'department') {
+    await runNode('DEPARTMENT_SYNTHETIC_SEED', [
+      '--import',
+      'tsx',
+      'tooling/prototype/seed-department-demo.ts',
+    ]);
+    departmentPersistenceBefore = await readDepartmentPrefixSnapshot();
+  } else if (validateUi) {
     await runNode(
       'PROTOTYPE_UI_BUILD',
       [resolve(repositoryRoot, 'node_modules/vite/bin/vite.js'), 'build', '--mode', 'prototype'],
@@ -44,7 +57,9 @@ try {
     );
     uiBuildPassed = true;
   }
-  persistenceBefore = await readPrototypePersistenceTotals();
+  if (validationFlow === 'phase-01') {
+    persistenceBefore = await readPrototypePersistenceTotals();
+  }
 
   apiProcess = spawn(
     process.execPath,
@@ -76,18 +91,25 @@ try {
   });
   await waitForHealth(apiProcess, `${baseUrl}/health`, 20_000);
 
-  if (validateUi) {
+  if (validationFlow === 'phase-01' && validateUi) {
     await validatePrototypeUiResources(baseUrl);
     uiResourcesPassed = true;
   }
 
-  await runNode('HTTP_SMOKE', [
-    '--import',
-    'tsx',
-    'tooling/prototype/run-http-flow.ts',
-  ], {
-    PROTOTYPE_API_BASE_URL: baseUrl,
-  });
+  const smokeOutput = await runNode(
+    validationFlow === 'department' ? 'DEPARTMENT_HTTP_SMOKE' : 'HTTP_SMOKE',
+    [
+      '--import',
+      'tsx',
+      validationFlow === 'department'
+        ? 'tooling/prototype/run-department-http-flow.ts'
+        : 'tooling/prototype/run-http-flow.ts',
+    ],
+    { PROTOTYPE_API_BASE_URL: baseUrl },
+  );
+  if (validationFlow === 'department') {
+    departmentSmokeResult = parseDepartmentSmokeResult(smokeOutput);
+  }
   httpSmokePassed = true;
 } catch (error) {
   process.stderr.write(`${JSON.stringify({
@@ -101,8 +123,10 @@ try {
     : { exited: true, graceful: true };
   apiProcessExited = stopResult.exited;
   apiProcessGracefullyStopped = stopResult.graceful;
-  portReleased = !(await waitForPortState(host, port, false, 10_000));
-  if (httpSmokePassed && persistenceBefore) {
+  portReleased = validationFlow
+    ? !(await waitForPortState(host, port, false, 10_000))
+    : true;
+  if (validationFlow === 'phase-01' && httpSmokePassed && persistenceBefore) {
     try {
       const persistenceAfter = await readPrototypePersistenceTotals();
       persistenceObserved =
@@ -122,6 +146,30 @@ try {
       process.stderr.write(`${JSON.stringify({
         status: 'FAILED',
         errorCode: 'PROTOTYPE_HTTP_PERSISTENCE_CHECK_FAILED',
+      })}\n`);
+      process.exitCode = 1;
+    }
+  }
+  if (
+    validationFlow === 'department' &&
+    httpSmokePassed &&
+    departmentPersistenceBefore &&
+    departmentSmokeResult &&
+    apiProcessExited &&
+    apiProcessGracefullyStopped &&
+    databasePoolClosed &&
+    portReleased
+  ) {
+    try {
+      departmentPersistenceResult = await verifyDepartmentPersistence(
+        departmentPersistenceBefore,
+        departmentSmokeResult,
+      );
+      persistenceObserved = departmentPersistenceResult.persistenceObserved;
+    } catch (error) {
+      process.stderr.write(`${JSON.stringify({
+        status: 'FAILED',
+        errorCode: safeErrorCode(error, 'PROTOTYPE_DEPARTMENT_HTTP_PERSISTENCE_CHECK_FAILED'),
       })}\n`);
       process.exitCode = 1;
     }
@@ -147,7 +195,23 @@ try {
   }
 }
 
-if (process.exitCode !== 1) {
+if (process.exitCode !== 1 && validationFlow === 'department' && departmentPersistenceResult) {
+  process.stdout.write(`${JSON.stringify({
+    status: 'PASSED',
+    departmentHttpSmokePassed: httpSmokePassed,
+    departmentPublished: departmentPersistenceResult.departmentPublished,
+    workflowApproved: departmentPersistenceResult.workflowApproved,
+    releaseExactlyOnce: departmentPersistenceResult.releaseExactlyOnce,
+    projectionExactlyOnce: departmentPersistenceResult.projectionExactlyOnce,
+    auditSequenceObserved: departmentPersistenceResult.auditSequenceObserved,
+    publicationConfirmationIdempotent:
+      departmentPersistenceResult.publicationConfirmationIdempotent,
+    sourceMappingConfirmed: departmentPersistenceResult.sourceMappingConfirmed,
+    persistenceObserved: departmentPersistenceResult.persistenceObserved,
+    databasePoolClosed,
+    portReleased,
+  })}\n`);
+} else if (process.exitCode !== 1 && validationFlow === 'phase-01') {
   process.stdout.write(`${JSON.stringify({
     status: 'PASSED',
     apiProcessExited,
@@ -164,6 +228,55 @@ interface PrototypePersistenceTotals {
   readonly publishedChargeItemVersions: bigint;
   readonly publishedPriceListReleases: bigint;
   readonly priceResolutions: bigint;
+}
+
+interface DepartmentIdentity {
+  readonly departmentCode: string;
+  readonly departmentId: string;
+}
+
+interface DepartmentPrefixSnapshot {
+  readonly count: bigint;
+  readonly identities: readonly DepartmentIdentity[];
+}
+
+interface DepartmentHttpSmokeResult {
+  readonly status: 'PASSED';
+  readonly departmentHttpSmokePassed: true;
+  readonly departmentPublished: true;
+  readonly publicationArtifactsExactlyOnceBeforeConfirmation: true;
+  readonly publicationArtifactsUnchangedAfterConfirmations: true;
+  readonly publicationArtifactCounts: {
+    readonly beforeConfirmation: PublicationArtifactCounts;
+    readonly afterFirstConfirmation: PublicationArtifactCounts;
+    readonly afterSecondConfirmation: PublicationArtifactCounts;
+  };
+  readonly publicationConfirmationIdempotent: true;
+  readonly sourceMappingConfirmed: true;
+  readonly departmentCode: string;
+  readonly departmentId: string;
+  readonly departmentVersionId: string;
+  readonly governanceRequestId: string;
+  readonly correlationId: string;
+  readonly mappingId: string;
+  readonly sourceCode: string;
+}
+
+interface PublicationArtifactCounts {
+  readonly releaseMemberCount: 1;
+  readonly projectionCount: 1;
+  readonly publishedAuditCount: 1;
+}
+
+interface DepartmentPersistenceResult {
+  readonly departmentPublished: boolean;
+  readonly workflowApproved: boolean;
+  readonly releaseExactlyOnce: boolean;
+  readonly projectionExactlyOnce: boolean;
+  readonly auditSequenceObserved: boolean;
+  readonly publicationConfirmationIdempotent: boolean;
+  readonly sourceMappingConfirmed: boolean;
+  readonly persistenceObserved: boolean;
 }
 
 async function readPrototypePersistenceTotals(): Promise<PrototypePersistenceTotals> {
@@ -213,24 +326,214 @@ async function readPrototypePersistenceTotals(): Promise<PrototypePersistenceTot
   }
 }
 
+async function readDepartmentPrefixSnapshot(): Promise<DepartmentPrefixSnapshot> {
+  const databaseHandle = createDatabase({
+    connectionString: requireEnvironment('DATABASE_URL'),
+    application_name: 'hdi-prototype-department-http-prefix-check',
+    max: 1,
+  });
+  try {
+    const identities = await databaseHandle.database
+      .selectFrom('department_master.department')
+      .select([
+        'department_code as departmentCode',
+        'department_id as departmentId',
+      ])
+      .where('department_code', 'like', 'PROTOTYPE-HTTP-DEPARTMENT-%')
+      .orderBy('department_code')
+      .execute();
+    return {
+      count: BigInt(identities.length),
+      identities,
+    };
+  } finally {
+    await databaseHandle.close();
+  }
+}
+
+async function verifyDepartmentPersistence(
+  before: DepartmentPrefixSnapshot,
+  smoke: DepartmentHttpSmokeResult,
+): Promise<DepartmentPersistenceResult> {
+  const databaseHandle = createDatabase({
+    connectionString: requireEnvironment('DATABASE_URL'),
+    application_name: 'hdi-prototype-department-http-persistence-check',
+    max: 1,
+  });
+  try {
+    const database = databaseHandle.database;
+    const identities = await database
+      .selectFrom('department_master.department')
+      .select([
+        'department_code as departmentCode',
+        'department_id as departmentId',
+      ])
+      .where('department_code', 'like', 'PROTOTYPE-HTTP-DEPARTMENT-%')
+      .orderBy('department_code')
+      .execute();
+    const beforeCodes = new Set(before.identities.map((identity) => identity.departmentCode));
+    const added = identities.filter((identity) => !beforeCodes.has(identity.departmentCode));
+    if (
+      BigInt(identities.length) !== before.count + 1n ||
+      added.length !== 1 ||
+      added[0]?.departmentCode !== smoke.departmentCode ||
+      added[0]?.departmentId !== smoke.departmentId
+    ) {
+      throw new Error('PROTOTYPE_DEPARTMENT_HTTP_IDENTITY_DELTA_INVALID');
+    }
+
+    const version = await database
+      .selectFrom('department_master.department_version')
+      .select(['governance_status', 'content_hash', 'release_id'])
+      .where('department_id', '=', smoke.departmentId)
+      .where('department_version_id', '=', smoke.departmentVersionId)
+      .executeTakeFirstOrThrow();
+    const workflow = await database
+      .selectFrom('workflow.change_request')
+      .select(['request_status', 'submitted_content_hash'])
+      .where('change_request_id', '=', smoke.governanceRequestId)
+      .where('stable_entity_id', '=', smoke.departmentId)
+      .where('entity_version_id', '=', smoke.departmentVersionId)
+      .executeTakeFirstOrThrow();
+    const releaseMembers = await database
+      .selectFrom('release_distribution.release_member_department')
+      .select(['release_id', 'department_id', 'department_version_id', 'member_hash'])
+      .where('department_id', '=', smoke.departmentId)
+      .where('department_version_id', '=', smoke.departmentVersionId)
+      .execute();
+    const release = version.release_id
+      ? await database
+        .selectFrom('release_distribution.governance_release')
+        .select(['release_id', 'governance_object_id'])
+        .where('release_id', '=', version.release_id)
+        .executeTakeFirst()
+      : undefined;
+    const projections = await database
+      .selectFrom('department_master.department_published_projection')
+      .select([
+        'department_id',
+        'department_version_id',
+        'published_release_id',
+        'superseded_at',
+        'content_hash',
+      ])
+      .where('department_id', '=', smoke.departmentId)
+      .where('department_version_id', '=', smoke.departmentVersionId)
+      .execute();
+    const requiredAuditActions = [
+      'DEPARTMENT_CREATED',
+      'DEPARTMENT_VERSION_CREATED',
+      'DEPARTMENT_SUBMITTED',
+      'DEPARTMENT_REVIEWED',
+      'DEPARTMENT_APPROVED',
+      'DEPARTMENT_PUBLISHED',
+    ] as const;
+    const auditRows = await database
+      .selectFrom('audit.audit_event')
+      .select(['action', 'entity_type', 'stable_entity_id'])
+      .where('governance_object_id', '=', PROTOTYPE_FIXTURE.departmentMasterObjectId)
+      .where('correlation_id', '=', smoke.correlationId)
+      .where('action', 'in', requiredAuditActions)
+      .orderBy('audit_sequence')
+      .execute();
+    const mapping = await database
+      .selectFrom('department_master.department_source_mapping')
+      .select([
+        'department_id',
+        'source_department_code',
+        'mapping_status',
+      ])
+      .where('department_mapping_id', '=', smoke.mappingId)
+      .executeTakeFirstOrThrow();
+
+    const departmentPublished = version.governance_status === 'PUBLISHED';
+    const workflowApproved =
+      workflow.request_status === 'APPROVED' &&
+      workflow.submitted_content_hash.equals(version.content_hash);
+    const releaseMember = releaseMembers[0];
+    const releaseExactlyOnce =
+      releaseMembers.length === 1 &&
+      version.release_id !== null &&
+      release?.release_id === version.release_id &&
+      release.governance_object_id === PROTOTYPE_FIXTURE.departmentMasterObjectId &&
+      releaseMember?.release_id === version.release_id &&
+      releaseMember.department_id === smoke.departmentId &&
+      releaseMember.department_version_id === smoke.departmentVersionId &&
+      releaseMember.member_hash.equals(version.content_hash);
+    const projection = projections[0];
+    const projectionExactlyOnce =
+      projections.length === 1 &&
+      projection?.department_id === smoke.departmentId &&
+      projection.department_version_id === smoke.departmentVersionId &&
+      projection.published_release_id === version.release_id &&
+      projection.superseded_at === null &&
+      projection.content_hash.equals(version.content_hash);
+    const auditSequenceObserved =
+      auditRows.length === requiredAuditActions.length &&
+      auditRows.every((row, index) =>
+        row.action === requiredAuditActions[index] &&
+        row.entity_type === (index === 0 ? 'DEPARTMENT' : 'DEPARTMENT_VERSION') &&
+        row.stable_entity_id === (index === 0 ? smoke.departmentId : smoke.departmentVersionId)) &&
+      auditRows.filter((row) => row.action === 'DEPARTMENT_PUBLISHED').length === 1;
+    const sourceMappingConfirmed =
+      mapping.department_id === smoke.departmentId &&
+      mapping.source_department_code === smoke.sourceCode &&
+      mapping.mapping_status === 'CONFIRMED';
+    const publicationConfirmationIdempotent =
+      smoke.publicationConfirmationIdempotent &&
+      smoke.publicationArtifactsExactlyOnceBeforeConfirmation &&
+      smoke.publicationArtifactsUnchangedAfterConfirmations &&
+      releaseExactlyOnce &&
+      projectionExactlyOnce &&
+      auditRows.filter((row) => row.action === 'DEPARTMENT_PUBLISHED').length === 1;
+    const persistenceObserved =
+      departmentPublished &&
+      workflowApproved &&
+      releaseExactlyOnce &&
+      projectionExactlyOnce &&
+      auditSequenceObserved &&
+      publicationConfirmationIdempotent &&
+      sourceMappingConfirmed;
+    if (!persistenceObserved) {
+      throw new Error('PROTOTYPE_DEPARTMENT_HTTP_PERSISTENCE_NOT_OBSERVED');
+    }
+    return {
+      departmentPublished,
+      workflowApproved,
+      releaseExactlyOnce,
+      projectionExactlyOnce,
+      auditSequenceObserved,
+      publicationConfirmationIdempotent,
+      sourceMappingConfirmed,
+      persistenceObserved,
+    };
+  } finally {
+    await databaseHandle.close();
+  }
+}
+
 async function runNode(
   step: string,
   arguments_: readonly string[],
   environment?: Readonly<Record<string, string>>,
   workingDirectory = repositoryRoot,
-): Promise<void> {
-  await new Promise<void>((resolvePromise, reject) => {
+): Promise<string> {
+  return new Promise<string>((resolvePromise, reject) => {
+    let standardOutput = '';
     const child = spawn(process.execPath, arguments_, {
       cwd: workingDirectory,
       env: { ...process.env, ...environment },
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
-    child.stdout.on('data', (chunk: Buffer) => process.stdout.write(chunk));
+    child.stdout.on('data', (chunk: Buffer) => {
+      standardOutput += chunk.toString('utf8');
+      process.stdout.write(chunk);
+    });
     child.stderr.on('data', (chunk: Buffer) => process.stderr.write(chunk));
     child.once('error', () => reject(new Error(`PROTOTYPE_STEP_SPAWN_FAILED:${step}`)));
     child.once('exit', (code, signal) => {
-      if (code === 0) resolvePromise();
+      if (code === 0) resolvePromise(standardOutput);
       else reject(new Error(`PROTOTYPE_STEP_FAILED:${step}:${code ?? signal ?? 'UNKNOWN'}`));
     });
   });
@@ -368,6 +671,81 @@ function parsePort(value: string): number {
     throw new Error('PORT_INVALID');
   }
   return parsed;
+}
+
+function parseValidationFlow(arguments_: readonly string[]): 'phase-01' | 'department' {
+  if (arguments_.length === 0) return 'phase-01';
+  if (arguments_.length === 1 && arguments_[0] === 'phase-01') return 'phase-01';
+  if (arguments_.length === 1 && arguments_[0] === 'department') return 'department';
+  throw new Error(arguments_.length > 1
+    ? 'PROTOTYPE_HTTP_VALIDATION_ARGUMENT_COUNT_INVALID'
+    : 'PROTOTYPE_HTTP_VALIDATION_FLOW_INVALID');
+}
+
+function parseDepartmentSmokeResult(output: string): DepartmentHttpSmokeResult {
+  for (const line of output.trim().split(/\r?\n/u).reverse()) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line) as unknown;
+    } catch {
+      continue;
+    }
+    if (
+      !isRecord(parsed) ||
+      parsed['status'] !== 'PASSED' ||
+      parsed['departmentHttpSmokePassed'] !== true ||
+      parsed['departmentPublished'] !== true ||
+      parsed['publicationArtifactsExactlyOnceBeforeConfirmation'] !== true ||
+      parsed['publicationArtifactsUnchangedAfterConfirmations'] !== true ||
+      !hasExactlyOncePublicationArtifactSnapshots(parsed['publicationArtifactCounts']) ||
+      parsed['publicationConfirmationIdempotent'] !== true ||
+      parsed['sourceMappingConfirmed'] !== true ||
+      !isDepartmentCode(parsed['departmentCode']) ||
+      !isUuid(parsed['departmentId']) ||
+      !isUuid(parsed['departmentVersionId']) ||
+      !isUuid(parsed['governanceRequestId']) ||
+      !isUuid(parsed['mappingId']) ||
+      typeof parsed['correlationId'] !== 'string' ||
+      !/^PROTOTYPE-HTTP-DEPARTMENT-[A-Z0-9]+$/u.test(parsed['correlationId']) ||
+      typeof parsed['sourceCode'] !== 'string' ||
+      !/^PROTOTYPE-HTTP-HIS-[A-Z0-9]+$/u.test(parsed['sourceCode'])
+    ) {
+      continue;
+    }
+    return parsed as unknown as DepartmentHttpSmokeResult;
+  }
+  throw new Error('PROTOTYPE_DEPARTMENT_HTTP_RESULT_INVALID');
+}
+
+function hasExactlyOncePublicationArtifactSnapshots(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    isExactlyOncePublicationArtifactCounts(value['beforeConfirmation']) &&
+    isExactlyOncePublicationArtifactCounts(value['afterFirstConfirmation']) &&
+    isExactlyOncePublicationArtifactCounts(value['afterSecondConfirmation'])
+  );
+}
+
+function isExactlyOncePublicationArtifactCounts(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    value['releaseMemberCount'] === 1 &&
+    value['projectionCount'] === 1 &&
+    value['publishedAuditCount'] === 1
+  );
+}
+
+function isDepartmentCode(value: unknown): value is string {
+  return typeof value === 'string' && /^PROTOTYPE-HTTP-DEPARTMENT-[A-Z0-9]+$/u.test(value);
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function requireEnvironment(name: string): string {

@@ -334,6 +334,39 @@ describe('department application contract - controlled dependencies', () => {
     ).not.toMatch(/workflow|department_version|published_projection|DATABASE_URL|password/iu);
   });
 
+  it('normalizes PostgreSQL fractional seconds only for pending review DTOs', async () => {
+    const harness = createHarness();
+    harness.scope.workflow.findPendingChangeRequests.mockResolvedValueOnce([
+      {
+        request,
+        actions: [],
+        publication: null,
+        submittedAt: '2026-09-03T22:00:00.123456',
+      },
+    ]);
+
+    await expect(
+      harness.application.findPendingReviews({ governanceObjectId }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        governanceRequestId,
+        submittedAt: '2026-09-03T22:00:00',
+      }),
+    ]);
+
+    harness.scope.workflow.findPendingChangeRequests.mockResolvedValueOnce([
+      {
+        request,
+        actions: [],
+        publication: null,
+        submittedAt: '2026-09-03T22:00:00.123456Z',
+      },
+    ]);
+    await expect(
+      harness.application.findPendingReviews({ governanceObjectId }),
+    ).rejects.toMatchObject({ code: 'DEPARTMENT_STATUS_INVALID' });
+  });
+
   it('treats PublishDepartment as an idempotent postcondition read with no second workflow action', async () => {
     const harness = createHarness({ published: true });
     const command = {
