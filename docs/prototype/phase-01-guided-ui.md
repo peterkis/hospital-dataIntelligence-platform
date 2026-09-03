@@ -65,3 +65,7 @@ The following prototype observations passed on 2026-09-03:
 - manual in-app browser journey, explicit three-role switching, technical-details disclosure, sticky non-production banner, four-level resolution explanation, and refresh recovery.
 
 This work did not run AR-07, formal verification, formal ABG, Sequence 10–13, Keycloak, Podman, Docker, a formal Playwright suite, production deployment, deployment-environment certification, real identities, real hospital data, or real consumer integration. It does not change the frozen formal OpenAPI or Generated Client Schema.
+
+## PV-004 Demo Ready extension
+
+PV-004 adds a Demo Ready dashboard, topic-domain explorer, fixed governance-flow rail, explainable pricing panel, synthetic audit timeline, and idempotent `prototype:demo:prepare` dataset. Its operating guide and 30-minute walkthrough are maintained in `docs/prototype/demo-report.md` and `docs/prototype/demo-script.md`. The extension remains Prototype-only and preserves every boundary above.

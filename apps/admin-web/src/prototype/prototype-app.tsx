@@ -11,6 +11,11 @@ import type { PrototypeApi, PrototypeContext } from './prototype-api.js';
 import { PrototypeBanner, RoleSwitcher } from './prototype-components.js';
 import { PrototypeJourneyPage } from './prototype-journey-page.js';
 import {
+  DashboardPage,
+  DomainExplorerPage,
+  GovernanceFlowRail,
+} from './prototype-demo-pages.js';
+import {
   createInitialJourneyState,
   resetPrototypeJourney,
   savePrototypeJourneyState,
@@ -45,7 +50,9 @@ export function PrototypeApp({
         path: '/',
         Component: PrototypeLayout,
         children: [
-          { index: true, Component: PrototypeJourneyPage },
+          { index: true, Component: DashboardPage },
+          { path: 'domains', Component: DomainExplorerPage },
+          { path: 'journey', Component: PrototypeJourneyWithFlow },
           { path: 'advanced/overview', Component: OverviewPage },
           { path: 'advanced/vertical-slice', Component: PrototypeVerticalSlicePage },
           { path: 'advanced/charge-items', Component: ChargeItemDraftPage },
@@ -99,12 +106,14 @@ function PrototypeLayout() {
         <div className="prototype-brand">
           <span className="prototype-brand-mark">HDI</span>
           <div>
-            <strong>收费与价表治理原型</strong>
-            <small>医院信息科内部演示工作台</small>
+            <strong>医院数据治理平台 Demo</strong>
+            <small>HDI Demo Hospital · Synthetic Prototype</small>
           </div>
         </div>
         <nav aria-label="原型导航">
-          <NavLink to="/" end>引导式旅程</NavLink>
+          <NavLink to="/" end>治理驾驶舱</NavLink>
+          <NavLink to="/domains">主题域</NavLink>
+          <NavLink to="/journey">治理流程</NavLink>
           <NavLink to="/advanced/overview">概览</NavLink>
           <NavLink to="/advanced/charge-items">收费项目</NavLink>
           <NavLink to="/advanced/price-lists">价表</NavLink>
@@ -120,4 +129,8 @@ function PrototypeLayout() {
 
 function PrototypeVerticalSlicePage() {
   return <VerticalSlicePage routePrefix="/advanced" />;
+}
+
+function PrototypeJourneyWithFlow() {
+  return <div className="governance-process-layout"><GovernanceFlowRail /><PrototypeJourneyPage /></div>;
 }

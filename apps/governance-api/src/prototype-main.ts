@@ -19,6 +19,10 @@ import {
   createPrototypeContext,
   resolvePrototypeAdminStaticRoot,
 } from './prototype-context.js';
+import {
+  assertPrototypeDemoReady,
+  loadPrototypeDemoDashboard,
+} from './prototype-demo.js';
 
 process.env['TZ'] = 'Asia/Shanghai';
 
@@ -48,6 +52,9 @@ try {
     databaseHandle.database,
     resolve(import.meta.dirname, '../../../db/migrations'),
   );
+  if (process.env['PROTOTYPE_DEMO_READY'] === 'true') {
+    await assertPrototypeDemoReady(databaseHandle.database);
+  }
   const transactionRunner = createTransactionRunner<ScopedModules>(
     databaseHandle.database,
     (transaction, context) => createScopedModules(
@@ -77,6 +84,11 @@ try {
     { schema: { hide: true } },
     async () => createPrototypeContext(nowInAsiaShanghai()),
   );
+  application.get(
+    '/prototype/demo/dashboard',
+    { schema: { hide: true } },
+    async () => loadPrototypeDemoDashboard(databaseHandle.database, nowInAsiaShanghai()),
+  );
   await application.listen({ host, port });
   safeDevelopmentLog({
     event: 'PROTOTYPE_API_STARTED',
@@ -89,6 +101,14 @@ try {
     postgresqlVersion: readiness.postgresqlVersion,
     syntheticPrincipalCount: readiness.syntheticPrincipalCount,
   });
+  if (process.env['PROTOTYPE_DEMO_READY'] === 'true') {
+    process.stdout.write('============================================================\n');
+    process.stdout.write('Hospital Data Governance Demo\n');
+    process.stdout.write('URL:\n');
+    process.stdout.write(`http://${host}:${port}/admin/\n`);
+    process.stdout.write('============================================================\n');
+    process.stdout.write('Ctrl+C to stop gracefully.\n');
+  }
 } catch (error) {
   let resourceCloseError: unknown;
   try {

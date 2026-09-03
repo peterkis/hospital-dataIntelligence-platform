@@ -28,6 +28,7 @@ import {
   type WorkflowActionState,
   type WorkflowState,
 } from './prototype-state.js';
+import { formatDemoDecimal } from './prototype-demo-pages.js';
 
 const OWNER = 'prototype-owner' as const;
 const REVIEWER = 'prototype-reviewer' as const;
@@ -668,7 +669,7 @@ function ResolutionPath({ resolution }: { readonly resolution?: ResolutionJourne
         return (
           <li className={matched ? 'matched' : ''} key={label}>
             <span>{index + 1}</span>
-            <div><strong>{label}</strong><small>{matched ? '实际命中层级' : evidence ? `结果：${evidence.decision}` : '按顺序检查'}</small></div>
+            <div><strong>{label}</strong><small>{matched ? '命中' : evidence?.decision === 'NO_CANDIDATE' ? '未命中' : evidence ? `结果：${evidence.decision}` : '按顺序检查'}</small></div>
           </li>
         );
       })}
@@ -679,7 +680,7 @@ function ResolutionPath({ resolution }: { readonly resolution?: ResolutionJourne
 function ResolutionSummary({ resolution }: { readonly resolution: ResolutionJourneyState }) {
   return (
     <div className="resolution-result">
-      <div><span>解析结果</span><strong>{resolution.finalAmount} {resolution.currencyCode}</strong><small>{resolution.quantity} × {resolution.unitPrice} = {resolution.finalAmount}</small></div>
+      <div><span>解析结果</span><strong>{formatDemoDecimal(resolution.finalAmount)} {resolution.currencyCode}</strong><small>{formatDemoDecimal(resolution.quantity)} × {formatDemoDecimal(resolution.unitPrice)} = {formatDemoDecimal(resolution.finalAmount)}</small></div>
       <ResolutionPath resolution={resolution} />
       <div className="data-grid compact">
         <Datum label="服务发生时间" value={<LocalTime value={resolution.serviceOccurredAt} />} />

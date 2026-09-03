@@ -13,10 +13,11 @@ export const ROLE_LABELS: Readonly<Record<PrototypeRoleCode, string>> = {
 export function PrototypeBanner() {
   return (
     <div className="prototype-banner" role="note" aria-label="原型环境提示">
-      <strong>合成数据原型</strong>
+      <strong>🏥 医院数据治理平台 Demo</strong>
+      <span>环境：Synthetic Prototype</span>
+      <span>身份：Prototype Synthetic</span>
+      <span>时间：Asia/Shanghai</span>
       <span>非生产环境</span>
-      <span>认证模式：PROTOTYPE_SYNTHETIC</span>
-      <span>业务时区：Asia/Shanghai</span>
     </div>
   );
 }

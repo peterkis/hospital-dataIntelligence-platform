@@ -29,6 +29,66 @@ export interface PrototypeApi {
   setRole(role: PrototypeRoleCode | null): void;
 }
 
+export interface PrototypeDemoDashboard {
+  readonly status: 'READY';
+  readonly environment: 'Synthetic Prototype';
+  readonly identity: 'Prototype Synthetic';
+  readonly timeZone: 'Asia/Shanghai';
+  readonly currentLocalDateTime: string;
+  readonly organization: { readonly organizationId: string; readonly displayName: string };
+  readonly campuses: readonly { readonly campusId: string; readonly campusCode: string; readonly displayName: string }[];
+  readonly counts: {
+    readonly organizationCount: number;
+    readonly campusCount: number;
+    readonly chargeItemCount: number;
+    readonly priceListCount: number;
+    readonly publishedVersionCount: number;
+    readonly publishedChargeVersionCount: number;
+    readonly approvalEventCount: number;
+    readonly auditEventCount: number;
+  };
+  readonly chargeItems: readonly {
+    readonly objectId: string;
+    readonly code: string;
+    readonly displayName: string;
+    readonly publishedVersion: null | { readonly versionId: string; readonly digest: string; readonly recordedFrom: string };
+    readonly draftVersion: null | { readonly versionId: string; readonly digest: string; readonly recordedFrom: string };
+  }[];
+  readonly priceLists: readonly {
+    readonly objectId: string;
+    readonly versionId: string;
+    readonly code: string;
+    readonly displayName: string;
+    readonly governanceStatus: string;
+    readonly digest: string;
+    readonly businessValidFrom: string;
+    readonly scopeLabel: string;
+    readonly fixedUnitPrice: string;
+  }[];
+  readonly auditTimeline: readonly {
+    readonly auditEventId: string;
+    readonly auditSequence: string;
+    readonly action: string;
+    readonly actor: string;
+    readonly role: string;
+    readonly timestamp: string;
+  }[];
+  readonly resolution: {
+    readonly objectId: string;
+    readonly digest: string | null;
+    readonly status: string;
+    readonly unitPrice: string | null;
+    readonly quantity: string | null;
+    readonly finalAmount: string | null;
+    readonly currencyCode: string | null;
+    readonly steps: readonly {
+      readonly stepNo: string;
+      readonly label: string;
+      readonly decision: string;
+    }[];
+  };
+}
+
 export class PrototypeRequestError extends Error {
   constructor(
     readonly status: number,
@@ -76,6 +136,18 @@ export async function loadPrototypeContext(
   if (!response.ok) throw new Error('PROTOTYPE_CONTEXT_LOAD_FAILED');
   const candidate = await response.json() as unknown;
   if (!isPrototypeContext(candidate)) throw new Error('PROTOTYPE_CONTEXT_INVALID');
+  return candidate;
+}
+
+export async function loadPrototypeDemoDashboard(
+  fetchImplementation: typeof globalThis.fetch = globalThis.fetch,
+): Promise<PrototypeDemoDashboard> {
+  const response = await fetchImplementation('/prototype/demo/dashboard', {
+    headers: { accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error('PROTOTYPE_DEMO_DASHBOARD_LOAD_FAILED');
+  const candidate = await response.json() as unknown;
+  if (!isPrototypeDemoDashboard(candidate)) throw new Error('PROTOTYPE_DEMO_DASHBOARD_INVALID');
   return candidate;
 }
 
@@ -131,4 +203,24 @@ function isPrototypeContext(value: unknown): value is PrototypeContext {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPrototypeDemoDashboard(value: unknown): value is PrototypeDemoDashboard {
+  if (!isRecord(value) || !isRecord(value['counts']) || !isRecord(value['organization'])) return false;
+  const timestamp = value['currentLocalDateTime'];
+  return value['status'] === 'READY' &&
+    value['environment'] === 'Synthetic Prototype' &&
+    value['identity'] === 'Prototype Synthetic' &&
+    value['timeZone'] === 'Asia/Shanghai' &&
+    typeof timestamp === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/u.test(timestamp) &&
+    !/[Zz]|[+-]\d{2}:\d{2}$/u.test(timestamp) &&
+    value['organization']['displayName'] === 'HDI Demo Hospital' &&
+    Array.isArray(value['campuses']) &&
+    Array.isArray(value['chargeItems']) &&
+    Array.isArray(value['priceLists']) &&
+    Array.isArray(value['auditTimeline']) &&
+    isRecord(value['resolution']) &&
+    value['counts']['chargeItemCount'] === 5 &&
+    value['counts']['priceListCount'] === 3;
 }

@@ -9,7 +9,7 @@ import './styles.css';
 import './prototype/prototype-styles.css';
 
 export async function bootstrapPrototype(): Promise<void> {
-  document.title = '收费与价表治理原型 | HDI';
+  document.title = '医院数据治理平台 Demo | HDI';
   const context = await loadPrototypeContext();
   const api = createPrototypeApi(context);
   const initialState = loadPrototypeJourneyState(sessionStorage);
