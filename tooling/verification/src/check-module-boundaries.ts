@@ -13,6 +13,7 @@ const EXPECTED_MODULES = [
   'authorization',
   'batch-import',
   'charge-catalog',
+  'department-master',
   'emergency-control',
   'price-list',
   'price-resolution',

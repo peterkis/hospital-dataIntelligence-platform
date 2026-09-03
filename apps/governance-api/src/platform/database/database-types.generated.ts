@@ -160,6 +160,161 @@ export interface ChargeCatalogPricedObject {
   priced_object_id: Generated<string>;
 }
 
+export interface DepartmentMasterDepartment {
+  created_at: Generated<string>;
+  created_by: string;
+  department_code: string;
+  department_id: Generated<string>;
+  updated_at: Generated<string>;
+  updated_by: string;
+}
+
+export interface DepartmentMasterDepartmentAlias {
+  confidence_score: Numeric | null;
+  created_at: Generated<string>;
+  department_alias_id: Generated<string>;
+  department_id: string;
+  mapping_status: string;
+  source_code: string;
+  source_name: string;
+  source_system: string;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentHierarchyGroup {
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_group_id: Generated<string>;
+  department_hierarchy_view_id: string;
+  group_code: string;
+  updated_at: Generated<string>;
+  updated_by: string;
+}
+
+export interface DepartmentMasterDepartmentHierarchyGroupVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_group_id: string;
+  department_hierarchy_group_version_id: Generated<string>;
+  department_hierarchy_view_id: string;
+  display_name: string;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  updated_at: Generated<string>;
+  updated_by: string;
+  version_no: Int8;
+}
+
+export interface DepartmentMasterDepartmentHierarchyNode {
+  created_at: Generated<string>;
+  department_hierarchy_group_id: string | null;
+  department_hierarchy_group_version_id: string | null;
+  department_hierarchy_node_id: Generated<string>;
+  department_hierarchy_view_id: string;
+  department_hierarchy_view_version_id: string;
+  department_id: string | null;
+  department_version_id: string | null;
+  display_name: string;
+  node_kind: string;
+  parent_node_id: string | null;
+  sort_order: Generated<number>;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentHierarchyView {
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_view_id: Generated<string>;
+  operational_enabled: boolean;
+  updated_at: Generated<string>;
+  updated_by: string;
+  view_code: string;
+  view_name: string;
+  view_type: string;
+}
+
+export interface DepartmentMasterDepartmentHierarchyViewVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_view_id: string;
+  department_hierarchy_view_version_id: Generated<string>;
+  governance_status: string;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  updated_at: Generated<string>;
+  updated_by: string;
+  version_no: Int8;
+}
+
+export interface DepartmentMasterDepartmentMapping {
+  created_at: Generated<string>;
+  department_id: string;
+  department_mapping_id: Generated<string>;
+  mapping_status: string;
+  mapping_type: string;
+  source_department_code: string;
+  source_department_name: string;
+  source_system: string;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentQualityScore {
+  calculated_at: string;
+  completeness_score: Numeric;
+  created_at: Generated<string>;
+  department_id: string;
+  department_quality_score_id: Generated<string>;
+  overall_score: Numeric;
+  standardization_score: Numeric;
+  uniqueness_score: Numeric;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentVersion {
+  business_period: Generated<string | null>;
+  business_status: string;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  clinical_flag: boolean;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_id: string;
+  department_type: string;
+  department_version_id: Generated<string>;
+  description: string | null;
+  governance_status: string;
+  management_flag: boolean;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  short_name: string | null;
+  standard_name: string;
+  updated_at: Generated<string>;
+  updated_by: string;
+  version_no: Int8;
+}
+
+export interface DepartmentMasterMasterDataSource {
+  created_at: Generated<string>;
+  enabled: Generated<boolean>;
+  master_data_source_id: string;
+  source_code: string;
+  source_name: string;
+  system_type: string;
+  updated_at: Generated<string>;
+}
+
 export interface EmergencyControlImpactCase {
   case_status: string;
   closed_at: string | null;
@@ -646,6 +801,17 @@ export interface DB {
   "charge_catalog.charge_item": ChargeCatalogChargeItem;
   "charge_catalog.charge_item_version": ChargeCatalogChargeItemVersion;
   "charge_catalog.priced_object": ChargeCatalogPricedObject;
+  "department_master.department": DepartmentMasterDepartment;
+  "department_master.department_alias": DepartmentMasterDepartmentAlias;
+  "department_master.department_hierarchy_group": DepartmentMasterDepartmentHierarchyGroup;
+  "department_master.department_hierarchy_group_version": DepartmentMasterDepartmentHierarchyGroupVersion;
+  "department_master.department_hierarchy_node": DepartmentMasterDepartmentHierarchyNode;
+  "department_master.department_hierarchy_view": DepartmentMasterDepartmentHierarchyView;
+  "department_master.department_hierarchy_view_version": DepartmentMasterDepartmentHierarchyViewVersion;
+  "department_master.department_mapping": DepartmentMasterDepartmentMapping;
+  "department_master.department_quality_score": DepartmentMasterDepartmentQualityScore;
+  "department_master.department_version": DepartmentMasterDepartmentVersion;
+  "department_master.master_data_source": DepartmentMasterMasterDataSource;
   "emergency_control.impact_case": EmergencyControlImpactCase;
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;

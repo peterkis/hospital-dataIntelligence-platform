@@ -5,6 +5,7 @@
     "access_control": "authorization",
     "batch_import": "batch-import",
     "charge_catalog": "charge-catalog",
+    "department_master": "department-master",
     "emergency_control": "emergency-control",
     "platform": "composition-root",
     "price_list": "price-list",
