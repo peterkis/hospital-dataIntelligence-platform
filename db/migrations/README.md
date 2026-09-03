@@ -15,5 +15,7 @@
 - `0012_department_master.sql`：新增科室稳定身份、不可变双时态版本、来源别名与映射、质量评分，以及行政、运营、病案独立层级视图版本；通用父科室不进入科室版本。
 - `0013_department_master_api_readiness.sql`：追加科室与层级视图治理对象作用域、Workflow发布预留、来源映射终态、Group组合引用、科室院区双时态关系及诊疗科目映射适用性，为后续HTTP生命周期提供失败关闭的领域边界。
 - `0014_department_governance_audit_events.sql`：在既有`audit.audit_event`追加无时区记录时间与最小业务事实载荷，复用同一只追加哈希链承载科室、版本、层级、来源映射和院区关系治理事件。
+- `0015_department_published_projection.sql`：新增科室对外消费的只读发布投影，冻结已发布版本对应的院区、层级视图与质量分数，并以延迟约束保证发布版本、投影和审计事务共同提交或回滚。
+- `0016_department_projection_audit_time.sql`：为只读科室发布投影追加由创建或关闭时间自动派生的`updated_at`生成列，在不开放内容更新的前提下满足科室Schema统一审计时间约束。
 
 迁移按文件名前缀严格升序执行。尚未进入正式证据包的迁移可在开发期修订；进入证据基线后，原文件及摘要不得覆盖，后续只能追加迁移。逻辑表所有权见 `db/table-ownership.json`。

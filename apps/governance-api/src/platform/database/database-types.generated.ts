@@ -284,6 +284,25 @@ export interface DepartmentMasterDepartmentHierarchyViewVersion {
   version_no: Int8;
 }
 
+export interface DepartmentMasterDepartmentPublishedProjection {
+  campuses: Json;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  department_code: string;
+  department_id: string;
+  department_published_projection_id: Generated<string>;
+  department_type: string;
+  department_version_id: string;
+  hierarchies: Json;
+  published_at: string;
+  published_release_id: string;
+  quality_score: Numeric | null;
+  standard_name: string;
+  subject_mapping_applicability: string;
+  superseded_at: string | null;
+  updated_at: Generated<string | null>;
+}
+
 export interface DepartmentMasterDepartmentQualityScore {
   calculated_at: string;
   completeness_score: Numeric;
@@ -861,6 +880,7 @@ export interface DB {
   "department_master.department_hierarchy_node": DepartmentMasterDepartmentHierarchyNode;
   "department_master.department_hierarchy_view": DepartmentMasterDepartmentHierarchyView;
   "department_master.department_hierarchy_view_version": DepartmentMasterDepartmentHierarchyViewVersion;
+  "department_master.department_published_projection": DepartmentMasterDepartmentPublishedProjection;
   "department_master.department_quality_score": DepartmentMasterDepartmentQualityScore;
   "department_master.department_source_mapping": DepartmentMasterDepartmentSourceMapping;
   "department_master.department_version": DepartmentMasterDepartmentVersion;

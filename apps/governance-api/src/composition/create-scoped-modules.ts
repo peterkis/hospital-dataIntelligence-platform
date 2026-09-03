@@ -1,6 +1,7 @@
 import type { Kysely, Transaction } from 'kysely';
 import type { DB } from '../platform/database/database-types.generated.js';
 import type { RequestContext } from '../platform/transaction/transaction-runner.js';
+import { createCampusReferenceReader } from '../platform/campus/campus-reference-reader.js';
 import { createAuditModule, type AuditModule } from '../modules/audit/index.js';
 import { createBatchImportModule, type BatchImportModule } from '../modules/batch-import/index.js';
 import {
@@ -120,7 +121,12 @@ export function createScopedModules(
       authorizationDecisionDatabase,
     ),
     chargeCatalog,
-    departmentMaster: createDepartmentMasterModule(transaction, audit, context),
+    departmentMaster: createDepartmentMasterModule(
+      transaction,
+      audit,
+      context,
+      createCampusReferenceReader(transaction),
+    ),
     priceList,
     priceResolution: createPriceResolutionModule(transaction, priceList),
     emergencyControl,

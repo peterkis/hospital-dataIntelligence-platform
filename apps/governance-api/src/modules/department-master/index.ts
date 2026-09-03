@@ -1,6 +1,7 @@
 import { sql, type Selectable, type Transaction } from 'kysely';
 import { Type, type Static } from 'typebox';
 import type { DB } from '../../platform/database/database-types.generated.js';
+import type { CampusReferenceReader } from '../../platform/campus/campus-reference-reader.js';
 import { canonicalSha256, digestHex } from '../../platform/hashing/canonical-hash.js';
 import { LOCAL_DATE_TIME_JSON_PATTERN, parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
 import type { RequestContext } from '../../platform/transaction/transaction-runner.js';
@@ -69,6 +70,27 @@ export interface DepartmentCampusAssignment {
   readonly businessValidFrom: string; readonly businessValidTo: string | null;
   readonly recordedFrom: string; readonly recordedTo: string | null; readonly contentHash: Buffer;
 }
+export interface PublishedDepartmentProjection {
+  readonly id: string;
+  readonly departmentId: string;
+  readonly departmentVersionId: string;
+  readonly departmentCode: string;
+  readonly standardName: string;
+  readonly departmentType: DepartmentType;
+  readonly subjectMappingApplicability: SubjectMappingApplicability;
+  readonly campuses: readonly string[];
+  readonly hierarchies: Readonly<Record<string, string>>;
+  readonly qualityScore: string | null;
+  readonly publishedReleaseId: string;
+  readonly publishedAt: string;
+  readonly supersededAt: string | null;
+  readonly contentHash: Buffer;
+  readonly createdAt: string;
+}
+export type PublishedDepartmentProjectionSnapshot = Omit<
+  PublishedDepartmentProjection,
+  'id' | 'supersededAt' | 'createdAt'
+>;
 export interface DepartmentHierarchyView {
   readonly id: string; readonly governanceObjectId: string; readonly viewCode: string;
   readonly viewName: string; readonly viewType: DepartmentHierarchyViewType; readonly operationalEnabled: boolean;
@@ -105,6 +127,8 @@ export interface DepartmentMasterModule {
   recordDepartmentCampusAssignment(command: { readonly governanceObjectId: string; readonly departmentId: string; readonly campusId: string; readonly businessValidFrom: string; readonly businessValidTo: string | null; readonly recordedFrom: string; readonly actorPrincipalId: string }): Promise<DepartmentCampusAssignment>;
   listDepartmentCampusAssignments(command: { readonly governanceObjectId: string; readonly departmentId: string }): Promise<readonly DepartmentCampusAssignment[]>;
   findDepartmentCampusAssignmentsAsOf(command: { readonly governanceObjectId: string; readonly departmentId: string; readonly businessAt: string; readonly recordAsOf: string }): Promise<readonly DepartmentCampusAssignment[]>;
+  getPublishedDepartmentProjection(command: { readonly governanceObjectId: string; readonly departmentId: string }): Promise<PublishedDepartmentProjection | null>;
+  findDepartmentProjectionAsOf(command: { readonly governanceObjectId: string; readonly departmentId: string; readonly businessAt: string }): Promise<PublishedDepartmentProjection | null>;
   createHierarchyView(command: { readonly governanceObjectId: string; readonly viewCode: string; readonly viewName: string; readonly viewType: DepartmentHierarchyViewType; readonly actorPrincipalId: string }): Promise<DepartmentHierarchyView>;
   createHierarchyGroupVersion(command: { readonly governanceObjectId: string; readonly hierarchyViewId: string; readonly groupCode: string; readonly displayName: string; readonly businessValidFrom: string; readonly businessValidTo: string | null; readonly recordedFrom: string; readonly actorPrincipalId: string }): Promise<{ readonly groupId: string; readonly groupVersionId: string }>;
   createHierarchyViewVersion(command: { readonly governanceObjectId: string; readonly hierarchyViewId: string; readonly businessValidFrom: string; readonly businessValidTo: string | null; readonly recordedFrom: string; readonly actorPrincipalId: string; readonly nodes: readonly HierarchyNodeInput[] }): Promise<DepartmentHierarchySnapshot>;
@@ -118,6 +142,7 @@ export function createDepartmentMasterModule(
   database: Transaction<DB>,
   audit: AuditEventService,
   context: RequestContext,
+  campusReferences: CampusReferenceReader,
 ): DepartmentMasterModule {
   const governanceAudit = createDepartmentGovernanceAudit(audit, context);
   const module: DepartmentMasterModule = {
@@ -164,6 +189,16 @@ export function createDepartmentMasterModule(
       if (old) { if (command.recordedFrom <= old.recorded_from) throw new Error('DEPARTMENT_RECORDED_TIME_CONFLICT'); await database.updateTable('department_master.department_version').set({ recorded_to: command.recordedFrom, updated_at: sql<string>`platform.local_now()`, updated_by: command.actorPrincipalId }).where('department_version_id', '=', old.department_version_id).executeTakeFirstOrThrow(); }
       const result = await database.updateTable('department_master.department_version').set({ governance_status: 'PUBLISHED', release_id: command.releaseId, updated_at: sql<string>`platform.local_now()`, updated_by: command.actorPrincipalId }).where('department_version_id', '=', command.departmentVersionId).where('governance_status', '=', 'DRAFT').executeTakeFirst();
       if (result.numUpdatedRows !== 1n) throw new Error('DEPARTMENT_PUBLICATION_STATE_CONFLICT');
+      const code = (await requireDepartment(database, command.governanceObjectId, command.departmentId)).department_code;
+      const snapshot = await buildPublishedProjectionSnapshot(database, campusReferences, {
+        ...version,
+        governanceStatus: 'PUBLISHED',
+        releaseId: command.releaseId,
+      }, code, command.releaseId, command.recordedFrom);
+      const closed = await database.updateTable('department_master.department_published_projection').set({ superseded_at: command.recordedFrom }).where('department_id', '=', command.departmentId).where('superseded_at', 'is', null).executeTakeFirst();
+      if (old && closed.numUpdatedRows !== 1n) throw new Error('DEPARTMENT_PROJECTION_CURRENT_NOT_FOUND');
+      if (!old && closed.numUpdatedRows !== 0n) throw new Error('DEPARTMENT_PROJECTION_STATE_CONFLICT');
+      await database.insertInto('department_master.department_published_projection').values({ department_id: snapshot.departmentId, department_version_id: snapshot.departmentVersionId, department_code: snapshot.departmentCode, standard_name: snapshot.standardName, department_type: snapshot.departmentType, subject_mapping_applicability: snapshot.subjectMappingApplicability, campuses: sql`${JSON.stringify(snapshot.campuses)}::jsonb`, hierarchies: sql`${JSON.stringify(snapshot.hierarchies)}::jsonb`, quality_score: snapshot.qualityScore, published_release_id: snapshot.publishedReleaseId, published_at: snapshot.publishedAt, content_hash: snapshot.contentHash }).execute();
       await governanceAudit.departmentPublished({ governanceObjectId: command.governanceObjectId, departmentVersionId: command.departmentVersionId, releaseId: command.releaseId, publishedAt: command.recordedFrom, contentHash: version.contentHash });
     },
     async addAlias(command) { await requireDepartment(database, command.governanceObjectId, command.departmentId); await database.insertInto('department_master.department_alias').values({ department_id: command.departmentId, source_system: command.sourceSystem, source_code: command.sourceCode, source_name: command.sourceName, mapping_status: 'CONFIRMED', confidence_score: command.confidenceScore }).execute(); },
@@ -183,6 +218,8 @@ export function createDepartmentMasterModule(
     },
     async listDepartmentCampusAssignments(command) { await requireDepartment(database, command.governanceObjectId, command.departmentId); return (await database.selectFrom('department_master.department_campus_assignment').selectAll().where('department_id', '=', command.departmentId).orderBy('recorded_from').execute()).map(toAssignment); },
     async findDepartmentCampusAssignmentsAsOf(command) { await requireDepartment(database, command.governanceObjectId, command.departmentId); parseLocalDateTime(command.businessAt); parseLocalDateTime(command.recordAsOf); return (await database.selectFrom('department_master.department_campus_assignment').selectAll().where('department_id', '=', command.departmentId).where(sql<boolean>`business_period @> ${command.businessAt}::timestamp`).where(sql<boolean>`recorded_period @> ${command.recordAsOf}::timestamp`).orderBy('campus_id').execute()).map(toAssignment); },
+    async getPublishedDepartmentProjection(command) { await requireDepartment(database, command.governanceObjectId, command.departmentId); const row = await database.selectFrom('department_master.department_published_projection').selectAll().where('department_id', '=', command.departmentId).where('superseded_at', 'is', null).executeTakeFirst(); return row ? toPublishedProjection(row) : null; },
+    async findDepartmentProjectionAsOf(command) { await requireDepartment(database, command.governanceObjectId, command.departmentId); parseLocalDateTime(command.businessAt); const row = await database.selectFrom('department_master.department_published_projection').selectAll().where('department_id', '=', command.departmentId).where('published_at', '<=', command.businessAt).where((expression) => expression.or([expression('superseded_at', 'is', null), expression('superseded_at', '>', command.businessAt)])).orderBy('published_at', 'desc').limit(1).executeTakeFirst(); return row ? toPublishedProjection(row) : null; },
     async createHierarchyView(command) { const row = await database.insertInto('department_master.department_hierarchy_view').values({ governance_object_id: command.governanceObjectId, view_code: command.viewCode, view_name: command.viewName, view_type: command.viewType, operational_enabled: operationalViews.has(command.viewType), created_by: command.actorPrincipalId, updated_by: command.actorPrincipalId }).returningAll().executeTakeFirstOrThrow(); const view = toView(row); await governanceAudit.hierarchyViewCreated({ governanceObjectId: command.governanceObjectId, viewId: view.id, viewType: view.viewType }); return view; },
     async createHierarchyGroupVersion(command) { await requireView(database, command.governanceObjectId, command.hierarchyViewId); const groupId = await nextUuid(database); const versionId = await nextUuid(database); await database.insertInto('department_master.department_hierarchy_group').values({ department_hierarchy_group_id: groupId, department_hierarchy_view_id: command.hierarchyViewId, group_code: command.groupCode, created_by: command.actorPrincipalId, updated_by: command.actorPrincipalId }).execute(); await database.insertInto('department_master.department_hierarchy_group_version').values({ department_hierarchy_group_version_id: versionId, department_hierarchy_group_id: groupId, department_hierarchy_view_id: command.hierarchyViewId, version_no: '1', display_name: command.displayName, business_valid_from: command.businessValidFrom, business_valid_to: command.businessValidTo, recorded_from: command.recordedFrom, recorded_to: null, content_hash: canonicalSha256(command), created_by: command.actorPrincipalId, updated_by: command.actorPrincipalId }).execute(); return { groupId, groupVersionId: versionId }; },
     async createHierarchyViewVersion(command) {
@@ -196,6 +233,124 @@ export function createDepartmentMasterModule(
     async getHierarchySnapshot(command) { const row = await getHierarchyRow(database, command.governanceObjectId, command.hierarchyViewVersionId); return row ? { view: toView(row), version: toHierarchyVersion(row), nodes: await selectNodes(database, command.hierarchyViewVersionId) } : null; },
   };
   return module;
+}
+
+export function createPublishedProjectionSnapshot(input: {
+  readonly sourceGovernanceStatus: string;
+  readonly departmentId: string;
+  readonly departmentVersionId: string;
+  readonly departmentCode: string;
+  readonly standardName: string;
+  readonly departmentType: DepartmentType;
+  readonly subjectMappingApplicability: SubjectMappingApplicability;
+  readonly campuses: readonly string[];
+  readonly hierarchies: Readonly<Record<string, string>>;
+  readonly qualityScore: string | null;
+  readonly publishedReleaseId: string;
+  readonly publishedAt: string;
+  readonly contentHash: Buffer;
+}): PublishedDepartmentProjectionSnapshot {
+  if (input.sourceGovernanceStatus !== 'PUBLISHED') {
+    throw new Error('DEPARTMENT_PROJECTION_REQUIRES_PUBLISHED_VERSION');
+  }
+  parseLocalDateTime(input.publishedAt);
+  return Object.freeze({
+    departmentId: input.departmentId,
+    departmentVersionId: input.departmentVersionId,
+    departmentCode: input.departmentCode,
+    standardName: input.standardName,
+    departmentType: input.departmentType,
+    subjectMappingApplicability: input.subjectMappingApplicability,
+    campuses: Object.freeze([...input.campuses]),
+    hierarchies: Object.freeze({ ...input.hierarchies }),
+    qualityScore: input.qualityScore,
+    publishedReleaseId: input.publishedReleaseId,
+    publishedAt: input.publishedAt,
+    contentHash: Buffer.from(input.contentHash),
+  });
+}
+
+async function buildPublishedProjectionSnapshot(
+  db: Transaction<DB>,
+  campusReferences: CampusReferenceReader,
+  version: DepartmentVersion,
+  departmentCode: string,
+  publishedReleaseId: string,
+  publishedAt: string,
+): Promise<PublishedDepartmentProjectionSnapshot> {
+  const assignments = await db
+    .selectFrom('department_master.department_campus_assignment')
+    .select('campus_id')
+    .where('department_id', '=', version.departmentId)
+    .where(sql<boolean>`business_period @> ${version.businessValidFrom}::timestamp`)
+    .where(sql<boolean>`recorded_period @> ${publishedAt}::timestamp`)
+    .orderBy('campus_id')
+    .execute();
+  const campuses = await campusReferences.getDisplayNames(assignments.map((row) => row.campus_id));
+  const hierarchyRows = await db
+    .selectFrom('department_master.department_hierarchy_view_version as hierarchy_version')
+    .innerJoin('department_master.department_hierarchy_view as hierarchy_view', 'hierarchy_view.department_hierarchy_view_id', 'hierarchy_version.department_hierarchy_view_id')
+    .innerJoin('department_master.department_hierarchy_node as department_node', 'department_node.department_hierarchy_view_version_id', 'hierarchy_version.department_hierarchy_view_version_id')
+    .select(['hierarchy_version.department_hierarchy_view_version_id', 'hierarchy_view.view_code', 'hierarchy_view.view_type', 'department_node.department_hierarchy_node_id'])
+    .where('hierarchy_version.governance_status', '=', 'PUBLISHED')
+    .where('department_node.department_id', '=', version.departmentId)
+    .where(sql<boolean>`hierarchy_version.business_period @> ${version.businessValidFrom}::timestamp`)
+    .where(sql<boolean>`hierarchy_version.recorded_period @> ${publishedAt}::timestamp`)
+    .orderBy('hierarchy_view.view_type')
+    .orderBy('hierarchy_view.view_code')
+    .execute();
+  const hierarchies: Record<string, string> = {};
+  for (const row of hierarchyRows) {
+    if (row.view_type in hierarchies) {
+      throw new Error('DEPARTMENT_PROJECTION_HIERARCHY_TYPE_AMBIGUOUS');
+    }
+    const nodes = await selectNodes(db, row.department_hierarchy_view_version_id);
+    const node = nodes.find((candidate) => candidate.id === row.department_hierarchy_node_id);
+    if (!node) throw new Error('DEPARTMENT_PROJECTION_HIERARCHY_NODE_NOT_FOUND');
+    hierarchies[row.view_type] = hierarchySnapshotPath(nodes, node);
+  }
+  const quality = await db
+    .selectFrom('department_master.department_quality_score')
+    .select('overall_score')
+    .where('department_id', '=', version.departmentId)
+    .where('calculated_at', '<=', publishedAt)
+    .orderBy('calculated_at', 'desc')
+    .orderBy('department_quality_score_id', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  return createPublishedProjectionSnapshot({
+    sourceGovernanceStatus: version.governanceStatus,
+    departmentId: version.departmentId,
+    departmentVersionId: version.id,
+    departmentCode,
+    standardName: version.standardName,
+    departmentType: version.departmentType,
+    subjectMappingApplicability: version.subjectMappingApplicability,
+    campuses,
+    hierarchies,
+    qualityScore: quality?.overall_score ?? null,
+    publishedReleaseId,
+    publishedAt,
+    contentHash: version.contentHash,
+  });
+}
+
+function hierarchySnapshotPath(
+  nodes: readonly DepartmentHierarchyNode[],
+  departmentNode: DepartmentHierarchyNode,
+): string {
+  const labels: string[] = [];
+  let parentId = departmentNode.parentNodeId;
+  const visited = new Set<string>();
+  while (parentId !== null) {
+    if (visited.has(parentId)) throw new Error('DEPARTMENT_PROJECTION_HIERARCHY_CYCLE');
+    visited.add(parentId);
+    const parent = nodes.find((candidate) => candidate.id === parentId);
+    if (!parent) throw new Error('DEPARTMENT_PROJECTION_HIERARCHY_PARENT_NOT_FOUND');
+    labels.unshift(parent.displayName);
+    parentId = parent.parentNodeId;
+  }
+  return labels.length === 0 ? departmentNode.displayName : labels.join(' / ');
 }
 
 export function departmentSemanticHash(value: DepartmentVersionContent & { readonly departmentId: string; readonly departmentVersionId: string; readonly versionNo: string; readonly recordedFrom: string }): Buffer { return canonicalSha256({ departmentId: value.departmentId, departmentVersionId: value.departmentVersionId, versionNo: value.versionNo, standardName: value.standardName, shortName: value.shortName, departmentType: value.departmentType, clinicalFlag: value.clinicalFlag, managementFlag: value.managementFlag, subjectMappingApplicability: value.subjectMappingApplicability, businessStatus: value.businessStatus, description: value.description, businessValidFrom: value.businessValidFrom, businessValidTo: value.businessValidTo, recordedFrom: value.recordedFrom }); }
@@ -220,11 +375,14 @@ function hierarchyProjection(s: DepartmentHierarchySnapshot): DepartmentHierarch
 function toVersion(row: Selectable<DB['department_master.department_version']>): DepartmentVersion { return { id: row.department_version_id, departmentId: row.department_id, versionNo: row.version_no, standardName: row.standard_name, shortName: row.short_name, departmentType: row.department_type as DepartmentType, clinicalFlag: row.clinical_flag, managementFlag: row.management_flag, subjectMappingApplicability: row.subject_mapping_applicability as SubjectMappingApplicability, businessStatus: row.business_status as DepartmentBusinessStatus, governanceStatus: row.governance_status as 'DRAFT' | 'PUBLISHED', description: row.description, businessValidFrom: row.business_valid_from, businessValidTo: row.business_valid_to, recordedFrom: row.recorded_from, recordedTo: row.recorded_to, releaseId: row.release_id, contentHash: row.content_hash }; }
 function toMapping(row: Selectable<DB['department_master.department_source_mapping']>): DepartmentSourceMapping { return { id: row.department_mapping_id, departmentId: row.department_id, sourceSystem: row.source_system, sourceDepartmentCode: row.source_department_code, sourceDepartmentName: row.source_department_name, matchMethod: row.match_method as DepartmentSourceMatchMethod, mappingStatus: row.mapping_status as DepartmentSourceMappingStatus }; }
 function toAssignment(row: Selectable<DB['department_master.department_campus_assignment']>): DepartmentCampusAssignment { return { id: row.department_campus_assignment_id, departmentId: row.department_id, campusId: row.campus_id, businessValidFrom: row.business_valid_from, businessValidTo: row.business_valid_to, recordedFrom: row.recorded_from, recordedTo: row.recorded_to, contentHash: row.content_hash }; }
+function toPublishedProjection(row: Selectable<DB['department_master.department_published_projection']>): PublishedDepartmentProjection { return { id: row.department_published_projection_id, departmentId: row.department_id, departmentVersionId: row.department_version_id, departmentCode: row.department_code, standardName: row.standard_name, departmentType: row.department_type as DepartmentType, subjectMappingApplicability: row.subject_mapping_applicability as SubjectMappingApplicability, campuses: readStringArray(row.campuses, 'DEPARTMENT_PROJECTION_CAMPUSES_INVALID'), hierarchies: readStringRecord(row.hierarchies, 'DEPARTMENT_PROJECTION_HIERARCHIES_INVALID'), qualityScore: row.quality_score, publishedReleaseId: row.published_release_id, publishedAt: row.published_at, supersededAt: row.superseded_at, contentHash: row.content_hash, createdAt: row.created_at }; }
 function toView(row: Selectable<DB['department_master.department_hierarchy_view']>): DepartmentHierarchyView { return { id: row.department_hierarchy_view_id, governanceObjectId: row.governance_object_id, viewCode: row.view_code, viewName: row.view_name, viewType: row.view_type as DepartmentHierarchyViewType, operationalEnabled: row.operational_enabled }; }
 function toHierarchyVersion(row: Selectable<DB['department_master.department_hierarchy_view_version']>): DepartmentHierarchyViewVersion { return { id: row.department_hierarchy_view_version_id, hierarchyViewId: row.department_hierarchy_view_id, versionNo: row.version_no, governanceStatus: row.governance_status as 'DRAFT' | 'PUBLISHED', businessValidFrom: row.business_valid_from, businessValidTo: row.business_valid_to, recordedFrom: row.recorded_from, recordedTo: row.recorded_to, releaseId: row.release_id, contentHash: row.content_hash }; }
 function assignmentAuditSnapshot(assignment: DepartmentCampusAssignment): DepartmentAssignmentAuditSnapshot { return { assignmentId: assignment.id, campusId: assignment.campusId, businessValidFrom: assignment.businessValidFrom, businessValidTo: assignment.businessValidTo, recordedFrom: assignment.recordedFrom, recordedTo: assignment.recordedTo }; }
 async function recordHierarchyNodeMoves(db: Transaction<DB>, audit: DepartmentGovernanceAudit, governanceObjectId: string, viewType: string, oldVersionId: string, newVersionId: string): Promise<void> { const oldNodes = await selectNodes(db, oldVersionId); const newNodes = await selectNodes(db, newVersionId); const oldByDepartment = new Map(oldNodes.filter((node) => node.nodeKind === 'DEPARTMENT').map((node) => [node.departmentId, node])); for (const node of newNodes) { if (node.nodeKind !== 'DEPARTMENT') continue; const oldNode = oldByDepartment.get(node.departmentId); if (!oldNode || parentSemanticIdentity(oldNodes, oldNode) === parentSemanticIdentity(newNodes, node)) continue; await audit.nodeMoved({ governanceObjectId, viewVersionId: newVersionId, departmentId: node.departmentId, oldParentNodeId: oldNode.parentNodeId, newParentNodeId: node.parentNodeId, hierarchyViewType: viewType }); } }
 function parentSemanticIdentity(nodes: readonly DepartmentHierarchyNode[], node: DepartmentHierarchyNode): string | null { if (node.parentNodeId === null) return null; const parent = nodes.find((candidate) => candidate.id === node.parentNodeId); if (!parent) throw new Error('DEPARTMENT_HIERARCHY_PARENT_NOT_FOUND'); return parent.nodeKind === 'DEPARTMENT' ? `DEPARTMENT:${parent.departmentId}` : `GROUP:${parent.groupId}`; }
+function readStringArray(value: unknown, errorCode: string): readonly string[] { if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) throw new Error(errorCode); return Object.freeze([...value]); }
+function readStringRecord(value: unknown, errorCode: string): Readonly<Record<string, string>> { if (value === null || Array.isArray(value) || typeof value !== 'object') throw new Error(errorCode); const entries = Object.entries(value); if (entries.some(([, item]) => typeof item !== 'string')) throw new Error(errorCode); return Object.freeze(Object.fromEntries(entries) as Record<string, string>); }
 function validatePeriod(from: string, to: string | null): void { parseLocalDateTime(from); if (to !== null) { parseLocalDateTime(to); if (to <= from) throw new Error('DEPARTMENT_BUSINESS_PERIOD_INVALID'); } }
 const operationalViews = new Set<DepartmentHierarchyViewType>(['ADMINISTRATIVE', 'OPERATIONAL', 'MEDICAL_RECORD']);
 async function nextUuid(db: Transaction<DB>): Promise<string> { return (await db.selectNoFrom((e) => e.fn<string>('uuidv7', []).as('id')).executeTakeFirstOrThrow()).id; }
