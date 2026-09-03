@@ -41,12 +41,22 @@ import {
   type ReleaseDistributionModule,
 } from '../modules/release-distribution/index.js';
 import { createWorkflowModule, type WorkflowModule } from '../modules/workflow/index.js';
+import {
+  createDepartmentMasterModule,
+  DEPARTMENT_HIERARCHY_PROJECTION_TYPE,
+  DEPARTMENT_MASTER_PROJECTION_TYPE,
+  DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+  DepartmentHierarchyProjectionSchema,
+  DepartmentMasterProjectionSchema,
+  type DepartmentMasterModule,
+} from '../modules/department-master/index.js';
 
 export interface ScopedModules {
   readonly audit: AuditModule;
   readonly batchImport: BatchImportModule;
   readonly authorization: AuthorizationModule;
   readonly chargeCatalog: ChargeCatalogModule;
+  readonly departmentMaster: DepartmentMasterModule;
   readonly priceList: PriceListModule;
   readonly priceResolution: PriceResolutionModule;
   readonly emergencyControl: EmergencyControlModule;
@@ -80,6 +90,16 @@ export const PHASE_01_PROJECTION_CONTRACTS: readonly ProjectionContractRegistrat
     schemaVersion: PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2,
     schema: PriceListProjectionSchemaV2,
   },
+  {
+    projectionType: DEPARTMENT_MASTER_PROJECTION_TYPE,
+    schemaVersion: DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+    schema: DepartmentMasterProjectionSchema,
+  },
+  {
+    projectionType: DEPARTMENT_HIERARCHY_PROJECTION_TYPE,
+    schemaVersion: DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+    schema: DepartmentHierarchyProjectionSchema,
+  },
 ];
 
 export function createScopedModules(
@@ -99,6 +119,7 @@ export function createScopedModules(
       authorizationDecisionDatabase,
     ),
     chargeCatalog,
+    departmentMaster: createDepartmentMasterModule(transaction),
     priceList,
     priceResolution: createPriceResolutionModule(transaction, priceList),
     emergencyControl,

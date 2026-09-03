@@ -15,23 +15,78 @@ try {
     delete from department_master.department
     where department_id = '72000000-0000-7000-8000-000000000001'
   `);
-
-  checks['immutableVersionContentRejected'] = await expectSqlState(client, '55000', `
+  checks['draftRecordPeriodDirectClosureRejected'] = await expectSqlState(client, '55000', `
     update department_master.department_version
-    set standard_name = '禁止覆盖'
+    set recorded_to = '2026-10-01 00:00:00', updated_at = platform.local_now()
     where department_version_id = '72100000-0000-7000-8000-000000000001'
   `);
 
-  await client.query('savepoint record_closure_probe');
   await client.query(`
-    update department_master.department_version
-    set recorded_to = '2026-10-01 00:00:00',
-        updated_at = platform.local_now(),
-        updated_by = '70000000-0000-7000-8000-000000000001'
-    where department_version_id = '72100000-0000-7000-8000-000000000001'
+    insert into department_master.department_hierarchy_group (
+      department_hierarchy_group_id, department_hierarchy_view_id, group_code,
+      created_by, updated_by
+    ) values
+      ('7f100000-0000-7000-8000-000000000001', '73000000-0000-7000-8000-000000000001', 'PROBE-A', '70000000-0000-7000-8000-000000000001', '70000000-0000-7000-8000-000000000001'),
+      ('7f100000-0000-7000-8000-000000000002', '73000000-0000-7000-8000-000000000001', 'PROBE-B', '70000000-0000-7000-8000-000000000001', '70000000-0000-7000-8000-000000000001'),
+      ('7f100000-0000-7000-8000-000000000003', '73000000-0000-7000-8000-000000000002', 'PROBE-C', '70000000-0000-7000-8000-000000000001', '70000000-0000-7000-8000-000000000001');
+    insert into department_master.department_hierarchy_group_version (
+      department_hierarchy_group_version_id, department_hierarchy_group_id,
+      department_hierarchy_view_id, version_no, display_name,
+      business_valid_from, recorded_from, content_hash, created_by, updated_by
+    ) values
+      ('7f110000-0000-7000-8000-000000000001', '7f100000-0000-7000-8000-000000000001', '73000000-0000-7000-8000-000000000001', 1, '探针A', '2026-09-01 00:00:00', '2026-09-03 09:00:00', digest('probe-a', 'sha256'), '70000000-0000-7000-8000-000000000001', '70000000-0000-7000-8000-000000000001'),
+      ('7f110000-0000-7000-8000-000000000002', '7f100000-0000-7000-8000-000000000002', '73000000-0000-7000-8000-000000000001', 1, '探针B', '2026-09-01 00:00:00', '2026-09-03 09:00:00', digest('probe-b', 'sha256'), '70000000-0000-7000-8000-000000000001', '70000000-0000-7000-8000-000000000001'),
+      ('7f110000-0000-7000-8000-000000000003', '7f100000-0000-7000-8000-000000000003', '73000000-0000-7000-8000-000000000002', 1, '探针C', '2026-09-01 00:00:00', '2026-09-03 09:00:00', digest('probe-c', 'sha256'), '70000000-0000-7000-8000-000000000001', '70000000-0000-7000-8000-000000000001')
   `);
-  checks['recordPeriodClosureAllowed'] = true;
-  await client.query('rollback to savepoint record_closure_probe');
+
+  checks['mismatchedGroupAndGroupVersionRejected'] = await expectSqlState(client, '23503', `
+    insert into department_master.department_hierarchy_node (
+      department_hierarchy_node_id, department_hierarchy_view_version_id,
+      department_hierarchy_view_id, node_kind, department_hierarchy_group_id,
+      department_hierarchy_group_version_id, display_name
+    ) values (
+      '7f000000-0000-7000-8000-000000000020',
+      '73100000-0000-7000-8000-000000000001',
+      '73000000-0000-7000-8000-000000000001', 'GROUP',
+      '7f100000-0000-7000-8000-000000000001',
+      '7f110000-0000-7000-8000-000000000002', '错配分组'
+    )
+  `);
+
+  checks['duplicateGroupPlacementRejected'] = await expectSqlState(client, '23505', `
+    insert into department_master.department_hierarchy_node (
+      department_hierarchy_node_id, department_hierarchy_view_version_id,
+      department_hierarchy_view_id, node_kind, department_hierarchy_group_id,
+      department_hierarchy_group_version_id, display_name
+    ) values
+    (
+      '7f000000-0000-7000-8000-000000000021',
+      '73100000-0000-7000-8000-000000000001',
+      '73000000-0000-7000-8000-000000000001', 'GROUP',
+      '7f100000-0000-7000-8000-000000000001',
+      '7f110000-0000-7000-8000-000000000001', '重复分组'
+    ), (
+      '7f000000-0000-7000-8000-000000000022',
+      '73100000-0000-7000-8000-000000000001',
+      '73000000-0000-7000-8000-000000000001', 'GROUP',
+      '7f100000-0000-7000-8000-000000000001',
+      '7f110000-0000-7000-8000-000000000001', '重复分组'
+    )
+  `);
+
+  checks['groupVersionFromOtherViewRejected'] = await expectSqlState(client, '23503', `
+    insert into department_master.department_hierarchy_node (
+      department_hierarchy_node_id, department_hierarchy_view_version_id,
+      department_hierarchy_view_id, node_kind, department_hierarchy_group_id,
+      department_hierarchy_group_version_id, display_name
+    ) values (
+      '7f000000-0000-7000-8000-000000000023',
+      '73100000-0000-7000-8000-000000000001',
+      '73000000-0000-7000-8000-000000000001', 'GROUP',
+      '7f100000-0000-7000-8000-000000000003',
+      '7f110000-0000-7000-8000-000000000003', '跨视图分组'
+    )
+  `);
 
   checks['duplicateDepartmentPlacementRejected'] = await expectSqlState(client, '23505', `
     insert into department_master.department_hierarchy_node (
@@ -62,8 +117,8 @@ try {
       '73000000-0000-7000-8000-000000000001',
       '73420000-0000-7000-8000-000000000001',
       'GROUP',
-      '73200000-0000-7000-8000-000000000001',
-      '73300000-0000-7000-8000-000000000001',
+      '7f100000-0000-7000-8000-000000000001',
+      '7f110000-0000-7000-8000-000000000001',
       '跨版本父节点探针', 99
     );
     set constraints all immediate
@@ -101,16 +156,16 @@ try {
         '73100000-0000-7000-8000-000000000001',
         '73000000-0000-7000-8000-000000000001',
         '7f000000-0000-7000-8000-000000000005', 'GROUP',
-        '73200000-0000-7000-8000-000000000001',
-        '73300000-0000-7000-8000-000000000001', '循环探针A', 99
+        '7f100000-0000-7000-8000-000000000001',
+        '7f110000-0000-7000-8000-000000000001', '循环探针A', 99
       ),
       (
         '7f000000-0000-7000-8000-000000000005',
         '73100000-0000-7000-8000-000000000001',
         '73000000-0000-7000-8000-000000000001',
         '7f000000-0000-7000-8000-000000000004', 'GROUP',
-        '73200000-0000-7000-8000-000000000001',
-        '73300000-0000-7000-8000-000000000001', '循环探针B', 100
+        '7f100000-0000-7000-8000-000000000002',
+        '7f110000-0000-7000-8000-000000000002', '循环探针B', 100
       )
   `);
   try {
@@ -133,15 +188,15 @@ try {
         '7f000000-0000-7000-8000-000000000006',
         '73100000-0000-7000-8000-000000000001',
         '73000000-0000-7000-8000-000000000001', null, 'GROUP',
-        '73200000-0000-7000-8000-000000000001',
-        '73300000-0000-7000-8000-000000000001', '森林根A', 99
+        '7f100000-0000-7000-8000-000000000001',
+        '7f110000-0000-7000-8000-000000000001', '森林根A', 99
       ),
       (
         '7f000000-0000-7000-8000-000000000007',
         '73100000-0000-7000-8000-000000000001',
         '73000000-0000-7000-8000-000000000001', null, 'GROUP',
-        '73200000-0000-7000-8000-000000000001',
-        '73300000-0000-7000-8000-000000000001', '森林根B', 100
+        '7f100000-0000-7000-8000-000000000002',
+        '7f110000-0000-7000-8000-000000000002', '森林根B', 100
       );
     set constraints all immediate
   `);

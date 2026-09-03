@@ -51,11 +51,25 @@ export type ReleaseMember =
       readonly versionId: string;
       readonly snapshotName: string;
       readonly memberHash: Buffer;
+    }
+  | {
+      readonly kind: 'DEPARTMENT';
+      readonly stableId: string;
+      readonly versionId: string;
+      readonly snapshotName: string;
+      readonly memberHash: Buffer;
+    }
+  | {
+      readonly kind: 'DEPARTMENT_HIERARCHY';
+      readonly stableId: string;
+      readonly versionId: string;
+      readonly snapshotName: string;
+      readonly memberHash: Buffer;
     };
 
 export interface RegisterPublicationCommand<Payload = unknown> {
   readonly governanceObjectId: string;
-  readonly aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST';
+  readonly aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST' | 'DEPARTMENT_MASTER' | 'DEPARTMENT_HIERARCHY';
   readonly releaseKind?:
     | 'NORMAL'
     | 'COMPENSATION'
@@ -84,7 +98,7 @@ export interface RegisteredPublication {
 }
 
 export interface CanonicalSnapshotArtifactInput<Payload = unknown> {
-  readonly aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST';
+  readonly aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST' | 'DEPARTMENT_MASTER' | 'DEPARTMENT_HIERARCHY';
   readonly governanceObjectId: string;
   readonly releaseId: string;
   readonly releaseNo: string;
@@ -349,13 +363,35 @@ export function createReleaseDistributionModule(
             member_hash: command.member.memberHash,
           })
           .execute();
-      } else {
+      } else if (command.member.kind === 'PRICE_LIST') {
         await database
           .insertInto('release_distribution.release_member_price_list')
           .values({
             release_id: release.release_id,
             price_list_id: command.member.stableId,
             price_list_release_id: command.member.versionId,
+            snapshot_name: command.member.snapshotName,
+            member_hash: command.member.memberHash,
+          })
+          .execute();
+      } else if (command.member.kind === 'DEPARTMENT') {
+        await database
+          .insertInto('release_distribution.release_member_department')
+          .values({
+            release_id: release.release_id,
+            department_id: command.member.stableId,
+            department_version_id: command.member.versionId,
+            snapshot_name: command.member.snapshotName,
+            member_hash: command.member.memberHash,
+          })
+          .execute();
+      } else {
+        await database
+          .insertInto('release_distribution.release_member_department_hierarchy')
+          .values({
+            release_id: release.release_id,
+            department_hierarchy_view_id: command.member.stableId,
+            department_hierarchy_view_version_id: command.member.versionId,
             snapshot_name: command.member.snapshotName,
             member_hash: command.member.memberHash,
           })

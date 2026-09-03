@@ -165,6 +165,7 @@ export interface DepartmentMasterDepartment {
   created_by: string;
   department_code: string;
   department_id: Generated<string>;
+  governance_object_id: string;
   updated_at: Generated<string>;
   updated_by: string;
 }
@@ -179,6 +180,23 @@ export interface DepartmentMasterDepartmentAlias {
   source_name: string;
   source_system: string;
   updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentCampusAssignment {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  campus_id: string;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_campus_assignment_id: Generated<string>;
+  department_id: string;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  updated_at: Generated<string>;
+  updated_by: string;
 }
 
 export interface DepartmentMasterDepartmentHierarchyGroup {
@@ -230,6 +248,7 @@ export interface DepartmentMasterDepartmentHierarchyView {
   created_at: Generated<string>;
   created_by: string;
   department_hierarchy_view_id: Generated<string>;
+  governance_object_id: string;
   operational_enabled: boolean;
   updated_at: Generated<string>;
   updated_by: string;
@@ -251,21 +270,10 @@ export interface DepartmentMasterDepartmentHierarchyViewVersion {
   recorded_from: string;
   recorded_period: Generated<string | null>;
   recorded_to: string | null;
+  release_id: string | null;
   updated_at: Generated<string>;
   updated_by: string;
   version_no: Int8;
-}
-
-export interface DepartmentMasterDepartmentMapping {
-  created_at: Generated<string>;
-  department_id: string;
-  department_mapping_id: Generated<string>;
-  mapping_status: string;
-  mapping_type: string;
-  source_department_code: string;
-  source_department_name: string;
-  source_system: string;
-  updated_at: Generated<string>;
 }
 
 export interface DepartmentMasterDepartmentQualityScore {
@@ -277,6 +285,18 @@ export interface DepartmentMasterDepartmentQualityScore {
   overall_score: Numeric;
   standardization_score: Numeric;
   uniqueness_score: Numeric;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentSourceMapping {
+  created_at: Generated<string>;
+  department_id: string;
+  department_mapping_id: Generated<string>;
+  mapping_status: string;
+  match_method: string;
+  source_department_code: string;
+  source_department_name: string;
+  source_system: string;
   updated_at: Generated<string>;
 }
 
@@ -298,8 +318,10 @@ export interface DepartmentMasterDepartmentVersion {
   recorded_from: string;
   recorded_period: Generated<string | null>;
   recorded_to: string | null;
+  release_id: string | null;
   short_name: string | null;
   standard_name: string;
+  subject_mapping_applicability: string;
   updated_at: Generated<string>;
   updated_by: string;
   version_no: Int8;
@@ -697,6 +719,28 @@ export interface ReleaseDistributionReleaseMemberChargeItem {
   snapshot_name: string;
 }
 
+export interface ReleaseDistributionReleaseMemberDepartment {
+  created_at: Generated<string>;
+  department_id: string;
+  department_version_id: string;
+  member_hash: Buffer;
+  release_id: string;
+  release_member_id: Generated<string>;
+  snapshot_name: string;
+  updated_at: Generated<string>;
+}
+
+export interface ReleaseDistributionReleaseMemberDepartmentHierarchy {
+  created_at: Generated<string>;
+  department_hierarchy_view_id: string;
+  department_hierarchy_view_version_id: string;
+  member_hash: Buffer;
+  release_id: string;
+  release_member_id: Generated<string>;
+  snapshot_name: string;
+  updated_at: Generated<string>;
+}
+
 export interface ReleaseDistributionReleaseMemberPriceList {
   member_hash: Buffer;
   price_list_id: string;
@@ -803,13 +847,14 @@ export interface DB {
   "charge_catalog.priced_object": ChargeCatalogPricedObject;
   "department_master.department": DepartmentMasterDepartment;
   "department_master.department_alias": DepartmentMasterDepartmentAlias;
+  "department_master.department_campus_assignment": DepartmentMasterDepartmentCampusAssignment;
   "department_master.department_hierarchy_group": DepartmentMasterDepartmentHierarchyGroup;
   "department_master.department_hierarchy_group_version": DepartmentMasterDepartmentHierarchyGroupVersion;
   "department_master.department_hierarchy_node": DepartmentMasterDepartmentHierarchyNode;
   "department_master.department_hierarchy_view": DepartmentMasterDepartmentHierarchyView;
   "department_master.department_hierarchy_view_version": DepartmentMasterDepartmentHierarchyViewVersion;
-  "department_master.department_mapping": DepartmentMasterDepartmentMapping;
   "department_master.department_quality_score": DepartmentMasterDepartmentQualityScore;
+  "department_master.department_source_mapping": DepartmentMasterDepartmentSourceMapping;
   "department_master.department_version": DepartmentMasterDepartmentVersion;
   "department_master.master_data_source": DepartmentMasterMasterDataSource;
   "emergency_control.impact_case": EmergencyControlImpactCase;
@@ -846,6 +891,8 @@ export interface DB {
   "release_distribution.outbox_event": ReleaseDistributionOutboxEvent;
   "release_distribution.release_consumer_compatibility": ReleaseDistributionReleaseConsumerCompatibility;
   "release_distribution.release_member_charge_item": ReleaseDistributionReleaseMemberChargeItem;
+  "release_distribution.release_member_department": ReleaseDistributionReleaseMemberDepartment;
+  "release_distribution.release_member_department_hierarchy": ReleaseDistributionReleaseMemberDepartmentHierarchy;
   "release_distribution.release_member_price_list": ReleaseDistributionReleaseMemberPriceList;
   "release_distribution.release_relationship": ReleaseDistributionReleaseRelationship;
   "release_distribution.release_snapshot": ReleaseDistributionReleaseSnapshot;

@@ -12,6 +12,12 @@ import {
 } from '../charge-catalog/index.js';
 import type { EmergencyControlModule } from '../emergency-control/index.js';
 import {
+  DEPARTMENT_HIERARCHY_PROJECTION_TYPE,
+  DEPARTMENT_MASTER_PROJECTION_TYPE,
+  DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+  type DepartmentMasterModule,
+} from '../department-master/index.js';
+import {
   PRICE_LIST_PROJECTION_SCHEMA_VERSION,
   PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2,
   PRICE_LIST_PROJECTION_TYPE,
@@ -27,7 +33,11 @@ import type {
   WorkflowStageType,
 } from './store.js';
 
-export type GovernedEntityType = 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE';
+export type GovernedEntityType =
+  | 'CHARGE_ITEM_VERSION'
+  | 'PRICE_LIST_RELEASE'
+  | 'DEPARTMENT_VERSION'
+  | 'DEPARTMENT_HIERARCHY_VIEW_VERSION';
 export type ChangeKind =
   | 'INITIAL_PUBLICATION'
   | 'VERSION_CHANGE'
@@ -41,6 +51,7 @@ export interface WorkflowApplicationScope {
   readonly audit: AuditModule;
   readonly authorization: AuthorizationModule;
   readonly chargeCatalog: ChargeCatalogModule;
+  readonly departmentMaster: DepartmentMasterModule;
   readonly emergencyControl: EmergencyControlModule;
   readonly priceList: PriceListModule;
   readonly releaseDistribution: ReleaseDistributionModule;
@@ -108,10 +119,13 @@ export function createWorkflowApplication(
           throw new Error('APPROVAL_CONTENT_DRIFT');
         }
         validateChangeRequestClassification(command, actualHash);
-        const permissionCode: ObjectPermissionCode =
-          command.entityType === 'CHARGE_ITEM_VERSION'
-            ? 'CHARGE_CATALOG_SUBMIT'
-            : 'PRICE_LIST_SUBMIT';
+        const permissionCode: ObjectPermissionCode = command.entityType === 'CHARGE_ITEM_VERSION'
+          ? 'CHARGE_CATALOG_SUBMIT'
+          : command.entityType === 'PRICE_LIST_RELEASE'
+            ? 'PRICE_LIST_SUBMIT'
+            : command.entityType === 'DEPARTMENT_VERSION'
+              ? 'DEPARTMENT_MASTER_SUBMIT'
+              : 'DEPARTMENT_HIERARCHY_SUBMIT';
         await modules.authorization.requireObjectPermission({
           governanceObjectId: command.governanceObjectId,
           permissionCode,
@@ -251,7 +265,7 @@ export function createWorkflowApplication(
 }
 
 async function loadGovernedEntityHash(
-  modules: Pick<WorkflowApplicationScope, 'chargeCatalog' | 'priceList'>,
+  modules: Pick<WorkflowApplicationScope, 'chargeCatalog' | 'priceList' | 'departmentMaster'>,
   command: {
     readonly governanceObjectId: string;
     readonly entityType: GovernedEntityType;
@@ -266,6 +280,24 @@ async function loadGovernedEntityHash(
       chargeItemVersionId: command.entityVersionId,
     });
     return version.contentHash;
+  }
+  if (command.entityType === 'DEPARTMENT_VERSION') {
+    const version = await modules.departmentMaster.getDepartmentVersion({
+      governanceObjectId: command.governanceObjectId,
+      departmentId: command.stableEntityId,
+      departmentVersionId: command.entityVersionId,
+    });
+    return version.contentHash;
+  }
+  if (command.entityType === 'DEPARTMENT_HIERARCHY_VIEW_VERSION') {
+    const snapshot = await modules.departmentMaster.getHierarchySnapshot({
+      governanceObjectId: command.governanceObjectId,
+      hierarchyViewVersionId: command.entityVersionId,
+    });
+    if (!snapshot || snapshot.view.id !== command.stableEntityId) {
+      throw new Error('DEPARTMENT_HIERARCHY_VERSION_NOT_FOUND');
+    }
+    return snapshot.version.contentHash;
   }
   const release = await modules.priceList.getRelease({
     governanceObjectId: command.governanceObjectId,
@@ -436,6 +468,114 @@ async function publishApprovedDraft(
     });
     return publication;
   }
+  if (entityType === 'DEPARTMENT_VERSION') {
+    await modules.authorization.requireObjectPermission({
+      governanceObjectId: request.governanceObjectId,
+      permissionCode: 'DEPARTMENT_MASTER_PUBLISH',
+    });
+    const prepared = await modules.departmentMaster.prepareDepartmentPublication({
+      governanceObjectId: request.governanceObjectId,
+      departmentId: request.stableEntityId,
+      departmentVersionId: request.entityVersionId,
+    });
+    const publication = await modules.releaseDistribution.registerPublication({
+      governanceObjectId: request.governanceObjectId,
+      aggregateType: 'DEPARTMENT_MASTER',
+      businessValidFrom: prepared.projection.businessValidFrom,
+      businessValidTo: prepared.projection.businessValidTo,
+      recordedFrom: context.occurredAt,
+      submittedBy: request.submittedBy,
+      approvedBy: context.actorPrincipalId,
+      approvedAt: context.occurredAt,
+      changeReason: request.changeReason,
+      projection: {
+        projectionType: DEPARTMENT_MASTER_PROJECTION_TYPE,
+        schemaVersion: DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+        payload: prepared.projection,
+        itemCount: 1,
+      },
+      member: {
+        kind: 'DEPARTMENT',
+        stableId: prepared.departmentId,
+        versionId: prepared.departmentVersionId,
+        snapshotName: prepared.projection.standardName,
+        memberHash: prepared.contentHash,
+      },
+    });
+    await modules.departmentMaster.confirmDepartmentPublication({
+      governanceObjectId: request.governanceObjectId,
+      departmentId: prepared.departmentId,
+      departmentVersionId: prepared.departmentVersionId,
+      releaseId: publication.releaseId,
+      recordedFrom: context.occurredAt,
+      actorPrincipalId: context.actorPrincipalId,
+    });
+    await modules.audit.append({
+      auditStreamId: request.governanceObjectId,
+      governanceObjectId: request.governanceObjectId,
+      entityType: 'DEPARTMENT_VERSION',
+      stableEntityId: prepared.departmentId,
+      entityVersionId: prepared.departmentVersionId,
+      action: 'PUBLISHED',
+      afterHash: prepared.contentHash,
+      authorityScope: 'APPROVED_CHANGE_REQUEST',
+    });
+    return publication;
+  }
+  if (entityType === 'DEPARTMENT_HIERARCHY_VIEW_VERSION') {
+    await modules.authorization.requireObjectPermission({
+      governanceObjectId: request.governanceObjectId,
+      permissionCode: 'DEPARTMENT_HIERARCHY_PUBLISH',
+    });
+    const prepared = await modules.departmentMaster.prepareHierarchyPublication({
+      governanceObjectId: request.governanceObjectId,
+      hierarchyViewId: request.stableEntityId,
+      hierarchyViewVersionId: request.entityVersionId,
+    });
+    const publication = await modules.releaseDistribution.registerPublication({
+      governanceObjectId: request.governanceObjectId,
+      aggregateType: 'DEPARTMENT_HIERARCHY',
+      businessValidFrom: prepared.projection.businessValidFrom,
+      businessValidTo: prepared.projection.businessValidTo,
+      recordedFrom: context.occurredAt,
+      submittedBy: request.submittedBy,
+      approvedBy: context.actorPrincipalId,
+      approvedAt: context.occurredAt,
+      changeReason: request.changeReason,
+      projection: {
+        projectionType: DEPARTMENT_HIERARCHY_PROJECTION_TYPE,
+        schemaVersion: DEPARTMENT_PROJECTION_SCHEMA_VERSION,
+        payload: prepared.projection,
+        itemCount: prepared.projection.nodes.length,
+      },
+      member: {
+        kind: 'DEPARTMENT_HIERARCHY',
+        stableId: prepared.hierarchyViewId,
+        versionId: prepared.hierarchyViewVersionId,
+        snapshotName: prepared.projection.viewCode,
+        memberHash: prepared.contentHash,
+      },
+    });
+    await modules.departmentMaster.confirmHierarchyPublication({
+      governanceObjectId: request.governanceObjectId,
+      hierarchyViewId: prepared.hierarchyViewId,
+      hierarchyViewVersionId: prepared.hierarchyViewVersionId,
+      releaseId: publication.releaseId,
+      recordedFrom: context.occurredAt,
+      actorPrincipalId: context.actorPrincipalId,
+    });
+    await modules.audit.append({
+      auditStreamId: request.governanceObjectId,
+      governanceObjectId: request.governanceObjectId,
+      entityType: 'DEPARTMENT_HIERARCHY_VIEW_VERSION',
+      stableEntityId: prepared.hierarchyViewId,
+      entityVersionId: prepared.hierarchyViewVersionId,
+      action: 'PUBLISHED',
+      afterHash: prepared.contentHash,
+      authorityScope: 'APPROVED_CHANGE_REQUEST',
+    });
+    return publication;
+  }
   if (entityType === 'CHARGE_ITEM_VERSION') {
     const prepared = await modules.chargeCatalog.prepareDraftPublication({
       governanceObjectId: request.governanceObjectId,
@@ -565,7 +705,12 @@ function governedEntityTypeFrom(
   evidence: Readonly<Record<string, unknown>>,
 ): GovernedEntityType {
   const entityType = evidence['entityType'];
-  if (entityType !== 'CHARGE_ITEM_VERSION' && entityType !== 'PRICE_LIST_RELEASE') {
+  if (
+    entityType !== 'CHARGE_ITEM_VERSION' &&
+    entityType !== 'PRICE_LIST_RELEASE' &&
+    entityType !== 'DEPARTMENT_VERSION' &&
+    entityType !== 'DEPARTMENT_HIERARCHY_VIEW_VERSION'
+  ) {
     throw new Error('APPROVAL_ENTITY_TYPE_EVIDENCE_MISSING');
   }
   return entityType;

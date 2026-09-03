@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { PROTOTYPE_FIXTURE } from './prototype-fixture.js';
+import { departmentSemanticHash } from '../../apps/governance-api/src/modules/department-master/index.js';
 
 const HOSPITAL_NAME = 'HDI Demo Hospital';
 const BUSINESS_VALID_FROM = '2026-09-01T00:00:00';
 const RECORDED_FROM = '2026-09-03T09:00:00';
 const QUALITY_CALCULATED_AT = '2026-09-03T09:30:00';
+const DEPARTMENT_GOVERNANCE_OBJECT_ID = '74000000-0000-7000-8000-000000000001';
 
 const campuses = [
   ['71000000-0000-7000-8000-000000000001', 'HDI-DEMO-HQ', '总部院区'],
@@ -22,6 +24,7 @@ const departments = [
     departmentType: 'CLINICAL',
     clinicalFlag: true,
     managementFlag: false,
+    subjectMappingApplicability: 'REQUIRED_CLINICAL_SERVICE' as const,
     description: 'HDI Demo Hospital 合成科室主数据：呼吸与危重症医学科。',
   },
   {
@@ -33,6 +36,7 @@ const departments = [
     departmentType: 'MEDICAL_TECHNOLOGY',
     clinicalFlag: false,
     managementFlag: false,
+    subjectMappingApplicability: 'EXEMPT_MEDICAL_TECHNOLOGY' as const,
     description: 'HDI Demo Hospital 合成科室主数据：医学影像科。',
   },
   {
@@ -44,6 +48,7 @@ const departments = [
     departmentType: 'MEDICAL_TECHNOLOGY',
     clinicalFlag: false,
     managementFlag: false,
+    subjectMappingApplicability: 'EXEMPT_MEDICAL_TECHNOLOGY' as const,
     description: 'HDI Demo Hospital 合成科室主数据：检验医学科。',
   },
 ] as const;
@@ -73,11 +78,11 @@ const qualityScores = [
 ] as const;
 
 const hierarchyViews = [
-  ['73000000-0000-7000-8000-000000000001', 'DEPARTMENT-ADMIN', '行政科室层级', 'ADMINISTRATIVE', true],
-  ['73000000-0000-7000-8000-000000000002', 'DEPARTMENT-OPERATION', '运营科室层级', 'OPERATIONAL', true],
-  ['73000000-0000-7000-8000-000000000003', 'DEPARTMENT-MEDICAL-RECORD', '病案科室层级', 'MEDICAL_RECORD', true],
-  ['73000000-0000-7000-8000-000000000004', 'DEPARTMENT-FINANCE', '财务科室层级', 'FINANCE', false],
-  ['73000000-0000-7000-8000-000000000005', 'DEPARTMENT-STATISTICAL', '统计科室层级', 'STATISTICAL', false],
+  ['73000000-0000-7000-8000-000000000001', 'DEPARTMENT-ADMIN', '行政科室层级', 'ADMINISTRATIVE', true, '74100000-0000-7000-8000-000000000001'],
+  ['73000000-0000-7000-8000-000000000002', 'DEPARTMENT-OPERATION', '运营科室层级', 'OPERATIONAL', true, '74100000-0000-7000-8000-000000000002'],
+  ['73000000-0000-7000-8000-000000000003', 'DEPARTMENT-MEDICAL-RECORD', '病案科室层级', 'MEDICAL_RECORD', true, '74100000-0000-7000-8000-000000000003'],
+  ['73000000-0000-7000-8000-000000000004', 'DEPARTMENT-FINANCE', '财务科室层级', 'FINANCE', false, '74100000-0000-7000-8000-000000000004'],
+  ['73000000-0000-7000-8000-000000000005', 'DEPARTMENT-STATISTICAL', '统计科室层级', 'STATISTICAL', false, '74100000-0000-7000-8000-000000000005'],
 ] as const;
 
 const operationalHierarchies = [
@@ -121,7 +126,7 @@ try {
   client = await pool.connect();
   await client.query('begin');
   const migration = await client.query(
-    "select exists(select 1 from platform.schema_migration where migration_id = '0012_department_master') as applied",
+    "select exists(select 1 from platform.schema_migration where migration_id = '0013_department_master_api_readiness') as applied",
   );
   if (migration.rows[0]?.applied !== true) throw new Error('DEPARTMENT_MIGRATION_REQUIRED');
 
@@ -138,6 +143,9 @@ try {
     hierarchyGroups: 0,
     hierarchyGroupVersions: 0,
     hierarchyNodes: 0,
+    governanceObjects: 0,
+    permissions: 0,
+    campusAssignments: 0,
   };
 
   inserted.principals += await insertCount(client, `
@@ -146,6 +154,47 @@ try {
     ) values ($1::uuid, 'PROTOTYPE-SYNTHETIC-STEWARD', 'PERSON', 'ACTIVE')
     on conflict (security_principal_id) do nothing
   `, [PROTOTYPE_FIXTURE.actorPrincipalId]);
+
+  const governanceObjects = [
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, 'PROTOTYPE-SYNTHETIC-DEPARTMENT-MASTER', 'DEPARTMENT_MASTER', 'PROTOTYPE SYNTHETIC DEPARTMENT MASTER'],
+    ...hierarchyViews.map((view) => [view[5], `PROTOTYPE-SYNTHETIC-DEPARTMENT-HIERARCHY-${view[3]}`, 'DEPARTMENT_HIERARCHY', `PROTOTYPE SYNTHETIC ${view[3]} DEPARTMENT HIERARCHY`] as const),
+  ] as const;
+  for (const object of governanceObjects) {
+    inserted.governanceObjects += await insertCount(client, `
+      insert into platform.governance_object (
+        governance_object_id, object_code, object_type, display_name, created_by
+      ) values ($1::uuid, $2, $3, $4, $5::uuid)
+      on conflict (governance_object_id) do nothing
+    `, [...object, PROTOTYPE_FIXTURE.actorPrincipalId]);
+  }
+  const permissionFixtures = [
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_MASTER_DRAFT_READ'],
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_MASTER_DRAFT_WRITE'],
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_MASTER_SUBMIT'],
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'AUDIT_READ'],
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.reviewerPrincipalId, 'DEPARTMENT_MASTER_REVIEW'],
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.approverPrincipalId, 'DEPARTMENT_MASTER_APPROVE'],
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.approverPrincipalId, 'DEPARTMENT_MASTER_PUBLISH'],
+    ...hierarchyViews.flatMap((view) => [
+      [view[5], PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_HIERARCHY_DRAFT_READ'],
+      [view[5], PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_HIERARCHY_DRAFT_WRITE'],
+      [view[5], PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_HIERARCHY_SUBMIT'],
+      [view[5], PROTOTYPE_FIXTURE.actorPrincipalId, 'AUDIT_READ'],
+      [view[5], PROTOTYPE_FIXTURE.reviewerPrincipalId, 'DEPARTMENT_HIERARCHY_REVIEW'],
+      [view[5], PROTOTYPE_FIXTURE.approverPrincipalId, 'DEPARTMENT_HIERARCHY_APPROVE'],
+      [view[5], PROTOTYPE_FIXTURE.approverPrincipalId, 'DEPARTMENT_HIERARCHY_PUBLISH'],
+    ]),
+  ] as const;
+  for (const [objectId, principalId, permissionCode] of permissionFixtures) {
+    inserted.permissions += await insertCount(client, `
+      insert into access_control.object_permission_grant (
+        governance_object_id, security_principal_id, permission_code, grant_effect,
+        valid_from, grant_sequence, granted_by, reason, scope_level, campus_id
+      ) values ($1::uuid, $2::uuid, $3, 'ALLOW', '2026-01-01 00:00:00', 1,
+        $4::uuid, 'PROTOTYPE SYNTHETIC DEPARTMENT PERMISSION', 'HOSPITAL', null)
+      on conflict (governance_object_id, security_principal_id, permission_code, grant_sequence) do nothing
+    `, [objectId, principalId, permissionCode, PROTOTYPE_FIXTURE.actorPrincipalId]);
+  }
 
   for (const [id, code, name] of campuses) {
     inserted.campuses += await insertCount(client, `
@@ -158,23 +207,31 @@ try {
   for (const department of departments) {
     inserted.departments += await insertCount(client, `
       insert into department_master.department (
-        department_id, department_code, created_by, updated_by
-      ) values ($1::uuid, $2::varchar(64), $3::uuid, $3::uuid)
+        department_id, governance_object_id, department_code, created_by, updated_by
+      ) values ($1::uuid, $2::uuid, $3::varchar(64), $4::uuid, $4::uuid)
       on conflict (department_id) do nothing
-    `, [department.id, department.code, PROTOTYPE_FIXTURE.actorPrincipalId]);
+    `, [department.id, DEPARTMENT_GOVERNANCE_OBJECT_ID, department.code, PROTOTYPE_FIXTURE.actorPrincipalId]);
     inserted.versions += await insertCount(client, `
       insert into department_master.department_version (
         department_version_id, department_id, version_no, standard_name, short_name,
-        department_type, clinical_flag, management_flag, business_status,
+        department_type, clinical_flag, management_flag, subject_mapping_applicability, business_status,
         governance_status, description, business_valid_from, business_valid_to,
-        recorded_from, recorded_to, content_hash, created_by, updated_by
+        recorded_from, recorded_to, release_id, content_hash, created_by, updated_by
       ) values (
         $1::uuid, $2::uuid, 1, $3::varchar(256), $4::varchar(128),
-        $5::varchar(32), $6::boolean, $7::boolean, 'ACTIVE',
-        'PUBLISHED', $8::varchar(1000), $9::timestamp, null,
-        $10::timestamp, null, $11::bytea, $12::uuid, $12::uuid
+        $5::varchar(32), $6::boolean, $7::boolean, $8, 'ACTIVE',
+        'DRAFT', $9::varchar(1000), $10::timestamp, null,
+        $11::timestamp, null, null, $12::bytea, $13::uuid, $13::uuid
       )
-      on conflict (department_version_id) do nothing
+      on conflict (department_version_id) do update set
+        subject_mapping_applicability = excluded.subject_mapping_applicability,
+        content_hash = excluded.content_hash,
+        updated_at = platform.local_now(),
+        updated_by = excluded.updated_by
+      where department_master.department_version.governance_status = 'DRAFT'
+        and (department_master.department_version.subject_mapping_applicability,
+             department_master.department_version.content_hash)
+          is distinct from (excluded.subject_mapping_applicability, excluded.content_hash)
     `, [
       department.versionId,
       department.id,
@@ -183,10 +240,52 @@ try {
       department.departmentType,
       department.clinicalFlag,
       department.managementFlag,
+      department.subjectMappingApplicability,
       department.description,
       BUSINESS_VALID_FROM,
       RECORDED_FROM,
-      contentHash(['department', department]),
+      departmentSemanticHash({
+        departmentId: department.id,
+        departmentVersionId: department.versionId,
+        versionNo: '1',
+        standardName: department.standardName,
+        shortName: department.shortName,
+        departmentType: department.departmentType,
+        clinicalFlag: department.clinicalFlag,
+        managementFlag: department.managementFlag,
+        subjectMappingApplicability: department.subjectMappingApplicability,
+        businessStatus: 'ACTIVE',
+        description: department.description,
+        businessValidFrom: BUSINESS_VALID_FROM,
+        businessValidTo: null,
+        recordedFrom: RECORDED_FROM,
+      }),
+      PROTOTYPE_FIXTURE.actorPrincipalId,
+    ]);
+  }
+
+  const campusAssignments = [
+    ['72500000-0000-7000-8000-000000000001', departments[0].id, campuses[0][0]],
+    ['72500000-0000-7000-8000-000000000002', departments[1].id, campuses[0][0]],
+    ['72500000-0000-7000-8000-000000000003', departments[1].id, campuses[1][0]],
+  ] as const;
+  for (const [assignmentId, departmentId, campusId] of campusAssignments) {
+    inserted.campusAssignments += await insertCount(client, `
+      insert into department_master.department_campus_assignment (
+        department_campus_assignment_id, department_id, campus_id,
+        business_valid_from, business_valid_to, recorded_from, recorded_to,
+        content_hash, created_by, updated_by
+      ) values (
+        $1::uuid, $2::uuid, $3::uuid, $4::timestamp, null, $5::timestamp, null,
+        $6::bytea, $7::uuid, $7::uuid
+      ) on conflict (department_campus_assignment_id) do nothing
+    `, [
+      assignmentId,
+      departmentId,
+      campusId,
+      BUSINESS_VALID_FROM,
+      RECORDED_FROM,
+      contentHash(['department-campus-assignment', assignmentId, departmentId, campusId]),
       PROTOTYPE_FIXTURE.actorPrincipalId,
     ]);
   }
@@ -203,9 +302,9 @@ try {
 
   for (const mapping of mappings) {
     inserted.mappings += await insertCount(client, `
-      insert into department_master.department_mapping (
+      insert into department_master.department_source_mapping (
         department_mapping_id, department_id, source_system,
-        source_department_code, source_department_name, mapping_type, mapping_status
+        source_department_code, source_department_name, match_method, mapping_status
       ) values ($1::uuid, $2::uuid, $3, $4, $5, $6, 'CONFIRMED')
       on conflict (department_mapping_id) do nothing
     `, mapping);
@@ -221,14 +320,14 @@ try {
     `, [...score, QUALITY_CALCULATED_AT]);
   }
 
-  for (const [id, code, name, type, operationalEnabled] of hierarchyViews) {
+  for (const [id, code, name, type, operationalEnabled, governanceObjectId] of hierarchyViews) {
     inserted.hierarchyViews += await insertCount(client, `
       insert into department_master.department_hierarchy_view (
-        department_hierarchy_view_id, view_code, view_name, view_type,
+        department_hierarchy_view_id, governance_object_id, view_code, view_name, view_type,
         operational_enabled, created_by, updated_by
-      ) values ($1::uuid, $2, $3, $4, $5::boolean, $6::uuid, $6::uuid)
+      ) values ($1::uuid, $2::uuid, $3, $4, $5, $6::boolean, $7::uuid, $7::uuid)
       on conflict (department_hierarchy_view_id) do nothing
-    `, [id, code, name, type, operationalEnabled, PROTOTYPE_FIXTURE.actorPrincipalId]);
+    `, [id, governanceObjectId, code, name, type, operationalEnabled, PROTOTYPE_FIXTURE.actorPrincipalId]);
   }
 
   for (const hierarchy of operationalHierarchies) {
@@ -266,10 +365,10 @@ try {
       insert into department_master.department_hierarchy_view_version (
         department_hierarchy_view_version_id, department_hierarchy_view_id,
         version_no, governance_status, business_valid_from, business_valid_to,
-        recorded_from, recorded_to, content_hash, created_by, updated_by
+        recorded_from, recorded_to, release_id, content_hash, created_by, updated_by
       ) values (
-        $1::uuid, $2::uuid, 1, 'PUBLISHED', $3::timestamp, null,
-        $4::timestamp, null, $5::bytea, $6::uuid, $6::uuid
+        $1::uuid, $2::uuid, 1, 'DRAFT', $3::timestamp, null,
+        $4::timestamp, null, null, $5::bytea, $6::uuid, $6::uuid
       )
       on conflict (department_hierarchy_view_version_id) do nothing
     `, [
@@ -375,20 +474,41 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
           '71000000-0000-7000-8000-000000000002'::uuid
         ) and display_name in ('总部院区', '高新院区')) as campuses_created,
       (select count(*)::int = 3 from department_master.department
-        where department_code in ('DEP-00001', 'DEP-00002', 'DEP-00003')) as department_created,
+        where department_code in ('DEP-00001', 'DEP-00002', 'DEP-00003')
+          and governance_object_id = '74000000-0000-7000-8000-000000000001') as department_created,
       (select count(*)::int = 3 from department_master.department_version
         where department_version_id in (
           '72100000-0000-7000-8000-000000000001'::uuid,
           '72100000-0000-7000-8000-000000000002'::uuid,
           '72100000-0000-7000-8000-000000000003'::uuid
-        ) and governance_status = 'PUBLISHED') as version_created,
+        ) and governance_status = 'DRAFT'
+          and subject_mapping_applicability in (
+            'REQUIRED_CLINICAL_SERVICE', 'EXEMPT_MEDICAL_TECHNOLOGY'
+          )) as version_created,
       (select count(*)::int = 6 from department_master.department_alias
         where department_alias_id::text like '72200000-0000-7000-8000-%') as alias_created,
-      (select count(*)::int = 6 from department_master.department_mapping
+      (select count(*)::int = 6 from department_master.department_source_mapping
         where department_mapping_id::text like '72300000-0000-7000-8000-%'
           and mapping_status = 'CONFIRMED') as mapping_created,
       (select count(*)::int = 3 from department_master.department_quality_score
         where department_quality_score_id::text like '72400000-0000-7000-8000-%') as quality_score_created,
+      (select count(*)::int = 6 from platform.governance_object
+        where governance_object_id in (
+          '74000000-0000-7000-8000-000000000001'::uuid,
+          '74100000-0000-7000-8000-000000000001'::uuid,
+          '74100000-0000-7000-8000-000000000002'::uuid,
+          '74100000-0000-7000-8000-000000000003'::uuid,
+          '74100000-0000-7000-8000-000000000004'::uuid,
+          '74100000-0000-7000-8000-000000000005'::uuid
+        )) as governance_objects_bound,
+      (select count(*)::int = 3 from department_master.department_campus_assignment
+        where department_campus_assignment_id::text like '72500000-0000-7000-8000-%') as campus_assignments_created,
+      (select count(distinct department_id)::int = 2
+        from department_master.department_campus_assignment
+        where campus_id in (
+          '71000000-0000-7000-8000-000000000001'::uuid,
+          '71000000-0000-7000-8000-000000000002'::uuid
+        )) as campus_assignments_share_stable_departments,
       (select count(*)::int = 5 from department_master.department_hierarchy_view
         where view_type in ('ADMINISTRATIVE', 'OPERATIONAL', 'MEDICAL_RECORD', 'FINANCE', 'STATISTICAL')) as hierarchy_views_registered,
       (select count(*)::int = 3 from department_master.department_hierarchy_view
@@ -398,7 +518,7 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
         where operational_enabled = false
           and view_type in ('FINANCE', 'STATISTICAL')) as reserved_views_registration_only,
       (select count(*)::int = 3 from department_master.department_hierarchy_view_version
-        where governance_status = 'PUBLISHED') as hierarchy_versions_created,
+        where governance_status = 'DRAFT') as hierarchy_versions_created,
       (select count(*)::int = 12 from department_master.department_hierarchy_node
         where department_hierarchy_view_version_id in (
           '73100000-0000-7000-8000-000000000001'::uuid,

@@ -40,7 +40,11 @@ export interface ExpectedApprovalStage {
 export interface WorkflowModule {
   submitChange(command: {
     readonly governanceObjectId: string;
-    readonly governedEntityType: 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE';
+    readonly governedEntityType:
+      | 'CHARGE_ITEM_VERSION'
+      | 'PRICE_LIST_RELEASE'
+      | 'DEPARTMENT_VERSION'
+      | 'DEPARTMENT_HIERARCHY_VIEW_VERSION';
     readonly stableEntityId: string;
     readonly entityVersionId: string;
     readonly changeKind:
@@ -281,10 +285,20 @@ export function createWorkflowModule(
 }
 
 function templateVersionFor(
-  governedEntityType: 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE',
+  governedEntityType:
+    | 'CHARGE_ITEM_VERSION'
+    | 'PRICE_LIST_RELEASE'
+    | 'DEPARTMENT_VERSION'
+    | 'DEPARTMENT_HIERARCHY_VIEW_VERSION',
   changeKind: string,
   riskClassification: string,
 ): string {
+  if (governedEntityType === 'DEPARTMENT_VERSION') {
+    return '00000000-0000-7000-8000-000000000061';
+  }
+  if (governedEntityType === 'DEPARTMENT_HIERARCHY_VIEW_VERSION') {
+    return '00000000-0000-7000-8000-000000000071';
+  }
   if (changeKind === 'PROJECTION_SCHEMA_UPGRADE' && riskClassification === 'PURE_SCHEMA_UPGRADE') {
     return '00000000-0000-7000-8000-000000000041';
   }

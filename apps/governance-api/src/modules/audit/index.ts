@@ -17,7 +17,9 @@ export interface AppendAuditEventCommand {
   readonly entityType:
     | 'CHARGE_ITEM_VERSION'
     | 'PRICE_LIST_RELEASE'
-    | 'PRICE_RESOLUTION'
+      | 'PRICE_RESOLUTION'
+      | 'DEPARTMENT_VERSION'
+      | 'DEPARTMENT_HIERARCHY_VIEW_VERSION'
     | 'IMPORT_JOB'
     | 'CHANGE_REQUEST'
     | 'IMPACT_CASE'

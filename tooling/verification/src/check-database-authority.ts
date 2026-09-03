@@ -92,17 +92,27 @@ export async function runDatabaseAuthorityCheck(): Promise<void> {
   );
 
   const generatedTypes = readFileSync(GENERATED_TYPES, 'utf8');
+  const effectiveTables = new Set<string>();
   for (const { file } of migrationManifest) {
     const source = readFileSync(join(MIGRATIONS, file), 'utf8');
     for (const match of source.matchAll(/\bcreate\s+table\s+([a-z_]+\.[a-z_]+)/giu)) {
       const tableName = match[1];
-      if (tableName) {
-        assert.ok(
-          generatedTypes.includes(`"${tableName}"`),
-          `Generated database types are missing ${tableName}`,
-        );
-      }
+      if (tableName) effectiveTables.add(tableName.toLowerCase());
     }
+    for (const match of source.matchAll(
+      /\balter\s+table\s+([a-z_]+)\.([a-z_]+)\s+rename\s+to\s+([a-z_]+)/giu,
+    )) {
+      const [, schemaName, oldName, newName] = match;
+      if (!schemaName || !oldName || !newName) continue;
+      effectiveTables.delete(`${schemaName}.${oldName}`.toLowerCase());
+      effectiveTables.add(`${schemaName}.${newName}`.toLowerCase());
+    }
+  }
+  for (const tableName of effectiveTables) {
+    assert.ok(
+      generatedTypes.includes(`"${tableName}"`),
+      `Generated database types are missing ${tableName}`,
+    );
   }
 
   const ownerByModule = new Map(
