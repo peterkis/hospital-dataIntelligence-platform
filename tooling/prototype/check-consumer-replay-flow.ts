@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { setTimeout } from 'node:timers/promises';
+import { metricCounters, metricValue, type ReadMetrics } from './check-consumer-metrics-flow.js';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -18,9 +20,12 @@ interface CliResult {
 
 export async function checkConsumerReplayFlow(input: Pick<Parameters<typeof checkConsumerLifecycleFlow>[0],
   'database' | 'runner' | 'context' | 'owner' | 'subscriptionId' | 'event'> & {
-    baseUrl: string; accessToken: string; otherReleaseId: string; statePath: string;
+    baseUrl: string; accessToken: string; otherReleaseId: string; statePath: string; readMetrics?: ReadMetrics;
 }) {
   const { database, runner, context, owner, subscriptionId, event, statePath } = input;
+  const counters = async () => input.readMetrics ? metricCounters(await input.readMetrics()) : '';
+  const metric = async (name: string, labels: Record<string, string>) => input.readMetrics
+    ? metricValue(await input.readMetrics(), name, event.projectionType, labels) : 0;
   const client = createGovernanceApiClient({ baseUrl: input.baseUrl, accessToken: input.accessToken });
   const consumer = createReleaseConsumer({ client, subscriptionId,
     supportedProjections: [{ projectionType: event.projectionType, projectionSchemaVersion: '1' } as ProjectionSupport],
@@ -34,9 +39,11 @@ export async function checkConsumerReplayFlow(input: Pick<Parameters<typeof chec
     'states', (select count(*) from release_distribution.outbox_delivery_state where consumer_subscription_id = ${subscriptionId})
   ) as facts`.execute(database)).rows[0]!.facts;
   const before = await facts(); const fileBefore = await readFile(statePath, 'utf8');
+  const dryMetrics = await counters();
   const dry = await cli(event.releaseId);
   assert.equal(dry.mode, 'DRY_RUN'); assert.equal(dry.alreadyApplied, true); assert.equal(dry.checkpointChanged, false);
   assert.deepEqual(await facts(), before); assert.equal(await readFile(statePath, 'utf8'), fileBefore);
+  assert.equal(await counters(), dryMetrics, 'METRICS_DRY_RUN_COUNTED');
   const original = await consumer.inspectReplay({ releaseId: event.releaseId });
   const snapshotBefore = await client.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/snapshots/{snapshotId}/content', {
     params: { path: { subscriptionId, snapshotId: event.snapshotId } }, parseAs: 'arrayBuffer',
@@ -59,6 +66,21 @@ export async function checkConsumerReplayFlow(input: Pick<Parameters<typeof chec
   }));
   const newer = (await consumer.inspectReplay({ releaseId: publication.releaseId })).context.event;
   const frozenVersion = (await consumer.inspectReplay({ releaseId: newer.releaseId })).context.subscriptionVersion;
+  if (input.readMetrics) {
+    await setTimeout(1100);
+    const status = await client.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/operational-status', { params: { path: { subscriptionId } } });
+    assert.equal(status.data?.status, 'LATE'); assert.equal(status.data.applyOverdue, true);
+    assert.ok(await metric('consumer_sla_breached', { criticality: 'CRITICAL' }) >= 1);
+    const lagFacts = (await runner.run(context(), modules => modules.releaseDistribution.readConsumerMetricFacts())).filter(row => row.name === 'consumer_checkpoint_lag_seconds'
+      && row.projectionType === event.projectionType && row.labels['criticality'] === 'CRITICAL');
+    const interval = (await sql<{ seconds: string }>`select greatest(0, extract(epoch from later.created_at at time zone 'Asia/Shanghai')
+      - extract(epoch from earlier.created_at at time zone 'Asia/Shanghai'))::text seconds
+      from release_distribution.outbox_event earlier, release_distribution.outbox_event later
+      where earlier.event_id = ${event.eventId} and later.event_id = ${newer.eventId}`.execute(database)).rows[0]!.seconds;
+    assert.ok(Number(interval) > 0);
+    assert.ok(lagFacts.some(row => Number(row.value) === Number(interval)), 'METRICS_LAG_FORMULA');
+    assert.equal(await metric('consumer_checkpoint_lag_seconds', { criticality: 'CRITICAL' }), Math.max(...lagFacts.map(row => Number(row.value))));
+  }
   const laterVersion = await owner.POST('/v1/phase-01/consumer-subscriptions/{subscriptionId}/versions', {
     params: { path: { subscriptionId }, header: { 'x-csrf-token': PROTOTYPE_CSRF_TOKEN } },
     body: { governanceObjectId: event.governanceObjectId,
@@ -75,12 +97,21 @@ export async function checkConsumerReplayFlow(input: Pick<Parameters<typeof chec
   assert.equal((await cli(newer.releaseId)).alreadyApplied, false);
   assert.deepEqual(await facts(), pendingBefore);
   const operationId = randomUUID();
+  const replayApplied = await metric('consumer_apply_total', { mode: 'replay', result: 'success' });
+  const normalApplied = await metric('consumer_apply_total', { mode: 'normal', result: 'success' });
+  const replayCompleted = await metric('consumer_replay_total', { mode: 'replay', result: 'success' });
   const apply = await cli(newer.releaseId, operationId);
   assert.equal(apply.businessApplied, true); assert.equal(apply.checkpointAfter, newer.aggregateVersion);
+  if (input.readMetrics) {
+    assert.equal(await metric('consumer_apply_total', { mode: 'replay', result: 'success' }), replayApplied + 1);
+    assert.equal(await metric('consumer_apply_total', { mode: 'normal', result: 'success' }), normalApplied);
+    assert.equal(await metric('consumer_replay_total', { mode: 'replay', result: 'success' }), replayCompleted + 1);
+  }
   const appliedFacts = await facts();
   const repeated = await cli(newer.releaseId, operationId);
   assert.equal(repeated.businessApplied, false); assert.equal(repeated.receiptReused, true);
   assert.deepEqual(await facts(), appliedFacts);
+  if (input.readMetrics) assert.equal(await metric('consumer_apply_total', { mode: 'replay', result: 'success' }), replayApplied + 1);
   const old = await cli(event.releaseId, randomUUID());
   assert.equal(old.businessApplied, true); assert.equal(old.checkpointBefore, newer.aggregateVersion);
   assert.equal(old.checkpointAfter, newer.aggregateVersion); assert.equal(old.checkpointChanged, false);
@@ -111,12 +142,20 @@ export async function checkConsumerReplayFlow(input: Pick<Parameters<typeof chec
     });
     assert.equal(response.response.status, 200);
     if (targetStatus !== 'ACTIVE') {
+      const failures = await metric('consumer_replay_total', { mode: 'replay', result: 'failed' });
       const deniedBefore = await facts(); const deniedState = await readFile(statePath, 'utf8');
       assert.equal((await cli(event.releaseId, randomUUID(), 1)).errorCode, targetStatus);
+      if (input.readMetrics) {
+        assert.equal(await metric('consumer_replay_total', { mode: 'replay', result: 'failed' }), failures + 1);
+        assert.equal((await client.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/events', { params: { path: { subscriptionId } } })).response.status, 403);
+        assert.equal((await client.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/operational-status', { params: { path: { subscriptionId } } })).data?.applyOverdue, false);
+      }
       assert.deepEqual(await facts(), deniedBefore); assert.equal(await readFile(statePath, 'utf8'), deniedState);
     }
   }
   return { newer, proof: { dryRun: dry, apply, repeat: repeated, oldRelease: old }, checks: {
+    ...(input.readMetrics ? { metricsReplaySuccessFailure: true, metricsReplayRetryNoApply: true, metricsDryRunExcluded: true,
+      metricsSlaLate: true, metricsLagFormula: true, metricsRevokedArchivedOverride: true } : {}),
     replayDryRunZeroMutation: true, replayExactSuccess: true, replayIdempotentRestart: true,
     replayOldCheckpointMonotonic: true, replayArtifactBytesUnchanged: true,
     replayCrossSubscriptionOpaque: true, replayLifecycleRejected: true, replayStdoutSafe: true, replayExitCodesCorrect: true,

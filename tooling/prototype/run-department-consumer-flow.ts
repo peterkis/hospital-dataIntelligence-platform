@@ -1,5 +1,9 @@
 import { checkConsumerAuditFlow, readConsumerAuditProof } from './check-consumer-audit-flow.js';
+import { checkPublicationMetrics, checkConsumerMetricsBeforeApply, metricValue, metricCounters } from './check-consumer-metrics-flow.js';
+import { collectConsumerMetrics } from '../../apps/governance-api/src/composition/create-consumer-metrics.js';
+import { registerConsumerMetrics } from '../../apps/governance-api/src/platform/fastify/register-consumer-metrics.js';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, readdir, rm, rmdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -43,7 +47,7 @@ type Event = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][2
 type SubscriptionBody = GovernanceApiOperations['createPhase01ConsumerSubscription']['requestBody']['content']['application/json'];
 
 // This composition exists only in tooling. Production still resolves Keycloak JWTs.
-export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean; verifyReplay?: boolean; verifyAudit?: boolean } = {}) {
+export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean; verifyReplay?: boolean; verifyAudit?: boolean; verifyMetrics?: boolean } = {}) {
   assert.notEqual(process.env['NODE_ENV']?.toLowerCase(), 'production');
   const connectionString = process.env['DATABASE_URL'];
   assert.ok(connectionString, 'PROTOTYPE_DATABASE_CONFIGURATION_REQUIRED');
@@ -87,6 +91,9 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
     }),
   });
   const stateDirectory = await mkdtemp(join(tmpdir(), 'hdi-department-consumer-'));
+  if (options.verifyMetrics) registerConsumerMetrics(application, { host: '127.0.0.1', nodeEnvironment: 'test', prototypeMode: 'true',
+    resolvePrincipal, collect: principalId => collectConsumerMetrics(database, principalId) });
+  let metricsBeforeRestart = '';
   const statePaths = [join(stateDirectory, 'master.json'), join(stateDirectory, 'hierarchy.json')];
   const checks: Record<string, boolean> = {};
   const consumed: { subscriptionId: string; event: Event }[] = [];
@@ -104,6 +111,14 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       { security_principal_id: disabledServiceId, principal_code: `PROTOTYPE-SYNTHETIC-DISABLED-${suffix}`, principal_kind: 'SERVICE', status: 'DISABLED' },
     ]).execute();
     const baseUrl = await application.listen({ host: '127.0.0.1', port: 0 });
+    const readMetrics = async () => {
+      const response = await fetch(`${baseUrl}/prototype/observability/metrics`, { headers: { 'x-prototype-principal-code': 'prototype-owner' } });
+      assert.equal(response.status, 200, 'METRICS_ENDPOINT_FAILED');
+      const text = await response.text();
+      assert.doesNotMatch(text, /subscriptionId|releaseId|governanceObjectId|departmentId|requestId|correlationId|servicePrincipalId|Bearer|postgres(?:ql)?:\/\/|password|synthetic-private/iu);
+      assert.ok(!text.includes(masterToken) && !text.includes(hierarchyToken));
+      return text;
+    };
     const browser = (code: string): Client => createGovernanceApiClient({
       baseUrl, csrfToken: PROTOTYPE_CSRF_TOKEN,
       fetch(input, init) {
@@ -236,7 +251,8 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       decision: 'APPROVED' as const, reason: 'PROTOTYPE SYNTHETIC CONSUMER VALIDATION' };
     const parameters = { path: { governanceRequestId: submitted.governanceRequestId }, header: csrf };
     data(await reviewer.POST('/v1/department-governance/requests/{governanceRequestId}/reviews', { params: parameters, body: decision }));
-    const published = data(await approver.POST('/v1/department-governance/requests/{governanceRequestId}/approvals', { params: parameters, body: decision }));
+    const publishMaster = async () => data(await approver.POST('/v1/department-governance/requests/{governanceRequestId}/approvals', { params: parameters, body: decision }));
+    const published = options.verifyMetrics ? await checkPublicationMetrics(readMetrics, 'hdi.department-master', publishMaster) : await publishMaster();
     assert.equal(published.status, 'PUBLISHED');
     const masterEvent = await onlyEvent(serviceA, master.subscriptionId);
     checks['departmentMasterEventObserved'] = masterEvent.projectionType === 'hdi.department-master';
@@ -272,7 +288,8 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
     const action = { changeRequestId: request.changeRequestId, actionResult: 'APPROVED' as const,
       reason: 'PROTOTYPE SYNTHETIC HIERARCHY CONSUMER', seenContentDigest: hierarchyDraft.version.contentHash.toString('hex'), campusId: null };
     await workflow.act(hierarchyContext(fixture.reviewerPrincipalId), { ...action, stageType: 'PROFESSIONAL_REVIEW' });
-    const hierarchyPublication = await workflow.act(hierarchyContext(fixture.approverPrincipalId), { ...action, stageType: 'OWNER_FINAL_APPROVAL' });
+    const publishHierarchy = () => workflow.act(hierarchyContext(fixture.approverPrincipalId), { ...action, stageType: 'OWNER_FINAL_APPROVAL' });
+    const hierarchyPublication = options.verifyMetrics ? await checkPublicationMetrics(readMetrics, 'hdi.department-hierarchy', publishHierarchy) : await publishHierarchy();
     assert.ok(hierarchyPublication.publication);
     const hierarchyEvent = await onlyEvent(serviceB, hierarchy.subscriptionId);
     checks['departmentHierarchyEventObserved'] = hierarchyEvent.projectionType === 'hdi.department-hierarchy';
@@ -359,6 +376,8 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
           consumed.push({ subscriptionId, event });
         }
       }
+      const metrics = options.verifyMetrics ? await checkConsumerMetricsBeforeApply({ database, runner, context, owner, service,
+        subscriptionId: subscription.subscriptionId, event, baseUrl, accessToken, readMetrics }) : undefined;
       const result = await runSimulatedConsumerOnce({ baseUrl, accessToken, subscriptionId: subscription.subscriptionId,
         statePath, expectedProjectionType: event.projectionType, expectedProjectionSchemaVersion: '1', now });
       assert.deepEqual(result, { applied: 1, receiptsClosed: 1 });
@@ -370,9 +389,24 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       assert.deepEqual(data(await service.GET(eventsPath, { params: { path: subscription, query: { afterAggregateVersion: event.aggregateVersion } } })).events, []);
       assert.deepEqual(await runSimulatedConsumerOnce({ baseUrl, accessToken, subscriptionId: subscription.subscriptionId,
         statePath, expectedProjectionType: event.projectionType, expectedProjectionSchemaVersion: '1', now }), { applied: 0, receiptsClosed: 0 });
+      if (metrics) {
+        assert.equal(metricValue(await readMetrics(), 'consumer_apply_total', event.projectionType, { mode: 'normal', result: 'success' }), metrics.baseline + 1);
+        assert.equal((await metrics.status()).status, 'HEALTHY');
+        const counters = metricCounters(await readMetrics());
+        for (let retry = 0; retry < 2; retry++) data(await service.POST(receiptPath, { params: { path: subscription },
+          body: { ...receiptBody, processingDigest: event.snapshotArtifactDigest } }));
+        assert.equal(metricCounters(await readMetrics()), counters, 'METRICS_RECEIPT_RETRY');
+        for (const [name, passed] of Object.entries(metrics.checks)) checks[`${kind}_${name}`] = passed;
+        checks[`${kind}_metricsAppliedSuccess`] = true;
+        checks[`${kind}_metricsSlaHealthy`] = true;
+        checks[`${kind}_metricsPublishRollbackRetry`] = true;
+      }
       if (options.verifyAudit) {
+        const replayFailures = options.verifyMetrics ? metricValue(await readMetrics(), 'consumer_apply_total', event.projectionType, { mode: 'replay', result: 'failed' }) : 0;
         const auditChecks = await checkConsumerAuditFlow({ database, runner, context, service, otherService,
           subscriptionId: subscription.subscriptionId, event, baseUrl, accessToken });
+        if (options.verifyMetrics) assert.equal(metricValue(await readMetrics(), 'consumer_apply_total', event.projectionType,
+          { mode: 'replay', result: 'failed' }), replayFailures + 1, 'METRICS_REPLAY_CALLBACK_FAILURE');
         for (const [name, value] of Object.entries(auditChecks)) checks[`${kind}_${name}`] = value;
       }
       checks[`${kind}ReceiptApplied`] = true;
@@ -411,7 +445,8 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
         [hierarchy, hierarchyEvent, hierarchyToken, statePaths[1]!, 'departmentHierarchy', masterEvent.releaseId],
       ] as const) {
         const replay = await checkConsumerReplayFlow({ database, runner, context, owner, baseUrl, accessToken,
-          subscriptionId: subscription.subscriptionId, event, statePath, otherReleaseId });
+          subscriptionId: subscription.subscriptionId, event, statePath, otherReleaseId,
+          ...(options.verifyMetrics ? { readMetrics } : {}) });
         for (const [name, value] of Object.entries(replay.checks)) checks[`${kind}_${name}`] = value;
         replayProofs[kind] = replay.proof;
         consumed.find((entry) => entry.subscriptionId === subscription.subscriptionId)!.event = replay.newer;
@@ -431,6 +466,11 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
         auditProofs[subscription.subscriptionId] = rows;
         checks[`${kind}_auditReplayTerminals`] = true;
       }
+    }
+    if (options.verifyMetrics) {
+      metricsBeforeRestart = await readMetrics();
+      assert.equal((await fetch(`${baseUrl}/prototype/observability/metrics`)).status, 401);
+      checks['metricsEndpointNoSecrets'] = true;
     }
     migrationCount = Number((await database.selectFrom('platform.schema_migration')
       .select(({ fn }) => fn.countAll<string>().as('count')).executeTakeFirstOrThrow()).count);
@@ -457,6 +497,14 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   const verification = createDatabase({ connectionString, max: 1, application_name: 'hdi-department-consumer-persistence' });
   try {
     const reopenedRunner = createTransactionRunner<ScopedModules>(verification.database, createScopedModules);
+    if (options.verifyMetrics) {
+      assert.equal(await collectConsumerMetrics(verification.database, fixture.actorPrincipalId), metricsBeforeRestart, 'METRICS_RESTART_CHANGED');
+      const digest = execFileSync(process.execPath, ['--import', 'tsx', 'tooling/prototype/consumer-metrics-worker.ts'], {
+        cwd: resolve(import.meta.dirname, '../..'), windowsHide: true, encoding: 'utf8', timeout: 30_000,
+      });
+      assert.equal(digest, sha256Bytes(Buffer.from(metricsBeforeRestart)).toString('hex'), 'METRICS_PROCESS_RESTART_CHANGED');
+      checks['metricsRestartPersistence'] = true;
+    }
     if (slaResult) {
       for (const expected of slaResult.views) {
         assert.deepEqual(await reopenedRunner.run(slaResult.context, (m) => m.releaseDistribution.getConsumerOperationalStatus({
@@ -504,7 +552,7 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   checks['databasePoolClosed'] = true;
   checks['portReleased'] = true;
   assert.ok(Object.values(checks).every(Boolean));
-  return { status: 'PASSED', scenario: options.verifyAudit ? 'PV-005-C-03' : options.verifyReplay ? 'PV-005-C-02' : options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
+  return { status: 'PASSED', scenario: options.verifyMetrics ? 'PV-005-C-04' : options.verifyAudit ? 'PV-005-C-03' : options.verifyReplay ? 'PV-005-C-02' : options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
     ...checks, ...(options.verifyAudit ? { auditProofs } : {}), ...(options.verifyReplay ? { replayProofs } : {}), migrationCount, forbiddenTimezoneTypeCount };
 }
 

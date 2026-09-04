@@ -9,6 +9,8 @@ import { hitControlledPublicationFault } from '../../platform/fault-injection/co
 import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
 import type { ConsumerAuditEvent } from './consumer-events.js';
 export * from './consumer-events.js';
+import { readConsumerAuditMetricFacts } from './consumer-metric-facts.js';
+import type { ConsumerMetricFact } from '../../platform/observability/consumer-metrics.js';
 
 export const AUDIT_MODULE_ID = 'audit' as const;
 
@@ -177,13 +179,16 @@ export interface AuditEventService {
   }[]>;
 }
 
-export type AuditModule = AuditEventService;
+export interface AuditModule extends AuditEventService {
+  readConsumerMetricFacts(): Promise<readonly ConsumerMetricFact[]>;
+}
 
 export function createAuditModule(
   database: Kysely<DB>,
   context: RequestContext,
-): AuditEventService {
+): AuditModule {
   return {
+    readConsumerMetricFacts: () => readConsumerAuditMetricFacts(database),
     async append(command) {
       parseLocalDateTime(context.occurredAt);
       const normalized = normalizeAuditCommand(command);

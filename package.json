@@ -15,6 +15,7 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:consumer:metrics:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-department-consumer-flow.ts --metrics",
     "contract:check-consumer-audit": "node --import tsx apps/governance-api/scripts/check-consumer-audit-openapi-diff.ts",
     "prototype:consumer:audit:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-department-consumer-flow.ts --audit",
     "consumer:replay": "node --import tsx tooling/prototype/consumer-replay.ts",

@@ -1,4 +1,6 @@
 import { resolve } from 'node:path';
+import { collectConsumerMetrics } from './composition/create-consumer-metrics.js';
+import { registerConsumerMetrics } from './platform/fastify/register-consumer-metrics.js';
 import { buildApplication } from './composition/build-application.js';
 import { createDepartmentGovernanceHttpDependencies } from './composition/create-department-governance-http-dependencies.js';
 import { createScopedModules, type ScopedModules } from './composition/create-scoped-modules.js';
@@ -102,6 +104,8 @@ try {
     { schema: { hide: true } },
     async () => loadPrototypeDemoDashboard(databaseHandle.database, nowInAsiaShanghai()),
   );
+  registerConsumerMetrics(application, { host, nodeEnvironment: process.env['NODE_ENV'], prototypeMode: process.env['PROTOTYPE_MODE'],
+    resolvePrincipal: request => authentication.resolvePrincipal(request), collect: principalId => collectConsumerMetrics(databaseHandle.database, principalId) });
   await application.listen({ host, port });
   safeDevelopmentLog({
     event: 'PROTOTYPE_API_STARTED',

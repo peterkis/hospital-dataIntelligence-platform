@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readReleaseConsumerMetricFacts } from './consumer-metric-facts.js';
+import type { ConsumerMetricFact } from '../../platform/observability/consumer-metrics.js';
 import { createConsumerAudit, type ConsumerAuditQuery } from './consumer-audit.js';
 import type { ConsumerAuditReport, ConsumerFailureCode } from '../audit/index.js';
 import { sql, type Kysely } from 'kysely';
@@ -181,6 +183,7 @@ export interface AvailableEvent {
 }
 
 export interface ReleaseDistributionModule {
+  readConsumerMetricFacts(): Promise<readonly ConsumerMetricFact[]>;
   reportConsumerAudit(subscriptionId: string, report: ConsumerAuditReport): Promise<{ auditEventId: string; auditSequence: string }>;
   queryConsumerAudit(input: ConsumerAuditQuery): Promise<Awaited<ReturnType<ReturnType<typeof createConsumerAudit>['query']>>>;
   recordConsumerReceiptRejection(input: { subscriptionId: string; eventId: string; failureCode: ConsumerFailureCode;
@@ -302,6 +305,7 @@ export function createReleaseDistributionModule(
 
   const consumerAudit = createConsumerAudit(database, audit, context);
   return {
+    readConsumerMetricFacts: () => readReleaseConsumerMetricFacts(database),
     async reportConsumerAudit(subscriptionId, report) {
       if (!await references.getActiveServiceOwner(context.actorPrincipalId)) throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
       return consumerAudit.report(subscriptionId, report);
