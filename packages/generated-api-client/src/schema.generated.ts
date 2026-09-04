@@ -600,6 +600,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/lifecycle-transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 暂停、恢复、撤销或归档消费者订阅
+         * @description 同状态请求幂等，不重复写入生命周期或审计事件。原因仅允许1至256个字符的单行纯文本，不得包含凭据、密钥或患者数据。
+         */
+        post: operations["changePhase01ConsumerSubscriptionLifecycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/receipts": {
         parameters: {
             query?: never;
@@ -4679,6 +4699,114 @@ export interface operations {
             };
             /** @description Default Response */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    changePhase01ConsumerSubscriptionLifecycle: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-csrf-token": string;
+            };
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    governanceObjectId: string;
+                    reason?: string;
+                    targetStatus: "ACTIVE" | "SUSPENDED" | "REVOKED" | "ARCHIVED";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        lifecycleChangedAt: string;
+                        lifecycleStatus: "ACTIVE" | "SUSPENDED" | "REVOKED" | "ARCHIVED";
+                        subscriptionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

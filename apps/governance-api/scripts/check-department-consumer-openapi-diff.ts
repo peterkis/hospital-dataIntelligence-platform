@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -10,12 +9,15 @@ const base = '80ed445c7710deb72db5560acc49be3652d8fbdc';
 const oldSha = '0a6f4916188d592993dc2bdfa6c8e42c8832ab112a4447f7cd211d7fb228879c';
 const file = 'contracts/openapi/phase-01.openapi.json';
 const oldBytes = execFileSync('git', ['show', `${base}:${file}`], { cwd: root, windowsHide: true });
-const newBytes = readFileSync(resolve(root, file));
+// B-02B is a closed delta. Later task guards must validate their own live delta
+// from this frozen result without expanding this allowlist.
+const candidate = 'dce23903b0147910d7b0f90e6d431a30627d6fcc';
+const newBytes = execFileSync('git', ['show', `${candidate}:${file}`], { cwd: root, windowsHide: true });
 const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 assert.equal(digest(oldBytes), oldSha);
 const newSha = digest(newBytes);
 assert.notEqual(newSha, oldSha);
-assert.equal(readFileSync(resolve(root, 'contracts/openapi/phase-01.openapi.sha256'), 'utf8').trim(),
+assert.equal(execFileSync('git', ['show', `${candidate}:contracts/openapi/phase-01.openapi.sha256`], { cwd: root, encoding: 'utf8', windowsHide: true }).trim(),
   `${newSha}  phase-01.openapi.json`);
 const before = JSON.parse(oldBytes.toString('utf8'));
 const after = JSON.parse(newBytes.toString('utf8'));

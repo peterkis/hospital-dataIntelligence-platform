@@ -24,6 +24,8 @@ import {
   CreateSubscriptionBodySchema,
   CreateSubscriptionVersionBodySchema,
   SnapshotBinarySchema,
+  ChangeSubscriptionLifecycleBodySchema,
+  SubscriptionLifecycleResponseSchema,
 } from './release-consumer-schemas.js';
 
 const UuidSchema = Type.String({
@@ -1688,6 +1690,32 @@ export async function registerPhase01Routes(
         return modules.releaseDistribution.createSubscription(request.body);
       });
       return reply.code(201).send(subscription);
+    },
+  );
+
+  typed.post(
+    '/v1/phase-01/consumer-subscriptions/:subscriptionId/lifecycle-transitions',
+    {
+      schema: {
+        operationId: 'changePhase01ConsumerSubscriptionLifecycle',
+        summary: '暂停、恢复、撤销或归档消费者订阅',
+        description: '同状态请求幂等，不重复写入生命周期或审计事件。原因仅允许1至256个字符的单行纯文本，不得包含凭据、密钥或患者数据。',
+        security: [{ browserSession: [] }],
+        headers: BrowserMutationHeadersSchema,
+        params: SubscriptionParamsSchema,
+        body: ChangeSubscriptionLifecycleBodySchema,
+        response: { 200: SubscriptionLifecycleResponseSchema, 400: ErrorResponseSchema,
+          401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema,
+          409: ErrorResponseSchema, 503: ErrorResponseSchema },
+      },
+    },
+    async (request) => {
+      const runtime = requireRuntime(dependencies);
+      const context = await createRequestContext(request, runtime, 'PERSON');
+      return runtime.transactionRunner.run(context, (modules) =>
+        modules.releaseDistribution.changeSubscriptionLifecycle({
+          subscriptionId: request.params.subscriptionId, ...request.body,
+        }));
     },
   );
 

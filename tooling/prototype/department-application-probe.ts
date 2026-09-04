@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readdir } from 'node:fs/promises';
 import { sql } from 'kysely';
 import {
   createScopedModules,
@@ -456,7 +457,9 @@ try {
       and data_type.typname in ('timestamptz', 'timetz', 'tstzrange', 'tstzmultirange')
   `.execute(database);
   const forbiddenTimezoneTypeCount = Number(forbiddenTypes.rows[0]?.count ?? '-1');
-  checks['migrationCountIs16'] = migrationCount === 16;
+  const migrationFiles = (await readdir(new URL('../../db/migrations/', import.meta.url)))
+    .filter((name) => /^\d{4}_.+\.sql$/u.test(name));
+  checks['migrationCountMatchesAuthority'] = migrationCount === migrationFiles.length;
   checks['forbiddenTimezoneTypeCountIs0'] = forbiddenTimezoneTypeCount === 0;
 
   if (Object.values(checks).some((value) => value !== true)) {

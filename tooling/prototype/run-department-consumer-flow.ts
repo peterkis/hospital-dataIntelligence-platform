@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readFile, rm, rmdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, rmdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { FastifyRequest } from 'fastify';
 import { sql } from 'kysely';
 import { Check } from 'typebox/value';
@@ -23,6 +23,7 @@ import { canonicalSha256, sha256Bytes } from '../../apps/governance-api/src/plat
 import { createPrototypeAuthentication, PROTOTYPE_CSRF_TOKEN } from '../../apps/governance-api/src/platform/authentication/prototype-authentication.js';
 import { PROTOTYPE_FIXTURE as fixture } from './prototype-fixture.js';
 import { checkDepartmentConsumerCanonical } from './check-department-consumer-canonical.js';
+import { checkConsumerLifecycleFlow } from './check-consumer-lifecycle-flow.js';
 
 const masterObject = fixture.departmentMasterObjectId;
 const hierarchyObject = '74100000-0000-7000-8000-000000000001';
@@ -38,7 +39,7 @@ type Event = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][2
 type SubscriptionBody = GovernanceApiOperations['createPhase01ConsumerSubscription']['requestBody']['content']['application/json'];
 
 // This composition exists only in tooling. Production still resolves Keycloak JWTs.
-export async function runDepartmentConsumerFlow() {
+export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean } = {}) {
   assert.notEqual(process.env['NODE_ENV']?.toLowerCase(), 'production');
   const connectionString = process.env['DATABASE_URL'];
   assert.ok(connectionString, 'PROTOTYPE_DATABASE_CONFIGURATION_REQUIRED');
@@ -85,6 +86,7 @@ export async function runDepartmentConsumerFlow() {
   const statePaths = [join(stateDirectory, 'master.json'), join(stateDirectory, 'hierarchy.json')];
   const checks: Record<string, boolean> = {};
   const consumed: { subscriptionId: string; event: Event }[] = [];
+  let lifecycleHistories: Awaited<ReturnType<ScopedModules['releaseDistribution']['getSubscriptionHistory']>>[] = [];
   let migrationCount = 0;
   let forbiddenTimezoneTypeCount = -1;
   try {
@@ -357,6 +359,12 @@ export async function runDepartmentConsumerFlow() {
     data(await serviceA.POST(receiptPath, { params: { path: blocked }, body: { eventId: masterEvent.eventId,
       receiveResult: 'ACCEPTED', validationResult: 'VALID', applyResult: 'APPLIED', processingDigest: masterEvent.snapshotArtifactDigest, processedAt: now() } }));
     checks['compatibilityReplayPreservesOriginalArtifact'] = true;
+    if (options.verifyLifecycle) {
+      const lifecycle = await checkConsumerLifecycleFlow({ database, runner, context, owner, reviewer,
+        service: serviceA, otherService: serviceB, baseUrl, subscriptionId: master.subscriptionId, event: masterEvent });
+      lifecycleHistories = lifecycle.histories;
+      Object.assign(checks, lifecycle.checks);
+    }
     migrationCount = Number((await database.selectFrom('platform.schema_migration')
       .select(({ fn }) => fn.countAll<string>().as('count')).executeTakeFirstOrThrow()).count);
     const forbidden = await sql<{ count: string }>`select count(*)::text as count
@@ -365,7 +373,9 @@ export async function runDepartmentConsumerFlow() {
       where n.nspname not in ('pg_catalog', 'information_schema') and a.attnum > 0 and not a.attisdropped
         and t.typname in ('timestamptz', 'timetz', 'tstzrange', 'tstzmultirange')`.execute(database);
     forbiddenTimezoneTypeCount = Number(forbidden.rows[0]?.count);
-    assert.equal(migrationCount, 16);
+    const migrationFiles = (await readdir(resolve(import.meta.dirname, '../../db/migrations')))
+      .filter((name) => /^\d{4}_.+\.sql$/u.test(name));
+    assert.equal(migrationCount, migrationFiles.length);
     assert.equal(forbiddenTimezoneTypeCount, 0);
   } finally {
     await application.close();
@@ -379,6 +389,14 @@ export async function runDepartmentConsumerFlow() {
   assert.equal(application.server.listening, false);
   const verification = createDatabase({ connectionString, max: 1, application_name: 'hdi-department-consumer-persistence' });
   try {
+    const reopenedRunner = createTransactionRunner<ScopedModules>(verification.database, createScopedModules);
+    for (const expected of lifecycleHistories) {
+      const actual = await reopenedRunner.run(context(), (m) => m.releaseDistribution.getSubscriptionHistory({
+        subscriptionId: expected.subscriptionId, governanceObjectId: masterObject,
+      }));
+      assert.deepEqual(actual, expected);
+    }
+    if (options.verifyLifecycle) checks['lifecyclePersistenceObserved'] = true;
     for (const { subscriptionId, event } of consumed) {
       const checkpoint = await verification.database.selectFrom('release_distribution.consumer_checkpoint')
         .select('applied_aggregate_version').where('consumer_subscription_id', '=', subscriptionId).executeTakeFirstOrThrow();
@@ -398,7 +416,7 @@ export async function runDepartmentConsumerFlow() {
   checks['databasePoolClosed'] = true;
   checks['portReleased'] = true;
   assert.ok(Object.values(checks).every(Boolean));
-  return { status: 'PASSED', scenario: 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
+  return { status: 'PASSED', scenario: options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
     ...checks, migrationCount, forbiddenTimezoneTypeCount };
 }
 

@@ -6,9 +6,16 @@ import type { DB } from '../database/database-types.generated.js';
 export interface ConsumerReferenceReader {
   getGovernanceObjectType(governanceObjectId: string): Promise<string | null>;
   isActiveServicePrincipal(principalId: string): Promise<boolean>;
+  isActivePersonPrincipal(principalId: string): Promise<boolean>;
 }
 
 export function createConsumerReferenceReader(database: Kysely<DB>): ConsumerReferenceReader {
+  async function isActivePrincipal(principalId: string, kind: 'PERSON' | 'SERVICE') {
+    const principal = await database.selectFrom('platform.security_principal')
+      .select(['principal_kind', 'status']).where('security_principal_id', '=', principalId)
+      .forShare().executeTakeFirst();
+    return principal?.principal_kind === kind && principal.status === 'ACTIVE';
+  }
   return {
     async getGovernanceObjectType(governanceObjectId) {
       const object = await database.selectFrom('platform.governance_object')
@@ -16,11 +23,7 @@ export function createConsumerReferenceReader(database: Kysely<DB>): ConsumerRef
         .forShare().executeTakeFirst();
       return object?.object_type ?? null;
     },
-    async isActiveServicePrincipal(principalId) {
-      const principal = await database.selectFrom('platform.security_principal')
-        .select(['principal_kind', 'status']).where('security_principal_id', '=', principalId)
-        .forShare().executeTakeFirst();
-      return principal?.principal_kind === 'SERVICE' && principal.status === 'ACTIVE';
-    },
+    isActiveServicePrincipal: (principalId) => isActivePrincipal(principalId, 'SERVICE'),
+    isActivePersonPrincipal: (principalId) => isActivePrincipal(principalId, 'PERSON'),
   };
 }

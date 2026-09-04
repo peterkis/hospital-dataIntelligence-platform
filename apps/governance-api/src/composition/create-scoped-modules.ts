@@ -113,14 +113,11 @@ export function createScopedModules(
   const emergencyControl = createEmergencyControlModule(transaction, context);
   const priceList = createPriceListModule(transaction, chargeCatalog, emergencyControl);
   const audit = createAuditModule(transaction, context);
+  const authorization = createAuthorizationModule(transaction, context, authorizationDecisionDatabase);
   return {
     audit,
     batchImport: createBatchImportModule(transaction, context),
-    authorization: createAuthorizationModule(
-      transaction,
-      context,
-      authorizationDecisionDatabase,
-    ),
+    authorization,
     chargeCatalog,
     departmentMaster: createDepartmentMasterModule(
       transaction,
@@ -136,6 +133,8 @@ export function createScopedModules(
       PHASE_01_PROJECTION_CONTRACTS,
       context,
       createConsumerReferenceReader(transaction),
+      audit,
+      authorization,
     ),
     workflow: createWorkflowModule(transaction, context),
   };

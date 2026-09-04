@@ -6,6 +6,7 @@ import { createScopedModules, type ScopedModules } from './composition/create-sc
 import { createPhase01VerticalSlice } from './composition/phase-01-vertical-slice.js';
 import { createKeycloakAuthentication } from './platform/authentication/keycloak-authentication.js';
 import { createDatabase } from './platform/database/create-database.js';
+import { createConsumerReferenceReader } from './platform/release-consumer/consumer-reference-reader.js';
 import { createTransactionRunner } from './platform/transaction/transaction-runner.js';
 import {
   createHttpReleaseNotificationTransport,
@@ -49,6 +50,7 @@ const dispatcher = createReleaseDistributionDispatcher(
     maxNotificationAttempts: 5,
     pollIntervalMilliseconds: 5_000,
     now: nowInAsiaShanghai,
+    references: createConsumerReferenceReader,
   },
 );
 const transactionRunner = createTransactionRunner<ScopedModules>(

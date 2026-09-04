@@ -90,7 +90,7 @@ describe('Department Governance frozen browser OpenAPI', () => {
     expect(JSON.parse(canonicalize(document))).toEqual(frozen);
   });
 
-  it('keeps service consumers on Release Distribution and defers Department snapshot HTTP to B-02B', async () => {
+  it('keeps Department system consumption exclusively on the frozen Release Distribution snapshot contract', async () => {
     application = await buildApplication({ departmentGovernance: createDepartmentGovernanceContractDependencies() });
     await application.ready();
     const document = application.swagger();
@@ -103,8 +103,14 @@ describe('Department Governance frozen browser OpenAPI', () => {
         if (operation && typeof operation === 'object' && 'security' in operation
           && JSON.stringify(operation.security).includes('serviceBearer')) {
           expect(path.toLowerCase()).not.toContain('department');
-          expect(JSON.stringify(operation.responses)).not.toContain('DEPARTMENT_MASTER');
-          expect(JSON.stringify(operation.responses)).not.toContain('DEPARTMENT_HIERARCHY');
+          const responses = JSON.stringify(operation.responses);
+          if (path === '/v1/phase-01/consumer-subscriptions/{subscriptionId}/snapshots/{snapshotId}/content') {
+            expect(responses).toContain('DEPARTMENT_MASTER');
+            expect(responses).toContain('DEPARTMENT_HIERARCHY');
+          } else {
+            expect(responses).not.toContain('DEPARTMENT_MASTER');
+            expect(responses).not.toContain('DEPARTMENT_HIERARCHY');
+          }
         }
       }
     }

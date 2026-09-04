@@ -629,6 +629,8 @@ export interface ReleaseDistributionConsumerSubscription {
   consumer_subscription_id: Generated<string>;
   created_at: Generated<string>;
   governance_object_id: string;
+  lifecycle_changed_at: Generated<string>;
+  lifecycle_status: Generated<string>;
   service_principal_id: string;
   subscription_code: string;
 }

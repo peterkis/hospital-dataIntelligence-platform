@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { Pool } from 'pg';
 import { sql } from 'kysely';
+import { createConsumerReferenceReader } from '../platform/release-consumer/consumer-reference-reader.js';
 import {
   GenericContainer,
   type StartedTestContainer,
@@ -409,6 +410,7 @@ afterAll(async () => {
         maxNotificationAttempts: 3,
         pollIntervalMilliseconds: 1_000,
         now: () => dispatcherNow,
+        references: createConsumerReferenceReader,
       },
     );
     const chargeContext = requestContext(foundation.actorId, 'charge-draft', '2026-08-08T09:00:00');

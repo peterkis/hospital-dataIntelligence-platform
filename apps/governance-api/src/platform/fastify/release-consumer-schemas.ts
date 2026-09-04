@@ -1,5 +1,6 @@
 import { Type, type TProperties, type TSchema } from 'typebox';
 import { LOCAL_DATE_TIME_JSON_PATTERN } from '../local-datetime/local-datetime.js';
+import { ConsumerSubscriptionLifecycleStatusSchema, ConsumerSubscriptionLifecycleReasonSchema } from '../../modules/release-distribution/index.js';
 import {
   CHARGE_CATALOG_PROJECTION_TYPE,
   CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
@@ -29,6 +30,17 @@ const Uuid = Type.String({
 });
 const LocalDateTime = Type.String({ pattern: LOCAL_DATE_TIME_JSON_PATTERN });
 const Digest = Type.String({ pattern: '^[0-9a-f]{64}$' });
+
+export const ChangeSubscriptionLifecycleBodySchema = Type.Object({
+  governanceObjectId: Uuid,
+  targetStatus: ConsumerSubscriptionLifecycleStatusSchema,
+  reason: Type.Optional(ConsumerSubscriptionLifecycleReasonSchema),
+}, { additionalProperties: false });
+export const SubscriptionLifecycleResponseSchema = Type.Object({
+  subscriptionId: Uuid,
+  lifecycleStatus: ConsumerSubscriptionLifecycleStatusSchema,
+  lifecycleChangedAt: LocalDateTime,
+}, { additionalProperties: false });
 
 // Flatten each closed object so both runtime validation and generated TypeScript
 // preserve the projection type/version relationship.

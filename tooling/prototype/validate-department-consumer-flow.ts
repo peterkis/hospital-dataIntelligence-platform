@@ -1,7 +1,7 @@
 import { runDepartmentConsumerFlow } from './run-department-consumer-flow.js';
 
 try {
-  process.stdout.write(`${JSON.stringify(await runDepartmentConsumerFlow())}\n`);
+  process.stdout.write(`${JSON.stringify(await runDepartmentConsumerFlow({ verifyLifecycle: process.argv.includes('--lifecycle') }))}\n`);
 } catch (error) {
   // Assertions and drivers can carry SQL, request headers or connection values.
   // Only stable error identifiers leave this synthetic verifier.

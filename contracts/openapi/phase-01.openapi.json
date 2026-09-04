@@ -11300,6 +11300,287 @@
         "summary": "按对象内版本顺序查询可消费发布事件"
       }
     },
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/lifecycle-transitions": {
+      "post": {
+        "description": "同状态请求幂等，不重复写入生命周期或审计事件。原因仅允许1至256个字符的单行纯文本，不得包含凭据、密钥或患者数据。",
+        "operationId": "changePhase01ConsumerSubscriptionLifecycle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subscriptionId",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "schema": {
+              "minLength": 32,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "governanceObjectId": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f<>]+$",
+                    "type": "string"
+                  },
+                  "targetStatus": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "ACTIVE"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "SUSPENDED"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "REVOKED"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "ARCHIVED"
+                        ],
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "governanceObjectId",
+                  "targetStatus"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lifecycleChangedAt": {
+                      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                      "type": "string"
+                    },
+                    "lifecycleStatus": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "ACTIVE"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "SUSPENDED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "REVOKED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "ARCHIVED"
+                          ],
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "subscriptionId": {
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "subscriptionId",
+                    "lifecycleStatus",
+                    "lifecycleChangedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "security": [
+          {
+            "browserSession": []
+          }
+        ],
+        "summary": "暂停、恢复、撤销或归档消费者订阅"
+      }
+    },
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/receipts": {
       "post": {
         "operationId": "recordPhase01ConsumerReceipt",

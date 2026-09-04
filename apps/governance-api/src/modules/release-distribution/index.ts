@@ -4,6 +4,13 @@ import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/database-types.generated.js';
 import type { RequestContext } from '../../platform/transaction/transaction-runner.js';
 import type { ConsumerReferenceReader } from '../../platform/release-consumer/consumer-reference-reader.js';
+import type { AuditModule } from '../audit/index.js';
+import type { AuthorizationModule } from '../authorization/index.js';
+import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
+import { lifecycleStatus, lockSubscription, requireActiveSubscription, validateLifecycleTransition,
+  type ConsumerSubscriptionLifecycleStatus } from './subscription-lifecycle.js';
+export { ConsumerSubscriptionLifecycleStatusSchema, ConsumerSubscriptionLifecycleReasonSchema,
+  type ConsumerSubscriptionLifecycleStatus } from './subscription-lifecycle.js';
 import { hitControlledPublicationFault } from '../../platform/fault-injection/controlled-faults.js';
 import {
   canonicalJson,
@@ -167,6 +174,29 @@ export interface AvailableEvent {
 }
 
 export interface ReleaseDistributionModule {
+  changeSubscriptionLifecycle(command: {
+    readonly subscriptionId: string;
+    readonly governanceObjectId: string;
+    readonly targetStatus: ConsumerSubscriptionLifecycleStatus;
+    readonly reason?: string;
+  }): Promise<{
+    readonly subscriptionId: string;
+    readonly lifecycleStatus: ConsumerSubscriptionLifecycleStatus;
+    readonly lifecycleChangedAt: string;
+  }>;
+  getSubscriptionHistory(command: {
+    readonly subscriptionId: string;
+    readonly governanceObjectId: string;
+  }): Promise<{
+    readonly subscriptionId: string;
+    readonly lifecycleStatus: ConsumerSubscriptionLifecycleStatus;
+    readonly lifecycleChangedAt: string;
+    readonly versions: readonly { readonly subscriptionVersionId: string; readonly versionNo: string;
+      readonly projectionType: string; readonly projectionSchemaVersion: string; readonly projectionSchemaDigest: string }[];
+    readonly releases: readonly { readonly releaseId: string; readonly eventId: string; readonly snapshotId: string }[];
+    readonly receipts: readonly { readonly receiptId: string; readonly eventId: string; readonly applyResult: string }[];
+    readonly checkpoints: readonly { readonly governanceObjectId: string; readonly appliedAggregateVersion: string }[];
+  }>;
   registerPublication<Payload>(
     command: RegisterPublicationCommand<Payload>,
   ): Promise<RegisteredPublication>;
@@ -235,6 +265,8 @@ export function createReleaseDistributionModule(
   registrations: readonly ProjectionContractRegistration[],
   context: RequestContext,
   references: ConsumerReferenceReader,
+  audit: AuditModule,
+  authorization: AuthorizationModule,
 ): ReleaseDistributionModule {
   const contracts = new Map<string, RegisteredContract>();
   for (const registration of registrations) {
@@ -247,6 +279,56 @@ export function createReleaseDistributionModule(
   }
 
   return {
+    async changeSubscriptionLifecycle(command) {
+      await requireSubscriptionGovernance(references, authorization, context, command.governanceObjectId);
+      const subscription = await lockSubscription(database, command.subscriptionId);
+      if (subscription.governance_object_id !== command.governanceObjectId) {
+        throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+      }
+      const changed = validateLifecycleTransition(subscription.lifecycle_status, command.targetStatus, command.reason);
+      if (!changed) return subscriptionLifecycleView(subscription);
+      parseLocalDateTime(context.occurredAt);
+      const updated = await database.updateTable('release_distribution.consumer_subscription').set({
+        lifecycle_status: command.targetStatus, lifecycle_changed_at: context.occurredAt,
+      }).where('consumer_subscription_id', '=', command.subscriptionId).returningAll().executeTakeFirstOrThrow();
+      await audit.append({
+        auditStreamId: command.subscriptionId, governanceObjectId: command.governanceObjectId,
+        eventType: 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED', aggregateType: 'CONSUMER_SUBSCRIPTION',
+        aggregateId: command.subscriptionId, afterHash: canonicalSha256(subscriptionLifecycleView(updated)),
+        authorityScope: 'HOSPITAL', payload: {
+          fromStatus: subscription.lifecycle_status, toStatus: command.targetStatus, reason: command.reason ?? null,
+        },
+      });
+      return subscriptionLifecycleView(updated);
+    },
+
+    async getSubscriptionHistory(command) {
+      await requireSubscriptionGovernance(references, authorization, context, command.governanceObjectId);
+      const subscription = await database.selectFrom('release_distribution.consumer_subscription').selectAll()
+        .where('consumer_subscription_id', '=', command.subscriptionId)
+        .where('governance_object_id', '=', command.governanceObjectId).executeTakeFirst();
+      if (!subscription) throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+      const versionRows = await database.selectFrom('release_distribution.consumer_subscription_version as version')
+        .innerJoin('release_distribution.consumer_projection_support as support', 'support.consumer_subscription_version_id', 'version.consumer_subscription_version_id')
+        .select(['version.consumer_subscription_version_id as subscriptionVersionId', 'version.version_no as versionNo',
+          'support.projection_type as projectionType', 'support.projection_schema_version as projectionSchemaVersion',
+          'support.projection_schema_digest as projectionSchemaDigest'])
+        .where('version.consumer_subscription_id', '=', command.subscriptionId).orderBy('version.version_no')
+        .orderBy('support.projection_type').orderBy('support.projection_schema_version').execute();
+      const versions = versionRows.map((row) => ({ ...row, projectionSchemaDigest: digestHex(row.projectionSchemaDigest) }));
+      const releases = await database.selectFrom('release_distribution.outbox_delivery as delivery')
+        .innerJoin('release_distribution.outbox_event as event', 'event.event_id', 'delivery.event_id')
+        .select(['event.release_id as releaseId', 'event.event_id as eventId', 'event.release_snapshot_id as snapshotId'])
+        .where('delivery.consumer_subscription_id', '=', command.subscriptionId).orderBy('event.aggregate_version').execute();
+      const receipts = await database.selectFrom('release_distribution.consumer_receipt')
+        .select(['consumer_receipt_id as receiptId', 'event_id as eventId', 'apply_result as applyResult'])
+        .where('consumer_subscription_id', '=', command.subscriptionId).orderBy('event_id').orderBy('receipt_sequence').execute();
+      const checkpoints = await database.selectFrom('release_distribution.consumer_checkpoint')
+        .select(['governance_object_id as governanceObjectId', 'applied_aggregate_version as appliedAggregateVersion'])
+        .where('consumer_subscription_id', '=', command.subscriptionId).orderBy('governance_object_id').execute();
+      return { ...subscriptionLifecycleView(subscription), versions, releases, receipts, checkpoints };
+    },
+
     async linkReleaseRelationship(command) {
       await sql`
         insert into release_distribution.release_relationship (
@@ -420,33 +502,26 @@ export function createReleaseDistributionModule(
         .executeTakeFirstOrThrow();
       hitControlledPublicationFault('OUTBOX_EVENT_WRITTEN');
 
-      const activeSubscriptions = await sql<{
-        subscription_id: string;
-        subscription_version_id: string;
-      }>`
-        select
-          subscription.consumer_subscription_id as subscription_id,
-          version.consumer_subscription_version_id as subscription_version_id
-        from release_distribution.consumer_subscription as subscription
-        join lateral (
-          select candidate.consumer_subscription_version_id, candidate.status
-          from release_distribution.consumer_subscription_version as candidate
-          where candidate.consumer_subscription_id = subscription.consumer_subscription_id
-          order by candidate.version_no desc
-          limit 1
-        ) as version on true
-        where subscription.governance_object_id = ${command.governanceObjectId}
-          and version.status = 'ACTIVE'
-        order by subscription.consumer_subscription_id
-      `.execute(database);
-      for (const subscription of activeSubscriptions.rows) {
+      const subscriptions = await database.selectFrom('release_distribution.consumer_subscription')
+        .select('consumer_subscription_id as subscription_id')
+        .where('governance_object_id', '=', command.governanceObjectId).orderBy('consumer_subscription_id').execute();
+      for (const subscription of subscriptions) {
+        // Paused subscriptions retain their backlog for gap-free resumption.
+        // Terminal subscriptions receive no further delivery records.
+        const current = await lockSubscription(database, subscription.subscription_id);
+        if (current.lifecycle_status === 'REVOKED' || current.lifecycle_status === 'ARCHIVED') continue;
+        const latestVersion = await database.selectFrom('release_distribution.consumer_subscription_version')
+          .select(['consumer_subscription_version_id', 'status'])
+          .where('consumer_subscription_id', '=', subscription.subscription_id).orderBy('version_no', 'desc')
+          .limit(1).executeTakeFirst();
+        if (latestVersion?.status !== 'ACTIVE') continue;
         const support = await database
           .selectFrom('release_distribution.consumer_projection_support')
           .select('projection_schema_digest')
           .where(
             'consumer_subscription_version_id',
             '=',
-            subscription.subscription_version_id,
+            latestVersion.consumer_subscription_version_id,
           )
           .where('projection_type', '=', contract.projectionType)
           .where('projection_schema_version', '=', contract.schemaVersion)
@@ -461,7 +536,7 @@ export function createReleaseDistributionModule(
             release_id: release.release_id,
             event_id: event.event_id,
             consumer_subscription_id: subscription.subscription_id,
-            consumer_subscription_version_id: subscription.subscription_version_id,
+            consumer_subscription_version_id: latestVersion.consumer_subscription_version_id,
             result: compatibilityResult,
             result_sequence: '1',
             evidence_hash: canonicalSha256({
@@ -471,7 +546,7 @@ export function createReleaseDistributionModule(
               projectionType: contract.projectionType,
               result: compatibilityResult,
               subscriptionId: subscription.subscription_id,
-              subscriptionVersionId: subscription.subscription_version_id,
+              subscriptionVersionId: latestVersion.consumer_subscription_version_id,
             }),
           })
           .returning('release_consumer_compatibility_id')
@@ -542,6 +617,7 @@ export function createReleaseDistributionModule(
     },
 
     async createSubscription(command) {
+      parseLocalDateTime(context.occurredAt);
       const contract = requireContract(
         contracts,
         command.projectionType,
@@ -557,6 +633,8 @@ export function createReleaseDistributionModule(
           subscription_code: command.subscriptionCode,
           service_principal_id: command.servicePrincipalId,
           governance_object_id: command.governanceObjectId,
+          lifecycle_status: 'ACTIVE',
+          lifecycle_changed_at: context.occurredAt,
         })
         .returning('consumer_subscription_id')
         .executeTakeFirstOrThrow();
@@ -588,16 +666,11 @@ export function createReleaseDistributionModule(
         command.projectionType,
         command.projectionSchemaVersion,
       );
-      await sql`select pg_advisory_xact_lock(hashtextextended(${command.subscriptionId}, 47))`.execute(
-        database,
-      );
-      const subscription = await database
-        .selectFrom('release_distribution.consumer_subscription')
-        .select('consumer_subscription_id')
-        .where('consumer_subscription_id', '=', command.subscriptionId)
-        .where('governance_object_id', '=', command.governanceObjectId)
-        .executeTakeFirst();
-      if (!subscription) throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+      const subscription = await lockSubscription(database, command.subscriptionId);
+      if (subscription.governance_object_id !== command.governanceObjectId) throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+      if (subscription.lifecycle_status !== 'ACTIVE' && subscription.lifecycle_status !== 'SUSPENDED') {
+        throw new Error('CONSUMER_SUBSCRIPTION_NOT_ACTIVE');
+      }
       await requireProjectionGovernanceObjectCompatibility(references, command);
       const latest = await database
         .selectFrom('release_distribution.consumer_subscription_version')
@@ -632,6 +705,12 @@ export function createReleaseDistributionModule(
     },
 
     async replayBlockedDelivery(command) {
+      const subscription = await lockSubscription(database, command.subscriptionId);
+      if (subscription.governance_object_id !== command.governanceObjectId) throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+      requireActiveSubscription(subscription.lifecycle_status);
+      if (!await references.isActiveServicePrincipal(subscription.service_principal_id)) {
+        throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
+      }
       await sql`select pg_advisory_xact_lock(hashtextextended(${command.subscriptionId}, 59))`.execute(
         database,
       );
@@ -773,7 +852,7 @@ export function createReleaseDistributionModule(
     },
 
     async listAvailableEvents(command) {
-      await requireServiceSubscription(database, command.subscriptionId, command.servicePrincipalId);
+      await requireServiceSubscription(database, references, command.subscriptionId, command.servicePrincipalId);
       const selected = await sql<{
         aggregate_version: string;
         delivery_id: string;
@@ -862,31 +941,16 @@ export function createReleaseDistributionModule(
     },
 
     async getSnapshot(snapshotId) {
-      const snapshot = await database
-        .selectFrom('release_distribution.release_snapshot')
-        .select([
-          'release_snapshot_id',
-          'release_id',
-          'artifact_media_type',
-          'artifact_bytes',
-          'artifact_byte_length',
-          'snapshot_artifact_digest',
-        ])
-        .where('release_snapshot_id', '=', snapshotId)
-        .executeTakeFirst();
-      if (!snapshot) throw new Error('SNAPSHOT_NOT_FOUND');
-      return {
-        snapshotId: snapshot.release_snapshot_id,
-        releaseId: snapshot.release_id,
-        mediaType: snapshot.artifact_media_type,
-        bytes: snapshot.artifact_bytes,
-        byteLength: snapshot.artifact_byte_length ?? snapshot.artifact_bytes.byteLength.toString(),
-        digest: snapshot.snapshot_artifact_digest,
-      };
+      const reference = await database.selectFrom('release_distribution.release_snapshot as snapshot')
+        .innerJoin('release_distribution.governance_release as release', 'release.release_id', 'snapshot.release_id')
+        .select('release.governance_object_id').where('snapshot.release_snapshot_id', '=', snapshotId).executeTakeFirst();
+      if (!reference) throw new Error('SNAPSHOT_NOT_FOUND');
+      await requireSubscriptionGovernance(references, authorization, context, reference.governance_object_id);
+      return readSnapshot(database, snapshotId);
     },
 
     async getSnapshotForSubscription(command) {
-      await requireServiceSubscription(database, command.subscriptionId, command.servicePrincipalId);
+      await requireServiceSubscription(database, references, command.subscriptionId, command.servicePrincipalId);
       const allowed = await sql<{ release_snapshot_id: string }>`
         select event.release_snapshot_id
         from release_distribution.consumer_subscription as subscription
@@ -910,11 +974,11 @@ export function createReleaseDistributionModule(
           and event.release_snapshot_id = ${command.snapshotId}
       `.execute(database);
       if (!allowed.rows[0]) throw new Error('SNAPSHOT_NOT_AVAILABLE_TO_SUBSCRIPTION');
-      return this.getSnapshot(command.snapshotId);
+      return readSnapshot(database, command.snapshotId);
     },
 
     async recordReceipt(command) {
-      await requireServiceSubscription(database, command.subscriptionId, command.servicePrincipalId);
+      await requireServiceSubscription(database, references, command.subscriptionId, command.servicePrincipalId);
       const selected = await sql<{
         aggregate_id: string;
         aggregate_version: string;
@@ -1084,18 +1148,43 @@ async function nextUuid(database: Kysely<DB>): Promise<string> {
 
 async function requireServiceSubscription(
   database: Kysely<DB>,
+  references: ConsumerReferenceReader,
   subscriptionId: string,
   servicePrincipalId: string,
 ): Promise<void> {
-  const subscription = await database
-    .selectFrom('release_distribution.consumer_subscription')
-    .select('service_principal_id')
-    .where('consumer_subscription_id', '=', subscriptionId)
-    .executeTakeFirst();
-  if (!subscription) throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+  const subscription = await lockSubscription(database, subscriptionId);
   if (subscription.service_principal_id !== servicePrincipalId) {
     throw new Error('CONSUMER_SUBSCRIPTION_FORBIDDEN');
   }
+  requireActiveSubscription(subscription.lifecycle_status);
+  if (!await references.isActiveServicePrincipal(servicePrincipalId)) {
+    throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
+  }
+}
+
+function subscriptionLifecycleView(subscription: {
+  readonly consumer_subscription_id: string; readonly lifecycle_status: string; readonly lifecycle_changed_at: string;
+}) {
+  return { subscriptionId: subscription.consumer_subscription_id,
+    lifecycleStatus: lifecycleStatus(subscription.lifecycle_status), lifecycleChangedAt: subscription.lifecycle_changed_at };
+}
+
+async function requireSubscriptionGovernance(references: ConsumerReferenceReader, authorization: AuthorizationModule,
+  context: RequestContext, governanceObjectId: string): Promise<void> {
+  if (!await references.isActivePersonPrincipal(context.actorPrincipalId)) throw new Error('PRINCIPAL_KIND_FORBIDDEN');
+  await authorization.requireObjectPermission({ governanceObjectId, permissionCode: 'CONSUMER_SUBSCRIPTION_MANAGE' });
 }
 
 export const EMPTY_DIGEST = ZERO_DIGEST;
+
+async function readSnapshot(database: Kysely<DB>, snapshotId: string): Promise<SnapshotArtifact> {
+  const snapshot = await database.selectFrom('release_distribution.release_snapshot')
+    .select(['release_snapshot_id', 'release_id', 'artifact_media_type', 'artifact_bytes',
+      'artifact_byte_length', 'snapshot_artifact_digest'])
+    .where('release_snapshot_id', '=', snapshotId).executeTakeFirst();
+  if (!snapshot) throw new Error('SNAPSHOT_NOT_FOUND');
+  return { snapshotId: snapshot.release_snapshot_id, releaseId: snapshot.release_id,
+    mediaType: snapshot.artifact_media_type, bytes: snapshot.artifact_bytes,
+    byteLength: snapshot.artifact_byte_length ?? snapshot.artifact_bytes.byteLength.toString(),
+    digest: snapshot.snapshot_artifact_digest };
+}
