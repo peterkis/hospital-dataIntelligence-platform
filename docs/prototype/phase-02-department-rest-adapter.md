@@ -2,6 +2,8 @@
 
 ## 范围与定位
 
+PV-005-B-02A 更新：本 Prototype Adapter 已成为正式 Browser Governance API 的验证来源；Prototype surface 继续保留用于本地演示和回归，15 条旧路径、Prototype authentication、Prototype CSRF 和 OpenAPI 隐藏语义保持。正式浏览器路径、安全声明和客户端契约见 [Department Governance Browser HTTP Contract](../design/department-governance-http-contract.md)。下文关于“仅 Prototype、未修改正式契约”的描述是 PV-005-B-01 的历史交付记录；本次双 surface 共用 handler 和 DTO，正式 API 的 audience 仅为治理工作台人员，系统消费者仍使用 Release Distribution。
+
 本实现以提交 `4733dfc5cb79712a329869e804c929160eb299ef` 为冻结开工基线。REST Adapter 是 `DepartmentGovernanceApplicationContract` 的薄 HTTP 传输适配层，仅在 Prototype API 中以 `/prototype/v1` prefix 注册；插件内部保留相对路径，全部路由设置 `schema.hide = true`。
 
 请求处理固定为：HTTP Handler 创建可信 `RequestContext`，再通过请求作用域 factory 创建一个 `DepartmentGovernanceApplicationContract`，调用冻结的 Application Contract，最后返回冻结 DTO。Adapter 不直接访问 Kysely、repository、`DepartmentMasterModule`、`WorkflowModule`、Audit、Release 或 Projection，也不在 Handler 中重新实现权限、摘要或时间查询规则。

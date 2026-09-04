@@ -25,6 +25,8 @@ import {
 } from '../authentication/prototype-authentication.js';
 import type { RequestContext } from '../transaction/transaction-runner.js';
 import { mapHttpError } from './map-http-error.js';
+import { buildApplication } from '../../composition/build-application.js';
+import type { KeycloakAuthentication } from '../authentication/keycloak-authentication.js';
 import {
   registerDepartmentGovernanceRoutes,
   type DepartmentGovernanceHttpDependencies,
@@ -236,9 +238,10 @@ async function buildTestApplication(
     });
   }
 
-  await application.register(
-    async (scope) => registerDepartmentGovernanceRoutes(scope, dependencies ?? undefined),
-    { prefix: '/prototype/v1' },
+  await registerDepartmentGovernanceRoutes(
+    application,
+    dependencies ?? undefined,
+    { surface: 'PROTOTYPE', prefix: '/prototype/v1', hide: true },
   );
   return application;
 }
@@ -1339,5 +1342,199 @@ describe('department governance Fastify schemas', () => {
       fromVersionNo: '1',
       toVersionNo: '2',
     });
+  });
+});
+
+
+const FORMAL_PREFIX = '/v1/department-governance';
+const BROWSER_HEADERS = {
+  cookie: '__Host-hdi-session=synthetic-browser-session',
+  'x-csrf-token': 'synthetic-browser-csrf-token-for-contract-tests',
+};
+
+// A formal browser-session resolver double, never a Prototype header resolver.
+async function buildFormalTestApplication(contract = createFakeContract()) {
+  const authentication = {
+    resolvePrincipal: vi.fn<KeycloakAuthentication['resolvePrincipal']>(async (request) => {
+      if (request.headers.authorization?.startsWith('Bearer ')) {
+        return { principalId: OTHER_ACTOR_ID, principalKind: 'SERVICE' };
+      }
+      if (request.headers.cookie !== BROWSER_HEADERS.cookie) {
+        throw new Error('BROWSER_SESSION_UNAUTHENTICATED');
+      }
+      if (request.method === 'POST' && request.headers['x-csrf-token'] !== BROWSER_HEADERS['x-csrf-token']) {
+        throw new Error('BROWSER_CSRF_FORBIDDEN');
+      }
+      return { principalId: OTHER_ACTOR_ID, principalKind: 'PERSON' };
+    }),
+  } satisfies Pick<KeycloakAuthentication, 'resolvePrincipal'>;
+  const dependencies = createDependencies(contract, {
+    resolvePrincipal: (request) => authentication.resolvePrincipal(request),
+  });
+  const application = await buildApplication({ departmentGovernance: dependencies });
+  applications.push(application);
+  return { application, dependencies, authentication, contract };
+}
+
+describe('formal Department browser API Fastify integration', () => {
+  it('registers Formal routes through buildApplication and excludes Prototype routes', async () => {
+    const { application } = await buildFormalTestApplication();
+    const formal = await application.inject({
+      method: 'GET', url: `${FORMAL_PREFIX}/departments?governanceObjectId=${GOVERNANCE_OBJECT_ID}`,
+      headers: BROWSER_HEADERS,
+    });
+    expect(formal.statusCode).toBe(200);
+    const prototype = await application.inject({
+      method: 'GET', url: `/prototype/v1/departments?governanceObjectId=${GOVERNANCE_OBJECT_ID}`,
+      headers: { 'x-prototype-principal-code': 'prototype-owner' },
+    });
+    expect(prototype.statusCode).toBe(404);
+  });
+
+  it.each([
+    ['prototype-only identity', { 'x-prototype-principal-code': 'prototype-owner' }, 401, 'BROWSER_SESSION_UNAUTHENTICATED'],
+    ['missing session', {}, 401, 'BROWSER_SESSION_UNAUTHENTICATED'],
+    ['service bearer', { authorization: 'Bearer synthetic-service' }, 403, 'PRINCIPAL_KIND_FORBIDDEN'],
+  ])('rejects %s before creating an application', async (_name, headers, status, code) => {
+    const { application, dependencies } = await buildFormalTestApplication();
+    const response = await application.inject({
+      method: 'GET', url: `${FORMAL_PREFIX}/departments?governanceObjectId=${GOVERNANCE_OBJECT_ID}`,
+      headers,
+    });
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toEqual({ code, requestId: expect.any(String) });
+    expect(dependencies.createApplication).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing', undefined, 400, 'REQUEST_SCHEMA_INVALID'],
+    ['short', 'bad', 400, 'REQUEST_SCHEMA_INVALID'],
+    ['wrong session token', 'x'.repeat(40), 403, 'BROWSER_CSRF_FORBIDDEN'],
+    ['prototype token', PROTOTYPE_CSRF_TOKEN, 403, 'BROWSER_CSRF_FORBIDDEN'],
+  ])('reuses browser header validation and session validation for %s CSRF', async (_name, csrf, status, code) => {
+    const { application, contract } = await buildFormalTestApplication();
+    const response = await application.inject({
+      method: 'POST', url: `${FORMAL_PREFIX}/department-drafts`, payload: CREATE_BODY,
+      headers: { cookie: BROWSER_HEADERS.cookie, ...(csrf ? { 'x-csrf-token': csrf } : {}) },
+    });
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toEqual({ code, requestId: expect.any(String) });
+    expect(contract.execute).not.toHaveBeenCalled();
+  });
+
+  it('binds each request to the formal resolved principal and server clock', async () => {
+    const { application, dependencies, authentication } = await buildFormalTestApplication();
+    for (const suffix of ['1', '2']) {
+      const response = await application.inject({
+        method: 'GET', url: `${FORMAL_PREFIX}/departments?governanceObjectId=${GOVERNANCE_OBJECT_ID}`,
+        headers: { ...BROWSER_HEADERS, 'x-request-id': `request-${suffix}`,
+          'x-correlation-id': `correlation-${suffix}`, 'x-prototype-principal-code': 'prototype-owner' },
+      });
+      expect(response.statusCode).toBe(200);
+    }
+    expect(authentication.resolvePrincipal).toHaveBeenCalledTimes(2);
+    expect(dependencies.createApplication.mock.calls).toEqual(['1', '2'].map((suffix) => [{
+      actorPrincipalId: OTHER_ACTOR_ID, occurredAt: NOW,
+      requestId: `request-${suffix}`, correlationId: `correlation-${suffix}`,
+    }]));
+    expect(dependencies.createApplication.mock.calls[0]![0]).not.toBe(dependencies.createApplication.mock.calls[1]![0]);
+  });
+
+  it('maps all six commands unchanged and never publishes again after approval', async () => {
+    const { application, contract, dependencies } = await buildFormalTestApplication();
+    const commands = [
+      ['/department-drafts', CREATE_BODY, { commandName: 'CreateDepartmentDraft', ...CREATE_BODY }, 201],
+      [`/departments/${DEPARTMENT_ID}/versions/${DEPARTMENT_VERSION_ID}/submissions`, SUBMIT_BODY,
+        { commandName: 'SubmitDepartmentGovernance', departmentId: DEPARTMENT_ID, departmentVersionId: DEPARTMENT_VERSION_ID, ...SUBMIT_BODY }, 201],
+      [`/requests/${GOVERNANCE_REQUEST_ID}/reviews`, DECISION_BODY,
+        { commandName: 'ReviewDepartment', governanceRequestId: GOVERNANCE_REQUEST_ID, ...DECISION_BODY }, 200],
+      [`/requests/${GOVERNANCE_REQUEST_ID}/approvals`, DECISION_BODY,
+        { commandName: 'ApproveDepartment', governanceRequestId: GOVERNANCE_REQUEST_ID, ...DECISION_BODY }, 200],
+      [`/requests/${GOVERNANCE_REQUEST_ID}/publication-confirmations`, PUBLICATION_BODY,
+        { commandName: 'PublishDepartment', governanceRequestId: GOVERNANCE_REQUEST_ID, ...PUBLICATION_BODY }, 200],
+      [`/departments/${DEPARTMENT_ID}/source-mappings/${MAPPING_ID}/confirmations`, { governanceObjectId: GOVERNANCE_OBJECT_ID },
+        { commandName: 'ConfirmSourceMapping', governanceObjectId: GOVERNANCE_OBJECT_ID, departmentId: DEPARTMENT_ID, mappingId: MAPPING_ID }, 200],
+    ] as const;
+    for (const [path, body, command, status] of commands) {
+      contract.execute.mockClear();
+      dependencies.createApplication.mockClear();
+      const response = await application.inject({ method: 'POST', url: FORMAL_PREFIX + path, payload: body, headers: BROWSER_HEADERS });
+      expect(response.statusCode).toBe(status);
+      expect(response.json()).toEqual(STATUS_VIEW);
+      expect(contract.execute.mock.calls).toEqual([[command]]);
+      expect(dependencies.createApplication).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('repeats publication confirmation through the same frozen command without extra calls', async () => {
+    const { application, contract } = await buildFormalTestApplication();
+    const results = [];
+    for (let i = 0; i < 2; i++) {
+      const response = await application.inject({ method: 'POST',
+        url: `${FORMAL_PREFIX}/requests/${GOVERNANCE_REQUEST_ID}/publication-confirmations`,
+        payload: PUBLICATION_BODY, headers: BROWSER_HEADERS });
+      expect(response.statusCode).toBe(200);
+      results.push(response.json());
+    }
+    expect(results).toEqual([STATUS_VIEW, STATUS_VIEW]);
+    expect(contract.execute.mock.calls).toEqual([0, 1].map(() => [{
+      commandName: 'PublishDepartment', governanceRequestId: GOVERNANCE_REQUEST_ID, ...PUBLICATION_BODY,
+    }]));
+  });
+
+  it('maps all nine queries to frozen DTOs with the exact application arguments', async () => {
+    const { application, contract } = await buildFormalTestApplication();
+    const scope = { governanceObjectId: GOVERNANCE_OBJECT_ID };
+    const target = { ...scope, departmentId: DEPARTMENT_ID };
+    const queries = [
+      ['/departments', 'listPublishedDepartments', [SUMMARY], scope, ''],
+      [`/departments/${DEPARTMENT_ID}`, 'getPublishedDepartment', DETAIL, target, ''],
+      [`/departments/${DEPARTMENT_ID}/history`, 'getDepartmentHistory', HISTORY, { ...target, asOf: NOW }, `&asOf=${NOW}`],
+      ['/hierarchies/ADMINISTRATIVE', 'getDepartmentHierarchy', [HIERARCHY], { ...scope, viewType: 'ADMINISTRATIVE' }, ''],
+      [`/departments/${DEPARTMENT_ID}/source-mappings`, 'getDepartmentSourceMappings', [SOURCE_MAPPING], target, ''],
+      [`/departments/${DEPARTMENT_ID}/quality`, 'getDepartmentQuality', QUALITY, target, ''],
+      [`/departments/${DEPARTMENT_ID}/governance-status`, 'getGovernanceStatus', STATUS_VIEW, target, ''],
+      ['/pending-reviews', 'findPendingReviews', [REVIEW_QUEUE_ITEM], scope, ''],
+      [`/departments/${DEPARTMENT_ID}/version-difference`, 'getVersionDifference', VERSION_DIFFERENCE,
+        { ...target, fromVersionNo: null, toVersionNo: '1' }, '&toVersionNo=1'],
+    ] as const;
+    for (const [path, method, dto, query, extra] of queries) {
+      const response = await application.inject({ method: 'GET',
+        url: `${FORMAL_PREFIX}${path}?governanceObjectId=${GOVERNANCE_OBJECT_ID}${extra}`, headers: BROWSER_HEADERS });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(dto);
+      expect(contract[method]).toHaveBeenCalledExactlyOnceWith(query);
+    }
+  });
+
+  it.each([
+    ['DEPARTMENT_PERMISSION_DENIED', 403], ['DEPARTMENT_NOT_FOUND', 404],
+    ['DEPARTMENT_VERSION_NOT_FOUND', 404], ['DEPARTMENT_STATUS_INVALID', 409],
+    ['DEPARTMENT_APPROVAL_REQUIRED', 409], ['DEPARTMENT_CONTENT_CHANGED', 409],
+    ['DEPARTMENT_EVOLUTION_RELATION_REQUIRED', 409],
+  ] as const)('preserves formal error %s', async (code, status) => {
+    const { application, contract } = await buildFormalTestApplication();
+    contract.execute.mockRejectedValueOnce(new DepartmentContractError(code));
+    const response = await application.inject({ method: 'POST', url: `${FORMAL_PREFIX}/department-drafts`,
+      payload: CREATE_BODY, headers: BROWSER_HEADERS });
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toEqual({ code, requestId: expect.any(String) });
+  });
+
+  it('hides unknown internal error text from the formal client', async () => {
+    const { application, contract } = await buildFormalTestApplication();
+    contract.execute.mockRejectedValueOnce(new Error('private database SQLSTATE error text'));
+    const response = await application.inject({ method: 'POST', url: `${FORMAL_PREFIX}/department-drafts`,
+      payload: CREATE_BODY, headers: BROWSER_HEADERS });
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ code: 'INTERNAL_ERROR', requestId: expect.any(String) });
+  });
+
+  it.each(['actorId', 'actorPrincipalId', 'reviewerId', 'approverId', 'password', 'token'])('rejects undeclared formal body field %s', async (field) => {
+    const { application, contract } = await buildFormalTestApplication();
+    const response = await application.inject({ method: 'POST', url: `${FORMAL_PREFIX}/department-drafts`,
+      payload: { ...CREATE_BODY, [field]: 'synthetic-invalid' }, headers: BROWSER_HEADERS });
+    expect(response.statusCode).toBe(400);
+    expect(contract.execute).not.toHaveBeenCalled();
   });
 });

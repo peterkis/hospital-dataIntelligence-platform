@@ -1,17 +1,13 @@
 import { resolve } from 'node:path';
 import { buildApplication } from './composition/build-application.js';
+import { createDepartmentGovernanceHttpDependencies } from './composition/create-department-governance-http-dependencies.js';
 import { createScopedModules, type ScopedModules } from './composition/create-scoped-modules.js';
 import { createPhase01VerticalSlice } from './composition/phase-01-vertical-slice.js';
-import {
-  createDepartmentGovernanceApplication,
-  createDepartmentQueryService,
-} from './modules/department-master/index.js';
 import { createWorkflowApplication } from './modules/workflow/index.js';
 import {
   PROTOTYPE_AUTHENTICATION_MODE,
   createPrototypeAuthentication,
 } from './platform/authentication/prototype-authentication.js';
-import { createCampusReferenceReader } from './platform/campus/campus-reference-reader.js';
 import { createDatabase } from './platform/database/create-database.js';
 import { assertNoProductionFaultConfiguration } from './platform/fault-injection/controlled-faults.js';
 import { registerDepartmentGovernanceRoutes } from './platform/fastify/register-department-governance-routes.js';
@@ -75,11 +71,6 @@ try {
     transactionRunner,
     () => notificationTransport.publicationCommitted(),
   );
-  const campusReferenceReader = createCampusReferenceReader(databaseHandle.database);
-  const queryService = createDepartmentQueryService(
-    databaseHandle.database,
-    campusReferenceReader,
-  );
   application = await buildApplication({
     ...(prototypeAdminRoot ? { adminStaticRoot: prototypeAdminRoot } : {}),
     phase01: {
@@ -90,20 +81,16 @@ try {
       now: nowInAsiaShanghai,
     },
   });
-  await application.register(
-    async (departmentApplication) => {
-      await registerDepartmentGovernanceRoutes(departmentApplication, {
-        resolvePrincipal: (request) => authentication.resolvePrincipal(request),
-        now: nowInAsiaShanghai,
-        createApplication: (context) => createDepartmentGovernanceApplication({
-          context,
-          transactionRunner,
-          workflowApplication,
-          queryService,
-        }),
-      });
-    },
-    { prefix: '/prototype/v1' },
+  await registerDepartmentGovernanceRoutes(
+    application,
+    createDepartmentGovernanceHttpDependencies({
+      database: databaseHandle.database,
+      transactionRunner,
+      workflowApplication,
+      resolvePrincipal: (request) => authentication.resolvePrincipal(request),
+      now: nowInAsiaShanghai,
+    }),
+    { surface: 'PROTOTYPE', prefix: '/prototype/v1', hide: true },
   );
   application.get(
     '/prototype/context',

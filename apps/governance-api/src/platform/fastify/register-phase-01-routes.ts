@@ -4,6 +4,7 @@ import {
 } from '@fastify/type-provider-typebox';
 import type { FastifyInstance } from 'fastify';
 import type { Static } from 'typebox';
+import { BrowserMutationHeadersSchema } from './browser-mutation-headers.js';
 import type { TransactionRunner } from '../transaction/transaction-runner.js';
 import { LOCAL_DATE_TIME_JSON_PATTERN } from '../local-datetime/local-datetime.js';
 import {
@@ -38,9 +39,6 @@ const UuidSchema = Type.String({
 const LocalDateTimeSchema = Type.String({ pattern: LOCAL_DATE_TIME_JSON_PATTERN });
 const DigestHexSchema = Type.String({ pattern: '^[0-9a-f]{64}$' });
 const PositiveSequenceSchema = Type.String({ pattern: '^(?:0|[1-9]\\d*)$' });
-const BrowserMutationHeadersSchema = Type.Object({
-  'x-csrf-token': Type.String({ minLength: 32 }),
-});
 const ServiceHeadersSchema = Type.Object({
   authorization: Type.String({ pattern: '^Bearer .+$' }),
 });

@@ -1,5 +1,6 @@
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { BrowserMutationHeadersSchema } from './browser-mutation-headers.js';
 import {
   departmentDtoLocalDateTime,
   type DepartmentGovernanceApplicationContract,
@@ -51,17 +52,66 @@ const errorResponses = {
   503: DepartmentErrorResponseSchema,
 };
 
+export type DepartmentGovernanceRouteOptions =
+  | {
+    readonly surface: 'PROTOTYPE';
+    readonly prefix: '/prototype/v1';
+    readonly security?: undefined;
+    readonly hide: true;
+  }
+  | {
+    readonly surface: 'FORMAL_BROWSER';
+    readonly prefix: '/v1/department-governance';
+    readonly security: [{ browserSession: [] }];
+    readonly hide: false;
+  };
+
 export async function registerDepartmentGovernanceRoutes(
   instance: FastifyInstance,
-  dependencies?: DepartmentGovernanceHttpDependencies,
+  dependencies: DepartmentGovernanceHttpDependencies | undefined,
+  options: DepartmentGovernanceRouteOptions,
 ): Promise<void> {
+  // Fail closed even for untyped callers; each surface has a disjoint prefix.
+  const formal = options.surface === 'FORMAL_BROWSER';
+  if (
+    options.prefix !== (formal ? '/v1/department-governance' : '/prototype/v1')
+    || options.hide !== !formal
+    || (formal
+      ? JSON.stringify(options.security) !== '[{"browserSession":[]}]'
+      : options.security !== undefined)
+  ) {
+    throw new Error('DEPARTMENT_SURFACE_CONFIGURATION_INVALID');
+  }
+  await instance.register(async (scope) => {
+    registerSurfaceRoutes(scope, dependencies, options);
+  }, { prefix: options.prefix });
+}
+
+function registerSurfaceRoutes(
+  instance: FastifyInstance,
+  dependencies: DepartmentGovernanceHttpDependencies | undefined,
+  options: DepartmentGovernanceRouteOptions,
+): void {
   const fastify = instance.withTypeProvider<TypeBoxTypeProvider>();
+  const formal = options.surface === 'FORMAL_BROWSER';
+  const path = (formalPath: string, prototypePath = formalPath) =>
+    formal ? formalPath : prototypePath;
+  const surfaceSchema = (operationId: string, summary: string, mutation = false) => formal
+    ? {
+      hide: options.hide,
+      security: options.security,
+      tags: ['Department Governance'],
+      operationId,
+      summary,
+      ...(mutation ? { headers: BrowserMutationHeadersSchema } : {}),
+    }
+    : { hide: options.hide };
 
   fastify.post(
     '/department-drafts',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('createDepartmentDraft', '创建科室草稿', true),
         body: CreateDepartmentDraftBodySchema,
         response: {
           201: DepartmentGovernanceStatusResponseSchema,
@@ -98,7 +148,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/versions/:departmentVersionId/submissions',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('submitDepartmentGovernance', '提交科室治理申请', true),
         params: DepartmentVersionParamsSchema,
         body: SubmitDepartmentBodySchema,
         response: {
@@ -122,10 +172,10 @@ export async function registerDepartmentGovernanceRoutes(
   );
 
   fastify.post(
-    '/department-governance/:governanceRequestId/reviews',
+    path('/requests/:governanceRequestId/reviews', '/department-governance/:governanceRequestId/reviews'),
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('reviewDepartmentGovernance', '执行科室专业复核', true),
         params: DepartmentGovernanceRequestParamsSchema,
         body: DepartmentDecisionBodySchema,
         response: {
@@ -150,10 +200,10 @@ export async function registerDepartmentGovernanceRoutes(
   );
 
   fastify.post(
-    '/department-governance/:governanceRequestId/approvals',
+    path('/requests/:governanceRequestId/approvals', '/department-governance/:governanceRequestId/approvals'),
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('approveDepartmentGovernance', '最终审批并原子发布科室版本', true),
         params: DepartmentGovernanceRequestParamsSchema,
         body: DepartmentDecisionBodySchema,
         response: {
@@ -178,10 +228,10 @@ export async function registerDepartmentGovernanceRoutes(
   );
 
   fastify.post(
-    '/department-governance/:governanceRequestId/publication-confirmations',
+    path('/requests/:governanceRequestId/publication-confirmations', '/department-governance/:governanceRequestId/publication-confirmations'),
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('confirmDepartmentPublication', '确认既有科室发布后置条件', true),
         params: DepartmentGovernanceRequestParamsSchema,
         body: DepartmentPublicationConfirmationBodySchema,
         response: {
@@ -207,7 +257,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/source-mappings/:mappingId/confirmations',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('confirmDepartmentSourceMapping', '确认科室来源映射', true),
         params: DepartmentSourceMappingParamsSchema,
         body: DepartmentSourceMappingConfirmationBodySchema,
         response: {
@@ -231,7 +281,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('listPublishedDepartments', '查询治理工作台已发布科室列表'),
         querystring: DepartmentPublishedListQuerySchema,
         response: {
           200: DepartmentSummaryListResponseSchema,
@@ -266,7 +316,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getPublishedDepartment', '查询治理工作台已发布科室详情'),
         params: DepartmentParamsSchema,
         querystring: DepartmentGovernanceObjectQuerySchema,
         response: {
@@ -288,7 +338,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/history',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getDepartmentHistory', '查询科室业务时点历史'),
         params: DepartmentParamsSchema,
         querystring: DepartmentHistoryQuerySchema,
         response: {
@@ -308,10 +358,10 @@ export async function registerDepartmentGovernanceRoutes(
   );
 
   fastify.get(
-    '/department-hierarchies/:viewType',
+    path('/hierarchies/:viewType', '/department-hierarchies/:viewType'),
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getDepartmentHierarchy', '查询已发布科室层级视图'),
         params: DepartmentHierarchyParamsSchema,
         querystring: DepartmentGovernanceObjectQuerySchema,
         response: {
@@ -333,7 +383,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/source-mappings',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getDepartmentSourceMappings', '查询科室来源映射'),
         params: DepartmentParamsSchema,
         querystring: DepartmentGovernanceObjectQuerySchema,
         response: {
@@ -355,7 +405,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/quality',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getDepartmentQuality', '查询科室质量评分'),
         params: DepartmentParamsSchema,
         querystring: DepartmentGovernanceObjectQuerySchema,
         response: {
@@ -377,7 +427,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/governance-status',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getDepartmentGovernanceStatus', '查询科室治理状态'),
         params: DepartmentParamsSchema,
         querystring: DepartmentGovernanceObjectQuerySchema,
         response: {
@@ -396,10 +446,10 @@ export async function registerDepartmentGovernanceRoutes(
   );
 
   fastify.get(
-    '/department-governance/pending-reviews',
+    path('/pending-reviews', '/department-governance/pending-reviews'),
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('listDepartmentPendingReviews', '查询科室待审核事项'),
         querystring: DepartmentGovernanceObjectQuerySchema,
         response: {
           200: DepartmentReviewQueueListResponseSchema,
@@ -419,7 +469,7 @@ export async function registerDepartmentGovernanceRoutes(
     '/departments/:departmentId/version-difference',
     {
       schema: {
-        hide: true,
+        ...surfaceSchema('getDepartmentVersionDifference', '查询科室版本差异'),
         params: DepartmentParamsSchema,
         querystring: DepartmentVersionDifferenceQuerySchema,
         response: {

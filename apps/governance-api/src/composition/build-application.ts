@@ -14,6 +14,10 @@ import type { KeycloakAuthentication } from '../platform/authentication/keycloak
 import { registerAuthenticationRoutes } from '../platform/fastify/register-authentication-routes.js';
 import { mapHttpError } from '../platform/fastify/map-http-error.js';
 import { PHASE_01_PROJECTION_CONTRACTS } from './create-scoped-modules.js';
+import {
+  registerDepartmentGovernanceRoutes,
+  type DepartmentGovernanceHttpDependencies,
+} from '../platform/fastify/register-department-governance-routes.js';
 
 const HealthResponseSchema = Type.Object(
   {
@@ -29,6 +33,7 @@ export async function buildApplication(options?: {
   readonly adminStaticRoot?: string;
   readonly authentication?: KeycloakAuthentication;
   readonly phase01?: Phase01HttpDependencies;
+  readonly departmentGovernance?: DepartmentGovernanceHttpDependencies;
 }): Promise<FastifyInstance> {
   const application = Fastify({
     logger: false,
@@ -44,6 +49,12 @@ export async function buildApplication(options?: {
         version: '0.0.0-phase-01',
       },
       servers: [{ url: '/' }],
+      ...(options?.departmentGovernance ? {
+        tags: [{
+          name: 'Department Governance',
+          description: '面向治理工作台人员的科室主数据治理接口，不是第三方系统主数据消费接口。',
+        }],
+      } : {}),
       components: {
         securitySchemes: {
           browserSession: {
@@ -96,6 +107,14 @@ export async function buildApplication(options?: {
 
   await registerAuthenticationRoutes(application, options?.authentication);
   await registerPhase01Routes(application, options?.phase01);
+  if (options?.departmentGovernance) {
+    await registerDepartmentGovernanceRoutes(application, options.departmentGovernance, {
+      surface: 'FORMAL_BROWSER',
+      prefix: '/v1/department-governance',
+      security: [{ browserSession: [] }],
+      hide: false,
+    });
+  }
 
   if (options?.adminStaticRoot) {
     await application.register(staticPlugin, {

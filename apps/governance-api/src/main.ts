@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { buildApplication } from './composition/build-application.js';
+import { createDepartmentGovernanceHttpDependencies } from './composition/create-department-governance-http-dependencies.js';
 import { createScopedModules, type ScopedModules } from './composition/create-scoped-modules.js';
 import { createPhase01VerticalSlice } from './composition/phase-01-vertical-slice.js';
 import { createKeycloakAuthentication } from './platform/authentication/keycloak-authentication.js';
@@ -64,6 +65,13 @@ const adminStaticRoot =
 const application = await buildApplication({
   adminStaticRoot,
   authentication,
+  departmentGovernance: createDepartmentGovernanceHttpDependencies({
+    database: databaseHandle.database,
+    transactionRunner,
+    workflowApplication,
+    resolvePrincipal: (request) => authentication.resolvePrincipal(request),
+    now: nowInAsiaShanghai,
+  }),
   phase01: {
     verticalSlice,
     transactionRunner,
