@@ -3,6 +3,7 @@ import type { TSchema } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/database-types.generated.js';
 import type { RequestContext } from '../../platform/transaction/transaction-runner.js';
+import type { ConsumerReferenceReader } from '../../platform/release-consumer/consumer-reference-reader.js';
 import { hitControlledPublicationFault } from '../../platform/fault-injection/controlled-faults.js';
 import {
   canonicalJson,
@@ -233,6 +234,7 @@ export function createReleaseDistributionModule(
   database: Kysely<DB>,
   registrations: readonly ProjectionContractRegistration[],
   context: RequestContext,
+  references: ConsumerReferenceReader,
 ): ReleaseDistributionModule {
   const contracts = new Map<string, RegisteredContract>();
   for (const registration of registrations) {
@@ -545,6 +547,10 @@ export function createReleaseDistributionModule(
         command.projectionType,
         command.projectionSchemaVersion,
       );
+      await requireProjectionGovernanceObjectCompatibility(references, command);
+      if (!await references.isActiveServicePrincipal(command.servicePrincipalId)) {
+        throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
+      }
       const inserted = await database
         .insertInto('release_distribution.consumer_subscription')
         .values({
@@ -592,6 +598,7 @@ export function createReleaseDistributionModule(
         .where('governance_object_id', '=', command.governanceObjectId)
         .executeTakeFirst();
       if (!subscription) throw new Error('CONSUMER_SUBSCRIPTION_NOT_FOUND');
+      await requireProjectionGovernanceObjectCompatibility(references, command);
       const latest = await database
         .selectFrom('release_distribution.consumer_subscription_version')
         .select((expression) => expression.fn.max('version_no').as('latest_version_no'))
@@ -1038,6 +1045,24 @@ export function createReleaseDistributionModule(
 
 function contractKey(type: string, version: string): string {
   return `${type}@${version}`;
+}
+
+const projectionGovernanceObjectTypes = new Map([
+  ['hdi.charge-catalog', 'CHARGE_CATALOG'],
+  ['hdi.price-list', 'PRICE_LIST'],
+  ['hdi.department-master', 'DEPARTMENT_MASTER'],
+  ['hdi.department-hierarchy', 'DEPARTMENT_HIERARCHY'],
+]);
+
+async function requireProjectionGovernanceObjectCompatibility(
+  references: ConsumerReferenceReader,
+  command: { readonly governanceObjectId: string; readonly projectionType: string },
+): Promise<void> {
+  const expectedType = projectionGovernanceObjectTypes.get(command.projectionType);
+  const objectType = await references.getGovernanceObjectType(command.governanceObjectId);
+  if (!expectedType || objectType !== expectedType) {
+    throw new Error('CONSUMER_PROJECTION_GOVERNANCE_OBJECT_MISMATCH');
+  }
 }
 
 function requireContract(

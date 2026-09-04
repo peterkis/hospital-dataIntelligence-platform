@@ -4513,6 +4513,22 @@ export interface operations {
                     projectionType: "hdi.price-list";
                     servicePrincipalId: string;
                     subscriptionCode: string;
+                } | {
+                    governanceObjectId: string;
+                    /** @enum {string} */
+                    projectionSchemaVersion: "1";
+                    /** @enum {string} */
+                    projectionType: "hdi.department-master";
+                    servicePrincipalId: string;
+                    subscriptionCode: string;
+                } | {
+                    governanceObjectId: string;
+                    /** @enum {string} */
+                    projectionSchemaVersion: "1";
+                    /** @enum {string} */
+                    projectionType: "hdi.department-hierarchy";
+                    servicePrincipalId: string;
+                    subscriptionCode: string;
                 };
             };
         };
@@ -4925,7 +4941,8 @@ export interface operations {
                         envelopeContractVersion: "phase-01.v1";
                         payload: components["schemas"]["def-0"];
                         projectionContract: {
-                            projectionType: string;
+                            /** @enum {string} */
+                            projectionType: "hdi.charge-catalog";
                             schemaDigest: string;
                             /** @enum {string} */
                             schemaDigestAlgorithm: "SHA-256";
@@ -4939,6 +4956,32 @@ export interface operations {
                             businessValidTo: string | null;
                             governanceObjectId: string;
                             releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
+                            releaseNo: string;
+                        };
+                        /** @enum {string} */
+                        serializationProfileVersion: "canonical-json.v1";
+                    } | {
+                        /** @enum {string} */
+                        envelopeContractVersion: "phase-01.v1";
+                        payload: components["schemas"]["def-1"];
+                        projectionContract: {
+                            /** @enum {string} */
+                            projectionType: "hdi.charge-catalog";
+                            schemaDigest: string;
+                            /** @enum {string} */
+                            schemaDigestAlgorithm: "SHA-256";
+                            /** @enum {string} */
+                            schemaVersion: "2";
+                        };
+                        release: {
+                            /** @enum {string} */
+                            aggregateType: "CHARGE_CATALOG";
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            governanceObjectId: string;
+                            releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
                             releaseNo: string;
                         };
                         /** @enum {string} */
@@ -4948,7 +4991,8 @@ export interface operations {
                         envelopeContractVersion: "phase-01.v1";
                         payload: components["schemas"]["def-2"];
                         projectionContract: {
-                            projectionType: string;
+                            /** @enum {string} */
+                            projectionType: "hdi.price-list";
                             schemaDigest: string;
                             /** @enum {string} */
                             schemaDigestAlgorithm: "SHA-256";
@@ -4962,6 +5006,7 @@ export interface operations {
                             businessValidTo: string | null;
                             governanceObjectId: string;
                             releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
                             releaseNo: string;
                         };
                         /** @enum {string} */
@@ -4971,7 +5016,8 @@ export interface operations {
                         envelopeContractVersion: "phase-01.v1";
                         payload: components["schemas"]["def-3"];
                         projectionContract: {
-                            projectionType: string;
+                            /** @enum {string} */
+                            projectionType: "hdi.price-list";
                             schemaDigest: string;
                             /** @enum {string} */
                             schemaDigestAlgorithm: "SHA-256";
@@ -4985,6 +5031,120 @@ export interface operations {
                             businessValidTo: string | null;
                             governanceObjectId: string;
                             releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
+                            releaseNo: string;
+                        };
+                        /** @enum {string} */
+                        serializationProfileVersion: "canonical-json.v1";
+                    } | {
+                        /** @enum {string} */
+                        envelopeContractVersion: "phase-01.v1";
+                        payload: components["schemas"]["def-4"];
+                        projectionContract: {
+                            /** @enum {string} */
+                            projectionType: "hdi.price-list";
+                            schemaDigest: string;
+                            /** @enum {string} */
+                            schemaDigestAlgorithm: "SHA-256";
+                            /** @enum {string} */
+                            schemaVersion: "2";
+                        };
+                        release: {
+                            /** @enum {string} */
+                            aggregateType: "PRICE_LIST";
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            governanceObjectId: string;
+                            releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
+                            releaseNo: string;
+                        };
+                        /** @enum {string} */
+                        serializationProfileVersion: "canonical-json.v1";
+                    } | {
+                        /** @enum {string} */
+                        envelopeContractVersion: "phase-01.v1";
+                        payload: {
+                            businessStatus: string;
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            clinicalFlag: boolean;
+                            contentHash: string;
+                            departmentCode: string;
+                            departmentId: string;
+                            departmentType: string;
+                            departmentVersionId: string;
+                            description: string | null;
+                            managementFlag: boolean;
+                            recordedFrom: string;
+                            shortName: string | null;
+                            standardName: string;
+                            subjectMappingApplicability: string;
+                            versionNo: string;
+                        };
+                        projectionContract: {
+                            /** @enum {string} */
+                            projectionType: "hdi.department-master";
+                            schemaDigest: string;
+                            /** @enum {string} */
+                            schemaDigestAlgorithm: "SHA-256";
+                            /** @enum {string} */
+                            schemaVersion: "1";
+                        };
+                        release: {
+                            /** @enum {string} */
+                            aggregateType: "DEPARTMENT_MASTER";
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            governanceObjectId: string;
+                            releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
+                            releaseNo: string;
+                        };
+                        /** @enum {string} */
+                        serializationProfileVersion: "canonical-json.v1";
+                    } | {
+                        /** @enum {string} */
+                        envelopeContractVersion: "phase-01.v1";
+                        payload: {
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            contentHash: string;
+                            hierarchyViewId: string;
+                            hierarchyViewVersionId: string;
+                            nodes: {
+                                departmentId: string | null;
+                                departmentVersionId: string | null;
+                                displayName: string;
+                                groupId: string | null;
+                                groupVersionId: string | null;
+                                nodeId: string;
+                                nodeKind: string;
+                                parentNodeId: string | null;
+                                sortOrder: number;
+                            }[];
+                            recordedFrom: string;
+                            versionNo: string;
+                            viewCode: string;
+                            viewType: string;
+                        };
+                        projectionContract: {
+                            /** @enum {string} */
+                            projectionType: "hdi.department-hierarchy";
+                            schemaDigest: string;
+                            /** @enum {string} */
+                            schemaDigestAlgorithm: "SHA-256";
+                            /** @enum {string} */
+                            schemaVersion: "1";
+                        };
+                        release: {
+                            /** @enum {string} */
+                            aggregateType: "DEPARTMENT_HIERARCHY";
+                            businessValidFrom: string;
+                            businessValidTo: string | null;
+                            governanceObjectId: string;
+                            releaseId: string;
+                            releaseKind: "NORMAL" | "COMPENSATION" | "HISTORICAL_REPUBLICATION" | "CONTRACT_SCHEMA_UPGRADE";
                             releaseNo: string;
                         };
                         /** @enum {string} */
@@ -5060,6 +5220,18 @@ export interface operations {
                     projectionSchemaVersion: "0" | "1" | "2";
                     /** @enum {string} */
                     projectionType: "hdi.price-list";
+                } | {
+                    governanceObjectId: string;
+                    /** @enum {string} */
+                    projectionSchemaVersion: "1";
+                    /** @enum {string} */
+                    projectionType: "hdi.department-master";
+                } | {
+                    governanceObjectId: string;
+                    /** @enum {string} */
+                    projectionSchemaVersion: "1";
+                    /** @enum {string} */
+                    projectionType: "hdi.department-hierarchy";
                 };
             };
         };

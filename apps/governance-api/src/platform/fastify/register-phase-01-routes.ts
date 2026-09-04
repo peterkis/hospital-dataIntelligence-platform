@@ -19,19 +19,12 @@ import type {
   ChangeRequestView,
   WorkflowApplication,
 } from '../../modules/workflow/index.js';
+import type { PriceEntryInput } from '../../modules/price-list/index.js';
 import {
-  CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
-  CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
-} from '../../modules/charge-catalog/index.js';
-import {
-  PRICE_LIST_LEGACY_PROJECTION_SCHEMA_ID,
-  PRICE_LIST_PROJECTION_SCHEMA_ID,
-  PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION,
-  PRICE_LIST_PROJECTION_SCHEMA_VERSION,
-  PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2,
-  PRICE_LIST_PROJECTION_TYPE,
-  type PriceEntryInput,
-} from '../../modules/price-list/index.js';
+  CreateSubscriptionBodySchema,
+  CreateSubscriptionVersionBodySchema,
+  SnapshotBinarySchema,
+} from './release-consumer-schemas.js';
 
 const UuidSchema = Type.String({
   pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
@@ -461,32 +454,6 @@ const ResolutionResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 
-const PriceListProjectionSchemaVersionSchema = Type.Union([
-  Type.Literal(PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION),
-  Type.Literal(PRICE_LIST_PROJECTION_SCHEMA_VERSION),
-  Type.Literal(PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2),
-]);
-
-const CreateSubscriptionBodySchema = Type.Object(
-  {
-    subscriptionCode: Type.String({ minLength: 1, maxLength: 128 }),
-    servicePrincipalId: UuidSchema,
-    governanceObjectId: UuidSchema,
-    projectionType: Type.Literal(PRICE_LIST_PROJECTION_TYPE),
-    projectionSchemaVersion: PriceListProjectionSchemaVersionSchema,
-  },
-  { additionalProperties: false },
-);
-
-const CreateSubscriptionVersionBodySchema = Type.Object(
-  {
-    governanceObjectId: UuidSchema,
-    projectionType: Type.Literal(PRICE_LIST_PROJECTION_TYPE),
-    projectionSchemaVersion: PriceListProjectionSchemaVersionSchema,
-  },
-  { additionalProperties: false },
-);
-
 const SubscriptionVersionResponseSchema = Type.Object(
   {
     subscriptionId: UuidSchema,
@@ -565,64 +532,6 @@ const ReceiptResponseSchema = Type.Object(
   { receiptId: UuidSchema, receiptSequence: Type.String({ pattern: '^[1-9]\\d*$' }) },
   { additionalProperties: false },
 );
-
-function createSnapshotEnvelopeSchema(
-  aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST',
-  projectionSchemaVersion: '0' | '1',
-  payloadSchemaId: string,
-) {
-  return Type.Object(
-    {
-      envelopeContractVersion: Type.Literal('phase-01.v1'),
-      release: Type.Object(
-        {
-          aggregateType: Type.Literal(aggregateType),
-          governanceObjectId: UuidSchema,
-          releaseId: UuidSchema,
-          releaseNo: Type.String({ pattern: '^[1-9]\\d*$' }),
-          businessValidFrom: LocalDateTimeSchema,
-          businessValidTo: Type.Union([LocalDateTimeSchema, Type.Null()]),
-        },
-        { additionalProperties: false },
-      ),
-      projectionContract: Type.Object(
-        {
-          projectionType: Type.String({ minLength: 1, maxLength: 128 }),
-          schemaVersion: Type.Literal(projectionSchemaVersion),
-          schemaDigestAlgorithm: Type.Literal('SHA-256'),
-          schemaDigest: DigestHexSchema,
-        },
-        { additionalProperties: false },
-      ),
-      serializationProfileVersion: Type.Literal('canonical-json.v1'),
-      payload: Type.Ref(payloadSchemaId),
-    },
-    { additionalProperties: false },
-  );
-}
-
-const SnapshotEnvelopeSchema = Type.Union([
-  createSnapshotEnvelopeSchema(
-    'CHARGE_CATALOG',
-    CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
-    CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
-  ),
-  createSnapshotEnvelopeSchema(
-    'PRICE_LIST',
-    PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION,
-    PRICE_LIST_LEGACY_PROJECTION_SCHEMA_ID,
-  ),
-  createSnapshotEnvelopeSchema(
-    'PRICE_LIST',
-    PRICE_LIST_PROJECTION_SCHEMA_VERSION,
-    PRICE_LIST_PROJECTION_SCHEMA_ID,
-  ),
-]);
-
-const SnapshotBinarySchema = Type.Unsafe<Buffer>({
-  ...SnapshotEnvelopeSchema,
-  contentMediaType: 'application/vnd.hdi.canonical-snapshot+json',
-});
 
 const ErrorResponseSchema = Type.Object(
   {

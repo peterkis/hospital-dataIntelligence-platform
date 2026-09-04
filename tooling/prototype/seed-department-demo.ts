@@ -168,6 +168,8 @@ try {
     `, [...object, PROTOTYPE_FIXTURE.actorPrincipalId]);
   }
   const permissionFixtures = [
+    [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'CONSUMER_SUBSCRIPTION_MANAGE'],
+    [hierarchyViews[0][5], PROTOTYPE_FIXTURE.actorPrincipalId, 'CONSUMER_SUBSCRIPTION_MANAGE'],
     [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_MASTER_DRAFT_READ'],
     [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_MASTER_DRAFT_WRITE'],
     [DEPARTMENT_GOVERNANCE_OBJECT_ID, PROTOTYPE_FIXTURE.actorPrincipalId, 'DEPARTMENT_MASTER_SUBMIT'],
@@ -535,6 +537,11 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
           on version.department_version_id = node.department_version_id
           and version.department_id = node.department_id
         where node.node_kind = 'DEPARTMENT'
+          and node.department_hierarchy_view_version_id in (
+            '73100000-0000-7000-8000-000000000001'::uuid,
+            '73100000-0000-7000-8000-000000000002'::uuid,
+            '73100000-0000-7000-8000-000000000003'::uuid
+          )
           and node.display_name = version.standard_name) as snapshot_names_and_versions_frozen,
       not exists (
         select 1 from information_schema.columns

@@ -10,6 +10,8 @@ PV-005-B-02A 以 `a81aa3165039f438951c17a22b4b7c320cf0fd13` 为冻结开工基�
 
 HIS、EMR、LIS、PACS、BI 和第三方厂商不是这些 HTTP 路由的消费者。应用契约中发布列表、详情等查询的名称不等于授权创建系统直查 HTTP API；这些查询在本 surface 中用于治理工作台展示。系统消费者仍通过 Release Distribution、版本化 Subscription、Event 和 Canonical Snapshot 接收发布内容，保持投影支持声明、发布顺序、幂等、水位、回执与重放语义。没有新增 `/v1/master-data/departments`、`/v1/service/departments` 或任何 `serviceBearer` Department direct-query route。
 
+系统消费者不得依赖 Browser Governance API；正式系统消费通过 Release Distribution consumer contract。
+
 ## 双 surface 与路由
 
 `registerDepartmentGovernanceRoutes(instance, dependencies, options)` 只有一份 handler 和一份 TypeBox body/response DTO Schema。`PROTOTYPE` 使用 `/prototype/v1`、无正式 security 声明、`hide=true`、无 operationId；`FORMAL_BROWSER` 使用 `/v1/department-governance`、`security=[{ browserSession: [] }]`、`hide=false`。不合法的 prefix/security/hide 组合在注册时失败。两个 surface 可同时注册，前缀互斥。

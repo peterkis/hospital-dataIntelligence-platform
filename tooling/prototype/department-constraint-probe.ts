@@ -243,6 +243,11 @@ try {
         from department_master.department_hierarchy_node
         where node_kind = 'DEPARTMENT'
           and department_id = '72000000-0000-7000-8000-000000000001'
+          and department_hierarchy_view_version_id in (
+            '73100000-0000-7000-8000-000000000001'::uuid,
+            '73100000-0000-7000-8000-000000000002'::uuid,
+            '73100000-0000-7000-8000-000000000003'::uuid
+          )
       ) as independent_view_placements,
       (
         select count(*)::int = 9
@@ -252,6 +257,11 @@ try {
           and version.department_id = node.department_id
         where node.node_kind = 'DEPARTMENT'
           and node.display_name = version.standard_name
+          and node.department_hierarchy_view_version_id in (
+            '73100000-0000-7000-8000-000000000001'::uuid,
+            '73100000-0000-7000-8000-000000000002'::uuid,
+            '73100000-0000-7000-8000-000000000003'::uuid
+          )
       ) as frozen_names_and_versions
   `);
   Object.assign(checks, catalog.rows[0]);

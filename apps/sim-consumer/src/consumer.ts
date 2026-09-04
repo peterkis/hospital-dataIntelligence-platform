@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
+import {
+  createGovernanceApiClient,
+  type GovernanceApiOperations,
+} from '@hospital-data-intelligence/generated-api-client';
+
+type ConsumerEvent = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][200]['content']['application/json']['events'][number];
 
 interface AppliedEventState {
   readonly eventId: string;
@@ -25,6 +30,8 @@ export interface SimulatedConsumerOptions {
   readonly accessToken: string;
   readonly subscriptionId: string;
   readonly statePath: string;
+  readonly expectedProjectionType?: string;
+  readonly expectedProjectionSchemaVersion?: string;
   now(): string;
 }
 
@@ -60,6 +67,14 @@ export async function runSimulatedConsumerOnce(
   let applied = 0;
 
   for (const event of eventResponse.data.events) {
+    if (
+      (options.expectedProjectionType !== undefined &&
+        event.projectionType !== options.expectedProjectionType) ||
+      (options.expectedProjectionSchemaVersion !== undefined &&
+        event.projectionSchemaVersion !== options.expectedProjectionSchemaVersion)
+    ) {
+      throw new Error('SIM_CONSUMER_PROJECTION_CONTRACT_MISMATCH');
+    }
     const expectedVersion = (BigInt(state.appliedAggregateVersion) + 1n).toString();
     const hasEstablishedBaseline =
       state.appliedAggregateVersion !== '0' || Object.keys(state.appliedEvents).length > 0;
@@ -87,7 +102,11 @@ export async function runSimulatedConsumerOnce(
     if (snapshotDigest !== event.snapshotArtifactDigest) {
       throw new Error('SIM_CONSUMER_SNAPSHOT_DIGEST_MISMATCH');
     }
-    const artifact = parseSnapshot(snapshotBytes);
+    const digestHeader = `sha-256=:${Buffer.from(snapshotDigest, 'hex').toString('base64')}:`;
+    if (snapshotResponse.response.headers.get('digest') !== digestHeader) {
+      throw new Error('SIM_CONSUMER_SNAPSHOT_DIGEST_HEADER_MISMATCH');
+    }
+    const artifact = parseSnapshot(snapshotBytes, event);
     const appliedEvent: AppliedEventState = {
       eventId: event.eventId,
       aggregateVersion: event.aggregateVersion,
@@ -114,10 +133,47 @@ export async function runSimulatedConsumerOnce(
   return { applied, receiptsClosed };
 }
 
-function parseSnapshot(bytes: Buffer): { readonly payload: unknown } {
-  const parsed = JSON.parse(bytes.toString('utf8')) as unknown;
-  if (!isRecord(parsed) || !('payload' in parsed)) throw new Error('SIM_CONSUMER_SNAPSHOT_SCHEMA_INVALID');
+function parseSnapshot(bytes: Buffer, event: ConsumerEvent): { readonly payload: unknown } {
+  let parsed: unknown;
+  try { parsed = JSON.parse(bytes.toString('utf8')) as unknown; }
+  catch { throw new Error('SIM_CONSUMER_SNAPSHOT_SCHEMA_INVALID'); }
+  if (
+    !isRecord(parsed) || !Object.hasOwn(parsed, 'payload') ||
+    parsed['envelopeContractVersion'] !== 'phase-01.v1' ||
+    parsed['serializationProfileVersion'] !== 'canonical-json.v1' ||
+    !isRecord(parsed['release']) || !isRecord(parsed['projectionContract'])
+  ) throw new Error('SIM_CONSUMER_SNAPSHOT_SCHEMA_INVALID');
+  const release = parsed['release'];
+  const contract = parsed['projectionContract'];
+  if (
+    !aggregateTypes.has(event.projectionType) ||
+    release['aggregateType'] !== aggregateTypes.get(event.projectionType) ||
+    release['governanceObjectId'] !== event.governanceObjectId ||
+    release['releaseId'] !== event.releaseId || release['releaseNo'] !== event.aggregateVersion ||
+    !releaseKinds.has(String(release['releaseKind'])) ||
+    !isLocalDateTime(release['businessValidFrom']) ||
+    (release['businessValidTo'] !== null && !isLocalDateTime(release['businessValidTo'])) ||
+    contract['projectionType'] !== event.projectionType ||
+    contract['schemaVersion'] !== event.projectionSchemaVersion ||
+    contract['schemaDigestAlgorithm'] !== 'SHA-256' ||
+    contract['schemaDigest'] !== event.projectionSchemaDigest
+  ) throw new Error('SIM_CONSUMER_SNAPSHOT_CONTRACT_MISMATCH');
   return { payload: parsed['payload'] };
+}
+
+const aggregateTypes = new Map([
+  ['hdi.charge-catalog', 'CHARGE_CATALOG'],
+  ['hdi.price-list', 'PRICE_LIST'],
+  ['hdi.department-master', 'DEPARTMENT_MASTER'],
+  ['hdi.department-hierarchy', 'DEPARTMENT_HIERARCHY'],
+]);
+const releaseKinds = new Set([
+  'NORMAL', 'COMPENSATION', 'HISTORICAL_REPUBLICATION', 'CONTRACT_SCHEMA_UPGRADE',
+]);
+
+function isLocalDateTime(value: unknown): value is string {
+  return typeof value === 'string' &&
+    /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?$/u.test(value);
 }
 
 async function sendReceipt(

@@ -52,6 +52,21 @@ try {
     insertedPrincipalCount += inserted.rowCount ?? 0;
   }
 
+  const service = await client.query(`
+    insert into platform.security_principal (
+      security_principal_id, principal_code, principal_kind, status
+    ) values ($1::uuid, 'PROTOTYPE-SYNTHETIC-DEPARTMENT-CONSUMER', 'SERVICE', 'ACTIVE')
+    on conflict (security_principal_id) do nothing
+  `, [PROTOTYPE_FIXTURE.serviceConsumerPrincipalId]);
+  insertedPrincipalCount += service.rowCount ?? 0;
+  const serviceCheck = await client.query(`
+    select exists(select 1 from platform.security_principal
+      where security_principal_id = $1::uuid
+        and principal_code = 'PROTOTYPE-SYNTHETIC-DEPARTMENT-CONSUMER'
+        and principal_kind = 'SERVICE' and status = 'ACTIVE') as valid
+  `, [PROTOTYPE_FIXTURE.serviceConsumerPrincipalId]);
+  if (serviceCheck.rows[0]?.valid !== true) throw new Error('PROTOTYPE_SERVICE_SEED_INVALID');
+
   const campus = await client.query(
     `
       insert into platform.campus (campus_id, campus_code, display_name)

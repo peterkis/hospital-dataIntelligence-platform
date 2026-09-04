@@ -10795,58 +10795,138 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "governanceObjectId": {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                    "type": "string"
-                  },
-                  "projectionSchemaVersion": {
-                    "anyOf": [
-                      {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "governanceObjectId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "projectionSchemaVersion": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "0"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "enum": [
+                              "1"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "enum": [
+                              "2"
+                            ],
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "projectionType": {
                         "enum": [
-                          "0"
+                          "hdi.price-list"
                         ],
                         "type": "string"
                       },
-                      {
+                      "servicePrincipalId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "subscriptionCode": {
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subscriptionCode",
+                      "servicePrincipalId",
+                      "governanceObjectId",
+                      "projectionType",
+                      "projectionSchemaVersion"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "governanceObjectId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "projectionSchemaVersion": {
                         "enum": [
                           "1"
                         ],
                         "type": "string"
                       },
-                      {
+                      "projectionType": {
                         "enum": [
-                          "2"
+                          "hdi.department-master"
                         ],
                         "type": "string"
+                      },
+                      "servicePrincipalId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "subscriptionCode": {
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "type": "string"
                       }
-                    ]
-                  },
-                  "projectionType": {
-                    "enum": [
-                      "hdi.price-list"
+                    },
+                    "required": [
+                      "subscriptionCode",
+                      "servicePrincipalId",
+                      "governanceObjectId",
+                      "projectionType",
+                      "projectionSchemaVersion"
                     ],
-                    "type": "string"
+                    "type": "object"
                   },
-                  "servicePrincipalId": {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                    "type": "string"
-                  },
-                  "subscriptionCode": {
-                    "maxLength": 128,
-                    "minLength": 1,
-                    "type": "string"
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "governanceObjectId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "projectionSchemaVersion": {
+                        "enum": [
+                          "1"
+                        ],
+                        "type": "string"
+                      },
+                      "projectionType": {
+                        "enum": [
+                          "hdi.department-hierarchy"
+                        ],
+                        "type": "string"
+                      },
+                      "servicePrincipalId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "subscriptionCode": {
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subscriptionCode",
+                      "servicePrincipalId",
+                      "governanceObjectId",
+                      "projectionType",
+                      "projectionSchemaVersion"
+                    ],
+                    "type": "object"
                   }
-                },
-                "required": [
-                  "subscriptionCode",
-                  "servicePrincipalId",
-                  "governanceObjectId",
-                  "projectionType",
-                  "projectionSchemaVersion"
-                ],
-                "type": "object"
+                ]
               }
             }
           },
@@ -11760,8 +11840,9 @@
                           "additionalProperties": false,
                           "properties": {
                             "projectionType": {
-                              "maxLength": 128,
-                              "minLength": 1,
+                              "enum": [
+                                "hdi.charge-catalog"
+                              ],
                               "type": "string"
                             },
                             "schemaDigest": {
@@ -11821,6 +11902,34 @@
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                               "type": "string"
                             },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
                             "releaseNo": {
                               "pattern": "^[1-9]\\d*$",
                               "type": "string"
@@ -11831,6 +11940,145 @@
                             "governanceObjectId",
                             "releaseId",
                             "releaseNo",
+                            "releaseKind",
+                            "businessValidFrom",
+                            "businessValidTo"
+                          ],
+                          "type": "object"
+                        },
+                        "serializationProfileVersion": {
+                          "enum": [
+                            "canonical-json.v1"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "envelopeContractVersion",
+                        "release",
+                        "projectionContract",
+                        "serializationProfileVersion",
+                        "payload"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "envelopeContractVersion": {
+                          "enum": [
+                            "phase-01.v1"
+                          ],
+                          "type": "string"
+                        },
+                        "payload": {
+                          "$ref": "#/components/schemas/def-1"
+                        },
+                        "projectionContract": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "projectionType": {
+                              "enum": [
+                                "hdi.charge-catalog"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaDigest": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "schemaDigestAlgorithm": {
+                              "enum": [
+                                "SHA-256"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaVersion": {
+                              "enum": [
+                                "2"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "projectionType",
+                            "schemaVersion",
+                            "schemaDigestAlgorithm",
+                            "schemaDigest"
+                          ],
+                          "type": "object"
+                        },
+                        "release": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "aggregateType": {
+                              "enum": [
+                                "CHARGE_CATALOG"
+                              ],
+                              "type": "string"
+                            },
+                            "businessValidFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "businessValidTo": {
+                              "anyOf": [
+                                {
+                                  "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "governanceObjectId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "aggregateType",
+                            "governanceObjectId",
+                            "releaseId",
+                            "releaseNo",
+                            "releaseKind",
                             "businessValidFrom",
                             "businessValidTo"
                           ],
@@ -11868,8 +12116,9 @@
                           "additionalProperties": false,
                           "properties": {
                             "projectionType": {
-                              "maxLength": 128,
-                              "minLength": 1,
+                              "enum": [
+                                "hdi.price-list"
+                              ],
                               "type": "string"
                             },
                             "schemaDigest": {
@@ -11929,6 +12178,34 @@
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                               "type": "string"
                             },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
                             "releaseNo": {
                               "pattern": "^[1-9]\\d*$",
                               "type": "string"
@@ -11939,6 +12216,7 @@
                             "governanceObjectId",
                             "releaseId",
                             "releaseNo",
+                            "releaseKind",
                             "businessValidFrom",
                             "businessValidTo"
                           ],
@@ -11976,8 +12254,9 @@
                           "additionalProperties": false,
                           "properties": {
                             "projectionType": {
-                              "maxLength": 128,
-                              "minLength": 1,
+                              "enum": [
+                                "hdi.price-list"
+                              ],
                               "type": "string"
                             },
                             "schemaDigest": {
@@ -12037,6 +12316,34 @@
                               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                               "type": "string"
                             },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
                             "releaseNo": {
                               "pattern": "^[1-9]\\d*$",
                               "type": "string"
@@ -12047,6 +12354,660 @@
                             "governanceObjectId",
                             "releaseId",
                             "releaseNo",
+                            "releaseKind",
+                            "businessValidFrom",
+                            "businessValidTo"
+                          ],
+                          "type": "object"
+                        },
+                        "serializationProfileVersion": {
+                          "enum": [
+                            "canonical-json.v1"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "envelopeContractVersion",
+                        "release",
+                        "projectionContract",
+                        "serializationProfileVersion",
+                        "payload"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "envelopeContractVersion": {
+                          "enum": [
+                            "phase-01.v1"
+                          ],
+                          "type": "string"
+                        },
+                        "payload": {
+                          "$ref": "#/components/schemas/def-4"
+                        },
+                        "projectionContract": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "projectionType": {
+                              "enum": [
+                                "hdi.price-list"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaDigest": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "schemaDigestAlgorithm": {
+                              "enum": [
+                                "SHA-256"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaVersion": {
+                              "enum": [
+                                "2"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "projectionType",
+                            "schemaVersion",
+                            "schemaDigestAlgorithm",
+                            "schemaDigest"
+                          ],
+                          "type": "object"
+                        },
+                        "release": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "aggregateType": {
+                              "enum": [
+                                "PRICE_LIST"
+                              ],
+                              "type": "string"
+                            },
+                            "businessValidFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "businessValidTo": {
+                              "anyOf": [
+                                {
+                                  "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "governanceObjectId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "aggregateType",
+                            "governanceObjectId",
+                            "releaseId",
+                            "releaseNo",
+                            "releaseKind",
+                            "businessValidFrom",
+                            "businessValidTo"
+                          ],
+                          "type": "object"
+                        },
+                        "serializationProfileVersion": {
+                          "enum": [
+                            "canonical-json.v1"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "envelopeContractVersion",
+                        "release",
+                        "projectionContract",
+                        "serializationProfileVersion",
+                        "payload"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "envelopeContractVersion": {
+                          "enum": [
+                            "phase-01.v1"
+                          ],
+                          "type": "string"
+                        },
+                        "payload": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "businessStatus": {
+                              "type": "string"
+                            },
+                            "businessValidFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "businessValidTo": {
+                              "anyOf": [
+                                {
+                                  "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "clinicalFlag": {
+                              "type": "boolean"
+                            },
+                            "contentHash": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "departmentCode": {
+                              "type": "string"
+                            },
+                            "departmentId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "departmentType": {
+                              "type": "string"
+                            },
+                            "departmentVersionId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "description": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "managementFlag": {
+                              "type": "boolean"
+                            },
+                            "recordedFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "shortName": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "standardName": {
+                              "type": "string"
+                            },
+                            "subjectMappingApplicability": {
+                              "type": "string"
+                            },
+                            "versionNo": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "departmentCode",
+                            "departmentId",
+                            "departmentVersionId",
+                            "versionNo",
+                            "standardName",
+                            "shortName",
+                            "departmentType",
+                            "clinicalFlag",
+                            "managementFlag",
+                            "subjectMappingApplicability",
+                            "businessStatus",
+                            "description",
+                            "businessValidFrom",
+                            "businessValidTo",
+                            "recordedFrom",
+                            "contentHash"
+                          ],
+                          "type": "object"
+                        },
+                        "projectionContract": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "projectionType": {
+                              "enum": [
+                                "hdi.department-master"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaDigest": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "schemaDigestAlgorithm": {
+                              "enum": [
+                                "SHA-256"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaVersion": {
+                              "enum": [
+                                "1"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "projectionType",
+                            "schemaVersion",
+                            "schemaDigestAlgorithm",
+                            "schemaDigest"
+                          ],
+                          "type": "object"
+                        },
+                        "release": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "aggregateType": {
+                              "enum": [
+                                "DEPARTMENT_MASTER"
+                              ],
+                              "type": "string"
+                            },
+                            "businessValidFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "businessValidTo": {
+                              "anyOf": [
+                                {
+                                  "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "governanceObjectId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "aggregateType",
+                            "governanceObjectId",
+                            "releaseId",
+                            "releaseNo",
+                            "releaseKind",
+                            "businessValidFrom",
+                            "businessValidTo"
+                          ],
+                          "type": "object"
+                        },
+                        "serializationProfileVersion": {
+                          "enum": [
+                            "canonical-json.v1"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "envelopeContractVersion",
+                        "release",
+                        "projectionContract",
+                        "serializationProfileVersion",
+                        "payload"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "envelopeContractVersion": {
+                          "enum": [
+                            "phase-01.v1"
+                          ],
+                          "type": "string"
+                        },
+                        "payload": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "businessValidFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "businessValidTo": {
+                              "anyOf": [
+                                {
+                                  "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "contentHash": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "hierarchyViewId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "hierarchyViewVersionId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "nodes": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "departmentId": {
+                                    "anyOf": [
+                                      {
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "departmentVersionId": {
+                                    "anyOf": [
+                                      {
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "displayName": {
+                                    "type": "string"
+                                  },
+                                  "groupId": {
+                                    "anyOf": [
+                                      {
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "groupVersionId": {
+                                    "anyOf": [
+                                      {
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "nodeId": {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  "nodeKind": {
+                                    "type": "string"
+                                  },
+                                  "parentNodeId": {
+                                    "anyOf": [
+                                      {
+                                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "sortOrder": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "parentNodeId",
+                                  "nodeKind",
+                                  "departmentId",
+                                  "departmentVersionId",
+                                  "groupId",
+                                  "groupVersionId",
+                                  "displayName",
+                                  "sortOrder"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "recordedFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "versionNo": {
+                              "type": "string"
+                            },
+                            "viewCode": {
+                              "type": "string"
+                            },
+                            "viewType": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "hierarchyViewId",
+                            "hierarchyViewVersionId",
+                            "viewCode",
+                            "viewType",
+                            "versionNo",
+                            "businessValidFrom",
+                            "businessValidTo",
+                            "recordedFrom",
+                            "contentHash",
+                            "nodes"
+                          ],
+                          "type": "object"
+                        },
+                        "projectionContract": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "projectionType": {
+                              "enum": [
+                                "hdi.department-hierarchy"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaDigest": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "schemaDigestAlgorithm": {
+                              "enum": [
+                                "SHA-256"
+                              ],
+                              "type": "string"
+                            },
+                            "schemaVersion": {
+                              "enum": [
+                                "1"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "projectionType",
+                            "schemaVersion",
+                            "schemaDigestAlgorithm",
+                            "schemaDigest"
+                          ],
+                          "type": "object"
+                        },
+                        "release": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "aggregateType": {
+                              "enum": [
+                                "DEPARTMENT_HIERARCHY"
+                              ],
+                              "type": "string"
+                            },
+                            "businessValidFrom": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "businessValidTo": {
+                              "anyOf": [
+                                {
+                                  "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "governanceObjectId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseKind": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "NORMAL"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "COMPENSATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "HISTORICAL_REPUBLICATION"
+                                  ],
+                                  "type": "string"
+                                },
+                                {
+                                  "enum": [
+                                    "CONTRACT_SCHEMA_UPGRADE"
+                                  ],
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "aggregateType",
+                            "governanceObjectId",
+                            "releaseId",
+                            "releaseNo",
+                            "releaseKind",
                             "businessValidFrom",
                             "businessValidTo"
                           ],
@@ -12203,47 +13164,105 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "governanceObjectId": {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                    "type": "string"
-                  },
-                  "projectionSchemaVersion": {
-                    "anyOf": [
-                      {
-                        "enum": [
-                          "0"
-                        ],
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "governanceObjectId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                         "type": "string"
                       },
-                      {
+                      "projectionSchemaVersion": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "0"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "enum": [
+                              "1"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "enum": [
+                              "2"
+                            ],
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "projectionType": {
+                        "enum": [
+                          "hdi.price-list"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "governanceObjectId",
+                      "projectionType",
+                      "projectionSchemaVersion"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "governanceObjectId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "projectionSchemaVersion": {
                         "enum": [
                           "1"
                         ],
                         "type": "string"
                       },
-                      {
+                      "projectionType": {
                         "enum": [
-                          "2"
+                          "hdi.department-master"
                         ],
                         "type": "string"
                       }
-                    ]
-                  },
-                  "projectionType": {
-                    "enum": [
-                      "hdi.price-list"
+                    },
+                    "required": [
+                      "governanceObjectId",
+                      "projectionType",
+                      "projectionSchemaVersion"
                     ],
-                    "type": "string"
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "governanceObjectId": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "projectionSchemaVersion": {
+                        "enum": [
+                          "1"
+                        ],
+                        "type": "string"
+                      },
+                      "projectionType": {
+                        "enum": [
+                          "hdi.department-hierarchy"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "governanceObjectId",
+                      "projectionType",
+                      "projectionSchemaVersion"
+                    ],
+                    "type": "object"
                   }
-                },
-                "required": [
-                  "governanceObjectId",
-                  "projectionType",
-                  "projectionSchemaVersion"
-                ],
-                "type": "object"
+                ]
               }
             }
           },

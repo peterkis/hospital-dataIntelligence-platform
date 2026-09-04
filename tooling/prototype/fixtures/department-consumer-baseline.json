@@ -1,0 +1,300 @@
+{
+  "baselineHead": "80ed445c7710deb72db5560acc49be3652d8fbdc",
+  "synthetic": true,
+  "timezone": "Asia/Shanghai",
+  "contracts": [
+    {
+      "projectionType": "hdi.charge-catalog",
+      "schemaVersion": "1",
+      "schemaDigest": "7cfa8efd37477a18472838a876239d97f512512076500c38f7041f31ba3ac0cf",
+      "input": {
+        "aggregateType": "CHARGE_CATALOG",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.charge-catalog",
+        "projectionSchemaVersion": "1",
+        "projectionSchemaDigest": "7cfa8efd37477a18472838a876239d97f512512076500c38f7041f31ba3ac0cf",
+        "payload": {
+          "catalogCode": "PROTOTYPE SYNTHETIC",
+          "items": [
+            {
+              "chargeItemId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemVersionId": "10000000-0000-7000-8000-000000000001",
+              "versionNo": "1",
+              "internalCode": "PROTOTYPE SYNTHETIC",
+              "formalName": "PROTOTYPE SYNTHETIC",
+              "serviceDefinition": "PROTOTYPE SYNTHETIC",
+              "billingUnitCode": "PROTOTYPE SYNTHETIC",
+              "chargingMethodCode": "PROTOTYPE SYNTHETIC",
+              "businessStatus": "ACTIVE",
+              "businessValidFrom": "2026-09-04T10:00:00",
+              "businessValidTo": "2026-09-04T10:00:00",
+              "recordedFrom": "2026-09-04T10:00:00",
+              "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ]
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"catalogCode\":\"PROTOTYPE SYNTHETIC\",\"items\":[{\"billingUnitCode\":\"PROTOTYPE SYNTHETIC\",\"businessStatus\":\"ACTIVE\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"chargeItemId\":\"10000000-0000-7000-8000-000000000001\",\"chargeItemVersionId\":\"10000000-0000-7000-8000-000000000001\",\"chargingMethodCode\":\"PROTOTYPE SYNTHETIC\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"formalName\":\"PROTOTYPE SYNTHETIC\",\"internalCode\":\"PROTOTYPE SYNTHETIC\",\"recordedFrom\":\"2026-09-04T10:00:00\",\"serviceDefinition\":\"PROTOTYPE SYNTHETIC\",\"versionNo\":\"1\"}]},\"projectionContract\":{\"projectionType\":\"hdi.charge-catalog\",\"schemaDigest\":\"7cfa8efd37477a18472838a876239d97f512512076500c38f7041f31ba3ac0cf\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"1\"},\"release\":{\"aggregateType\":\"CHARGE_CATALOG\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "123da65b13ec1f956bfdf4f92c849e1bd9a53dad7fae3609056ba37d5033c9b4"
+    },
+    {
+      "projectionType": "hdi.charge-catalog",
+      "schemaVersion": "2",
+      "schemaDigest": "3cd3c2f8f565660420662edab1ad510b945ff070429634c7f611707f0f663521",
+      "input": {
+        "aggregateType": "CHARGE_CATALOG",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.charge-catalog",
+        "projectionSchemaVersion": "2",
+        "projectionSchemaDigest": "3cd3c2f8f565660420662edab1ad510b945ff070429634c7f611707f0f663521",
+        "payload": {
+          "catalogCode": "PROTOTYPE SYNTHETIC",
+          "items": [
+            {
+              "chargeItemId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemVersionId": "10000000-0000-7000-8000-000000000001",
+              "versionNo": "1",
+              "internalCode": "PROTOTYPE SYNTHETIC",
+              "formalName": "PROTOTYPE SYNTHETIC",
+              "serviceDefinition": "PROTOTYPE SYNTHETIC",
+              "billingUnitCode": "PROTOTYPE SYNTHETIC",
+              "chargingMethodCode": "PROTOTYPE SYNTHETIC",
+              "businessStatus": "ACTIVE",
+              "businessValidFrom": "2026-09-04T10:00:00",
+              "businessValidTo": "2026-09-04T10:00:00",
+              "recordedFrom": "2026-09-04T10:00:00",
+              "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "contractRevision": "2"
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"catalogCode\":\"PROTOTYPE SYNTHETIC\",\"contractRevision\":\"2\",\"items\":[{\"billingUnitCode\":\"PROTOTYPE SYNTHETIC\",\"businessStatus\":\"ACTIVE\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"chargeItemId\":\"10000000-0000-7000-8000-000000000001\",\"chargeItemVersionId\":\"10000000-0000-7000-8000-000000000001\",\"chargingMethodCode\":\"PROTOTYPE SYNTHETIC\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"formalName\":\"PROTOTYPE SYNTHETIC\",\"internalCode\":\"PROTOTYPE SYNTHETIC\",\"recordedFrom\":\"2026-09-04T10:00:00\",\"serviceDefinition\":\"PROTOTYPE SYNTHETIC\",\"versionNo\":\"1\"}]},\"projectionContract\":{\"projectionType\":\"hdi.charge-catalog\",\"schemaDigest\":\"3cd3c2f8f565660420662edab1ad510b945ff070429634c7f611707f0f663521\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"2\"},\"release\":{\"aggregateType\":\"CHARGE_CATALOG\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "b00eea7e470158df42967431e2fd08f38ce788a4863821f85998eae1331bc155"
+    },
+    {
+      "projectionType": "hdi.price-list",
+      "schemaVersion": "0",
+      "schemaDigest": "c86545cd688371eca02508366fbaf7322be9b739cd09846fca634a85a157887d",
+      "input": {
+        "aggregateType": "PRICE_LIST",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.price-list",
+        "projectionSchemaVersion": "0",
+        "projectionSchemaDigest": "c86545cd688371eca02508366fbaf7322be9b739cd09846fca634a85a157887d",
+        "payload": {
+          "priceListId": "10000000-0000-7000-8000-000000000001",
+          "priceListCode": "PROTOTYPE SYNTHETIC",
+          "legacyEntries": [
+            {
+              "itemCode": "PROTOTYPE SYNTHETIC",
+              "unitPrice": "12.34"
+            }
+          ]
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"legacyEntries\":[{\"itemCode\":\"PROTOTYPE SYNTHETIC\",\"unitPrice\":\"12.34\"}],\"priceListCode\":\"PROTOTYPE SYNTHETIC\",\"priceListId\":\"10000000-0000-7000-8000-000000000001\"},\"projectionContract\":{\"projectionType\":\"hdi.price-list\",\"schemaDigest\":\"c86545cd688371eca02508366fbaf7322be9b739cd09846fca634a85a157887d\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"0\"},\"release\":{\"aggregateType\":\"PRICE_LIST\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "b46c77524a9492f2f07016d6ec4a795b418da9e0b4b6e1d3da328d0ae0e9bbe7"
+    },
+    {
+      "projectionType": "hdi.price-list",
+      "schemaVersion": "1",
+      "schemaDigest": "308b8e3b84d2ae603f1f14a901075938e26261dcd03fc3590023178309712d48",
+      "input": {
+        "aggregateType": "PRICE_LIST",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.price-list",
+        "projectionSchemaVersion": "1",
+        "projectionSchemaDigest": "308b8e3b84d2ae603f1f14a901075938e26261dcd03fc3590023178309712d48",
+        "payload": {
+          "priceListId": "10000000-0000-7000-8000-000000000001",
+          "priceListReleaseId": "10000000-0000-7000-8000-000000000001",
+          "releaseNo": "1",
+          "priceListCode": "PROTOTYPE SYNTHETIC",
+          "displayName": "PROTOTYPE SYNTHETIC",
+          "currencyCode": "CNY",
+          "businessValidFrom": "2026-09-04T10:00:00",
+          "businessValidTo": "2026-09-04T10:00:00",
+          "recordedFrom": "2026-09-04T10:00:00",
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "entries": [
+            {
+              "entryNo": "1",
+              "priceEntryId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemVersionId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemInternalCode": "PROTOTYPE SYNTHETIC",
+              "scopeLevel": "HOSPITAL",
+              "campusId": "10000000-0000-7000-8000-000000000001",
+              "encounterMode": "GENERAL",
+              "encounterType": "OUTPATIENT",
+              "fixedUnitPrice": "12.3400",
+              "currencyCode": "CNY",
+              "billingUnitCode": "PROTOTYPE SYNTHETIC",
+              "businessValidFrom": "2026-09-04T10:00:00",
+              "businessValidTo": "2026-09-04T10:00:00",
+              "priceNature": "HOSPITAL_DEFAULT",
+              "zeroPriceReason": "PROTOTYPE SYNTHETIC",
+              "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ]
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"currencyCode\":\"CNY\",\"displayName\":\"PROTOTYPE SYNTHETIC\",\"entries\":[{\"billingUnitCode\":\"PROTOTYPE SYNTHETIC\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"campusId\":\"10000000-0000-7000-8000-000000000001\",\"chargeItemId\":\"10000000-0000-7000-8000-000000000001\",\"chargeItemInternalCode\":\"PROTOTYPE SYNTHETIC\",\"chargeItemVersionId\":\"10000000-0000-7000-8000-000000000001\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"currencyCode\":\"CNY\",\"encounterMode\":\"GENERAL\",\"encounterType\":\"OUTPATIENT\",\"entryNo\":\"1\",\"fixedUnitPrice\":\"12.3400\",\"priceEntryId\":\"10000000-0000-7000-8000-000000000001\",\"priceNature\":\"HOSPITAL_DEFAULT\",\"scopeLevel\":\"HOSPITAL\",\"zeroPriceReason\":\"PROTOTYPE SYNTHETIC\"}],\"priceListCode\":\"PROTOTYPE SYNTHETIC\",\"priceListId\":\"10000000-0000-7000-8000-000000000001\",\"priceListReleaseId\":\"10000000-0000-7000-8000-000000000001\",\"recordedFrom\":\"2026-09-04T10:00:00\",\"releaseNo\":\"1\"},\"projectionContract\":{\"projectionType\":\"hdi.price-list\",\"schemaDigest\":\"308b8e3b84d2ae603f1f14a901075938e26261dcd03fc3590023178309712d48\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"1\"},\"release\":{\"aggregateType\":\"PRICE_LIST\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "3babe64dc137d3127c5c953bae725ab2518c092b6803e14e05f0f23e986f4266"
+    },
+    {
+      "projectionType": "hdi.price-list",
+      "schemaVersion": "2",
+      "schemaDigest": "7085579787d86ecb29fa08c6b669f9fc519eaec4c75f66c670bde6e3670595e7",
+      "input": {
+        "aggregateType": "PRICE_LIST",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.price-list",
+        "projectionSchemaVersion": "2",
+        "projectionSchemaDigest": "7085579787d86ecb29fa08c6b669f9fc519eaec4c75f66c670bde6e3670595e7",
+        "payload": {
+          "priceListId": "10000000-0000-7000-8000-000000000001",
+          "priceListReleaseId": "10000000-0000-7000-8000-000000000001",
+          "releaseNo": "1",
+          "priceListCode": "PROTOTYPE SYNTHETIC",
+          "displayName": "PROTOTYPE SYNTHETIC",
+          "currencyCode": "CNY",
+          "businessValidFrom": "2026-09-04T10:00:00",
+          "businessValidTo": "2026-09-04T10:00:00",
+          "recordedFrom": "2026-09-04T10:00:00",
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "entries": [
+            {
+              "entryNo": "1",
+              "priceEntryId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemVersionId": "10000000-0000-7000-8000-000000000001",
+              "chargeItemInternalCode": "PROTOTYPE SYNTHETIC",
+              "scopeLevel": "HOSPITAL",
+              "campusId": "10000000-0000-7000-8000-000000000001",
+              "encounterMode": "GENERAL",
+              "encounterType": "OUTPATIENT",
+              "fixedUnitPrice": "12.3400",
+              "currencyCode": "CNY",
+              "billingUnitCode": "PROTOTYPE SYNTHETIC",
+              "businessValidFrom": "2026-09-04T10:00:00",
+              "businessValidTo": "2026-09-04T10:00:00",
+              "priceNature": "HOSPITAL_DEFAULT",
+              "zeroPriceReason": "PROTOTYPE SYNTHETIC",
+              "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "contractRevision": "2"
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"contractRevision\":\"2\",\"currencyCode\":\"CNY\",\"displayName\":\"PROTOTYPE SYNTHETIC\",\"entries\":[{\"billingUnitCode\":\"PROTOTYPE SYNTHETIC\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"campusId\":\"10000000-0000-7000-8000-000000000001\",\"chargeItemId\":\"10000000-0000-7000-8000-000000000001\",\"chargeItemInternalCode\":\"PROTOTYPE SYNTHETIC\",\"chargeItemVersionId\":\"10000000-0000-7000-8000-000000000001\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"currencyCode\":\"CNY\",\"encounterMode\":\"GENERAL\",\"encounterType\":\"OUTPATIENT\",\"entryNo\":\"1\",\"fixedUnitPrice\":\"12.3400\",\"priceEntryId\":\"10000000-0000-7000-8000-000000000001\",\"priceNature\":\"HOSPITAL_DEFAULT\",\"scopeLevel\":\"HOSPITAL\",\"zeroPriceReason\":\"PROTOTYPE SYNTHETIC\"}],\"priceListCode\":\"PROTOTYPE SYNTHETIC\",\"priceListId\":\"10000000-0000-7000-8000-000000000001\",\"priceListReleaseId\":\"10000000-0000-7000-8000-000000000001\",\"recordedFrom\":\"2026-09-04T10:00:00\",\"releaseNo\":\"1\"},\"projectionContract\":{\"projectionType\":\"hdi.price-list\",\"schemaDigest\":\"7085579787d86ecb29fa08c6b669f9fc519eaec4c75f66c670bde6e3670595e7\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"2\"},\"release\":{\"aggregateType\":\"PRICE_LIST\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "be8b7ccc640df775efbd8558f15c1cfd5f9e0ba98435ac9487e0f6818dd1d04a"
+    },
+    {
+      "projectionType": "hdi.department-master",
+      "schemaVersion": "1",
+      "schemaDigest": "a9ef826fee8da8888f1bb4df0613c4f768fbdcf2b89b6e7dd4884365c23b86fc",
+      "input": {
+        "aggregateType": "DEPARTMENT_MASTER",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.department-master",
+        "projectionSchemaVersion": "1",
+        "projectionSchemaDigest": "a9ef826fee8da8888f1bb4df0613c4f768fbdcf2b89b6e7dd4884365c23b86fc",
+        "payload": {
+          "departmentCode": "PROTOTYPE SYNTHETIC",
+          "departmentId": "10000000-0000-7000-8000-000000000001",
+          "departmentVersionId": "10000000-0000-7000-8000-000000000001",
+          "versionNo": "PROTOTYPE SYNTHETIC",
+          "standardName": "PROTOTYPE SYNTHETIC",
+          "shortName": "PROTOTYPE SYNTHETIC",
+          "departmentType": "PROTOTYPE SYNTHETIC",
+          "clinicalFlag": true,
+          "managementFlag": true,
+          "subjectMappingApplicability": "PROTOTYPE SYNTHETIC",
+          "businessStatus": "PROTOTYPE SYNTHETIC",
+          "description": "PROTOTYPE SYNTHETIC",
+          "businessValidFrom": "2026-09-04T10:00:00",
+          "businessValidTo": "2026-09-04T10:00:00",
+          "recordedFrom": "2026-09-04T10:00:00",
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"businessStatus\":\"PROTOTYPE SYNTHETIC\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"clinicalFlag\":true,\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"departmentCode\":\"PROTOTYPE SYNTHETIC\",\"departmentId\":\"10000000-0000-7000-8000-000000000001\",\"departmentType\":\"PROTOTYPE SYNTHETIC\",\"departmentVersionId\":\"10000000-0000-7000-8000-000000000001\",\"description\":\"PROTOTYPE SYNTHETIC\",\"managementFlag\":true,\"recordedFrom\":\"2026-09-04T10:00:00\",\"shortName\":\"PROTOTYPE SYNTHETIC\",\"standardName\":\"PROTOTYPE SYNTHETIC\",\"subjectMappingApplicability\":\"PROTOTYPE SYNTHETIC\",\"versionNo\":\"PROTOTYPE SYNTHETIC\"},\"projectionContract\":{\"projectionType\":\"hdi.department-master\",\"schemaDigest\":\"a9ef826fee8da8888f1bb4df0613c4f768fbdcf2b89b6e7dd4884365c23b86fc\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"1\"},\"release\":{\"aggregateType\":\"DEPARTMENT_MASTER\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "336ab62f8d2230eb5eeb7fa4ac41f8ae12ad0a63a4e6cc937bee416a902b9f26"
+    },
+    {
+      "projectionType": "hdi.department-hierarchy",
+      "schemaVersion": "1",
+      "schemaDigest": "72a7910058121c35b7402cf834a9585c95d17fc98c99937adaa431fdef303372",
+      "input": {
+        "aggregateType": "DEPARTMENT_HIERARCHY",
+        "governanceObjectId": "10000000-0000-7000-8000-000000000002",
+        "releaseId": "10000000-0000-7000-8000-000000000003",
+        "releaseNo": "1",
+        "releaseKind": "NORMAL",
+        "businessValidFrom": "2026-09-04T10:00:00",
+        "businessValidTo": null,
+        "projectionType": "hdi.department-hierarchy",
+        "projectionSchemaVersion": "1",
+        "projectionSchemaDigest": "72a7910058121c35b7402cf834a9585c95d17fc98c99937adaa431fdef303372",
+        "payload": {
+          "hierarchyViewId": "10000000-0000-7000-8000-000000000001",
+          "hierarchyViewVersionId": "10000000-0000-7000-8000-000000000001",
+          "viewCode": "PROTOTYPE SYNTHETIC",
+          "viewType": "PROTOTYPE SYNTHETIC",
+          "versionNo": "PROTOTYPE SYNTHETIC",
+          "businessValidFrom": "2026-09-04T10:00:00",
+          "businessValidTo": "2026-09-04T10:00:00",
+          "recordedFrom": "2026-09-04T10:00:00",
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "nodes": [
+            {
+              "nodeId": "10000000-0000-7000-8000-000000000001",
+              "parentNodeId": "10000000-0000-7000-8000-000000000001",
+              "nodeKind": "PROTOTYPE SYNTHETIC",
+              "departmentId": "10000000-0000-7000-8000-000000000001",
+              "departmentVersionId": "10000000-0000-7000-8000-000000000001",
+              "groupId": "10000000-0000-7000-8000-000000000001",
+              "groupVersionId": "10000000-0000-7000-8000-000000000001",
+              "displayName": "PROTOTYPE SYNTHETIC",
+              "sortOrder": 1
+            }
+          ]
+        }
+      },
+      "artifactUtf8": "{\"envelopeContractVersion\":\"phase-01.v1\",\"payload\":{\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":\"2026-09-04T10:00:00\",\"contentHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"hierarchyViewId\":\"10000000-0000-7000-8000-000000000001\",\"hierarchyViewVersionId\":\"10000000-0000-7000-8000-000000000001\",\"nodes\":[{\"departmentId\":\"10000000-0000-7000-8000-000000000001\",\"departmentVersionId\":\"10000000-0000-7000-8000-000000000001\",\"displayName\":\"PROTOTYPE SYNTHETIC\",\"groupId\":\"10000000-0000-7000-8000-000000000001\",\"groupVersionId\":\"10000000-0000-7000-8000-000000000001\",\"nodeId\":\"10000000-0000-7000-8000-000000000001\",\"nodeKind\":\"PROTOTYPE SYNTHETIC\",\"parentNodeId\":\"10000000-0000-7000-8000-000000000001\",\"sortOrder\":1}],\"recordedFrom\":\"2026-09-04T10:00:00\",\"versionNo\":\"PROTOTYPE SYNTHETIC\",\"viewCode\":\"PROTOTYPE SYNTHETIC\",\"viewType\":\"PROTOTYPE SYNTHETIC\"},\"projectionContract\":{\"projectionType\":\"hdi.department-hierarchy\",\"schemaDigest\":\"72a7910058121c35b7402cf834a9585c95d17fc98c99937adaa431fdef303372\",\"schemaDigestAlgorithm\":\"SHA-256\",\"schemaVersion\":\"1\"},\"release\":{\"aggregateType\":\"DEPARTMENT_HIERARCHY\",\"businessValidFrom\":\"2026-09-04T10:00:00\",\"businessValidTo\":null,\"governanceObjectId\":\"10000000-0000-7000-8000-000000000002\",\"releaseId\":\"10000000-0000-7000-8000-000000000003\",\"releaseKind\":\"NORMAL\",\"releaseNo\":\"1\"},\"serializationProfileVersion\":\"canonical-json.v1\"}",
+      "artifactDigest": "fb71ec35bf39f9ea508b764beb56a386df48922d0015d54662b8a334feae2cf4"
+    }
+  ]
+}
