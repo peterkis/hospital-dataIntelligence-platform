@@ -1,3 +1,5 @@
+import { consumerFailureCode } from '../../modules/audit/index.js';
+import { ConsumerAuditReportSchema, ConsumerAuditQuerySchema, ConsumerAuditAcknowledgementSchema, ConsumerAuditPageSchema } from './consumer-audit-schemas.js';
 import {
   Type,
   type TypeBoxTypeProvider,
@@ -1784,6 +1786,31 @@ export async function registerPhase01Routes(
     },
   );
 
+  typed.post('/v1/phase-01/consumer-subscriptions/:subscriptionId/audit-reports', {
+    schema: { operationId: 'reportPhase01ConsumerReleaseAudit', summary: 'Append consumer-reported evidence without changing receipts or checkpoints',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema, params: SubscriptionParamsSchema,
+      body: ConsumerAuditReportSchema, response: { 201: ConsumerAuditAcknowledgementSchema,
+        400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema,
+        409: ErrorResponseSchema, 503: ErrorResponseSchema } },
+  }, async (request, reply) => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    const result = await runtime.transactionRunner.run(context, modules =>
+      modules.releaseDistribution.reportConsumerAudit(request.params.subscriptionId, request.body));
+    return reply.code(201).send(result);
+  });
+  typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/audit-events', {
+    schema: { operationId: 'queryPhase01ConsumerReleaseAudit', summary: 'Consumer support evidence: own subscription, sequence pages of at most 100, time ranges of at most 31 days',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema, params: SubscriptionParamsSchema,
+      querystring: ConsumerAuditQuerySchema, response: { 200: ConsumerAuditPageSchema,
+        400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 503: ErrorResponseSchema } },
+  }, async request => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    return runtime.transactionRunner.run(context, modules =>
+      modules.releaseDistribution.queryConsumerAudit({ ...request.params, ...request.query }));
+  });
+
   typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/operational-status', {
     schema: {
       operationId: 'getPhase01ConsumerOperationalStatus',
@@ -1959,7 +1986,9 @@ export async function registerPhase01Routes(
     async (request, reply) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'SERVICE');
-      const receipt = await runtime.transactionRunner.run(context, (modules) =>
+      const receipt = await (async () => {
+        try {
+        return await runtime.transactionRunner.run(context, (modules) =>
         modules.releaseDistribution.recordReceipt({
           subscriptionId: request.params.subscriptionId,
           servicePrincipalId: context.actorPrincipalId,
@@ -1972,6 +2001,22 @@ export async function registerPhase01Routes(
           ...(request.body.replay ? { replay: request.body.replay } : {}),
         }),
       );
+        } catch (error) {
+          // Rejection evidence commits only after the business transaction has rolled back.
+          if (error instanceof Error && error.message === 'CONSUMER_AUDIT_UNAVAILABLE') throw error;
+          try {
+            await runtime.transactionRunner.run(context, modules => modules.releaseDistribution.recordConsumerReceiptRejection({
+              subscriptionId: request.params.subscriptionId, eventId: request.body.eventId,
+              failureCode: consumerFailureCode(error), ...(request.body.replay ? { replay: request.body.replay } : {}),
+            }));
+          } catch (auditError) {
+            if (!(auditError instanceof Error && auditError.message === 'CONSUMER_SUBSCRIPTION_NOT_FOUND')) {
+              throw new Error('CONSUMER_AUDIT_UNAVAILABLE');
+            }
+          }
+          throw error;
+        }
+      })();
       return reply.code(201).send(receipt);
     },
   );

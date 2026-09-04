@@ -40,6 +40,7 @@ function server(artifact: unknown, options?: { wrongHeader?: boolean; failReceip
   let downloads = 0;
   let checkpoint = '0';
   vi.stubGlobal('fetch', vi.fn(async (input: Request) => {
+    if (input.url.endsWith('/audit-reports')) return Response.json({ auditEventId: id, auditSequence: '1' }, { status: 201 });
     if (input.url.includes('/operational-status')) return Response.json({
       subscriptionId: id, subscriptionVersionId: id, versionNo: '1', lifecycleStatus: 'ACTIVE',
       sla: { criticality: 'NORMAL', expectedApplyWithinSeconds: null, retryWindowSeconds: null },

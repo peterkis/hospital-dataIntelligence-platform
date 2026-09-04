@@ -42,7 +42,9 @@ export async function checkConsumerLifecycleFlow(input: {
     ...scope, projectionType: event.projectionType, projectionSchemaVersion: '1',
   }));
   const auditEvents = () => database.selectFrom('audit.audit_event').selectAll()
-    .where('audit_stream_id', '=', subscriptionId).orderBy('audit_sequence').execute();
+    // C-03 shares this stream; retain the exact B-03A transition count assertion.
+    .where('audit_stream_id', '=', subscriptionId).where('action', '=', 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED')
+    .orderBy('audit_sequence').execute();
   const stableHistory = ({ lifecycleStatus: _status, lifecycleChangedAt: _at, ...rest }: History) => rest;
   const initial = await history();
   assert.equal(initial.lifecycleStatus, 'ACTIVE');

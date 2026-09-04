@@ -64,6 +64,8 @@ test('real CLI processes reject corrupted artifacts and recover durable state af
     processingDigestMismatch: false };
   const server = createServer((request, response) => {
     response.setHeader('content-type', 'application/json');
+    if (request.url?.endsWith('/audit-reports')) { request.resume(); response.statusCode = 201;
+      response.end(JSON.stringify({ auditEventId: id, auditSequence: '1' })); return; }
     if (request.url?.endsWith('/replay-context')) { response.end(JSON.stringify(metadata)); return; }
     if (request.url?.includes('/content')) {
       response.setHeader('x-snapshot-id', id); response.setHeader('digest', `sha-256=:${Buffer.from(digest, 'hex').toString('base64')}:`);

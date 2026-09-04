@@ -16,7 +16,7 @@ const consumer = createReleaseConsumer({
 async function contract() {
   const event = await consumer.fetchExactRelease({ releaseId: 'synthetic' });
   const downloaded = await consumer.downloadSnapshot(event);
-  const verified = consumer.verifySnapshot(downloaded);
+  const verified = await consumer.verifySnapshot(downloaded);
   await consumer.ackApplied(await consumer.apply(verified));
   await consumer.submitProcessingReceipt(downloaded, { receiveResult: 'ACCEPTED', validationResult: 'VALID' });
   await consumer.getCheckpoint(); await consumer.resume();

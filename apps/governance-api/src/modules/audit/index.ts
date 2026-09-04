@@ -7,6 +7,8 @@ import {
 import type { RequestContext } from '../../platform/transaction/transaction-runner.js';
 import { hitControlledPublicationFault } from '../../platform/fault-injection/controlled-faults.js';
 import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
+import type { ConsumerAuditEvent } from './consumer-events.js';
+export * from './consumer-events.js';
 
 export const AUDIT_MODULE_ID = 'audit' as const;
 
@@ -45,7 +47,7 @@ export type AuditEventType =
   | 'CONSUMER_RELEASE_REPLAYED'
   | 'PUBLISHED'
   | 'RESOLVED'
-  | DepartmentAuditEventType;
+  | DepartmentAuditEventType | ConsumerAuditEvent;
 
 export const DEPARTMENT_AUDIT_EVENT_TYPES = [
   'DEPARTMENT_CREATED',
@@ -101,7 +103,7 @@ export interface AppendAuditEventCommand {
 export interface AppendGovernanceAuditEventCommand {
   readonly auditStreamId?: string;
   readonly governanceObjectId: string;
-  readonly eventType: DepartmentAuditEventType | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED' | 'CONSUMER_RELEASE_REPLAYED';
+  readonly eventType: DepartmentAuditEventType | ConsumerAuditEvent | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED' | 'CONSUMER_RELEASE_REPLAYED';
   readonly aggregateType: DepartmentAuditAggregateType | 'CONSUMER_SUBSCRIPTION';
   readonly aggregateId: string;
   readonly aggregateVersionId?: string | null;
@@ -134,6 +136,14 @@ export interface AuditEventService {
     readonly errorType: 'SEQUENCE' | 'PAYLOAD_HASH' | 'PREVIOUS_HASH' | 'CURRENT_HASH' | null;
   }>;
   query(command: {
+    readonly auditStreamId?: string;
+    readonly consumerReleaseOnly?: boolean;
+    readonly releaseId?: string;
+    readonly projectionType?: string;
+    readonly result?: string;
+    readonly occurredFrom?: string;
+    readonly occurredTo?: string;
+    readonly afterSequence?: string;
     readonly governanceObjectId: string;
     readonly stableEntityId?: string;
     readonly entityVersionId?: string;
@@ -285,6 +295,14 @@ export function createAuditModule(
           'current_hash as currentHash',
         ])
         .where('governance_object_id', '=', command.governanceObjectId);
+      if (command.auditStreamId) query = query.where('audit_stream_id', '=', command.auditStreamId);
+      if (command.consumerReleaseOnly) query = query.where(sql<string>`event_payload ->> 'evidenceKind'`, '=', 'CONSUMER_RELEASE');
+      if (command.releaseId) query = query.where(sql<string>`event_payload ->> 'releaseId'`, '=', command.releaseId);
+      if (command.projectionType) query = query.where(sql<string>`event_payload ->> 'projectionType'`, '=', command.projectionType);
+      if (command.result) query = query.where(sql<string>`event_payload ->> 'result'`, '=', command.result);
+      if (command.occurredFrom) query = query.where('occurred_at', '>=', command.occurredFrom);
+      if (command.occurredTo) query = query.where('occurred_at', '<=', command.occurredTo);
+      if (command.afterSequence) query = query.where('audit_sequence', '>', command.afterSequence);
       if (command.stableEntityId) query = query.where('stable_entity_id', '=', command.stableEntityId);
       if (command.entityVersionId) query = query.where('entity_version_id', '=', command.entityVersionId);
       if (command.requestId) query = query.where('request_id', '=', command.requestId);
@@ -416,7 +434,7 @@ function normalizeAuditCommand(
   };
 }
 
-const SENSITIVE_AUDIT_KEY = /databaseurl|password|token|cookie|secret/iu;
+const SENSITIVE_AUDIT_KEY = /databaseurl|password|token|cookie|secret|authorization/iu;
 
 export function assertAuditPayloadSafe(payload: AuditEventPayload): void {
   visitAuditPayload(payload, new Set<object>());

@@ -3,11 +3,13 @@ import type { createGovernanceApiClient, GovernanceApiOperations } from '@hospit
 export type ReleaseConsumerClient = ReturnType<typeof createGovernanceApiClient>;
 export type ReleaseEvent = Readonly<GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][200]['content']['application/json']['events'][number]>;
 export type ConsumerOperationalStatus = GovernanceApiOperations['getPhase01ConsumerOperationalStatus']['responses'][200]['content']['application/json'];
+export type ConsumerAuditReport = GovernanceApiOperations['reportPhase01ConsumerReleaseAudit']['requestBody']['content']['application/json'];
 export type ReceiptResult = GovernanceApiOperations['recordPhase01ConsumerReceipt']['responses'][201]['content']['application/json'];
 export type ReplayContext = GovernanceApiOperations['getPhase01ConsumerReplayContext']['responses'][200]['content']['application/json'];
 export interface ReplayInspection { readonly context: ReplayContext; readonly snapshot: VerifiedSnapshot }
 export interface ReplayCommand { readonly releaseId: string; readonly operationId: string; readonly reason: string }
 export interface ReplayRecord extends ReplayCommand {
+  readonly auditEvidenceId?: string;
   readonly subscriptionId: string; readonly servicePrincipalId: string;
   readonly subscriptionVersionId: string; readonly eventId: string; readonly snapshotId: string;
   readonly processingDigest: string; readonly processedAt: string;
@@ -43,6 +45,8 @@ export interface VerifiedSnapshot {
 export interface AppliedRelease { readonly [applied]: true; readonly event: ReleaseEvent }
 
 export interface AppliedEventState {
+  /** Durable apply-evidence outbox identity, committed with the business effects. */
+  readonly auditEvidenceId?: string;
   readonly eventId: string;
   readonly aggregateVersion: string;
   readonly snapshotId: string;
@@ -90,7 +94,7 @@ export interface ReleaseConsumer {
   poll(afterAggregateVersion?: string): Promise<readonly ReleaseEvent[]>;
   fetchExactRelease(identity: { readonly releaseId: string } | { readonly eventId: string }): Promise<ReleaseEvent>;
   downloadSnapshot(event: ReleaseEvent): Promise<DownloadedSnapshot>;
-  verifySnapshot(snapshot: DownloadedSnapshot): VerifiedSnapshot;
+  verifySnapshot(snapshot: DownloadedSnapshot): Promise<VerifiedSnapshot>;
   apply(snapshot: VerifiedSnapshot): Promise<AppliedRelease>;
   ackApplied(release: AppliedRelease): Promise<ReceiptResult | null>;
   submitProcessingReceipt(snapshot: DownloadedSnapshot, result: ProcessingResult): Promise<ReceiptResult>;

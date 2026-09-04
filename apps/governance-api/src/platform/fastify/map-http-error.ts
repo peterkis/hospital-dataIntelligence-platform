@@ -19,6 +19,9 @@ const departmentErrorStatus = {
 } as const satisfies Readonly<Record<DepartmentErrorCode, HttpErrorMapping['statusCode']>>;
 
 const publicErrorStatus: Readonly<Record<string, HttpErrorMapping['statusCode']>> = {
+  REQUEST_SCHEMA_INVALID: 400,
+  CONSUMER_AUDIT_UNAVAILABLE: 503,
+  CONSUMER_AUDIT_CONFLICT: 409,
   PHASE_01_RUNTIME_NOT_CONFIGURED: 503,
   AUTHENTICATION_RUNTIME_NOT_CONFIGURED: 503,
   DEPARTMENT_RUNTIME_NOT_CONFIGURED: 503,

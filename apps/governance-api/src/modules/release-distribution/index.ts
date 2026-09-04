@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { createConsumerAudit, type ConsumerAuditQuery } from './consumer-audit.js';
+import type { ConsumerAuditReport, ConsumerFailureCode } from '../audit/index.js';
 import { sql, type Kysely } from 'kysely';
 import type { TSchema } from 'typebox';
 import { Check } from 'typebox/value';
@@ -178,6 +181,10 @@ export interface AvailableEvent {
 }
 
 export interface ReleaseDistributionModule {
+  reportConsumerAudit(subscriptionId: string, report: ConsumerAuditReport): Promise<{ auditEventId: string; auditSequence: string }>;
+  queryConsumerAudit(input: ConsumerAuditQuery): Promise<Awaited<ReturnType<ReturnType<typeof createConsumerAudit>['query']>>>;
+  recordConsumerReceiptRejection(input: { subscriptionId: string; eventId: string; failureCode: ConsumerFailureCode;
+    replay?: { releaseId: string; operationId: string } }): Promise<void>;
   getConsumerReplayContext(command: { readonly subscriptionId: string; readonly releaseId: string }):
     Promise<Awaited<ReturnType<typeof readConsumerReplayView>>>;
   getConsumerOperationalStatus(command: {
@@ -293,7 +300,21 @@ export function createReleaseDistributionModule(
     });
   }
 
+  const consumerAudit = createConsumerAudit(database, audit, context);
   return {
+    async reportConsumerAudit(subscriptionId, report) {
+      if (!await references.getActiveServiceOwner(context.actorPrincipalId)) throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
+      return consumerAudit.report(subscriptionId, report);
+    },
+    async queryConsumerAudit(input) {
+      if (!await references.getActiveServiceOwner(context.actorPrincipalId)) throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
+      return consumerAudit.query(input);
+    },
+    async recordConsumerReceiptRejection(input) {
+      await consumerAudit.append({ subscriptionId: input.subscriptionId, eventId: input.eventId,
+        evidenceId: randomUUID(), eventType: 'CONSUMER_RECEIPT_REJECTED', source: 'PLATFORM',
+        mode: input.replay ? 'REPLAY' : 'ORIGINAL', ...(input.replay ?? {}), failureCode: input.failureCode, denial: true });
+    },
     async getConsumerReplayContext(command) {
       await requireServiceSubscription(database, references, command.subscriptionId, context.actorPrincipalId);
       return readConsumerReplayView(database, { ...command, servicePrincipalId: context.actorPrincipalId });
@@ -1037,16 +1058,26 @@ export function createReleaseDistributionModule(
         }
         const payload = { operationId: command.replay.operationId, subscriptionId: command.subscriptionId,
           subscriptionVersionId: command.replay.subscriptionVersionId, releaseId: command.replay.releaseId,
-          eventId: command.eventId, processingDigest: command.processingDigest.toString('hex'), reason: command.replay.reason };
+          eventId: command.eventId, processingDigest: command.processingDigest.toString('hex'), reasonDigest: canonicalSha256(command.replay.reason).toString('hex') };
         const prior = await audit.query({ governanceObjectId: replay.event.governanceObjectId,
           stableEntityId: command.replay.operationId, action: 'CONSUMER_RELEASE_REPLAYED', limit: 2 });
+        // Preserve C-02 retries without copying free-text reasons into new evidence.
+        const previousPayload = prior[0]?.payload;
+        const priorIdentity = previousPayload && typeof previousPayload['reason'] === 'string'
+          ? Object.fromEntries([...Object.entries(previousPayload).filter(([key]) => key !== 'reason'),
+            ['reasonDigest', canonicalSha256(previousPayload['reason']).toString('hex')]]) : previousPayload;
         if (prior.length > 1 || (prior[0] && (prior[0].actorPrincipalId !== context.actorPrincipalId ||
-            !canonicalSha256(prior[0].payload).equals(canonicalSha256(payload))))) throw new Error('REPLAY_OPERATION_CONFLICT');
-        if (!prior.length) await audit.append({ auditStreamId: command.subscriptionId,
+            !canonicalSha256(priorIdentity).equals(canonicalSha256(payload))))) throw new Error('REPLAY_OPERATION_CONFLICT');
+        if (!prior.length) await consumerAudit.appendLegacyReplay({ auditStreamId: command.subscriptionId,
           governanceObjectId: replay.event.governanceObjectId, eventType: 'CONSUMER_RELEASE_REPLAYED',
           aggregateType: 'CONSUMER_SUBSCRIPTION', aggregateId: command.replay.operationId,
           afterHash: canonicalSha256(payload), authorityScope: 'HOSPITAL', payload });
-        if (replay.appliedReceipt) return { receiptId: replay.appliedReceipt.receiptId, receiptSequence: replay.appliedReceipt.receiptSequence };
+        if (replay.appliedReceipt) {
+          await consumerAudit.append({ subscriptionId: command.subscriptionId, eventId: command.eventId,
+            evidenceId: randomUUID(), eventType: 'CONSUMER_RECEIPT_ACCEPTED', source: 'PLATFORM', mode: 'REPLAY',
+            operationId: command.replay.operationId, receiptId: replay.appliedReceipt.receiptId, receiptApplyResult: 'APPLIED' });
+          return { receiptId: replay.appliedReceipt.receiptId, receiptSequence: replay.appliedReceipt.receiptSequence };
+        }
       }
       const selected = await sql<{
         aggregate_id: string;
@@ -1172,6 +1203,10 @@ export function createReleaseDistributionModule(
               : 'ATTENTION_REQUIRED',
         })
         .execute();
+      await consumerAudit.append({ subscriptionId: command.subscriptionId, eventId: command.eventId,
+        evidenceId: randomUUID(), eventType: 'CONSUMER_RECEIPT_ACCEPTED', source: 'PLATFORM',
+        mode: command.replay ? 'REPLAY' : 'ORIGINAL', ...(command.replay ? { operationId: command.replay.operationId } : {}),
+        receiptId: receipt.consumer_receipt_id, receiptApplyResult: command.applyResult });
       return { receiptId: receipt.consumer_receipt_id, receiptSequence };
     },
   };

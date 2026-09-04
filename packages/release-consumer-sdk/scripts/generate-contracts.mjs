@@ -42,6 +42,8 @@ const contracts = envelopes.map((envelope) => {
 });
 assert.equal(contracts.length, published.length);
 const schemas = {
+  auditReportSchema: resolveReferences(api.paths[prefix + '/audit-reports'].post.requestBody.content['application/json'].schema),
+  auditAcknowledgementSchema: response('/audit-reports', 'post', 201),
   replayContextSchema: response('/releases/{releaseId}/replay-context', 'get', 200),
   eventsSchema: response('/events', 'get', 200),
   operationalSchema: response('/operational-status', 'get', 200),

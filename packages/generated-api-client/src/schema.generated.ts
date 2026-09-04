@@ -583,6 +583,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consumer support evidence: own subscription, sequence pages of at most 100, time ranges of at most 31 days */
+        get: operations["queryPhase01ConsumerReleaseAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/audit-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append consumer-reported evidence without changing receipts or checkpoints */
+        post: operations["reportPhase01ConsumerReleaseAudit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/events": {
         parameters: {
             query?: never;
@@ -4642,6 +4676,253 @@ export interface operations {
             };
             /** @description Default Response */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    queryPhase01ConsumerReleaseAudit: {
+        parameters: {
+            query?: {
+                afterSequence?: string;
+                limit?: number;
+                releaseId?: string;
+                projectionType?: string;
+                eventType?: "CONSUMER_RELEASE_OBSERVED" | "CONSUMER_SNAPSHOT_VERIFIED" | "CONSUMER_SNAPSHOT_VERIFICATION_FAILED" | "CONSUMER_APPLY_SUCCEEDED" | "CONSUMER_APPLY_FAILED" | "CONSUMER_REPLAY_REQUESTED" | "CONSUMER_REPLAY_COMPLETED" | "CONSUMER_REPLAY_FAILED" | "CONSUMER_RECEIPT_ACCEPTED" | "CONSUMER_RECEIPT_REJECTED";
+                result?: "SUCCEEDED" | "FAILED" | "REQUESTED";
+                occurredFrom?: string;
+                occurredTo?: string;
+            };
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: {
+                            actorPrincipalId: string;
+                            auditEventId: string;
+                            auditSequence: string;
+                            correlationId: string;
+                            currentHash: string;
+                            /** @enum {unknown} */
+                            eventType: "CONSUMER_RELEASE_OBSERVED" | "CONSUMER_SNAPSHOT_VERIFIED" | "CONSUMER_SNAPSHOT_VERIFICATION_FAILED" | "CONSUMER_APPLY_SUCCEEDED" | "CONSUMER_APPLY_FAILED" | "CONSUMER_REPLAY_REQUESTED" | "CONSUMER_REPLAY_COMPLETED" | "CONSUMER_REPLAY_FAILED" | "CONSUMER_RECEIPT_ACCEPTED" | "CONSUMER_RECEIPT_REJECTED";
+                            evidence: {
+                                attemptId: string | null;
+                                checkpoint: string;
+                                consumerOccurredAt: string | null;
+                                eventId: string | null;
+                                /** @enum {string} */
+                                evidenceKind: "CONSUMER_RELEASE";
+                                failureCode: ("DIGEST_MISMATCH" | "SCHEMA_DIGEST_MISMATCH" | "LIFECYCLE_BLOCKED" | "CROSS_SUBSCRIPTION" | "PROCESSING_DIGEST_MISMATCH" | "APPLY_FAILED" | "APPLY_OUTCOME_UNKNOWN" | "AUDIT_UNAVAILABLE" | "TRANSPORT_FAILED" | "IDENTITY_MISMATCH" | "PROJECTION_MISMATCH" | "SNAPSHOT_INVALID" | "CHECKPOINT_GAP" | "STATE_INVALID" | "RELEASE_UNAVAILABLE" | "RECEIPT_INCOHERENT" | "REPLAY_CONFLICT" | "PROCESSING_FAILED") | null;
+                                governanceObjectId: string;
+                                mode: "ORIGINAL" | "REPLAY";
+                                operationId: string | null;
+                                projectionSchemaVersion: string | null;
+                                projectionType: string | null;
+                                receiptApplyResult: string | null;
+                                receiptId: string | null;
+                                releaseId: string | null;
+                                /** @enum {unknown} */
+                                result: "SUCCEEDED" | "FAILED" | "REQUESTED";
+                                servicePrincipalId: string;
+                                snapshotDigest: string | null;
+                                source: "CONSUMER_REPORTED" | "PLATFORM";
+                                /** @enum {unknown} */
+                                stage?: "OBSERVE" | "VERIFY" | "APPLY" | "RECEIPT" | "CHECKPOINT" | "REPLAY" | "STATE" | "AUDIT";
+                                subscriptionId: string;
+                                subscriptionVersion: string | null;
+                                subscriptionVersionId: string | null;
+                            };
+                            occurredAt: string;
+                            previousHash: string;
+                            recordedAt: string;
+                            requestId: string;
+                        }[];
+                        nextAfterSequence: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    reportPhase01ConsumerReleaseAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    attemptId?: string;
+                    /** @enum {unknown} */
+                    eventType: "CONSUMER_RELEASE_OBSERVED" | "CONSUMER_SNAPSHOT_VERIFIED" | "CONSUMER_SNAPSHOT_VERIFICATION_FAILED" | "CONSUMER_APPLY_SUCCEEDED" | "CONSUMER_APPLY_FAILED" | "CONSUMER_REPLAY_REQUESTED" | "CONSUMER_REPLAY_COMPLETED" | "CONSUMER_REPLAY_FAILED";
+                    evidenceId: string;
+                    /** @enum {unknown} */
+                    failureCode?: "DIGEST_MISMATCH" | "SCHEMA_DIGEST_MISMATCH" | "LIFECYCLE_BLOCKED" | "CROSS_SUBSCRIPTION" | "PROCESSING_DIGEST_MISMATCH" | "APPLY_FAILED" | "APPLY_OUTCOME_UNKNOWN" | "AUDIT_UNAVAILABLE" | "TRANSPORT_FAILED" | "IDENTITY_MISMATCH" | "PROJECTION_MISMATCH" | "SNAPSHOT_INVALID" | "CHECKPOINT_GAP" | "STATE_INVALID" | "RELEASE_UNAVAILABLE" | "RECEIPT_INCOHERENT" | "REPLAY_CONFLICT" | "PROCESSING_FAILED";
+                    /** @enum {unknown} */
+                    failureStage?: "OBSERVE" | "VERIFY" | "APPLY" | "RECEIPT" | "CHECKPOINT" | "REPLAY" | "STATE" | "AUDIT";
+                    mode: "ORIGINAL" | "REPLAY";
+                    occurredAt: string;
+                    operationId?: string;
+                    releaseId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        auditEventId: string;
+                        auditSequence: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

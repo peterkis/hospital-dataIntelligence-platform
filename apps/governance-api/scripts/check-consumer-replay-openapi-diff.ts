@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 
@@ -8,7 +7,9 @@ const root = resolve(import.meta.dirname, '../../..');
 const START_HEAD = '3dcd9e018b6ffe2ca1c0c73cb4aada709de434f8';
 const file = 'contracts/openapi/phase-01.openapi.json';
 const before = JSON.parse(execFileSync('git', ['show', `${START_HEAD}:${file}`], { cwd: root, encoding: 'utf8', windowsHide: true }));
-const bytes = readFileSync(resolve(root, file));
+// C-02 is closed. C-03 has a separate live delta guard; retain this historical gate.
+const candidate = 'b3c9ae58dbec4e3d2429c06763b1613065f7d570';
+const bytes = execFileSync('git', ['show', `${candidate}:${file}`], { cwd: root, windowsHide: true });
 const after = JSON.parse(bytes.toString('utf8'));
 const prefix = '/v1/phase-01/consumer-subscriptions/{subscriptionId}';
 const added = `${prefix}/releases/{releaseId}/replay-context`;
@@ -29,6 +30,6 @@ assert.deepEqual(receipt.properties.replay.required.sort(), ['operationId', 'rea
 delete receipt.properties.replay;
 assert.deepEqual(after, before, 'C02_CHANGE_OUTSIDE_EXACT_REPLAY_CONTRACT');
 const hash = createHash('sha256').update(bytes).digest('hex');
-assert.equal(readFileSync(resolve(root, 'contracts/openapi/phase-01.openapi.sha256'), 'utf8').trim(), `${hash}  phase-01.openapi.json`);
+assert.equal(execFileSync('git', ['show', `${candidate}:contracts/openapi/phase-01.openapi.sha256`], { cwd: root, windowsHide: true, encoding: 'utf8' }).trim(), `${hash}  phase-01.openapi.json`);
 console.log(JSON.stringify({ status: 'PASSED', START_HEAD, pathsAdded: 1, pathsModified: 2,
   componentsChanged: 0, departmentBrowserPathsChanged: 0, canonicalSnapshotSchemasChanged: 0, openapiSha256: hash }));

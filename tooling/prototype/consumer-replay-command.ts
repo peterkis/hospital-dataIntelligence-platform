@@ -62,8 +62,6 @@ export async function runConsumerReplay(args: readonly string[], environment: No
       checkpointBefore: context.checkpoint.appliedAggregateVersion, checkpointAfter: context.checkpoint.appliedAggregateVersion,
       checkpointChanged: false };
   }
-  // All read-only checks precede even opening the local write lock.
-  await consumer.inspectReplay(command);
   const store = await openSyntheticReplayAdapter(statePath!, command.subscriptionId);
   try {
     const result = await consumer.replayExactRelease({ releaseId: command.releaseId,

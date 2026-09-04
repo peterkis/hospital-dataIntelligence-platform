@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { canonicalize } from 'json-canonicalize';
 import { Check } from 'typebox/schema';
-import { contracts, eventsSchema, operationalSchema, receiptBodySchema, receiptResponseSchema, replayContextSchema } from './contracts.generated.js';
+import { contracts, auditReportSchema, auditAcknowledgementSchema, eventsSchema, operationalSchema, receiptBodySchema, receiptResponseSchema, replayContextSchema } from './contracts.generated.js';
 import { ReleaseConsumerError, type ReleaseConsumerErrorCode } from './errors.js';
 import type {
-  AppliedEventState, AppliedRelease, CanonicalSnapshot, ConsumerCheckpoint, ConsumerOperationalStatus,
+  ConsumerAuditReport, AppliedEventState, AppliedRelease, CanonicalSnapshot, ConsumerCheckpoint, ConsumerOperationalStatus,
   DownloadedSnapshot, ReceiptResult, ReleaseConsumer, ReleaseConsumerOptions, ReleaseConsumerState,
   ReleaseEvent, VerifiedSnapshot,
   ReplayContext, ReplayInspection, ReplayCommand, ReplayRecord, ReplayAdapter, ReplayResult,
@@ -18,7 +18,7 @@ const serverCodes = new Set<ReleaseConsumerErrorCode>([
   'SNAPSHOT_NOT_AVAILABLE_TO_SUBSCRIPTION', 'CONSUMER_EVENT_NOT_AVAILABLE', 'CONSUMER_PROCESSING_DIGEST_MISMATCH',
   'CONSUMER_RECEIPT_RESULT_INCOHERENT', 'CONSUMER_CHECKPOINT_GAP', 'REQUEST_SCHEMA_INVALID',
   'SERVICE_TOKEN_UNAUTHENTICATED', 'PRINCIPAL_KIND_FORBIDDEN',
-  'REPLAY_OPERATION_CONFLICT',
+  'REPLAY_OPERATION_CONFLICT', 'CONSUMER_AUDIT_UNAVAILABLE', 'CONSUMER_AUDIT_CONFLICT',
 ]);
 const sequence = /^(?:0|[1-9]\d*)$/u;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -52,6 +52,51 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
   const applications = new WeakMap<AppliedRelease, AppliedEventState | null>();
   let busy = false;
 
+  type AuditMode = { mode: 'ORIGINAL' } | { mode: 'REPLAY'; operationId: string; attemptId: string };
+  function auditCode(error: unknown): NonNullable<ConsumerAuditReport['failureCode']> {
+    const code = error instanceof ReleaseConsumerError ? error.code : 'APPLY_FAILED';
+    if (['SUSPENDED', 'REVOKED', 'ARCHIVED', 'CONSUMER_SUBSCRIPTION_NOT_ACTIVE'].includes(code)) return 'LIFECYCLE_BLOCKED';
+    if (code === 'CONSUMER_SUBSCRIPTION_FORBIDDEN') return 'CROSS_SUBSCRIPTION';
+    if (code === 'SCHEMA_DIGEST_MISMATCH') return code;
+    if (code.includes('DIGEST') && !code.includes('PROCESSING')) return 'DIGEST_MISMATCH';
+    if (code === 'CONSUMER_PROCESSING_DIGEST_MISMATCH') return 'PROCESSING_DIGEST_MISMATCH';
+    if (code.includes('AUDIT')) return 'AUDIT_UNAVAILABLE';
+    if (code === 'TRANSPORT_FAILED' || code === 'HTTP_FAILED') return 'TRANSPORT_FAILED';
+    if (code.includes('PROJECTION')) return 'PROJECTION_MISMATCH';
+    if (code.includes('GAP') || code === 'CHECKPOINT_NOT_ADVANCED') return 'CHECKPOINT_GAP';
+    if (code.includes('REPLAY')) return 'REPLAY_CONFLICT';
+    if (code.includes('STATE')) return 'STATE_INVALID';
+    if (code === 'APPLY_NOT_DURABLE') return 'APPLY_OUTCOME_UNKNOWN';
+    if (code === 'APPLY_FAILED') return 'APPLY_FAILED';
+    if (code === 'IDENTITY_MISMATCH') return code;
+    if (code.includes('NOT_AVAILABLE') || code === 'RELEASE_NOT_FOUND') return 'RELEASE_UNAVAILABLE';
+    return 'SNAPSHOT_INVALID';
+  }
+  function auditStage(error: unknown): NonNullable<ConsumerAuditReport['failureStage']> {
+    const stage = error instanceof ReleaseConsumerError ? error.stage : '';
+    const stages: Record<string, NonNullable<ConsumerAuditReport['failureStage']>> = {
+      poll: 'OBSERVE', download: 'VERIFY', verify: 'VERIFY', digest: 'VERIFY', projection: 'VERIFY',
+      'schema-digest': 'VERIFY', envelope: 'VERIFY', payload: 'VERIFY', identity: 'VERIFY',
+      apply: 'APPLY', receipt: 'RECEIPT', checkpoint: 'CHECKPOINT', replay: 'REPLAY',
+      recovery: 'STATE', state: 'STATE', time: 'STATE', audit: 'AUDIT',
+    };
+    return stages[stage] ?? 'REPLAY';
+  }
+  async function report(releaseId: string, eventType: ConsumerAuditReport['eventType'], mode: AuditMode = { mode: 'ORIGINAL' },
+    extra: { evidenceId?: string; occurredAt?: string; failureCode?: ConsumerAuditReport['failureCode']; failureStage?: ConsumerAuditReport['failureStage'] } = {}) {
+    try {
+      const body: ConsumerAuditReport = { releaseId, eventType, ...mode, evidenceId: extra.evidenceId ?? randomUUID(),
+        occurredAt: extra.occurredAt ?? now(), ...(extra.failureCode ? { failureCode: extra.failureCode, ...(extra.failureStage ? { failureStage: extra.failureStage } : {}) } : {}) };
+      if (!Check(auditReportSchema, body)) failure('STATE_INVALID', 'audit');
+      const result = await client.POST('/v1/phase-01/consumer-subscriptions/{subscriptionId}/audit-reports',
+        { params: { path: { subscriptionId } }, body });
+      if (!result.response.ok || !Check(auditAcknowledgementSchema, result.data)) failure('AUDIT_UNAVAILABLE', 'audit');
+    } catch { failure('AUDIT_UNAVAILABLE', 'audit'); }
+  }
+  async function reportApplied(event: ReleaseEvent, saved: AppliedEventState) {
+    await report(event.releaseId, 'CONSUMER_APPLY_SUCCEEDED', { mode: 'ORIGINAL' },
+      { evidenceId: saved.auditEvidenceId ?? event.eventId, occurredAt: saved.processedAt });
+  }
   async function exclusive<T>(work: () => Promise<T>): Promise<T> {
     if (busy) failure('CONCURRENT_CONSUMPTION', 'apply');
     busy = true;
@@ -118,7 +163,7 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     let previous = BigInt(afterAggregateVersion);
     const ids = new Set<string>();
     const objects = new Set<string>();
-    return data.events.filter((event) => BigInt(event.aggregateVersion) > previous).map((event) => {
+    const observed = data.events.filter((event) => BigInt(event.aggregateVersion) > previous).map((event) => {
       if (BigInt(event.aggregateVersion) <= previous || ids.has(event.eventId)) failure('EVENT_GAP', 'poll');
       previous = BigInt(event.aggregateVersion);
       ids.add(event.eventId);
@@ -130,6 +175,8 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
       ownedEvents.add(value);
       return value;
     });
+    for (const event of observed) await report(event.releaseId, 'CONSUMER_RELEASE_OBSERVED');
+    return observed;
   }
   async function exact(identity: { readonly releaseId: string } | { readonly eventId: string }): Promise<ReleaseEvent> {
     const events = await poll('0');
@@ -161,16 +208,18 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     if (current > 0n && BigInt(data.event.aggregateVersion) > current + 1n) failure('EVENT_GAP', 'replay');
     return freeze(data);
   }
-  async function inspectReplay(identity: { readonly releaseId: string }): Promise<ReplayInspection> {
+  async function inspectReplay(identity: { readonly releaseId: string }, auditMode?: AuditMode): Promise<ReplayInspection> {
     const context = await replayContext(identity.releaseId);
     ownedEvents.add(context.event);
-    const snapshot = verifySnapshot(await downloadSnapshot(context.event, identity.releaseId));
+    if (auditMode) await report(identity.releaseId, 'CONSUMER_RELEASE_OBSERVED', auditMode);
+    const download = await downloadSnapshot(context.event, identity.releaseId);
+    const snapshot = auditMode ? await verifySnapshot(download, auditMode) : verifySnapshotCore(download);
     return freeze({ context, snapshot });
   }
-  async function replayExactRelease(command: ReplayCommand, adapter: ReplayAdapter): Promise<ReplayResult> {
+  async function replayExactRelease(command: ReplayCommand, adapter: ReplayAdapter, auditMode: AuditMode): Promise<ReplayResult> {
     if (!uuid.test(command.operationId) || typeof command.reason !== 'string' || command.reason.trim().length === 0 ||
         command.reason.length > 256 || /[\u0000-\u001f\u007f<>]/u.test(command.reason)) failure('REPLAY_COMMAND_INVALID', 'replay');
-    const { context: inspected, snapshot } = await inspectReplay(command);
+    const { context: inspected, snapshot } = await inspectReplay(command, auditMode);
     const context = await replayContext(command.releaseId); // Recheck lifecycle/identity immediately before repair.
     if (canonicalize(context.event) !== canonicalize(inspected.event) ||
         canonicalize(context.subscriptionVersion) !== canonicalize(inspected.subscriptionVersion) ||
@@ -189,18 +238,34 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     if (saved === null) {
       let processedAt: string;
       try { processedAt = now(); } catch { return failure('STATE_INVALID', 'time'); }
-      saved = freeze({ ...identity, processedAt, closure: 'APPLIED_PENDING_RECEIPT' as const });
+      saved = freeze({ ...identity, auditEvidenceId: randomUUID(), processedAt, closure: 'APPLIED_PENDING_RECEIPT' as const });
       if (!Check(receiptBodySchema, { eventId: saved.eventId, processingDigest: saved.processingDigest,
         processedAt, receiveResult: 'ACCEPTED', validationResult: 'VALID', applyResult: 'APPLIED' })) failure('STATE_INVALID', 'time');
       try {
         if (await adapter.commit(snapshot, saved) !== undefined) failure('APPLY_FAILED', 'replay');
-      } catch { return failure('APPLY_FAILED', 'replay'); }
+      } catch {
+        let committed: ReplayRecord | null;
+        try { committed = await adapter.load(command.operationId); } catch {
+          await report(command.releaseId, 'CONSUMER_APPLY_FAILED', auditMode, { failureCode: 'APPLY_OUTCOME_UNKNOWN' });
+          return failure('APPLY_FAILED', 'replay');
+        }
+        if (canonicalize(committed) === canonicalize(saved)) {
+          await report(command.releaseId, 'CONSUMER_APPLY_SUCCEEDED', auditMode,
+            { evidenceId: saved.auditEvidenceId ?? saved.operationId, occurredAt: saved.processedAt });
+        } else await report(command.releaseId, 'CONSUMER_APPLY_FAILED', auditMode, { failureCode: 'APPLY_FAILED' });
+        return failure('APPLY_FAILED', 'replay');
+      }
     }
     let durable: ReplayRecord | null;
     if (!Check(receiptBodySchema, { eventId: saved.eventId, processingDigest: saved.processingDigest, processedAt: saved.processedAt,
       receiveResult: 'ACCEPTED', validationResult: 'VALID', applyResult: 'APPLIED' })) failure('STATE_INVALID', 'replay');
     try { durable = await adapter.load(command.operationId); } catch { return failure('STATE_IO_FAILED', 'replay'); }
-    if (canonicalize(durable) !== canonicalize(saved)) failure('APPLY_NOT_DURABLE', 'replay');
+    if (canonicalize(durable) !== canonicalize(saved)) {
+      await report(command.releaseId, 'CONSUMER_APPLY_FAILED', auditMode, { failureCode: 'APPLY_OUTCOME_UNKNOWN' });
+      failure('APPLY_NOT_DURABLE', 'replay');
+    }
+    await report(command.releaseId, 'CONSUMER_APPLY_SUCCEEDED', auditMode,
+      { evidenceId: saved.auditEvidenceId ?? saved.operationId, occurredAt: saved.processedAt });
     const beforeReceipt = await replayContext(command.releaseId);
     if (canonicalize(beforeReceipt.event) !== canonicalize(context.event) ||
         canonicalize(beforeReceipt.subscriptionVersion) !== canonicalize(context.subscriptionVersion)) failure('REPLAY_CONTEXT_CHANGED', 'receipt');
@@ -235,7 +300,17 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     downloads.set(handle, { bytes: Buffer.from(data), digestHeader: response.headers.get('digest') });
     return handle;
   }
-  function verifySnapshot(download: DownloadedSnapshot): VerifiedSnapshot {
+  async function verifySnapshot(download: DownloadedSnapshot, auditMode: AuditMode = { mode: 'ORIGINAL' }): Promise<VerifiedSnapshot> {
+    let result: VerifiedSnapshot;
+    try { result = verifySnapshotCore(download); } catch (error) {
+      if (downloads.has(download)) await report(download.event.releaseId, 'CONSUMER_SNAPSHOT_VERIFICATION_FAILED', auditMode,
+        { failureCode: auditCode(error), failureStage: auditStage(error) });
+      throw error;
+    }
+    await report(download.event.releaseId, 'CONSUMER_SNAPSHOT_VERIFIED', auditMode);
+    return result;
+  }
+  function verifySnapshotCore(download: DownloadedSnapshot): VerifiedSnapshot {
     const content = downloads.get(download);
     if (!content) return failure('UNVERIFIED_INPUT', 'verify');
     const { event } = download;
@@ -317,7 +392,7 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     let processedAt: string;
     try { processedAt = now(); } catch { return failure('STATE_INVALID', 'time'); }
     const pending: AppliedEventState = { eventId: event.eventId, aggregateVersion: event.aggregateVersion,
-      snapshotId: event.snapshotId, snapshotDigest: event.snapshotArtifactDigest, processedAt, closure: 'APPLIED_PENDING_RECEIPT' };
+      snapshotId: event.snapshotId, snapshotDigest: event.snapshotArtifactDigest, auditEvidenceId: randomUUID(), processedAt, closure: 'APPLIED_PENDING_RECEIPT' };
     if (!Check(receiptBodySchema, receiptBody(pending))) failure('STATE_INVALID', 'time');
     const nextState = freeze({ ...state, appliedAggregateVersion: event.aggregateVersion,
       appliedEvents: { ...state.appliedEvents, [event.eventId]: pending } });
@@ -325,10 +400,23 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
       const outcome = await callback(snapshot, nextState);
       // Untyped adapters must not turn a resolved failure value into success.
       if (outcome !== undefined) failure('APPLY_FAILED', 'apply');
-    } catch { return failure('APPLY_FAILED', 'apply'); }
+    } catch {
+      let committed: ReleaseConsumerState;
+      try { committed = await load(); } catch {
+        await report(event.releaseId, 'CONSUMER_APPLY_FAILED', { mode: 'ORIGINAL' }, { failureCode: 'APPLY_OUTCOME_UNKNOWN' });
+        return failure('APPLY_FAILED', 'apply');
+      }
+      if (canonicalize(committed.appliedEvents[event.eventId]) === canonicalize(pending)) await reportApplied(event, pending);
+      else await report(event.releaseId, 'CONSUMER_APPLY_FAILED', { mode: 'ORIGINAL' }, { failureCode: 'APPLY_FAILED' });
+      return failure('APPLY_FAILED', 'apply');
+    }
     const persisted = await load();
     if (persisted.appliedAggregateVersion !== nextState.appliedAggregateVersion ||
-        canonicalize(persisted.appliedEvents) !== canonicalize(nextState.appliedEvents)) failure('APPLY_NOT_DURABLE', 'apply');
+        canonicalize(persisted.appliedEvents) !== canonicalize(nextState.appliedEvents)) {
+      await report(event.releaseId, 'CONSUMER_APPLY_FAILED', { mode: 'ORIGINAL' }, { failureCode: 'APPLY_OUTCOME_UNKNOWN' });
+      failure('APPLY_NOT_DURABLE', 'apply');
+    }
+    await reportApplied(event, pending);
     return application(event, pending);
   }
   async function postReceipt(body: (ReturnType<typeof receiptBody> & { replay?: ReplayCommand & { subscriptionVersionId: string } }) | {
@@ -350,6 +438,7 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
       const current = (await load()).appliedEvents[release.event.eventId];
       if (!current) failure('STATE_INVALID', 'receipt');
       matches(release.event, current);
+      await reportApplied(release.event, current);
     }
     const before = await activeCheckpoint();
     let result: ReceiptResult | null = null;
@@ -387,7 +476,7 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     const after = BigInt(state.appliedAggregateVersion) > BigInt(remote.appliedAggregateVersion)
       ? state.appliedAggregateVersion : remote.appliedAggregateVersion;
     for (const event of await poll(after)) {
-      const snapshot = verifySnapshot(await downloadSnapshot(event));
+      const snapshot = await verifySnapshot(await downloadSnapshot(event));
       const result = await apply(snapshot);
       if (applications.get(result)?.closure === 'APPLIED_PENDING_RECEIPT') applied += 1;
       await ackApplied(result);
@@ -397,8 +486,18 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
   }
   return {
     inspectReplay,
-    replayExactRelease: (command, adapter) => exclusive(() => replayExactRelease({ releaseId: command.releaseId,
-      operationId: command.operationId, reason: command.reason }, adapter)),
+    replayExactRelease: (command, adapter) => exclusive(async () => {
+      const mode = { mode: 'REPLAY' as const, operationId: command.operationId, attemptId: randomUUID() };
+      await report(command.releaseId, 'CONSUMER_REPLAY_REQUESTED', mode);
+      try {
+        const result = await replayExactRelease({ releaseId: command.releaseId, operationId: command.operationId, reason: command.reason }, adapter, mode);
+        await report(command.releaseId, 'CONSUMER_REPLAY_COMPLETED', mode);
+        return result;
+      } catch (error) {
+        await report(command.releaseId, 'CONSUMER_REPLAY_FAILED', mode, { failureCode: auditCode(error), failureStage: auditStage(error) });
+        throw error;
+      }
+    }),
     subscriptionId, poll, fetchExactRelease: exact, downloadSnapshot, verifySnapshot,
     apply: (snapshot) => exclusive(() => apply(snapshot)),
     ackApplied: (release) => exclusive(() => ackApplied(release)),
@@ -407,7 +506,7 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
       if (!content) return failure('UNVERIFIED_INPUT', 'receipt');
       // VALID processing is available only after full verification. No APPLIED
       // input is accepted here, even from untyped JavaScript callers.
-      if (result.validationResult === 'VALID') verifySnapshot(snapshot);
+      if (result.validationResult === 'VALID') await verifySnapshot(snapshot);
       let processedAt: string;
       try { processedAt = now(); } catch { return failure('STATE_INVALID', 'time'); }
       return postReceipt({ eventId: snapshot.event.eventId, receiveResult: result.receiveResult,

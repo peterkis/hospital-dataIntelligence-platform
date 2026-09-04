@@ -30,11 +30,19 @@ function harness(pair: ProjectionSupport = { projectionType: 'hdi.department-mas
   let lifecycle: 'ACTIVE' | 'SUSPENDED' | 'REVOKED' | 'ARCHIVED' = 'ACTIVE';
   let wrongHeader = false;
   let wrongId = false;
+  const auditReports: Record<string, unknown>[] = [];
+  let auditFailure: string | null = null;
   const receiptBodies: unknown[] = [];
   const callbacks: unknown[] = [];
   const transport = vi.fn<typeof fetch>(async (input) => {
     const request = input instanceof Request ? input : new Request(input);
     const path = new URL(request.url).pathname;
+    if (path.endsWith('/audit-reports')) {
+      const body = await request.json() as Record<string, unknown>;
+      if (auditFailure === body['eventType']) return Response.json({ code: 'CONSUMER_AUDIT_UNAVAILABLE' }, { status: 503 });
+      auditReports.push(body);
+      return Response.json({ auditEventId: id, auditSequence: '1' }, { status: 201 });
+    }
     if (path.endsWith('/operational-status')) return Response.json({
       subscriptionId: id, subscriptionVersionId: id, versionNo: '1', lifecycleStatus: lifecycle,
       sla: { criticality: 'NORMAL', expectedApplyWithinSeconds: null, retryWindowSeconds: null },
@@ -62,7 +70,7 @@ function harness(pair: ProjectionSupport = { projectionType: 'hdi.department-mas
     state: { async load() { return structuredClone(state); }, async save(value) { state = structuredClone(value); } },
     async apply(snapshot, nextState) { callbacks.push(snapshot.snapshot.payload); state = structuredClone(nextState); },
   };
-  return { artifact, event, options, transport, receiptBodies, callbacks,
+  return { artifact, event, options, auditReports, setAuditFailure: (value: string | null) => { auditFailure = value; }, transport, receiptBodies, callbacks,
     create: () => createReleaseConsumer(options), state: () => state, checkpoint: () => checkpoint,
     setCheckpoint: (value: string) => { checkpoint = value; },
     setState: (value: ReleaseConsumerState | null) => { state = value; },
@@ -75,8 +83,45 @@ function harness(pair: ProjectionSupport = { projectionType: 'hdi.department-mas
 }
 async function verified(h: ReturnType<typeof harness>, consumer = h.create()) {
   const event = await consumer.fetchExactRelease({ releaseId });
-  return { consumer, value: consumer.verifySnapshot(await consumer.downloadSnapshot(event)) };
+  return { consumer, value: await consumer.verifySnapshot(await consumer.downloadSnapshot(event)) };
 }
+
+it('records observation, verification and durable apply evidence without payloads or credentials', async () => {
+  const h = harness(); await h.create().consume();
+  expect(h.auditReports.map(r => r['eventType'])).toEqual(expect.arrayContaining([
+    'CONSUMER_RELEASE_OBSERVED', 'CONSUMER_SNAPSHOT_VERIFIED', 'CONSUMER_APPLY_SUCCEEDED']));
+  expect(h.auditReports.every(r => r['mode'] === 'ORIGINAL' && r['releaseId'] === releaseId)).toBe(true);
+  expect(JSON.stringify(h.auditReports)).not.toMatch(/Bearer|password|postgres|patient|payload/iu);
+});
+it('records bounded digest verification failure and never applies', async () => {
+  const h = harness(); h.corruptBytes();
+  await expect(h.create().consume()).rejects.toMatchObject({ code: 'SNAPSHOT_DIGEST_MISMATCH' });
+  expect(h.auditReports.at(-1)).toMatchObject({ eventType: 'CONSUMER_SNAPSHOT_VERIFICATION_FAILED', failureCode: 'DIGEST_MISMATCH' });
+  expect(h.callbacks).toHaveLength(0);
+});
+it('fails closed before apply when verification audit cannot be persisted', async () => {
+  const h = harness(); h.setAuditFailure('CONSUMER_SNAPSHOT_VERIFIED');
+  await expect(h.create().consume()).rejects.toMatchObject({ code: 'AUDIT_UNAVAILABLE' });
+  expect(h.callbacks).toHaveLength(0); expect(h.receiptBodies).toHaveLength(0);
+});
+it('restarts the durable apply evidence outbox after audit failure, without reapplying or fabricating a receipt', async () => {
+  const h = harness(); h.setAuditFailure('CONSUMER_APPLY_SUCCEEDED');
+  await expect(h.create().consume()).rejects.toMatchObject({ code: 'AUDIT_UNAVAILABLE' });
+  expect(h.callbacks).toHaveLength(1); expect(h.receiptBodies).toHaveLength(0); expect(h.checkpoint()).toBe('0');
+  const evidenceId = h.state()!.appliedEvents[id]!.auditEvidenceId;
+  expect(evidenceId).toBeTruthy();
+  h.setAuditFailure(null); await h.create().resume();
+  expect(h.callbacks).toHaveLength(1); expect(h.receiptBodies).toHaveLength(1);
+  expect(h.auditReports.find(r => r['eventType'] === 'CONSUMER_APPLY_SUCCEEDED')).toMatchObject({ evidenceId });
+});
+it('records local apply success separately when the receipt network request fails', async () => {
+  const h = harness(); h.setMode('before-receipt');
+  await expect(h.create().consume()).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' });
+  expect(h.auditReports.some(r => r['eventType'] === 'CONSUMER_APPLY_SUCCEEDED')).toBe(true);
+  expect(h.auditReports.some(r => r['eventType'] === 'CONSUMER_APPLY_FAILED')).toBe(false);
+  expect(h.state()!.appliedEvents[id]!.closure).toBe('APPLIED_PENDING_RECEIPT');
+  expect(h.checkpoint()).toBe('0');
+});
 
 it.each(fixtures)('verifies frozen $projectionType@$schemaVersion through the generated client', async (f) => {
   const h = harness({ projectionType: f.projectionType, projectionSchemaVersion: f.schemaVersion } as ProjectionSupport);
@@ -174,7 +219,7 @@ it('submits processing without APPLIED and exposes exact-release primitives', as
   const content = await consumer.downloadSnapshot(event);
   await consumer.submitProcessingReceipt(content, { receiveResult: 'ACCEPTED', validationResult: 'VALID' });
   expect(h.checkpoint()).toBe('0');
-  await consumer.ackApplied(await consumer.apply(consumer.verifySnapshot(content)));
+  await consumer.ackApplied(await consumer.apply(await consumer.verifySnapshot(content)));
   expect(h.receiptBodies).toHaveLength(2); expect(h.checkpoint()).toBe('1');
 });
 it('runtime capabilities prevent forged or cross-consumer apply handles', async () => {

@@ -1,3 +1,4 @@
+import { checkConsumerAuditFlow, readConsumerAuditProof } from './check-consumer-audit-flow.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, readdir, rm, rmdir } from 'node:fs/promises';
@@ -42,7 +43,7 @@ type Event = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][2
 type SubscriptionBody = GovernanceApiOperations['createPhase01ConsumerSubscription']['requestBody']['content']['application/json'];
 
 // This composition exists only in tooling. Production still resolves Keycloak JWTs.
-export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean; verifyReplay?: boolean } = {}) {
+export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean; verifyReplay?: boolean; verifyAudit?: boolean } = {}) {
   assert.notEqual(process.env['NODE_ENV']?.toLowerCase(), 'production');
   const connectionString = process.env['DATABASE_URL'];
   assert.ok(connectionString, 'PROTOTYPE_DATABASE_CONFIGURATION_REQUIRED');
@@ -90,6 +91,7 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   const checks: Record<string, boolean> = {};
   const consumed: { subscriptionId: string; event: Event }[] = [];
   const replayProofs: Record<string, unknown> = {};
+  const auditProofs: Record<string, Awaited<ReturnType<typeof readConsumerAuditProof>>> = {};
   let lifecycleHistories: Awaited<ReturnType<ScopedModules['releaseDistribution']['getSubscriptionHistory']>>[] = [];
   let slaResult: Awaited<ReturnType<typeof checkConsumerSlaFlow>> | undefined;
   let migrationCount = 0;
@@ -368,6 +370,11 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       assert.deepEqual(data(await service.GET(eventsPath, { params: { path: subscription, query: { afterAggregateVersion: event.aggregateVersion } } })).events, []);
       assert.deepEqual(await runSimulatedConsumerOnce({ baseUrl, accessToken, subscriptionId: subscription.subscriptionId,
         statePath, expectedProjectionType: event.projectionType, expectedProjectionSchemaVersion: '1', now }), { applied: 0, receiptsClosed: 0 });
+      if (options.verifyAudit) {
+        const auditChecks = await checkConsumerAuditFlow({ database, runner, context, service, otherService,
+          subscriptionId: subscription.subscriptionId, event, baseUrl, accessToken });
+        for (const [name, value] of Object.entries(auditChecks)) checks[`${kind}_${name}`] = value;
+      }
       checks[`${kind}ReceiptApplied`] = true;
       consumed.push({ subscriptionId: subscription.subscriptionId, event });
     }
@@ -410,6 +417,21 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
         consumed.find((entry) => entry.subscriptionId === subscription.subscriptionId)!.event = replay.newer;
       }
     }
+    if (options.verifyAudit) {
+      for (const [subscription, service, kind] of [[master, serviceA, 'departmentMaster'], [hierarchy, serviceB, 'departmentHierarchy']] as const) {
+        const rows = await readConsumerAuditProof({ service, subscriptionId: subscription.subscriptionId });
+        for (const requested of rows.filter(row => row.eventType === 'CONSUMER_REPLAY_REQUESTED')) {
+          const terminal = rows.filter(row => row.evidence.attemptId === requested.evidence.attemptId &&
+            ['CONSUMER_REPLAY_COMPLETED', 'CONSUMER_REPLAY_FAILED'].includes(row.eventType));
+          assert.equal(terminal.length, 1, 'REPLAY_ATTEMPT_TERMINAL_MISSING');
+          assert.ok(BigInt(terminal[0]!.auditSequence) > BigInt(requested.auditSequence));
+        }
+        assert.ok(rows.some(row => row.eventType === 'CONSUMER_REPLAY_COMPLETED'));
+        assert.ok(rows.some(row => row.eventType === 'CONSUMER_REPLAY_FAILED' && row.evidence.failureCode === 'LIFECYCLE_BLOCKED'));
+        auditProofs[subscription.subscriptionId] = rows;
+        checks[`${kind}_auditReplayTerminals`] = true;
+      }
+    }
     migrationCount = Number((await database.selectFrom('platform.schema_migration')
       .select(({ fn }) => fn.countAll<string>().as('count')).executeTakeFirstOrThrow()).count);
     const forbidden = await sql<{ count: string }>`select count(*)::text as count
@@ -450,6 +472,15 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       assert.deepEqual(actual, expected);
     }
     if (options.verifyLifecycle) checks['lifecyclePersistenceObserved'] = true;
+    for (const [subscriptionId, expected] of Object.entries(auditProofs)) {
+      const actual = await verification.database.selectFrom('audit.audit_event').select(['audit_event_id', 'current_hash'])
+        .where('audit_stream_id', '=', subscriptionId).where('audit_event_id', 'in', expected.map(row => row.auditEventId))
+        .orderBy('audit_sequence').execute();
+      assert.deepEqual(actual.map(row => ({ id: row.audit_event_id, hash: row.current_hash.toString('hex') })),
+        expected.map(row => ({ id: row.auditEventId, hash: row.currentHash })));
+      assert.equal(await reopenedRunner.run(context(), modules => modules.audit.verifyChain(subscriptionId)), true);
+    }
+    if (options.verifyAudit) checks['auditRestartPersistence'] = true;
     for (const { subscriptionId, event } of consumed) {
       if (options.verifyReplay) {
         assert.equal(await reopenedRunner.run(context(), (modules) => modules.audit.verifyChain(subscriptionId)), true);
@@ -473,8 +504,8 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   checks['databasePoolClosed'] = true;
   checks['portReleased'] = true;
   assert.ok(Object.values(checks).every(Boolean));
-  return { status: 'PASSED', scenario: options.verifyReplay ? 'PV-005-C-02' : options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
-    ...checks, ...(options.verifyReplay ? { replayProofs } : {}), migrationCount, forbiddenTimezoneTypeCount };
+  return { status: 'PASSED', scenario: options.verifyAudit ? 'PV-005-C-03' : options.verifyReplay ? 'PV-005-C-02' : options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
+    ...checks, ...(options.verifyAudit ? { auditProofs } : {}), ...(options.verifyReplay ? { replayProofs } : {}), migrationCount, forbiddenTimezoneTypeCount };
 }
 
 function data<T>(result: { data?: T; error?: unknown; response: Response }): T {

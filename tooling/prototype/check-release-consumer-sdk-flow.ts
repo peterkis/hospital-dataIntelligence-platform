@@ -26,7 +26,7 @@ export async function checkReleaseConsumerSdkFlow(options: {
     });
     const event = await readonlyConsumer.fetchExactRelease({ releaseId: options.event.releaseId });
     assert.deepEqual(event, options.event);
-    const snapshot = readonlyConsumer.verifySnapshot(await readonlyConsumer.downloadSnapshot(event));
+    const snapshot = await readonlyConsumer.verifySnapshot(await readonlyConsumer.downloadSnapshot(event));
     assert.equal(snapshot.event.snapshotArtifactDigest, options.event.snapshotArtifactDigest);
     assert.equal(snapshot.snapshot.projectionContract.schemaDigest, options.event.projectionSchemaDigest);
     assert.equal((await readonlyConsumer.getCheckpoint()).appliedAggregateVersion, '0');

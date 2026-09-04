@@ -92,7 +92,7 @@ state layout and pending receipt recovery. See
 | `poll(afterAggregateVersion = '0')` | Read the subscription's assigned events; preserve order and filter entries at/below the supplied cursor. `consume` uses the durable/server checkpoint automatically. |
 | `fetchExactRelease({releaseId})` / `({eventId})` | Resolve exactly one authorized event using the existing events operation with cursor 0, including delivered history. Missing/blocked events fail. The existing API returns the full assigned backlog; no exact server shortcut was added. |
 | `downloadSnapshot(event)` | Download via Generated Client and bind the HTTP snapshot identity to that event. Raw bytes and transport details remain private. |
-| `verifySnapshot(downloaded)` | Verify content and HTTP SHA-256, exact projection/version and published schema digest, closed envelope, canonical payload schema and payload digest. Return an immutable, opaque verified handle. |
+| `await verifySnapshot(downloaded)` | Verify content and HTTP SHA-256, exact projection/version and published schema digest, closed envelope, canonical payload schema and payload digest. Persist verification audit evidence before returning an immutable, opaque verified handle. |
 | `apply(verified)` | Check sequence/checkpoint, invoke the adapter callback once, and require its durable pending marker. Return an opaque applied handle; already completed events skip business application. |
 | `ackApplied(applied)` | Submit APPLIED from durable application evidence, confirm checkpoint progression, then persist closure. Return null when checkpoint already proves completion. |
 | `submitProcessingReceipt(downloaded, result)` | Construct NOT_APPLIED processing evidence. VALID requires full verification. This API cannot assert APPLIED. |
@@ -160,3 +160,23 @@ Lifecycle and monotonic checkpoints remain fail-closed. The adapter still owns
 cross-process single-writer control. The synthetic CLI, safe defaults, bounds,
 configuration and recovery limitations are documented in
 [`consumer-release-replay-cli.md`](../../docs/design/consumer-release-replay-cli.md).
+
+
+### C-03 consumer audit evidence
+
+The SDK now uses the generated consumer audit-report API. Await `verifySnapshot`:
+its successful return includes acknowledgement of the verification evidence.
+Observed, verified/failed, apply and replay facts contain only bounded identities,
+steps, codes and local times. These are consumer reports; only the platform receipt
+transaction can confirm receipt acceptance and checkpoint movement.
+
+New pending apply markers include an immutable `auditEvidenceId`. Adapters must
+preserve it in the same atomic commit as business effects. Resume resends that
+apply evidence before closing the receipt, using the same ID and original event
+time. `AUDIT_UNAVAILABLE` after a commit leaves a pending marker; reload/resume
+without reapplying. A receipt transport error does not change an already durable
+apply success into an apply failure. `inspectReplay` stays entirely read-only;
+each real `replayExactRelease` call adds a separate requested/terminal attempt.
+
+See `docs/design/consumer-release-audit-trail.md` for the server evidence authority,
+query bounds, failure recovery limits and validation results.

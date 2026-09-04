@@ -2021,6 +2021,121 @@ export const contracts: readonly { readonly projectionType: string; readonly sch
   }
 ];
 
+export const auditReportSchema: XSchema = {
+  "additionalProperties": false,
+  "properties": {
+    "attemptId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "eventType": {
+      "enum": [
+        "CONSUMER_RELEASE_OBSERVED",
+        "CONSUMER_SNAPSHOT_VERIFIED",
+        "CONSUMER_SNAPSHOT_VERIFICATION_FAILED",
+        "CONSUMER_APPLY_SUCCEEDED",
+        "CONSUMER_APPLY_FAILED",
+        "CONSUMER_REPLAY_REQUESTED",
+        "CONSUMER_REPLAY_COMPLETED",
+        "CONSUMER_REPLAY_FAILED"
+      ]
+    },
+    "evidenceId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "failureCode": {
+      "enum": [
+        "DIGEST_MISMATCH",
+        "SCHEMA_DIGEST_MISMATCH",
+        "LIFECYCLE_BLOCKED",
+        "CROSS_SUBSCRIPTION",
+        "PROCESSING_DIGEST_MISMATCH",
+        "APPLY_FAILED",
+        "APPLY_OUTCOME_UNKNOWN",
+        "AUDIT_UNAVAILABLE",
+        "TRANSPORT_FAILED",
+        "IDENTITY_MISMATCH",
+        "PROJECTION_MISMATCH",
+        "SNAPSHOT_INVALID",
+        "CHECKPOINT_GAP",
+        "STATE_INVALID",
+        "RELEASE_UNAVAILABLE",
+        "RECEIPT_INCOHERENT",
+        "REPLAY_CONFLICT",
+        "PROCESSING_FAILED"
+      ]
+    },
+    "failureStage": {
+      "enum": [
+        "OBSERVE",
+        "VERIFY",
+        "APPLY",
+        "RECEIPT",
+        "CHECKPOINT",
+        "REPLAY",
+        "STATE",
+        "AUDIT"
+      ]
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "enum": [
+            "ORIGINAL"
+          ],
+          "type": "string"
+        },
+        {
+          "enum": [
+            "REPLAY"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "occurredAt": {
+      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+      "type": "string"
+    },
+    "operationId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "releaseId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidenceId",
+    "releaseId",
+    "eventType",
+    "mode",
+    "occurredAt"
+  ],
+  "type": "object"
+};
+
+export const auditAcknowledgementSchema: XSchema = {
+  "additionalProperties": false,
+  "properties": {
+    "auditEventId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "auditSequence": {
+      "pattern": "^(?:0|[1-9]\\d{0,18})$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "auditEventId",
+    "auditSequence"
+  ],
+  "type": "object"
+};
+
 export const replayContextSchema: XSchema = {
   "additionalProperties": false,
   "properties": {

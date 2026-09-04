@@ -11209,6 +11209,886 @@
         "summary": "建立精确投影契约的仿真消费者订阅"
       }
     },
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/audit-events": {
+      "get": {
+        "operationId": "queryPhase01ConsumerReleaseAudit",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "afterSequence",
+            "required": false,
+            "schema": {
+              "pattern": "^(?:0|[1-9]\\d{0,18})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "releaseId",
+            "required": false,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "projectionType",
+            "required": false,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[a-z0-9.-]+$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "eventType",
+            "required": false,
+            "schema": {
+              "enum": [
+                "CONSUMER_RELEASE_OBSERVED",
+                "CONSUMER_SNAPSHOT_VERIFIED",
+                "CONSUMER_SNAPSHOT_VERIFICATION_FAILED",
+                "CONSUMER_APPLY_SUCCEEDED",
+                "CONSUMER_APPLY_FAILED",
+                "CONSUMER_REPLAY_REQUESTED",
+                "CONSUMER_REPLAY_COMPLETED",
+                "CONSUMER_REPLAY_FAILED",
+                "CONSUMER_RECEIPT_ACCEPTED",
+                "CONSUMER_RECEIPT_REJECTED"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "enum": [
+                "SUCCEEDED",
+                "FAILED",
+                "REQUESTED"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "occurredFrom",
+            "required": false,
+            "schema": {
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "occurredTo",
+            "required": false,
+            "schema": {
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subscriptionId",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actorPrincipalId": {
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "type": "string"
+                          },
+                          "auditEventId": {
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "type": "string"
+                          },
+                          "auditSequence": {
+                            "pattern": "^(?:0|[1-9]\\d{0,18})$",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "type": "string"
+                          },
+                          "currentHash": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "type": "string"
+                          },
+                          "eventType": {
+                            "enum": [
+                              "CONSUMER_RELEASE_OBSERVED",
+                              "CONSUMER_SNAPSHOT_VERIFIED",
+                              "CONSUMER_SNAPSHOT_VERIFICATION_FAILED",
+                              "CONSUMER_APPLY_SUCCEEDED",
+                              "CONSUMER_APPLY_FAILED",
+                              "CONSUMER_REPLAY_REQUESTED",
+                              "CONSUMER_REPLAY_COMPLETED",
+                              "CONSUMER_REPLAY_FAILED",
+                              "CONSUMER_RECEIPT_ACCEPTED",
+                              "CONSUMER_RECEIPT_REJECTED"
+                            ]
+                          },
+                          "evidence": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "attemptId": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "checkpoint": {
+                                "pattern": "^(?:0|[1-9]\\d{0,18})$",
+                                "type": "string"
+                              },
+                              "consumerOccurredAt": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "eventId": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "evidenceKind": {
+                                "enum": [
+                                  "CONSUMER_RELEASE"
+                                ],
+                                "type": "string"
+                              },
+                              "failureCode": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "DIGEST_MISMATCH",
+                                      "SCHEMA_DIGEST_MISMATCH",
+                                      "LIFECYCLE_BLOCKED",
+                                      "CROSS_SUBSCRIPTION",
+                                      "PROCESSING_DIGEST_MISMATCH",
+                                      "APPLY_FAILED",
+                                      "APPLY_OUTCOME_UNKNOWN",
+                                      "AUDIT_UNAVAILABLE",
+                                      "TRANSPORT_FAILED",
+                                      "IDENTITY_MISMATCH",
+                                      "PROJECTION_MISMATCH",
+                                      "SNAPSHOT_INVALID",
+                                      "CHECKPOINT_GAP",
+                                      "STATE_INVALID",
+                                      "RELEASE_UNAVAILABLE",
+                                      "RECEIPT_INCOHERENT",
+                                      "REPLAY_CONFLICT",
+                                      "PROCESSING_FAILED"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "governanceObjectId": {
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                "type": "string"
+                              },
+                              "mode": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "ORIGINAL"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  {
+                                    "enum": [
+                                      "REPLAY"
+                                    ],
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "operationId": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "projectionSchemaVersion": {
+                                "anyOf": [
+                                  {
+                                    "maxLength": 256,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "projectionType": {
+                                "anyOf": [
+                                  {
+                                    "maxLength": 256,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "receiptApplyResult": {
+                                "anyOf": [
+                                  {
+                                    "maxLength": 256,
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "receiptId": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "releaseId": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "result": {
+                                "enum": [
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REQUESTED"
+                                ]
+                              },
+                              "servicePrincipalId": {
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                "type": "string"
+                              },
+                              "snapshotDigest": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{64}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "source": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "CONSUMER_REPORTED"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  {
+                                    "enum": [
+                                      "PLATFORM"
+                                    ],
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "stage": {
+                                "enum": [
+                                  "OBSERVE",
+                                  "VERIFY",
+                                  "APPLY",
+                                  "RECEIPT",
+                                  "CHECKPOINT",
+                                  "REPLAY",
+                                  "STATE",
+                                  "AUDIT"
+                                ]
+                              },
+                              "subscriptionId": {
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                "type": "string"
+                              },
+                              "subscriptionVersion": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^(?:0|[1-9]\\d{0,18})$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "subscriptionVersionId": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "evidenceKind",
+                              "subscriptionId",
+                              "subscriptionVersionId",
+                              "subscriptionVersion",
+                              "servicePrincipalId",
+                              "governanceObjectId",
+                              "projectionType",
+                              "projectionSchemaVersion",
+                              "releaseId",
+                              "eventId",
+                              "result",
+                              "failureCode",
+                              "source",
+                              "mode",
+                              "operationId",
+                              "attemptId",
+                              "checkpoint",
+                              "receiptId",
+                              "receiptApplyResult",
+                              "snapshotDigest",
+                              "consumerOccurredAt"
+                            ],
+                            "type": "object"
+                          },
+                          "occurredAt": {
+                            "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                            "type": "string"
+                          },
+                          "previousHash": {
+                            "pattern": "^[0-9a-f]{64}$",
+                            "type": "string"
+                          },
+                          "recordedAt": {
+                            "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                            "type": "string"
+                          },
+                          "requestId": {
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "auditEventId",
+                          "auditSequence",
+                          "eventType",
+                          "actorPrincipalId",
+                          "occurredAt",
+                          "recordedAt",
+                          "requestId",
+                          "correlationId",
+                          "previousHash",
+                          "currentHash",
+                          "evidence"
+                        ],
+                        "type": "object"
+                      },
+                      "maxItems": 100,
+                      "type": "array"
+                    },
+                    "nextAfterSequence": {
+                      "anyOf": [
+                        {
+                          "pattern": "^(?:0|[1-9]\\d{0,18})$",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "nextAfterSequence"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "summary": "Consumer support evidence: own subscription, sequence pages of at most 100, time ranges of at most 31 days"
+      }
+    },
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/audit-reports": {
+      "post": {
+        "operationId": "reportPhase01ConsumerReleaseAudit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subscriptionId",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "attemptId": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "eventType": {
+                    "enum": [
+                      "CONSUMER_RELEASE_OBSERVED",
+                      "CONSUMER_SNAPSHOT_VERIFIED",
+                      "CONSUMER_SNAPSHOT_VERIFICATION_FAILED",
+                      "CONSUMER_APPLY_SUCCEEDED",
+                      "CONSUMER_APPLY_FAILED",
+                      "CONSUMER_REPLAY_REQUESTED",
+                      "CONSUMER_REPLAY_COMPLETED",
+                      "CONSUMER_REPLAY_FAILED"
+                    ]
+                  },
+                  "evidenceId": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "failureCode": {
+                    "enum": [
+                      "DIGEST_MISMATCH",
+                      "SCHEMA_DIGEST_MISMATCH",
+                      "LIFECYCLE_BLOCKED",
+                      "CROSS_SUBSCRIPTION",
+                      "PROCESSING_DIGEST_MISMATCH",
+                      "APPLY_FAILED",
+                      "APPLY_OUTCOME_UNKNOWN",
+                      "AUDIT_UNAVAILABLE",
+                      "TRANSPORT_FAILED",
+                      "IDENTITY_MISMATCH",
+                      "PROJECTION_MISMATCH",
+                      "SNAPSHOT_INVALID",
+                      "CHECKPOINT_GAP",
+                      "STATE_INVALID",
+                      "RELEASE_UNAVAILABLE",
+                      "RECEIPT_INCOHERENT",
+                      "REPLAY_CONFLICT",
+                      "PROCESSING_FAILED"
+                    ]
+                  },
+                  "failureStage": {
+                    "enum": [
+                      "OBSERVE",
+                      "VERIFY",
+                      "APPLY",
+                      "RECEIPT",
+                      "CHECKPOINT",
+                      "REPLAY",
+                      "STATE",
+                      "AUDIT"
+                    ]
+                  },
+                  "mode": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "ORIGINAL"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "REPLAY"
+                        ],
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "occurredAt": {
+                    "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                    "type": "string"
+                  },
+                  "operationId": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "releaseId": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "evidenceId",
+                  "releaseId",
+                  "eventType",
+                  "mode",
+                  "occurredAt"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "auditEventId": {
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "auditSequence": {
+                      "pattern": "^(?:0|[1-9]\\d{0,18})$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "auditEventId",
+                    "auditSequence"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "summary": "Append consumer-reported evidence without changing receipts or checkpoints"
+      }
+    },
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/events": {
       "get": {
         "operationId": "listPhase01ConsumerEvents",
