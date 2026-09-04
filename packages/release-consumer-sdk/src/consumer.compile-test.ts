@@ -20,6 +20,13 @@ async function contract() {
   await consumer.ackApplied(await consumer.apply(verified));
   await consumer.submitProcessingReceipt(downloaded, { receiveResult: 'ACCEPTED', validationResult: 'VALID' });
   await consumer.getCheckpoint(); await consumer.resume();
+  await consumer.inspectReplay({ releaseId: 'synthetic' });
+  const replayAdapter = { async load() { return null; }, async commit() {}, async close() {} };
+  await consumer.replayExactRelease({ releaseId: 'synthetic', operationId: 'synthetic', reason: 'Synthetic repair' }, replayAdapter);
+  // @ts-expect-error A replay needs an explicit operation identity and reason.
+  await consumer.replayExactRelease({ releaseId: 'synthetic' }, replayAdapter);
+  // @ts-expect-error No force bypass of lifecycle governance.
+  await consumer.replayExactRelease({ releaseId: 'synthetic', operationId: 'synthetic', reason: 'Repair', force: true }, replayAdapter);
   // @ts-expect-error Raw events cannot bypass verification.
   await consumer.apply(event);
   // @ts-expect-error Verified bytes do not prove callback commit.

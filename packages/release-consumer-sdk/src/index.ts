@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto';
 import { canonicalize } from 'json-canonicalize';
 import { Check } from 'typebox/schema';
-import { contracts, eventsSchema, operationalSchema, receiptBodySchema, receiptResponseSchema } from './contracts.generated.js';
+import { contracts, eventsSchema, operationalSchema, receiptBodySchema, receiptResponseSchema, replayContextSchema } from './contracts.generated.js';
 import { ReleaseConsumerError, type ReleaseConsumerErrorCode } from './errors.js';
 import type {
   AppliedEventState, AppliedRelease, CanonicalSnapshot, ConsumerCheckpoint, ConsumerOperationalStatus,
   DownloadedSnapshot, ReceiptResult, ReleaseConsumer, ReleaseConsumerOptions, ReleaseConsumerState,
   ReleaseEvent, VerifiedSnapshot,
+  ReplayContext, ReplayInspection, ReplayCommand, ReplayRecord, ReplayAdapter, ReplayResult,
 } from './types.js';
 export { ReleaseConsumerError } from './errors.js';
 export type { ReleaseConsumerErrorCode } from './errors.js';
@@ -17,6 +18,7 @@ const serverCodes = new Set<ReleaseConsumerErrorCode>([
   'SNAPSHOT_NOT_AVAILABLE_TO_SUBSCRIPTION', 'CONSUMER_EVENT_NOT_AVAILABLE', 'CONSUMER_PROCESSING_DIGEST_MISMATCH',
   'CONSUMER_RECEIPT_RESULT_INCOHERENT', 'CONSUMER_CHECKPOINT_GAP', 'REQUEST_SCHEMA_INVALID',
   'SERVICE_TOKEN_UNAUTHENTICATED', 'PRINCIPAL_KIND_FORBIDDEN',
+  'REPLAY_OPERATION_CONFLICT',
 ]);
 const sequence = /^(?:0|[1-9]\d*)$/u;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -136,11 +138,97 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     if (matches.length !== 1) failure('RELEASE_NOT_FOUND', 'exact');
     return matches[0]!;
   }
-  async function downloadSnapshot(event: ReleaseEvent): Promise<DownloadedSnapshot> {
+  async function replayContext(releaseId: string): Promise<ReplayContext> {
+    if (!uuid.test(releaseId)) failure('IDENTITY_MISMATCH', 'replay');
+    const { data } = await request('replay', () => client.GET(
+      '/v1/phase-01/consumer-subscriptions/{subscriptionId}/releases/{releaseId}/replay-context',
+      { params: { path: { subscriptionId, releaseId } } },
+    ));
+    if (!Check(replayContextSchema, data)) failure('RESPONSE_INVALID', 'replay');
+    if (data.subscriptionId !== subscriptionId || data.event.releaseId !== releaseId ||
+        (expectedGovernanceObjectId !== undefined && data.event.governanceObjectId !== expectedGovernanceObjectId)) {
+      failure('IDENTITY_MISMATCH', 'replay');
+    }
+    const version = data.subscriptionVersion;
+    if (version.projectionType !== data.event.projectionType) failure('PROJECTION_TYPE_MISMATCH', 'replay');
+    if (version.projectionSchemaVersion !== data.event.projectionSchemaVersion) failure('PROJECTION_VERSION_MISMATCH', 'replay');
+    if (version.projectionSchemaDigest !== data.event.projectionSchemaDigest) failure('SCHEMA_DIGEST_MISMATCH', 'replay');
+    if (data.processingDigestMismatch || (data.appliedReceipt &&
+        data.appliedReceipt.processingDigest !== data.event.snapshotArtifactDigest)) failure('CONSUMER_PROCESSING_DIGEST_MISMATCH', 'replay');
+    if (data.appliedReceipt && (data.appliedReceipt.applyResult !== 'APPLIED' || data.appliedReceipt.receiveResult !== 'ACCEPTED' ||
+        data.appliedReceipt.validationResult !== 'VALID')) failure('RESPONSE_INVALID', 'replay');
+    const current = BigInt(data.checkpoint.appliedAggregateVersion);
+    if (current > 0n && BigInt(data.event.aggregateVersion) > current + 1n) failure('EVENT_GAP', 'replay');
+    return freeze(data);
+  }
+  async function inspectReplay(identity: { readonly releaseId: string }): Promise<ReplayInspection> {
+    const context = await replayContext(identity.releaseId);
+    ownedEvents.add(context.event);
+    const snapshot = verifySnapshot(await downloadSnapshot(context.event, identity.releaseId));
+    return freeze({ context, snapshot });
+  }
+  async function replayExactRelease(command: ReplayCommand, adapter: ReplayAdapter): Promise<ReplayResult> {
+    if (!uuid.test(command.operationId) || typeof command.reason !== 'string' || command.reason.trim().length === 0 ||
+        command.reason.length > 256 || /[\u0000-\u001f\u007f<>]/u.test(command.reason)) failure('REPLAY_COMMAND_INVALID', 'replay');
+    const { context: inspected, snapshot } = await inspectReplay(command);
+    const context = await replayContext(command.releaseId); // Recheck lifecycle/identity immediately before repair.
+    if (canonicalize(context.event) !== canonicalize(inspected.event) ||
+        canonicalize(context.subscriptionVersion) !== canonicalize(inspected.subscriptionVersion) ||
+        context.servicePrincipalId !== inspected.servicePrincipalId) failure('REPLAY_CONTEXT_CHANGED', 'replay');
+    let saved: ReplayRecord | null;
+    try { saved = await adapter.load(command.operationId); } catch { return failure('STATE_IO_FAILED', 'replay'); }
+    const identity = { ...command, subscriptionId, servicePrincipalId: context.servicePrincipalId,
+      subscriptionVersionId: context.subscriptionVersion.subscriptionVersionId, eventId: context.event.eventId,
+      snapshotId: context.event.snapshotId, processingDigest: context.event.snapshotArtifactDigest };
+    if (saved !== null) {
+      const previous = saved;
+      if (!record(saved) || Object.entries(identity).some(([key, value]) => previous[key as keyof ReplayRecord] !== value) ||
+          !['APPLIED_PENDING_RECEIPT', 'CLOSED'].includes(saved.closure)) failure('REPLAY_OPERATION_CONFLICT', 'replay');
+    }
+    const businessApplied = saved === null;
+    if (saved === null) {
+      let processedAt: string;
+      try { processedAt = now(); } catch { return failure('STATE_INVALID', 'time'); }
+      saved = freeze({ ...identity, processedAt, closure: 'APPLIED_PENDING_RECEIPT' as const });
+      if (!Check(receiptBodySchema, { eventId: saved.eventId, processingDigest: saved.processingDigest,
+        processedAt, receiveResult: 'ACCEPTED', validationResult: 'VALID', applyResult: 'APPLIED' })) failure('STATE_INVALID', 'time');
+      try {
+        if (await adapter.commit(snapshot, saved) !== undefined) failure('APPLY_FAILED', 'replay');
+      } catch { return failure('APPLY_FAILED', 'replay'); }
+    }
+    let durable: ReplayRecord | null;
+    if (!Check(receiptBodySchema, { eventId: saved.eventId, processingDigest: saved.processingDigest, processedAt: saved.processedAt,
+      receiveResult: 'ACCEPTED', validationResult: 'VALID', applyResult: 'APPLIED' })) failure('STATE_INVALID', 'replay');
+    try { durable = await adapter.load(command.operationId); } catch { return failure('STATE_IO_FAILED', 'replay'); }
+    if (canonicalize(durable) !== canonicalize(saved)) failure('APPLY_NOT_DURABLE', 'replay');
+    const beforeReceipt = await replayContext(command.releaseId);
+    if (canonicalize(beforeReceipt.event) !== canonicalize(context.event) ||
+        canonicalize(beforeReceipt.subscriptionVersion) !== canonicalize(context.subscriptionVersion)) failure('REPLAY_CONTEXT_CHANGED', 'receipt');
+    if (saved.closure !== 'CLOSED') {
+      await postReceipt({ eventId: saved.eventId, processingDigest: saved.processingDigest, processedAt: saved.processedAt,
+        receiveResult: 'ACCEPTED', validationResult: 'VALID', applyResult: 'APPLIED',
+        replay: { ...command, subscriptionVersionId: saved.subscriptionVersionId } });
+    }
+    const after = await replayContext(command.releaseId);
+    if (canonicalize(after.event) !== canonicalize(context.event) ||
+        canonicalize(after.subscriptionVersion) !== canonicalize(context.subscriptionVersion)) failure('REPLAY_CONTEXT_CHANGED', 'replay');
+    if (!after.appliedReceipt || BigInt(after.checkpoint.appliedAggregateVersion) < BigInt(context.event.aggregateVersion) ||
+        BigInt(after.checkpoint.appliedAggregateVersion) < BigInt(context.checkpoint.appliedAggregateVersion) ||
+        BigInt(after.checkpoint.appliedAggregateVersion) < BigInt(beforeReceipt.checkpoint.appliedAggregateVersion)) {
+      failure('CHECKPOINT_NOT_ADVANCED', 'replay');
+    }
+    try { await adapter.close(freeze({ ...saved, closure: 'CLOSED' })); }
+    catch { return failure('STATE_IO_FAILED', 'replay'); }
+    try { durable = await adapter.load(command.operationId); } catch { return failure('STATE_IO_FAILED', 'replay'); }
+    if (canonicalize(durable) !== canonicalize({ ...saved, closure: 'CLOSED' })) failure('APPLY_NOT_DURABLE', 'replay');
+    return { context, checkpointBefore: context.checkpoint, checkpointAfter: after.checkpoint,
+      alreadyApplied: Boolean(context.appliedReceipt), businessApplied, receiptReused: Boolean(beforeReceipt.appliedReceipt) };
+  }
+  async function downloadSnapshot(event: ReleaseEvent, replayReleaseId?: string): Promise<DownloadedSnapshot> {
     requireEvent(event);
     const { data, response } = await request('download', () => client.GET(
       '/v1/phase-01/consumer-subscriptions/{subscriptionId}/snapshots/{snapshotId}/content',
-      { params: { path: { subscriptionId, snapshotId: event.snapshotId } }, parseAs: 'arrayBuffer' },
+      { params: { path: { subscriptionId, snapshotId: event.snapshotId }, ...(replayReleaseId ? { query: { replayReleaseId } } : {}) }, parseAs: 'arrayBuffer' },
     ));
     if (response.headers.get('x-snapshot-id') !== event.snapshotId) failure('IDENTITY_MISMATCH', 'download');
     const handle = freeze({ event }) as DownloadedSnapshot;
@@ -243,7 +331,7 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
         canonicalize(persisted.appliedEvents) !== canonicalize(nextState.appliedEvents)) failure('APPLY_NOT_DURABLE', 'apply');
     return application(event, pending);
   }
-  async function postReceipt(body: ReturnType<typeof receiptBody> | {
+  async function postReceipt(body: (ReturnType<typeof receiptBody> & { replay?: ReplayCommand & { subscriptionVersionId: string } }) | {
     eventId: string; receiveResult: 'ACCEPTED' | 'REJECTED'; validationResult: 'VALID' | 'INVALID';
     applyResult: 'NOT_APPLIED'; processingDigest: string; processedAt: string;
   }): Promise<ReceiptResult> {
@@ -308,6 +396,9 @@ export function createReleaseConsumer(options: ReleaseConsumerOptions): ReleaseC
     return { applied, receiptsClosed };
   }
   return {
+    inspectReplay,
+    replayExactRelease: (command, adapter) => exclusive(() => replayExactRelease({ releaseId: command.releaseId,
+      operationId: command.operationId, reason: command.reason }, adapter)),
     subscriptionId, poll, fetchExactRelease: exact, downloadSnapshot, verifySnapshot,
     apply: (snapshot) => exclusive(() => apply(snapshot)),
     ackApplied: (release) => exclusive(() => ackApplied(release)),

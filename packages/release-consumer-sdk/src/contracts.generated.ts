@@ -2021,6 +2021,324 @@ export const contracts: readonly { readonly projectionType: string; readonly sch
   }
 ];
 
+export const replayContextSchema: XSchema = {
+  "additionalProperties": false,
+  "properties": {
+    "appliedReceipt": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "applyResult": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "APPLIED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "NOT_APPLIED"
+                  ],
+                  "type": "string"
+                }
+              ]
+            },
+            "processingDigest": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "receiptId": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "receiptSequence": {
+              "maxLength": 19,
+              "pattern": "^(?:0|[1-9]\\d*)$",
+              "type": "string"
+            },
+            "receiveResult": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ACCEPTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "REJECTED"
+                  ],
+                  "type": "string"
+                }
+              ]
+            },
+            "validationResult": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "VALID"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "INVALID"
+                  ],
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "receiptId",
+            "receiptSequence",
+            "receiveResult",
+            "validationResult",
+            "applyResult",
+            "processingDigest"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "checkpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "appliedAggregateVersion": {
+          "maxLength": 19,
+          "pattern": "^(?:0|[1-9]\\d*)$",
+          "type": "string"
+        },
+        "recordedAt": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "appliedAggregateVersion",
+        "recordedAt"
+      ],
+      "type": "object"
+    },
+    "event": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregateVersion": {
+          "maxLength": 19,
+          "pattern": "^[1-9]\\d*$",
+          "type": "string"
+        },
+        "eventId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "governanceObjectId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "projectionPayloadDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "projectionSchemaDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "projectionSchemaVersion": {
+          "maxLength": 32,
+          "type": "string"
+        },
+        "projectionType": {
+          "maxLength": 128,
+          "type": "string"
+        },
+        "releaseId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "snapshotArtifactDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "snapshotId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eventId",
+        "governanceObjectId",
+        "aggregateVersion",
+        "releaseId",
+        "snapshotId",
+        "projectionType",
+        "projectionSchemaVersion",
+        "projectionSchemaDigest",
+        "projectionPayloadDigest",
+        "snapshotArtifactDigest"
+      ],
+      "type": "object"
+    },
+    "latestReceipt": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "applyResult": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "APPLIED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "NOT_APPLIED"
+                  ],
+                  "type": "string"
+                }
+              ]
+            },
+            "processingDigest": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "receiptId": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "receiptSequence": {
+              "maxLength": 19,
+              "pattern": "^(?:0|[1-9]\\d*)$",
+              "type": "string"
+            },
+            "receiveResult": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ACCEPTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "REJECTED"
+                  ],
+                  "type": "string"
+                }
+              ]
+            },
+            "validationResult": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "VALID"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "INVALID"
+                  ],
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "receiptId",
+            "receiptSequence",
+            "receiveResult",
+            "validationResult",
+            "applyResult",
+            "processingDigest"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lifecycleStatus": {
+      "enum": [
+        "ACTIVE"
+      ],
+      "type": "string"
+    },
+    "processingDigestMismatch": {
+      "type": "boolean"
+    },
+    "servicePrincipalId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "subscriptionId": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "subscriptionVersion": {
+      "additionalProperties": false,
+      "properties": {
+        "projectionSchemaDigest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "projectionSchemaVersion": {
+          "maxLength": 32,
+          "type": "string"
+        },
+        "projectionType": {
+          "maxLength": 128,
+          "type": "string"
+        },
+        "subscriptionVersionId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "versionNo": {
+          "maxLength": 19,
+          "pattern": "^(?:0|[1-9]\\d*)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionVersionId",
+        "versionNo",
+        "projectionType",
+        "projectionSchemaVersion",
+        "projectionSchemaDigest"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "subscriptionId",
+    "servicePrincipalId",
+    "lifecycleStatus",
+    "subscriptionVersion",
+    "event",
+    "checkpoint",
+    "latestReceipt",
+    "appliedReceipt",
+    "processingDigestMismatch"
+  ],
+  "type": "object"
+};
+
 export const eventsSchema: XSchema = {
   "additionalProperties": false,
   "properties": {
@@ -2473,6 +2791,36 @@ export const receiptBodySchema: XSchema = {
           "type": "string"
         }
       ]
+    },
+    "replay": {
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f<>]+$",
+          "type": "string"
+        },
+        "releaseId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "subscriptionVersionId": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "releaseId",
+        "subscriptionVersionId",
+        "operationId",
+        "reason"
+      ],
+      "type": "object"
     },
     "validationResult": {
       "anyOf": [

@@ -528,6 +528,9 @@ const ReceiptBodySchema = Type.Object(
     applyResult: Type.Union([Type.Literal('APPLIED'), Type.Literal('NOT_APPLIED')]),
     processingDigest: DigestHexSchema,
     processedAt: LocalDateTimeSchema,
+    replay: Type.Optional(Type.Object({ releaseId: UuidSchema, subscriptionVersionId: UuidSchema,
+      operationId: UuidSchema, reason: Type.String({ minLength: 1, maxLength: 256, pattern: '^[^\\u0000-\\u001f\\u007f<>]+$' }),
+    }, { additionalProperties: false })),
   },
   { additionalProperties: false },
 );
@@ -536,6 +539,28 @@ const ReceiptResponseSchema = Type.Object(
   { receiptId: UuidSchema, receiptSequence: Type.String({ pattern: '^[1-9]\\d*$' }) },
   { additionalProperties: false },
 );
+
+const ReplayContextParamsSchema = Type.Object({ subscriptionId: UuidSchema, releaseId: UuidSchema }, { additionalProperties: false });
+const ReplaySequenceSchema = Type.String({ pattern: '^(?:0|[1-9]\\d*)$', maxLength: 19 });
+const ReplayReceiptSchema = Type.Union([Type.Object({
+  receiptId: UuidSchema, receiptSequence: ReplaySequenceSchema,
+  receiveResult: Type.Union([Type.Literal('ACCEPTED'), Type.Literal('REJECTED')]),
+  validationResult: Type.Union([Type.Literal('VALID'), Type.Literal('INVALID')]),
+  applyResult: Type.Union([Type.Literal('APPLIED'), Type.Literal('NOT_APPLIED')]), processingDigest: DigestHexSchema,
+}, { additionalProperties: false }), Type.Null()]);
+const ReplayContextResponseSchema = Type.Object({
+  subscriptionId: UuidSchema, servicePrincipalId: UuidSchema, lifecycleStatus: Type.Literal('ACTIVE'),
+  subscriptionVersion: Type.Object({ subscriptionVersionId: UuidSchema, versionNo: ReplaySequenceSchema,
+    projectionType: Type.String({ maxLength: 128 }), projectionSchemaVersion: Type.String({ maxLength: 32 }), projectionSchemaDigest: DigestHexSchema,
+  }, { additionalProperties: false }),
+  event: Type.Object({ ...AvailableEventsResponseSchema.properties.events.items.properties,
+    aggregateVersion: Type.String({ pattern: '^[1-9]\\d*$', maxLength: 19 }),
+    projectionType: Type.String({ maxLength: 128 }), projectionSchemaVersion: Type.String({ maxLength: 32 }),
+  }, { additionalProperties: false }),
+  checkpoint: Type.Object({ appliedAggregateVersion: ReplaySequenceSchema,
+    recordedAt: Type.Union([LocalDateTimeSchema, Type.Null()]) }, { additionalProperties: false }),
+  latestReceipt: ReplayReceiptSchema, appliedReceipt: ReplayReceiptSchema, processingDigestMismatch: Type.Boolean(),
+}, { additionalProperties: false });
 
 const ErrorResponseSchema = Type.Object(
   {
@@ -1777,6 +1802,18 @@ export async function registerPhase01Routes(
     }));
   });
 
+  typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/releases/:releaseId/replay-context', {
+    schema: { operationId: 'getPhase01ConsumerReplayContext',
+      summary: '只读解析精确历史发布、冻结订阅版本和回执；不追加投递尝试',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema, params: ReplayContextParamsSchema,
+      response: { 200: ReplayContextResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema,
+        403: ErrorResponseSchema, 404: ErrorResponseSchema, 503: ErrorResponseSchema } },
+  }, async (request) => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    return runtime.transactionRunner.run(context, (modules) => modules.releaseDistribution.getConsumerReplayContext(request.params));
+  });
+
   typed.post(
     '/v1/phase-01/consumer-subscriptions/:subscriptionId/replays',
     {
@@ -1867,8 +1904,10 @@ export async function registerPhase01Routes(
         headers: ServiceHeadersSchema,
         produces: ['application/vnd.hdi.canonical-snapshot+json'],
         params: SnapshotParamsSchema,
+        querystring: Type.Object({ replayReleaseId: Type.Optional(UuidSchema) }, { additionalProperties: false }),
         response: {
           200: SnapshotBinarySchema,
+          400: ErrorResponseSchema,
           401: ErrorResponseSchema,
           403: ErrorResponseSchema,
           404: ErrorResponseSchema,
@@ -1883,6 +1922,7 @@ export async function registerPhase01Routes(
         modules.releaseDistribution.getSnapshotForSubscription({
           subscriptionId: request.params.subscriptionId,
           snapshotId: request.params.snapshotId,
+          ...request.query,
           servicePrincipalId: context.actorPrincipalId,
         }),
       );
@@ -1929,6 +1969,7 @@ export async function registerPhase01Routes(
           applyResult: request.body.applyResult,
           processingDigest: Buffer.from(request.body.processingDigest, 'hex'),
           processedAt: request.body.processedAt,
+          ...(request.body.replay ? { replay: request.body.replay } : {}),
         }),
       );
       return reply.code(201).send(receipt);

@@ -42,6 +42,7 @@ export type AuditEventType =
   | 'SCHEMA_UPGRADE_PUBLISHED'
   | 'DELIVERY_RECEIPT_RECORDED'
   | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED'
+  | 'CONSUMER_RELEASE_REPLAYED'
   | 'PUBLISHED'
   | 'RESOLVED'
   | DepartmentAuditEventType;
@@ -100,7 +101,7 @@ export interface AppendAuditEventCommand {
 export interface AppendGovernanceAuditEventCommand {
   readonly auditStreamId?: string;
   readonly governanceObjectId: string;
-  readonly eventType: DepartmentAuditEventType | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED';
+  readonly eventType: DepartmentAuditEventType | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED' | 'CONSUMER_RELEASE_REPLAYED';
   readonly aggregateType: DepartmentAuditAggregateType | 'CONSUMER_SUBSCRIPTION';
   readonly aggregateId: string;
   readonly aggregateVersionId?: string | null;

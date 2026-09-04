@@ -141,3 +141,22 @@ identify digest, schema, identity, callback, state, receipt and checkpoint failu
 SLA is metadata. The SDK has no timer, retry daemon, alerting, hospital policy,
 subscription management, replay CLI or automatic lifecycle bypass. Exact-release
 primitives are available for a separately authorized replay adapter.
+
+## C-02 explicit Consumer Release Replay
+
+`inspectReplay({releaseId})` performs a read-only, bounded exact-release lookup
+and full snapshot verification without calling the events endpoint (which records
+pull offers). Its context contains the delivery's frozen subscription version,
+exact receipt facts and current checkpoint. `replayExactRelease({releaseId,
+operationId, reason}, adapter)` explicitly repairs even a release older than the
+checkpoint. Ordinary apply/consume/resume semantics do not change.
+
+The `ReplayAdapter` atomically commits business repair and a `ReplayRecord` in
+`APPLIED_PENDING_RECEIPT`, loads durable records by operation ID and persists
+closure. Reuse one operation ID and unchanged inputs after a transport error;
+an intentional new repair uses a new ID. Reuse preserves APPLIED receipt identity
+and adds one idempotent, hash-chained server audit for the explicit operation.
+Lifecycle and monotonic checkpoints remain fail-closed. The adapter still owns
+cross-process single-writer control. The synthetic CLI, safe defaults, bounds,
+configuration and recovery limitations are documented in
+[`consumer-release-replay-cli.md`](../../docs/design/consumer-release-replay-cli.md).

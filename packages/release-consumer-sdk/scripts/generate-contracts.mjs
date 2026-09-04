@@ -42,6 +42,7 @@ const contracts = envelopes.map((envelope) => {
 });
 assert.equal(contracts.length, published.length);
 const schemas = {
+  replayContextSchema: response('/releases/{releaseId}/replay-context', 'get', 200),
   eventsSchema: response('/events', 'get', 200),
   operationalSchema: response('/operational-status', 'get', 200),
   receiptResponseSchema: response('/receipts', 'post', 201),

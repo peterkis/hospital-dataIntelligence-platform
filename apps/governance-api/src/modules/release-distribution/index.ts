@@ -9,6 +9,7 @@ import type { AuthorizationModule } from '../authorization/index.js';
 import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
 import { normalizeConsumerSla, type ConsumerSlaInput } from './consumer-sla.js';
 import { readConsumerOperationalView } from './consumer-operational-view.js';
+import { readConsumerReplayView } from './consumer-replay-view.js';
 export { ConsumerSlaInputSchema, ConsumerSlaSchema, ConsumerOperationalStatusSchema } from './consumer-sla.js';
 import { lifecycleStatus, lockSubscription, requireActiveSubscription, validateLifecycleTransition,
   type ConsumerSubscriptionLifecycleStatus } from './subscription-lifecycle.js';
@@ -177,6 +178,8 @@ export interface AvailableEvent {
 }
 
 export interface ReleaseDistributionModule {
+  getConsumerReplayContext(command: { readonly subscriptionId: string; readonly releaseId: string }):
+    Promise<Awaited<ReturnType<typeof readConsumerReplayView>>>;
   getConsumerOperationalStatus(command: {
     readonly subscriptionId: string; readonly subscriptionVersionId?: string;
   }): Promise<Awaited<ReturnType<typeof readConsumerOperationalView>> & {
@@ -250,11 +253,13 @@ export interface ReleaseDistributionModule {
   }): Promise<readonly AvailableEvent[]>;
   getSnapshot(snapshotId: string): Promise<SnapshotArtifact>;
   getSnapshotForSubscription(command: {
+    readonly replayReleaseId?: string;
     readonly subscriptionId: string;
     readonly snapshotId: string;
     readonly servicePrincipalId: string;
   }): Promise<SnapshotArtifact>;
   recordReceipt(command: {
+    readonly replay?: { readonly releaseId: string; readonly subscriptionVersionId: string; readonly operationId: string; readonly reason: string };
     readonly subscriptionId: string;
     readonly servicePrincipalId: string;
     readonly eventId: string;
@@ -289,6 +294,10 @@ export function createReleaseDistributionModule(
   }
 
   return {
+    async getConsumerReplayContext(command) {
+      await requireServiceSubscription(database, references, command.subscriptionId, context.actorPrincipalId);
+      return readConsumerReplayView(database, { ...command, servicePrincipalId: context.actorPrincipalId });
+    },
     async getConsumerOperationalStatus(command) {
       const subscription = await lockSubscription(database, command.subscriptionId);
       if (subscription.service_principal_id !== context.actorPrincipalId) throw new Error('CONSUMER_SUBSCRIPTION_FORBIDDEN');
@@ -979,6 +988,11 @@ export function createReleaseDistributionModule(
 
     async getSnapshotForSubscription(command) {
       await requireServiceSubscription(database, references, command.subscriptionId, command.servicePrincipalId);
+      if (command.replayReleaseId) {
+        const replay = await readConsumerReplayView(database, { ...command, releaseId: command.replayReleaseId });
+        if (replay.event.snapshotId !== command.snapshotId) throw new Error('SNAPSHOT_NOT_AVAILABLE_TO_SUBSCRIPTION');
+        return readSnapshot(database, command.snapshotId);
+      }
       const allowed = await sql<{ release_snapshot_id: string }>`
         select event.release_snapshot_id
         from release_distribution.consumer_subscription as subscription
@@ -1008,6 +1022,32 @@ export function createReleaseDistributionModule(
     async recordReceipt(command) {
       parseLocalDateTime(command.processedAt);
       await requireServiceSubscription(database, references, command.subscriptionId, command.servicePrincipalId);
+      if (command.replay) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(command.replay.operationId) ||
+            typeof command.replay.reason !== 'string' || !command.replay.reason.trim() || command.replay.reason.length > 256 ||
+            /[\u0000-\u001f\u007f<>]/u.test(command.replay.reason)) throw new Error('REQUEST_SCHEMA_INVALID');
+        const replay = await readConsumerReplayView(database, { subscriptionId: command.subscriptionId,
+          servicePrincipalId: command.servicePrincipalId, releaseId: command.replay.releaseId });
+        if (replay.event.eventId !== command.eventId || replay.subscriptionVersion.subscriptionVersionId !== command.replay.subscriptionVersionId ||
+            command.applyResult !== 'APPLIED' || command.receiveResult !== 'ACCEPTED' || command.validationResult !== 'VALID') {
+          throw new Error('CONSUMER_RECEIPT_RESULT_INCOHERENT');
+        }
+        if (replay.processingDigestMismatch || !command.processingDigest.equals(Buffer.from(replay.event.snapshotArtifactDigest, 'hex'))) {
+          throw new Error('CONSUMER_PROCESSING_DIGEST_MISMATCH');
+        }
+        const payload = { operationId: command.replay.operationId, subscriptionId: command.subscriptionId,
+          subscriptionVersionId: command.replay.subscriptionVersionId, releaseId: command.replay.releaseId,
+          eventId: command.eventId, processingDigest: command.processingDigest.toString('hex'), reason: command.replay.reason };
+        const prior = await audit.query({ governanceObjectId: replay.event.governanceObjectId,
+          stableEntityId: command.replay.operationId, action: 'CONSUMER_RELEASE_REPLAYED', limit: 2 });
+        if (prior.length > 1 || (prior[0] && (prior[0].actorPrincipalId !== context.actorPrincipalId ||
+            !canonicalSha256(prior[0].payload).equals(canonicalSha256(payload))))) throw new Error('REPLAY_OPERATION_CONFLICT');
+        if (!prior.length) await audit.append({ auditStreamId: command.subscriptionId,
+          governanceObjectId: replay.event.governanceObjectId, eventType: 'CONSUMER_RELEASE_REPLAYED',
+          aggregateType: 'CONSUMER_SUBSCRIPTION', aggregateId: command.replay.operationId,
+          afterHash: canonicalSha256(payload), authorityScope: 'HOSPITAL', payload });
+        if (replay.appliedReceipt) return { receiptId: replay.appliedReceipt.receiptId, receiptSequence: replay.appliedReceipt.receiptSequence };
+      }
       const selected = await sql<{
         aggregate_id: string;
         aggregate_version: string;
@@ -1043,7 +1083,8 @@ export function createReleaseDistributionModule(
           and subscription.consumer_subscription_id = ${command.subscriptionId}
           and subscription.service_principal_id = ${command.servicePrincipalId}
           and compatibility.result = 'SUPPORTED'
-          and state.delivery_status in ('PENDING', 'LEASED', 'NOTIFIED', 'DELIVERED')
+          and (state.delivery_status in ('PENDING', 'LEASED', 'NOTIFIED', 'DELIVERED')
+            or (${Boolean(command.replay)} and state.delivery_status = 'ATTENTION_REQUIRED'))
       `.execute(database);
       const event = selected.rows[0];
       if (!event) throw new Error('CONSUMER_EVENT_NOT_AVAILABLE');

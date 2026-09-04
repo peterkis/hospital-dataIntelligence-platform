@@ -657,6 +657,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/releases/{releaseId}/replay-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 只读解析精确历史发布、冻结订阅版本和回执；不追加投递尝试 */
+        get: operations["getPhase01ConsumerReplayContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/replays": {
         parameters: {
             query?: never;
@@ -5005,6 +5022,12 @@ export interface operations {
                     processedAt: string;
                     processingDigest: string;
                     receiveResult: "ACCEPTED" | "REJECTED";
+                    replay?: {
+                        operationId: string;
+                        reason: string;
+                        releaseId: string;
+                        subscriptionVersionId: string;
+                    };
                     validationResult: "VALID" | "INVALID";
                 };
             };
@@ -5072,6 +5095,134 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    getPhase01ConsumerReplayContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+                releaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        appliedReceipt: {
+                            applyResult: "APPLIED" | "NOT_APPLIED";
+                            processingDigest: string;
+                            receiptId: string;
+                            receiptSequence: string;
+                            receiveResult: "ACCEPTED" | "REJECTED";
+                            validationResult: "VALID" | "INVALID";
+                        } | null;
+                        checkpoint: {
+                            appliedAggregateVersion: string;
+                            recordedAt: string | null;
+                        };
+                        event: {
+                            aggregateVersion: string;
+                            eventId: string;
+                            governanceObjectId: string;
+                            projectionPayloadDigest: string;
+                            projectionSchemaDigest: string;
+                            projectionSchemaVersion: string;
+                            projectionType: string;
+                            releaseId: string;
+                            snapshotArtifactDigest: string;
+                            snapshotId: string;
+                        };
+                        latestReceipt: {
+                            applyResult: "APPLIED" | "NOT_APPLIED";
+                            processingDigest: string;
+                            receiptId: string;
+                            receiptSequence: string;
+                            receiveResult: "ACCEPTED" | "REJECTED";
+                            validationResult: "VALID" | "INVALID";
+                        } | null;
+                        /** @enum {string} */
+                        lifecycleStatus: "ACTIVE";
+                        processingDigestMismatch: boolean;
+                        servicePrincipalId: string;
+                        subscriptionId: string;
+                        subscriptionVersion: {
+                            projectionSchemaDigest: string;
+                            projectionSchemaVersion: string;
+                            projectionType: string;
+                            subscriptionVersionId: string;
+                            versionNo: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5205,7 +5356,9 @@ export interface operations {
     };
     downloadPhase01CanonicalSnapshot: {
         parameters: {
-            query?: never;
+            query?: {
+                replayReleaseId?: string;
+            };
             header?: never;
             path: {
                 subscriptionId: string;
@@ -5434,6 +5587,18 @@ export interface operations {
                         };
                         /** @enum {string} */
                         serializationProfileVersion: "canonical-json.v1";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.hdi.canonical-snapshot+json": {
+                        code: string;
+                        requestId: string;
                     };
                 };
             };

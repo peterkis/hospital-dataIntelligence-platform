@@ -26,6 +26,7 @@ import { checkDepartmentConsumerCanonical } from './check-department-consumer-ca
 import { checkConsumerLifecycleFlow } from './check-consumer-lifecycle-flow.js';
 import { checkConsumerSlaFlow } from './check-consumer-sla-flow.js';
 import { checkReleaseConsumerSdkFlow } from './check-release-consumer-sdk-flow.js';
+import { checkConsumerReplayFlow } from './check-consumer-replay-flow.js';
 
 const masterObject = fixture.departmentMasterObjectId;
 const hierarchyObject = '74100000-0000-7000-8000-000000000001';
@@ -41,7 +42,7 @@ type Event = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][2
 type SubscriptionBody = GovernanceApiOperations['createPhase01ConsumerSubscription']['requestBody']['content']['application/json'];
 
 // This composition exists only in tooling. Production still resolves Keycloak JWTs.
-export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean } = {}) {
+export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean; verifyReplay?: boolean } = {}) {
   assert.notEqual(process.env['NODE_ENV']?.toLowerCase(), 'production');
   const connectionString = process.env['DATABASE_URL'];
   assert.ok(connectionString, 'PROTOTYPE_DATABASE_CONFIGURATION_REQUIRED');
@@ -88,6 +89,7 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   const statePaths = [join(stateDirectory, 'master.json'), join(stateDirectory, 'hierarchy.json')];
   const checks: Record<string, boolean> = {};
   const consumed: { subscriptionId: string; event: Event }[] = [];
+  const replayProofs: Record<string, unknown> = {};
   let lifecycleHistories: Awaited<ReturnType<ScopedModules['releaseDistribution']['getSubscriptionHistory']>>[] = [];
   let slaResult: Awaited<ReturnType<typeof checkConsumerSlaFlow>> | undefined;
   let migrationCount = 0;
@@ -396,6 +398,18 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
         service: serviceA, otherService: serviceB, baseUrl, subscriptionId: master.subscriptionId, event: masterEvent });
       Object.assign(checks, slaResult.checks);
     }
+    if (options.verifyReplay) {
+      for (const [subscription, event, accessToken, statePath, kind, otherReleaseId] of [
+        [master, masterEvent, masterToken, statePaths[0]!, 'departmentMaster', hierarchyEvent.releaseId],
+        [hierarchy, hierarchyEvent, hierarchyToken, statePaths[1]!, 'departmentHierarchy', masterEvent.releaseId],
+      ] as const) {
+        const replay = await checkConsumerReplayFlow({ database, runner, context, owner, baseUrl, accessToken,
+          subscriptionId: subscription.subscriptionId, event, statePath, otherReleaseId });
+        for (const [name, value] of Object.entries(replay.checks)) checks[`${kind}_${name}`] = value;
+        replayProofs[kind] = replay.proof;
+        consumed.find((entry) => entry.subscriptionId === subscription.subscriptionId)!.event = replay.newer;
+      }
+    }
     migrationCount = Number((await database.selectFrom('platform.schema_migration')
       .select(({ fn }) => fn.countAll<string>().as('count')).executeTakeFirstOrThrow()).count);
     const forbidden = await sql<{ count: string }>`select count(*)::text as count
@@ -437,11 +451,15 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
     }
     if (options.verifyLifecycle) checks['lifecyclePersistenceObserved'] = true;
     for (const { subscriptionId, event } of consumed) {
+      if (options.verifyReplay) {
+        assert.equal(await reopenedRunner.run(context(), (modules) => modules.audit.verifyChain(subscriptionId)), true);
+      }
       const checkpoint = await verification.database.selectFrom('release_distribution.consumer_checkpoint')
         .select('applied_aggregate_version').where('consumer_subscription_id', '=', subscriptionId).executeTakeFirstOrThrow();
       assert.equal(checkpoint.applied_aggregate_version, event.aggregateVersion);
       const receipt = await verification.database.selectFrom('release_distribution.consumer_receipt').selectAll()
-        .where('consumer_subscription_id', '=', subscriptionId).where('event_id', '=', event.eventId).executeTakeFirstOrThrow();
+        .where('consumer_subscription_id', '=', subscriptionId).where('event_id', '=', event.eventId)
+        .where('apply_result', '=', 'APPLIED').orderBy('receipt_sequence').limit(1).executeTakeFirstOrThrow();
       assert.equal(receipt.apply_result, 'APPLIED');
       assert.equal(receipt.validation_result, 'VALID');
       assert.equal(receipt.processing_digest.toString('hex'), event.snapshotArtifactDigest);
@@ -455,8 +473,8 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   checks['databasePoolClosed'] = true;
   checks['portReleased'] = true;
   assert.ok(Object.values(checks).every(Boolean));
-  return { status: 'PASSED', scenario: options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
-    ...checks, migrationCount, forbiddenTimezoneTypeCount };
+  return { status: 'PASSED', scenario: options.verifyReplay ? 'PV-005-C-02' : options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
+    ...checks, ...(options.verifyReplay ? { replayProofs } : {}), migrationCount, forbiddenTimezoneTypeCount };
 }
 
 function data<T>(result: { data?: T; error?: unknown; response: Response }): T {

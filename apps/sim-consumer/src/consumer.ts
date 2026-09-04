@@ -2,9 +2,10 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
 import { createReleaseConsumer, ReleaseConsumerError,
-  type ProjectionSupport, type ReleaseConsumerState } from '@hospital-data-intelligence/release-consumer-sdk';
+  type ProjectionSupport, type ReleaseConsumerState, type ReplayRecord } from '@hospital-data-intelligence/release-consumer-sdk';
 
-interface SyntheticState extends ReleaseConsumerState { readonly lastAppliedPayload: unknown; readonly applyCount: number }
+interface SyntheticState extends ReleaseConsumerState { readonly lastAppliedPayload: unknown; readonly applyCount: number;
+  readonly replays?: Record<string, ReplayRecord>; readonly replayApplyCount?: number }
 export interface SimulatedConsumerOptions {
   readonly baseUrl: string;
   readonly accessToken: string;
@@ -30,6 +31,7 @@ const supported: readonly ProjectionSupport[] = [
 export async function runSimulatedConsumerOnce(options: SimulatedConsumerOptions) {
   let lastAppliedPayload: unknown = null;
   let applyCount = 0;
+  let replayMetadata: Pick<SyntheticState, 'replays' | 'replayApplyCount'> = {};
   const consumer = createReleaseConsumer({
     client: createGovernanceApiClient({ baseUrl: options.baseUrl, accessToken: options.accessToken,
       ...(options.fetch ? { fetch: options.fetch } : {}) }),
@@ -44,13 +46,15 @@ export async function runSimulatedConsumerOnce(options: SimulatedConsumerOptions
           const state = JSON.parse(await readFile(options.statePath, 'utf8')) as SyntheticState;
           lastAppliedPayload = state.lastAppliedPayload;
           applyCount = state.applyCount ?? Object.keys(state.appliedEvents).length;
+          replayMetadata = { ...(state.replays ? { replays: state.replays } : {}),
+            ...(state.replayApplyCount !== undefined ? { replayApplyCount: state.replayApplyCount } : {}) };
           return state;
         } catch (error) {
           if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
           throw new ReleaseConsumerError('STATE_IO_FAILED', 'state');
         }
       },
-      async save(state) { await writeStateAtomically(options.statePath, { ...state, lastAppliedPayload, applyCount }); },
+      async save(state) { await writeStateAtomically(options.statePath, { ...state, ...replayMetadata, lastAppliedPayload, applyCount }); },
     },
     async apply(snapshot, nextState) {
       if (options.failurePoint === 'BEFORE_APPLY') throw new Error('SYNTHETIC_BEFORE_APPLY');
@@ -58,7 +62,7 @@ export async function runSimulatedConsumerOnce(options: SimulatedConsumerOptions
       // recovery marker. The SDK owns no consumer database transaction.
       lastAppliedPayload = snapshot.snapshot.payload;
       applyCount += 1;
-      await writeStateAtomically(options.statePath, { ...nextState, lastAppliedPayload, applyCount });
+      await writeStateAtomically(options.statePath, { ...nextState, ...replayMetadata, lastAppliedPayload, applyCount });
       if (options.failurePoint === 'AFTER_APPLY') throw new Error('SYNTHETIC_AFTER_APPLY');
     },
   });

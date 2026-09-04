@@ -4,6 +4,28 @@ export type ReleaseConsumerClient = ReturnType<typeof createGovernanceApiClient>
 export type ReleaseEvent = Readonly<GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][200]['content']['application/json']['events'][number]>;
 export type ConsumerOperationalStatus = GovernanceApiOperations['getPhase01ConsumerOperationalStatus']['responses'][200]['content']['application/json'];
 export type ReceiptResult = GovernanceApiOperations['recordPhase01ConsumerReceipt']['responses'][201]['content']['application/json'];
+export type ReplayContext = GovernanceApiOperations['getPhase01ConsumerReplayContext']['responses'][200]['content']['application/json'];
+export interface ReplayInspection { readonly context: ReplayContext; readonly snapshot: VerifiedSnapshot }
+export interface ReplayCommand { readonly releaseId: string; readonly operationId: string; readonly reason: string }
+export interface ReplayRecord extends ReplayCommand {
+  readonly subscriptionId: string; readonly servicePrincipalId: string;
+  readonly subscriptionVersionId: string; readonly eventId: string; readonly snapshotId: string;
+  readonly processingDigest: string; readonly processedAt: string;
+  readonly closure: 'APPLIED_PENDING_RECEIPT' | 'CLOSED';
+}
+export interface ReplayAdapter {
+  /** Return null only for a new operation. Corrupt/unreadable state must throw. */
+  load(operationId: string): Promise<ReplayRecord | null>;
+  /** Atomically commit business repair AND its pending record; one writer per consumer. */
+  commit(snapshot: VerifiedSnapshot, record: ReplayRecord): Promise<void>;
+  /** Persist closure without changing business state. */
+  close(record: ReplayRecord): Promise<void>;
+}
+export interface ReplayResult {
+  readonly context: ReplayContext; readonly checkpointBefore: ConsumerCheckpoint;
+  readonly checkpointAfter: ConsumerCheckpoint; readonly alreadyApplied: boolean;
+  readonly businessApplied: boolean; readonly receiptReused: boolean;
+}
 export type CanonicalSnapshot = GovernanceApiOperations['downloadPhase01CanonicalSnapshot']['responses'][200]['content']['application/vnd.hdi.canonical-snapshot+json'];
 export type ProjectionSupport = CanonicalSnapshot extends infer Envelope
   ? Envelope extends { projectionContract: { projectionType: infer P; schemaVersion: infer V } }
@@ -62,6 +84,8 @@ export interface ProcessingResult {
   readonly validationResult: 'VALID' | 'INVALID';
 }
 export interface ReleaseConsumer {
+  inspectReplay(identity: { readonly releaseId: string }): Promise<ReplayInspection>;
+  replayExactRelease(command: ReplayCommand, adapter: ReplayAdapter): Promise<ReplayResult>;
   readonly subscriptionId: string;
   poll(afterAggregateVersion?: string): Promise<readonly ReleaseEvent[]>;
   fetchExactRelease(identity: { readonly releaseId: string } | { readonly eventId: string }): Promise<ReleaseEvent>;

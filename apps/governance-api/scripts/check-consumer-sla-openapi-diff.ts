@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../../..');
 const START_HEAD = '733072bc592b82c3ceb0bda4a7be16e2979c64e6';
 const file = 'contracts/openapi/phase-01.openapi.json';
 const oldBytes = execFileSync('git', ['show', `${START_HEAD}:${file}`], { cwd: root, windowsHide: true });
-const newBytes = readFileSync(resolve(root, file));
+// B-03B is closed. C-02 has its own live delta guard; do not widen this one.
+const candidate = '3dcd9e018b6ffe2ca1c0c73cb4aada709de434f8';
+const newBytes = execFileSync('git', ['show', `${candidate}:${file}`], { cwd: root, windowsHide: true });
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const oldSha = hash(oldBytes), newSha = hash(newBytes);
 assert.equal(oldSha, '5c32b5bedf0cbd67171e31bd8a8b0aa5ca46dfd06b7dadf1bfa2b19b410831bb');
-assert.equal(readFileSync(resolve(root, 'contracts/openapi/phase-01.openapi.sha256'), 'utf8').trim(), `${newSha}  phase-01.openapi.json`);
+assert.equal(execFileSync('git', ['show', `${candidate}:contracts/openapi/phase-01.openapi.sha256`], { cwd: root, windowsHide: true, encoding: 'utf8' }).trim(), `${newSha}  phase-01.openapi.json`);
 const before = JSON.parse(oldBytes.toString('utf8'));
 const after = JSON.parse(newBytes.toString('utf8'));
 const prefix = '/v1/phase-01/consumer-subscriptions';
