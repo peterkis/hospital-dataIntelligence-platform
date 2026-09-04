@@ -403,6 +403,36 @@ export interface EmergencyControlSuspensionEvent {
   suspension_event_id: Generated<string>;
 }
 
+export interface PersonMasterPersonIdentifier {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  governance_object_id: string;
+  identifier_system: string;
+  identifier_value: string;
+  person_id: string;
+  person_identifier_id: Generated<string>;
+}
+
+export interface PersonMasterPersonIdentifierVersion {
+  assertion_status: string;
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  created_by: string;
+  governance_object_id: string;
+  /**
+   * Retry identity for operation kind and assertion validity only. Never contains identifier value or its hash; never exported to audit.
+   */
+  operation_hash: Buffer;
+  person_id: string;
+  person_identifier_id: string;
+  person_identifier_version_id: Generated<string>;
+  recorded_from: Generated<string>;
+  request_id: string;
+  version_no: Int8;
+}
+
 export interface PersonMasterPersonSubject {
   created_at: Generated<string>;
   created_by: string;
@@ -923,6 +953,8 @@ export interface DB {
   "emergency_control.impact_case": EmergencyControlImpactCase;
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
+  "person_master.person_identifier": PersonMasterPersonIdentifier;
+  "person_master.person_identifier_version": PersonMasterPersonIdentifierVersion;
   "person_master.person_subject": PersonMasterPersonSubject;
   "person_master.person_subject_version": PersonMasterPersonSubjectVersion;
   "platform.browser_session": PlatformBrowserSession;

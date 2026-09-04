@@ -15,7 +15,10 @@ try {
   assert.equal(result.rows[0]?.present, true, 'PERSON_SUBJECT_TABLE_REQUIRED');
   await seedPersonScope(handle.database);
   const count = await sql<{ count: string }>`select count(*) from platform.schema_migration`.execute(handle.database);
-  assert.equal(count.rows[0]?.count, '20'); checks['migrationCount20'] = true;
+  assert.ok(Number(count.rows[0]?.count) >= 20); checks['personCoreMigrationPresent'] = true;
+  const coreMigration = await handle.database.selectFrom('platform.schema_migration').select('migration_id')
+    .where('migration_id', '=', '0020_person_master_subject_core').executeTakeFirst();
+  assert.ok(coreMigration);
 
   await rejected('stableIdentityNeverReused', ['23505'], async (tx, f) => {
     await tx.insertInto('person_master.person_subject').values({ person_id: f.personId, governance_object_id: PERSON_FIXTURE.objectId,
