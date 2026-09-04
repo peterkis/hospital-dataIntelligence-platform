@@ -1,30 +1,10 @@
-import { createHash } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import {
-  createGovernanceApiClient,
-  type GovernanceApiOperations,
-} from '@hospital-data-intelligence/generated-api-client';
+import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
+import { createReleaseConsumer, ReleaseConsumerError,
+  type ProjectionSupport, type ReleaseConsumerState } from '@hospital-data-intelligence/release-consumer-sdk';
 
-type ConsumerEvent = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][200]['content']['application/json']['events'][number];
-
-interface AppliedEventState {
-  readonly eventId: string;
-  readonly aggregateVersion: string;
-  readonly snapshotId: string;
-  readonly snapshotDigest: string;
-  readonly processedAt: string;
-  readonly closure: 'APPLIED_PENDING_RECEIPT' | 'CLOSED';
-}
-
-interface ConsumerState {
-  readonly schemaVersion: 1;
-  readonly subscriptionId: string;
-  readonly appliedAggregateVersion: string;
-  readonly appliedEvents: Record<string, AppliedEventState>;
-  readonly lastAppliedPayload: unknown;
-}
-
+interface SyntheticState extends ReleaseConsumerState { readonly lastAppliedPayload: unknown; readonly applyCount: number }
 export interface SimulatedConsumerOptions {
   readonly baseUrl: string;
   readonly accessToken: string;
@@ -32,222 +12,62 @@ export interface SimulatedConsumerOptions {
   readonly statePath: string;
   readonly expectedProjectionType?: string;
   readonly expectedProjectionSchemaVersion?: string;
+  /** Synthetic failure injection; never part of the SDK application contract. */
+  readonly failurePoint?: 'BEFORE_APPLY' | 'AFTER_APPLY';
+  readonly fetch?: typeof globalThis.fetch;
   now(): string;
 }
+const supported: readonly ProjectionSupport[] = [
+  { projectionType: 'hdi.charge-catalog', projectionSchemaVersion: '1' },
+  { projectionType: 'hdi.charge-catalog', projectionSchemaVersion: '2' },
+  { projectionType: 'hdi.price-list', projectionSchemaVersion: '0' },
+  { projectionType: 'hdi.price-list', projectionSchemaVersion: '1' },
+  { projectionType: 'hdi.price-list', projectionSchemaVersion: '2' },
+  { projectionType: 'hdi.department-master', projectionSchemaVersion: '1' },
+  { projectionType: 'hdi.department-hierarchy', projectionSchemaVersion: '1' },
+];
 
-export async function runSimulatedConsumerOnce(
-  options: SimulatedConsumerOptions,
-): Promise<{ readonly applied: number; readonly receiptsClosed: number }> {
-  const client = createGovernanceApiClient({
-    baseUrl: options.baseUrl,
-    accessToken: options.accessToken,
+export async function runSimulatedConsumerOnce(options: SimulatedConsumerOptions) {
+  let lastAppliedPayload: unknown = null;
+  let applyCount = 0;
+  const consumer = createReleaseConsumer({
+    client: createGovernanceApiClient({ baseUrl: options.baseUrl, accessToken: options.accessToken,
+      ...(options.fetch ? { fetch: options.fetch } : {}) }),
+    subscriptionId: options.subscriptionId,
+    supportedProjections: supported.filter((pair) =>
+      (options.expectedProjectionType === undefined || pair.projectionType === options.expectedProjectionType) &&
+      (options.expectedProjectionSchemaVersion === undefined || pair.projectionSchemaVersion === options.expectedProjectionSchemaVersion)),
+    now: options.now,
+    state: {
+      async load() {
+        try {
+          const state = JSON.parse(await readFile(options.statePath, 'utf8')) as SyntheticState;
+          lastAppliedPayload = state.lastAppliedPayload;
+          applyCount = state.applyCount ?? Object.keys(state.appliedEvents).length;
+          return state;
+        } catch (error) {
+          if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
+          throw new ReleaseConsumerError('STATE_IO_FAILED', 'state');
+        }
+      },
+      async save(state) { await writeStateAtomically(options.statePath, { ...state, lastAppliedPayload, applyCount }); },
+    },
+    async apply(snapshot, nextState) {
+      if (options.failurePoint === 'BEFORE_APPLY') throw new Error('SYNTHETIC_BEFORE_APPLY');
+      // One atomic replacement commits both synthetic business state and the
+      // recovery marker. The SDK owns no consumer database transaction.
+      lastAppliedPayload = snapshot.snapshot.payload;
+      applyCount += 1;
+      await writeStateAtomically(options.statePath, { ...nextState, lastAppliedPayload, applyCount });
+      if (options.failurePoint === 'AFTER_APPLY') throw new Error('SYNTHETIC_AFTER_APPLY');
+    },
   });
-  let state = await readState(options.statePath, options.subscriptionId);
-  let receiptsClosed = 0;
-
-  for (const pending of Object.values(state.appliedEvents)
-    .filter((event) => event.closure === 'APPLIED_PENDING_RECEIPT')
-    .sort((left, right) => compareSequence(left.aggregateVersion, right.aggregateVersion))) {
-    await sendReceipt(client, options.subscriptionId, pending);
-    state = closeReceipt(state, pending.eventId);
-    await writeStateAtomically(options.statePath, state);
-    receiptsClosed += 1;
-  }
-
-  const eventResponse = await client.GET(
-    '/v1/phase-01/consumer-subscriptions/{subscriptionId}/events',
-    {
-      params: {
-        path: { subscriptionId: options.subscriptionId },
-        query: { afterAggregateVersion: state.appliedAggregateVersion },
-      },
-    },
-  );
-  if (eventResponse.error) throw new Error('SIM_CONSUMER_EVENT_QUERY_FAILED');
-  let applied = 0;
-
-  for (const event of eventResponse.data.events) {
-    if (
-      (options.expectedProjectionType !== undefined &&
-        event.projectionType !== options.expectedProjectionType) ||
-      (options.expectedProjectionSchemaVersion !== undefined &&
-        event.projectionSchemaVersion !== options.expectedProjectionSchemaVersion)
-    ) {
-      throw new Error('SIM_CONSUMER_PROJECTION_CONTRACT_MISMATCH');
-    }
-    const expectedVersion = (BigInt(state.appliedAggregateVersion) + 1n).toString();
-    const hasEstablishedBaseline =
-      state.appliedAggregateVersion !== '0' || Object.keys(state.appliedEvents).length > 0;
-    if (hasEstablishedBaseline && event.aggregateVersion !== expectedVersion) {
-      throw new Error('SIM_CONSUMER_EVENT_GAP');
-    }
-    const existing = state.appliedEvents[event.eventId];
-    if (existing?.closure === 'CLOSED') continue;
-
-    const snapshotResponse = await client.GET(
-      '/v1/phase-01/consumer-subscriptions/{subscriptionId}/snapshots/{snapshotId}/content',
-      {
-        params: {
-          path: {
-            subscriptionId: options.subscriptionId,
-            snapshotId: event.snapshotId,
-          },
-        },
-        parseAs: 'arrayBuffer',
-      },
-    );
-    if (snapshotResponse.error) throw new Error('SIM_CONSUMER_SNAPSHOT_DOWNLOAD_FAILED');
-    const snapshotBytes = Buffer.from(snapshotResponse.data);
-    const snapshotDigest = createHash('sha256').update(snapshotBytes).digest('hex');
-    if (snapshotDigest !== event.snapshotArtifactDigest) {
-      throw new Error('SIM_CONSUMER_SNAPSHOT_DIGEST_MISMATCH');
-    }
-    const digestHeader = `sha-256=:${Buffer.from(snapshotDigest, 'hex').toString('base64')}:`;
-    if (snapshotResponse.response.headers.get('digest') !== digestHeader) {
-      throw new Error('SIM_CONSUMER_SNAPSHOT_DIGEST_HEADER_MISMATCH');
-    }
-    const artifact = parseSnapshot(snapshotBytes, event);
-    const appliedEvent: AppliedEventState = {
-      eventId: event.eventId,
-      aggregateVersion: event.aggregateVersion,
-      snapshotId: event.snapshotId,
-      snapshotDigest,
-      processedAt: options.now(),
-      closure: 'APPLIED_PENDING_RECEIPT',
-    };
-    state = {
-      ...state,
-      appliedAggregateVersion: event.aggregateVersion,
-      appliedEvents: { ...state.appliedEvents, [event.eventId]: appliedEvent },
-      lastAppliedPayload: artifact.payload,
-    };
-    await writeStateAtomically(options.statePath, state);
-    applied += 1;
-
-    await sendReceipt(client, options.subscriptionId, appliedEvent);
-    state = closeReceipt(state, event.eventId);
-    await writeStateAtomically(options.statePath, state);
-    receiptsClosed += 1;
-  }
-
-  return { applied, receiptsClosed };
+  return consumer.consume();
 }
 
-function parseSnapshot(bytes: Buffer, event: ConsumerEvent): { readonly payload: unknown } {
-  let parsed: unknown;
-  try { parsed = JSON.parse(bytes.toString('utf8')) as unknown; }
-  catch { throw new Error('SIM_CONSUMER_SNAPSHOT_SCHEMA_INVALID'); }
-  if (
-    !isRecord(parsed) || !Object.hasOwn(parsed, 'payload') ||
-    parsed['envelopeContractVersion'] !== 'phase-01.v1' ||
-    parsed['serializationProfileVersion'] !== 'canonical-json.v1' ||
-    !isRecord(parsed['release']) || !isRecord(parsed['projectionContract'])
-  ) throw new Error('SIM_CONSUMER_SNAPSHOT_SCHEMA_INVALID');
-  const release = parsed['release'];
-  const contract = parsed['projectionContract'];
-  if (
-    !aggregateTypes.has(event.projectionType) ||
-    release['aggregateType'] !== aggregateTypes.get(event.projectionType) ||
-    release['governanceObjectId'] !== event.governanceObjectId ||
-    release['releaseId'] !== event.releaseId || release['releaseNo'] !== event.aggregateVersion ||
-    !releaseKinds.has(String(release['releaseKind'])) ||
-    !isLocalDateTime(release['businessValidFrom']) ||
-    (release['businessValidTo'] !== null && !isLocalDateTime(release['businessValidTo'])) ||
-    contract['projectionType'] !== event.projectionType ||
-    contract['schemaVersion'] !== event.projectionSchemaVersion ||
-    contract['schemaDigestAlgorithm'] !== 'SHA-256' ||
-    contract['schemaDigest'] !== event.projectionSchemaDigest
-  ) throw new Error('SIM_CONSUMER_SNAPSHOT_CONTRACT_MISMATCH');
-  return { payload: parsed['payload'] };
-}
-
-const aggregateTypes = new Map([
-  ['hdi.charge-catalog', 'CHARGE_CATALOG'],
-  ['hdi.price-list', 'PRICE_LIST'],
-  ['hdi.department-master', 'DEPARTMENT_MASTER'],
-  ['hdi.department-hierarchy', 'DEPARTMENT_HIERARCHY'],
-]);
-const releaseKinds = new Set([
-  'NORMAL', 'COMPENSATION', 'HISTORICAL_REPUBLICATION', 'CONTRACT_SCHEMA_UPGRADE',
-]);
-
-function isLocalDateTime(value: unknown): value is string {
-  return typeof value === 'string' &&
-    /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?$/u.test(value);
-}
-
-async function sendReceipt(
-  client: ReturnType<typeof createGovernanceApiClient>,
-  subscriptionId: string,
-  event: AppliedEventState,
-): Promise<void> {
-  const response = await client.POST(
-    '/v1/phase-01/consumer-subscriptions/{subscriptionId}/receipts',
-    {
-      params: { path: { subscriptionId } },
-      body: {
-        eventId: event.eventId,
-        receiveResult: 'ACCEPTED',
-        validationResult: 'VALID',
-        applyResult: 'APPLIED',
-        processingDigest: event.snapshotDigest,
-        processedAt: event.processedAt,
-      },
-    },
-  );
-  if (response.error) throw new Error('SIM_CONSUMER_RECEIPT_FAILED');
-}
-
-async function readState(path: string, subscriptionId: string): Promise<ConsumerState> {
-  try {
-    const parsed = JSON.parse(await readFile(path, 'utf8')) as ConsumerState;
-    if (parsed.schemaVersion !== 1 || parsed.subscriptionId !== subscriptionId) {
-      throw new Error('SIM_CONSUMER_STATE_IDENTITY_MISMATCH');
-    }
-    return parsed;
-  } catch (error) {
-    if (isMissingFile(error)) {
-      return {
-        schemaVersion: 1,
-        subscriptionId,
-        appliedAggregateVersion: '0',
-        appliedEvents: {},
-        lastAppliedPayload: null,
-      };
-    }
-    throw error;
-  }
-}
-
-async function writeStateAtomically(path: string, state: ConsumerState): Promise<void> {
+async function writeStateAtomically(path: string, state: SyntheticState): Promise<void> {
   const temporaryPath = `${path}.tmp`;
   await mkdir(dirname(path), { recursive: true });
   await writeFile(temporaryPath, `${JSON.stringify(state, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   await rename(temporaryPath, path);
-}
-
-function closeReceipt(state: ConsumerState, eventId: string): ConsumerState {
-  const event = state.appliedEvents[eventId];
-  if (!event) throw new Error('SIM_CONSUMER_EVENT_STATE_MISSING');
-  return {
-    ...state,
-    appliedEvents: {
-      ...state.appliedEvents,
-      [eventId]: { ...event, closure: 'CLOSED' },
-    },
-  };
-}
-
-function compareSequence(left: string, right: string): number {
-  const leftValue = BigInt(left);
-  const rightValue = BigInt(right);
-  return leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }

@@ -25,6 +25,7 @@ import { PROTOTYPE_FIXTURE as fixture } from './prototype-fixture.js';
 import { checkDepartmentConsumerCanonical } from './check-department-consumer-canonical.js';
 import { checkConsumerLifecycleFlow } from './check-consumer-lifecycle-flow.js';
 import { checkConsumerSlaFlow } from './check-consumer-sla-flow.js';
+import { checkReleaseConsumerSdkFlow } from './check-release-consumer-sdk-flow.js';
 
 const masterObject = fixture.departmentMasterObjectId;
 const hierarchyObject = '74100000-0000-7000-8000-000000000001';
@@ -40,7 +41,7 @@ type Event = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][2
 type SubscriptionBody = GovernanceApiOperations['createPhase01ConsumerSubscription']['requestBody']['content']['application/json'];
 
 // This composition exists only in tooling. Production still resolves Keycloak JWTs.
-export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean } = {}) {
+export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean; verifySdk?: boolean } = {}) {
   assert.notEqual(process.env['NODE_ENV']?.toLowerCase(), 'production');
   const connectionString = process.env['DATABASE_URL'];
   assert.ok(connectionString, 'PROTOTYPE_DATABASE_CONFIGURATION_REQUIRED');
@@ -149,6 +150,14 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
     checks['failedSubscriptionCreatesNoRows'] = true;
     const master = data(await create(masterBody));
     const hierarchy = data(await create(hierarchyBody));
+    const sdkSubscriptions: Record<'departmentMaster' | 'departmentHierarchy', string[]> = { departmentMaster: [], departmentHierarchy: [] };
+    if (options.verifySdk) {
+      for (const [kind, body] of [['departmentMaster', masterBody], ['departmentHierarchy', hierarchyBody]] as const) {
+        for (let index = 0; index < 3; index += 1) {
+          sdkSubscriptions[kind].push(data(await create({ ...body, subscriptionCode: `PROTOTYPE-SDK-${kind}-${index}-${suffix}` })).subscriptionId);
+        }
+      }
+    }
     checks['departmentMasterSubscriptionSupported'] = true;
     checks['departmentHierarchySubscriptionSupported'] = true;
 
@@ -331,6 +340,21 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       await rejected(otherService.GET(eventsPath, { params: { path: subscription } }), 403, 'CONSUMER_SUBSCRIPTION_FORBIDDEN');
       await rejected(otherService.GET(snapshotPath, { params: { path: { ...subscription, snapshotId: event.snapshotId } }, parseAs: 'arrayBuffer' }), 403);
       await rejected(otherService.POST(receiptPath, { params: { path: subscription }, body: receiptBody }), 403, 'CONSUMER_SUBSCRIPTION_FORBIDDEN');
+      if (options.verifySdk) {
+        const sdkPaths = sdkSubscriptions[kind].map((_, index) => join(stateDirectory, `sdk-${kind}-${index}.json`));
+        statePaths.push(...sdkPaths);
+        const sdk = await checkReleaseConsumerSdkFlow({ baseUrl, accessToken, owner, csrfToken: PROTOTYPE_CSRF_TOKEN,
+          otherAccessToken: kind === 'departmentMaster' ? hierarchyToken : masterToken,
+          subscriptionIds: sdkSubscriptions[kind], statePaths: sdkPaths,
+          projection: { projectionType: kind === 'departmentMaster' ? 'hdi.department-master' : 'hdi.department-hierarchy', projectionSchemaVersion: '1' }, event });
+        for (const [name, passed] of Object.entries(sdk)) checks[`${kind}_${name}`] = passed;
+        for (const subscriptionId of sdkSubscriptions[kind]) {
+          const receipts = await database.selectFrom('release_distribution.consumer_receipt').select('apply_result')
+            .where('consumer_subscription_id', '=', subscriptionId).where('event_id', '=', event.eventId).execute();
+          assert.deepEqual(receipts, [{ apply_result: 'APPLIED' }]);
+          consumed.push({ subscriptionId, event });
+        }
+      }
       const result = await runSimulatedConsumerOnce({ baseUrl, accessToken, subscriptionId: subscription.subscriptionId,
         statePath, expectedProjectionType: event.projectionType, expectedProjectionSchemaVersion: '1', now });
       assert.deepEqual(result, { applied: 1, receiptsClosed: 1 });
@@ -431,7 +455,7 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   checks['databasePoolClosed'] = true;
   checks['portReleased'] = true;
   assert.ok(Object.values(checks).every(Boolean));
-  return { status: 'PASSED', scenario: options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
+  return { status: 'PASSED', scenario: options.verifySdk ? 'PV-005-C-01' : options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
     ...checks, migrationCount, forbiddenTimezoneTypeCount };
 }
 

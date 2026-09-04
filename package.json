@@ -29,9 +29,9 @@
     "verify:ar12-history-evidence-contract": "npm run verify:ar12-history-evidence-contract --workspace @hospital-data-intelligence/verification-tooling",
     "verify:verification-source-manifest": "npm run verify:source-manifest --workspace @hospital-data-intelligence/verification-tooling -- ../..",
     "verify:abg-coverage": "npm run verify:abg-coverage --workspace @hospital-data-intelligence/verification-tooling",
-    "check": "npm run check:runtime && npm run check:repo:layout && npm run check:module-boundaries && npm run contract:check-projection-freeze && npm run check:database-authority",
+    "check": "npm run check:runtime && npm run check:repo:layout && npm run check:module-boundaries && npm run contract:check-projection-freeze && npm run contract:check-consumer-sdk && npm run check:database-authority",
     "typecheck": "tsc -p tooling/prototype/tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspace @hospital-data-intelligence/generated-api-client && npm run build --workspace @hospital-data-intelligence/admin-web && npm run build --workspace @hospital-data-intelligence/governance-api && npm run build --workspace @hospital-data-intelligence/sim-consumer",
+    "build": "npm run build --workspace @hospital-data-intelligence/generated-api-client && npm run build --workspace @hospital-data-intelligence/release-consumer-sdk && npm run build --workspace @hospital-data-intelligence/admin-web && npm run build --workspace @hospital-data-intelligence/governance-api && npm run build --workspace @hospital-data-intelligence/sim-consumer",
     "contract:generate": "npm run contract:generate --workspace @hospital-data-intelligence/governance-api",
     "contract:generate-client": "npm run contract:generate --workspace @hospital-data-intelligence/generated-api-client",
     "contract:lint": "redocly lint contracts/openapi/phase-01.openapi.json --extends=minimal --skip-rule=operation-2xx-response",
@@ -68,7 +68,9 @@
     "prototype:ui:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-ui.ts",
     "prototype:demo:prepare": "npm run prototype:db:check && npm run prototype:db:migrate && npm run prototype:db:seed && tsx --env-file-if-exists=.env.prototype.local tooling/prototype/demo-reset.ts",
     "prototype:demo": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/start-ui.ts --demo",
-    "test": "node tooling/test/run-root-tests.mjs"
+    "test": "node tooling/test/run-root-tests.mjs",
+    "contract:check-consumer-sdk": "npm run contract:check --workspace @hospital-data-intelligence/release-consumer-sdk",
+    "prototype:department:consumer:sdk:validate": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/validate-department-consumer-flow.ts --sdk"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",
