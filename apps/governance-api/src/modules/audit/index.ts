@@ -17,6 +17,7 @@ export const AUDIT_MODULE_ID = 'audit' as const;
 const ZERO_HASH = Buffer.alloc(32);
 
 export type AuditEventType =
+  | PersonAuditEventType
   | 'DRAFT_CREATED'
   | 'DRAFT_READ'
   | 'DRAFT_UPDATED'
@@ -82,6 +83,8 @@ export type DepartmentAuditAggregateType =
 
 export type AuditEventPayload = Readonly<Record<string, unknown>>;
 
+export type PersonAuditEventType = 'PERSON_SUBJECT_CREATED' | 'PERSON_SUBJECT_VERSION_CREATED' | 'PERSON_SUBJECT_READ' | 'PERSON_CORE_ACCESS_DENIED';
+
 export interface AppendAuditEventCommand {
   readonly auditStreamId: string;
   readonly governanceObjectId: string;
@@ -105,8 +108,8 @@ export interface AppendAuditEventCommand {
 export interface AppendGovernanceAuditEventCommand {
   readonly auditStreamId?: string;
   readonly governanceObjectId: string;
-  readonly eventType: DepartmentAuditEventType | ConsumerAuditEvent | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED' | 'CONSUMER_RELEASE_REPLAYED';
-  readonly aggregateType: DepartmentAuditAggregateType | 'CONSUMER_SUBSCRIPTION';
+  readonly eventType: DepartmentAuditEventType | PersonAuditEventType | ConsumerAuditEvent | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED' | 'CONSUMER_RELEASE_REPLAYED';
+  readonly aggregateType: DepartmentAuditAggregateType | 'PERSON_SUBJECT' | 'PERSON_SUBJECT_VERSION' | 'PERSON_CORE_ACCESS' | 'CONSUMER_SUBSCRIPTION';
   readonly aggregateId: string;
   readonly aggregateVersionId?: string | null;
   readonly payload: AuditEventPayload;

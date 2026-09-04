@@ -15,6 +15,9 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:constraints": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-subject-constraint-probe.ts",
+    "prototype:person:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-subject-application-probe.ts",
+    "prototype:person:validate": "npm run prototype:person:constraints && npm run prototype:person:application",
     "prototype:consumer:metrics:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-department-consumer-flow.ts --metrics",
     "contract:check-consumer-audit": "node --import tsx apps/governance-api/scripts/check-consumer-audit-openapi-diff.ts",
     "prototype:consumer:audit:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/validate-department-consumer-flow.ts --audit",

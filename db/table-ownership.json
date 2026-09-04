@@ -8,6 +8,7 @@
     "department_master": "department-master",
     "emergency_control": "emergency-control",
     "platform": "composition-root",
+    "person_master": "person-master",
     "price_list": "price-list",
     "price_resolution": "price-resolution",
     "release_distribution": "release-distribution",

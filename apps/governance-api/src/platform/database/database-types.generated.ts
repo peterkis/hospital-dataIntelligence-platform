@@ -403,6 +403,36 @@ export interface EmergencyControlSuspensionEvent {
   suspension_event_id: Generated<string>;
 }
 
+export interface PersonMasterPersonSubject {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  governance_object_id: string;
+  person_id: Generated<string>;
+}
+
+export interface PersonMasterPersonSubjectVersion {
+  /**
+   * Optional calendar date, never a timestamp.
+   */
+  birth_date: string | null;
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  canonical_name: string;
+  created_by: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  person_version_id: Generated<string>;
+  /**
+   * Asia/Shanghai database record time; per-person version_no owns ordering.
+   */
+  recorded_from: Generated<string>;
+  request_id: string;
+  version_no: Int8;
+}
+
 export interface PlatformBrowserSession {
   created_at: Generated<string>;
   csrf_digest: Buffer;
@@ -893,6 +923,8 @@ export interface DB {
   "emergency_control.impact_case": EmergencyControlImpactCase;
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
+  "person_master.person_subject": PersonMasterPersonSubject;
+  "person_master.person_subject_version": PersonMasterPersonSubjectVersion;
   "platform.browser_session": PlatformBrowserSession;
   "platform.campus": PlatformCampus;
   "platform.external_identity_binding": PlatformExternalIdentityBinding;

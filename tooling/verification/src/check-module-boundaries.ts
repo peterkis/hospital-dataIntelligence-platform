@@ -15,6 +15,7 @@ const EXPECTED_MODULES = [
   'charge-catalog',
   'department-master',
   'emergency-control',
+  'person-master',
   'price-list',
   'price-resolution',
   'release-distribution',
