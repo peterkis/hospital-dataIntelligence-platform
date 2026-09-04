@@ -10835,6 +10835,50 @@
                         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                         "type": "string"
                       },
+                      "sla": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "criticality": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "LOW"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "NORMAL"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "HIGH"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "CRITICAL"
+                                ],
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "expectedApplyWithinSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "retryWindowSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
                       "subscriptionCode": {
                         "maxLength": 128,
                         "minLength": 1,
@@ -10873,6 +10917,50 @@
                         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                         "type": "string"
                       },
+                      "sla": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "criticality": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "LOW"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "NORMAL"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "HIGH"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "CRITICAL"
+                                ],
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "expectedApplyWithinSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "retryWindowSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
                       "subscriptionCode": {
                         "maxLength": 128,
                         "minLength": 1,
@@ -10910,6 +10998,50 @@
                       "servicePrincipalId": {
                         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                         "type": "string"
+                      },
+                      "sla": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "criticality": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "LOW"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "NORMAL"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "HIGH"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "CRITICAL"
+                                ],
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "expectedApplyWithinSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "retryWindowSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
                       },
                       "subscriptionCode": {
                         "maxLength": 128,
@@ -11579,6 +11711,479 @@
           }
         ],
         "summary": "暂停、恢复、撤销或归档消费者订阅"
+      }
+    },
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/operational-status": {
+      "get": {
+        "description": "仅本订阅的有效服务主体可读。省略版本时选择最新版本；指定历史版本只改变评估策略，不表示历史时点查询。时间展示为Asia/Shanghai，时限按绝对时刻计算。",
+        "operationId": "getPhase01ConsumerOperationalStatus",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "subscriptionVersionId",
+            "required": false,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subscriptionId",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "applyOverdue": {
+                      "type": "boolean"
+                    },
+                    "evaluatedAt": {
+                      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                      "type": "string"
+                    },
+                    "lastSuccessfulApply": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recordedAt": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "releaseId",
+                            "releaseNo",
+                            "recordedAt"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "latestCheckpoint": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "appliedReleaseNo": {
+                              "pattern": "^(?:0|[1-9]\\d*)$",
+                              "type": "string"
+                            },
+                            "recordedAt": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "appliedReleaseNo",
+                            "recordedAt"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "latestRelease": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "publishedAt": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "releaseId",
+                            "releaseNo",
+                            "publishedAt"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lifecycleStatus": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "ACTIVE"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "SUSPENDED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "REVOKED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "ARCHIVED"
+                          ],
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "oldestPendingRelease": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "publishedAt": {
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?$",
+                              "type": "string"
+                            },
+                            "releaseId": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "releaseNo": {
+                              "pattern": "^[1-9]\\d*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "releaseId",
+                            "releaseNo",
+                            "publishedAt"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "owner": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "principalCode": {
+                          "maxLength": 128,
+                          "type": "string"
+                        },
+                        "servicePrincipalId": {
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "servicePrincipalId",
+                        "principalCode"
+                      ],
+                      "type": "object"
+                    },
+                    "sla": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "criticality": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "LOW"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "enum": [
+                                "NORMAL"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "enum": [
+                                "HIGH"
+                              ],
+                              "type": "string"
+                            },
+                            {
+                              "enum": [
+                                "CRITICAL"
+                              ],
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "expectedApplyWithinSeconds": {
+                          "anyOf": [
+                            {
+                              "maximum": 2147483647,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "retryWindowSeconds": {
+                          "anyOf": [
+                            {
+                              "maximum": 2147483647,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "criticality",
+                        "expectedApplyWithinSeconds",
+                        "retryWindowSeconds"
+                      ],
+                      "type": "object"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "NOT_CONFIGURED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "HEALTHY"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "LATE"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "NEVER_APPLIED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "SUSPENDED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "REVOKED"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "enum": [
+                            "ARCHIVED"
+                          ],
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "subscriptionId": {
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "subscriptionVersionId": {
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "timezone": {
+                      "enum": [
+                        "Asia/Shanghai"
+                      ],
+                      "type": "string"
+                    },
+                    "versionNo": {
+                      "pattern": "^[1-9]\\d*$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "subscriptionId",
+                    "subscriptionVersionId",
+                    "versionNo",
+                    "lifecycleStatus",
+                    "sla",
+                    "status",
+                    "applyOverdue",
+                    "owner",
+                    "evaluatedAt",
+                    "timezone",
+                    "latestRelease",
+                    "oldestPendingRelease",
+                    "lastSuccessfulApply",
+                    "latestCheckpoint"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "requestId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "summary": "读取当前消费事实与不可变订阅版本的运营SLA状态"
       }
     },
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/receipts": {
@@ -13480,6 +14085,50 @@
                           "hdi.price-list"
                         ],
                         "type": "string"
+                      },
+                      "sla": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "criticality": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "LOW"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "NORMAL"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "HIGH"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "CRITICAL"
+                                ],
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "expectedApplyWithinSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "retryWindowSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
                       }
                     },
                     "required": [
@@ -13507,6 +14156,50 @@
                           "hdi.department-master"
                         ],
                         "type": "string"
+                      },
+                      "sla": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "criticality": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "LOW"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "NORMAL"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "HIGH"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "CRITICAL"
+                                ],
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "expectedApplyWithinSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "retryWindowSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
                       }
                     },
                     "required": [
@@ -13534,6 +14227,50 @@
                           "hdi.department-hierarchy"
                         ],
                         "type": "string"
+                      },
+                      "sla": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "criticality": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "LOW"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "NORMAL"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "HIGH"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "enum": [
+                                  "CRITICAL"
+                                ],
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "expectedApplyWithinSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "retryWindowSeconds": {
+                            "maximum": 2147483647,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
                       }
                     },
                     "required": [

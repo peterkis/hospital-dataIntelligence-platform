@@ -26,6 +26,8 @@ import {
   SnapshotBinarySchema,
   ChangeSubscriptionLifecycleBodySchema,
   SubscriptionLifecycleResponseSchema,
+  ConsumerOperationalQuerySchema,
+  ConsumerOperationalResponseSchema,
 } from './release-consumer-schemas.js';
 
 const UuidSchema = Type.String({
@@ -1756,6 +1758,24 @@ export async function registerPhase01Routes(
       return reply.code(201).send(version);
     },
   );
+
+  typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/operational-status', {
+    schema: {
+      operationId: 'getPhase01ConsumerOperationalStatus',
+      summary: '读取当前消费事实与不可变订阅版本的运营SLA状态',
+      description: '仅本订阅的有效服务主体可读。省略版本时选择最新版本；指定历史版本只改变评估策略，不表示历史时点查询。时间展示为Asia/Shanghai，时限按绝对时刻计算。',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema,
+      params: SubscriptionParamsSchema, querystring: ConsumerOperationalQuerySchema,
+      response: { 200: ConsumerOperationalResponseSchema, 400: ErrorResponseSchema,
+        401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 503: ErrorResponseSchema },
+    },
+  }, async (request) => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    return runtime.transactionRunner.run(context, (modules) => modules.releaseDistribution.getConsumerOperationalStatus({
+      subscriptionId: request.params.subscriptionId, ...request.query,
+    }));
+  });
 
   typed.post(
     '/v1/phase-01/consumer-subscriptions/:subscriptionId/replays',

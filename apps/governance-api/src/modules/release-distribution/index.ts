@@ -7,6 +7,9 @@ import type { ConsumerReferenceReader } from '../../platform/release-consumer/co
 import type { AuditModule } from '../audit/index.js';
 import type { AuthorizationModule } from '../authorization/index.js';
 import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
+import { normalizeConsumerSla, type ConsumerSlaInput } from './consumer-sla.js';
+import { readConsumerOperationalView } from './consumer-operational-view.js';
+export { ConsumerSlaInputSchema, ConsumerSlaSchema, ConsumerOperationalStatusSchema } from './consumer-sla.js';
 import { lifecycleStatus, lockSubscription, requireActiveSubscription, validateLifecycleTransition,
   type ConsumerSubscriptionLifecycleStatus } from './subscription-lifecycle.js';
 export { ConsumerSubscriptionLifecycleStatusSchema, ConsumerSubscriptionLifecycleReasonSchema,
@@ -174,6 +177,11 @@ export interface AvailableEvent {
 }
 
 export interface ReleaseDistributionModule {
+  getConsumerOperationalStatus(command: {
+    readonly subscriptionId: string; readonly subscriptionVersionId?: string;
+  }): Promise<Awaited<ReturnType<typeof readConsumerOperationalView>> & {
+    readonly owner: { readonly servicePrincipalId: string; readonly principalCode: string };
+  }>;
   changeSubscriptionLifecycle(command: {
     readonly subscriptionId: string;
     readonly governanceObjectId: string;
@@ -208,6 +216,7 @@ export interface ReleaseDistributionModule {
   }): Promise<void>;
   hasAppliedReceipt(releaseId: string): Promise<boolean>;
   createSubscription(command: {
+    readonly sla?: ConsumerSlaInput;
     readonly subscriptionCode: string;
     readonly servicePrincipalId: string;
     readonly governanceObjectId: string;
@@ -215,6 +224,7 @@ export interface ReleaseDistributionModule {
     readonly projectionSchemaVersion: string;
   }): Promise<{ readonly subscriptionId: string }>;
   createSubscriptionVersion(command: {
+    readonly sla?: ConsumerSlaInput;
     readonly subscriptionId: string;
     readonly governanceObjectId: string;
     readonly projectionType: string;
@@ -279,6 +289,16 @@ export function createReleaseDistributionModule(
   }
 
   return {
+    async getConsumerOperationalStatus(command) {
+      const subscription = await lockSubscription(database, command.subscriptionId);
+      if (subscription.service_principal_id !== context.actorPrincipalId) throw new Error('CONSUMER_SUBSCRIPTION_FORBIDDEN');
+      const owner = await references.getActiveServiceOwner(context.actorPrincipalId);
+      if (!owner) throw new Error('CONSUMER_SERVICE_PRINCIPAL_INVALID');
+      return { ...await readConsumerOperationalView(database, {
+        ...command, governanceObjectId: subscription.governance_object_id,
+        lifecycle: lifecycleStatus(subscription.lifecycle_status), evaluatedAt: context.occurredAt,
+      }), owner };
+    },
     async changeSubscriptionLifecycle(command) {
       await requireSubscriptionGovernance(references, authorization, context, command.governanceObjectId);
       const subscription = await lockSubscription(database, command.subscriptionId);
@@ -617,6 +637,7 @@ export function createReleaseDistributionModule(
     },
 
     async createSubscription(command) {
+      const sla = normalizeConsumerSla(command.sla);
       parseLocalDateTime(context.occurredAt);
       const contract = requireContract(
         contracts,
@@ -645,6 +666,9 @@ export function createReleaseDistributionModule(
           version_no: '1',
           status: 'ACTIVE',
           recorded_sequence: '1',
+          criticality: sla.criticality,
+          expected_apply_within_seconds: sla.expectedApplyWithinSeconds,
+          retry_window_seconds: sla.retryWindowSeconds,
         })
         .returning('consumer_subscription_version_id')
         .executeTakeFirstOrThrow();
@@ -661,6 +685,7 @@ export function createReleaseDistributionModule(
     },
 
     async createSubscriptionVersion(command) {
+      const sla = normalizeConsumerSla(command.sla);
       const contract = requireContract(
         contracts,
         command.projectionType,
@@ -685,6 +710,9 @@ export function createReleaseDistributionModule(
           version_no: versionNo,
           status: 'ACTIVE',
           recorded_sequence: versionNo,
+          criticality: sla.criticality,
+          expected_apply_within_seconds: sla.expectedApplyWithinSeconds,
+          retry_window_seconds: sla.retryWindowSeconds,
         })
         .returning('consumer_subscription_version_id')
         .executeTakeFirstOrThrow();
@@ -978,6 +1006,7 @@ export function createReleaseDistributionModule(
     },
 
     async recordReceipt(command) {
+      parseLocalDateTime(command.processedAt);
       await requireServiceSubscription(database, references, command.subscriptionId, command.servicePrincipalId);
       const selected = await sql<{
         aggregate_id: string;
@@ -1065,7 +1094,7 @@ export function createReleaseDistributionModule(
             .onConflict((conflict) =>
               conflict.columns(['consumer_subscription_id', 'governance_object_id']).doUpdateSet({
                 applied_aggregate_version: event.aggregate_version,
-                updated_at: command.processedAt,
+                updated_at: sql`platform.local_now()`,
               }),
             )
             .execute();

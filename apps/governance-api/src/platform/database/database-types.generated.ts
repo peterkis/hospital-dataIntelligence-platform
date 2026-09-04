@@ -639,7 +639,10 @@ export interface ReleaseDistributionConsumerSubscriptionVersion {
   consumer_subscription_id: string;
   consumer_subscription_version_id: Generated<string>;
   created_at: Generated<string>;
+  criticality: Generated<string>;
+  expected_apply_within_seconds: number | null;
   recorded_sequence: Int8;
+  retry_window_seconds: number | null;
   status: string;
   version_no: Int8;
 }

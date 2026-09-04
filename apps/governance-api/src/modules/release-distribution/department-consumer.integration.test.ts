@@ -3,6 +3,24 @@ import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { readdirSync } from 'node:fs';
 
+it('derives consumer SLA status from immutable policies and persistent receipt facts', () => {
+  const root = resolve(import.meta.dirname, '../../../../..');
+  const output = execFileSync(process.execPath, [
+    '--env-file-if-exists=.env.prototype.local', '--import', 'tsx',
+    'tooling/prototype/validate-department-consumer-flow.ts', '--sla',
+  ], { cwd: root, encoding: 'utf8', windowsHide: true, timeout: 60_000 });
+  expect(output).not.toMatch(/postgres(?:ql)?:\/\/|DATABASE_URL=|password|Bearer /iu);
+  const result = JSON.parse(output);
+  expect(result.status).toBe('PASSED');
+  expect(result.scenario).toBe('PV-005-B-03B');
+  for (const check of ['slaBackwardCompatible', 'slaPoliciesValidated', 'slaVersionsImmutable',
+    'slaDerivedFromAppliedReceipt', 'slaReplayDoesNotRefreshSuccess', 'slaDigestFailuresDoNotMarkSuccess',
+    'slaOldEventFiltering', 'slaLifecycleOverrides', 'slaCrossSubscriptionRejected', 'slaOwnerReusedAndValidated',
+    'slaAbsoluteTimeDeterministic', 'slaOldestPendingReleaseRetained', 'slaPersistenceObserved', 'databasePoolClosed', 'portReleased']) {
+    expect(result[check], check).toBe(true);
+  }
+}, 65_000);
+
 it('completes Department Master and Hierarchy consumption on real PostgreSQL and HTTP', () => {
   const root = resolve(import.meta.dirname, '../../../../..');
   const output = execFileSync(process.execPath, [

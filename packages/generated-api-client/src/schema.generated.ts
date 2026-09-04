@@ -620,6 +620,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/phase-01/consumer-subscriptions/{subscriptionId}/operational-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 读取当前消费事实与不可变订阅版本的运营SLA状态
+         * @description 仅本订阅的有效服务主体可读。省略版本时选择最新版本；指定历史版本只改变评估策略，不表示历史时点查询。时间展示为Asia/Shanghai，时限按绝对时刻计算。
+         */
+        get: operations["getPhase01ConsumerOperationalStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/phase-01/consumer-subscriptions/{subscriptionId}/receipts": {
         parameters: {
             query?: never;
@@ -4532,6 +4552,11 @@ export interface operations {
                     /** @enum {string} */
                     projectionType: "hdi.price-list";
                     servicePrincipalId: string;
+                    sla?: {
+                        criticality?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                        expectedApplyWithinSeconds?: number;
+                        retryWindowSeconds?: number;
+                    };
                     subscriptionCode: string;
                 } | {
                     governanceObjectId: string;
@@ -4540,6 +4565,11 @@ export interface operations {
                     /** @enum {string} */
                     projectionType: "hdi.department-master";
                     servicePrincipalId: string;
+                    sla?: {
+                        criticality?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                        expectedApplyWithinSeconds?: number;
+                        retryWindowSeconds?: number;
+                    };
                     subscriptionCode: string;
                 } | {
                     governanceObjectId: string;
@@ -4548,6 +4578,11 @@ export interface operations {
                     /** @enum {string} */
                     projectionType: "hdi.department-hierarchy";
                     servicePrincipalId: string;
+                    sla?: {
+                        criticality?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                        expectedApplyWithinSeconds?: number;
+                        retryWindowSeconds?: number;
+                    };
                     subscriptionCode: string;
                 };
             };
@@ -4807,6 +4842,128 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+        };
+    };
+    getPhase01ConsumerOperationalStatus: {
+        parameters: {
+            query?: {
+                subscriptionVersionId?: string;
+            };
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        applyOverdue: boolean;
+                        evaluatedAt: string;
+                        lastSuccessfulApply: {
+                            recordedAt: string;
+                            releaseId: string;
+                            releaseNo: string;
+                        } | null;
+                        latestCheckpoint: {
+                            appliedReleaseNo: string;
+                            recordedAt: string;
+                        } | null;
+                        latestRelease: {
+                            publishedAt: string;
+                            releaseId: string;
+                            releaseNo: string;
+                        } | null;
+                        lifecycleStatus: "ACTIVE" | "SUSPENDED" | "REVOKED" | "ARCHIVED";
+                        oldestPendingRelease: {
+                            publishedAt: string;
+                            releaseId: string;
+                            releaseNo: string;
+                        } | null;
+                        owner: {
+                            principalCode: string;
+                            servicePrincipalId: string;
+                        };
+                        sla: {
+                            criticality: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                            expectedApplyWithinSeconds: number | null;
+                            retryWindowSeconds: number | null;
+                        };
+                        status: "NOT_CONFIGURED" | "HEALTHY" | "LATE" | "NEVER_APPLIED" | "SUSPENDED" | "REVOKED" | "ARCHIVED";
+                        subscriptionId: string;
+                        subscriptionVersionId: string;
+                        /** @enum {string} */
+                        timezone: "Asia/Shanghai";
+                        versionNo: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5348,18 +5505,33 @@ export interface operations {
                     projectionSchemaVersion: "0" | "1" | "2";
                     /** @enum {string} */
                     projectionType: "hdi.price-list";
+                    sla?: {
+                        criticality?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                        expectedApplyWithinSeconds?: number;
+                        retryWindowSeconds?: number;
+                    };
                 } | {
                     governanceObjectId: string;
                     /** @enum {string} */
                     projectionSchemaVersion: "1";
                     /** @enum {string} */
                     projectionType: "hdi.department-master";
+                    sla?: {
+                        criticality?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                        expectedApplyWithinSeconds?: number;
+                        retryWindowSeconds?: number;
+                    };
                 } | {
                     governanceObjectId: string;
                     /** @enum {string} */
                     projectionSchemaVersion: "1";
                     /** @enum {string} */
                     projectionType: "hdi.department-hierarchy";
+                    sla?: {
+                        criticality?: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+                        expectedApplyWithinSeconds?: number;
+                        retryWindowSeconds?: number;
+                    };
                 };
             };
         };

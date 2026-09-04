@@ -1,6 +1,7 @@
 import { Type, type TProperties, type TSchema } from 'typebox';
 import { LOCAL_DATE_TIME_JSON_PATTERN } from '../local-datetime/local-datetime.js';
 import { ConsumerSubscriptionLifecycleStatusSchema, ConsumerSubscriptionLifecycleReasonSchema } from '../../modules/release-distribution/index.js';
+import { ConsumerSlaInputSchema, ConsumerSlaSchema, ConsumerOperationalStatusSchema } from '../../modules/release-distribution/index.js';
 import {
   CHARGE_CATALOG_PROJECTION_TYPE,
   CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
@@ -70,13 +71,38 @@ function consumerProjectionSupport<Properties extends TProperties>(properties: P
 
 export const ConsumerProjectionSupportSchema = consumerProjectionSupport({});
 export const CreateSubscriptionBodySchema = consumerProjectionSupport({
+  sla: Type.Optional(ConsumerSlaInputSchema),
   subscriptionCode: Type.String({ minLength: 1, maxLength: 128 }),
   servicePrincipalId: Uuid,
   governanceObjectId: Uuid,
 });
 export const CreateSubscriptionVersionBodySchema = consumerProjectionSupport({
+  sla: Type.Optional(ConsumerSlaInputSchema),
   governanceObjectId: Uuid,
 });
+
+export const ConsumerOperationalQuerySchema = Type.Object({
+  subscriptionVersionId: Type.Optional(Uuid),
+}, { additionalProperties: false });
+const OperationalRelease = Type.Object({
+  releaseId: Uuid, releaseNo: Type.String({ pattern: '^[1-9]\\d*$' }), publishedAt: LocalDateTime,
+}, { additionalProperties: false });
+export const ConsumerOperationalResponseSchema = Type.Object({
+  subscriptionId: Uuid, subscriptionVersionId: Uuid,
+  versionNo: Type.String({ pattern: '^[1-9]\\d*$' }),
+  lifecycleStatus: ConsumerSubscriptionLifecycleStatusSchema,
+  sla: ConsumerSlaSchema, status: ConsumerOperationalStatusSchema, applyOverdue: Type.Boolean(),
+  owner: Type.Object({ servicePrincipalId: Uuid, principalCode: Type.String({ maxLength: 128 }) }, { additionalProperties: false }),
+  evaluatedAt: LocalDateTime, timezone: Type.Literal('Asia/Shanghai'),
+  latestRelease: Type.Union([OperationalRelease, Type.Null()]),
+  oldestPendingRelease: Type.Union([OperationalRelease, Type.Null()]),
+  lastSuccessfulApply: Type.Union([Type.Object({
+    releaseId: Uuid, releaseNo: Type.String({ pattern: '^[1-9]\\d*$' }), recordedAt: LocalDateTime,
+  }, { additionalProperties: false }), Type.Null()]),
+  latestCheckpoint: Type.Union([Type.Object({
+    appliedReleaseNo: Type.String({ pattern: '^(?:0|[1-9]\\d*)$' }), recordedAt: LocalDateTime,
+  }, { additionalProperties: false }), Type.Null()]),
+}, { additionalProperties: false });
 
 function snapshotEnvelope(
   aggregateType: string,

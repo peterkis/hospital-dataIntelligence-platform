@@ -24,6 +24,7 @@ import { createPrototypeAuthentication, PROTOTYPE_CSRF_TOKEN } from '../../apps/
 import { PROTOTYPE_FIXTURE as fixture } from './prototype-fixture.js';
 import { checkDepartmentConsumerCanonical } from './check-department-consumer-canonical.js';
 import { checkConsumerLifecycleFlow } from './check-consumer-lifecycle-flow.js';
+import { checkConsumerSlaFlow } from './check-consumer-sla-flow.js';
 
 const masterObject = fixture.departmentMasterObjectId;
 const hierarchyObject = '74100000-0000-7000-8000-000000000001';
@@ -39,7 +40,7 @@ type Event = GovernanceApiOperations['listPhase01ConsumerEvents']['responses'][2
 type SubscriptionBody = GovernanceApiOperations['createPhase01ConsumerSubscription']['requestBody']['content']['application/json'];
 
 // This composition exists only in tooling. Production still resolves Keycloak JWTs.
-export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean } = {}) {
+export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boolean; verifySla?: boolean } = {}) {
   assert.notEqual(process.env['NODE_ENV']?.toLowerCase(), 'production');
   const connectionString = process.env['DATABASE_URL'];
   assert.ok(connectionString, 'PROTOTYPE_DATABASE_CONFIGURATION_REQUIRED');
@@ -87,6 +88,7 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   const checks: Record<string, boolean> = {};
   const consumed: { subscriptionId: string; event: Event }[] = [];
   let lifecycleHistories: Awaited<ReturnType<ScopedModules['releaseDistribution']['getSubscriptionHistory']>>[] = [];
+  let slaResult: Awaited<ReturnType<typeof checkConsumerSlaFlow>> | undefined;
   let migrationCount = 0;
   let forbiddenTimezoneTypeCount = -1;
   try {
@@ -365,6 +367,11 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
       lifecycleHistories = lifecycle.histories;
       Object.assign(checks, lifecycle.checks);
     }
+    if (options.verifySla) {
+      slaResult = await checkConsumerSlaFlow({ database, runner, context, owner, reviewer, person,
+        service: serviceA, otherService: serviceB, baseUrl, subscriptionId: master.subscriptionId, event: masterEvent });
+      Object.assign(checks, slaResult.checks);
+    }
     migrationCount = Number((await database.selectFrom('platform.schema_migration')
       .select(({ fn }) => fn.countAll<string>().as('count')).executeTakeFirstOrThrow()).count);
     const forbidden = await sql<{ count: string }>`select count(*)::text as count
@@ -390,6 +397,14 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   const verification = createDatabase({ connectionString, max: 1, application_name: 'hdi-department-consumer-persistence' });
   try {
     const reopenedRunner = createTransactionRunner<ScopedModules>(verification.database, createScopedModules);
+    if (slaResult) {
+      for (const expected of slaResult.views) {
+        assert.deepEqual(await reopenedRunner.run(slaResult.context, (m) => m.releaseDistribution.getConsumerOperationalStatus({
+          subscriptionId: expected.subscriptionId, subscriptionVersionId: expected.subscriptionVersionId,
+        })), expected);
+      }
+      checks['slaPersistenceObserved'] = true;
+    }
     for (const expected of lifecycleHistories) {
       const actual = await reopenedRunner.run(context(), (m) => m.releaseDistribution.getSubscriptionHistory({
         subscriptionId: expected.subscriptionId, governanceObjectId: masterObject,
@@ -416,7 +431,7 @@ export async function runDepartmentConsumerFlow(options: { verifyLifecycle?: boo
   checks['databasePoolClosed'] = true;
   checks['portReleased'] = true;
   assert.ok(Object.values(checks).every(Boolean));
-  return { status: 'PASSED', scenario: options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
+  return { status: 'PASSED', scenario: options.verifySla ? 'PV-005-B-03B' : options.verifyLifecycle ? 'PV-005-B-03A' : 'PV-005-B-02B', synthetic: true, production: false, timezone: 'Asia/Shanghai',
     ...checks, migrationCount, forbiddenTimezoneTypeCount };
 }
 
