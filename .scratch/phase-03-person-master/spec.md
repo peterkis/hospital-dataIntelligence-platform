@@ -22,7 +22,7 @@ Immutable Version Core task at authority HEAD
 | PV-006-A-02B | Person Source Record Mapping | DONE on the sole validated completion commit |
 | PV-006-B | Engagement | IN_PROGRESS |
 | PV-006-B-01 | Engagement Stable Relation & Immutable Version Core | DONE on the sole validated completion commit |
-| PV-006-B-02 | Engagement Type / Classification & Overlap Rules | NOT_STARTED |
+| PV-006-B-02 | Engagement Type / Classification & Overlap Rules | DONE on the sole validated completion commit |
 | PV-006-B-03 | Engagement Lifecycle / Business-State Semantics | NOT_STARTED |
 | PV-006-C | Assignment | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
@@ -75,3 +75,24 @@ restart recovery. A-01, A-02A, A-02B, Department, consumer, frozen-contract,
 typecheck, build and repository/database-authority regressions passed. Completion
 becomes effective with fresh final-candidate Standards/Spec approval and the sole
 local commit. PV-006-B remains IN_PROGRESS because B-02 and B-03 are NOT_STARTED.
+
+PV-006-B-02 is authorized by the user Engagement Type / Classification &
+Overlap Rules task at local B-01 authority
+`221dfa6a0d18cf4fb89fed3c1082ed8896022913`. It may add only versioned Engagement
+Type definitions, immutable type-version classification, versioned symmetric
+overlap rules, overlap evaluation for create/period revision, separated policy
+permissions and bounded audit. Its representative matrix is synthetic test
+policy only. B-03, Assignment, Role, Credential, HTTP, projection, release and
+consumer work remain unauthorized. One local completion commit; no push.
+
+B-02 local engineering gates passed against real PostgreSQL 18.6: migration
+23→24, four versioned categories and nine representative Types, immutable
+classification, symmetric immutable rule versions, record-time history, all
+three decisions plus missing-rule fail-closed, half-open/open periods,
+create/revision evaluation, exact one-of-two forbidden concurrency, bounded
+audit, policy-owner separation and actual restart recovery. Pre-B-02 as-of reads
+do not receive later backfill classification. B-01, A-01/A-02, Department,
+consumer, OpenAPI/client/canonical freeze, contract lint, typecheck, build and
+repository/database-authority regressions passed. Completion becomes effective
+with fresh final-candidate Standards/Spec approval and the sole local commit.
+PV-006-B remains IN_PROGRESS because B-03 is NOT_STARTED.

@@ -4,6 +4,7 @@ import { sql, type Insertable, type Selectable, type Transaction } from 'kysely'
 import type { DB } from '../../apps/governance-api/src/platform/database/database-types.generated.js';
 import { createDatabase } from '../../apps/governance-api/src/platform/database/create-database.js';
 import { ENGAGEMENT_FIXTURE, seedEngagementScope } from './person-engagement-fixture.js';
+import { seedSyntheticEngagementPolicy } from './person-engagement-policy-fixture.js';
 import { PROTOTYPE_FIXTURE } from './prototype-fixture.js';
 
 if (!process.env['DATABASE_URL']) throw new Error('PERSON_ENGAGEMENT_DATABASE_REQUIRED');
@@ -19,9 +20,14 @@ type Fixture = { id: string; stable: Stable; first: VersionRow; next: Version };
 
 try {
   const people = await seedEngagementScope(handle.database);
+  const policy = await seedSyntheticEngagementPolicy(handle.database);
+  const contractType = policy.types.get('CONTRACT_EMPLOYEE')?.[0];
+  if (!contractType) throw new Error('CONTRACT_EMPLOYEE_TYPE_REQUIRED');
+  const contractTypeId = contractType.engagementTypeId;
+  const contractTypeVersionId = contractType.engagementTypeVersionId;
   const migrations = await sql<{ count: string }>`select count(*) from platform.schema_migration`.execute(handle.database);
-  assert.equal(migrations.rows[0]?.count, '23');
-  checks['migrationCount23'] = true;
+  assert.equal(migrations.rows[0]?.count, '24');
+  checks['migrationCount24WithB01AuthorityPreserved'] = true;
   const metadata = await sql<{ version: string; timezone: string }>`
     select current_setting('server_version') as version, current_setting('TimeZone') as timezone
   `.execute(handle.database);
@@ -67,14 +73,27 @@ try {
   });
 
   await rejected('missingFirstVersionBlocked', ['23514'], async (tx, f) => {
-    await tx.insertInto('person_master.engagement').values({ ...f.stable,
-      creation_request_id: randomUUID() }).execute();
+    const requestId = randomUUID();
+    const relation = await tx.insertInto('person_master.engagement').values({ ...f.stable,
+      creation_request_id: requestId }).returning('engagement_id').executeTakeFirstOrThrow();
+    await tx.insertInto('person_master.engagement_classification').values({
+      engagement_id: relation.engagement_id, governance_object_id: ENGAGEMENT_FIXTURE.objectId,
+      person_id: people[0]!, engagement_type_id: contractTypeId,
+      engagement_type_version_id: contractTypeVersionId,
+      classified_by: ENGAGEMENT_FIXTURE.engagementOwnerId, request_id: requestId,
+    }).execute();
     await sql`set constraints all immediate`.execute(tx);
   });
   await rejected('firstVersionShapeGuard', ['23514'], async (tx, f) => {
     const requestId = randomUUID();
     const stable = await tx.insertInto('person_master.engagement').values({ ...f.stable,
       creation_request_id: requestId }).returning('engagement_id').executeTakeFirstOrThrow();
+    await tx.insertInto('person_master.engagement_classification').values({
+      engagement_id: stable.engagement_id, governance_object_id: ENGAGEMENT_FIXTURE.objectId,
+      person_id: people[0]!, engagement_type_id: contractTypeId,
+      engagement_type_version_id: contractTypeVersionId,
+      classified_by: ENGAGEMENT_FIXTURE.engagementOwnerId, request_id: requestId,
+    }).execute();
     await tx.insertInto('person_master.engagement_version').values({ ...f.next,
       engagement_id: stable.engagement_id, version_no: '1',
       supersedes_engagement_version_id: f.first.engagement_version_id,
@@ -102,6 +121,12 @@ try {
     const requestId = randomUUID();
     const other = await tx.insertInto('person_master.engagement').values({ ...f.stable,
       creation_request_id: requestId }).returningAll().executeTakeFirstOrThrow();
+    await tx.insertInto('person_master.engagement_classification').values({
+      engagement_id: other.engagement_id, governance_object_id: ENGAGEMENT_FIXTURE.objectId,
+      person_id: people[0]!, engagement_type_id: contractTypeId,
+      engagement_type_version_id: contractTypeVersionId,
+      classified_by: ENGAGEMENT_FIXTURE.engagementOwnerId, request_id: requestId,
+    }).execute();
     const otherFirst = await tx.insertInto('person_master.engagement_version').values({
       engagement_id: other.engagement_id, governance_object_id: other.governance_object_id,
       person_id: other.person_id, version_no: '1', supersedes_engagement_version_id: null,
@@ -121,7 +146,8 @@ try {
   for (const forbidden of ['engagement_type', 'engagement_category', 'employment_status', 'business_state',
     'lifecycle_state', 'department_id', 'campus_id', 'job_code', 'role_code', 'credential_id',
     'basis_reference', 'contract_no', 'employee_no']) assert.ok(!names.includes(forbidden), forbidden);
-  checks['classificationLifecycleAssignmentCredentialAbsent'] = true;
+  checks['classificationStoredOutsideB01CoreTables'] = true;
+  checks['businessLifecycleAssignmentCredentialAbsent'] = true;
 
   const objectCounts = await sql<{ tables: string; constraints: string; triggers: string; indexes: string }>`
     select
@@ -169,6 +195,12 @@ try {
           created_by: ENGAGEMENT_FIXTURE.engagementOwnerId };
         const relation = await tx.insertInto('person_master.engagement').values(stable)
           .returning('engagement_id').executeTakeFirstOrThrow();
+        await tx.insertInto('person_master.engagement_classification').values({
+          engagement_id: relation.engagement_id, governance_object_id: ENGAGEMENT_FIXTURE.objectId,
+          person_id: people[0]!, engagement_type_id: contractTypeId,
+          engagement_type_version_id: contractTypeVersionId,
+          classified_by: ENGAGEMENT_FIXTURE.engagementOwnerId, request_id: requestId,
+        }).execute();
         const first = await tx.insertInto('person_master.engagement_version').values({
           engagement_id: relation.engagement_id, governance_object_id: ENGAGEMENT_FIXTURE.objectId,
           person_id: people[0]!, version_no: '1', supersedes_engagement_version_id: null,

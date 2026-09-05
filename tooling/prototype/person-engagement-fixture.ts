@@ -45,6 +45,7 @@ export async function seedEngagementScope(database: Kysely<DB>): Promise<readonl
 
 export function engagementCreation(personId: string, index: number) {
   return { governanceObjectId: PERSON_FIXTURE.objectId, personId,
+    engagementTypeCode: 'CONTRACT_EMPLOYEE',
     relationBasis: 'CONFIRMED_DISTINCT_RELATION_BASIS' as const,
     businessValidFrom: `2026-${String((index % 9) + 1).padStart(2, '0')}-01T00:00:00`,
     businessValidTo: '2026-12-31T00:00:00' };

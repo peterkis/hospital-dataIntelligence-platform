@@ -11,3 +11,6 @@ export { createPersonSourceMappingModule, type PersonSourceMappingModule } from 
 export * from './engagement-contracts.js';
 export { createEngagementCoreApplication } from './engagement-application.js';
 export { createEngagementCoreModule, type EngagementCoreModule } from './engagement-repository.js';
+export * from './engagement-policy-contracts.js';
+export { createEngagementPolicyCoreApplication } from './engagement-policy-application.js';
+export { createEngagementPolicyModule, type EngagementPolicyModule } from './engagement-policy-repository.js';

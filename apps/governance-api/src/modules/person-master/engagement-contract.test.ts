@@ -13,18 +13,22 @@ const creation = { governanceObjectId, personId,
   relationBasis: 'CONFIRMED_DISTINCT_RELATION_BASIS' as const, ...validity };
 
 describe('Person Engagement Core contract', () => {
-  it('accepts a closed create command with an explicit distinct-relation declaration', () => {
-    validateEngagementCreation(creation);
-    expect(() => validateEngagementCreation({ ...creation,
-      relationBasis: 'REUSE_PREVIOUS_RELATION' } as unknown as typeof creation))
+  it('requires a governed type code and an explicit distinct-relation declaration', () => {
+    const classifiedCreation = { ...creation, engagementTypeCode: 'CONTRACT_EMPLOYEE' };
+    validateEngagementCreation(classifiedCreation);
+    expect(() => validateEngagementCreation(creation as typeof classifiedCreation))
+      .toThrow('ENGAGEMENT_TYPE_CODE_INVALID');
+    expect(() => validateEngagementCreation({ ...classifiedCreation,
+      relationBasis: 'REUSE_PREVIOUS_RELATION' } as unknown as typeof classifiedCreation))
       .toThrow('ENGAGEMENT_RELATION_BASIS_REQUIRED');
   });
 
-  it('keeps classification, lifecycle, assignment, role and credential facts absent', () => {
+  it('keeps category mutation, lifecycle, assignment, role and credential facts absent', () => {
     for (const forbidden of ['engagementType', 'engagementCategory', 'employmentType', 'employmentStatus',
       'businessState', 'lifecycleState', 'departmentId', 'campusId', 'jobCode', 'roleCode',
       'credential', 'basisReference', 'contractNo', 'employeeNo']) {
-      expect(() => validateEngagementCreation({ ...creation, [forbidden]: 'SYNTHETIC' }))
+      expect(() => validateEngagementCreation({ ...creation,
+        engagementTypeCode: 'CONTRACT_EMPLOYEE', [forbidden]: 'SYNTHETIC' }))
         .toThrow('PERSON_INPUT_INVALID');
     }
   });
@@ -39,6 +43,9 @@ describe('Person Engagement Core contract', () => {
       reasonCode: 'REHIRE' } as unknown as typeof revision)).toThrow('ENGAGEMENT_REASON_INVALID');
     expect(() => validateEngagementRevision({ ...revision,
       personId } as unknown as typeof revision)).toThrow('PERSON_INPUT_INVALID');
+    expect(() => validateEngagementRevision({ ...revision,
+      engagementTypeCode: 'PERMANENT_EMPLOYEE' } as unknown as typeof revision))
+      .toThrow('PERSON_INPUT_INVALID');
   });
 
   it('accepts only the B-01 revision reason closed set', () => {

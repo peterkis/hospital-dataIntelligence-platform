@@ -412,6 +412,69 @@ export interface PersonMasterEngagement {
   person_id: string;
 }
 
+export interface PersonMasterEngagementClassification {
+  classified_at: Generated<string>;
+  classified_by: string;
+  engagement_id: string;
+  engagement_type_id: string;
+  engagement_type_version_id: string;
+  governance_object_id: string;
+  person_id: string;
+  request_id: string;
+}
+
+export interface PersonMasterEngagementOverlapRule {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  engagement_overlap_rule_id: Generated<string>;
+  governance_object_id: string;
+  left_type_code: string;
+  right_type_code: string;
+}
+
+export interface PersonMasterEngagementOverlapRuleVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  created_by: string;
+  decision: string;
+  engagement_overlap_rule_id: string;
+  engagement_overlap_rule_version_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_engagement_overlap_rule_version_id: string | null;
+  version_no: Int8;
+}
+
+export interface PersonMasterEngagementType {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  engagement_type_id: Generated<string>;
+  governance_object_id: string;
+  type_code: string;
+}
+
+export interface PersonMasterEngagementTypeVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  category_code: string;
+  created_by: string;
+  display_name: string;
+  engagement_type_id: string;
+  engagement_type_version_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_engagement_type_version_id: string | null;
+  version_no: Int8;
+}
+
 export interface PersonMasterEngagementVersion {
   business_period: Generated<string | null>;
   business_valid_from: string;
@@ -1022,6 +1085,11 @@ export interface DB {
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
   "person_master.engagement": PersonMasterEngagement;
+  "person_master.engagement_classification": PersonMasterEngagementClassification;
+  "person_master.engagement_overlap_rule": PersonMasterEngagementOverlapRule;
+  "person_master.engagement_overlap_rule_version": PersonMasterEngagementOverlapRuleVersion;
+  "person_master.engagement_type": PersonMasterEngagementType;
+  "person_master.engagement_type_version": PersonMasterEngagementTypeVersion;
   "person_master.engagement_version": PersonMasterEngagementVersion;
   "person_master.person_identifier": PersonMasterPersonIdentifier;
   "person_master.person_identifier_version": PersonMasterPersonIdentifierVersion;

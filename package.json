@@ -15,6 +15,11 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:engagement-policy:constraints": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-policy-constraint-probe.ts",
+    "prototype:person:engagement-policy:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-policy-application-probe.ts",
+    "prototype:person:engagement-overlap:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-overlap-application-probe.ts",
+    "prototype:person:engagement-classification:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-overlap-application-probe.ts --recover",
+    "prototype:person:engagement-classification:validate": "npm run prototype:person:engagement-policy:constraints && npm run prototype:person:engagement-policy:application && npm run prototype:person:engagement-overlap:application",
     "prototype:person:engagement:constraints": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-constraint-probe.ts",
     "prototype:person:engagement:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-application-probe.ts",
     "prototype:person:engagement:validate": "npm run prototype:person:engagement:constraints && npm run prototype:person:engagement:application",

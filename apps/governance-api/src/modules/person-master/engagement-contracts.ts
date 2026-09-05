@@ -1,5 +1,6 @@
 import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime.js';
 import { assertClosedObject, assertPersonPeriod, assertPersonUuid } from './contracts.js';
+import { assertEngagementTypeCode, type EngagementCategoryCode } from './engagement-policy-contracts.js';
 
 export type EngagementRevisionReasonCode =
   | 'FACT_CORRECTION'
@@ -23,6 +24,7 @@ export interface EngagementValidity {
 export interface CreateEngagement extends EngagementValidity {
   readonly governanceObjectId: string;
   readonly personId: string;
+  readonly engagementTypeCode: string;
   readonly relationBasis: 'CONFIRMED_DISTINCT_RELATION_BASIS';
 }
 
@@ -35,12 +37,22 @@ export interface Engagement {
   readonly engagementId: string;
   readonly governanceObjectId: string;
   readonly personId: string;
+  readonly engagementTypeCode: string;
+  readonly engagementCategoryCode: EngagementCategoryCode;
+  readonly engagementTypeVersionId: string;
+  readonly engagementTypeVersionNo: string;
+  readonly classificationRecordedAt: string;
   readonly createdAt: string;
 }
 
 export interface EngagementVersion extends EngagementReference, EngagementValidity {
   readonly engagementVersionId: string;
   readonly personId: string;
+  readonly engagementTypeCode: string | null;
+  readonly engagementCategoryCode: EngagementCategoryCode | null;
+  readonly engagementTypeVersionId: string | null;
+  readonly engagementTypeVersionNo: string | null;
+  readonly classificationRecordedAt: string | null;
   readonly versionNo: string;
   readonly supersedesEngagementVersionId: string | null;
   readonly reasonCode: EngagementRevisionReasonCode | null;
@@ -68,10 +80,11 @@ export interface EngagementCoreApplication {
 }
 
 export function validateEngagementCreation(command: CreateEngagement): void {
-  assertClosedObject(command, ['governanceObjectId', 'personId', 'relationBasis',
+  assertClosedObject(command, ['governanceObjectId', 'personId', 'engagementTypeCode', 'relationBasis',
     'businessValidFrom', 'businessValidTo']);
   requireUuid(command.governanceObjectId, 'ENGAGEMENT_SCOPE_INVALID');
   requireUuid(command.personId, 'ENGAGEMENT_PERSON_INVALID');
+  assertEngagementTypeCode(command.engagementTypeCode);
   if (command.relationBasis !== 'CONFIRMED_DISTINCT_RELATION_BASIS') {
     throw new Error('ENGAGEMENT_RELATION_BASIS_REQUIRED');
   }
@@ -113,6 +126,9 @@ export function validateEngagementReason(reason: unknown): asserts reason is Eng
 
 const SAFE_ERRORS = new Set([
   'ENGAGEMENT_SCOPE_INVALID', 'ENGAGEMENT_PERSON_INVALID', 'ENGAGEMENT_RELATION_BASIS_REQUIRED',
+  'ENGAGEMENT_TYPE_CODE_INVALID', 'ENGAGEMENT_TYPE_VERSION_NOT_FOUND',
+  'ENGAGEMENT_OVERLAP_RULE_MISSING', 'ENGAGEMENT_OVERLAP_FORBIDDEN',
+  'ENGAGEMENT_OVERLAP_REVIEW_REQUIRED',
   'ENGAGEMENT_TIME_INVALID', 'ENGAGEMENT_ID_INVALID', 'ENGAGEMENT_VERSION_ID_INVALID', 'ENGAGEMENT_EXPECTED_VERSION_INVALID',
   'ENGAGEMENT_REASON_INVALID', 'ENGAGEMENT_NOT_FOUND', 'ENGAGEMENT_VERSION_NOT_FOUND',
   'ENGAGEMENT_OPERATION_CONFLICT', 'ENGAGEMENT_STALE_VERSION', 'ENGAGEMENT_CONTEXT_INVALID',

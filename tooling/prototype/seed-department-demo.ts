@@ -524,7 +524,11 @@ async function verifySeed(client: pg.PoolClient): Promise<Record<string, boolean
         where operational_enabled = false
           and view_type in ('FINANCE', 'STATISTICAL')) as reserved_views_registration_only,
       (select count(*)::int = 3 from department_master.department_hierarchy_view_version
-        where governance_status = 'DRAFT') as hierarchy_versions_created,
+        where department_hierarchy_view_version_id in (
+          '73100000-0000-7000-8000-000000000001'::uuid,
+          '73100000-0000-7000-8000-000000000002'::uuid,
+          '73100000-0000-7000-8000-000000000003'::uuid
+        ) and governance_status = 'DRAFT') as hierarchy_versions_created,
       (select count(*)::int = 12 from department_master.department_hierarchy_node
         where department_hierarchy_view_version_id in (
           '73100000-0000-7000-8000-000000000001'::uuid,

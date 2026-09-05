@@ -13,6 +13,7 @@ import { IDENTIFIER_FIXTURE } from './person-identifier-fixture.js';
 import {
   ENGAGEMENT_FIXTURE, engagementContext, engagementCreation, seedEngagementScope,
 } from './person-engagement-fixture.js';
+import { seedSyntheticEngagementPolicy } from './person-engagement-policy-fixture.js';
 import { PERSON_FIXTURE, personContext } from './person-subject-fixture.js';
 import { PROTOTYPE_FIXTURE } from './prototype-fixture.js';
 
@@ -75,6 +76,7 @@ async function recover() {
 
 async function exercise() {
   const people = await seedEngagementScope(handle.database);
+  await seedSyntheticEngagementPolicy(handle.database);
   const personCountsBefore = await protectedCounts();
   const created: EngagementVersion[] = [];
   for (let index = 0; index < 6; index += 1) {
@@ -126,7 +128,7 @@ async function exercise() {
   assert.ok(personOneRelations.length >= 3);
   checks['samePersonMultipleEngagementIdsAllowed'] = true;
   checks['distinctEngagementsSamePersonConcurrent'] = true;
-  checks['overlapPolicyNotApplied'] = true;
+  checks['b01MultipleRelationsRemainCompatibleWithB02AllowRule'] = true;
 
   const rawStableBefore = await handle.database.selectFrom('person_master.engagement').selectAll()
     .where('engagement_id', '=', first.engagementId).executeTakeFirstOrThrow();
@@ -271,7 +273,7 @@ async function exercise() {
     'lifecycle_state', 'department_id', 'campus_id', 'job_code', 'role_code', 'credential_id']) {
     assert.ok(!names.includes(forbidden), forbidden);
   }
-  checks['classificationAbsent'] = true;
+  checks['classificationStoredOutsideB01CoreTables'] = true;
   checks['businessLifecycleAbsent'] = true;
   checks['assignmentAbsent'] = true;
   checks['credentialAbsent'] = true;
