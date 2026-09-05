@@ -433,6 +433,42 @@ export interface PersonMasterPersonIdentifierVersion {
   version_no: Int8;
 }
 
+export interface PersonMasterPersonSourceMapping {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  governance_object_id: string;
+  person_source_mapping_id: Generated<string>;
+  source_entity: string;
+  /**
+   * Opaque canonical source-adapter key. It is not a Person Identifier and must not enter audit, logs, errors or metrics.
+   */
+  source_record_key: string;
+  source_system: string;
+}
+
+export interface PersonMasterPersonSourceMappingVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  change_kind: string;
+  created_by: string;
+  governance_object_id: string;
+  mapping_status: string;
+  /**
+   * Internal retry identity only. Never exported to audit, logs or metrics.
+   */
+  operation_hash: Buffer;
+  person_id: string;
+  person_source_mapping_id: string;
+  person_source_mapping_version_id: Generated<string>;
+  reason_code: string | null;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_mapping_version_id: string | null;
+  version_no: Int8;
+}
+
 export interface PersonMasterPersonSubject {
   created_at: Generated<string>;
   created_by: string;
@@ -955,6 +991,8 @@ export interface DB {
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
   "person_master.person_identifier": PersonMasterPersonIdentifier;
   "person_master.person_identifier_version": PersonMasterPersonIdentifierVersion;
+  "person_master.person_source_mapping": PersonMasterPersonSourceMapping;
+  "person_master.person_source_mapping_version": PersonMasterPersonSourceMappingVersion;
   "person_master.person_subject": PersonMasterPersonSubject;
   "person_master.person_subject_version": PersonMasterPersonSubjectVersion;
   "platform.browser_session": PlatformBrowserSession;

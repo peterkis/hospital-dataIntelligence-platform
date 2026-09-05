@@ -15,6 +15,9 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:source-mapping:constraints": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-source-mapping-constraint-probe.ts",
+    "prototype:person:source-mapping:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-source-mapping-application-probe.ts",
+    "prototype:person:source-mapping:validate": "npm run prototype:person:source-mapping:constraints && npm run prototype:person:source-mapping:application",
     "prototype:person:identifier:constraints": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-identifier-constraint-probe.ts",
     "prototype:person:identifier:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-identifier-application-probe.ts",
     "prototype:person:identifier:validate": "npm run prototype:person:identifier:constraints && npm run prototype:person:identifier:application",

@@ -85,7 +85,11 @@ export type AuditEventPayload = Readonly<Record<string, unknown>>;
 
 export type PersonAuditEventType = 'PERSON_SUBJECT_CREATED' | 'PERSON_SUBJECT_VERSION_CREATED' | 'PERSON_SUBJECT_READ' | 'PERSON_CORE_ACCESS_DENIED'
   | 'PERSON_IDENTIFIER_REGISTERED' | 'PERSON_IDENTIFIER_VERSION_CREATED' | 'PERSON_IDENTIFIER_READ'
-  | 'PERSON_IDENTIFIER_LOOKUP' | 'PERSON_IDENTIFIER_COLLISION_REJECTED' | 'PERSON_IDENTIFIER_ACCESS_DENIED';
+  | 'PERSON_IDENTIFIER_LOOKUP' | 'PERSON_IDENTIFIER_COLLISION_REJECTED' | 'PERSON_IDENTIFIER_ACCESS_DENIED'
+  | 'PERSON_SOURCE_MAPPING_REGISTERED' | 'PERSON_SOURCE_MAPPING_CORRECTED' | 'PERSON_SOURCE_MAPPING_RETRACTED'
+  | 'PERSON_SOURCE_MAPPING_READ' | 'PERSON_SOURCE_MAPPING_LOOKUP'
+  | 'PERSON_SOURCE_MAPPING_REGISTRATION_REJECTED' | 'PERSON_SOURCE_MAPPING_CORRECTION_REJECTED'
+  | 'PERSON_SOURCE_MAPPING_ACCESS_DENIED';
 
 export interface AppendAuditEventCommand {
   readonly auditStreamId: string;
@@ -111,7 +115,8 @@ export interface AppendGovernanceAuditEventCommand {
   readonly auditStreamId?: string;
   readonly governanceObjectId: string;
   readonly eventType: DepartmentAuditEventType | PersonAuditEventType | ConsumerAuditEvent | 'CONSUMER_SUBSCRIPTION_LIFECYCLE_CHANGED' | 'CONSUMER_RELEASE_REPLAYED';
-  readonly aggregateType: DepartmentAuditAggregateType | 'PERSON_SUBJECT' | 'PERSON_SUBJECT_VERSION' | 'PERSON_CORE_ACCESS' | 'PERSON_IDENTIFIER' | 'CONSUMER_SUBSCRIPTION';
+  readonly aggregateType: DepartmentAuditAggregateType | 'PERSON_SUBJECT' | 'PERSON_SUBJECT_VERSION' | 'PERSON_CORE_ACCESS'
+    | 'PERSON_IDENTIFIER' | 'PERSON_SOURCE_MAPPING' | 'CONSUMER_SUBSCRIPTION';
   readonly aggregateId: string;
   readonly aggregateVersionId?: string | null;
   readonly payload: AuditEventPayload;

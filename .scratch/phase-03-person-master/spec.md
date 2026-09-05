@@ -15,7 +15,7 @@ and all application date-times use Asia/Shanghai local strings.
 |---|---|---|
 | PV-006-A-01 | Person Stable Identity & Subject Core | DONE on the sole validated completion commit |
 | PV-006-A-02A | Person Identifier Registry | DONE on the sole validated completion commit |
-| PV-006-A-02B | Person Source Record Mapping | NOT_STARTED |
+| PV-006-A-02B | Person Source Record Mapping | DONE on the sole validated completion commit |
 | PV-006-B | Engagement | NOT_STARTED |
 | PV-006-C | Assignment | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
@@ -37,3 +37,19 @@ no push or next task. Local upstream is observed, not required to be absent.
 R1 authorizes source/upstream/remote source `dc2c4882fc2fc82d6f5f2e853c3c61b429282f2a`,
 divergence 0/0, and a new local `prototype/phase-03-person-master` without upstream.
 One local completion commit after all gates, no push, stop before A-02.
+
+PV-006-A-02B is authorized by the user Person Source Record Mapping task at
+`7e51b87493e1ce00fdaf918abef846948893f903`. It may add only the internal,
+synthetic source-record mapping capability and one local completion commit.
+Person binding corrections must append immutable versions through an explicit
+correction command; re-registration and row mutation may not repoint a mapping.
+PV-006-B and later work remain NOT_STARTED. No push.
+
+A-02B local engineering gates passed against real PostgreSQL 18.6: migration
+21→22, immutable stable mapping/version constraints, explicit correction,
+stale/concurrent correction protection, retraction, bitemporal history, privacy,
+transaction rollback and actual restart recovery. A-01, A-02A, Department,
+consumer, frozen-contract, typecheck, build and repository/database-authority
+regressions passed. Completion becomes effective only with fresh final-candidate
+Standards/Spec approval and the sole local commit. PV-006-A-02 is then complete as
+the aggregate of A-02A and A-02B; PV-006 itself remains IN_PROGRESS.

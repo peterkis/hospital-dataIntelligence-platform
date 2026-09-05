@@ -5,3 +5,6 @@ export { createPersonMasterModule, type PersonMasterModule } from './repository.
 export * from './identifier-contracts.js';
 export { createPersonIdentifierApplication } from './identifier-application.js';
 export { createPersonIdentifierModule } from './identifier-repository.js';
+export * from './source-mapping-contracts.js';
+export { createPersonSourceMappingApplication } from './source-mapping-application.js';
+export { createPersonSourceMappingModule, type PersonSourceMappingModule } from './source-mapping-repository.js';

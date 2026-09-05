@@ -15,7 +15,10 @@ type Fixture = { id: string; personId: string; requestId: string; stable: Stable
 try {
   const persons = await seedIdentifierScope(handle.database);
   const count = await sql<{ count: string }>`select count(*) from platform.schema_migration`.execute(handle.database);
-  assert.equal(count.rows[0]?.count, '21'); checks['migrationCount21'] = true;
+  assert.ok(Number(count.rows[0]?.count) >= 21); checks['identifierMigrationPresent'] = true;
+  const registryMigration = await handle.database.selectFrom('platform.schema_migration').select('migration_id')
+    .where('migration_id', '=', '0021_person_identifier_registry').executeTakeFirst();
+  assert.equal(registryMigration?.migration_id, '0021_person_identifier_registry');
   const metadata = await sql<{ version: string; timezone: string }>`select current_setting('server_version') as version, current_setting('TimeZone') as timezone`.execute(handle.database);
   assert.match(metadata.rows[0]!.version, /^18\./u); assert.equal(metadata.rows[0]!.timezone, 'Asia/Shanghai');
 
