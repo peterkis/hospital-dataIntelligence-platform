@@ -25,9 +25,12 @@ try {
   if (!contractType) throw new Error('CONTRACT_EMPLOYEE_TYPE_REQUIRED');
   const contractTypeId = contractType.engagementTypeId;
   const contractTypeVersionId = contractType.engagementTypeVersionId;
-  const migrations = await sql<{ count: string }>`select count(*) from platform.schema_migration`.execute(handle.database);
-  assert.equal(migrations.rows[0]?.count, '24');
-  checks['migrationCount24WithB01AuthorityPreserved'] = true;
+  const migrations = await sql<{ count: string }>`
+    select count(*) from platform.schema_migration
+    where migration_id = '0023_person_engagement_core'
+  `.execute(handle.database);
+  assert.equal(migrations.rows[0]?.count, '1');
+  checks['engagementCoreMigrationAuthorityPreserved'] = true;
   const metadata = await sql<{ version: string; timezone: string }>`
     select current_setting('server_version') as version, current_setting('TimeZone') as timezone
   `.execute(handle.database);

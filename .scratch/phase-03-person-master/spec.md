@@ -20,10 +20,10 @@ Immutable Version Core task at authority HEAD
 | PV-006-A-01 | Person Stable Identity & Subject Core | DONE on the sole validated completion commit |
 | PV-006-A-02A | Person Identifier Registry | DONE on the sole validated completion commit |
 | PV-006-A-02B | Person Source Record Mapping | DONE on the sole validated completion commit |
-| PV-006-B | Engagement | IN_PROGRESS |
+| PV-006-B | Engagement | COMPLETE on the B-03 sole validated completion commit |
 | PV-006-B-01 | Engagement Stable Relation & Immutable Version Core | DONE on the sole validated completion commit |
 | PV-006-B-02 | Engagement Type / Classification & Overlap Rules | DONE on the sole validated completion commit |
-| PV-006-B-03 | Engagement Lifecycle / Business-State Semantics | NOT_STARTED |
+| PV-006-B-03 | Engagement Lifecycle / Business-State Semantics | DONE on the sole validated completion commit |
 | PV-006-C | Assignment | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
@@ -96,3 +96,24 @@ consumer, OpenAPI/client/canonical freeze, contract lint, typecheck, build and
 repository/database-authority regressions passed. Completion becomes effective
 with fresh final-candidate Standards/Spec approval and the sole local commit.
 PV-006-B remains IN_PROGRESS because B-03 is NOT_STARTED.
+
+PV-006-B-03 is authorized by the user Engagement Lifecycle / Business-State
+Semantics task at B-02 authority
+`c887b1d27b909c2e4a80d6349edc10843c65efbe`. It may add only derived
+PLANNED/ACTIVE/SUSPENDED/ENDED semantics, append-only suspend/resume evidence,
+immutable end-period versions, correction/re-engagement guards, independent
+lifecycle authorization and bounded audit. It must not add governance workflow,
+Assignment, Role, Credential, HTTP, projection, release or consumer behavior.
+
+B-03 local engineering gates passed against real PostgreSQL 18.6: migrations
+24→25→26→27→28→29→30, append-only lifecycle constraints, rejected-request replay
+and database-serialized cross-table request authority, state derivation,
+idempotency,
+stale/concurrent suspend protection, suspend/end and resume/end serialization,
+late-fact and corrected-end bitemporal history, multiple independent Engagement
+states, separate Person/governance state, overlap preservation and actual restart
+recovery. B-01/B-02, A-01/A-02, Department, Consumer, SDK, Replay, OpenAPI/client,
+canonical artifacts, contract lint, typecheck, build and repository/database
+authority regressions passed. Completion becomes effective with fresh final-
+candidate Standards/Spec approval and the sole local commit. PV-006-B is then
+COMPLETE; PV-006 remains IN_PROGRESS and PV-006-C–G remain NOT_STARTED.

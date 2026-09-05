@@ -25,7 +25,8 @@ type TypeVersionRow = Selectable<DB['person_master.engagement_type_version']>;
 type OverlapFailureCode = 'ENGAGEMENT_OVERLAP_RULE_MISSING' |
   'ENGAGEMENT_OVERLAP_FORBIDDEN' | 'ENGAGEMENT_OVERLAP_REVIEW_REQUIRED';
 type CommandResult = { readonly ok: true; readonly version: EngagementVersion } |
-  { readonly ok: false; readonly code: 'ENGAGEMENT_STALE_VERSION' | OverlapFailureCode };
+  { readonly ok: false; readonly code: 'ENGAGEMENT_STALE_VERSION' |
+    'ENGAGEMENT_ENDED_REOPEN_FORBIDDEN' | OverlapFailureCode };
 
 interface FrozenClassification {
   readonly row: ClassificationRow;
@@ -411,6 +412,16 @@ export function createEngagementCoreModule(
           !retry.operation_hash.equals(operationHash)) throw new Error('ENGAGEMENT_OPERATION_CONFLICT');
         return { ok: true, version: toVersion(retry, frozen) };
       }
+      const lifecycleRequest = await database.selectFrom('person_master.engagement_lifecycle_event')
+        .select('engagement_lifecycle_event_id').where('engagement_id', '=', row.engagement_id)
+        .where('request_id', '=', context.requestId).executeTakeFirst();
+      const rejectedLifecycleRequest = await database
+        .selectFrom('person_master.engagement_lifecycle_rejection')
+        .select('engagement_lifecycle_rejection_id').where('engagement_id', '=', row.engagement_id)
+        .where('request_id', '=', context.requestId).executeTakeFirst();
+      if (lifecycleRequest || rejectedLifecycleRequest) {
+        throw new Error('ENGAGEMENT_OPERATION_CONFLICT');
+      }
       const previous = await latest(row.engagement_id);
       if (previous.engagement_version_id !== command.expectedCurrentVersionId) {
         await record(row.governance_object_id, row.engagement_id, 'PERSON_ENGAGEMENT_REVISION_REJECTED', {
@@ -419,6 +430,31 @@ export function createEngagementCoreModule(
           result: 'REJECTED', reason: 'ENGAGEMENT_STALE_VERSION',
         });
         return { ok: false, code: 'ENGAGEMENT_STALE_VERSION' };
+      }
+      if (previous.business_valid_to !== null) {
+        const boundary = await sql<{
+          readonly would_create_gap: boolean;
+          readonly ended_at_command: boolean;
+        }>`
+          select
+            ${command.businessValidFrom}::timestamp >= ${previous.business_valid_to}::timestamp
+              as would_create_gap,
+            ${previous.business_valid_to}::timestamp <= platform.local_now()
+              as ended_at_command
+        `.execute(database);
+        const blocked = boundary.rows[0]!.would_create_gap ||
+          (boundary.rows[0]!.ended_at_command && command.reasonCode !== 'VALIDITY_CORRECTION');
+        if (blocked) {
+          await record(row.governance_object_id, row.engagement_id,
+            'PERSON_ENGAGEMENT_REVISION_REJECTED', {
+              engagementId: row.engagement_id,
+              expectedCurrentVersionId: command.expectedCurrentVersionId,
+              actualCurrentVersionId: previous.engagement_version_id,
+              reasonCode: command.reasonCode,
+              result: 'REJECTED', reason: 'ENGAGEMENT_ENDED_REOPEN_FORBIDDEN',
+            });
+          return { ok: false, code: 'ENGAGEMENT_ENDED_REOPEN_FORBIDDEN' };
+        }
       }
       await lockPerson(row.governance_object_id, row.person_id);
       await lockPolicyRead(row.governance_object_id);

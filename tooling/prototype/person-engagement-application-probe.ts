@@ -274,7 +274,7 @@ async function exercise() {
     assert.ok(!names.includes(forbidden), forbidden);
   }
   checks['classificationStoredOutsideB01CoreTables'] = true;
-  checks['businessLifecycleAbsent'] = true;
+  checks['businessLifecycleStateAbsentFromB01CoreTables'] = true;
   checks['assignmentAbsent'] = true;
   checks['credentialAbsent'] = true;
   const orphan = await sql<{ count: string }>`select count(*) from person_master.engagement e

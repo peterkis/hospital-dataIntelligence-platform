@@ -7,6 +7,8 @@ export type EngagementRevisionReasonCode =
   | 'VALIDITY_CORRECTION'
   | 'CONTINUATION_EXTENSION';
 
+export type EngagementVersionReasonCode = EngagementRevisionReasonCode | 'LIFECYCLE_END';
+
 export interface EngagementReference {
   readonly governanceObjectId: string;
   readonly engagementId: string;
@@ -55,7 +57,7 @@ export interface EngagementVersion extends EngagementReference, EngagementValidi
   readonly classificationRecordedAt: string | null;
   readonly versionNo: string;
   readonly supersedesEngagementVersionId: string | null;
-  readonly reasonCode: EngagementRevisionReasonCode | null;
+  readonly reasonCode: EngagementVersionReasonCode | null;
   readonly recordedFrom: string;
 }
 
@@ -132,6 +134,7 @@ const SAFE_ERRORS = new Set([
   'ENGAGEMENT_TIME_INVALID', 'ENGAGEMENT_ID_INVALID', 'ENGAGEMENT_VERSION_ID_INVALID', 'ENGAGEMENT_EXPECTED_VERSION_INVALID',
   'ENGAGEMENT_REASON_INVALID', 'ENGAGEMENT_NOT_FOUND', 'ENGAGEMENT_VERSION_NOT_FOUND',
   'ENGAGEMENT_OPERATION_CONFLICT', 'ENGAGEMENT_STALE_VERSION', 'ENGAGEMENT_CONTEXT_INVALID',
+  'ENGAGEMENT_ENDED_REOPEN_FORBIDDEN',
   'PERSON_GOVERNANCE_SCOPE_INVALID', 'PERSON_HUMAN_ACTOR_REQUIRED', 'PERSON_INPUT_INVALID',
   'OBJECT_PERMISSION_FORBIDDEN',
 ]);

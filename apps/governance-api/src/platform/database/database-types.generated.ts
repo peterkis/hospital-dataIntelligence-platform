@@ -423,6 +423,38 @@ export interface PersonMasterEngagementClassification {
   request_id: string;
 }
 
+export interface PersonMasterEngagementLifecycleEvent {
+  /**
+   * Asia/Shanghai business-effective local timestamp; never replaced by record or creation time.
+   */
+  business_effective_at: string;
+  created_by: string;
+  engagement_id: string;
+  engagement_lifecycle_event_id: Generated<string>;
+  event_type: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  reason_code: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  /**
+   * Monotonic per-Engagement append sequence. Business-state ordering also respects business_effective_at and recordAsOf.
+   */
+  sequence_no: Int8;
+}
+
+export interface PersonMasterEngagementLifecycleRejection {
+  created_by: string;
+  engagement_id: string;
+  engagement_lifecycle_rejection_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  operation_type: string;
+  recorded_at: Generated<string>;
+  rejection_code: string;
+  request_id: string;
+}
+
 export interface PersonMasterEngagementOverlapRule {
   created_at: Generated<string>;
   created_by: string;
@@ -1086,6 +1118,8 @@ export interface DB {
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
   "person_master.engagement": PersonMasterEngagement;
   "person_master.engagement_classification": PersonMasterEngagementClassification;
+  "person_master.engagement_lifecycle_event": PersonMasterEngagementLifecycleEvent;
+  "person_master.engagement_lifecycle_rejection": PersonMasterEngagementLifecycleRejection;
   "person_master.engagement_overlap_rule": PersonMasterEngagementOverlapRule;
   "person_master.engagement_overlap_rule_version": PersonMasterEngagementOverlapRuleVersion;
   "person_master.engagement_type": PersonMasterEngagementType;

@@ -149,7 +149,7 @@ try {
   `.execute(handle.database);
   assert.equal(forbiddenColumns.rows[0]?.count, '0');
   checks['personCoreUnchanged'] = true;
-  checks['businessLifecycleAbsent'] = true;
+  checks['businessLifecycleStateAbsentFromPersonAndPolicyTables'] = true;
   checks['assignmentAbsent'] = true;
 
   const forbiddenTypes = await sql<{ count: string }>`
