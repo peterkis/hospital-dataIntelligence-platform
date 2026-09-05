@@ -73,6 +73,7 @@
     "test:verification:provenance": "npm run test:provenance --workspace @hospital-data-intelligence/verification-tooling",
     "verify:podman-runtime-authority": "npm run verify:podman-runtime-authority --workspace @hospital-data-intelligence/verification-tooling",
     "prototype:db:check": "node --env-file-if-exists=.env.prototype.local tooling/prototype/check-database.mjs",
+    "prototype:db:with": "node tooling/prototype/run-with-database.mjs",
     "prototype:db:migrate": "node --env-file-if-exists=.env.prototype.local tooling/runtime/apply-migrations.mjs db/migrations",
     "prototype:db:seed": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/seed-prototype.ts",
     "prototype:department:seed": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/seed-department-demo.ts",
