@@ -11,12 +11,19 @@ A-02A is authorized by the user PV-006-A-02A task. PV-005 remains ENGINEERING_CO
 and production status are unchanged. All fixtures are SYNTHETIC, NON_PRODUCTION,
 and all application date-times use Asia/Shanghai local strings.
 
+PV-006-B-01 is separately authorized by the user Engagement Stable Relation &
+Immutable Version Core task at authority HEAD
+`1b911a03b27e2fd391d70b1b123d47b455f4cee7`. Only B-01 is authorized.
+
 | Task | Scope | State |
 |---|---|---|
 | PV-006-A-01 | Person Stable Identity & Subject Core | DONE on the sole validated completion commit |
 | PV-006-A-02A | Person Identifier Registry | DONE on the sole validated completion commit |
 | PV-006-A-02B | Person Source Record Mapping | DONE on the sole validated completion commit |
-| PV-006-B | Engagement | NOT_STARTED |
+| PV-006-B | Engagement | IN_PROGRESS |
+| PV-006-B-01 | Engagement Stable Relation & Immutable Version Core | DONE on the sole validated completion commit |
+| PV-006-B-02 | Engagement Type / Classification & Overlap Rules | NOT_STARTED |
+| PV-006-B-03 | Engagement Lifecycle / Business-State Semantics | NOT_STARTED |
 | PV-006-C | Assignment | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
@@ -53,3 +60,18 @@ consumer, frozen-contract, typecheck, build and repository/database-authority
 regressions passed. Completion becomes effective only with fresh final-candidate
 Standards/Spec approval and the sole local commit. PV-006-A-02 is then complete as
 the aggregate of A-02A and A-02B; PV-006 itself remains IN_PROGRESS.
+
+PV-006-B-01 is authorized as the first Engagement slice. It may add only the
+stable Person-to-hospital relation, immutable bitemporal period versions,
+continuity/correction revisions, independent read/write permission and audit,
+and one local completion commit after all gates. It must not add classification,
+overlap policy, business lifecycle/status, Assignment, Role, Credential,
+projection/release/consumer, HTTP or UI. B-02 and B-03 remain NOT_STARTED.
+
+B-01 local engineering gates passed against real PostgreSQL 18.6: migration
+22→23, stable single-Person ownership, atomic V1, immutable bitemporal versions,
+idempotency, stale/concurrent revision protection, audit rollback and actual
+restart recovery. A-01, A-02A, A-02B, Department, consumer, frozen-contract,
+typecheck, build and repository/database-authority regressions passed. Completion
+becomes effective with fresh final-candidate Standards/Spec approval and the sole
+local commit. PV-006-B remains IN_PROGRESS because B-02 and B-03 are NOT_STARTED.

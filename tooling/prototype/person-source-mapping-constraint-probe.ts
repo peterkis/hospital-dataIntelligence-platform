@@ -19,9 +19,13 @@ type Fixture = { id: string; stable: Stable; first: VersionRow; next: Version };
 
 try {
   const people = await seedSourceMappingScope(handle.database);
-  const migrations = await sql<{ count: string }>`select count(*) from platform.schema_migration`.execute(handle.database);
-  assert.equal(migrations.rows[0]?.count, '22');
-  checks['migrationCount22'] = true;
+  const migrations = await sql<{ count: string; source_mapping_present: boolean }>`select
+    count(*)::text as count,
+    bool_or(migration_id = '0022_person_source_record_mapping') as source_mapping_present
+    from platform.schema_migration`.execute(handle.database);
+  assert.equal(migrations.rows[0]?.source_mapping_present, true);
+  assert.ok(Number(migrations.rows[0]?.count) >= 22);
+  checks['sourceMappingMigrationPresent'] = true;
   const metadata = await sql<{ version: string; timezone: string }>`
     select current_setting('server_version') as version, current_setting('TimeZone') as timezone
   `.execute(handle.database);

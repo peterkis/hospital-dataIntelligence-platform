@@ -403,6 +403,38 @@ export interface EmergencyControlSuspensionEvent {
   suspension_event_id: Generated<string>;
 }
 
+export interface PersonMasterEngagement {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  engagement_id: Generated<string>;
+  governance_object_id: string;
+  person_id: string;
+}
+
+export interface PersonMasterEngagementVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  created_by: string;
+  engagement_id: string;
+  engagement_version_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  /**
+   * Asia/Shanghai database record time, strictly increasing per Engagement.
+   */
+  recorded_from: Generated<string>;
+  request_id: string;
+  /**
+   * B-01 revision provenance only; it is not an Engagement lifecycle or business-state field.
+   */
+  revision_reason_code: string | null;
+  supersedes_engagement_version_id: string | null;
+  version_no: Int8;
+}
+
 export interface PersonMasterPersonIdentifier {
   created_at: Generated<string>;
   created_by: string;
@@ -989,6 +1021,8 @@ export interface DB {
   "emergency_control.impact_case": EmergencyControlImpactCase;
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
+  "person_master.engagement": PersonMasterEngagement;
+  "person_master.engagement_version": PersonMasterEngagementVersion;
   "person_master.person_identifier": PersonMasterPersonIdentifier;
   "person_master.person_identifier_version": PersonMasterPersonIdentifierVersion;
   "person_master.person_source_mapping": PersonMasterPersonSourceMapping;

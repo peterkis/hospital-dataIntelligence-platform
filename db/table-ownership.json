@@ -15,7 +15,7 @@
     "workflow": "workflow"
   },
   "rules": [
-    "person_master Person subject, identifier and source-mapping tables are owned by person-master.",
+    "person_master Person subject, identifier, source-mapping and Engagement tables are owned by person-master.",
     "Only versioned native SQL migrations own physical schema changes.",
     "A module may issue DML only against its owned schema.",
     "Cross-module reads and commands use public module interfaces, never direct SQL.",

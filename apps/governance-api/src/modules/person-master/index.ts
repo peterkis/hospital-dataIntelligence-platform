@@ -8,3 +8,6 @@ export { createPersonIdentifierModule } from './identifier-repository.js';
 export * from './source-mapping-contracts.js';
 export { createPersonSourceMappingApplication } from './source-mapping-application.js';
 export { createPersonSourceMappingModule, type PersonSourceMappingModule } from './source-mapping-repository.js';
+export * from './engagement-contracts.js';
+export { createEngagementCoreApplication } from './engagement-application.js';
+export { createEngagementCoreModule, type EngagementCoreModule } from './engagement-repository.js';
