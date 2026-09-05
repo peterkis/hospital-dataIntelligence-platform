@@ -14,19 +14,19 @@ import {
 import {
   canonicalizeEngagementTypePair,
   type EngagementCategoryCode,
-  type EngagementOverlapDecision,
 } from './engagement-policy-contracts.js';
+import { segmentRules, segmentFailure, temporalKey, TEMPORAL_LIMIT, MAX_RULE_CANDIDATES,
+  MAX_OVERLAPPING_ENGAGEMENTS, MAX_TEMPORAL_AUDIT_BYTES,
+  type TemporalRule, type RuleSegment, type OverlapFailureCode } from './engagement-rule-segments.js';
 
 type EngagementRow = Selectable<DB['person_master.engagement']>;
 type VersionRow = Selectable<DB['person_master.engagement_version']>;
 type ClassificationRow = Selectable<DB['person_master.engagement_classification']>;
 type TypeDefinitionRow = Selectable<DB['person_master.engagement_type']>;
 type TypeVersionRow = Selectable<DB['person_master.engagement_type_version']>;
-type OverlapFailureCode = 'ENGAGEMENT_OVERLAP_RULE_MISSING' |
-  'ENGAGEMENT_OVERLAP_FORBIDDEN' | 'ENGAGEMENT_OVERLAP_REVIEW_REQUIRED';
 type CommandResult = { readonly ok: true; readonly version: EngagementVersion } |
   { readonly ok: false; readonly code: 'ENGAGEMENT_STALE_VERSION' |
-    'ENGAGEMENT_ENDED_REOPEN_FORBIDDEN' | OverlapFailureCode };
+    'ENGAGEMENT_ENDED_REOPEN_FORBIDDEN' | typeof TEMPORAL_LIMIT | OverlapFailureCode };
 
 interface FrozenClassification {
   readonly row: ClassificationRow;
@@ -39,13 +39,8 @@ interface OverlappingEngagement {
   readonly business_valid_from: string;
   readonly business_valid_to: string | null;
   readonly type_code: string;
-}
-
-interface ApplicableRule {
-  readonly engagement_overlap_rule_id: string;
-  readonly engagement_overlap_rule_version_id: string;
+  readonly engagement_version_id: string;
   readonly version_no: string;
-  readonly decision: EngagementOverlapDecision;
   readonly recorded_from: string;
 }
 
@@ -57,7 +52,11 @@ interface OverlapEvaluation {
   readonly overlapFrom: string;
   readonly overlapTo: string | null;
   readonly evaluationRecordedAt: string;
-  readonly rule: ApplicableRule | null;
+  readonly rule: TemporalRule | null;
+  readonly segments: readonly RuleSegment[];
+  readonly otherAuthorityVersionId: string;
+  readonly otherAuthorityVersionNo: string;
+  readonly otherAuthorityRecordedFrom: string;
   readonly code: OverlapFailureCode | null;
 }
 
@@ -205,12 +204,15 @@ export function createEngagementCoreModule(
   ): Promise<readonly OverlapEvaluation[]> {
     const overlapping = await sql<OverlappingEngagement>`
       select relation.engagement_id, current_version.business_valid_from,
-        current_version.business_valid_to, definition.type_code
+        current_version.business_valid_to, definition.type_code,
+        current_version.engagement_version_id, current_version.version_no::text, current_version.recorded_from
       from person_master.engagement as relation
       join lateral (
-        select version.business_valid_from, version.business_valid_to, version.business_period
+        select version.business_valid_from, version.business_valid_to, version.business_period,
+          version.engagement_version_id, version.version_no, version.recorded_from
         from person_master.engagement_version as version
         where version.engagement_id = relation.engagement_id
+          and version.recorded_from <= ${evaluationRecordedAt}::timestamp
         order by version.version_no desc
         limit 1
       ) as current_version on true
@@ -220,25 +222,32 @@ export function createEngagementCoreModule(
         on definition.engagement_type_id = classification.engagement_type_id
       where relation.governance_object_id = ${objectId}::uuid
         and relation.person_id = ${personId}::uuid
+        and classification.classified_at <= ${evaluationRecordedAt}::timestamp
         and (${excludedEngagementId}::uuid is null or relation.engagement_id <> ${excludedEngagementId}::uuid)
         and current_version.business_period && tsrange(
           ${businessValidFrom}::timestamp, ${businessValidTo}::timestamp, '[)'
         )
       order by relation.engagement_id
+      limit ${MAX_OVERLAPPING_ENGAGEMENTS + 1}
     `.execute(database);
+    if (overlapping.rows.length > MAX_OVERLAPPING_ENGAGEMENTS) throw new Error(TEMPORAL_LIMIT);
     const evaluations: OverlapEvaluation[] = [];
     for (const other of overlapping.rows) {
       const [leftTypeCode, rightTypeCode] = canonicalizeEngagementTypePair(typeCode, other.type_code);
-      const overlapFrom = businessValidFrom >= other.business_valid_from
+      const overlapFrom = temporalKey(businessValidFrom) >= temporalKey(other.business_valid_from)
         ? businessValidFrom : other.business_valid_from;
       const overlapTo = minimumEnd(businessValidTo, other.business_valid_to);
-      const rule = await applicableRule(objectId, leftTypeCode, rightTypeCode,
+      const segments = await applicableRule(objectId, leftTypeCode, rightTypeCode,
         overlapFrom, overlapTo, evaluationRecordedAt);
-      const code = rule === null ? 'ENGAGEMENT_OVERLAP_RULE_MISSING'
-        : rule.decision === 'FORBID' ? 'ENGAGEMENT_OVERLAP_FORBIDDEN'
-          : rule.decision === 'REVIEW_REQUIRED' ? 'ENGAGEMENT_OVERLAP_REVIEW_REQUIRED' : null;
+      const code = segmentFailure(segments);
+      const rule = segments.length === 1 ? segments[0]!.winner : null;
       evaluations.push({ otherEngagementId: other.engagement_id, otherTypeCode: other.type_code,
-        leftTypeCode, rightTypeCode, overlapFrom, overlapTo, evaluationRecordedAt, rule, code });
+        otherAuthorityVersionId: other.engagement_version_id,
+        otherAuthorityVersionNo: other.version_no, otherAuthorityRecordedFrom: other.recorded_from,
+        leftTypeCode, rightTypeCode, overlapFrom, overlapTo, evaluationRecordedAt, rule, segments, code });
+    }
+    if (Buffer.byteLength(JSON.stringify(evaluations), 'utf8') + evaluations.length * 1024 > MAX_TEMPORAL_AUDIT_BYTES) {
+      throw new Error(TEMPORAL_LIMIT);
     }
     return evaluations;
   }
@@ -246,10 +255,11 @@ export function createEngagementCoreModule(
   async function applicableRule(
     objectId: string, leftTypeCode: string, rightTypeCode: string,
     overlapFrom: string, overlapTo: string | null, evaluationRecordedAt: string,
-  ): Promise<ApplicableRule | null> {
-    const result = await sql<ApplicableRule>`
+  ): Promise<readonly RuleSegment[]> {
+    const result = await sql<TemporalRule>`
       select rule.engagement_overlap_rule_id, version.engagement_overlap_rule_version_id,
-        version.version_no::text, version.decision, version.recorded_from
+        version.version_no::text, version.decision, version.recorded_from,
+        version.business_valid_from, version.business_valid_to
       from person_master.engagement_overlap_rule as rule
       join person_master.engagement_overlap_rule_version as version
         on version.engagement_overlap_rule_id = rule.engagement_overlap_rule_id
@@ -257,15 +267,24 @@ export function createEngagementCoreModule(
         and rule.left_type_code = ${leftTypeCode}
         and rule.right_type_code = ${rightTypeCode}
         and version.recorded_from <= ${evaluationRecordedAt}::timestamp
-        and version.business_valid_from <= ${overlapFrom}::timestamp
-        and (
-          version.business_valid_to is null
-          or (${overlapTo}::timestamp is not null and version.business_valid_to >= ${overlapTo}::timestamp)
-        )
+        and version.business_period && tsrange(${overlapFrom}::timestamp, ${overlapTo}::timestamp, '[)')
       order by version.version_no desc
-      limit 1
+      limit ${MAX_RULE_CANDIDATES + 1}
     `.execute(database);
-    return result.rows[0] ?? null;
+    if (result.rows.length > MAX_RULE_CANDIDATES) throw new Error(TEMPORAL_LIMIT);
+    return segmentRules(overlapFrom, overlapTo, evaluationRecordedAt, result.rows);
+  }
+
+  async function boundedEvaluations(...args: Parameters<typeof evaluateOverlaps>) {
+    try { return await evaluateOverlaps(...args); }
+    catch (error) {
+      if (!(error instanceof Error) || error.message !== TEMPORAL_LIMIT) throw error;
+      await record(args[0], args[5] ?? args[1], 'PERSON_ENGAGEMENT_OVERLAP_REJECTED', {
+        candidateEngagementId: args[5], personId: args[1], candidateTypeCode: args[2],
+        evaluationRecordedAt: args[6], result: 'REJECTED', reason: TEMPORAL_LIMIT,
+      });
+      return null;
+    }
   }
 
   async function recordOverlapRejection(
@@ -279,7 +298,13 @@ export function createEngagementCoreModule(
       candidateTypeCode, otherTypeCode: evaluation.otherTypeCode,
       leftEngagementTypeCode: evaluation.leftTypeCode,
       rightEngagementTypeCode: evaluation.rightTypeCode,
-      ruleDecision: evaluation.rule?.decision ?? 'MISSING',
+      ruleDecision: evaluation.code === 'ENGAGEMENT_OVERLAP_FORBIDDEN' ? 'FORBID'
+        : evaluation.code === 'ENGAGEMENT_OVERLAP_RULE_MISSING' ? 'MISSING'
+          : evaluation.code === 'ENGAGEMENT_OVERLAP_REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : 'ALLOW',
+      overlapFrom: evaluation.overlapFrom, overlapTo: evaluation.overlapTo,
+      otherAuthorityVersionId: evaluation.otherAuthorityVersionId,
+      otherAuthorityVersionNo: evaluation.otherAuthorityVersionNo,
+      otherAuthorityRecordedFrom: evaluation.otherAuthorityRecordedFrom, segments: evaluation.segments,
       ruleVersionId: evaluation.rule?.engagement_overlap_rule_version_id ?? null,
       ruleVersionNo: evaluation.rule?.version_no ?? null,
       ruleRecordedFrom: evaluation.rule?.recorded_from ?? null,
@@ -305,13 +330,35 @@ export function createEngagementCoreModule(
         candidateTypeCode, otherTypeCode: evaluation.otherTypeCode,
         leftEngagementTypeCode: evaluation.leftTypeCode,
         rightEngagementTypeCode: evaluation.rightTypeCode,
-        ruleDecision: evaluation.rule!.decision,
-        ruleVersionId: evaluation.rule!.engagement_overlap_rule_version_id,
-        ruleVersionNo: evaluation.rule!.version_no, result: 'ALLOWED',
-        ruleRecordedFrom: evaluation.rule!.recorded_from,
+        ruleDecision: 'ALLOW', overlapFrom: evaluation.overlapFrom, overlapTo: evaluation.overlapTo,
+        otherAuthorityVersionId: evaluation.otherAuthorityVersionId,
+        otherAuthorityVersionNo: evaluation.otherAuthorityVersionNo,
+        otherAuthorityRecordedFrom: evaluation.otherAuthorityRecordedFrom, segments: evaluation.segments,
+        ruleVersionId: evaluation.rule?.engagement_overlap_rule_version_id ?? null,
+        ruleVersionNo: evaluation.rule?.version_no ?? null, result: 'ALLOWED',
+        ruleRecordedFrom: evaluation.rule?.recorded_from ?? null,
         evaluationRecordedAt: evaluation.evaluationRecordedAt,
       });
     }
+  }
+
+  async function historicalAssertion(query: EngagementAsOfQuery) {
+      assertClosedObject(query, ['governanceObjectId', 'engagementId', 'businessAt', 'recordAsOf']);
+      validateEngagementTimes(query);
+      await authorize(query.governanceObjectId, 'READ');
+      await relation(query);
+      const row = await database.selectFrom('person_master.engagement_version').selectAll()
+        .where('governance_object_id', '=', query.governanceObjectId)
+        .where('engagement_id', '=', query.engagementId)
+        .where('recorded_from', '<=', query.recordAsOf)
+        .where('business_valid_from', '<=', query.businessAt)
+        .where((eb) => eb.or([eb('business_valid_to', 'is', null), eb('business_valid_to', '>', query.businessAt)]))
+        .orderBy('version_no', 'desc').executeTakeFirst();
+      const frozen = row ? await classificationAsOf(query.engagementId, query.recordAsOf) : null;
+      await record(query.governanceObjectId, query.engagementId, 'PERSON_ENGAGEMENT_READ', {
+        engagementId: query.engagementId, queryKind: 'PERIOD_ASSERTION_AS_OF', semanticRole: 'HISTORICAL_ASSERTION', result: row ? 'FOUND' : 'NOT_FOUND',
+      });
+      return row ? toVersion(row, frozen) : null;
   }
 
   return {
@@ -350,13 +397,14 @@ export function createEngagementCoreModule(
       const evaluationRecordedAt = await evaluationRecordTime();
       const type = await resolveTypeVersion(command.governanceObjectId, command.engagementTypeCode,
         command.businessValidFrom, command.businessValidTo, evaluationRecordedAt);
-      const evaluations = await evaluateOverlaps(command.governanceObjectId, command.personId,
+      const evaluations = await boundedEvaluations(command.governanceObjectId, command.personId,
         command.engagementTypeCode, command.businessValidFrom, command.businessValidTo, null,
         evaluationRecordedAt);
-      const rejection = evaluations.find((evaluation) => evaluation.code !== null);
+      if (evaluations === null) return { ok: false, code: TEMPORAL_LIMIT };
+      const rejection = firstRejection(evaluations);
       if (rejection) {
-        await recordOverlapRejection(command.governanceObjectId, command.personId,
-          null, command.engagementTypeCode, rejection);
+        for (const evaluation of evaluations) await recordOverlapRejection(command.governanceObjectId, command.personId,
+          null, command.engagementTypeCode, evaluation);
         return { ok: false, code: rejection.code! };
       }
       const row = await database.insertInto('person_master.engagement').values({
@@ -459,13 +507,14 @@ export function createEngagementCoreModule(
       await lockPerson(row.governance_object_id, row.person_id);
       await lockPolicyRead(row.governance_object_id);
       const evaluationRecordedAt = await evaluationRecordTime();
-      const evaluations = await evaluateOverlaps(row.governance_object_id, row.person_id,
+      const evaluations = await boundedEvaluations(row.governance_object_id, row.person_id,
         frozen.definition.type_code, command.businessValidFrom, command.businessValidTo,
         row.engagement_id, evaluationRecordedAt);
-      const rejection = evaluations.find((evaluation) => evaluation.code !== null);
+      if (evaluations === null) return { ok: false, code: TEMPORAL_LIMIT };
+      const rejection = firstRejection(evaluations);
       if (rejection) {
-        await recordOverlapRejection(row.governance_object_id, row.person_id,
-          row.engagement_id, frozen.definition.type_code, rejection);
+        for (const evaluation of evaluations) await recordOverlapRejection(row.governance_object_id, row.person_id,
+          row.engagement_id, frozen.definition.type_code, evaluation);
         return { ok: false, code: rejection.code! };
       }
       const version = await database.insertInto('person_master.engagement_version').values({
@@ -547,23 +596,10 @@ export function createEngagementCoreModule(
       return values;
     },
 
-    async findEngagementAsOf(query: EngagementAsOfQuery) {
-      assertClosedObject(query, ['governanceObjectId', 'engagementId', 'businessAt', 'recordAsOf']);
-      validateEngagementTimes(query);
-      await authorize(query.governanceObjectId, 'READ');
-      await relation(query);
-      const row = await database.selectFrom('person_master.engagement_version').selectAll()
-        .where('governance_object_id', '=', query.governanceObjectId)
-        .where('engagement_id', '=', query.engagementId)
-        .where('recorded_from', '<=', query.recordAsOf)
-        .where('business_valid_from', '<=', query.businessAt)
-        .where((eb) => eb.or([eb('business_valid_to', 'is', null), eb('business_valid_to', '>', query.businessAt)]))
-        .orderBy('version_no', 'desc').executeTakeFirst();
-      const frozen = row ? await classificationAsOf(query.engagementId, query.recordAsOf) : null;
-      await record(query.governanceObjectId, query.engagementId, 'PERSON_ENGAGEMENT_READ', {
-        engagementId: query.engagementId, queryKind: 'AS_OF', result: row ? 'FOUND' : 'NOT_FOUND',
-      });
-      return row ? toVersion(row, frozen) : null;
+    findEngagementAsOf: historicalAssertion,
+    async findEngagementPeriodAssertionAsOf(query) {
+      const version = await historicalAssertion(query);
+      return version ? { ...version, semanticRole: 'HISTORICAL_ASSERTION' as const } : null;
     },
   };
 }
@@ -571,7 +607,16 @@ export function createEngagementCoreModule(
 function minimumEnd(left: string | null, right: string | null): string | null {
   if (left === null) return right;
   if (right === null) return left;
-  return left <= right ? left : right;
+  return temporalKey(left) <= temporalKey(right) ? left : right;
+}
+
+function firstRejection(evaluations: readonly OverlapEvaluation[]) {
+  for (const code of ['ENGAGEMENT_OVERLAP_FORBIDDEN', 'ENGAGEMENT_OVERLAP_RULE_MISSING',
+    'ENGAGEMENT_OVERLAP_REVIEW_REQUIRED']) {
+    const rejection = evaluations.find(e => e.code === code);
+    if (rejection) return rejection;
+  }
+  return undefined;
 }
 
 function classificationFields(frozen: FrozenClassification | null) {

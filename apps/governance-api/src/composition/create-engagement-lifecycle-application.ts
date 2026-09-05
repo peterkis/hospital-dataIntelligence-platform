@@ -6,13 +6,27 @@ import { createAuthorizationModule } from '../modules/authorization/index.js';
 import {
   createEngagementLifecycleCoreApplication,
   createEngagementLifecycleModule,
-  type EngagementLifecycleApplication,
+  type EngagementLifecycleApplication, type EngagementEffectiveReader, safeEngagementLifecycleError,
 } from '../modules/person-master/index.js';
 
 export function createEngagementLifecycleApplication(
   database: Kysely<DB>, context: RequestContext,
 ): EngagementLifecycleApplication {
-  const runner = createTransactionRunner(database, (transaction, requestContext) => ({
+  return createEngagementLifecycleCoreApplication(createRunner(database), context);
+}
+
+export function createEngagementEffectiveReader(
+  database: Kysely<DB>, context: RequestContext,
+): EngagementEffectiveReader {
+  const runner = createRunner(database);
+  return { async getEngagementEffectiveAsOf(query) {
+    try { return await runner.run(context, ({ lifecycle }) => lifecycle.getEngagementEffectiveAsOf(query)); }
+    catch (error) { throw safeEngagementLifecycleError(error); }
+  } };
+}
+
+function createRunner(database: Kysely<DB>) {
+  return createTransactionRunner(database, (transaction, requestContext) => ({
     lifecycle: createEngagementLifecycleModule(transaction, requestContext,
       createAuditModule(transaction, requestContext),
       createAuthorizationModule(transaction, requestContext, database),
@@ -40,5 +54,4 @@ export function createEngagementLifecycleApplication(
         throw new Error(reason);
       }),
   }));
-  return createEngagementLifecycleCoreApplication(runner, context);
 }

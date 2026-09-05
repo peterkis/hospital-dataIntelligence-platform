@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { sql } from 'kysely';
 import { createEngagementApplication } from '../../apps/governance-api/src/composition/create-engagement-application.js';
+import { createPersonApplication } from '../../apps/governance-api/src/composition/create-person-application.js';
 import { createIdentifierApplication } from '../../apps/governance-api/src/composition/create-person-identifier-application.js';
 import { createDatabase } from '../../apps/governance-api/src/platform/database/create-database.js';
 import { configureControlledPublicationFault } from '../../apps/governance-api/src/platform/fault-injection/controlled-faults.js';
@@ -14,7 +15,7 @@ import {
   ENGAGEMENT_FIXTURE, engagementContext, engagementCreation, seedEngagementScope,
 } from './person-engagement-fixture.js';
 import { seedSyntheticEngagementPolicy } from './person-engagement-policy-fixture.js';
-import { PERSON_FIXTURE, personContext } from './person-subject-fixture.js';
+import { PERSON_FIXTURE, personContext, personCreation } from './person-subject-fixture.js';
 import { PROTOTYPE_FIXTURE } from './prototype-fixture.js';
 
 if (!process.env['DATABASE_URL']) throw new Error('PERSON_ENGAGEMENT_DATABASE_REQUIRED');
@@ -75,7 +76,15 @@ async function recover() {
 }
 
 async function exercise() {
-  const people = await seedEngagementScope(handle.database);
+  await seedEngagementScope(handle.database);
+  // B-04: repeated validation must not accumulate unbounded overlaps on the
+  // same six historical Persons. Preserve them and allocate an isolated cohort.
+  const people: string[] = [];
+  for (let index = 0; index < 6; index++) {
+    const person = await createPersonApplication(handle.database, personContext())
+      .createPersonSubject(personCreation);
+    people.push(person.personId);
+  }
   await seedSyntheticEngagementPolicy(handle.database);
   const personCountsBefore = await protectedCounts();
   const created: EngagementVersion[] = [];
@@ -262,7 +271,8 @@ async function exercise() {
   checks['sourceMappingUnchanged'] = true;
   const publicMethods = Object.keys(createEngagementApplication(handle.database, engagementContext())).sort();
   assert.deepEqual(publicMethods, ['createEngagement', 'reviseEngagement', 'getEngagement',
-    'getEngagementVersion', 'listEngagementVersions', 'listPersonEngagements', 'findEngagementAsOf'].sort());
+    'getEngagementVersion', 'listEngagementVersions', 'listPersonEngagements', 'findEngagementAsOf',
+    'findEngagementPeriodAssertionAsOf'].sort());
   checks['arbitraryUpdateAndUpsertAbsent'] = true;
   checks['automaticRehireAbsent'] = true;
 

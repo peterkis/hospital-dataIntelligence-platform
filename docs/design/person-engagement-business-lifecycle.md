@@ -30,6 +30,11 @@ The closed business-state set is exactly `PLANNED`, `ACTIVE`, `SUSPENDED` and
 
 ## Derived-state model
 
+B-04 implementation authority: the period/event/sequence derivation below now
+shares a single-statement temporal resolver with the read-only effective context.
+See `person-engagement-temporal-authority-reconciliation.md`; B-03 permissions,
+minimal result shape and historical validation remain unchanged.
+
 `getEngagementBusinessStateAsOf` first selects the highest Engagement version
 with `recorded_from <= recordAsOf`. It then applies the following precedence:
 

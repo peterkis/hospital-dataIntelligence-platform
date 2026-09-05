@@ -71,6 +71,10 @@ export interface PersonEngagementsQuery {
   readonly personId: string;
 }
 
+export interface EngagementPeriodAssertion extends EngagementVersion {
+  readonly semanticRole: 'HISTORICAL_ASSERTION';
+}
+
 export interface EngagementCoreApplication {
   createEngagement(command: CreateEngagement): Promise<EngagementVersion>;
   reviseEngagement(command: ReviseEngagement): Promise<EngagementVersion>;
@@ -78,6 +82,8 @@ export interface EngagementCoreApplication {
   getEngagementVersion(query: EngagementVersionReference): Promise<EngagementVersion>;
   listEngagementVersions(query: EngagementReference): Promise<readonly EngagementVersion[]>;
   listPersonEngagements(query: PersonEngagementsQuery): Promise<readonly Engagement[]>;
+  findEngagementPeriodAssertionAsOf(query: EngagementAsOfQuery): Promise<EngagementPeriodAssertion | null>;
+  /** @deprecated HISTORICAL ASSERTION ONLY; NOT EFFECTIVE ENGAGEMENT VALIDATION */
   findEngagementAsOf(query: EngagementAsOfQuery): Promise<EngagementVersion | null>;
 }
 
@@ -127,6 +133,7 @@ export function validateEngagementReason(reason: unknown): asserts reason is Eng
 }
 
 const SAFE_ERRORS = new Set([
+  'ENGAGEMENT_TEMPORAL_EVALUATION_LIMIT_EXCEEDED',
   'ENGAGEMENT_SCOPE_INVALID', 'ENGAGEMENT_PERSON_INVALID', 'ENGAGEMENT_RELATION_BASIS_REQUIRED',
   'ENGAGEMENT_TYPE_CODE_INVALID', 'ENGAGEMENT_TYPE_VERSION_NOT_FOUND',
   'ENGAGEMENT_OVERLAP_RULE_MISSING', 'ENGAGEMENT_OVERLAP_FORBIDDEN',

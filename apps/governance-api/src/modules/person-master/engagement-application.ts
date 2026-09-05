@@ -26,6 +26,7 @@ export function createEngagementCoreApplication(
     getEngagementVersion: (query) => run((module) => module.getEngagementVersion(query)),
     listEngagementVersions: (query) => run((module) => module.listEngagementVersions(query)),
     listPersonEngagements: (query) => run((module) => module.listPersonEngagements(query)),
+    findEngagementPeriodAssertionAsOf: (query) => run((module) => module.findEngagementPeriodAssertionAsOf(query)),
     findEngagementAsOf: (query) => run((module) => module.findEngagementAsOf(query)),
   };
 }

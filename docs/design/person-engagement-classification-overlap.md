@@ -101,6 +101,11 @@ are test vectors only and require an HR/management Owner before any production u
 
 ## Evaluation semantics
 
+B-04 current authority: the whole-intersection single-rule selection described
+below is superseded by boundary segmentation in
+`person-engagement-temporal-authority-reconciliation.md` and ADR-0116. Historical
+B-02 delivery and validation records remain unchanged.
+
 The latest known period version of every other Engagement for the same Person is
 compared with the proposed `[businessValidFrom,businessValidTo)` interval using
 PostgreSQL `tsrange &&`. A null end is positive infinity; touching boundaries do

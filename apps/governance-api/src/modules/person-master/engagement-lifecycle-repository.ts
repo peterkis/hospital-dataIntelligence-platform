@@ -6,7 +6,6 @@ import type { RequestContext } from '../../platform/transaction/transaction-runn
 import type { AuditEventService, PersonAuditEventType } from '../audit/index.js';
 import type { AuthorizationModule, ObjectPermissionCode } from '../authorization/index.js';
 import {
-  deriveEngagementBusinessState,
   validateEndEngagement,
   validateEngagementBusinessStateQuery,
   validateResumeEngagement,
@@ -23,6 +22,9 @@ import {
 } from './engagement-lifecycle-contracts.js';
 import { assertEngagementUuid, type EngagementVersion } from './engagement-contracts.js';
 
+import { resolveEngagementTemporalContext } from './engagement-temporal-resolver.js';
+import type { EngagementEffectiveReader } from './engagement-effective-contracts.js';
+
 type EngagementRow = Selectable<DB['person_master.engagement']>;
 type VersionRow = Selectable<DB['person_master.engagement_version']>;
 type LifecycleEventRow = Selectable<DB['person_master.engagement_lifecycle_event']>;
@@ -33,7 +35,7 @@ type CommandResult<T> = { readonly ok: true; readonly value: T } |
   { readonly ok: false; readonly code: LifecycleFailureCode };
 
 export interface EngagementLifecycleModule extends Omit<EngagementLifecycleApplication,
-  'suspendEngagement' | 'resumeEngagement' | 'endEngagement'> {
+  'suspendEngagement' | 'resumeEngagement' | 'endEngagement'>, EngagementEffectiveReader {
   suspendEngagement(command: SuspendEngagement): Promise<CommandResult<EngagementLifecycleEvent>>;
   resumeEngagement(command: ResumeEngagement): Promise<CommandResult<EngagementLifecycleEvent>>;
   endEngagement(command: EndEngagement): Promise<CommandResult<EngagementVersion>>;
@@ -118,32 +120,11 @@ export function createEngagementLifecycleModule(
   async function deriveState(
     query: EngagementBusinessStateQuery,
   ): Promise<EngagementBusinessStateResult> {
-    const version = await database.selectFrom('person_master.engagement_version').selectAll()
-      .where('governance_object_id', '=', query.governanceObjectId)
-      .where('engagement_id', '=', query.engagementId)
-      .where('recorded_from', '<=', query.recordAsOf)
-      .orderBy('version_no', 'desc').executeTakeFirst();
-    if (!version) throw new Error('ENGAGEMENT_NOT_KNOWN_AS_OF');
-    const event = await database.selectFrom('person_master.engagement_lifecycle_event').selectAll()
-      .where('governance_object_id', '=', query.governanceObjectId)
-      .where('engagement_id', '=', query.engagementId)
-      .where('recorded_at', '<=', query.recordAsOf)
-      .where('business_effective_at', '<=', query.businessAt)
-      .orderBy('business_effective_at', 'desc').orderBy('sequence_no', 'desc')
-      .executeTakeFirst();
-    const recordedSequence = await database.selectFrom('person_master.engagement_lifecycle_event')
-      .select('sequence_no').where('governance_object_id', '=', query.governanceObjectId)
-      .where('engagement_id', '=', query.engagementId).where('recorded_at', '<=', query.recordAsOf)
-      .orderBy('sequence_no', 'desc').executeTakeFirst();
-    return {
-      ...query,
-      businessState: deriveEngagementBusinessState({ businessAt: query.businessAt,
-        businessValidFrom: version.business_valid_from, businessValidTo: version.business_valid_to,
-        lastApplicableEventType: event?.event_type as EngagementLifecycleEventType | undefined ?? null }),
-      engagementVersionId: version.engagement_version_id,
-      lastApplicableLifecycleEventId: event?.engagement_lifecycle_event_id ?? null,
-      lifecycleSequence: recordedSequence?.sequence_no ?? '0',
-    };
+    const context = await resolveEngagementTemporalContext(database, query);
+    return { ...query, businessState: context.businessState,
+      engagementVersionId: context.authorityEngagementVersionId,
+      lastApplicableLifecycleEventId: context.lastApplicableLifecycleEventId,
+      lifecycleSequence: context.recordVisibleLifecycleSequence };
   }
 
   async function record(
@@ -244,6 +225,20 @@ export function createEngagementLifecycleModule(
   }
 
   return {
+    async getEngagementEffectiveAsOf(query) {
+      validateEngagementBusinessStateQuery(query);
+      await authorize(query.governanceObjectId, 'READ');
+      await authorization.requireObjectPermission({ governanceObjectId: query.governanceObjectId,
+        permissionCode: 'PERSON_MASTER_ENGAGEMENT_READ' });
+      const effective = await resolveEngagementTemporalContext(database, query);
+      await record(query.governanceObjectId, query.engagementId, 'PERSON_ENGAGEMENT_BUSINESS_STATE_READ', {
+        queryKind: 'EFFECTIVE_AS_OF', semanticRole: effective.semanticRole,
+        businessAt: query.businessAt, recordAsOf: query.recordAsOf,
+        engagementVersionId: effective.authorityEngagementVersionId,
+        businessState: effective.businessState, result: 'DERIVED',
+      }, effective.authorityEngagementVersionId);
+      return effective;
+    },
     async getEngagementBusinessStateAsOf(query) {
       validateEngagementBusinessStateQuery(query);
       await authorize(query.governanceObjectId, 'READ');

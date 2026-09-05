@@ -17,3 +17,4 @@ export { createEngagementPolicyModule, type EngagementPolicyModule } from './eng
 export * from './engagement-lifecycle-contracts.js';
 export { createEngagementLifecycleCoreApplication } from './engagement-lifecycle-application.js';
 export { createEngagementLifecycleModule, type EngagementLifecycleModule } from './engagement-lifecycle-repository.js';
+export type { EngagementEffectiveReader, EngagementEffectiveContext } from './engagement-effective-contracts.js';

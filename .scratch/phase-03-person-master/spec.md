@@ -24,6 +24,7 @@ Immutable Version Core task at authority HEAD
 | PV-006-B-01 | Engagement Stable Relation & Immutable Version Core | DONE on the sole validated completion commit |
 | PV-006-B-02 | Engagement Type / Classification & Overlap Rules | DONE on the sole validated completion commit |
 | PV-006-B-03 | Engagement Lifecycle / Business-State Semantics | DONE on the sole validated completion commit |
+| PV-006-B-04 | Engagement Temporal Authority Reconciliation | DONE effective on the sole validated B-04 completion commit |
 | PV-006-C | Assignment | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
@@ -35,6 +36,19 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+PV-006-B-04 is separately authorized by the user's engagement temporal authority
+reconciliation prompt. Its supplemental B engineering gate is PASS; final-tree
+Standards/Spec approval and the sole local B-04 commit activate completion. See issue 07.
+The initial empty-database permission block was resolved by the user's explicit
+WSL postgres peer-administration authorization. The original B-01/B-02/B-03
+DONE records and historical B completion remain unchanged. The user-authorized
+startup-tooling commit `fa61dc79f0f4298629e4d5c6340f99455c99be98` is the resumed
+execution baseline above domain authority `c1abe02edab1a7ebfc64c207a96e3bfc5526620e`.
+Real baseline create/point disagreement has been reproduced; this does not
+establish a fix or authorize C-G by itself. Subsequent implementation and all
+engineering gates passed as recorded in the B-04 design. No B-04 completion commit
+until every gate passes. NEXT_PHASE_EXECUTION_AUTHORIZED=NO; C-G stay NOT_STARTED.
 
 A-02A continues the existing Person branch at authority
 0333d827373e8f97faaa8737145c54acc372f9c1. Registry and source mapping are separate

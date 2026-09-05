@@ -15,6 +15,13 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:engagement-temporal:recover-negative": "node tooling/prototype/person-engagement-temporal-recover-negative.mjs",
+    "prototype:person:engagement-temporal:regressions": "node tooling/prototype/person-engagement-temporal-regressions.mjs",
+    "prototype:person:engagement-temporal:validate": "npm run prototype:person:engagement-temporal:application && npm run prototype:person:engagement-temporal:regressions",
+    "prototype:person:engagement-temporal:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-temporal-application-probe.ts",
+    "prototype:person:engagement-temporal:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-temporal-application-probe.ts --recover",
+    "prototype:person:engagement-temporal:fresh-install": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-engagement-temporal-fresh-install.mjs",
+    "prototype:person:engagement-temporal:baseline": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-temporal-baseline-probe.ts",
     "prototype:person:engagement-lifecycle:constraints": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-lifecycle-constraint-probe.ts",
     "prototype:person:engagement-lifecycle:application": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-lifecycle-application-probe.ts",
     "prototype:person:engagement-lifecycle:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-engagement-lifecycle-application-probe.ts --recover",

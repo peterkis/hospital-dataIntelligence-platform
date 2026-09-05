@@ -18,6 +18,35 @@ npm run prototype:db:with -- prototype:person:validate
 npm run prototype:db:with -- check
 ```
 
+## Local roles and credentials
+
+The following role facts were verified against the local WSL PostgreSQL catalog on 2026-09-05. Re-query the catalog before an administrative change because local role grants can drift.
+
+| Purpose | PostgreSQL role | LOGIN | CREATEDB | SUPERUSER | Password state |
+|---|---|---:|---:|---:|---|
+| Application prototype | `hdi_prototype` | Yes | No | No | Stored only through the ignored local environment configuration |
+| Local database administration | `postgres` | Yes | Yes | Yes | Not configured; there is no plaintext password to retrieve or document |
+
+The current create-database path uses PostgreSQL peer authentication by entering WSL as the `postgres` operating-system user. With the service held open by the managed session, connect without a password prompt:
+
+```powershell
+wsl.exe -d Anolis-8.9-HDI-POC -u postgres -- psql -p 55434 -d postgres
+```
+
+Inside that `psql` session, the `postgres` role can run `CREATE DATABASE`. This peer-authenticated local path does not provide password-based access from Windows TCP clients.
+
+Keep every actual password in an ignored local secret store such as `.env.prototype.local`; tracked Markdown contains role capability and secret location only. If password-based `CREATEDB` access is required, obtain separate authorization to provision a dedicated limited administration role, enter its password interactively with `\password`, and store the resulting connection setting only in an ignored local environment file. Do not grant `CREATEDB` to the `hdi_prototype` application role merely to simplify setup.
+
+This password-state query returns booleans but no credential material:
+
+```sql
+select rolname, rolcreatedb, rolsuper, rolcanlogin,
+       rolpassword is not null as password_configured
+from pg_authid
+where rolcanlogin and (rolcreatedb or rolsuper)
+order by rolname;
+```
+
 The wrapper is the first database action in a local development or validation session. It:
 
 1. Requires the ignored `.env.prototype.local` file without reading or printing its values.

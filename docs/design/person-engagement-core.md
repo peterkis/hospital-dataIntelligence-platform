@@ -102,6 +102,11 @@ module interface; after locking, a stale writer fails with
 
 ## Bitemporal semantics
 
+B-04 clarification: this section describes historical period assertions only.
+Effective relation validation uses the latest record-visible complete period,
+as specified in `person-engagement-temporal-authority-reconciliation.md` and
+ADR-0116. The legacy as-of result and historical validation remain preserved.
+
 Every version uses a business interval `[businessValidFrom, businessValidTo)`.
 A null end is an open-ended interval only; it does not mean ACTIVE. Empty or
 inverted periods fail at both the interface and database constraint. Record time
