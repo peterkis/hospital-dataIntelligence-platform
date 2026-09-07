@@ -96,7 +96,7 @@ export async function runAssignmentSemanticSqlProbe(database:Kysely<DB>, f:Seman
       (tx:Transaction<DB>)=>tx.updateTable('person_master.assignment_semantic_term').set({code:'STANDING_CONCURRENT'}).where('term_id','=',primaryDefinition.termId).execute(),
       (tx:Transaction<DB>)=>tx.deleteFrom('person_master.assignment_semantic_term_version').where('term_version_id','=',definitions.term_version_id).execute(),
       (tx:Transaction<DB>)=>tx.updateTable('person_master.assignment_version_semantics').set({mode_code:'PRIMARY_AFFILIATION'}).where('assignment_version_id','=',source.coreVersion.assignmentVersionId).execute(),
-      (tx:Transaction<DB>)=>sql`truncate person_master.assignment_version_semantics`.execute(tx),
+      (tx:Transaction<DB>)=>sql`truncate person_master.assignment_version_semantics,person_master.assignment_closure_evidence`.execute(tx),
     ]) immutable.push(await probe(async tx=>{await action(tx);},'55000'));
     return {wrongAxis,nonexistent,wrongScope,wrongClock,future,immutable};
   });
@@ -124,11 +124,13 @@ export async function runAssignmentSemanticSqlProbe(database:Kysely<DB>, f:Seman
     for (const target of [accepted,revised]) {
       const v=await database.selectFrom('person_master.assignment_version').selectAll()
         .where('assignment_version_id','=',target.assignmentVersionId).executeTakeFirstOrThrow();
+      const evaluationRecordAsOf = v.evaluation_record_as_of;
+      assert.ok(evaluationRecordAsOf !== null, 'ADMISSION_EVALUATION_REQUIRED');
       observed.push(await probe(async tx=> {
         await tx.insertInto('person_master.assignment_version_semantics').values({...sourceSemantic,
           assignment_version_id:v.assignment_version_id,assignment_id:v.assignment_id,request_id:v.request_id,
           created_by:v.created_by,operation_hash:v.operation_hash,semantic_recorded_from:v.recorded_from,
-          evaluation_record_as_of:v.evaluation_record_as_of}).execute();
+          evaluation_record_as_of:evaluationRecordAsOf}).execute();
       },'23514'));
       assert.equal((await app().getAssignmentVersionSemantics({...assignmentScope,assignmentId:target.assignmentId,
         assignmentVersionId:target.assignmentVersionId})).classification,'UNCLASSIFIED');

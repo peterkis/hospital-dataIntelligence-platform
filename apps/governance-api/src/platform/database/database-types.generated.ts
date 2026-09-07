@@ -417,6 +417,33 @@ export interface PersonMasterAssignment {
   relation_basis: string;
 }
 
+export interface PersonMasterAssignmentClosureEvidence {
+  assignment_id: string;
+  closure_assignment_version_id: string;
+  closure_evidence_fingerprint: Buffer;
+  closure_policy_code: string;
+  closure_policy_digest: Buffer;
+  closure_policy_version: number;
+  closure_recorded_from: string;
+  created_by: string;
+  ended_at: string;
+  governance_object_id: string;
+  is_period_preserving_end_confirmation: boolean;
+  operation_hash: Buffer;
+  previous_assignment_version_id: string;
+  previous_business_valid_from: string;
+  previous_business_valid_to: string | null;
+  previous_version_no: Int8;
+  proof_kind: string;
+  reason_code: string;
+  request_id: string;
+  semantic_inheritance: string;
+  source_acceptance_dependency_fingerprint: Buffer;
+  source_acceptance_version_id: string;
+  source_semantic_fingerprint: Buffer | null;
+  source_semantics_version_id: string | null;
+}
+
 export interface PersonMasterAssignmentCommandOutcome {
   assignment_version_id: string | null;
   created_by: string;
@@ -471,11 +498,11 @@ export interface PersonMasterAssignmentValidationSegment {
 export interface PersonMasterAssignmentVersion {
   assignment_id: string;
   assignment_version_id: Generated<string>;
-  authority_engagement_recorded_from: string;
-  authority_engagement_valid_from: string;
+  authority_engagement_recorded_from: string | null;
+  authority_engagement_valid_from: string | null;
   authority_engagement_valid_to: string | null;
-  authority_engagement_version_id: string;
-  authority_engagement_version_no: Int8;
+  authority_engagement_version_id: string | null;
+  authority_engagement_version_no: Int8 | null;
   business_period: Generated<string | null>;
   business_valid_from: string;
   business_valid_to: string | null;
@@ -485,29 +512,33 @@ export interface PersonMasterAssignmentVersion {
   classification_type_version_no: Int8 | null;
   classified_at: string | null;
   created_by: string;
-  department_business_status: string;
-  department_content_hash: Buffer;
+  department_business_status: string | null;
+  department_content_hash: Buffer | null;
   department_id: string;
-  department_publication_projection_id: string;
-  department_published_at: string;
-  department_recorded_from: string;
+  department_publication_projection_id: string | null;
+  department_published_at: string | null;
+  department_recorded_from: string | null;
   department_recorded_to: string | null;
-  department_release_id: string;
-  department_valid_from: string;
+  department_release_id: string | null;
+  department_valid_from: string | null;
   department_valid_to: string | null;
-  department_version_id: string;
-  department_version_no: Int8;
-  dependency_fingerprint: Buffer;
+  department_version_id: string | null;
+  department_version_no: Int8 | null;
+  dependency_fingerprint: Buffer | null;
   engagement_id: string;
-  evaluation_record_as_of: string;
+  evaluation_record_as_of: string | null;
+  /**
+   * ADMISSION retains original positive evidence; CLOSURE has independent non-expansive proof and no new ACTIVE segments.
+   */
+  evidence_kind: Generated<string>;
   governance_object_id: string;
   operation_hash: Buffer;
   reason_code: string | null;
-  record_visible_lifecycle_sequence: Int8;
+  record_visible_lifecycle_sequence: Int8 | null;
   recorded_from: Generated<string>;
   request_id: string;
   supersedes_assignment_version_id: string | null;
-  validation_policy_code: string;
+  validation_policy_code: string | null;
   version_no: Int8;
 }
 
@@ -1254,6 +1285,7 @@ export interface DB {
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
   "person_master.assignment": PersonMasterAssignment;
+  "person_master.assignment_closure_evidence": PersonMasterAssignmentClosureEvidence;
   "person_master.assignment_command_outcome": PersonMasterAssignmentCommandOutcome;
   "person_master.assignment_semantic_term": PersonMasterAssignmentSemanticTerm;
   "person_master.assignment_semantic_term_version": PersonMasterAssignmentSemanticTermVersion;

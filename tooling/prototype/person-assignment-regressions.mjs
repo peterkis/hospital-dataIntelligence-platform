@@ -1,13 +1,13 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import pg from 'pg';
 import assert from 'node:assert/strict';
 
 if (!process.env.npm_execpath || !process.env.DATABASE_URL) throw new Error('C01_MANAGED_NPM_DATABASE_SESSION_REQUIRED');
-const semantics = process.argv.includes('--assignment-semantics');
-const task = semantics ? 'PV-006-C-02' : 'PV-006-C-01';
+const closure = process.argv.includes('--assignment-closure');
+const semantics = closure || process.argv.includes('--assignment-semantics');
+const task = closure ? 'PV-006-C-03-01' : semantics ? 'PV-006-C-02' : 'PV-006-C-01';
 if (semantics) {
   const endpoint = new URL(process.env.DATABASE_URL);
   assert.equal(endpoint.hostname, '127.0.0.1'); assert.equal(endpoint.port, '55434');
@@ -15,7 +15,7 @@ if (semantics) {
 }
 const childEnvironment = semantics ? { ...process.env, REDOCLY_TELEMETRY: 'off', REDOCLY_SUPPRESS_UPDATE_NOTICE: 'true',
   npm_config_offline: 'true', npm_config_update_notifier: 'false', HOST: '127.0.0.1', PORT: '3000' } : process.env;
-const directory = `.runtime/${semantics ? 'pv006-c02' : 'pv006-c01'}/${randomUUID()}`;
+const directory = `.runtime/${closure ? 'pv006-c0301' : semantics ? 'pv006-c02' : 'pv006-c01'}/${randomUUID()}`;
 await mkdir(directory, { recursive: false });
 const root = process.cwd();
 const commands = [];
@@ -37,6 +37,7 @@ try {
   const before = await fingerprint();
   await writeFile(`${directory}/immutable-before.json`, JSON.stringify({ cutoff, before }, null, 2), { flag: 'wx' });
   const scripts = [
+    ...(closure ? ['prototype:person:assignment-closure:validate','prototype:person:assignment-semantics:validate','prototype:person:assignment-semantics:sql'] : []),
     ...(semantics ? ['prototype:person:assignment:application'] : []),
     'prototype:person:engagement:validate', 'prototype:person:engagement-classification:validate',
     'prototype:person:engagement-lifecycle:validate', 'prototype:person:validate',
@@ -45,8 +46,8 @@ try {
   ];
   if (!gatesOnly) {
     for (const script of scripts) await npm(script);
-    await run(['../../node_modules/vitest/vitest.mjs', 'run', '--no-file-parallelism', '--maxWorkers=1',
-      '--exclude', 'src/composition/phase-01-vertical-slice.integration.test.ts'], resolve(root, 'apps/governance-api'));
+    await run([process.env.npm_execpath, 'run', 'test', '--workspace', '@hospital-data-intelligence/governance-api', '--',
+      '--no-file-parallelism', '--maxWorkers=1', '--exclude', 'src/composition/phase-01-vertical-slice.integration.test.ts']);
     await run([process.env.npm_execpath, 'run', 'test', '--workspace', '@hospital-data-intelligence/sim-consumer']);
     await run([process.env.npm_execpath, 'run', 'test', '--workspace', '@hospital-data-intelligence/release-consumer-sdk']);
     for (const script of ['test:consumer-replay', 'prototype:department:validate', 'prototype:department:http:validate',

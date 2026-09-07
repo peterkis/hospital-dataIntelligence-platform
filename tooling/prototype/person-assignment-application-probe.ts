@@ -56,9 +56,9 @@ async function identity() {
 }
 async function exercise() {
   const target = await identity();
-  assert.match(target.database, /^(hdi_prototype|pv006_c0[12]_[a-f0-9]{32})$/u);
+  assert.match(target.database, /^(hdi_prototype|pv006_c0(?:[12]|301)_[a-f0-9]{32})$/u);
   assert.equal(target.role, 'hdi_prototype');
-  assert.equal(target.migrations, 34);
+  assert.equal(target.migrations, 35);
   const f = await createAssignmentFixture(handle.database, runId);
   const department = await f.createDepartment('PRIMARY');
   const command = (engagementId: string, from = Jul, to: string | null = Dec, departmentId = department.departmentId): CreateAssignment => ({
@@ -67,7 +67,7 @@ async function exercise() {
     businessValidFrom: from, businessValidTo: to,
   });
   const count = async () => (await sql<{ n: number }>`select count(*)::int as n from person_master.assignment`.execute(handle.database)).rows[0]!.n;
-  const keep = (v: AssignmentVersion) => { versions.push(v); return v; };
+  const keep = <T extends AssignmentVersion>(v: T): T => { versions.push(v); return v; };
   const assessment = async (v: AssignmentVersion, recordAsOf = '') => {
     const query = { ...assignmentScope, assignmentId: v.assignmentId, assignmentVersionId: v.assignmentVersionId,
       recordAsOf: recordAsOf || await f.now() };

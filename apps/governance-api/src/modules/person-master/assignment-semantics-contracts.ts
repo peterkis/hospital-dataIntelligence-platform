@@ -1,4 +1,4 @@
-import type { AssignmentReference, AssignmentVersion, AssignmentVersionReference, CreateAssignment, ReviseAssignment } from './assignment-contracts.js';
+import type { AssignmentAdmissionVersion, AssignmentReference, AssignmentVersion, AssignmentVersionReference, CreateAssignment, ReviseAssignment } from './assignment-contracts.js';
 
 export const ASSIGNMENT_PURPOSES = ['ORGANIZATIONAL_AFFILIATION', 'CLINICAL_PRACTICE', 'TRAINING_LEARNING'] as const;
 export const ASSIGNMENT_MODES = ['PRIMARY_AFFILIATION', 'STANDING_CONCURRENT'] as const;
@@ -58,6 +58,7 @@ export interface AssignmentSemanticEvaluation {
   }[];
 }
 export interface ClassifiedAssignmentSemantics {
+  readonly semanticRole?: 'EVALUATED_ADMISSION';
   readonly classification: 'CLASSIFIED';
   readonly assignmentVersionId: string;
   readonly purpose: AssignmentSemanticTermVersion;
@@ -73,8 +74,22 @@ export interface ClassifiedAssignmentSemantics {
   readonly evaluation: AssignmentSemanticEvaluation;
   readonly semanticFingerprint: string;
 }
-export type AssignmentVersionSemantics = ClassifiedAssignmentSemantics | { readonly classification: 'UNCLASSIFIED'; readonly assignmentVersionId: string };
-export interface ClassifiedAssignmentResult { readonly coreVersion: AssignmentVersion; readonly semantics: ClassifiedAssignmentSemantics }
+export interface InheritedAssignmentClosureSemantics {
+  readonly classification: 'CLASSIFIED';
+  readonly semanticRole: 'INHERITED_FOR_CLOSURE';
+  readonly assignmentVersionId: string;
+  readonly sourceAssignmentVersionId: string;
+  readonly sourceSemanticRecordedFrom: string;
+  readonly closureKnownFrom: string;
+  readonly purpose: AssignmentSemanticTermVersion;
+  readonly mode: AssignmentSemanticTermVersion;
+  readonly scopeCode: 'HOSPITAL_DEPARTMENT_PLACEMENTS';
+  readonly sourceSemanticFingerprint: string;
+  readonly primaryEvaluation: 'NOT_REEVALUATED_NON_EXPANSIVE';
+}
+export type AssignmentAdmissionSemantics = ClassifiedAssignmentSemantics | { readonly classification: 'UNCLASSIFIED'; readonly assignmentVersionId: string };
+export type AssignmentVersionSemantics = AssignmentAdmissionSemantics | InheritedAssignmentClosureSemantics;
+export interface ClassifiedAssignmentResult { readonly coreVersion: AssignmentAdmissionVersion; readonly semantics: ClassifiedAssignmentSemantics }
 export interface AssignmentPrimaryResolution {
   readonly semanticRole: 'SCOPED_PRIMARY_AFFILIATION_ASSERTION';
   readonly bucket: AssignmentPrimaryBucket;

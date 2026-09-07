@@ -4,9 +4,10 @@ import type { RequestContext } from '../../platform/transaction/transaction-runn
 import { canonicalSha256 } from '../../platform/hashing/canonical-hash.js';
 import { assignmentPeriodCovered, type AssignmentDependencyEvidence, type AssignmentVersion } from './assignment-contracts.js';
 import { assignmentTermResult } from './assignment-semantic-definitions.js';
+import { readAssignmentClosureVersion } from './assignment-closure-store.js';
 import { ASSIGNMENT_SEMANTIC_POLICY, evaluateAssignmentPrimary, type AssignmentSemanticCandidate } from './assignment-semantics-policy.js';
 import type { AssignmentSemanticCodes, AssignmentSemanticEvaluation, AssignmentSemanticOperation,
-  AssignmentSemanticTermVersion, AssignmentVersionSemantics, ClassifiedAssignmentSemantics, CorrectAssignmentSemantics } from './assignment-semantics-contracts.js';
+  AssignmentSemanticTermVersion, AssignmentVersionSemantics, AssignmentAdmissionSemantics, ClassifiedAssignmentSemantics, CorrectAssignmentSemantics } from './assignment-semantics-contracts.js';
 
 /** Person-owner private helpers. There is no caller-supplied approval or public save port. */
 export async function assignmentSemanticCandidates(database: Transaction<DB>, governanceObjectId: string,
@@ -15,13 +16,16 @@ export async function assignmentSemanticCandidates(database: Transaction<DB>, go
     select latest.assignment_id as "assignmentId",latest.assignment_version_id as "assignmentVersionId",
       latest.business_valid_from as "businessValidFrom",latest.business_valid_to as "businessValidTo",
       s.purpose_code as "purposeCode",s.mode_code as "modeCode"
-    from (select distinct on (v.assignment_id) v.assignment_id,v.assignment_version_id,v.business_valid_from,v.business_valid_to
+    from (select distinct on (v.assignment_id) v.assignment_id,v.assignment_version_id,v.business_valid_from,v.business_valid_to,v.evidence_kind
       from person_master.assignment_version v
       where v.governance_object_id=${governanceObjectId}::uuid and v.engagement_id=${engagementId}::uuid
         and v.recorded_from<=${recordAsOf}::timestamp
         and (${excludeAssignmentId}::uuid is null or v.assignment_id<>${excludeAssignmentId}::uuid)
       order by v.assignment_id,v.version_no desc) latest
-    left join person_master.assignment_version_semantics s on s.assignment_version_id=latest.assignment_version_id
+    left join person_master.assignment_closure_evidence ce
+      on latest.evidence_kind='CLOSURE' and ce.closure_assignment_version_id=latest.assignment_version_id
+    left join person_master.assignment_version_semantics s on s.assignment_version_id=
+      case when latest.evidence_kind='CLOSURE' then ce.source_semantics_version_id else latest.assignment_version_id end
       and s.semantic_recorded_from<=${recordAsOf}::timestamp
     order by latest.assignment_id limit 65
   `.execute(database)).rows;
@@ -29,6 +33,20 @@ export async function assignmentSemanticCandidates(database: Transaction<DB>, go
   return rows;
 }
 export async function assignmentSemanticExact(database: Transaction<DB>, assignmentVersionId: string): Promise<AssignmentVersionSemantics> {
+  const version = await database.selectFrom('person_master.assignment_version').selectAll()
+    .where('assignment_version_id', '=', assignmentVersionId).executeTakeFirstOrThrow();
+  if (version.evidence_kind !== 'CLOSURE') return assignmentAdmissionSemanticExact(database, assignmentVersionId);
+  const closure = await readAssignmentClosureVersion(database, version);
+  if (closure.closureEvidence.semanticInheritance === 'UNCLASSIFIED') return { classification: 'UNCLASSIFIED', assignmentVersionId };
+  const source = await assignmentAdmissionSemanticExact(database, closure.supersedesAssignmentVersionId);
+  if (source.classification !== 'CLASSIFIED' || source.semanticFingerprint !== closure.closureEvidence.sourceSemanticFingerprint)
+    throw new Error('ASSIGNMENT_CLOSURE_EVIDENCE_INVALID');
+  return { classification: 'CLASSIFIED', semanticRole: 'INHERITED_FOR_CLOSURE', assignmentVersionId,
+    sourceAssignmentVersionId: source.assignmentVersionId, sourceSemanticRecordedFrom: source.semanticRecordedFrom,
+    closureKnownFrom: closure.recordedFrom, purpose: source.purpose, mode: source.mode, scopeCode: source.scopeCode,
+    sourceSemanticFingerprint: source.semanticFingerprint, primaryEvaluation: 'NOT_REEVALUATED_NON_EXPANSIVE' };
+}
+export async function assignmentAdmissionSemanticExact(database: Transaction<DB>, assignmentVersionId: string): Promise<AssignmentAdmissionSemantics> {
   const row = await database.selectFrom('person_master.assignment_version_semantics').selectAll()
     .where('assignment_version_id','=',assignmentVersionId).executeTakeFirst();
   if (!row) return { classification: 'UNCLASSIFIED', assignmentVersionId };

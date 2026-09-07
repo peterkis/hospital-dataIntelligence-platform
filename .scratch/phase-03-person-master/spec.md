@@ -28,7 +28,9 @@ Immutable Version Core task at authority HEAD
 | PV-006-C | Assignment | IN_PROGRESS |
 | PV-006-C-01 | Assignment Stable Relation & Placement Core | DONE effective on the sole validated C-01 completion commit |
 | PV-006-C-02 | Assignment Purpose / Mode & Scoped Primary Affiliation | DONE effective on the sole reviewed local completion commit |
-| PV-006-C-03 | Later Assignment slice | NOT_STARTED |
+| PV-006-C-03 | Assignment closure and later transfer | IN_PROGRESS |
+| PV-006-C-03-01 | Assignment End & Historical Closure | DONE effective on the sole reviewed local completion commit |
+| PV-006-C-03-02 | Atomic transfer (separate authorization required) | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
 | PV-006-F | Projection / Release / Consumer | NOT_STARTED |
@@ -39,6 +41,22 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+C-03-01 local engineering gates passed: explicit non-expansive closure with distinct
+evidence, preserved admission history and historical primary/unknown occupancy.
+The 27 application/SQL/queue/oracle groups, 28 regression commands, fresh installation,
+real restart/recovery and original-row/frozen-surface checks are recorded under
+`.runtime/pv006-c0301/local-only-20260907/`. DONE is effective only after same-tree
+Standards/Spec approval and the sole local commit; C-03, C and PV-006 remain
+IN_PROGRESS, and C-03-02 / D–G remain NOT_STARTED.
+
+2026-09-07: PV-006-C-03-01 is separately authorized at HEAD
+`9ea890d839721959db0ad3f8f6241489b88d8265`, tree
+`adf08ae8708a4a6a21d03706065b60808691f311`. LOCAL_AUTHORITY_NO_EXTERNAL_NETWORK
+continues. Issue 10 covers explicit non-expansive closure, distinct closure
+evidence and historical declaration/primary reading. All 68 gates, independent
+same-tree review and one local commit are required; no push. C-03-02 / D–G
+remain NOT_STARTED and NEXT_PHASE_EXECUTION_AUTHORIZED=NO.
 
 C-02 local engineering validation passed: independently versioned Purpose/Mode,
 exact immutable pairing, explicit adoption/correction, scoped primary at-most-one,

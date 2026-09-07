@@ -2,6 +2,7 @@ import { parseLocalDateTime } from '../../platform/local-datetime/local-datetime
 import type { EngagementEffectivePeriodContext } from './engagement-effective-period-contracts.js';
 import type { DepartmentPlacementReference } from '../department-master/index.js';
 import { assertClosedObject, assertPersonUuid } from './contracts.js';
+import type { AssignmentClosureVersion } from './assignment-closure-contracts.js';
 
 export const ASSIGNMENT_POLICY = 'ASSIGNMENT_DEPARTMENT_CORE_V1' as const;
 export interface AssignmentPlacement {
@@ -44,16 +45,19 @@ export interface AssignmentDependencyEvidence {
   readonly department: DepartmentPlacementReference;
   readonly dependencyFingerprint: string;
 }
-export interface AssignmentVersion extends AssignmentVersionReference {
+export interface AssignmentAdmissionVersion extends AssignmentVersionReference {
+  readonly recordKind?: 'ADMISSION';
   readonly versionNo: string;
   readonly supersedesAssignmentVersionId: string | null;
-  readonly reasonCode: AssignmentVersionReason | null;
+  readonly reasonCode: AssignmentAdmissionReason | null;
   readonly businessValidFrom: string;
   readonly businessValidTo: string | null;
   readonly recordedFrom: string;
   readonly acceptanceEvidence: AssignmentDependencyEvidence;
 }
-export type AssignmentVersionReason = ReviseAssignment['reasonCode'] | 'SEMANTIC_ADOPTION' | 'SEMANTIC_CORRECTION';
+export type AssignmentVersion = AssignmentAdmissionVersion | AssignmentClosureVersion;
+export type AssignmentAdmissionReason = ReviseAssignment['reasonCode'] | 'SEMANTIC_ADOPTION' | 'SEMANTIC_CORRECTION';
+export type AssignmentVersionReason = AssignmentAdmissionReason | 'LIFECYCLE_END';
 export interface AssignmentDependencyAssessment {
   readonly evaluatedAssignmentVersionId: string;
   readonly assessedRecordAsOf: string;
@@ -65,8 +69,8 @@ export interface AssignmentDependencyAssessment {
   readonly reasons: readonly string[];
 }
 export interface AssignmentCoreApplication {
-  createAssignment(command: CreateAssignment): Promise<AssignmentVersion>;
-  reviseAssignment(command: ReviseAssignment): Promise<AssignmentVersion>;
+  createAssignment(command: CreateAssignment): Promise<AssignmentAdmissionVersion>;
+  reviseAssignment(command: ReviseAssignment): Promise<AssignmentAdmissionVersion>;
   getAssignment(query: AssignmentReference): Promise<Assignment>;
   getAssignmentVersion(query: AssignmentVersionReference): Promise<AssignmentVersion>;
   listAssignmentVersions(query: AssignmentReference & { readonly afterVersionNo: string; readonly limit: number }): Promise<readonly AssignmentVersion[]>;

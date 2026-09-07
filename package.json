@@ -15,6 +15,16 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:assignment-closure:gates": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-gates.ts",
+    "prototype:person:assignment-closure:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-recovery-probe.ts --recover",
+    "prototype:person:assignment-closure:recover-negative": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-closure-recover-negative.mjs",
+    "prototype:person:assignment-closure:restart": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-closure-restart.mjs",
+    "prototype:person:assignment-closure:fresh-install": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-fresh-install.mjs --assignment-closure",
+    "prototype:person:assignment-closure:regressions": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-regressions.mjs --assignment-closure",
+    "prototype:person:assignment-closure:concurrency": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-application-probe.ts --concurrency-probe",
+    "prototype:person:assignment-closure:sql": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-application-probe.ts --sql-probe",
+    "prototype:person:assignment-closure:preserve": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-closure-preservation.mjs",
+    "prototype:person:assignment-closure:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-application-probe.ts",
     "prototype:person:assignment-semantics:regressions": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-regressions.mjs --assignment-semantics",
     "prototype:person:assignment-semantics:fresh-install": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-fresh-install.mjs --assignment-semantics",
     "prototype:person:assignment-semantics:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-semantics-recovery-probe.ts --recover",

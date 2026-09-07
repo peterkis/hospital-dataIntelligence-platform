@@ -11,6 +11,16 @@ import type { EngagementEffectivePeriodReader, EngagementEffectivePeriodQuery,
 
 const LIMIT = 'ASSIGNMENT_DEPENDENCY_EVALUATION_LIMIT';
 
+/** Composition-only closure identity fence; no lifecycle or current upstream permission is evaluated. */
+export function createAssignmentClosureEngagementPin(database: Transaction<DB>) {
+  return async (query: { governanceObjectId: string; engagementId: string; personId: string }): Promise<void> => {
+    const row = await database.selectFrom('person_master.engagement').select('engagement_id')
+      .where('governance_object_id', '=', query.governanceObjectId).where('engagement_id', '=', query.engagementId)
+      .where('person_id', '=', query.personId).forUpdate().executeTakeFirst();
+    if (!row) throw new Error('ASSIGNMENT_CLOSURE_IDENTITY_INVALID');
+  };
+}
+
 /** C02 identity-only owner port; it never evaluates lifecycle or clinical validity. */
 export function createAssignmentEngagementIdentityReader(database: Transaction<DB>, authorization: AuthorizationModule,
   requireScope: (objectId: string) => Promise<void>) {

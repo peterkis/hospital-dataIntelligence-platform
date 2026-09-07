@@ -104,11 +104,11 @@ export async function runAssignmentConstraints(database: Kysely<DB>, f: Fixture,
       outcomes.push(await probe(async tx => { await sql`update ${sql.table(table)} set ${sql.ref(column)}=${sql.ref(column)} where ${sql.ref(key)}=${id}::uuid`.execute(tx); }, '55000'));
       outcomes.push(await probe(async tx => { await sql`delete from ${sql.table(table)} where ${sql.ref(key)}=${id}::uuid`.execute(tx); }, '55000'));
     }
-    // Include C02's new FK dependent so this still reaches the immutable trigger,
+    // Include C02/C0301 FK dependents so this still reaches the immutable trigger,
     // rather than stopping earlier at PostgreSQL's TRUNCATE dependency check.
     outcomes.push(await probe(async tx => { await sql`truncate person_master.assignment,person_master.assignment_version,
       person_master.assignment_validation_segment,person_master.assignment_command_outcome,
-      person_master.assignment_version_semantics`.execute(tx); }, '55000'));
+      person_master.assignment_version_semantics,person_master.assignment_closure_evidence`.execute(tx); }, '55000'));
     outcomes.push(await probe(tx => candidate(tx, { version: { version_no: '2' } }), '23514'));
     outcomes.push(await probe(tx => candidate(tx, { version: { recorded_from: Jan } }), '23514'));
     outcomes.push(await probe(tx => candidate(tx, { version: { evaluation_record_as_of: Jan } }), '23514'));

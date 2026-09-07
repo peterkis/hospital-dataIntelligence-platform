@@ -6,7 +6,7 @@ import { createAuditModule } from '../modules/audit/index.js';
 import { createAuthorizationModule, type ObjectPermissionCode } from '../modules/authorization/index.js';
 import { createDepartmentPlacementReferenceScope, type DepartmentPlacementReferenceReader } from '../modules/department-master/index.js';
 import { createAssignmentCoreModule, createEngagementEffectivePeriodScope, createClassifiedAssignmentEngagementPin,
-  createAssignmentSemanticDefinitionModule, createAssignmentEngagementIdentityReader,
+  createAssignmentSemanticDefinitionModule, createAssignmentEngagementIdentityReader, createAssignmentClosureEngagementPin,
   type AssignmentCoreApplication, type AssignmentCoreModule, type EngagementEffectivePeriodReader,
 } from '../modules/person-master/index.js';
 
@@ -44,11 +44,13 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
       engagement, department, pinEngagement: engagement.pinEngagement, pinDepartment: department.pinDepartment,
       pinClassifiedEngagement: createClassifiedAssignmentEngagementPin(database,authorization,id=>requireScope(id,'PERSON_MASTER')),
       readEngagementIdentity: createAssignmentEngagementIdentityReader(database,authorization,id=>requireScope(id,'PERSON_MASTER')),
+      pinClosureEngagement: createAssignmentClosureEngagementPin(database),
       authorizeSemantics,
       async authorize(governanceObjectId, operation) {
         await requireScope(governanceObjectId, 'PERSON_MASTER');
         await authorization.requireObjectPermission({ governanceObjectId,
-          permissionCode: operation === 'READ' ? 'PERSON_MASTER_ASSIGNMENT_READ' : 'PERSON_MASTER_ASSIGNMENT_WRITE' });
+          permissionCode: operation === 'READ' ? 'PERSON_MASTER_ASSIGNMENT_READ' :
+            operation === 'END' ? 'PERSON_MASTER_ASSIGNMENT_END' : 'PERSON_MASTER_ASSIGNMENT_WRITE' });
       },
       async authorizeDependencies(governanceObjectId, target) {
         await requireScope(governanceObjectId, 'PERSON_MASTER');
