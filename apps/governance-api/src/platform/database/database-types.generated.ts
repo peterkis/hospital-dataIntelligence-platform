@@ -403,6 +403,85 @@ export interface EmergencyControlSuspensionEvent {
   suspension_event_id: Generated<string>;
 }
 
+export interface PersonMasterAssignment {
+  assignment_id: Generated<string>;
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  department_governance_object_id: string;
+  department_id: string;
+  engagement_id: string;
+  governance_object_id: string;
+  person_id: string;
+  placement_scope: string;
+  relation_basis: string;
+}
+
+export interface PersonMasterAssignmentCommandOutcome {
+  assignment_version_id: string | null;
+  created_by: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  operation_type: string;
+  recorded_at: Generated<string>;
+  rejection_code: string | null;
+  request_id: string;
+}
+
+export interface PersonMasterAssignmentValidationSegment {
+  assignment_version_id: string;
+  business_state: string;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  engagement_id: string;
+  last_applicable_lifecycle_event_id: string | null;
+  lifecycle_sequence: Int8;
+  segment_no: number;
+}
+
+export interface PersonMasterAssignmentVersion {
+  assignment_id: string;
+  assignment_version_id: Generated<string>;
+  authority_engagement_recorded_from: string;
+  authority_engagement_valid_from: string;
+  authority_engagement_valid_to: string | null;
+  authority_engagement_version_id: string;
+  authority_engagement_version_no: Int8;
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  classification_category_code: string | null;
+  classification_type_code: string | null;
+  classification_type_version_id: string | null;
+  classification_type_version_no: Int8 | null;
+  classified_at: string | null;
+  created_by: string;
+  department_business_status: string;
+  department_content_hash: Buffer;
+  department_id: string;
+  department_publication_projection_id: string;
+  department_published_at: string;
+  department_recorded_from: string;
+  department_recorded_to: string | null;
+  department_release_id: string;
+  department_valid_from: string;
+  department_valid_to: string | null;
+  department_version_id: string;
+  department_version_no: Int8;
+  dependency_fingerprint: Buffer;
+  engagement_id: string;
+  evaluation_record_as_of: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  reason_code: string | null;
+  record_visible_lifecycle_sequence: Int8;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_assignment_version_id: string | null;
+  validation_policy_code: string;
+  version_no: Int8;
+}
+
 export interface PersonMasterEngagement {
   created_at: Generated<string>;
   created_by: string;
@@ -1116,6 +1195,10 @@ export interface DB {
   "emergency_control.impact_case": EmergencyControlImpactCase;
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
+  "person_master.assignment": PersonMasterAssignment;
+  "person_master.assignment_command_outcome": PersonMasterAssignmentCommandOutcome;
+  "person_master.assignment_validation_segment": PersonMasterAssignmentValidationSegment;
+  "person_master.assignment_version": PersonMasterAssignmentVersion;
   "person_master.engagement": PersonMasterEngagement;
   "person_master.engagement_classification": PersonMasterEngagementClassification;
   "person_master.engagement_lifecycle_event": PersonMasterEngagementLifecycleEvent;

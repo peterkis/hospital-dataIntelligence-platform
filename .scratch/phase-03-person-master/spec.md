@@ -25,7 +25,8 @@ Immutable Version Core task at authority HEAD
 | PV-006-B-02 | Engagement Type / Classification & Overlap Rules | DONE on the sole validated completion commit |
 | PV-006-B-03 | Engagement Lifecycle / Business-State Semantics | DONE on the sole validated completion commit |
 | PV-006-B-04 | Engagement Temporal Authority Reconciliation | DONE effective on the sole validated B-04 completion commit |
-| PV-006-C | Assignment | NOT_STARTED |
+| PV-006-C | Assignment | IN_PROGRESS |
+| PV-006-C-01 | Assignment Stable Relation & Placement Core | DONE effective on the sole validated C-01 completion commit |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
 | PV-006-F | Projection / Release / Consumer | NOT_STARTED |
@@ -36,6 +37,13 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+PV-006-C-01 is separately authorized by the user's assignment placement core
+prompt at HEAD `8b1721ebb2000435415aa2cfd47c398a258d9f09`, tree
+`c0b3670a893bc40cbad6a9e85ffebd7263819977`. Only DEPARTMENT placement core,
+complete-period owner dependencies and exact-version read-only assessment are
+authorized. ASSIGNMENT_DEPARTMENT_CORE_V1 is synthetic test policy only.
+One local completion commit after all 72 gates; no push or C-02/D-G work.
 
 PV-006-B-04 is separately authorized by the user's engagement temporal authority
 reconciliation prompt. Its supplemental B engineering gate is PASS; final-tree

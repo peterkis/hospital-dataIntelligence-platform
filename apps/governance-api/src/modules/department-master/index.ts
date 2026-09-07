@@ -421,3 +421,4 @@ export * from './department-audit.js';
 export * from './application.js';
 export * from './department-contracts.js';
 export * from './read-model.js';
+export * from './placement-reference.js';

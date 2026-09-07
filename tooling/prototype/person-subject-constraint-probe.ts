@@ -61,7 +61,10 @@ try {
   });
 
   const columns = await sql<{ table_name: string; column_name: string; data_type: string }>`select table_name, column_name, data_type from information_schema.columns where table_schema = 'person_master' order by table_name, ordinal_position`.execute(handle.database);
-  const names = columns.rows.map((row) => row.column_name);
+  // A-01 owns Person Core, not the separately authorized Assignment tables.
+  // Keep the whole-schema time-type check below; scope fact exclusions to Core.
+  const names = columns.rows.filter((row) => ['person_subject', 'person_subject_version'].includes(row.table_name))
+    .map((row) => row.column_name);
   const groups = {
     employmentFactsAbsent: ['employment_status', 'employment_type', 'engagement_type', 'active', 'is_active'],
     assignmentFactsAbsent: ['department_id', 'campus_id', 'job_code', 'position_code', 'role_code'],

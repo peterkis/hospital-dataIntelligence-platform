@@ -72,7 +72,9 @@ try {
       .where('engagement_version_id', '=', f.first.engagement_version_id).execute());
   await rejected('versionTruncateBlocked', ['55000'], async (tx) => {
     await sql`set constraints all immediate`.execute(tx);
-    await sql`truncate person_master.engagement_version`.execute(tx);
+    // C-01 adds frozen-reference FKs. Include dependents so this rollback-only
+    // probe still reaches the original 55000 immutable guard, not the FK precheck.
+    await sql`truncate person_master.engagement_version cascade`.execute(tx);
   });
 
   await rejected('missingFirstVersionBlocked', ['23514'], async (tx, f) => {

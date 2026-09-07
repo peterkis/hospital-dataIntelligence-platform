@@ -5,6 +5,9 @@ import type { RequestContext } from '../../platform/transaction/transaction-runn
 export const AUTHORIZATION_MODULE_ID = 'authorization' as const;
 
 export type ObjectPermissionCode =
+  | 'PERSON_MASTER_ASSIGNMENT_READ'
+  | 'PERSON_MASTER_ASSIGNMENT_WRITE'
+  | 'DEPARTMENT_MASTER_PLACEMENT_REFERENCE_READ'
   | 'PERSON_MASTER_ENGAGEMENT_LIFECYCLE_READ'
   | 'PERSON_MASTER_ENGAGEMENT_LIFECYCLE_WRITE'
   | 'PERSON_MASTER_ENGAGEMENT_CLASSIFICATION_READ'
