@@ -8,6 +8,7 @@ import { createDepartmentPlacementReferenceScope, type DepartmentPlacementRefere
 import { createAssignmentCoreModule, createEngagementEffectivePeriodScope, createClassifiedAssignmentEngagementPin,
   createAssignmentSemanticDefinitionModule, createAssignmentEngagementIdentityReader, createAssignmentClosureEngagementPin,
   type AssignmentCoreApplication, type AssignmentCoreModule, type EngagementEffectivePeriodReader,
+  type AssignmentDependencies, createAssignmentTransferModule, ASSIGNMENT_TRANSFER_CHILD_PREFIX,
 } from '../modules/person-master/index.js';
 
 export async function createAssignmentScope(database: Transaction<DB>, context: RequestContext) {
@@ -15,6 +16,7 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(context.actorPrincipalId) ||
     [context.requestId, context.correlationId].some(v => typeof v !== 'string' || !v.trim() || v.length > 128 || /\p{Cc}/u.test(v)))
     throw new Error('ASSIGNMENT_CONTEXT_INVALID');
+  if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) throw new Error('ASSIGNMENT_INTERNAL_REQUEST_FORBIDDEN');
   const now = (await sql<{ now: string }>`select platform.local_now() as now`.execute(database)).rows[0]!.now;
   // Replayed requests re-evaluate grants at server time, not their original request clock.
   const authorization = createAuthorizationModule(database, { ...context, occurredAt: now });
@@ -36,16 +38,16 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
     };
     await authorization.requireObjectPermission({governanceObjectId,permissionCode:permissions[operation]});
   }
-  return {
-    engagement, department,
-    definitions: createAssignmentSemanticDefinitionModule(database,context,createAuditModule(database,context),authorizeSemantics),
-    authorizeSemantics,
-    assignment: createAssignmentCoreModule(database, context, createAuditModule(database, context), {
+  const dependencies: AssignmentDependencies = {
       engagement, department, pinEngagement: engagement.pinEngagement, pinDepartment: department.pinDepartment,
       pinClassifiedEngagement: createClassifiedAssignmentEngagementPin(database,authorization,id=>requireScope(id,'PERSON_MASTER')),
       readEngagementIdentity: createAssignmentEngagementIdentityReader(database,authorization,id=>requireScope(id,'PERSON_MASTER')),
       pinClosureEngagement: createAssignmentClosureEngagementPin(database),
       authorizeSemantics,
+      async authorizeTransfer(governanceObjectId) {
+        await requireScope(governanceObjectId, 'PERSON_MASTER');
+        await authorization.requireObjectPermission({ governanceObjectId, permissionCode: 'PERSON_MASTER_ASSIGNMENT_TRANSFER' });
+      },
       async authorize(governanceObjectId, operation) {
         await requireScope(governanceObjectId, 'PERSON_MASTER');
         await authorization.requireObjectPermission({ governanceObjectId,
@@ -63,7 +65,14 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
         for (const [objectId, permissionCode] of permissions)
           await authorization.requireObjectPermission({ governanceObjectId: objectId, permissionCode });
       },
-    }),
+  };
+  const privateStep = (stepContext: RequestContext) => createAssignmentCoreModule(database, stepContext, createAuditModule(database, stepContext), dependencies);
+  const assignment = privateStep(context);
+  return {
+    engagement, department,
+    definitions: createAssignmentSemanticDefinitionModule(database, context, createAuditModule(database, context), authorizeSemantics),
+    authorizeSemantics, assignment,
+    transfer: createAssignmentTransferModule(database, context, createAuditModule(database, context), dependencies, assignment, privateStep),
   };
 }
 

@@ -136,7 +136,22 @@
     "prototype:demo": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/start-ui.ts --demo",
     "test": "node tooling/test/run-root-tests.mjs",
     "contract:check-consumer-sdk": "npm run contract:check --workspace @hospital-data-intelligence/release-consumer-sdk",
-    "prototype:department:consumer:sdk:validate": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/validate-department-consumer-flow.ts --sdk"
+    "prototype:department:consumer:sdk:validate": "tsx --env-file-if-exists=.env.prototype.local tooling/prototype/validate-department-consumer-flow.ts --sdk",
+    "prototype:person:assignment-transfer:preserve": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-transfer-preservation.mjs",
+    "prototype:person:assignment-transfer:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts",
+    "prototype:person:assignment-transfer:sql": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --sql-probe",
+    "prototype:person:assignment-transfer:history": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --history-probe",
+    "prototype:person:assignment-transfer:request": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --request-probe",
+    "prototype:person:assignment-transfer:concurrency": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --concurrency-probe",
+    "prototype:person:assignment-transfer:restart": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-transfer-restart.mjs",
+    "prototype:person:assignment-transfer:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-recovery-probe.ts --recover",
+    "prototype:person:assignment-transfer:fresh-install": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-fresh-install.mjs --assignment-transfer",
+    "prototype:person:assignment-transfer:regressions": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-regressions.mjs --assignment-transfer",
+    "prototype:person:assignment-transfer:recover-negative": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-transfer-recover-negative.mjs",
+    "prototype:person:assignment-transfer:scope": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --scope-probe",
+    "prototype:person:assignment-transfer:gates": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-gates.ts",
+    "prototype:person:assignment-transfer:prepare-recovery": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --prepare-recovery",
+    "prototype:person:assignment-transfer:definition-repair": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-definition-repair.ts"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

@@ -25,6 +25,8 @@ export { createAssignmentClosureEngagementPin } from './engagement-effective-per
 export { createAssignmentEngagementIdentityReader } from './engagement-effective-period.js';
 export * from './assignment-contracts.js';
 export * from './assignment-closure-contracts.js';
-export { createAssignmentCoreModule, type AssignmentCoreModule } from './assignment-repository.js';
+export { createAssignmentCoreModule, type AssignmentCoreModule, type AssignmentDependencies } from './assignment-repository.js';
+export * from './assignment-transfer-contracts.js';
+export { createAssignmentTransferModule } from './assignment-transfer-store.js';
 export * from './assignment-semantics-contracts.js';
 export { createAssignmentSemanticDefinitionModule } from './assignment-semantic-definitions.js';

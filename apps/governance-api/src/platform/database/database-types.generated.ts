@@ -453,6 +453,7 @@ export interface PersonMasterAssignmentCommandOutcome {
   recorded_at: Generated<string>;
   rejection_code: string | null;
   request_id: string;
+  transfer_id: string | null;
 }
 
 export interface PersonMasterAssignmentSemanticTerm {
@@ -482,6 +483,38 @@ export interface PersonMasterAssignmentSemanticTermVersion {
   term_id: string;
   term_version_id: Generated<string>;
   version_no: Int8;
+}
+
+export interface PersonMasterAssignmentTransfer {
+  created_by: string;
+  effective_at: string;
+  engagement_id: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  policy_code: string;
+  policy_digest: Buffer;
+  policy_version: number;
+  preserved_mode_code: string;
+  preserved_purpose_code: string;
+  recorded_from: Generated<string>;
+  root_request_id: string;
+  source_assignment_id: string;
+  source_closure_version_id: Generated<string>;
+  source_department_governance_object_id: string;
+  source_department_id: string;
+  source_operation_hash: Buffer;
+  source_original_from: string;
+  source_original_to: string | null;
+  source_previous_version_id: string;
+  source_request_id: string;
+  target_admission_version_id: Generated<string>;
+  target_assignment_id: Generated<string>;
+  target_department_governance_object_id: string;
+  target_department_id: string;
+  target_operation_hash: Buffer;
+  target_request_id: string;
+  transfer_id: Generated<string>;
 }
 
 export interface PersonMasterAssignmentValidationSegment {
@@ -1289,6 +1322,7 @@ export interface DB {
   "person_master.assignment_command_outcome": PersonMasterAssignmentCommandOutcome;
   "person_master.assignment_semantic_term": PersonMasterAssignmentSemanticTerm;
   "person_master.assignment_semantic_term_version": PersonMasterAssignmentSemanticTermVersion;
+  "person_master.assignment_transfer": PersonMasterAssignmentTransfer;
   "person_master.assignment_validation_segment": PersonMasterAssignmentValidationSegment;
   "person_master.assignment_version": PersonMasterAssignmentVersion;
   "person_master.assignment_version_semantics": PersonMasterAssignmentVersionSemantics;

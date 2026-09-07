@@ -28,9 +28,9 @@ Immutable Version Core task at authority HEAD
 | PV-006-C | Assignment | IN_PROGRESS |
 | PV-006-C-01 | Assignment Stable Relation & Placement Core | DONE effective on the sole validated C-01 completion commit |
 | PV-006-C-02 | Assignment Purpose / Mode & Scoped Primary Affiliation | DONE effective on the sole reviewed local completion commit |
-| PV-006-C-03 | Assignment closure and later transfer | IN_PROGRESS |
+| PV-006-C-03 | Assignment END and atomic transfer (only the authorized pair) | COMPLETE effective on the sole R1-reviewed C-03-02 local commit |
 | PV-006-C-03-01 | Assignment End & Historical Closure | DONE effective on the sole reviewed local completion commit |
-| PV-006-C-03-02 | Atomic transfer (separate authorization required) | NOT_STARTED |
+| PV-006-C-03-02 | Atomic transfer | DONE effective on the sole R1-reviewed local commit; two accepted historical deviations |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
 | PV-006-F | Projection / Release / Consumer | NOT_STARTED |
@@ -41,6 +41,45 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+R1 controlled completion: the user accepted the initial missing RED once
+(NOT_PERFORMED remains the historical fact) and the earlier shared-definition
+scope deviation. The verified owner append corrected only the target label
+v27→v28; old business fields, all old rows and frozen references remain intact.
+Cross-process same-request replay added nothing. Current retained validation is
+36 PASS + 1 SKIPPED_BY_SCOPE, paired with verified post-isolation fresh 37 PASS;
+all current R1 required gates passed. Prior 29-command/fresh/restart evidence is
+explicitly reused with source/content and data-scope mapping. See issue 11,
+the design R1 addendum, and `.runtime/pv006-c0302/r1-20260908/coverage.json`.
+The table's DONE/COMPLETE takes effect only after actual final same-tree
+Standards/Spec approval and the sole local commit, recorded in ignored final
+receipts. C and PV-006 remain IN_PROGRESS; other C extensions and D–G remain
+NOT_STARTED; NEXT_PHASE_EXECUTION_AUTHORIZED=NO. Earlier blocked comments below
+are preserved historical observations, not rewritten findings.
+
+2026-09-08 final review did not approve completion: initial RED chronology is
+missing, and the definition concurrency test mutated retained shared authority.
+The latter is now restricted prospectively to receipt-owned fresh databases.
+Restoring current shared values stopped before writes on intervening C02
+definition versions. No completion commit exists; historical engineering receipts
+below do not override these blockers. See issue 11 and the design review addendum.
+
+PV-006-C-03-02 engineering gates passed: 37 real application/SQL/queue/oracle
+groups and all 29 regression commands on 38 migrations/90 tables; native fresh
+installation, real restart and C0302/C0301/C02/C01 cold recovery, invalid-receipt
+subprocesses, original-row protection and frozen surfaces passed. The 76-case
+mapping is `.runtime/pv006-c0302/local-only-20260907/acceptance-precommit.json`;
+independent same-tree review and the sole local commit are still the activation
+conditions. C-03 COMPLETE means only the authorized END and atomic transfer pair.
+C and PV-006 remain IN_PROGRESS; other C extensions and D–G remain NOT_STARTED;
+NEXT_PHASE_EXECUTION_AUTHORIZED=NO. No push or remote observation.
+
+2026-09-08: PV-006-C-03-02 is independently authorized by the external local-only
+prompt at HEAD `7666716dd24320dbba28cd02400755318e9bee7f`. Issue 11 and ADR-0119
+cover same-Engagement/codes residual transfer, one transaction, savepoint rejection
+rollback, root replay and common database knowledge time. All 76 cases, fresh,
+restart, full regression and two independent same-tree reviews must pass before
+the sole local completion commit. No push or next-phase execution is authorized.
 
 C-03-01 local engineering gates passed: explicit non-expansive closure with distinct
 evidence, preserved admission history and historical primary/unknown occupancy.

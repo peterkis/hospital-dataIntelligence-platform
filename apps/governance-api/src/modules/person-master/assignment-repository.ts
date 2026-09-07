@@ -15,6 +15,7 @@ import { validateAssignmentEnd, assignmentEndConstraint,
 import { createAssignmentSemanticStore, assignmentSemanticExact, assignmentAdmissionSemanticExact, assignmentSemanticCandidates } from './assignment-semantic-store.js';
 import { validateAssignmentSemanticCodes, ASSIGNMENT_SEMANTIC_POLICY } from './assignment-semantics-policy.js';
 import { ASSIGNMENT_PURPOSES, ASSIGNMENT_MODES } from './assignment-semantics-contracts.js';
+import { ASSIGNMENT_TRANSFER_CHILD_PREFIX } from './assignment-transfer-contracts.js';
 import type { AssignmentSemanticCodes, AssignmentSemanticOperation, AssignmentVersionSemantics, ClassifiedAssignmentSemantics,
   CreateClassifiedAssignment, AdoptAssignmentSemantics, AssignmentSemanticsApplication, CorrectAssignmentSemantics,
   ReviseClassifiedAssignmentPeriod } from './assignment-semantics-contracts.js';
@@ -55,6 +56,7 @@ export interface AssignmentDependencies {
   authorize(governanceObjectId: string, operation: 'READ' | 'WRITE' | 'END'): Promise<void>;
   authorizeSemantics(governanceObjectId: string, operation: 'READ'|'WRITE'): Promise<void>;
   authorizeDependencies(governanceObjectId: string, placement: AssignmentPlacement): Promise<void>;
+  authorizeTransfer(governanceObjectId: string): Promise<void>;
 }
 
 const TERMINAL = new Set([
@@ -70,7 +72,15 @@ const TERMINAL = new Set([
 export function createAssignmentCoreModule(database: Transaction<DB>, context: RequestContext,
   audit: AuditEventService, dependencies: AssignmentDependencies): AssignmentCoreModule {
   const semantics=createAssignmentSemanticStore(database,context);
-  const clock = async () => (await sql<{ now: string }>`select platform.local_now() as now`.execute(database)).rows[0]!.now;
+  const clock = async (governanceObjectId: string) => {
+    if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) {
+      const transfer = await database.selectFrom('person_master.assignment_transfer').select('recorded_from')
+        .where('governance_object_id', '=', governanceObjectId).where('target_request_id', '=', context.requestId)
+        .where('created_by', '=', context.actorPrincipalId).executeTakeFirstOrThrow();
+      return transfer.recorded_from;
+    }
+    return (await sql<{ now: string }>`select platform.local_now() as now`.execute(database)).rows[0]!.now;
+  };
   async function event(governanceObjectId: string, aggregateId: string, eventType: PersonAuditEventType,
     payload: Readonly<Record<string, unknown>>, versionId: string | null = null) {
     await audit.append({ governanceObjectId, aggregateType: 'PERSON_ASSIGNMENT', aggregateId,
@@ -169,6 +179,7 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       .where('governance_object_id', '=', governanceObjectId).where('request_id', '=', context.requestId).executeTakeFirst();
     if (!prior) return null;
     if (!prior.operation_hash.equals(operationHash)) throw new Error('ASSIGNMENT_OPERATION_CONFLICT');
+    if (prior.operation_type === 'TRANSFER') throw new Error('ASSIGNMENT_OPERATION_CONFLICT');
     if (prior.rejection_code !== null) return { ok: false, code: prior.rejection_code };
     const row = await database.selectFrom('person_master.assignment_version').selectAll()
       .where('assignment_version_id', '=', prior.assignment_version_id!).executeTakeFirstOrThrow();
@@ -182,6 +193,9 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
   }
   async function reject(governanceObjectId: string, operation: 'CREATE' | 'REVISE' | 'END' | AssignmentSemanticOperation, operationHash: Buffer, code: string,
     semanticEvaluation?: Readonly<Record<string, unknown>>): Promise<{ readonly ok: false; readonly code: string }> {
+    // A private step never owns a permanent rejection. Its coordinator rolls the
+    // body back and saves only the root rejection in the original request ledger.
+    if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) return { ok: false, code };
     await database.insertInto('person_master.assignment_command_outcome').values({ governance_object_id: governanceObjectId,
       request_id: context.requestId, created_by: context.actorPrincipalId, operation_type: operation,
       operation_hash: operationHash, assignment_version_id: null, rejection_code: code }).execute();
@@ -200,7 +214,7 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       engagement_id: relation.engagement_id, department_id: relation.department_id,
       version_no: String(BigInt(prior?.version_no ?? '0') + 1n), supersedes_assignment_version_id: prior?.assignment_version_id ?? null,
       reason_code: reasonCode, business_valid_from: command.businessValidFrom, business_valid_to: command.businessValidTo,
-      recorded_from: await clock(), created_by: context.actorPrincipalId, request_id: context.requestId, operation_hash: operationHash,
+      recorded_from: await clock(relation.governance_object_id), created_by: context.actorPrincipalId, request_id: context.requestId, operation_hash: operationHash,
       validation_policy_code: ASSIGNMENT_POLICY, evaluation_record_as_of: evidence.evaluationRecordAsOf,
       authority_engagement_version_id: e.authorityEngagementVersionId, authority_engagement_version_no: e.authorityVersionNo,
       authority_engagement_recorded_from: e.authorityRecordedFrom, authority_engagement_valid_from: e.authoritativeBusinessValidFrom,
@@ -214,13 +228,16 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       department_valid_from: d.businessValidFrom, department_valid_to: d.businessValidTo,
       dependency_fingerprint: Buffer.from(evidence.dependencyFingerprint, 'hex'),
     }).returningAll().executeTakeFirstOrThrow();
+    if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_VERSION_WRITTEN');
     await database.insertInto('person_master.assignment_validation_segment').values(e.stateSegments.map((s, i) => ({
       assignment_version_id: row.assignment_version_id, engagement_id: relation.engagement_id, segment_no: i + 1,
       business_valid_from: s.from, business_valid_to: s.to, business_state: s.businessState,
       last_applicable_lifecycle_event_id: s.lastApplicableLifecycleEventId, lifecycle_sequence: s.lifecycleSequence,
     }))).execute();
+    if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_SEGMENTS_WRITTEN');
     const value=await admissionResult(row);
     const paired=classified ? await semantics.append(value,classified.accepted,classified.operation,operationHash,classified.correctionReason) : undefined;
+    if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_SEMANTICS_WRITTEN');
     await database.insertInto('person_master.assignment_command_outcome').values({ governance_object_id: relation.governance_object_id,
       request_id: context.requestId, created_by: context.actorPrincipalId, operation_type: classified?.operation ?? (prior ? 'REVISE' : 'CREATE'),
       operation_hash: operationHash, assignment_version_id: row.assignment_version_id, rejection_code: null }).execute();
@@ -306,7 +323,7 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       await dependencies.pinDepartment({ departmentGovernanceObjectId: target.departmentGovernanceObjectId, departmentId: target.departmentId });
       if (selectedCodes) await semantics.pinDefinitions(command.governanceObjectId,selectedCodes);
       evidence = await observe(command.governanceObjectId, engagementId, target,
-        period.businessValidFrom, period.businessValidTo, await clock());
+        period.businessValidFrom, period.businessValidTo, await clock(command.governanceObjectId));
       const reason = constraint(evidence);
       if (reason) return reject(command.governanceObjectId, operation, operationHash, reason);
       if (selectedCodes) {
@@ -324,6 +341,7 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       placement_scope: 'DEPARTMENT', relation_basis: command.relationBasis,
       creation_request_id: context.requestId, created_by: context.actorPrincipalId,
     }).returningAll().executeTakeFirstOrThrow();
+    if (create && context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_STABLE_WRITTEN');
     const reasonCode=create ? null : operation==='SEMANTIC_ADOPT' ? 'SEMANTIC_ADOPTION' :
       operation==='SEMANTIC_CORRECT' ? 'SEMANTIC_CORRECTION' :
       'businessValidFrom' in command ? assignmentVersionReason(command.reasonCode) : null;

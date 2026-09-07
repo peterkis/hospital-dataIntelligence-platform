@@ -27,7 +27,7 @@ try {
   const forbidden = (await pool.query(`select count(*)::int as count from information_schema.columns
     where table_schema not in ('pg_catalog','information_schema')
     and udt_name in ('timestamptz','timetz','tstzrange','tstzmultirange')`)).rows[0].count;
-  assert.equal(identity.database, 'hdi_prototype'); assert.equal(identity.migrations, 35);
+  assert.equal(identity.database, 'hdi_prototype'); assert.equal(identity.migrations, 38);
   assert.equal(identity.createdb, false); assert.equal(identity.superuser, false); assert.equal(forbidden, 0); assert.equal(tables.length, 4);
   const result = { task: 'PV-006-C-01', status: 'PASSED', identity, tables, constraints, forbiddenTimezoneTypes: forbidden };
   await writeFile(`${directory}/catalog.json`, JSON.stringify(result, null, 2), { flag: 'wx' });

@@ -18,7 +18,8 @@ it('binds both owner readers and Assignment to one scoped database transaction',
   const composition = read('../../composition/create-assignment-application.ts');
   expect(composition).toContain('createEngagementEffectivePeriodScope(database, authorization');
   expect(composition).toContain('createDepartmentPlacementReferenceScope(database, authorization');
-  expect(composition).toContain('createAssignmentCoreModule(database, context');
+  expect(composition).toContain('createAssignmentCoreModule(database, stepContext');
+  expect(composition).toContain('const assignment = privateStep(context)');
   expect(composition).toContain("setIsolationLevel('repeatable read')");
   expect(composition).not.toMatch(/createEngagementEffectiveReader\(|createDepartmentQueryService\(/);
 });

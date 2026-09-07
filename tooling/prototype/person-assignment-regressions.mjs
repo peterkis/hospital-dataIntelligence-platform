@@ -5,9 +5,10 @@ import pg from 'pg';
 import assert from 'node:assert/strict';
 
 if (!process.env.npm_execpath || !process.env.DATABASE_URL) throw new Error('C01_MANAGED_NPM_DATABASE_SESSION_REQUIRED');
-const closure = process.argv.includes('--assignment-closure');
+const transfer = process.argv.includes('--assignment-transfer');
+const closure = transfer || process.argv.includes('--assignment-closure');
 const semantics = closure || process.argv.includes('--assignment-semantics');
-const task = closure ? 'PV-006-C-03-01' : semantics ? 'PV-006-C-02' : 'PV-006-C-01';
+const task = transfer ? 'PV-006-C-03-02' : closure ? 'PV-006-C-03-01' : semantics ? 'PV-006-C-02' : 'PV-006-C-01';
 if (semantics) {
   const endpoint = new URL(process.env.DATABASE_URL);
   assert.equal(endpoint.hostname, '127.0.0.1'); assert.equal(endpoint.port, '55434');
@@ -15,7 +16,7 @@ if (semantics) {
 }
 const childEnvironment = semantics ? { ...process.env, REDOCLY_TELEMETRY: 'off', REDOCLY_SUPPRESS_UPDATE_NOTICE: 'true',
   npm_config_offline: 'true', npm_config_update_notifier: 'false', HOST: '127.0.0.1', PORT: '3000' } : process.env;
-const directory = `.runtime/${closure ? 'pv006-c0301' : semantics ? 'pv006-c02' : 'pv006-c01'}/${randomUUID()}`;
+const directory = `.runtime/${transfer ? 'pv006-c0302' : closure ? 'pv006-c0301' : semantics ? 'pv006-c02' : 'pv006-c01'}/${randomUUID()}`;
 await mkdir(directory, { recursive: false });
 const root = process.cwd();
 const commands = [];
@@ -37,6 +38,7 @@ try {
   const before = await fingerprint();
   await writeFile(`${directory}/immutable-before.json`, JSON.stringify({ cutoff, before }, null, 2), { flag: 'wx' });
   const scripts = [
+    ...(transfer ? ['prototype:person:assignment-transfer:validate'] : []),
     ...(closure ? ['prototype:person:assignment-closure:validate','prototype:person:assignment-semantics:validate','prototype:person:assignment-semantics:sql'] : []),
     ...(semantics ? ['prototype:person:assignment:application'] : []),
     'prototype:person:engagement:validate', 'prototype:person:engagement-classification:validate',

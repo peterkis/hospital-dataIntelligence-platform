@@ -16,13 +16,14 @@ assert.equal(decodeURIComponent(sourceUrl.username), 'hdi_prototype');
 assert.equal(sourceUrl.hostname, '127.0.0.1');
 assert.equal(sourceUrl.port, '55434');
 const runId = randomUUID();
-const closure = process.argv.includes('--assignment-closure');
+const transfer = process.argv.includes('--assignment-transfer');
+const closure = transfer || process.argv.includes('--assignment-closure');
 const semantics = closure || process.argv.includes('--assignment-semantics');
 assert.ok(process.argv.slice(2).length === 0 || (semantics && process.argv.slice(2).length === 1), 'ASSIGNMENT_FRESH_MODE_INVALID');
-const task = closure ? 'PV-006-C-03-01' : semantics ? 'PV-006-C-02' : 'PV-006-C-01';
-const prefix = closure ? 'pv006_c0301' : semantics ? 'pv006_c02' : 'pv006_c01';
+const task = transfer ? 'PV-006-C-03-02' : closure ? 'PV-006-C-03-01' : semantics ? 'PV-006-C-02' : 'PV-006-C-01';
+const prefix = transfer ? 'pv006_c0302' : closure ? 'pv006_c0301' : semantics ? 'pv006_c02' : 'pv006_c01';
 const databaseName = `${prefix}_${runId.replaceAll('-', '')}`;
-const directory = `.runtime/${closure ? 'pv006-c0301' : semantics ? 'pv006-c02' : 'pv006-c01'}/${runId}`;
+const directory = `.runtime/${transfer ? 'pv006-c0302' : closure ? 'pv006-c0301' : semantics ? 'pv006-c02' : 'pv006-c01'}/${runId}`;
 assert.equal(execFileSync('git', ['check-ignore', `${directory}/ownership.json`],
   { encoding: 'utf8' }).trim(), `${directory}/ownership.json`);
 await mkdir(directory, { recursive: false });
@@ -38,7 +39,7 @@ try {
   const source = (await sourcePool.query(`select current_database() as database,
     pg_postmaster_start_time()::text as started_at,
     (select count(*)::int from platform.schema_migration) as migration_count`)).rows[0];
-  assert.equal(source.migration_count, 35);
+  assert.equal(source.migration_count, 38);
   const admin = JSON.parse(peer(`select json_build_object('role',current_user,
     'started_at',pg_postmaster_start_time()::text,'can_create',rolcreatedb or rolsuper,
     'app_createdb',(select rolcreatedb from pg_roles where rolname='hdi_prototype'))
@@ -82,8 +83,8 @@ try {
     (select count(*)::int from platform.schema_migration) as migrations,
     (select count(*)::int from information_schema.tables where table_schema=any($1::text[])
      and table_type='BASE TABLE') as tables`, [schemas])).rows[0];
-  assert.equal(counts.migrations, 35);
-  assert.equal(counts.tables, 89);
+  assert.equal(counts.migrations, 38);
+  assert.equal(counts.tables, 90);
   result.counts = counts;
   result.migrationsPassed = true;
   const sourceManifest = await schemaManifest(sourcePool, schemas);
@@ -117,6 +118,10 @@ try {
     child('closure-application', ['--import', 'tsx', 'tooling/prototype/person-assignment-closure-application-probe.ts'], freshUrl);
     result.closureApplicationPassed = true;
   }
+  if (transfer) {
+    child('transfer-application', ['--import', 'tsx', 'tooling/prototype/person-assignment-transfer-application-probe.ts'], freshUrl);
+    result.transferApplicationPassed = true;
+  }
   result.focusedApplicationPassed = true;
   assert.deepEqual(await schemaManifest(freshPool, schemas), freshManifest, 'SEED_OR_PROBE_CHANGED_SCHEMA');
   result.status = 'FRESH_INSTALL_PASSED';
@@ -133,7 +138,7 @@ try {
     // Re-read the create-exclusive receipt and verify identity before cleanup.
     const stored = JSON.parse(await readFile(`${directory}/ownership.json`, 'utf8'));
     assert.deepEqual(stored, receipt);
-    assert.match(stored.databaseName, /^pv006_c0(?:[12]|301)_[a-f0-9]{32}$/);
+    assert.match(stored.databaseName, /^pv006_c0(?:[12]|301|302)_[a-f0-9]{32}$/);
     function validateCleanup(candidate) {
       assert.ok(candidate, 'C01_CLEANUP_RECEIPT_REQUIRED');
       assert.equal(candidate.task, task); assert.equal(candidate.mode, 'FRESH_INSTALL');
@@ -144,7 +149,7 @@ try {
       assert.deepEqual(current, candidate.identity);
       assert.equal(peer(`select count(*) from pg_stat_activity where datname='${databaseName}';`), '0');
     }
-    const negatives = [null, { ...stored, mode: 'APPLICATION' }, { ...stored, databaseName: 'hdi_prototype' },
+    const negatives = [null, { ...stored, task: 'UNAUTHORIZED_CLEANUP_TASK' }, { ...stored, mode: 'APPLICATION' }, { ...stored, databaseName: 'hdi_prototype' },
       { ...stored, identity: { ...stored.identity, oid: '0' } }, { ...stored, endpoint: { ...stored.endpoint, port: '1' } }];
     for (const candidate of negatives) {
       assert.throws(() => validateCleanup(candidate));
@@ -185,7 +190,8 @@ function redact(value) {
 
 function child(label, argv, url) {
   const execution = spawnSync(process.execPath, argv, { cwd: process.cwd(), encoding: 'utf8',
-    env: { ...process.env, DATABASE_URL: url.toString() }, windowsHide: true });
+    env: { ...process.env, DATABASE_URL: url.toString(),
+      ...(transfer ? { C0302_FRESH_OWNERSHIP_RECEIPT: resolve(directory, 'ownership.json') } : {}) }, windowsHide: true });
   result.commands.push({ executable: process.execPath, argv, cwd: process.cwd(), target: databaseName, exitCode: execution.status });
   // Only known tool output; both connection URLs and the configured password are redacted.
   const output = redact(`${execution.stdout ?? ''}\n${execution.stderr ?? ''}`);
