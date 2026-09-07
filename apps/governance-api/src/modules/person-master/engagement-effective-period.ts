@@ -11,6 +11,40 @@ import type { EngagementEffectivePeriodReader, EngagementEffectivePeriodQuery,
 
 const LIMIT = 'ASSIGNMENT_DEPENDENCY_EVALUATION_LIMIT';
 
+/** C02 identity-only owner port; it never evaluates lifecycle or clinical validity. */
+export function createAssignmentEngagementIdentityReader(database: Transaction<DB>, authorization: AuthorizationModule,
+  requireScope: (objectId: string) => Promise<void>) {
+  return async (query: { governanceObjectId: string; engagementId: string; recordAsOf: string }): Promise<{ personId: string }> => {
+    assertClosedObject(query, ['governanceObjectId', 'engagementId', 'recordAsOf']);
+    assertEngagementUuid(query.governanceObjectId, 'ENGAGEMENT_SCOPE_INVALID');
+    assertEngagementUuid(query.engagementId, 'ENGAGEMENT_ID_INVALID');
+    const recordAsOf = temporalKey(query.recordAsOf);
+    await requireScope(query.governanceObjectId);
+    for (const permissionCode of ['PERSON_MASTER_ASSIGNMENT_READ', 'PERSON_MASTER_ASSIGNMENT_SEMANTICS_READ'] as const)
+      await authorization.requireObjectPermission({ governanceObjectId: query.governanceObjectId, permissionCode });
+    const row = await database.selectFrom('person_master.engagement').select(['person_id', 'created_at'])
+      .where('governance_object_id', '=', query.governanceObjectId).where('engagement_id', '=', query.engagementId).executeTakeFirst();
+    if (!row) throw new Error('ENGAGEMENT_NOT_FOUND');
+    if (temporalKey(row.created_at) > recordAsOf) throw new Error('ENGAGEMENT_NOT_KNOWN_AS_OF');
+    return { personId: row.person_id };
+  };
+}
+
+/** C02 composition-only pin. Acquire UPDATE directly; do not upgrade the C01 SHARE pin. */
+export function createClassifiedAssignmentEngagementPin(database: Transaction<DB>, authorization: AuthorizationModule,
+  requireScope: (objectId: string)=>Promise<void>) {
+  return async (query: { governanceObjectId: string; engagementId: string }): Promise<void> => {
+    assertEngagementUuid(query.governanceObjectId,'ENGAGEMENT_SCOPE_INVALID');
+    assertEngagementUuid(query.engagementId,'ENGAGEMENT_ID_INVALID');
+    await requireScope(query.governanceObjectId);
+    for (const permissionCode of ['PERSON_MASTER_ENGAGEMENT_READ','PERSON_MASTER_ENGAGEMENT_LIFECYCLE_READ'] as const)
+      await authorization.requireObjectPermission({ governanceObjectId: query.governanceObjectId,permissionCode });
+    const row=await database.selectFrom('person_master.engagement').select('engagement_id')
+      .where('governance_object_id','=',query.governanceObjectId).where('engagement_id','=',query.engagementId).forUpdate().executeTakeFirst();
+    if (!row) throw new Error('ENGAGEMENT_NOT_FOUND');
+  };
+}
+
 /** Composition-only factory. Every read uses its caller's transaction snapshot. */
 export function createEngagementEffectivePeriodScope(database: Transaction<DB>,
   authorization: AuthorizationModule,

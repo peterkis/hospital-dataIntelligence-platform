@@ -16,12 +16,16 @@ assert.equal(decodeURIComponent(sourceUrl.username), 'hdi_prototype');
 assert.equal(sourceUrl.hostname, '127.0.0.1');
 assert.equal(sourceUrl.port, '55434');
 const runId = randomUUID();
-const databaseName = `pv006_c01_${runId.replaceAll('-', '')}`;
-const directory = `.runtime/pv006-c01/${runId}`;
+const semantics = process.argv.includes('--assignment-semantics');
+assert.ok(process.argv.slice(2).length === 0 || (semantics && process.argv.slice(2).length === 1), 'ASSIGNMENT_FRESH_MODE_INVALID');
+const task = semantics ? 'PV-006-C-02' : 'PV-006-C-01';
+const prefix = semantics ? 'pv006_c02' : 'pv006_c01';
+const databaseName = `${prefix}_${runId.replaceAll('-', '')}`;
+const directory = `.runtime/${semantics ? 'pv006-c02' : 'pv006-c01'}/${runId}`;
 assert.equal(execFileSync('git', ['check-ignore', `${directory}/ownership.json`],
   { encoding: 'utf8' }).trim(), `${directory}/ownership.json`);
 await mkdir(directory, { recursive: false });
-const result = { task: 'PV-006-C-01', runId, mode: 'FRESH_INSTALL',
+const result = { task, runId, mode: 'FRESH_INSTALL',
   baselineCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   classification: 'SYNTHETIC / NON_PRODUCTION', databaseName, created: false,
   migrationsPassed: false, temporaryDatabaseRemoved: false, commands: [] };
@@ -33,7 +37,7 @@ try {
   const source = (await sourcePool.query(`select current_database() as database,
     pg_postmaster_start_time()::text as started_at,
     (select count(*)::int from platform.schema_migration) as migration_count`)).rows[0];
-  assert.equal(source.migration_count, 32);
+  assert.equal(source.migration_count, 34);
   const admin = JSON.parse(peer(`select json_build_object('role',current_user,
     'started_at',pg_postmaster_start_time()::text,'can_create',rolcreatedb or rolsuper,
     'app_createdb',(select rolcreatedb from pg_roles where rolname='hdi_prototype'))
@@ -77,8 +81,8 @@ try {
     (select count(*)::int from platform.schema_migration) as migrations,
     (select count(*)::int from information_schema.tables where table_schema=any($1::text[])
      and table_type='BASE TABLE') as tables`, [schemas])).rows[0];
-  assert.equal(counts.migrations, 32);
-  assert.equal(counts.tables, 85);
+  assert.equal(counts.migrations, 34);
+  assert.equal(counts.tables, 88);
   result.counts = counts;
   result.migrationsPassed = true;
   const sourceManifest = await schemaManifest(sourcePool, schemas);
@@ -103,6 +107,11 @@ try {
   child('person-seed', ['--import', 'tsx', 'tooling/prototype/person-assignment-fresh-seed.ts'], freshUrl);
   result.seedPassed = true;
   child('focused-application', ['--import', 'tsx', 'tooling/prototype/person-assignment-application-probe.ts'], freshUrl);
+  if (semantics) {
+    child('semantic-application', ['--import', 'tsx', 'tooling/prototype/person-assignment-semantics-application-probe.ts'], freshUrl);
+    child('semantic-sql', ['--import', 'tsx', 'tooling/prototype/person-assignment-semantics-application-probe.ts', '--sql-probe'], freshUrl);
+    result.semanticApplicationAndSqlPassed = true;
+  }
   result.focusedApplicationPassed = true;
   assert.deepEqual(await schemaManifest(freshPool, schemas), freshManifest, 'SEED_OR_PROBE_CHANGED_SCHEMA');
   result.status = 'FRESH_INSTALL_PASSED';
@@ -119,10 +128,10 @@ try {
     // Re-read the create-exclusive receipt and verify identity before cleanup.
     const stored = JSON.parse(await readFile(`${directory}/ownership.json`, 'utf8'));
     assert.deepEqual(stored, receipt);
-    assert.match(stored.databaseName, /^pv006_c01_[a-f0-9]{32}$/);
+    assert.match(stored.databaseName, /^pv006_c0[12]_[a-f0-9]{32}$/);
     function validateCleanup(candidate) {
       assert.ok(candidate, 'C01_CLEANUP_RECEIPT_REQUIRED');
-      assert.equal(candidate.task, 'PV-006-C-01'); assert.equal(candidate.mode, 'FRESH_INSTALL');
+      assert.equal(candidate.task, task); assert.equal(candidate.mode, 'FRESH_INSTALL');
       assert.equal(candidate.databaseName, databaseName);
       assert.deepEqual(candidate.endpoint, { host: '127.0.0.1', port: '55434', role: 'hdi_prototype' });
       const current = JSON.parse(peer(`select json_build_object('oid',oid::text,

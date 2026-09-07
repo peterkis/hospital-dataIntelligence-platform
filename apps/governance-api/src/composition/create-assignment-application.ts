@@ -5,11 +5,12 @@ import { parseLocalDateTime } from '../platform/local-datetime/local-datetime.js
 import { createAuditModule } from '../modules/audit/index.js';
 import { createAuthorizationModule, type ObjectPermissionCode } from '../modules/authorization/index.js';
 import { createDepartmentPlacementReferenceScope, type DepartmentPlacementReferenceReader } from '../modules/department-master/index.js';
-import { createAssignmentCoreModule, createEngagementEffectivePeriodScope,
+import { createAssignmentCoreModule, createEngagementEffectivePeriodScope, createClassifiedAssignmentEngagementPin,
+  createAssignmentSemanticDefinitionModule, createAssignmentEngagementIdentityReader,
   type AssignmentCoreApplication, type AssignmentCoreModule, type EngagementEffectivePeriodReader,
 } from '../modules/person-master/index.js';
 
-async function createScope(database: Transaction<DB>, context: RequestContext) {
+export async function createAssignmentScope(database: Transaction<DB>, context: RequestContext) {
   parseLocalDateTime(context.occurredAt);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(context.actorPrincipalId) ||
     [context.requestId, context.correlationId].some(v => typeof v !== 'string' || !v.trim() || v.length > 128 || /\p{Cc}/u.test(v)))
@@ -27,10 +28,23 @@ async function createScope(database: Transaction<DB>, context: RequestContext) {
   }
   const engagement = createEngagementEffectivePeriodScope(database, authorization, id => requireScope(id, 'PERSON_MASTER'));
   const department = createDepartmentPlacementReferenceScope(database, authorization, id => requireScope(id, 'DEPARTMENT_MASTER'));
+  async function authorizeSemantics(governanceObjectId: string,operation: 'READ'|'WRITE'|'DEFINITION_READ'|'DEFINITION_WRITE') {
+    await requireScope(governanceObjectId,'PERSON_MASTER');
+    const permissions: Record<typeof operation,ObjectPermissionCode>={
+      READ:'PERSON_MASTER_ASSIGNMENT_SEMANTICS_READ',WRITE:'PERSON_MASTER_ASSIGNMENT_SEMANTICS_WRITE',
+      DEFINITION_READ:'PERSON_MASTER_ASSIGNMENT_SEMANTIC_DEFINITION_READ',DEFINITION_WRITE:'PERSON_MASTER_ASSIGNMENT_SEMANTIC_DEFINITION_WRITE',
+    };
+    await authorization.requireObjectPermission({governanceObjectId,permissionCode:permissions[operation]});
+  }
   return {
     engagement, department,
+    definitions: createAssignmentSemanticDefinitionModule(database,context,createAuditModule(database,context),authorizeSemantics),
+    authorizeSemantics,
     assignment: createAssignmentCoreModule(database, context, createAuditModule(database, context), {
       engagement, department, pinEngagement: engagement.pinEngagement, pinDepartment: department.pinDepartment,
+      pinClassifiedEngagement: createClassifiedAssignmentEngagementPin(database,authorization,id=>requireScope(id,'PERSON_MASTER')),
+      readEngagementIdentity: createAssignmentEngagementIdentityReader(database,authorization,id=>requireScope(id,'PERSON_MASTER')),
+      authorizeSemantics,
       async authorize(governanceObjectId, operation) {
         await requireScope(governanceObjectId, 'PERSON_MASTER');
         await authorization.requireObjectPermission({ governanceObjectId,
@@ -56,7 +70,7 @@ export function createAssignmentApplication(database: Kysely<DB>, context: Reque
     try {
       // Local RR only: assessment's owner SELECTs share one actual MVCC snapshot.
       const transaction = consistentSnapshot ? database.transaction().setIsolationLevel('repeatable read') : database.transaction();
-      return await transaction.execute(async tx => work((await createScope(tx, context)).assignment));
+      return await transaction.execute(async tx => work((await createAssignmentScope(tx, context)).assignment));
     } catch (error) {
       if (error instanceof Error && ['OBJECT_PERMISSION_FORBIDDEN', 'ASSIGNMENT_HUMAN_ACTOR_REQUIRED', 'ASSIGNMENT_GOVERNANCE_SCOPE_INVALID'].includes(error.message)) {
         // The original transaction has already rolled back, so denial audit cannot self-deadlock.
@@ -106,7 +120,7 @@ export function createAssignmentApplication(database: Kysely<DB>, context: Reque
 export function createAssignmentEngagementPeriodReader(database: Kysely<DB>, context: RequestContext): EngagementEffectivePeriodReader {
   return { async getEngagementEffectivePeriodAsOf(query) {
     const value = await database.transaction().setIsolationLevel('repeatable read')
-      .execute(async tx => (await createScope(tx, context)).engagement.getEngagementEffectivePeriodAsOf(query));
+      .execute(async tx => (await createAssignmentScope(tx, context)).engagement.getEngagementEffectivePeriodAsOf(query));
     await database.transaction().execute(tx => createAuditModule(tx, context).append({
       governanceObjectId: query.governanceObjectId, aggregateType: 'PERSON_ENGAGEMENT', aggregateId: query.engagementId,
       aggregateVersionId: value.authorityEngagementVersionId, eventType: 'PERSON_ENGAGEMENT_BUSINESS_STATE_READ',
@@ -119,5 +133,5 @@ export function createAssignmentEngagementPeriodReader(database: Kysely<DB>, con
 }
 export function createAssignmentDepartmentReferenceReader(database: Kysely<DB>, context: RequestContext): DepartmentPlacementReferenceReader {
   return { getDepartmentPlacementReferenceAsOf: query => database.transaction().setIsolationLevel('repeatable read')
-    .execute(async tx => (await createScope(tx, context)).department.getDepartmentPlacementReferenceAsOf(query)) };
+    .execute(async tx => (await createAssignmentScope(tx, context)).department.getDepartmentPlacementReferenceAsOf(query)) };
 }

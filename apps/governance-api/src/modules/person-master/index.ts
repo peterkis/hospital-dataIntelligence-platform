@@ -20,5 +20,9 @@ export { createEngagementLifecycleModule, type EngagementLifecycleModule } from 
 export type { EngagementEffectiveReader, EngagementEffectiveContext } from './engagement-effective-contracts.js';
 export * from './engagement-effective-period-contracts.js';
 export { createEngagementEffectivePeriodScope } from './engagement-effective-period.js';
+export { createClassifiedAssignmentEngagementPin } from './engagement-effective-period.js';
+export { createAssignmentEngagementIdentityReader } from './engagement-effective-period.js';
 export * from './assignment-contracts.js';
 export { createAssignmentCoreModule, type AssignmentCoreModule } from './assignment-repository.js';
+export * from './assignment-semantics-contracts.js';
+export { createAssignmentSemanticDefinitionModule } from './assignment-semantic-definitions.js';

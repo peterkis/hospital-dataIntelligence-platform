@@ -56,9 +56,9 @@ async function identity() {
 }
 async function exercise() {
   const target = await identity();
-  assert.match(target.database, /^(hdi_prototype|pv006_c01_[a-f0-9]{32})$/u);
+  assert.match(target.database, /^(hdi_prototype|pv006_c0[12]_[a-f0-9]{32})$/u);
   assert.equal(target.role, 'hdi_prototype');
-  assert.equal(target.migrations, 32);
+  assert.equal(target.migrations, 34);
   const f = await createAssignmentFixture(handle.database, runId);
   const department = await f.createDepartment('PRIMARY');
   const command = (engagementId: string, from = Jul, to: string | null = Dec, departmentId = department.departmentId): CreateAssignment => ({

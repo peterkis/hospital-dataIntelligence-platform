@@ -3,9 +3,19 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import pg from 'pg';
+import assert from 'node:assert/strict';
 
 if (!process.env.npm_execpath || !process.env.DATABASE_URL) throw new Error('C01_MANAGED_NPM_DATABASE_SESSION_REQUIRED');
-const directory = `.runtime/pv006-c01/${randomUUID()}`;
+const semantics = process.argv.includes('--assignment-semantics');
+const task = semantics ? 'PV-006-C-02' : 'PV-006-C-01';
+if (semantics) {
+  const endpoint = new URL(process.env.DATABASE_URL);
+  assert.equal(endpoint.hostname, '127.0.0.1'); assert.equal(endpoint.port, '55434');
+  assert.equal(endpoint.pathname, '/hdi_prototype');
+}
+const childEnvironment = semantics ? { ...process.env, REDOCLY_TELEMETRY: 'off', REDOCLY_SUPPRESS_UPDATE_NOTICE: 'true',
+  npm_config_offline: 'true', npm_config_update_notifier: 'false', HOST: '127.0.0.1', PORT: '3000' } : process.env;
+const directory = `.runtime/${semantics ? 'pv006-c02' : 'pv006-c01'}/${randomUUID()}`;
 await mkdir(directory, { recursive: false });
 const root = process.cwd();
 const commands = [];
@@ -27,6 +37,7 @@ try {
   const before = await fingerprint();
   await writeFile(`${directory}/immutable-before.json`, JSON.stringify({ cutoff, before }, null, 2), { flag: 'wx' });
   const scripts = [
+    ...(semantics ? ['prototype:person:assignment:application'] : []),
     'prototype:person:engagement:validate', 'prototype:person:engagement-classification:validate',
     'prototype:person:engagement-lifecycle:validate', 'prototype:person:validate',
     'prototype:person:identifier:validate', 'prototype:person:source-mapping:validate',
@@ -48,10 +59,10 @@ try {
   const after = await fingerprint();
   await writeFile(`${directory}/immutable-after.json`, JSON.stringify({ cutoff, after }, null, 2), { flag: 'wx' });
   if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error('PREEXISTING_IMMUTABLE_ROWS_CHANGED');
-  console.log(JSON.stringify({ task: 'PV-006-C-01', status: gatesOnly ? 'REMAINING_GATES_PASSED' : 'REGRESSIONS_PASSED', commandCount: commands.length,
+  console.log(JSON.stringify({ task, status: gatesOnly ? 'REMAINING_GATES_PASSED' : 'REGRESSIONS_PASSED', commandCount: commands.length,
     preexistingImmutableRowsPreserved: true, evidenceDirectory: directory }));
 } catch (error) {
-  console.log(JSON.stringify({ task: 'PV-006-C-01', status: 'REGRESSIONS_FAILED',
+  console.log(JSON.stringify({ task, status: 'REGRESSIONS_FAILED',
     code: error instanceof Error && /^[A-Z0-9_]+$/.test(error.message) ? error.message : 'REGRESSION_ERROR',
     evidenceDirectory: directory }));
   process.exitCode = 1;
@@ -65,7 +76,7 @@ async function run(argv, cwd = root) {
   const startedAt = new Date().toISOString();
   console.log(JSON.stringify({ commandStarted: index, cwd, argv }));
   let output = '';
-  const child = spawn(process.execPath, argv, { cwd, env: process.env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, argv, { cwd, env: childEnvironment, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', data => { output += data.toString(); });
   child.stderr.on('data', data => { output += data.toString(); });
   const exitCode = await new Promise((resolveExit, reject) => { child.once('error', reject); child.once('close', resolveExit); });

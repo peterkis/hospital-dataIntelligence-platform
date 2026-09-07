@@ -15,6 +15,13 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:assignment-semantics:regressions": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-regressions.mjs --assignment-semantics",
+    "prototype:person:assignment-semantics:fresh-install": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-fresh-install.mjs --assignment-semantics",
+    "prototype:person:assignment-semantics:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-semantics-recovery-probe.ts --recover",
+    "prototype:person:assignment-semantics:recover-negative": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-semantics-recover-negative.mjs",
+    "prototype:person:assignment-semantics:sql": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-semantics-application-probe.ts --sql-probe",
+    "prototype:person:assignment-semantics:preserve": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-semantics-preservation.mjs",
+    "prototype:person:assignment-semantics:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-semantics-application-probe.ts",
     "prototype:person:assignment:baseline": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-preservation.mjs baseline",
     "prototype:person:assignment:preservation": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-preservation.mjs verify",
     "prototype:person:assignment:types": "npm run db:types:generate --workspace @hospital-data-intelligence/governance-api",

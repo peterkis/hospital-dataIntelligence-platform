@@ -27,6 +27,8 @@ Immutable Version Core task at authority HEAD
 | PV-006-B-04 | Engagement Temporal Authority Reconciliation | DONE effective on the sole validated B-04 completion commit |
 | PV-006-C | Assignment | IN_PROGRESS |
 | PV-006-C-01 | Assignment Stable Relation & Placement Core | DONE effective on the sole validated C-01 completion commit |
+| PV-006-C-02 | Assignment Purpose / Mode & Scoped Primary Affiliation | DONE effective on the sole reviewed local completion commit |
+| PV-006-C-03 | Later Assignment slice | NOT_STARTED |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
 | PV-006-F | Projection / Release / Consumer | NOT_STARTED |
@@ -37,6 +39,29 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+C-02 local engineering validation passed: independently versioned Purpose/Mode,
+exact immutable pairing, explicit adoption/correction, scoped primary at-most-one,
+unknown completeness and classified-lineage protection. The local-only coordinator
+`.runtime/pv006-c02/local-only-20260907/` records real DB/concurrency/fresh/restart,
+63-case evidence, complete C01 rechecks and all 25 regression commands. DONE becomes
+effective with same-tree independent Standards/Spec approval and the sole local
+commit. C and PV-006 remain IN_PROGRESS; C-03 and D–G remain NOT_STARTED.
+
+2026-09-07: C-02 execution now uses the 1.1.0-local-only prompt at
+`D:\Agent-Prompts\PV-006-C-02-local-only\PV-006-C-02-assignment-purpose-mode-primary-affiliation.local-only.prompt.md`.
+The user explicitly authorized resuming the existing local C-02 edits after the
+clean-worktree preflight stop. LOCAL_AUTHORITY_NO_EXTERNAL_NETWORK replaces this
+ticket's prior real-time remote gate. Historical R1 observations below remain
+historical; current remote verification is NOT_PERFORMED_BY_SCOPE.
+
+PV-006-C-02 and its R1 resume are separately authorized at HEAD
+`8490afa128bf5b4a72a4cdb9fe29672e4f1fba03`, tree
+`a30783e06179eb9979492ce3af2ed152b8421da1`. The resumed live git ls-remote matched
+that exact authority after the previous TLS-only block. Issue 09 covers independent
+Purpose/Mode definitions, exact-version adoption and scoped primary affiliation.
+All 63 gates and same-tree independent reviews precede one local completion
+commit. No push or C-03/D–G execution is authorized; prior comments remain history.
 
 PV-006-C-01 is separately authorized by the user's assignment placement core
 prompt at HEAD `8b1721ebb2000435415aa2cfd47c398a258d9f09`, tree

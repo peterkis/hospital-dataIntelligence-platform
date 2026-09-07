@@ -47,12 +47,13 @@ export interface AssignmentDependencyEvidence {
 export interface AssignmentVersion extends AssignmentVersionReference {
   readonly versionNo: string;
   readonly supersedesAssignmentVersionId: string | null;
-  readonly reasonCode: ReviseAssignment['reasonCode'] | null;
+  readonly reasonCode: AssignmentVersionReason | null;
   readonly businessValidFrom: string;
   readonly businessValidTo: string | null;
   readonly recordedFrom: string;
   readonly acceptanceEvidence: AssignmentDependencyEvidence;
 }
+export type AssignmentVersionReason = ReviseAssignment['reasonCode'] | 'SEMANTIC_ADOPTION' | 'SEMANTIC_CORRECTION';
 export interface AssignmentDependencyAssessment {
   readonly evaluatedAssignmentVersionId: string;
   readonly assessedRecordAsOf: string;

@@ -7,27 +7,44 @@ import type { DepartmentPlacementReferenceReader } from '../department-master/in
 import type { EngagementEffectivePeriodReader } from './engagement-effective-period-contracts.js';
 import { temporalKey } from './engagement-rule-segments.js';
 import { assertClosedObject, assertPersonUuid } from './contracts.js';
+import { createAssignmentSemanticStore, assignmentSemanticExact, assignmentSemanticCandidates } from './assignment-semantic-store.js';
+import { validateAssignmentSemanticCodes, ASSIGNMENT_SEMANTIC_POLICY } from './assignment-semantics-policy.js';
+import { ASSIGNMENT_PURPOSES, ASSIGNMENT_MODES } from './assignment-semantics-contracts.js';
+import type { AssignmentSemanticCodes, AssignmentSemanticOperation, AssignmentVersionSemantics, ClassifiedAssignmentSemantics,
+  CreateClassifiedAssignment, AdoptAssignmentSemantics, AssignmentSemanticsApplication, CorrectAssignmentSemantics,
+  ReviseClassifiedAssignmentPeriod } from './assignment-semantics-contracts.js';
 import {
   ASSIGNMENT_POLICY, assignmentEngagementConstraint, assignmentPeriodCovered,
   validateAssignmentCreate, validateAssignmentRevise,
   type Assignment, type AssignmentCoreApplication, type AssignmentDependencyEvidence,
   type AssignmentPlacement, type AssignmentReference, type AssignmentVersion, type AssignmentVersionReference,
-  type CreateAssignment, type ReviseAssignment,
+  type CreateAssignment, type ReviseAssignment, type AssignmentVersionReason,
 } from './assignment-contracts.js';
 
 type VersionRow = Selectable<DB['person_master.assignment_version']>;
 type StableRow = Selectable<DB['person_master.assignment']>;
-type Result = { readonly ok: true; readonly value: AssignmentVersion } | { readonly ok: false; readonly code: string };
+type Result = { readonly ok: true; readonly value: AssignmentVersion; readonly semantics?: ClassifiedAssignmentSemantics } | { readonly ok: false; readonly code: string };
 export interface AssignmentCoreModule extends Omit<AssignmentCoreApplication, 'createAssignment' | 'reviseAssignment'> {
   createAssignment(command: CreateAssignment): Promise<Result>;
   reviseAssignment(command: ReviseAssignment): Promise<Result>;
+  createClassifiedAssignment(command: CreateClassifiedAssignment): Promise<Result>;
+  adoptAssignmentSemantics(command: AdoptAssignmentSemantics): Promise<Result>;
+  correctAssignmentSemantics(command: CorrectAssignmentSemantics): Promise<Result>;
+  reviseClassifiedAssignmentPeriod(command: ReviseClassifiedAssignmentPeriod): Promise<Result>;
+  getAssignmentSemanticsAsOf: AssignmentSemanticsApplication['getAssignmentSemanticsAsOf'];
+  resolvePrimaryAffiliation: AssignmentSemanticsApplication['resolvePrimaryAffiliation'];
+  readAssignmentVersionSnapshot(query: AssignmentVersionReference): Promise<AssignmentVersion>;
+  readAssignmentSemanticsSnapshot(query: AssignmentVersionReference): Promise<AssignmentVersionSemantics>;
 }
 export interface AssignmentDependencies {
   readonly engagement: EngagementEffectivePeriodReader;
   readonly department: DepartmentPlacementReferenceReader;
   pinEngagement(query: { governanceObjectId: string; engagementId: string }): Promise<void>;
+  pinClassifiedEngagement(query: { governanceObjectId: string; engagementId: string }): Promise<void>;
+  readEngagementIdentity(query: { governanceObjectId: string; engagementId: string; recordAsOf: string }): Promise<{ personId: string }>;
   pinDepartment(query: { departmentGovernanceObjectId: string; departmentId: string }): Promise<void>;
   authorize(governanceObjectId: string, operation: 'READ' | 'WRITE'): Promise<void>;
+  authorizeSemantics(governanceObjectId: string, operation: 'READ'|'WRITE'): Promise<void>;
   authorizeDependencies(governanceObjectId: string, placement: AssignmentPlacement): Promise<void>;
 }
 
@@ -38,10 +55,12 @@ const TERMINAL = new Set([
   'ASSIGNMENT_PLACEMENT_UNPUBLISHED', 'ASSIGNMENT_PLACEMENT_TEMPORAL_SCOPE_UNSUPPORTED',
   'ASSIGNMENT_PLACEMENT_NOT_ACTIVE', 'ASSIGNMENT_PLACEMENT_PERIOD_NOT_COVERED',
   'ENGAGEMENT_NOT_FOUND', 'ENGAGEMENT_NOT_KNOWN_AS_OF',
+  'ASSIGNMENT_TERM_NOT_APPLICABLE','ASSIGNMENT_SEMANTIC_EVALUATION_LIMIT','ASSIGNMENT_SEMANTIC_REVISION_REQUIRED',
 ]);
 
 export function createAssignmentCoreModule(database: Transaction<DB>, context: RequestContext,
   audit: AuditEventService, dependencies: AssignmentDependencies): AssignmentCoreModule {
+  const semantics=createAssignmentSemanticStore(database,context);
   const clock = async () => (await sql<{ now: string }>`select platform.local_now() as now`.execute(database)).rows[0]!.now;
   async function event(governanceObjectId: string, aggregateId: string, eventType: PersonAuditEventType,
     payload: Readonly<Record<string, unknown>>, versionId: string | null = null) {
@@ -78,7 +97,7 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
     return {
       governanceObjectId: r.governance_object_id, assignmentId: r.assignment_id, assignmentVersionId: r.assignment_version_id,
       versionNo: r.version_no, supersedesAssignmentVersionId: r.supersedes_assignment_version_id,
-      reasonCode: r.reason_code as ReviseAssignment['reasonCode'] | null,
+      reasonCode: assignmentVersionReason(r.reason_code),
       businessValidFrom: r.business_valid_from, businessValidTo: r.business_valid_to, recordedFrom: r.recorded_from,
       acceptanceEvidence: {
         validationPolicyCode: ASSIGNMENT_POLICY, evaluationRecordAsOf: r.evaluation_record_as_of,
@@ -135,18 +154,27 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
     if (prior.rejection_code !== null) return { ok: false, code: prior.rejection_code };
     const row = await database.selectFrom('person_master.assignment_version').selectAll()
       .where('assignment_version_id', '=', prior.assignment_version_id!).executeTakeFirstOrThrow();
+    if (prior.operation_type!=='CREATE' && prior.operation_type!=='REVISE') {
+      const paired=await assignmentSemanticExact(database,row.assignment_version_id);
+      if (paired.classification!=='CLASSIFIED') throw new Error('ASSIGNMENT_SEMANTICS_REQUIRED');
+      return {ok:true,value:await result(row),semantics:paired};
+    }
     return { ok: true, value: await result(row) };
   }
-  async function reject(governanceObjectId: string, operation: 'CREATE' | 'REVISE', operationHash: Buffer, code: string): Promise<Result> {
+  async function reject(governanceObjectId: string, operation: 'CREATE' | 'REVISE' | AssignmentSemanticOperation, operationHash: Buffer, code: string,
+    semanticEvaluation?: Readonly<Record<string, unknown>>): Promise<Result> {
     await database.insertInto('person_master.assignment_command_outcome').values({ governance_object_id: governanceObjectId,
       request_id: context.requestId, created_by: context.actorPrincipalId, operation_type: operation,
       operation_hash: operationHash, assignment_version_id: null, rejection_code: code }).execute();
-    await event(governanceObjectId, governanceObjectId, 'PERSON_ASSIGNMENT_REJECTED', { operation, code, result: 'REJECTED' });
+    await event(governanceObjectId, governanceObjectId, 'PERSON_ASSIGNMENT_REJECTED', { operation, code, result: 'REJECTED',
+      ...(semanticEvaluation ? { semanticEvaluation } : {}) });
     return { ok: false, code };
   }
   async function save(relation: StableRow, command: { businessValidFrom: string; businessValidTo: string | null },
-    prior: VersionRow | null, reasonCode: ReviseAssignment['reasonCode'] | null,
-    evidence: AssignmentDependencyEvidence, operationHash: Buffer): Promise<Result> {
+    prior: VersionRow | null, reasonCode: AssignmentVersionReason | null,
+    evidence: AssignmentDependencyEvidence, operationHash: Buffer,
+    classified?: { accepted: Extract<Awaited<ReturnType<typeof semantics.evaluate>>, {ok:true}>; operation: AssignmentSemanticOperation;
+      correctionReason: CorrectAssignmentSemantics['reasonCode']|null }): Promise<Result> {
     const e = evidence.engagement, d = evidence.department, c = e.classification;
     const row = await database.insertInto('person_master.assignment_version').values({
       assignment_id: relation.assignment_id, governance_object_id: relation.governance_object_id,
@@ -172,24 +200,53 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       business_valid_from: s.from, business_valid_to: s.to, business_state: s.businessState,
       last_applicable_lifecycle_event_id: s.lastApplicableLifecycleEventId, lifecycle_sequence: s.lifecycleSequence,
     }))).execute();
+    const value=await result(row);
+    const paired=classified ? await semantics.append(value,classified.accepted,classified.operation,operationHash,classified.correctionReason) : undefined;
     await database.insertInto('person_master.assignment_command_outcome').values({ governance_object_id: relation.governance_object_id,
-      request_id: context.requestId, created_by: context.actorPrincipalId, operation_type: prior ? 'REVISE' : 'CREATE',
+      request_id: context.requestId, created_by: context.actorPrincipalId, operation_type: classified?.operation ?? (prior ? 'REVISE' : 'CREATE'),
       operation_hash: operationHash, assignment_version_id: row.assignment_version_id, rejection_code: null }).execute();
     await event(relation.governance_object_id, relation.assignment_id, prior ? 'PERSON_ASSIGNMENT_VERSION_CREATED' : 'PERSON_ASSIGNMENT_CREATED',
       { versionNo: row.version_no, validationPolicyCode: ASSIGNMENT_POLICY, dependencyFingerprint: evidence.dependencyFingerprint,
         evaluationRecordAsOf: evidence.evaluationRecordAsOf, result: 'ACCEPTED_CORE_FACT' }, row.assignment_version_id);
-    return { ok: true, value: await result(row) };
+    if (classified) await event(relation.governance_object_id,relation.assignment_id,'ASSIGNMENT_SEMANTICS_RECORDED',{
+      operation: classified.operation, purposeTermVersionId: classified.accepted.purpose.termVersionId,
+      modeTermVersionId: classified.accepted.mode.termVersionId,result: classified.accepted.evaluation.result,
+      confirmedPrimaryCount: classified.accepted.evaluation.confirmedPrimaryCount,
+      unclassifiedCandidateCount: classified.accepted.evaluation.unclassifiedCandidateCount,
+    },row.assignment_version_id);
+    return paired ? {ok:true,value,semantics:paired} : { ok: true, value };
   }
-  async function mutation(command: CreateAssignment | ReviseAssignment, operation: 'CREATE' | 'REVISE'): Promise<Result> {
+  async function mutation(command: CreateAssignment | ReviseAssignment | Omit<AdoptAssignmentSemantics,keyof AssignmentSemanticCodes> |
+    Omit<CorrectAssignmentSemantics,keyof AssignmentSemanticCodes>,
+    operation: 'CREATE' | 'REVISE' | AssignmentSemanticOperation,
+    semanticCodes?: AssignmentSemanticCodes): Promise<Result> {
     if (!command || typeof command !== 'object' || Array.isArray(command)) throw new Error('ASSIGNMENT_INPUT_INVALID');
     const create = 'placement' in command;
-    if ((operation === 'CREATE') !== create) throw new Error('ASSIGNMENT_INPUT_INVALID');
-    if (create) validateAssignmentCreate(command); else validateAssignmentRevise(command);
+    const classifiedOperation=operation!=='CREATE' && operation!=='REVISE' ? operation : null;
+    let selectedCodes=semanticCodes;
+    let correctionReason:CorrectAssignmentSemantics['reasonCode']|null=null;
+    const requestedPeriod='businessValidFrom' in command ? {businessValidFrom:command.businessValidFrom,businessValidTo:command.businessValidTo}:null;
+    if ((operation === 'CREATE' || operation === 'CLASSIFIED_CREATE') !== create) throw new Error('ASSIGNMENT_INPUT_INVALID');
+    if (create) validateAssignmentCreate(command);
+    else if (operation==='SEMANTIC_ADOPT' || operation==='SEMANTIC_CORRECT') {
+      validateReference(command,['expectedCurrentVersionId',...(operation==='SEMANTIC_CORRECT'?['reasonCode']:[])]);
+      assertPersonUuid(command.expectedCurrentVersionId);
+      if (operation==='SEMANTIC_CORRECT') {
+        const suppliedReason='reasonCode' in command ? command.reasonCode : null;
+        const reason=(['PURPOSE_CORRECTION','MODE_CORRECTION','PURPOSE_AND_MODE_CORRECTION'] as const).find(r=>r===suppliedReason);
+        if (!reason) throw new Error('ASSIGNMENT_INPUT_INVALID');
+        correctionReason=reason;
+      }
+    } else {
+      if (!('businessValidFrom' in command)) throw new Error('ASSIGNMENT_INPUT_INVALID');
+      validateAssignmentRevise(command);
+    }
     await dependencies.authorize(command.governanceObjectId, 'WRITE');
+    if (classifiedOperation) await dependencies.authorizeSemantics(command.governanceObjectId,'WRITE');
     let relation: StableRow | null = create ? null : await stable(command);
     const target = create ? command.placement : placement(relation!);
     await dependencies.authorizeDependencies(command.governanceObjectId, target);
-    const operationHash = canonicalSha256({ command: normalizeTimes(command), operation, actor: context.actorPrincipalId });
+    const operationHash = canonicalSha256({ command: normalizeTimes(semanticCodes ? {...command,...semanticCodes} : command), operation, actor: context.actorPrincipalId });
     const repeated = await replay(command.governanceObjectId, operationHash);
     if (repeated) return repeated;
     if (!create) relation = await stable(command, true);
@@ -199,17 +256,40 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
         .where('assignment_id', '=', command.assignmentId).orderBy('version_no', 'desc').limit(1).executeTakeFirstOrThrow();
       if (prior.assignment_version_id !== command.expectedCurrentVersionId)
         return reject(command.governanceObjectId, operation, operationHash, 'ASSIGNMENT_STALE_VERSION');
+      const classifiedHistory=await database.selectFrom('person_master.assignment_version_semantics').select('assignment_version_id')
+        .where('assignment_id','=',command.assignmentId).limit(1).executeTakeFirst();
+      if (classifiedHistory && operation==='REVISE') return reject(command.governanceObjectId,operation,operationHash,'ASSIGNMENT_SEMANTIC_REVISION_REQUIRED');
+      const current=await assignmentSemanticExact(database,prior.assignment_version_id);
+      if (operation==='SEMANTIC_ADOPT' && current.classification==='CLASSIFIED')
+        return reject(command.governanceObjectId,operation,operationHash,'ASSIGNMENT_ALREADY_CLASSIFIED');
+      if (operation==='CLASSIFIED_PERIOD_REVISE' || operation==='SEMANTIC_CORRECT') {
+        if (current.classification!=='CLASSIFIED') return reject(command.governanceObjectId,operation,operationHash,'ASSIGNMENT_SEMANTICS_REQUIRED');
+        if (operation==='CLASSIFIED_PERIOD_REVISE') {
+          const purposeCode=ASSIGNMENT_PURPOSES.find(c=>c===current.purpose.code), modeCode=ASSIGNMENT_MODES.find(c=>c===current.mode.code);
+          if (!purposeCode || !modeCode) throw new Error('ASSIGNMENT_SEMANTIC_EVIDENCE_INVALID');
+          selectedCodes={purposeCode,modeCode};
+        } else if ((correctionReason==='MODE_CORRECTION' && selectedCodes!.purposeCode!==current.purpose.code) ||
+          (correctionReason==='PURPOSE_CORRECTION' && selectedCodes!.modeCode!==current.mode.code)) throw new Error('ASSIGNMENT_SEMANTIC_CORRECTION_INVALID');
+      }
     }
+    const period=requestedPeriod??{businessValidFrom:prior!.business_valid_from,businessValidTo:prior!.business_valid_to};
     const engagementId = create ? command.engagementId : relation!.engagement_id;
     let evidence: AssignmentDependencyEvidence;
+    let semanticAcceptance: Extract<Awaited<ReturnType<typeof semantics.evaluate>>, {ok:true}> | undefined;
     // Only bounded dependency errors become replayable refusals, before any Assignment business insert.
     try {
-      await dependencies.pinEngagement({ governanceObjectId: command.governanceObjectId, engagementId });
+      await (classifiedOperation ? dependencies.pinClassifiedEngagement : dependencies.pinEngagement)({ governanceObjectId: command.governanceObjectId, engagementId });
       await dependencies.pinDepartment({ departmentGovernanceObjectId: target.departmentGovernanceObjectId, departmentId: target.departmentId });
+      if (selectedCodes) await semantics.pinDefinitions(command.governanceObjectId,selectedCodes);
       evidence = await observe(command.governanceObjectId, engagementId, target,
-        command.businessValidFrom, command.businessValidTo, await clock());
+        period.businessValidFrom, period.businessValidTo, await clock());
       const reason = constraint(evidence);
       if (reason) return reject(command.governanceObjectId, operation, operationHash, reason);
+      if (selectedCodes) {
+        const evaluated=await semantics.evaluate(command.governanceObjectId,engagementId,relation?.assignment_id??null,selectedCodes,evidence);
+        if (!evaluated.ok) return reject(command.governanceObjectId,operation,operationHash,evaluated.code,evaluated.evaluation);
+        semanticAcceptance=evaluated;
+      }
     } catch (error) {
       if (!(error instanceof Error) || !TERMINAL.has(error.message)) throw error;
       return reject(command.governanceObjectId, operation, operationHash, error.message);
@@ -220,9 +300,78 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       placement_scope: 'DEPARTMENT', relation_basis: command.relationBasis,
       creation_request_id: context.requestId, created_by: context.actorPrincipalId,
     }).returningAll().executeTakeFirstOrThrow();
-    return save(relation!, command, prior, create ? null : command.reasonCode, evidence, operationHash);
+    const reasonCode=create ? null : operation==='SEMANTIC_ADOPT' ? 'SEMANTIC_ADOPTION' :
+      operation==='SEMANTIC_CORRECT' ? 'SEMANTIC_CORRECTION' :
+      'businessValidFrom' in command ? assignmentVersionReason(command.reasonCode) : null;
+    return save(relation!, period, prior, reasonCode, evidence, operationHash,
+      semanticAcceptance && classifiedOperation ? {accepted:semanticAcceptance,operation:classifiedOperation,correctionReason} : undefined);
   }
   return {
+    async correctAssignmentSemantics(command) {
+      if (!command || typeof command!=='object') throw new Error('ASSIGNMENT_INPUT_INVALID');
+      const {purposeCode,modeCode,...core}=command;
+      validateAssignmentSemanticCodes({purposeCode,modeCode});
+      return mutation(core,'SEMANTIC_CORRECT',{purposeCode,modeCode});
+    },
+    reviseClassifiedAssignmentPeriod:command=>mutation(command,'CLASSIFIED_PERIOD_REVISE'),
+    async adoptAssignmentSemantics(command) {
+      if (!command || typeof command!=='object') throw new Error('ASSIGNMENT_INPUT_INVALID');
+      const {purposeCode,modeCode,...core}=command;
+      validateAssignmentSemanticCodes({purposeCode,modeCode});
+      return mutation(core,'SEMANTIC_ADOPT',{purposeCode,modeCode});
+    },
+    async createClassifiedAssignment(command) {
+      if (!command || typeof command!=='object') throw new Error('ASSIGNMENT_INPUT_INVALID');
+      const {purposeCode,modeCode,...core}=command;
+      validateAssignmentSemanticCodes({purposeCode,modeCode});
+      return mutation(core,'CLASSIFIED_CREATE',{purposeCode,modeCode});
+    },
+    async readAssignmentVersionSnapshot(query) {
+      validateReference(query,['assignmentVersionId']);
+      await dependencies.authorize(query.governanceObjectId,'READ');
+      return result(await exact(query));
+    },
+    async readAssignmentSemanticsSnapshot(query) {
+      validateReference(query,['assignmentVersionId']);
+      await dependencies.authorize(query.governanceObjectId,'READ');
+      await dependencies.authorizeSemantics(query.governanceObjectId,'READ');
+      await exact(query); return assignmentSemanticExact(database,query.assignmentVersionId);
+    },
+    async getAssignmentSemanticsAsOf(query) {
+      validateReference(query,['businessAt','recordAsOf']); temporalKey(query.businessAt); temporalKey(query.recordAsOf);
+      await dependencies.authorize(query.governanceObjectId,'READ');
+      await dependencies.authorizeSemantics(query.governanceObjectId,'READ');
+      await stable(query);
+      const row=await database.selectFrom('person_master.assignment_version').selectAll()
+        .where('governance_object_id','=',query.governanceObjectId).where('assignment_id','=',query.assignmentId)
+        .where('recorded_from','<=',query.recordAsOf).orderBy('version_no','desc').limit(1).executeTakeFirst();
+      if (!row) throw new Error('ASSIGNMENT_NOT_KNOWN_AS_OF');
+      const point=temporalKey(query.businessAt);
+      return {coreVersion:await result(row),
+        businessPeriodContainsPoint:temporalKey(row.business_valid_from)<=point && (row.business_valid_to===null || point<temporalKey(row.business_valid_to)),
+        semantics:await assignmentSemanticExact(database,row.assignment_version_id)};
+    },
+    async resolvePrimaryAffiliation(query) {
+      assertClosedObject(query,['governanceObjectId','engagementId','purposeCode','scopeCode','businessAt','recordAsOf']);
+      assertPersonUuid(query.governanceObjectId); assertPersonUuid(query.engagementId);
+      const point=temporalKey(query.businessAt); temporalKey(query.recordAsOf);
+      if (!ASSIGNMENT_PURPOSES.includes(query.purposeCode)) throw new Error('ASSIGNMENT_UNKNOWN_PURPOSE');
+      if (query.scopeCode!=='HOSPITAL_DEPARTMENT_PLACEMENTS') throw new Error('ASSIGNMENT_INPUT_INVALID');
+      await dependencies.authorize(query.governanceObjectId,'READ');
+      await dependencies.authorizeSemantics(query.governanceObjectId,'READ');
+      const engagement=await dependencies.readEngagementIdentity({governanceObjectId:query.governanceObjectId,
+        engagementId:query.engagementId,recordAsOf:query.recordAsOf});
+      const candidates=(await assignmentSemanticCandidates(database,query.governanceObjectId,query.engagementId,query.recordAsOf))
+        .filter(c=>temporalKey(c.businessValidFrom)<=point && (c.businessValidTo===null || point<temporalKey(c.businessValidTo)));
+      const known=candidates.filter(c=>c.purposeCode===query.purposeCode && c.modeCode==='PRIMARY_AFFILIATION');
+      const unknown=candidates.filter(c=>c.purposeCode===null || c.modeCode===null).length;
+      const resolution=known.length>1?'CONFLICT':unknown?'UNKNOWN':known.length===1?'UNIQUE':'NONE';
+      return {...ASSIGNMENT_SEMANTIC_POLICY,semanticRole:'SCOPED_PRIMARY_AFFILIATION_ASSERTION',
+        bucket:{governanceObjectId:query.governanceObjectId,personId:engagement.personId,engagementId:query.engagementId,
+          purposeCode:query.purposeCode,scopeCode:query.scopeCode},businessAt:query.businessAt,recordAsOf:query.recordAsOf,resolution,
+        knownPrimaryAssignmentVersionRefs:known.map(c=>({assignmentId:c.assignmentId,assignmentVersionId:c.assignmentVersionId})),
+        unclassifiedCandidateCount:unknown,selectedAssignmentVersionId:resolution==='UNIQUE'?known[0]!.assignmentVersionId:null};
+    },
     createAssignment: command => mutation(command, 'CREATE'),
     reviseAssignment: command => mutation(command, 'REVISE'),
     async getAssignment(query): Promise<Assignment> {
@@ -287,6 +436,11 @@ function normalizeTimes(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizeTimes);
   if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,normalizeTimes(v)]));
   return value;
+}
+function assignmentVersionReason(value: string|null): AssignmentVersionReason|null {
+  if (value===null || value==='VALIDITY_CORRECTION' || value==='CONTINUATION_EXTENSION' ||
+    value==='SEMANTIC_ADOPTION' || value==='SEMANTIC_CORRECTION') return value;
+  throw new Error('ASSIGNMENT_VERSION_REASON_INVALID');
 }
 function fingerprint(e: Omit<AssignmentDependencyEvidence, 'dependencyFingerprint'>): string {
   const { recordAsOf: ignoredEngagementClock, ...engagement } = e.engagement;

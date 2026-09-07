@@ -428,6 +428,35 @@ export interface PersonMasterAssignmentCommandOutcome {
   request_id: string;
 }
 
+export interface PersonMasterAssignmentSemanticTerm {
+  code: string;
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  dimension: string;
+  governance_object_id: string;
+  term_id: Generated<string>;
+}
+
+export interface PersonMasterAssignmentSemanticTermVersion {
+  business_valid_from: string;
+  business_valid_to: string | null;
+  code: string;
+  created_by: string;
+  definition_state: string;
+  dimension: string;
+  governance_object_id: string;
+  label: string;
+  operation_hash: Buffer;
+  reason_code: string | null;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_term_version_id: string | null;
+  term_id: string;
+  term_version_id: Generated<string>;
+  version_no: Int8;
+}
+
 export interface PersonMasterAssignmentValidationSegment {
   assignment_version_id: string;
   business_state: string;
@@ -480,6 +509,35 @@ export interface PersonMasterAssignmentVersion {
   supersedes_assignment_version_id: string | null;
   validation_policy_code: string;
   version_no: Int8;
+}
+
+export interface PersonMasterAssignmentVersionSemantics {
+  assignment_id: string;
+  assignment_version_id: string;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  constraint_scope_code: string;
+  correction_reason_code: string | null;
+  created_by: string;
+  engagement_id: string;
+  evaluation: Json;
+  evaluation_record_as_of: string;
+  governance_object_id: string;
+  mode_code: string;
+  mode_dimension: Generated<string>;
+  mode_term_version_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  policy_code: string;
+  policy_digest: Buffer;
+  policy_version: number;
+  purpose_code: string;
+  purpose_dimension: Generated<string>;
+  purpose_term_version_id: string;
+  request_id: string;
+  semantic_fingerprint: Buffer;
+  semantic_operation_kind: string;
+  semantic_recorded_from: string;
 }
 
 export interface PersonMasterEngagement {
@@ -1197,8 +1255,11 @@ export interface DB {
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
   "person_master.assignment": PersonMasterAssignment;
   "person_master.assignment_command_outcome": PersonMasterAssignmentCommandOutcome;
+  "person_master.assignment_semantic_term": PersonMasterAssignmentSemanticTerm;
+  "person_master.assignment_semantic_term_version": PersonMasterAssignmentSemanticTermVersion;
   "person_master.assignment_validation_segment": PersonMasterAssignmentValidationSegment;
   "person_master.assignment_version": PersonMasterAssignmentVersion;
+  "person_master.assignment_version_semantics": PersonMasterAssignmentVersionSemantics;
   "person_master.engagement": PersonMasterEngagement;
   "person_master.engagement_classification": PersonMasterEngagementClassification;
   "person_master.engagement_lifecycle_event": PersonMasterEngagementLifecycleEvent;
