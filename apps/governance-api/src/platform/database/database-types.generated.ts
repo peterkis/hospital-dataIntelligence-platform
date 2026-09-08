@@ -485,6 +485,44 @@ export interface PersonMasterAssignmentSemanticTermVersion {
   version_no: Int8;
 }
 
+export interface PersonMasterAssignmentTemporarySource {
+  created_by: string;
+  engagement_id: string;
+  evaluation_record_as_of: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  policy_code: string;
+  policy_digest: Buffer;
+  policy_version: number;
+  preserved_purpose_code: string;
+  reason_code: string;
+  recorded_from: Generated<string>;
+  request_id: string;
+  source_acceptance_dependency_fingerprint: Buffer;
+  source_assignment_id: string;
+  source_assignment_version_id: string;
+  source_declared_from: string;
+  source_declared_to: string | null;
+  source_department_governance_object_id: string;
+  source_department_id: string;
+  source_department_version_id: string;
+  source_link_fingerprint: Generated<Buffer>;
+  source_primary_evaluation_evidence: Json;
+  source_semantic_fingerprint: Buffer;
+  source_semantic_version_id: string;
+  source_window_validation_evidence: Json;
+  target_admission_dependency_fingerprint: Buffer;
+  target_admission_version_id: Generated<string>;
+  target_assignment_id: Generated<string>;
+  target_department_governance_object_id: string;
+  target_department_id: string;
+  temporary_from: string;
+  temporary_mode_code: string;
+  temporary_overlap_evaluation_evidence: Json;
+  temporary_to: string;
+}
+
 export interface PersonMasterAssignmentTransfer {
   created_by: string;
   effective_at: string;
@@ -1322,6 +1360,7 @@ export interface DB {
   "person_master.assignment_command_outcome": PersonMasterAssignmentCommandOutcome;
   "person_master.assignment_semantic_term": PersonMasterAssignmentSemanticTerm;
   "person_master.assignment_semantic_term_version": PersonMasterAssignmentSemanticTermVersion;
+  "person_master.assignment_temporary_source": PersonMasterAssignmentTemporarySource;
   "person_master.assignment_transfer": PersonMasterAssignmentTransfer;
   "person_master.assignment_validation_segment": PersonMasterAssignmentValidationSegment;
   "person_master.assignment_version": PersonMasterAssignmentVersion;

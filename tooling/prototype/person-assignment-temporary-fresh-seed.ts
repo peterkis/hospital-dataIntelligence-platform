@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { createDatabase } from '../../apps/governance-api/src/platform/database/create-database.js';
+import { createPersonApplication } from '../../apps/governance-api/src/composition/create-person-application.js';
+import { personContext, personCreation, seedPersonScope } from './person-subject-fixture.js';
+import { seedEngagementLifecycleScope } from './person-engagement-lifecycle-fixture.js';
+import { requireTemporaryFixtureTarget } from './person-assignment-temporary-fixture-guard.js';
+
+assert.ok(process.env['DATABASE_URL'], 'C04_MANAGED_DATABASE_REQUIRED');
+const handle = createDatabase({ connectionString: process.env['DATABASE_URL'], max: 4 });
+try {
+  const target = await requireTemporaryFixtureTarget(handle.database, 'SHARED_DEFINITION_MUTATION');
+  await seedPersonScope(handle.database);
+  for (let i = 0; i < 6; i++) await createPersonApplication(handle.database, personContext()).createPersonSubject(personCreation);
+  await seedEngagementLifecycleScope(handle.database);
+  console.log(JSON.stringify({ task: 'PV-006-C-04', mode: 'FRESH_SEED', database: target.identity.database, status: 'PASS' }));
+} finally { await handle.close(); }

@@ -31,6 +31,7 @@ Immutable Version Core task at authority HEAD
 | PV-006-C-03 | Assignment END and atomic transfer (only the authorized pair) | COMPLETE effective on the sole R1-reviewed C-03-02 local commit |
 | PV-006-C-03-01 | Assignment End & Historical Closure | DONE effective on the sole reviewed local completion commit |
 | PV-006-C-03-02 | Atomic transfer | DONE effective on the sole R1-reviewed local commit; two accepted historical deviations |
+| PV-006-C-04 | Source-linked temporary assignment, SECONDMENT only | DONE effective only on the sole independently reviewed local completion commit |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
 | PV-006-F | Projection / Release / Consumer | NOT_STARTED |
@@ -41,6 +42,28 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+2026-09-08 C04 controlled completion: retained 33 PASS + 3 SKIPPED_BY_SCOPE is
+paired with final owned fresh 46 PASS; all 31 current scoped regression/check
+commands passed, including API 40 files/519 tests, Sim 20, SDK 72 and Replay 4.
+Fresh 39 migrations/91 tables matches retained schema and real generated types;
+actual restart reproduced six creates, one refusal, 36 declarations and 12
+assessments. The 78-row coverage, preservation manifests, initial RED chronology,
+independent review and sole commit facts are linked through
+`.runtime/pv006-c04/local-only-20260908/`. DONE remains conditional on actual final
+same-tree Standards/Spec approval and the sole authorized local commit; pending
+review/commit gates are not pre-labelled PASS. C and PV-006 remain IN_PROGRESS,
+later C extensions and D–G remain NOT_STARTED. No push or next-slice authorization.
+
+2026-09-08: PV-006-C-04 is separately authorized by the external local-only prompt
+at HEAD `2ddce887263e1841912240534701c27db59cec1d`. Issue 12 and ADR-0120 cover
+finite source-linked SECONDMENT, preserved PRIMARY source, same Person/E/Purpose,
+full-window dependencies, immutable source proof and explicit read-only assessment.
+Real tests-only initial RED was saved before runtime/DDL edits. All 78 gates,
+fresh-only shared-definition mutation tests, retained preservation, restart,
+complete regression and same-tree independent review must pass before the one
+authorized local commit. No push, later C extensions or D–G execution. Prior
+Comments and C03 exception facts remain historical and are not new exemptions.
 
 R1 controlled completion: the user accepted the initial missing RED once
 (NOT_PERFORMED remains the historical fact) and the earlier shared-definition

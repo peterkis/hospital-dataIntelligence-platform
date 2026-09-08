@@ -15,6 +15,15 @@
     "tooling/*"
   ],
   "scripts": {
+    "prototype:person:assignment-temporary:initial": "node --env-file-if-exists=.env.prototype.local --import tsx --test tooling/prototype/person-assignment-temporary-initial.test.mjs",
+    "prototype:person:assignment-temporary:preserve": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-temporary-preservation.mjs",
+    "test:assignment-temporary-fixture": "node --import tsx --test tooling/prototype/person-assignment-temporary-fixture-guard.test.ts",
+    "test:assignment-temporary-policy": "node --import tsx --test tooling/prototype/person-assignment-temporary-policy.test.ts",
+    "prototype:person:assignment-temporary:fresh-install": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-temporary-fresh-install.mjs",
+    "prototype:person:assignment-temporary:validate": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-temporary-application-probe.ts",
+    "prototype:person:assignment-temporary:prepare-recovery": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-temporary-prepare-recovery.ts",
+    "prototype:person:assignment-temporary:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-temporary-recovery-probe.ts",
+    "prototype:person:assignment-temporary:restart": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-temporary-restart.mjs",
     "prototype:person:assignment-closure:gates": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-gates.ts",
     "prototype:person:assignment-closure:recover": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-closure-recovery-probe.ts --recover",
     "prototype:person:assignment-closure:recover-negative": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-closure-recover-negative.mjs",

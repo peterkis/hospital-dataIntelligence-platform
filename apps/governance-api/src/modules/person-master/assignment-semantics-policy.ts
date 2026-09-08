@@ -19,7 +19,7 @@ export const ASSIGNMENT_SEMANTIC_POLICY = {
 } as const;
 export function validateAssignmentSemanticCodes(codes: AssignmentSemanticCodes): void {
   if (!ASSIGNMENT_PURPOSES.includes(codes.purposeCode)) throw new Error('ASSIGNMENT_UNKNOWN_PURPOSE');
-  if (!ASSIGNMENT_MODES.includes(codes.modeCode)) throw new Error('ASSIGNMENT_MODE_NOT_SUPPORTED_IN_SLICE');
+  if (!ASSIGNMENT_MODES.some(mode => mode === codes.modeCode)) throw new Error('ASSIGNMENT_MODE_NOT_SUPPORTED_IN_SLICE');
 }
 
 export interface AssignmentSemanticCandidate {

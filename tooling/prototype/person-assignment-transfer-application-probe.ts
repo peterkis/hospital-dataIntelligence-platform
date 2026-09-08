@@ -36,8 +36,9 @@ const check: TransferCheck = async (ids, name, work, status) => {
 try {
   const db = handle.database;
   identity = await assignmentSemanticDatabaseIdentity(db);
-  assert.match(identity.database, /^(hdi_prototype|pv006_c0302_[a-f0-9]{32})$/u);
-  assert.equal(identity.role, 'hdi_prototype'); assert.equal(identity.migrations, 38);
+  assert.match(identity.database, /^(hdi_prototype|pv006_c0(?:302|4)_[a-f0-9]{32})$/u);
+  if (identity.database.startsWith('pv006_c04_')) await (await import('./person-assignment-temporary-fixture-guard.js')).requireTemporaryFixtureTarget(db, 'SHARED_DEFINITION_MUTATION');
+  assert.equal(identity.role, 'hdi_prototype'); assert.equal(identity.migrations, 39);
   const f = await createAssignmentTransferFixture(db, runId);
   const definitionRows = () => db.selectFrom('person_master.assignment_semantic_term_version').selectAll()
     .where('governance_object_id', '=', f.scope.governanceObjectId).orderBy('term_version_id').execute();

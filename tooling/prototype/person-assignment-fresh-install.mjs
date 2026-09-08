@@ -39,7 +39,7 @@ try {
   const source = (await sourcePool.query(`select current_database() as database,
     pg_postmaster_start_time()::text as started_at,
     (select count(*)::int from platform.schema_migration) as migration_count`)).rows[0];
-  assert.equal(source.migration_count, 38);
+  assert.equal(source.migration_count, 39);
   const admin = JSON.parse(peer(`select json_build_object('role',current_user,
     'started_at',pg_postmaster_start_time()::text,'can_create',rolcreatedb or rolsuper,
     'app_createdb',(select rolcreatedb from pg_roles where rolname='hdi_prototype'))
@@ -83,8 +83,8 @@ try {
     (select count(*)::int from platform.schema_migration) as migrations,
     (select count(*)::int from information_schema.tables where table_schema=any($1::text[])
      and table_type='BASE TABLE') as tables`, [schemas])).rows[0];
-  assert.equal(counts.migrations, 38);
-  assert.equal(counts.tables, 90);
+  assert.equal(counts.migrations, 39);
+  assert.equal(counts.tables, 91);
   result.counts = counts;
   result.migrationsPassed = true;
   const sourceManifest = await schemaManifest(sourcePool, schemas);

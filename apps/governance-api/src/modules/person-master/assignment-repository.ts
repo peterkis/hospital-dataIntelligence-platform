@@ -16,6 +16,7 @@ import { createAssignmentSemanticStore, assignmentSemanticExact, assignmentAdmis
 import { validateAssignmentSemanticCodes, ASSIGNMENT_SEMANTIC_POLICY } from './assignment-semantics-policy.js';
 import { ASSIGNMENT_PURPOSES, ASSIGNMENT_MODES } from './assignment-semantics-contracts.js';
 import { ASSIGNMENT_TRANSFER_CHILD_PREFIX } from './assignment-transfer-contracts.js';
+import { createTemporaryAssignmentModule, type TemporaryAssignmentModule } from './assignment-temporary-store.js';
 import type { AssignmentSemanticCodes, AssignmentSemanticOperation, AssignmentVersionSemantics, ClassifiedAssignmentSemantics,
   CreateClassifiedAssignment, AdoptAssignmentSemantics, AssignmentSemanticsApplication, CorrectAssignmentSemantics,
   ReviseClassifiedAssignmentPeriod } from './assignment-semantics-contracts.js';
@@ -30,7 +31,17 @@ import {
 type VersionRow = Selectable<DB['person_master.assignment_version']>;
 type StableRow = Selectable<DB['person_master.assignment']>;
 type Result<T = AssignmentAdmissionVersion> = { readonly ok: true; readonly value: T; readonly semantics?: ClassifiedAssignmentSemantics } | { readonly ok: false; readonly code: string };
+// Person-owner private preparation, not an application input or approval token.
+export interface TemporaryAdmissionPreparation {
+  readonly evidence: AssignmentDependencyEvidence;
+  readonly accepted: Extract<Awaited<ReturnType<ReturnType<typeof createAssignmentSemanticStore>['evaluate']>>, { ok: true }>;
+}
+export interface TemporaryAdmissionWriter {
+  prepareTemporaryAdmission(query: CreateAssignment & { readonly purposeCode: AssignmentSemanticCodes['purposeCode']; readonly recordAsOf: string }): Promise<TemporaryAdmissionPreparation>;
+  appendTemporaryAdmission(header: Selectable<DB['person_master.assignment_temporary_source']>, prepared: TemporaryAdmissionPreparation): Promise<AssignmentAdmissionVersion>;
+}
 export interface AssignmentCoreModule extends Omit<AssignmentCoreApplication, 'createAssignment' | 'reviseAssignment'> {
+  readonly temporary: TemporaryAssignmentModule;
   endAssignment(command: EndAssignment): Promise<Result<AssignmentClosureVersion>>;
   getAssignmentClosure: AssignmentClosureApplication['getAssignmentClosure'];
   getAssignmentDeclaredPeriodAsOf: AssignmentClosureApplication['getAssignmentDeclaredPeriodAsOf'];
@@ -57,6 +68,7 @@ export interface AssignmentDependencies {
   authorizeSemantics(governanceObjectId: string, operation: 'READ'|'WRITE'): Promise<void>;
   authorizeDependencies(governanceObjectId: string, placement: AssignmentPlacement): Promise<void>;
   authorizeTransfer(governanceObjectId: string): Promise<void>;
+  authorizeTemporaryCreate(governanceObjectId: string): Promise<void>;
 }
 
 const TERMINAL = new Set([
@@ -207,14 +219,16 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
     prior: VersionRow | null, reasonCode: AssignmentAdmissionReason | null,
     evidence: AssignmentDependencyEvidence, operationHash: Buffer,
     classified?: { accepted: Extract<Awaited<ReturnType<typeof semantics.evaluate>>, {ok:true}>; operation: AssignmentSemanticOperation;
-      correctionReason: CorrectAssignmentSemantics['reasonCode']|null }): Promise<Result> {
+      correctionReason: CorrectAssignmentSemantics['reasonCode']|null },
+    temporary?: { readonly assignmentVersionId: string; readonly recordedFrom: string }): Promise<Result> {
     const e = evidence.engagement, d = evidence.department, c = e.classification;
     const row = await database.insertInto('person_master.assignment_version').values({
+      ...(temporary ? { assignment_version_id: temporary.assignmentVersionId } : {}),
       assignment_id: relation.assignment_id, governance_object_id: relation.governance_object_id,
       engagement_id: relation.engagement_id, department_id: relation.department_id,
       version_no: String(BigInt(prior?.version_no ?? '0') + 1n), supersedes_assignment_version_id: prior?.assignment_version_id ?? null,
       reason_code: reasonCode, business_valid_from: command.businessValidFrom, business_valid_to: command.businessValidTo,
-      recorded_from: await clock(relation.governance_object_id), created_by: context.actorPrincipalId, request_id: context.requestId, operation_hash: operationHash,
+      recorded_from: temporary?.recordedFrom ?? await clock(relation.governance_object_id), created_by: context.actorPrincipalId, request_id: context.requestId, operation_hash: operationHash,
       validation_policy_code: ASSIGNMENT_POLICY, evaluation_record_as_of: evidence.evaluationRecordAsOf,
       authority_engagement_version_id: e.authorityEngagementVersionId, authority_engagement_version_no: e.authorityVersionNo,
       authority_engagement_recorded_from: e.authorityRecordedFrom, authority_engagement_valid_from: e.authoritativeBusinessValidFrom,
@@ -228,19 +242,23 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       department_valid_from: d.businessValidFrom, department_valid_to: d.businessValidTo,
       dependency_fingerprint: Buffer.from(evidence.dependencyFingerprint, 'hex'),
     }).returningAll().executeTakeFirstOrThrow();
+    if (temporary) hitControlledPublicationFault('ASSIGNMENT_TEMPORARY_VERSION_WRITTEN');
     if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_VERSION_WRITTEN');
     await database.insertInto('person_master.assignment_validation_segment').values(e.stateSegments.map((s, i) => ({
       assignment_version_id: row.assignment_version_id, engagement_id: relation.engagement_id, segment_no: i + 1,
       business_valid_from: s.from, business_valid_to: s.to, business_state: s.businessState,
       last_applicable_lifecycle_event_id: s.lastApplicableLifecycleEventId, lifecycle_sequence: s.lifecycleSequence,
     }))).execute();
+    if (temporary) hitControlledPublicationFault('ASSIGNMENT_TEMPORARY_SEGMENTS_WRITTEN');
     if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_SEGMENTS_WRITTEN');
     const value=await admissionResult(row);
     const paired=classified ? await semantics.append(value,classified.accepted,classified.operation,operationHash,classified.correctionReason) : undefined;
+    if (temporary) hitControlledPublicationFault('ASSIGNMENT_TEMPORARY_SEMANTICS_WRITTEN');
     if (context.requestId.startsWith(ASSIGNMENT_TRANSFER_CHILD_PREFIX)) hitControlledPublicationFault('ASSIGNMENT_TRANSFER_TARGET_SEMANTICS_WRITTEN');
     await database.insertInto('person_master.assignment_command_outcome').values({ governance_object_id: relation.governance_object_id,
       request_id: context.requestId, created_by: context.actorPrincipalId, operation_type: classified?.operation ?? (prior ? 'REVISE' : 'CREATE'),
       operation_hash: operationHash, assignment_version_id: row.assignment_version_id, rejection_code: null }).execute();
+    if (temporary) hitControlledPublicationFault('ASSIGNMENT_TEMPORARY_OUTCOME_WRITTEN');
     await event(relation.governance_object_id, relation.assignment_id, prior ? 'PERSON_ASSIGNMENT_VERSION_CREATED' : 'PERSON_ASSIGNMENT_CREATED',
       { versionNo: row.version_no, validationPolicyCode: ASSIGNMENT_POLICY, dependencyFingerprint: evidence.dependencyFingerprint,
         evaluationRecordAsOf: evidence.evaluationRecordAsOf, result: 'ACCEPTED_CORE_FACT' }, row.assignment_version_id);
@@ -292,6 +310,9 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
     if (!create) relation = await stable(command, true);
     let prior: VersionRow | null = null;
     if (!create) {
+      if (await database.selectFrom('person_master.assignment_temporary_source').select('target_assignment_id')
+        .where('target_assignment_id', '=', command.assignmentId).executeTakeFirst())
+        return reject(command.governanceObjectId, operation, operationHash, 'ASSIGNMENT_TEMPORARY_REVISION_NOT_SUPPORTED_IN_SLICE');
       prior = await database.selectFrom('person_master.assignment_version').selectAll()
         .where('assignment_id', '=', command.assignmentId).orderBy('version_no', 'desc').limit(1).executeTakeFirstOrThrow();
       if (prior.evidence_kind === 'CLOSURE') return reject(command.governanceObjectId, operation, operationHash, 'ASSIGNMENT_ALREADY_CLOSED');
@@ -348,7 +369,38 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
     return save(relation!, period, prior, reasonCode, evidence, operationHash,
       semanticAcceptance && classifiedOperation ? {accepted:semanticAcceptance,operation:classifiedOperation,correctionReason} : undefined);
   }
-  return {
+  const temporaryAdmission: TemporaryAdmissionWriter = {
+    async prepareTemporaryAdmission(query) {
+      const evidence = await observe(query.governanceObjectId, query.engagementId, query.placement,
+        query.businessValidFrom, query.businessValidTo, query.recordAsOf);
+      const reason = constraint(evidence);
+      if (reason) throw new Error(reason);
+      const accepted = await semantics.evaluate(query.governanceObjectId, query.engagementId, null,
+        { purposeCode: query.purposeCode, modeCode: 'SECONDMENT' }, evidence);
+      if (!accepted.ok) throw new Error(accepted.code);
+      return { evidence, accepted };
+    },
+    async appendTemporaryAdmission(header, prepared) {
+      if (header.request_id !== context.requestId || header.created_by !== context.actorPrincipalId
+        || header.target_admission_dependency_fingerprint.toString('hex') !== prepared.evidence.dependencyFingerprint
+        || prepared.accepted.mode.code !== 'SECONDMENT') throw new Error('ASSIGNMENT_TEMPORARY_EVIDENCE_INVALID');
+      const relation = await database.insertInto('person_master.assignment').values({
+        assignment_id: header.target_assignment_id, governance_object_id: header.governance_object_id,
+        engagement_id: header.engagement_id, person_id: header.person_id,
+        department_governance_object_id: header.target_department_governance_object_id, department_id: header.target_department_id,
+        placement_scope: 'DEPARTMENT', relation_basis: 'CONFIRMED_DISTINCT_PLACEMENT',
+        creation_request_id: context.requestId, created_by: context.actorPrincipalId, created_at: header.recorded_from,
+      }).returningAll().executeTakeFirstOrThrow();
+      hitControlledPublicationFault('ASSIGNMENT_TEMPORARY_STABLE_WRITTEN');
+      const outcome = await save(relation, { businessValidFrom: header.temporary_from, businessValidTo: header.temporary_to },
+        null, null, prepared.evidence, header.operation_hash,
+        { accepted: prepared.accepted, operation: 'TEMPORARY_CREATE', correctionReason: null },
+        { assignmentVersionId: header.target_admission_version_id, recordedFrom: header.recorded_from });
+      if (!outcome.ok) throw new Error('ASSIGNMENT_TEMPORARY_ADMISSION_CHANGED_UNDER_FENCE');
+      return outcome.value;
+    },
+  };
+  const core: Omit<AssignmentCoreModule, 'temporary'> = {
     async endAssignment(command) {
       validateAssignmentEnd(command);
       await dependencies.authorize(command.governanceObjectId, 'READ');
@@ -511,6 +563,9 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       validateReference(query, ['assignmentVersionId', 'recordAsOf']); temporalKey(query.recordAsOf);
       await dependencies.authorize(query.governanceObjectId, 'READ');
       const row = await exact(query), relation = await stable(query);
+      if (await database.selectFrom('person_master.assignment_temporary_source').select('target_assignment_id')
+        .where('target_assignment_id', '=', query.assignmentId).executeTakeFirst())
+        throw new Error('ASSIGNMENT_TEMPORARY_FULL_ASSESSMENT_REQUIRED');
       if (row.evidence_kind === 'CLOSURE') throw new Error('ASSIGNMENT_CLOSURE_NOT_ADMISSION_VERSION');
       await dependencies.authorizeDependencies(query.governanceObjectId, placement(relation));
       if (temporalKey(query.recordAsOf) < temporalKey(row.recorded_from)) throw new Error('ASSIGNMENT_NOT_KNOWN_AS_OF');
@@ -537,6 +592,7 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
       return value;
     },
   };
+  return { ...core, temporary: createTemporaryAssignmentModule(database, context, audit, dependencies, core, temporaryAdmission) };
 }
 
 function normalizeTimes(value: unknown): unknown {

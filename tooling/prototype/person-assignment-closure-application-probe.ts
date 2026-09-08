@@ -30,6 +30,7 @@ async function check(ids:string[],name:string,work:()=>Promise<unknown>) {
 }
 try {
   assert.ok(process.argv.length === 2 || (process.argv.length === 3 && ['--sql-probe', '--concurrency-probe'].includes(process.argv[2]!)), 'C0301_APPLICATION_MODE_INVALID');
+  if (process.env['C04_FRESH_OWNERSHIP_RECEIPT']) await (await import('./person-assignment-temporary-fixture-guard.js')).requireTemporaryFixtureTarget(handle.database, 'SHARED_DEFINITION_MUTATION');
   const f=await createAssignmentClosureFixture(handle.database,runId);
   const assignmentScope=f.scope;
   if (!process.argv[2]) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { sql, type Kysely, type Transaction, type Insertable } from 'kysely';
+import { sql, type Kysely, type Transaction, type Insertable, type KyselyPlugin } from 'kysely';
 import type { DB } from '../../apps/governance-api/src/platform/database/database-types.generated.js';
 import { canonicalSha256 } from '../../apps/governance-api/src/platform/hashing/canonical-hash.js';
 import { ASSIGNMENT_SEMANTIC_POLICY } from '../../apps/governance-api/src/modules/person-master/assignment-semantics-policy.js';
@@ -96,7 +96,7 @@ export async function runAssignmentSemanticSqlProbe(database:Kysely<DB>, f:Seman
       (tx:Transaction<DB>)=>tx.updateTable('person_master.assignment_semantic_term').set({code:'STANDING_CONCURRENT'}).where('term_id','=',primaryDefinition.termId).execute(),
       (tx:Transaction<DB>)=>tx.deleteFrom('person_master.assignment_semantic_term_version').where('term_version_id','=',definitions.term_version_id).execute(),
       (tx:Transaction<DB>)=>tx.updateTable('person_master.assignment_version_semantics').set({mode_code:'PRIMARY_AFFILIATION'}).where('assignment_version_id','=',source.coreVersion.assignmentVersionId).execute(),
-      (tx:Transaction<DB>)=>sql`truncate person_master.assignment_version_semantics,person_master.assignment_closure_evidence`.execute(tx),
+      (tx:Transaction<DB>)=>sql`truncate person_master.assignment_version_semantics,person_master.assignment_closure_evidence,person_master.assignment_temporary_source`.execute(tx),
     ]) immutable.push(await probe(async tx=>{await action(tx);},'55000'));
     return {wrongAxis,nonexistent,wrongScope,wrongClock,future,immutable};
   });
@@ -151,17 +151,29 @@ export async function runAssignmentSemanticSqlProbe(database:Kysely<DB>, f:Seman
     },'0A000','repeatable read');
     return {externalVersionId,observed,invalidRowsCommitted:0};
   });
-  await check(['UK-05'],'controlled rollback-only corruption returns CONFLICT rather than selecting one primary',async()=> {
+  await check(['UK-05'],'controlled candidate-read corruption returns CONFLICT without disabling any native guard',async()=> {
     const before=(await database.selectFrom('person_master.assignment_version').select('assignment_version_id')
       .where('engagement_id','=',e.engagementId).execute()).length;
     let resolution:unknown;
-    // The task explicitly requires a controlled corruption probe for this otherwise
-    // unreachable read state. Disable only the domain collision trigger inside a
-    // transaction that always rolls back; all pairing/FK/isolation guards stay active.
+    // Multiple PRIMARY rows cannot legitimately persist. Corrupt only this test's
+    // candidate observation over real SQL results; all native guards remain enabled.
+    // This is reader fault injection, not a claim of persisted conflicting facts.
+    const reads=new Set<unknown>();let altered=0;
+    const plugin:KyselyPlugin={
+      transformQuery(args){
+        if(args.node.kind==='RawNode'&&args.node.sqlFragments.some(part=>part.includes('as "modeCode"'))) reads.add(args.queryId);
+        return args.node;
+      },
+      async transformResult(args){
+        if(!reads.has(args.queryId))return args.result;
+        return {...args.result,rows:args.result.rows.map(row=>{
+          if(row['assignmentId']!==source.coreVersion.assignmentId)return row;
+          altered++;return {...row,modeCode:'PRIMARY_AFFILIATION'};
+        })};
+      },
+    };
     await probe(async tx=> {
-      await sql`alter table person_master.assignment_version_semantics disable trigger assignment_semantics_guard`.execute(tx);
-      await clone(tx,{primary:true});
-      const scope=await createAssignmentScope(tx,f.context());
+      const scope=await createAssignmentScope(tx.withPlugin(plugin),f.context());
       const recordAsOf=(await sql<{value:string}>`select platform.local_now() as value`.execute(tx)).rows[0]!.value;
       const value=await scope.assignment.resolvePrimaryAffiliation({...assignmentScope,engagementId:e.engagementId,
         purposeCode:'ORGANIZATIONAL_AFFILIATION',scopeCode:'HOSPITAL_DEPARTMENT_PLACEMENTS',
@@ -169,11 +181,13 @@ export async function runAssignmentSemanticSqlProbe(database:Kysely<DB>, f:Seman
       assert.equal(value.resolution,'CONFLICT');assert.equal(value.knownPrimaryAssignmentVersionRefs.length,2);
       assert.equal(value.selectedAssignmentVersionId,null);resolution=value;
     },null);
+    assert.equal(altered,1);
     assert.equal((await database.selectFrom('person_master.assignment_version').select('assignment_version_id')
       .where('engagement_id','=',e.engagementId).execute()).length,before);
     const enabled=(await sql<{enabled:string}>`select tgenabled as enabled from pg_trigger
       where tgrelid='person_master.assignment_version_semantics'::regclass and tgname='assignment_semantics_guard'`.execute(database)).rows[0]!.enabled;
     assert.equal(enabled,'O');
-    return {resolution,rolledBack:true,triggerRestored:enabled,businessVersionCountUnchanged:before};
+    return {resolution,method:'TEST_LOCAL_CANDIDATE_RESULT_ADAPTER_OVER_REAL_DATABASE',rolledBack:true,
+      triggerStayedEnabled:enabled,corruptRowsPersisted:0,businessVersionCountUnchanged:before};
   });
 }

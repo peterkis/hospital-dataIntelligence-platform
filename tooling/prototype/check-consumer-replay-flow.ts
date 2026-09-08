@@ -67,7 +67,17 @@ export async function checkConsumerReplayFlow(input: Pick<Parameters<typeof chec
   const newer = (await consumer.inspectReplay({ releaseId: publication.releaseId })).context.event;
   const frozenVersion = (await consumer.inspectReplay({ releaseId: newer.releaseId })).context.subscriptionVersion;
   if (input.readMetrics) {
-    await setTimeout(1100);
+    // The HTTP business clock has second precision; an event has microseconds.
+    // Wait until that same clock is strictly beyond the actual one-second SLA,
+    // rather than assuming 1.1 wall-clock seconds always crosses its next tick.
+    const deadline = (await sql<{ value: string }>`select
+      to_char(created_at + interval '1 second', 'YYYY-MM-DD"T"HH24:MI:SS.US') as value
+      from release_distribution.outbox_event where event_id = ${newer.eventId}`.execute(database)).rows[0]!.value;
+    const clockWaitStarted = performance.now();
+    while (context().occurredAt <= deadline) {
+      assert.ok(performance.now() - clockWaitStarted < 5000, 'REPLAY_FIXTURE_BUSINESS_CLOCK_DID_NOT_ADVANCE');
+      await setTimeout(20);
+    }
     const status = await client.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/operational-status', { params: { path: { subscriptionId } } });
     assert.equal(status.data?.status, 'LATE'); assert.equal(status.data.applyOverdue, true);
     assert.ok(await metric('consumer_sla_breached', { criticality: 'CRITICAL' }) >= 1);

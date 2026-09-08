@@ -48,6 +48,10 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
         await requireScope(governanceObjectId, 'PERSON_MASTER');
         await authorization.requireObjectPermission({ governanceObjectId, permissionCode: 'PERSON_MASTER_ASSIGNMENT_TRANSFER' });
       },
+      async authorizeTemporaryCreate(governanceObjectId) {
+        await requireScope(governanceObjectId, 'PERSON_MASTER');
+        await authorization.requireObjectPermission({ governanceObjectId, permissionCode: 'PERSON_MASTER_ASSIGNMENT_TEMPORARY_CREATE' });
+      },
       async authorize(governanceObjectId, operation) {
         await requireScope(governanceObjectId, 'PERSON_MASTER');
         await authorization.requireObjectPermission({ governanceObjectId,
@@ -73,6 +77,7 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
     definitions: createAssignmentSemanticDefinitionModule(database, context, createAuditModule(database, context), authorizeSemantics),
     authorizeSemantics, assignment,
     transfer: createAssignmentTransferModule(database, context, createAuditModule(database, context), dependencies, assignment, privateStep),
+    temporary: assignment.temporary,
   };
 }
 

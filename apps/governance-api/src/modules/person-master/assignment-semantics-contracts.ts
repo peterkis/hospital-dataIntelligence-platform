@@ -2,11 +2,16 @@ import type { AssignmentAdmissionVersion, AssignmentReference, AssignmentVersion
 
 export const ASSIGNMENT_PURPOSES = ['ORGANIZATIONAL_AFFILIATION', 'CLINICAL_PRACTICE', 'TRAINING_LEARNING'] as const;
 export const ASSIGNMENT_MODES = ['PRIMARY_AFFILIATION', 'STANDING_CONCURRENT'] as const;
+// Ordinary writers retain their original closed set. Reading/definition governance
+// also recognizes source-linked modes, which have a separate creation capability.
+export const ASSIGNMENT_KNOWN_MODES = [...ASSIGNMENT_MODES, 'SECONDMENT'] as const;
 export type AssignmentPurpose = typeof ASSIGNMENT_PURPOSES[number];
-export type AssignmentMode = typeof ASSIGNMENT_MODES[number];
+export type AssignmentWritableMode = typeof ASSIGNMENT_MODES[number];
+export type AssignmentMode = typeof ASSIGNMENT_KNOWN_MODES[number];
 export type AssignmentSemanticDimension = 'PURPOSE' | 'MODE';
-export type AssignmentSemanticOperation = 'CLASSIFIED_CREATE' | 'SEMANTIC_ADOPT' | 'CLASSIFIED_PERIOD_REVISE' | 'SEMANTIC_CORRECT';
+export type AssignmentSemanticOperation = 'CLASSIFIED_CREATE' | 'SEMANTIC_ADOPT' | 'CLASSIFIED_PERIOD_REVISE' | 'SEMANTIC_CORRECT' | 'TEMPORARY_CREATE';
 export interface AssignmentSemanticCodes { readonly purposeCode: AssignmentPurpose; readonly modeCode: AssignmentMode }
+export interface OrdinaryAssignmentSemanticCodes { readonly purposeCode: AssignmentPurpose; readonly modeCode: AssignmentWritableMode }
 export interface RegisterAssignmentSemanticTerm {
   readonly governanceObjectId: string;
   readonly dimension: AssignmentSemanticDimension;
@@ -28,8 +33,8 @@ export interface AssignmentSemanticTermVersion extends RegisterAssignmentSemanti
   readonly recordedFrom: string;
   readonly supersedesTermVersionId: string | null;
 }
-export type CreateClassifiedAssignment = CreateAssignment & AssignmentSemanticCodes;
-export type AdoptAssignmentSemantics = AssignmentReference & AssignmentSemanticCodes & { readonly expectedCurrentVersionId: string };
+export type CreateClassifiedAssignment = CreateAssignment & OrdinaryAssignmentSemanticCodes;
+export type AdoptAssignmentSemantics = AssignmentReference & OrdinaryAssignmentSemanticCodes & { readonly expectedCurrentVersionId: string };
 export type CorrectAssignmentSemantics = AdoptAssignmentSemantics & { readonly reasonCode: 'PURPOSE_CORRECTION' | 'MODE_CORRECTION' | 'PURPOSE_AND_MODE_CORRECTION' };
 export type ReviseClassifiedAssignmentPeriod = ReviseAssignment;
 export interface AssignmentPrimaryBucket {

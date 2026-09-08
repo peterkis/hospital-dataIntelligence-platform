@@ -23,7 +23,9 @@ export async function runAssignmentTransferConcurrency(database: Kysely<DB>, f: 
   const current = (await sql<{ name: string; oid: string; owner: string }>`select datname as name, oid::text as oid,
     pg_get_userbyid(datdba) as owner from pg_database where datname=current_database()`.execute(database)).rows[0]!;
   const retained = current.name === 'hdi_prototype';
-  if (!retained) {
+  if (current.name.startsWith('pv006_c04_')) {
+    await (await import('./person-assignment-temporary-fixture-guard.js')).requireTemporaryFixtureTarget(database, 'SHARED_DEFINITION_MUTATION');
+  } else if (!retained) {
     const receiptPath = process.env['C0302_FRESH_OWNERSHIP_RECEIPT'];
     assert.ok(receiptPath, 'C0302_FRESH_OWNERSHIP_REQUIRED');
     const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));

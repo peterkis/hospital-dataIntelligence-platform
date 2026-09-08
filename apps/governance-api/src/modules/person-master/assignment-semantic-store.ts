@@ -54,7 +54,7 @@ export async function assignmentAdmissionSemanticExact(database: Transaction<DB>
     .where('term_version_id','in',[row.purpose_term_version_id,row.mode_term_version_id]).execute();
   const purpose = definitions.find(d=>d.term_version_id===row.purpose_term_version_id);
   const mode = definitions.find(d=>d.term_version_id===row.mode_term_version_id);
-  const operation = (['CLASSIFIED_CREATE','SEMANTIC_ADOPT','CLASSIFIED_PERIOD_REVISE','SEMANTIC_CORRECT'] as const)
+  const operation = (['CLASSIFIED_CREATE','SEMANTIC_ADOPT','CLASSIFIED_PERIOD_REVISE','SEMANTIC_CORRECT','TEMPORARY_CREATE'] as const)
     .find(op=>op===row.semantic_operation_kind);
   if (!purpose || !mode || !operation || !row.policy_digest.equals(Buffer.from(ASSIGNMENT_SEMANTIC_POLICY.policyDigest,'hex')))
     throw new Error('ASSIGNMENT_SEMANTIC_EVIDENCE_INVALID');

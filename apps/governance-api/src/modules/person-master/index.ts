@@ -28,5 +28,6 @@ export * from './assignment-closure-contracts.js';
 export { createAssignmentCoreModule, type AssignmentCoreModule, type AssignmentDependencies } from './assignment-repository.js';
 export * from './assignment-transfer-contracts.js';
 export { createAssignmentTransferModule } from './assignment-transfer-store.js';
+export * from './assignment-temporary-contracts.js';
 export * from './assignment-semantics-contracts.js';
 export { createAssignmentSemanticDefinitionModule } from './assignment-semantic-definitions.js';

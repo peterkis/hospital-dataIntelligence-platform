@@ -27,7 +27,15 @@ try {
   const forbidden = (await pool.query(`select count(*)::int as count from information_schema.columns
     where table_schema not in ('pg_catalog','information_schema')
     and udt_name in ('timestamptz','timetz','tstzrange','tstzmultirange')`)).rows[0].count;
-  assert.equal(identity.database, 'hdi_prototype'); assert.equal(identity.migrations, 38);
+  assert.match(identity.database, /^(hdi_prototype|pv006_c04_[a-f0-9]{32})$/u); assert.equal(identity.migrations, 39);
+  if (identity.database.startsWith('pv006_c04_')) {
+    const { readFile } = await import('node:fs/promises');
+    assert.ok(process.env.C04_FRESH_OWNERSHIP_RECEIPT, 'C04_FRESH_RECEIPT_REQUIRED');
+    const receipt = JSON.parse(await readFile(process.env.C04_FRESH_OWNERSHIP_RECEIPT, 'utf8'));
+    assert.equal(receipt.task, 'PV-006-C-04'); assert.equal(receipt.mode, 'FRESH_INSTALL');
+    assert.equal(receipt.databaseName, identity.database); assert.equal(receipt.identity.oid, identity.oid);
+    assert.equal(receipt.identity.owner, 'hdi_prototype');
+  }
   assert.equal(identity.createdb, false); assert.equal(identity.superuser, false); assert.equal(forbidden, 0); assert.equal(tables.length, 4);
   const result = { task: 'PV-006-C-01', status: 'PASSED', identity, tables, constraints, forbiddenTimezoneTypes: forbidden };
   await writeFile(`${directory}/catalog.json`, JSON.stringify(result, null, 2), { flag: 'wx' });

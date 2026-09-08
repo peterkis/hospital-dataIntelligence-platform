@@ -30,9 +30,10 @@ try {
   assert.equal(endpoint.hostname, '127.0.0.1', 'C02_LOCAL_ENDPOINT_REQUIRED');
   assert.equal(endpoint.port, '55434', 'C02_LOCAL_ENDPOINT_REQUIRED');
   const identity = await assignmentSemanticDatabaseIdentity(handle.database);
-  assert.match(identity.database, /^(hdi_prototype|pv006_c0(?:2|301|302)_[a-f0-9]{32})$/u);
+  assert.match(identity.database, /^(hdi_prototype|pv006_c0(?:2|4|301|302)_[a-f0-9]{32})$/u);
+  if (identity.database.startsWith('pv006_c04_')) await (await import('./person-assignment-temporary-fixture-guard.js')).requireTemporaryFixtureTarget(handle.database, 'SHARED_DEFINITION_MUTATION');
   assert.equal(identity.role, 'hdi_prototype');
-  assert.equal(identity.migrations, 38);
+  assert.equal(identity.migrations, 39);
   // Dynamic import makes the original missing capability an actual retained RED.
   const { createAssignmentSemanticsApplication } = await import('../../apps/governance-api/src/composition/create-assignment-semantics-application.js');
   const f = await createAssignmentFixture(handle.database, runId);

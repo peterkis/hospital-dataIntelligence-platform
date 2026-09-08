@@ -6,7 +6,7 @@ import type { AuditEventService } from '../audit/index.js';
 import { assertClosedObject, assertPersonUuid } from './contracts.js';
 import { assignmentPeriodCovered } from './assignment-contracts.js';
 import { temporalKey } from './engagement-rule-segments.js';
-import { ASSIGNMENT_MODES, ASSIGNMENT_PURPOSES, type AssignmentSemanticTermVersion,
+import { ASSIGNMENT_KNOWN_MODES, ASSIGNMENT_PURPOSES, type AssignmentSemanticTermVersion,
   type AssignmentSemanticsApplication, type RegisterAssignmentSemanticTerm, type AppendAssignmentSemanticTermVersion,
 } from './assignment-semantics-contracts.js';
 
@@ -14,7 +14,7 @@ type Row = Selectable<DB['person_master.assignment_semantic_term_version']>;
 type DefinitionApplication = Pick<AssignmentSemanticsApplication, 'registerAssignmentSemanticTerm' | 'appendAssignmentSemanticTermVersion'
   | 'getAssignmentSemanticTermVersion' | 'findAssignmentSemanticTermAsOf'>;
 export function assignmentTermResult(row: Row): AssignmentSemanticTermVersion {
-  const code = [...ASSIGNMENT_PURPOSES,...ASSIGNMENT_MODES].find(c => c===row.code);
+  const code = [...ASSIGNMENT_PURPOSES,...ASSIGNMENT_KNOWN_MODES].find(c => c===row.code);
   if (!code || (row.dimension!=='PURPOSE' && row.dimension!=='MODE') ||
     (row.definition_state!=='ENABLED' && row.definition_state!=='RETIRED')) throw new Error('ASSIGNMENT_TERM_INVALID');
   return { governanceObjectId: row.governance_object_id, termId: row.term_id, termVersionId: row.term_version_id,
@@ -25,8 +25,8 @@ export function assignmentTermResult(row: Row): AssignmentSemanticTermVersion {
 export function validateAssignmentTermIdentity(dimension: string, code: string): void {
   if (dimension!=='PURPOSE' && dimension!=='MODE') throw new Error('ASSIGNMENT_TERM_WRONG_DIMENSION');
   if (dimension==='PURPOSE' && !ASSIGNMENT_PURPOSES.some(c=>c===code))
-    throw new Error(ASSIGNMENT_MODES.some(c=>c===code) ? 'ASSIGNMENT_TERM_WRONG_DIMENSION' : 'ASSIGNMENT_UNKNOWN_PURPOSE');
-  if (dimension==='MODE' && !ASSIGNMENT_MODES.some(c=>c===code))
+    throw new Error(ASSIGNMENT_KNOWN_MODES.some(c=>c===code) ? 'ASSIGNMENT_TERM_WRONG_DIMENSION' : 'ASSIGNMENT_UNKNOWN_PURPOSE');
+  if (dimension==='MODE' && !ASSIGNMENT_KNOWN_MODES.some(c=>c===code))
     throw new Error(ASSIGNMENT_PURPOSES.some(c=>c===code) ? 'ASSIGNMENT_TERM_WRONG_DIMENSION' : 'ASSIGNMENT_MODE_NOT_SUPPORTED_IN_SLICE');
 }
 export function createAssignmentSemanticDefinitionModule(database: Transaction<DB>, context: RequestContext,

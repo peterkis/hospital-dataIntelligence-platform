@@ -95,6 +95,9 @@ export function createAssignmentTransferModule(database: Transaction<DB>, contex
       const source = await database.selectFrom('person_master.assignment').selectAll()
         .where('governance_object_id', '=', governanceObjectId).where('assignment_id', '=', command.sourceAssignmentId).forUpdate().executeTakeFirst();
       if (!source) throw new Error('ASSIGNMENT_NOT_FOUND');
+      if (await database.selectFrom('person_master.assignment_temporary_source').select('target_assignment_id')
+        .where('target_assignment_id', '=', source.assignment_id).executeTakeFirst())
+        return reject(command, hash, 'ASSIGNMENT_TEMPORARY_REVISION_NOT_SUPPORTED_IN_SLICE');
       const prior = await database.selectFrom('person_master.assignment_version').selectAll()
         .where('assignment_id', '=', source.assignment_id).orderBy('version_no', 'desc').limit(1).executeTakeFirstOrThrow();
       if (prior.evidence_kind === 'CLOSURE') return reject(command, hash, 'ASSIGNMENT_ALREADY_CLOSED');
