@@ -6,7 +6,7 @@ import { createAuditModule } from '../modules/audit/index.js';
 import { createAuthorizationModule, type ObjectPermissionCode } from '../modules/authorization/index.js';
 import { createDepartmentPlacementReferenceScope, type DepartmentPlacementReferenceReader } from '../modules/department-master/index.js';
 import { createAssignmentCoreModule, createEngagementEffectivePeriodScope, createClassifiedAssignmentEngagementPin,
-  createAssignmentSemanticDefinitionModule, createAssignmentEngagementIdentityReader, createAssignmentClosureEngagementPin,
+  createAssignmentSemanticDefinitionModule, createAssignmentEngagementIdentityReader, createAssignmentClosureEngagementPin, createAssignmentEffectivePeriodScope,
   type AssignmentCoreApplication, type AssignmentCoreModule, type EngagementEffectivePeriodReader,
   type AssignmentDependencies, createAssignmentTransferModule, ASSIGNMENT_TRANSFER_CHILD_PREFIX,
 } from '../modules/person-master/index.js';
@@ -78,6 +78,7 @@ export async function createAssignmentScope(database: Transaction<DB>, context: 
     authorizeSemantics, assignment,
     transfer: createAssignmentTransferModule(database, context, createAuditModule(database, context), dependencies, assignment, privateStep),
     temporary: assignment.temporary,
+    effectivePeriod: createAssignmentEffectivePeriodScope(database, dependencies, assignment),
   };
 }
 

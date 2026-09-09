@@ -32,6 +32,7 @@ Immutable Version Core task at authority HEAD
 | PV-006-C-03-01 | Assignment End & Historical Closure | DONE effective on the sole reviewed local completion commit |
 | PV-006-C-03-02 | Atomic transfer | DONE effective on the sole R1-reviewed local commit; two accepted historical deviations |
 | PV-006-C-04 | Source-linked temporary assignment, SECONDMENT only | DONE effective only on the sole independently reviewed local completion commit |
+| PV-006-C-05 | Assignment effective period context and consumer read contract | DONE effective only on the sole independently reviewed local completion commit |
 | PV-006-D | Assignment Role | NOT_STARTED |
 | PV-006-E | Credential | NOT_STARTED |
 | PV-006-F | Projection / Release / Consumer | NOT_STARTED |
@@ -42,6 +43,22 @@ placement, roles, credentials, identifiers, accounts and patient identities are
 separate authorities. Matching names or dates never authorize a merge.
 
 ## Comments
+
+2026-09-09 C05: single-window read contract implemented with latest complete
+Assignment selection, exact uncovered periods, frozen semantics/original refs,
+bounded ordinary/SECONDMENT window dependencies, one RR observation and separate
+RC sensitive-read audit. No DDL or role/new-Mode write capability is added.
+Current retained 9 PASS + 1 scoped skip and same-source owned fresh 12 PASS,
+old SECONDMENT 46 groups, all 31 A/B/C/platform/regression gates, 39 migrations /
+91 tables, real restart with 29 cold-read vectors, nine bad-receipt refusals and
+original-row/definition/audit protection have passed. Detailed design is
+`docs/design/person-assignment-effective-period-context.md`; current evidence
+coordinator is `.runtime/pv006-c05/5352527e-95be-4099-b08b-9bae21f7f6f8/`.
+The 64-row matrix, original/supplemental RED, failure history, source equality,
+final independent review and unique local commit facts are indexed in
+`.runtime/pv006-c05/initial-20260909/`. DONE activates only from the actual
+same-tree review and sole commit. C/PV-006 remain IN_PROGRESS; other C extensions
+and D-G remain NOT_STARTED; NEXT_PHASE_EXECUTION_AUTHORIZED=NO. No push.
 
 2026-09-08 C04 controlled completion: retained 33 PASS + 3 SKIPPED_BY_SCOPE is
 paired with final owned fresh 46 PASS; all 31 current scoped regression/check

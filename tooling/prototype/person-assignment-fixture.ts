@@ -49,8 +49,8 @@ export async function createAssignmentFixture(database: Kysely<DB>, runId: strin
   const runner = createTransactionRunner(database, (tx, ctx) => createScopedModules(tx, ctx, database));
   const workflow = createWorkflowApplication(runner);
   const queryService = createDepartmentQueryService(database, createCampusReferenceReader(database));
-  const deptApp = async (principal: string) => createDepartmentGovernanceApplication({
-    context: { ...context(principal), occurredAt: (await now()).slice(0, 19) }, transactionRunner: runner, workflowApplication: workflow, queryService });
+  const deptApp = async (principal: string, recordedFrom?: string) => createDepartmentGovernanceApplication({
+    context: { ...context(principal), occurredAt: recordedFrom ?? (await now()).slice(0, 19) }, transactionRunner: runner, workflowApplication: workflow, queryService });
   async function createDepartment(label: string, publish = true, end: string | null = null) {
     const app = await deptApp(PROTOTYPE_FIXTURE.actorPrincipalId);
     const draft = await app.execute({ commandName: 'CreateDepartmentDraft', ...departmentScope,
@@ -63,16 +63,16 @@ export async function createAssignmentFixture(database: Kysely<DB>, runId: strin
     if (publish) await publishDepartment(draft);
     return draft;
   }
-  async function publishDepartment(draft: { departmentId: string; departmentVersionId: string; contentHash: string }) {
-    const submitted = await (await deptApp(PROTOTYPE_FIXTURE.actorPrincipalId)).execute({
+  async function publishDepartment(draft: { departmentId: string; departmentVersionId: string; contentHash: string }, recordedFrom?: string) {
+    const submitted = await (await deptApp(PROTOTYPE_FIXTURE.actorPrincipalId, recordedFrom)).execute({
       commandName: 'SubmitDepartmentGovernance', ...departmentScope, ...draft,
       expectedContentHash: draft.contentHash, changeReason: 'SYNTHETIC C01 TEST PUBLICATION' });
     assert.ok(submitted.governanceRequestId);
     const reference = { ...departmentScope, departmentId: draft.departmentId, departmentVersionId: draft.departmentVersionId,
       governanceRequestId: submitted.governanceRequestId, seenContentHash: draft.contentHash,
       decision: 'APPROVED' as const, reason: 'SYNTHETIC C01 TEST PUBLICATION' };
-    await (await deptApp(PROTOTYPE_FIXTURE.reviewerPrincipalId)).execute({ commandName: 'ReviewDepartment', ...reference });
-    return (await deptApp(PROTOTYPE_FIXTURE.approverPrincipalId)).execute({ commandName: 'ApproveDepartment', ...reference });
+    await (await deptApp(PROTOTYPE_FIXTURE.reviewerPrincipalId, recordedFrom)).execute({ commandName: 'ReviewDepartment', ...reference });
+    return (await deptApp(PROTOTYPE_FIXTURE.approverPrincipalId, recordedFrom)).execute({ commandName: 'ApproveDepartment', ...reference });
   }
   async function reviseDepartment(departmentId: string, status: DepartmentBusinessStatus = 'ACTIVE',
     name = 'SYNTHETIC C01 RENAMED', end: string | null = null, publish = true) {

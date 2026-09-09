@@ -50,6 +50,51 @@ export async function assessTemporaryDependencies(database: Transaction<DB>, dep
   const latestTarget = await database.selectFrom('person_master.assignment_version').select('assignment_version_id')
     .where('assignment_id', '=', query.targetAssignmentId).where('recorded_from', '<=', query.recordAsOf)
     .orderBy('version_no', 'desc').limit(1).executeTakeFirstOrThrow();
+  const evaluated = await evaluateTemporaryAssignmentWindow(database, dependencies, core, query, link,
+    { from: target.businessValidFrom, to: target.businessValidTo });
+  const { componentResults: components, observedSourceEvidence, reasons, constraintResult } = evaluated;
+  const { sourceVersion, sourceSemantics, engagement, sourceDepartment, targetDepartment, candidates: others } = observedSourceEvidence;
+  const baselineRefs = {
+    sourceVersion: link.sourceAssignmentVersionId, sourceSemantic: link.sourceSemanticFingerprint,
+    engagementVersion: admission.acceptanceEvidence.engagement.authorityEngagementVersionId,
+    lifecycleSequence: admission.acceptanceEvidence.engagement.recordVisibleLifecycleSequence,
+    sourceDepartmentVersion: link.sourceWindowValidationEvidence.sourceDepartment.departmentVersionId,
+    targetDepartmentVersion: admission.acceptanceEvidence.department.departmentVersionId,
+    candidates: link.sourcePrimaryEvaluationEvidence.candidates,
+  };
+  const currentRefs = {
+    sourceVersion: sourceVersion?.assignmentVersionId, sourceSemantic: semanticFingerprint(sourceSemantics),
+    engagementVersion: engagement?.authorityEngagementVersionId, lifecycleSequence: engagement?.recordVisibleLifecycleSequence,
+    sourceDepartmentVersion: sourceDepartment?.departmentVersionId, targetDepartmentVersion: targetDepartment?.departmentVersionId,
+    candidates: others,
+  };
+  const comparable = sourceVersion && sourceSemantics?.classification === 'CLASSIFIED' && engagement && sourceDepartment && targetDepartment && others;
+  const referenceComparison = !comparable ? 'NOT_COMPARABLE' : canonicalSha256(normalize(baselineRefs)).equals(canonicalSha256(normalize(currentRefs)))
+    ? 'UNCHANGED' : 'CHANGED';
+  const result: TemporaryAssignmentAssessment = { semanticRole: 'SOURCE_LINKED_TEMPORARY_ASSIGNMENT_ASSESSMENT', evaluatedAssignmentVersionId: query.assignmentVersionId,
+    assessedRecordAsOf: query.recordAsOf, isLatestAssignmentVersionAsOf: latestTarget.assignment_version_id === query.assignmentVersionId,
+    referenceComparison, constraintResult, componentResults: components, baselineSourceEvidence: link,
+    observedSourceEvidence, reasons: [...new Set(reasons)] };
+  if (Buffer.byteLength(JSON.stringify(result), 'utf8') <= 65536) return result;
+  // Do not return an apparently complete SATISFIED result after dropping evidence.
+  // Keep its immutable basis and explicitly report that this bounded comparison
+  // cannot be represented; no business fact or repair action is written.
+  const bounded: TemporaryAssignmentAssessment = { ...result, referenceComparison: 'NOT_COMPARABLE', constraintResult: 'UNKNOWN',
+    componentResults: { sourceDeclaration: 'UNKNOWN', sourcePrimary: 'UNKNOWN', engagement: 'UNKNOWN',
+      sourceDepartment: 'UNKNOWN', targetDepartment: 'UNKNOWN', temporaryOverlap: 'UNKNOWN' },
+    observedSourceEvidence: { sourceVersion: null, sourceSemantics: null, engagement: null,
+      sourceDepartment: null, targetDepartment: null, candidates: null }, reasons: ['ASSIGNMENT_TEMPORARY_EVALUATION_LIMIT'] };
+  if (Buffer.byteLength(JSON.stringify(bounded), 'utf8') > 65536) throw new Error('ASSIGNMENT_TEMPORARY_EVALUATION_LIMIT');
+  return bounded;
+}
+
+/** Owner-private evaluation of a selected immutable target over an explicit window.
+ * No version object or immutable link is changed to represent the subwindow. */
+export async function evaluateTemporaryAssignmentWindow(database: Transaction<DB>, dependencies: AssignmentDependencies,
+  core: Pick<AssignmentCoreModule, 'readAssignmentVersionSnapshot'>,
+  query: Parameters<TemporaryAssignmentApplication['assessTemporaryAssignmentDependencies']>[0],
+  link: TemporaryAssignmentAssessment['baselineSourceEvidence'],
+  window: { readonly from: string; readonly to: string }) {
   const components: Record<keyof TemporaryAssignmentAssessment['componentResults'], TemporaryConstraintResult> = {
     sourceDeclaration: 'UNKNOWN', sourcePrimary: 'UNKNOWN', engagement: 'UNKNOWN',
     sourceDepartment: 'UNKNOWN', targetDepartment: 'UNKNOWN', temporaryOverlap: 'UNKNOWN',
@@ -74,7 +119,7 @@ export async function assessTemporaryDependencies(database: Transaction<DB>, dep
     if (sourceSemantics.classification === 'CLASSIFIED') {
       const qualifies = sourceSemantics.mode.code === 'PRIMARY_AFFILIATION'
         && sourceSemantics.purpose.code === link.preservedPurposeCode
-        && assignmentPeriodCovered(sourceVersion.businessValidFrom, sourceVersion.businessValidTo, target.businessValidFrom, target.businessValidTo);
+        && assignmentPeriodCovered(sourceVersion.businessValidFrom, sourceVersion.businessValidTo, window.from, window.to);
       components.sourceDeclaration = qualifies ? 'SATISFIED' : 'NOT_SATISFIED';
       if (!qualifies) reasons.push('ASSIGNMENT_TEMPORARY_SOURCE_DECLARATION_NOT_SATISFIED');
     } else reasons.push('ASSIGNMENT_TEMPORARY_SOURCE_SEMANTICS_UNKNOWN');
@@ -84,19 +129,19 @@ export async function assessTemporaryDependencies(database: Transaction<DB>, dep
     link.engagementId, query.recordAsOf, query.targetAssignmentId));
   const others = candidates?.filter(candidate => candidate.assignmentId !== link.sourceAssignmentId) ?? null;
   if (others) {
-    const primary = evaluateAssignmentPrimary({ businessValidFrom: target.businessValidFrom, businessValidTo: target.businessValidTo,
+    const primary = evaluateAssignmentPrimary({ businessValidFrom: window.from, businessValidTo: window.to,
       purposeCode: link.preservedPurposeCode, modeCode: 'PRIMARY_AFFILIATION' }, others);
     components.sourcePrimary = components.sourceDeclaration === 'UNKNOWN' ? 'UNKNOWN' :
       components.sourceDeclaration !== 'SATISFIED' || primary.result === 'ASSIGNMENT_PRIMARY_AFFILIATION_CONFLICT' ? 'NOT_SATISFIED' :
         primary.result === 'ASSIGNMENT_PRIMARY_CLASSIFICATION_INCOMPLETE' ? 'UNKNOWN' : 'SATISFIED';
     if (primary.result !== 'SATISFIED') reasons.push(primary.result);
     const collision = others.some(candidate => candidate.modeCode === 'SECONDMENT' && candidate.purposeCode === link.preservedPurposeCode
-      && temporaryOverlaps(target.businessValidFrom, target.businessValidTo!, candidate));
+      && temporaryOverlaps(window.from, window.to, candidate));
     components.temporaryOverlap = collision ? 'NOT_SATISFIED' : 'SATISFIED';
     if (collision) reasons.push('ASSIGNMENT_TEMPORARY_OVERLAP_CONFLICT');
   }
   const engagement = await observe(() => dependencies.engagement.getEngagementEffectivePeriodAsOf({ governanceObjectId: query.governanceObjectId,
-    engagementId: link.engagementId, requestedFrom: target.businessValidFrom, requestedTo: target.businessValidTo, recordAsOf: query.recordAsOf }));
+    engagementId: link.engagementId, requestedFrom: window.from, requestedTo: window.to, recordAsOf: query.recordAsOf }));
   if (engagement) {
     const reason = assignmentEngagementConstraint(engagement);
     components.engagement = reason === null ? 'SATISFIED' : reason === 'ASSIGNMENT_ENGAGEMENT_SUSPENSION_REVIEW_REQUIRED'
@@ -109,7 +154,7 @@ export async function assessTemporaryDependencies(database: Transaction<DB>, dep
       departmentGovernanceObjectId: placement.departmentGovernanceObjectId, departmentId: placement.departmentId, recordAsOf: query.recordAsOf }));
     if (observed) {
       const satisfied = observed.businessStatus === 'ACTIVE'
-        && assignmentPeriodCovered(observed.businessValidFrom, observed.businessValidTo, target.businessValidFrom, target.businessValidTo);
+        && assignmentPeriodCovered(observed.businessValidFrom, observed.businessValidTo, window.from, window.to);
       components[which] = satisfied ? 'SATISFIED' : 'NOT_SATISFIED';
       if (!satisfied) reasons.push(which === 'sourceDepartment' ? 'ASSIGNMENT_TEMPORARY_SOURCE_DEPARTMENT_NOT_SATISFIED' : 'ASSIGNMENT_PLACEMENT_PERIOD_NOT_COVERED');
     }
@@ -118,39 +163,8 @@ export async function assessTemporaryDependencies(database: Transaction<DB>, dep
   const sourceDepartment = await department('sourceDepartment'), targetDepartment = await department('targetDepartment');
   const observedSourceEvidence: TemporarySourceObservation = { sourceVersion, sourceSemantics, engagement, sourceDepartment,
     targetDepartment, candidates: others };
-  const baselineRefs = {
-    sourceVersion: link.sourceAssignmentVersionId, sourceSemantic: link.sourceSemanticFingerprint,
-    engagementVersion: admission.acceptanceEvidence.engagement.authorityEngagementVersionId,
-    lifecycleSequence: admission.acceptanceEvidence.engagement.recordVisibleLifecycleSequence,
-    sourceDepartmentVersion: link.sourceWindowValidationEvidence.sourceDepartment.departmentVersionId,
-    targetDepartmentVersion: admission.acceptanceEvidence.department.departmentVersionId,
-    candidates: link.sourcePrimaryEvaluationEvidence.candidates,
-  };
-  const currentRefs = {
-    sourceVersion: sourceVersion?.assignmentVersionId, sourceSemantic: semanticFingerprint(sourceSemantics),
-    engagementVersion: engagement?.authorityEngagementVersionId, lifecycleSequence: engagement?.recordVisibleLifecycleSequence,
-    sourceDepartmentVersion: sourceDepartment?.departmentVersionId, targetDepartmentVersion: targetDepartment?.departmentVersionId,
-    candidates: others,
-  };
-  const comparable = sourceVersion && sourceSemantics?.classification === 'CLASSIFIED' && engagement && sourceDepartment && targetDepartment && others;
-  const referenceComparison = !comparable ? 'NOT_COMPARABLE' : canonicalSha256(normalize(baselineRefs)).equals(canonicalSha256(normalize(currentRefs)))
-    ? 'UNCHANGED' : 'CHANGED';
   const results = Object.values(components);
-  const constraintResult = results.includes('NOT_SATISFIED') ? 'NOT_SATISFIED' : results.includes('REVIEW_REQUIRED') ? 'REVIEW_REQUIRED'
-    : results.includes('UNKNOWN') ? 'UNKNOWN' : 'SATISFIED';
-  const result: TemporaryAssignmentAssessment = { semanticRole: 'SOURCE_LINKED_TEMPORARY_ASSIGNMENT_ASSESSMENT', evaluatedAssignmentVersionId: query.assignmentVersionId,
-    assessedRecordAsOf: query.recordAsOf, isLatestAssignmentVersionAsOf: latestTarget.assignment_version_id === query.assignmentVersionId,
-    referenceComparison, constraintResult, componentResults: components, baselineSourceEvidence: link,
-    observedSourceEvidence, reasons: [...new Set(reasons)] };
-  if (Buffer.byteLength(JSON.stringify(result), 'utf8') <= 65536) return result;
-  // Do not return an apparently complete SATISFIED result after dropping evidence.
-  // Keep its immutable basis and explicitly report that this bounded comparison
-  // cannot be represented; no business fact or repair action is written.
-  const bounded: TemporaryAssignmentAssessment = { ...result, referenceComparison: 'NOT_COMPARABLE', constraintResult: 'UNKNOWN',
-    componentResults: { sourceDeclaration: 'UNKNOWN', sourcePrimary: 'UNKNOWN', engagement: 'UNKNOWN',
-      sourceDepartment: 'UNKNOWN', targetDepartment: 'UNKNOWN', temporaryOverlap: 'UNKNOWN' },
-    observedSourceEvidence: { sourceVersion: null, sourceSemantics: null, engagement: null,
-      sourceDepartment: null, targetDepartment: null, candidates: null }, reasons: ['ASSIGNMENT_TEMPORARY_EVALUATION_LIMIT'] };
-  if (Buffer.byteLength(JSON.stringify(bounded), 'utf8') > 65536) throw new Error('ASSIGNMENT_TEMPORARY_EVALUATION_LIMIT');
-  return bounded;
+  const constraintResult = results.includes('NOT_SATISFIED') ? 'NOT_SATISFIED' as const : results.includes('REVIEW_REQUIRED') ? 'REVIEW_REQUIRED' as const
+    : results.includes('UNKNOWN') ? 'UNKNOWN' as const : 'SATISFIED' as const;
+  return { componentResults: components, observedSourceEvidence, reasons, constraintResult };
 }

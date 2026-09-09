@@ -15,6 +15,16 @@
     "tooling/*"
   ],
   "scripts": {
+    "test:person:assignment-effective:initial": "node --import tsx --test tooling/prototype/person-assignment-effective-initial.test.ts",
+    "prototype:person:assignment-effective:preserve": "node tooling/prototype/person-assignment-effective-preservation.mjs",
+    "prototype:person:assignment-effective:validate": "node --import tsx tooling/prototype/person-assignment-effective-application-probe.ts",
+    "test:person:assignment-effective:contract": "node --import tsx --test tooling/prototype/person-assignment-effective-contract.test.ts",
+    "test:person:assignment-effective:review": "node --import tsx --test tooling/prototype/person-assignment-effective-review-audit.test.ts",
+    "prototype:person:assignment-effective:fresh": "node --import tsx tooling/prototype/person-assignment-temporary-fresh-install.mjs --effective-period",
+    "prototype:person:assignment-effective:fresh-focused": "node --import tsx tooling/prototype/person-assignment-temporary-fresh-install.mjs --effective-focused",
+    "prototype:person:assignment-effective:recover": "node --import tsx tooling/prototype/person-assignment-effective-recovery-probe.ts --recover",
+    "prototype:person:assignment-effective:restart": "node tooling/prototype/person-assignment-effective-restart.mjs",
+    "prototype:person:assignment-effective:all": "node tooling/prototype/person-assignment-effective-validation-run.mjs",
     "prototype:person:assignment-temporary:initial": "node --env-file-if-exists=.env.prototype.local --import tsx --test tooling/prototype/person-assignment-temporary-initial.test.mjs",
     "prototype:person:assignment-temporary:preserve": "node --env-file-if-exists=.env.prototype.local tooling/prototype/person-assignment-temporary-preservation.mjs",
     "test:assignment-temporary-fixture": "node --import tsx --test tooling/prototype/person-assignment-temporary-fixture-guard.test.ts",

@@ -9,7 +9,8 @@ import { validateTemporaryFreshAuthority } from './person-assignment-temporary-f
 import { normalizeSchemaManifest } from './person-engagement-temporal-schema.mjs';
 
 const mode = process.argv[2];
-assert.ok(process.argv.length === 3 && ['--development', '--full', '--sql-only', '--regression'].includes(mode), 'C04_FRESH_MODE_REQUIRED');
+assert.ok(process.argv.length === 3 && ['--development', '--full', '--sql-only', '--regression', '--effective-period', '--effective-focused'].includes(mode), 'C04_FRESH_MODE_REQUIRED');
+const effectivePeriod = mode === '--effective-period' || mode === '--effective-focused';
 assert.ok(process.env.DATABASE_URL, 'C04_MANAGED_DATABASE_REQUIRED');
 const sourceUrl = new URL(process.env.DATABASE_URL);
 assert.equal(sourceUrl.hostname, '127.0.0.1'); assert.equal(sourceUrl.port, '55434');
@@ -30,7 +31,7 @@ try {
     pg_postmaster_start_time()::text as started_at,(select count(*)::int from platform.schema_migration) as migrations`)).rows[0];
   const migrations = (await readdir('db/migrations')).filter(name => /^\d{4}_.+\.sql$/u.test(name)).sort();
   assert.equal(migrations.length, 39);
-  assert.ok(source.migrations === 39 || (mode !== '--full' && source.migrations === 38), 'C04_RETAINED_MIGRATION_DRIFT');
+  assert.ok(source.migrations === 39 || (mode !== '--full' && !effectivePeriod && source.migrations === 38), 'C04_RETAINED_MIGRATION_DRIFT');
   const admin = JSON.parse(peer(`select json_build_object('role',current_user,'started_at',pg_postmaster_start_time()::text,
     'can_create',rolcreatedb or rolsuper,'app_createdb',(select rolcreatedb from pg_roles where rolname='hdi_prototype'),
     'app_superuser',(select rolsuper from pg_roles where rolname='hdi_prototype')) from pg_roles where rolname=current_user;`));
@@ -42,6 +43,7 @@ try {
   const identity = JSON.parse(peer(`select json_build_object('name',datname,'oid',oid::text,'owner',pg_get_userbyid(datdba))
     from pg_database where datname='${databaseName}';`));
   receipt = { task: 'PV-006-C-04', runId, mode: 'FRESH_INSTALL', databaseName, identity, endpoint,
+    ...(effectivePeriod ? { consumerTask: 'PV-006-C-05' } : {}),
     createdByPeerRole: admin.role, baselineCommit: result.baselineCommit, sourceDatabase: source.database, sourceStartedAt: source.started_at };
   validateTemporaryFreshAuthority({ database: databaseName, ...identity, role: 'hdi_prototype', createdb: false, superuser: false, endpoint }, receipt);
   receiptBytes = JSON.stringify(receipt, null, 2);
@@ -60,7 +62,7 @@ try {
   const generated = resolve(mode === '--development' ? 'apps/governance-api/src/platform/database/database-types.generated.ts'
     : `${directory}/database-types.generated.ts`);
   child('generated-types', ['node_modules/kysely-codegen/dist/cli/bin.js', '--config-file', 'apps/governance-api/kysely-codegen.json', '--out-file', generated]);
-  if (mode === '--full') {
+  if (mode === '--full' || effectivePeriod) {
     assert.equal((await readFile(generated, 'utf8')).replaceAll('\r\n','\n'),
       (await readFile('apps/governance-api/src/platform/database/database-types.generated.ts','utf8')).replaceAll('\r\n','\n'));
     result.generatedTypesEquivalent = true;
@@ -78,7 +80,15 @@ try {
   child('person-seed', ['--import', 'tsx', 'tooling/prototype/person-assignment-temporary-fresh-seed.ts']);
   child('missing-definition', ['--import','tsx','tooling/prototype/person-assignment-temporary-missing-definition-probe.ts']);
   child('initial-behavior', ['--import', 'tsx', '--test', 'tooling/prototype/person-assignment-temporary-initial.test.mjs']);
-  if (mode === '--regression') {
+  if (effectivePeriod) {
+    child('effective-initial', ['--import','tsx','--test','tooling/prototype/person-assignment-effective-initial.test.ts']);
+    child('effective-contract', ['--import','tsx','--test','tooling/prototype/person-assignment-effective-contract.test.ts']);
+    child('effective-focused', ['--import','tsx','tooling/prototype/person-assignment-effective-application-probe.ts']);
+    if (mode === '--effective-period') {
+      child('legacy-temporary-focused', ['--import','tsx','tooling/prototype/person-assignment-temporary-application-probe.ts']);
+      child('full-regressions', ['--import','tsx','tooling/prototype/person-assignment-temporary-regressions.mjs']);
+    }
+  } else if (mode === '--regression') {
     child('full-regressions', ['--import','tsx','tooling/prototype/person-assignment-temporary-regressions.mjs']);
   } else if (mode === '--sql-only') {
     child('focused-sql', ['--import','tsx','tooling/prototype/person-assignment-temporary-application-probe.ts','--sql']);

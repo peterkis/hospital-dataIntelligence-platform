@@ -9,6 +9,7 @@ import type { EngagementEffectivePeriodReader } from './engagement-effective-per
 import { temporalKey } from './engagement-rule-segments.js';
 import { assertClosedObject, assertPersonUuid } from './contracts.js';
 import { assertAssignmentAdmissionRow } from './assignment-admission-row.js';
+import { evaluateOrdinaryAssignmentWindow } from './assignment-dependency-window.js';
 import { appendAssignmentClosure, readAssignmentClosureVersion } from './assignment-closure-store.js';
 import { validateAssignmentEnd, assignmentEndConstraint,
   type AssignmentClosureApplication, type AssignmentClosureVersion, type EndAssignment } from './assignment-closure-contracts.js';
@@ -575,8 +576,13 @@ export function createAssignmentCoreModule(database: Transaction<DB>, context: R
         .orderBy('version_no', 'desc').limit(1).executeTakeFirstOrThrow();
       let observed: AssignmentDependencyEvidence | null = null, reason: string | null = null;
       try {
-        observed = await observe(query.governanceObjectId, relation.engagement_id, placement(relation),
-          row.business_valid_from, row.business_valid_to, query.recordAsOf);
+        const sources = await evaluateOrdinaryAssignmentWindow(dependencies, baseline, relation.engagement_id, placement(relation),
+          { from: baseline.businessValidFrom, to: baseline.businessValidTo }, query.recordAsOf);
+        if (!sources.engagement || !sources.department) throw new Error('ASSIGNMENT_DEPENDENCY_UNKNOWN');
+        const evidence = { validationPolicyCode: ASSIGNMENT_POLICY, evaluationRecordAsOf: query.recordAsOf,
+          engagement: sources.engagement, department: sources.department };
+        if (Buffer.byteLength(JSON.stringify(evidence)) > 65536) throw new Error('ASSIGNMENT_DEPENDENCY_EVALUATION_LIMIT');
+        observed = { ...evidence, dependencyFingerprint: fingerprint(evidence) };
         reason = constraint(observed);
       } catch (error) {
         if (!(error instanceof Error) || !TERMINAL.has(error.message)) throw error;

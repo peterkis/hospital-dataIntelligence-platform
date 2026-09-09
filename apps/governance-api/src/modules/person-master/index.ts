@@ -31,3 +31,6 @@ export { createAssignmentTransferModule } from './assignment-transfer-store.js';
 export * from './assignment-temporary-contracts.js';
 export * from './assignment-semantics-contracts.js';
 export { createAssignmentSemanticDefinitionModule } from './assignment-semantic-definitions.js';
+export type { AssignmentEffectivePeriodQuery, AssignmentEffectivePeriodContext, AssignmentEffectivePeriodReader } from './assignment-effective-period-contracts.js';
+export { createAssignmentEffectivePeriodScope } from './assignment-effective-period-reader.js';
+export { validateAssignmentEffectivePeriodQuery } from './assignment-effective-period-contracts.js';
