@@ -1,7 +1,10 @@
 node_modules/
 dist/
+dist-prototype/
 .runtime/
 coverage/
 playwright-report/
 test-results/
 *.log
+.env.prototype.local
+/demo-ready-report.json

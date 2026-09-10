@@ -6,9 +6,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "run-once": "tsx src/main.ts",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hospital-data-intelligence/generated-api-client": "0.0.0"
+    "@hospital-data-intelligence/generated-api-client": "0.0.0",
+    "@hospital-data-intelligence/release-consumer-sdk": "0.0.0"
   }
 }

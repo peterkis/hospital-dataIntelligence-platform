@@ -4,7 +4,9 @@
 
 容量环境补充状态：ADR-0110已确认本机WSL2 Anolis OS 8.9独占运行环境及环境门禁；当前初始化回执不是容量证据运行。
 
-更新日期：2026-08-08
+容器运行时补充状态：ADR-0111已确认rootful Podman为唯一现行容器运行时；AR-11进一步把唯一机器可读运行权威收敛到`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`（`schemaVersion: 3`、`authorityId: phase-01.podman-runtime-authority.v1`）。受管容器只用host network和冻结回环端口，Docker/Compose不再进入执行路径。AR-11只建立代码、协议和合成测试就绪，不等于当前真实Anolis/Podman环境验收。
+
+更新日期：2026-09-02
 
 ## 1. 目标与适用范围
 
@@ -68,7 +70,11 @@ flowchart LR
 19. 完整POC容量证据必须成对保存前置可行性实验与集成后真实链路核验；两者使用完全相同的画像身份及版本、环境、方法和阈值并记录差异。前置装置不是业务API、正式DDL、运行时依赖或最终验收权威；集成后阶段必须调用实际`release-distribution`和冻结公共下载API。核验失败不得换画像、择优或静默放宽，任何上限调整须有新证据和新ADR。
 20. 容量画像生成器及矩阵编排只属于既有TypeScript验证工具链中的确定性fixture资产，不是业务领域、数据库实体、公共契约、管理界面能力、独立应用、workspace或共享包。矩阵固定包含`F00`、`N10`、`N30`、`N50`、`N100`、`W50`和`E50`，最终CSV数据行数分别为24、10,000、30,000、50,000、100,000、50,000和50,000且不含表头；`F00`不参与上限推断，四个`N`画像仅改变行数，`W50`隔离行宽压力，`E50`隔离中文多字节和合法CSV转义压力。容量fixture与业务验收fixture隔离，记录必须有效、唯一、引用完整、有稳定全序且可确定转换；画像必须冻结身份/版本、投影Schema、交付配置/格式、生成器/代码摘要、种子、行数、分布及字符规则，且每个外部变长字符串必须有有限可执行最大长度。Phase 01不得预建或运行该生成器；集成后阶段必须让生成结果进入真实`release-distribution`及公共下载路径，不能保留平行容量实现。
 21. 同一容量fixture资产必须按精确输出列身份和稳定记录顺序执行ADR-0109，不得以运行时随机近似：四个`N`画像逐可选字段精确70%有值/30%冻结空值，适用非空文本精确70%/25%/5%达到冻结合法最大Unicode码点长度的20%/50%/85%；普通画像只用安全单字节基线字符，身份/代码/枚举/引用/摘要/严格模式字符串使用合法确定性生成器且排除出长度分布。`W50`全部可选字段有值，字符串目标90%且唯一后缀计入预算，非字符串采用最长合法表示，字符串保持单字节。`E50`复用`N50`逐字段非空与码点长度分布，每个适用文本字段内按稳定顺序形成纯中文、中文+ASCII、含逗号、含双引号、含逗号/双引号/LF五组各20%；适用/排除列由身份清单冻结，LF只进入多行字段，身份/代码/枚举/引用/摘要/金额/数值/日期/日期时间/布尔/不兼容模式字段排除。无合法字段、映射与Schema不一致、静默跳过或重分配必须失败关闭。字符串长度使用Unicode码点，容量只使用最终ZIP字节。该规则不形成第二生成器、业务配置或Phase 01资产。
-22. 两阶段容量证据运行前必须执行ADR-0110环境门禁：先`wsl --shutdown`，再只启动`Anolis-8.9-HDI-POC`；保存WSL版本/内核、`.wslconfig`摘要、唯一运行发行版、Anolis用户空间身份、`nproc=8`、约4 GiB `MemTotal`、空swap列表、10 GiB根块设备、systemd状态和`Asia/Shanghai`。任一其他WSL或Docker Desktop后端并发、资源配置漂移、根磁盘扩容或环境清单缺失均使该轮证据失格；不得把通过结果描述为Anolis原生内核、生产实机或内网服务器验收。
+22. 两阶段容量证据运行前必须执行ADR-0110环境门禁：先`wsl --shutdown`，再只启动`Anolis-8.9-HDI-POC`；保存WSL版本/内核、`.wslconfig`摘要、唯一运行发行版、Anolis用户空间身份、`nproc=8`、约4 GiB `MemTotal`、空swap列表、10 GiB根块设备、systemd状态和`Asia/Shanghai`。任一其他WSL、Docker Desktop、Podman Machine或其他容器后端并发，或者资源配置漂移、根磁盘扩容、环境清单缺失，均使该轮证据失格；不得把通过结果描述为Anolis原生内核、生产实机或内网服务器验收。
+23. 唯一机器可读运行权威是`phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json`的`.authority`对象。文件的`.observations`只保存一次捕获的环境、工具、镜像和迁移观察，`receipt-20260830-podman.json`只保存历史迁移回执；二者可进入provenance，但不得提供、覆盖或推断正式运行期望值。`runtimeAuthoritySha256`绑定整个权威文件字节，`runtimeAuthoritySemanticDigest`只对规范化`.authority`对象计算，二者都进入frozen inputs并在cleanup后重新核验；`podmanVersion`、`podmanSocketPath`、storage driver/graph root、OCI runtime、network backend、log driver及restart policy也只能从该authority派生并冻结。
+24. Shell启动、bootstrap和基线核验脚本必须用`jq`直接读取同一权威文件；TypeScript正式preflight、teardown、Testcontainers适配和证据协议必须通过严格schema parser读取同一文件。不得在Shell、TypeScript、环境变量、receipt或文档中维护版本、socket、镜像、端口、标签、网络、restart policy的第二份可执行硬编码权威。
+25. 所有正式验证容器，包括PostgreSQL、Keycloak和Testcontainers PostgreSQL，必须显式创建为`restart=no`并在创建后inspect实际策略。该策略阻止cleanup后自动复活，并与禁止生成systemd unit、Quadlet或auto-update持久化共同保证临时运行边界。Docker CLI、daemon、socket（包括指向Podman socket的alias）、systemd unit、进程、TCP API以及任何第二容器endpoint均失败关闭；唯一允许的兼容变量是精确`DOCKER_HOST=unix:///run/podman/podman.sock`，它只为Testcontainers提供Podman API传输兼容，不授予Docker Engine authority，`docker.io`也只是OCI registry名称。
+26. Partial startup和bootstrap失败都走相同的反向收尾：先Keycloak容器，再PostgreSQL容器，再Keycloak卷，最后PostgreSQL卷；bootstrap在runtime up后的readiness、migration、seed或schema verification失败时调用同一`down`路径。每次停止或删除前都重新inspect，只有名称属于当前namespace，且仓库、阶段、run id、run sequence、managed-by五个必需标签全部存在并与当前运行匹配时才允许变更；附加无关元数据标签不影响所有权，必需标签缺失或不一致的资源必须保留并失败关闭。所有路径只允许逐项删除，禁止`prune`和`podman system reset`。
 
 `E50`适用字段必须同时合法容纳全部五类；不允许LF的单行文本列整体排除在五组压力清单之外并保持普通内容，不能只跳过第五组或把其20%转移给其他类别。
 
@@ -77,6 +83,7 @@ flowchart LR
 | 能力 | Phase 01基线 | 版本与冻结要求 |
 |---|---|---|
 | 包管理与工作区 | npm workspaces | Node.js精确`24.18.0`、npm精确`11.9.0`、一个根`package-lock.json`，正式安装使用`npm ci` |
+| 容器运行时 | rootful Podman | 唯一权威为`runtime-baseline.lock.json`的`.authority`；精确`4.9.4-rhel`、`/run/podman/podman.sock`、`overlay`、`runc`、CNI、`k8s-file`及`restart=no`；受管容器只用host network并在进程层绑定冻结回环端口；Docker CLI/daemon/socket/TCP、Compose provider、第二endpoint、桥接网络和端口发布均不进入现行执行路径 |
 | 通用TypeScript测试 | Vitest | 首个证据基线精确固定`4.1.6`；`@vitest/coverage-v8`保持同版 |
 | Fastify模块和路由测试 | Vitest＋Fastify `inject()` | 使用实际应用构建入口，不另建测试专用业务实现 |
 | REST API场景 | Vitest＋冻结OpenAPI生成客户端 | 客户端来源摘要进入证据包 |
@@ -97,7 +104,7 @@ flowchart LR
 
 每次正式验证从受控、隔离的环境启动，并至少满足：
 
-1. PostgreSQL从空数据库执行全部权威原生SQL迁移，再生成及校验数据库派生类型；不得从预制业务数据库或人工快照起步。
+1. PostgreSQL从空数据库执行全部权威原生SQL迁移，再生成及校验数据库派生类型；不得从预制业务数据库或人工快照起步。运行时PostgreSQL绑定`127.0.0.1:55432`，Testcontainers集成PostgreSQL通过同一Podman socket以host network绑定`127.0.0.1:55433`，不得用端口NAT或第二容器后端。
 2. Keycloak使用正式版本镜像、与治理数据库分离的持久化厂商数据库和合成Realm配置，真实执行人员Authorization Code＋PKCE S256及服务Client Credentials；重启测试不得依赖内置临时数据库，不得通过测试请求头、伪造令牌或应用内假身份提供方绕过。
 3. Toxiproxy和容器生命周期只用于构造依赖延迟、超时、断连、恢复和重启，不改变平台领域结果。
 4. fixture使用固定生成版本、种子和稳定标识；不得导入真实患者、人员、费用、医嘱或消费系统数据。
@@ -218,6 +225,99 @@ Toxiproxy及Testcontainers生命周期负责验证：
 | 业务证据索引 | 请求ID、规则ID、对象及发布版本、审计、解析、Outbox、回执引用 |
 | 验证总结 | ABG或验收场景逐项结论、偏差、不在范围项和阻断项 |
 
+### 8.2.1 ABG 门禁结果协议迁移
+
+`phase-01.producer-evidence.v2` 和 `phase-01.producer-evidence-index.v2` 继续作为 producer 原始证据及其索引协议。门禁 producer 不再读取共享编排的总体 `PASSED`，也不再把共享、实时、Vitest 或 Playwright 完整文件复制到每个门禁目录。
+
+门禁结果升级为 `phase-01.abg-gate-result.v3`：每项必须记录其自身的场景和断言集合、直接关联的请求/主体/对象/版本/规则/冻结输入/制品摘要，以及每个选择器对应的相对路径、媒体类型、长度、SHA-256、producer、场景、断言、JSON Pointer 和选中 claim 摘要。结果还记录覆盖矩阵和所用 producer evidence index 的摘要。任一选择器、指针、身份引用、规则或摘要无法核验即失败关闭。
+
+正式运行总结升级为 `phase-01.abg-run.v5`，run plan及其authority分别升级为`phase-01.abg-run-plan.v4`和`phase-01.repository-authoritative-plan.v3`。它拒绝旧版门禁结果，并在 setup 前后复核覆盖矩阵及 producer 协议身份；每个引用必须留在运行根内、非符号链接、字节长度/媒体类型/摘要一致，并解析到相同 gate、scenario、assertion 和 producer 的 `PASSED` claim。总结验证器不信任输入的总体状态，而是从 preflight、setup、ABG-01～ABG-39、cleanup、残留资源、固定端口、cleanup 后冻结输入、验证权威身份与Podman runtime authority身份、输出目录独占、终态结论、seal eligibility、ABG-40 及 selector 集合重新推导 `status`。
+
+### 8.2.2 cleanup 后终态与 ABG-40
+
+正式运行严格分成 cleanup 前执行、cleanup 后终态生成和 evidence 封存三个边界。preflight 成功且独占创建输出目录后，runner 写入 `runtime/preflight.json`，冻结 run plan、frozen inputs 和 verification authority identity，完成 setup，仅执行 ABG-01～ABG-39，并在 cleanup 前保存顶层 producer evidence、`runtime/resources-started.json`、`runtime/producer-evidence-snapshot.json` 和 `runtime/failure-summary.json`。此阶段不得生成 ABG-40，也不得声称正式运行最终 `PASSED`。
+
+受控子进程停止并完成精确 cleanup 后，runner 写入 `runtime/resources-final.json` 和 `runtime/cleanup.json`，重新读取 frozen inputs、verification authority identity与Podman runtime authority identity，再构造 `phase-01.formal-terminal-conclusion.v2` 的 `runtime/terminal-conclusion.json`。该终态结论必须同时证明前 39 个门禁完整通过、producer evidence 已在 cleanup 前落盘、cleanup 通过、当前 run 零残留、全部 required ports 已观察且释放、未调用 prune、冻结输入、验证权威身份和runtime authority字节/语义摘要稳定以及输出目录保持独占；只有这些条件全部满足时 `sealEligible` 才能为 `true`。对应`runtime/final-outcome.json`使用`phase-01.formal-runtime-outcome.v3`并携带相同runtime authority身份与稳定性。
+
+ABG-40 只在上述 cleanup 后终态形成后执行。它使用 `RUN-FORMAL-TERMINAL-LIFECYCLE` 场景，以 `runtime/terminal-conclusion.json` 为 formal-run producer 的唯一原始机器证据，并精确选择 `ABG-40:formal-terminal-lifecycle-complete` 与 `ABG-40:formal-evidence-seal-eligible` 两个断言。ABG-40 证明的是“该运行已达到预封存资格”，不证明 `manifest.sha256` 已经存在或已由独立 reviewer 验证；旧 `formal-run/preliminary-conclusion.json` 不再是新协议权威。
+
+ABG-40 验证后，runner 合并 40 项门禁并写入 `phase-01.abg-run.v5` 的 `abg-results.json`，通过独立 summary validator 后写入 `phase-01.formal-runtime-outcome.v3` 的 `runtime/final-outcome.json`。final outcome 在 Manifest 之前生成，必须保持 `sealPendingAtWrite: true`，不得声称封存已完成。`sealEvidence` 只生成 `manifest.json` 与匹配的 `manifest.sha256`，不得修改既有 summary、gate proof 或 producer evidence；任何终态写入或 Manifest 失败都使 CLI 非零退出，且不得覆盖旧 evidence。
+
+独立 reviewer 最终从已封存目录复核 Manifest 摘要/长度、完整 runtime lifecycle、ABG-40 精确引用、summary/final-outcome 一致性及复核前后源 evidence 字节身份。它还把 summary 的 Git 身份绑定回 frozen run plan、从 runId/runSequence 规范派生 runtime namespace，将 cleanup 前 producer snapshot 的路径/长度/SHA-256 逐项绑定到 Manifest 字节，并独立重算 terminal conclusion 的资源/端口计数和两个 assertion body。ABG-40 `PASSED` 单独不等于正式验收完成；正式验收仍要求 Manifest 成功封存、CLI 成功终止及 independent reviewer `PASSED`。
+
+### 8.2.3 Producer、evidence package 与 reviewer provenance
+
+正式 producer 必须在 run plan 之前从干净工作区生成 `provenance/producer-source-manifest.json` 及其 SHA-256 sidecar。Producer source manifest 是生产时验证定义的只读身份记录：它绑定 producer commit、分支、干净工作区状态、evidence contract tuple，以及所有会改变证据生成或解释语义的权威源文件路径、角色、字节长度、SHA-256 与该 commit 中的 Git blob identity；它不携带源文件内容，也不是可执行代码包。每个工作区文件必须与同一 producer commit 的 blob 字节一致，manifest 生成后只能在 setup 后和 cleanup 后重新核验既有字节，不能重建或补写。
+
+Producer source manifest 先在内存中从干净 checkout 构建，其摘要作为正式 preflight 的必填 frozen input；输出目录独占保留后，再把同一 manifest 在 run plan 之前独占落盘。Run plan、frozen inputs、`runtime/terminal-conclusion.json`、`abg-results.json` 和 `runtime/final-outcome.json` 必须引用同一 producer source manifest SHA-256；terminal conclusion 还必须记录 cleanup 后稳定性，只有稳定为 `true` 才具备 seal eligibility。顶层 evidence Manifest 必须列出 producer source manifest 和 sidecar。独立复核前后 source evidence tree identity 必须一致；任何交叉文件引用、逐文件摘要或清单不一致属于 evidence integrity failure，而不是 definition drift。
+
+Reviewer 必须先验证 evidence 自身 contract tuple 与完整性，再使用本地 Git object database 对 producer provenance 做只读核验：确认 producer commit 存在，并以 Git plumbing 读取 manifest 各路径在该 commit 中的 blob，重新核对 object identity、字节长度和 SHA-256。Reviewer 禁止 checkout、fetch 或执行 producer commit 中的文件。Producer commit 不存在时结论是 provenance `UNVERIFIABLE`；commit 存在但 manifest 与其 blob 不一致时才是 provenance `INVALID`。两者都失败关闭，但不得把前者误报为 evidence 被篡改。
+
+Producer provenance 通过后，reviewer 才生成当前 checkout 的 reviewer source manifest，并比较两端定义。语义复核完成后、创建任何 review output 目录之前，reviewer 必须再次读取仓库状态和 source definitions；两次比较排除非身份字段 `generatedAt`，但工作区/commit/branch 变化与 source definition 变化分别失败关闭。Reviewer 自身输出不能使 CLEAN checkout 被误判为 DIRTY。Evidence contract 关系分为：
+
+- `EXACT`：受支持 tuple 完全匹配且权威源文件定义无漂移；只有此路径才可能形成正式 review `PASSED`。
+- `COMPATIBLE`：结构可按明确策略安全解析，但定义存在漂移；可以继续只读结构复核和输出完整 findings，最终 review 必须 `FAILED`。
+- `INCOMPATIBLE`：tuple 未受支持或混用未知版本；只允许安全目录、Manifest、摘要和基础版本提取，不得用当前 parser 猜测未知语义，最终 review 必须 `FAILED`。
+
+Definition drift 与 evidence integrity 是独立状态轴。Coverage matrix、producer protocol/schema、gate proof、terminal/summary contract 或 reviewer tool 任一语义源文件摘要不同，均须定位具体路径并标为 drift；即使旧 JSON 仍可解析，也不得以当前 checkout 的定义替代 producer 定义或给出 `PASSED`。Reviewer 自身工作区脏或身份不可用同样失败关闭。
+
+Reviewer 只把 evidence 文件视为不可信普通字节：不得执行、import 或动态加载其中的 TypeScript、JavaScript、Shell、SQL、二进制或命令，也不得启动应用、数据库、浏览器、容器或网络访问。复核输出写入独立且尚不存在的目录，并由 `review-manifest.json` 与 sidecar 封存 review、findings 和 reviewer source manifest；原 evidence 始终只读。
+
+AR-10 完成只表示 provenance、compatibility 和 drift 失败关闭机制完成本地实现及规定验证，不表示正式 ABG 已运行或 Phase 01 已 accepted。AR-11把Podman runtime authority、Docker/第二endpoint排他、`restart=no`和partial-startup/bootstrap失败收尾纳入同一producer source manifest与精确reviewer回归；source manifest从AR-10的历史35文件扩展为AR-11时的43文件，以不同角色登记runtime authority、严格TS loader/schema与verify CLI、运行时装配/代理/三只生命周期脚本、Testcontainers/live producer及历史receipt，但provenance登记本身不把receipt或observation提升为authority。AR-11完成后仍须由AR-12在冻结的当前HEAD上进入真实Anolis/Podman环境重基线及readiness，才能建立新的真实环境结论。
+
+### 8.2.4 AR-12 execution workspace 隔离
+
+AR-12最终重跑失败的根因已确认：编排所用的完整Git execution clone被放在被验证仓库的`.runtime/rebaseline/ar-12/worktrees/`下。根`.gitignore`只能排除Git工作区状态，不能把该物理checkout从仓库布局门禁的扫描范围中隔离；因此未放宽的`check-repo-layout.mjs`正确同时发现仓库根`package-lock.json`和嵌套clone中的第二个`package-lock.json`。干净Git状态不等于物理仓库树未被execution workspace污染，布局门禁也不得通过忽略`.runtime`、只扫描tracked文件、删除或跳过命令03来获得通过。
+
+AR-12 execution workspace必须只位于仓库外部。可选`AR12_EXECUTION_WORKSPACE_ROOT`覆盖默认根；未提供时使用`<repository-parent>/.hdi-ar12-execution-workspaces/<repository-id>`。解析后的规范路径不得位于被验证仓库、`.runtime`、任一evidence目录、`.git`、source output或review output之内，也不得经符号链接、Junction或其他reparse point回指这些路径。目标clone必须尚不存在，父路径必须可安全创建，且不同run不得复用同一目录。任何违反都应在创建或运行项目命令前失败关闭，至少使用`AR12_EXECUTION_WORKSPACE_INSIDE_REPOSITORY`、`AR12_EXECUTION_WORKSPACE_INSIDE_EVIDENCE`、`AR12_EXECUTION_WORKSPACE_SYMLINK_ESCAPE`、`AR12_EXECUTION_WORKSPACE_ALREADY_EXISTS`、`AR12_EXECUTION_WORKSPACE_ROOT_UNSAFE`或`AR12_EXECUTION_WORKSPACE_CREATE_FAILED`；仓库内发现marker、完整checkout、嵌套`.git`或第二lockfile时使用`AR12_REPOSITORY_CONTAMINATED_BY_EXECUTION_WORKSPACE`。
+
+外部clone只允许使用本地Git object database创建，不得fetch或访问网络；随后必须把目标分支精确定位到编排打开时的HEAD、恢复GitHub origin，并核验HEAD、分支、origin和干净状态。clone根必须独占写入`.ar12-execution-workspace.json`，记录schema、repository identity、source root digest、opening SHA、branch、purpose、createdAt、external root及`formalAcceptanceEligible: false`，且不得含凭据或token。任一身份不一致使用`AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH`失败关闭。正常清理、失败保留或归档前都必须重新核验marker、repository identity和HEAD；未标记目录不得删除，失败clone必须保留在仓库外并记录终态身份。
+
+编排器必须在第一个项目命令前同时执行execution workspace污染preflight和既有`check:repo:layout`门禁。当前仓库内遗留clone只能在验证其确为预期Git clone、HEAD、分支、根lockfile、非正式evidence目录且无身份漂移后，原子外移到新的外部archive路径；外移前后必须重算相同tree identity，并独占写入仓库内忽略提交的recovery artifact。该动作是受控迁移execution workspace，不是递归删除，也不得删除、改写或替换任何initial、attempt或failed-final evidence。若遗留clone身份不匹配，则保留原状并使任务失败。
+
+本修复不改变现行evidence contract tuple：`phase-01.abg-run-plan.v4`、`phase-01.repository-authoritative-plan.v3`、`phase-01.producer-evidence.v2`、`phase-01.producer-evidence-index.v2`、`phase-01.abg-gate-result.v3`、`phase-01.abg-run.v5`、`phase-01.formal-terminal-conclusion.v2`、`phase-01.formal-runtime-outcome.v3`和`phase-01.evidence-manifest.v1`保持不变。两个新的tracked AR-12编排模块以`ORCHESTRATOR`登记，使producer source manifest从AR-11时的43个文件扩展为45个文件；execution workspace路径与marker不进入contract tuple。遗留execution clone已按上述边界受控外移；recovery记录位于`.runtime/rebaseline/ar-12/recovery/20260830-0267bba/execution-workspace-relocation.json`，外移前后tree digest相同（`03c6f5f4…0700f67f`），五个既有evidence目录均保持不变，且未放宽的repository layout门禁现已通过。当前工作只修复execution workspace隔离并保留既有失败证据，不执行完整AR-12重基线、真实Podman/数据库/浏览器运行、shared readiness或正式ABG；AR-12继续为`claimed`，AR-07继续被AR-12阻断。
+
+AR-12每轮必须在创建当前run目录和外部execution clone之前，由唯一`ar-12-history-evidence-contract.ts`权威显式验证六个required history：`20260830-db57406-precloseout`、`20260830-db57406-precloseout-r2`、`20260830-db57406-precloseout-r3`、`20260830-db57406-precloseout-r4`、`20260830-4dca3ca-final`和`20260831-1d1204a-precloseout-r2`。任一精确相对路径缺失都失败关闭，通用发现到的额外目录不能替代required entry。第六项稳定分类为`SUMMARY_CONTRACT_FAILED_HISTORY`；其中不可覆盖`ar-12-rebaseline-summary.json`的固定SHA-256为`be19b1557dc75dc2adae612fefdd5088116677acc3414f151feddf0d10ad2cff`，即使内部技术执行`status=PASSED`，因缺少`repositoryContaminationGuard`、`repoLayoutStatus`和`historyEvidenceStable`仍必须记录`contractDisposition=REJECTED`，不得作为合格initial或closeout依据，也不得补写或重建。失败final的六个关键artifact仍精确匹配AR-12R-01固定SHA-256，recovery artifact字节SHA-256仍为`735e5ea4…f86f75e`且旧`worktrees/db57406-precloseout`路径不存在。
+
+通过pre-run contract后，`init`才生成`historyEvidenceBaseline`，绑定contract digest、六项classification与逐目录tree digest、固定artifact、recovery语义、额外历史发现和整体historical evidence set digest；finalize用同一权威重新计算并逐项比较。只有六项required全部通过、第六Summary/分类稳定、recovery匹配、stale clone持续缺失、逐目录tree digest及整体集合digest均未漂移时，`historyEvidenceStable`才可为`true`。通用目录fingerprint仅用于额外审计，不能独立形成通过结论。历史路径按相对路径绑定文件字节、长度和目录结构；符号链接、Junction/reparse、hard-link leaf或其他非普通项失败关闭。当前run目录被精确排除，不能用当前证据增长制造伪漂移，也不能用空目录、路径改名或旧artifact替换绕过稳定性核验。该authority以`AR12_HISTORY_EVIDENCE_CONTRACT`角色加入producer source manifest，使冻结源文件数从45增至46；动态`.runtime`字节不进入producer source manifest，正式ABG contract tuple不变。
+
+`init`必须根据opening历史身份和冻结时间预先计算合法`repository-boundary-result.json`的精确字节SHA-256并写入先于命令创建的run context。42条命令全部通过后、`finalize`之前，编排器再次对source repository执行execution-workspace contamination guard和未放宽的`npm run check:repo:layout`权威命令，再重算历史身份。只有opening/ending历史身份逐字段相同且结果字节匹配该预绑定SHA，才排他写入`repository-boundary-result.json`，并把相同SHA写入随后创建的`run-commands-result.json`。`finalize`必须同时验证context与run-commands两条绑定并再次现时复核contamination、npm layout和历史身份，才在initial/final summary顶层显式写入`repositoryContaminationGuard: PASSED`、`repoLayoutStatus: PASSED`和`historyEvidenceStable: true`；缺失、篡改、布局失败或历史漂移均以稳定错误码失败关闭，不能由人工检查或用户可见说明替代summary机器契约。
+
+### 8.2.5 正式 evidence 并发目录与原生 Podman Machine 语义
+
+正式 evidence 根目录继续采用排他创建，已存在即失败；每个文件继续使用`wx`，同一路径并发写入只能有一个成功。根目录以下的受控目录则由一个共享primitive逐段确保：并发`mkdir`得到`EEXIST`后必须重新`lstat`，只接受非symlink普通目录，再以`realpath`证明规范路径仍在evidence root内。文件、symlink/Junction、父目录替换、规范路径逃逸、权限错误和其他非`EEXIST`错误均使用稳定错误码失败关闭。Shared runner保留`Promise.all`并发，不通过串行化producer或吞掉全部`EEXIST`规避竞态。
+
+Preflight与cleanup通过同一typed Podman Machine inspection实现解释`podman info`、本地/远程connection、machine command能力和冻结runtime authority。结果只允许`NOT_APPLICABLE_NATIVE_ROOTFUL`、`NONE_REGISTERED`、`REGISTERED_MACHINE_PRESENT`、`RUNNING_MACHINE_PRESENT`、`REMOTE_CONNECTION_PRESENT`或`INSPECTION_FAILED`。冻结Anolis本地rootful Podman、`/run/podman/podman.sock`、无remote connection且machine command明确报告rootful不适用时，分类为`NOT_APPLICABLE_NATIVE_ROOTFUL`，它与`NONE_REGISTERED`都可满足该项cleanup终态；该判断同时依赖authority、实际`podman info`、connection结果、退出状态和受控capability签名，不能只依赖stderr片段。任一registered/running machine、remote connection、rootless或第二socket/endpoint继续失败；malformed JSON、权限错误、未知非零退出或本地/远程事实无法判定统一为`INSPECTION_FAILED`。
+
+WSL后端继续只根据`wsl.exe --list --running --quiet`判断正式运行期间的额外running backend；仅registered但未运行的普通发行版不构成运行中第二backend。当前Anolis必须是唯一预期运行主体，Docker Desktop、Podman Machine或其他额外running container backend仍失败关闭。
+
+### 8.2.6 TypeScript入口与子进程loader边界
+
+Sequence 11在正确Anolis WSL中的dry preflight为59/59 `PASSED`；setup 03已证明共享Evidence并发目录创建不再出现`EEXIST`，Podman Machine cleanup分类与收尾语义正确，最终cleanup为`PASSED`。该轮新的失败位于shared runner的`database-authority`子命令：冻结authoritative run plan通过`NODE_OPTIONS=--loader=./tooling/verification/node-ts-loader.mjs`启动setup 03和逐门禁producer，formal runner把变量传入setup 03，shared runner把完整`process.env`传给子命令，`check-database-authority.ts`再把它传给`npm run db:types:verify --workspace @hospital-data-intelligence/governance-api`；npm workspace在`apps/governance-api`工作目录解析相对loader，最终尝试不存在的`apps/governance-api/tooling/verification/node-ts-loader.mjs`并得到`ERR_MODULE_NOT_FOUND`。这是loader作用域泄漏，不是database-authority规则、Schema漂移、migration或Kysely配置错误。
+
+仓库TypeScript入口命令因此只有一个受控构造：`node --loader ./tooling/verification/node-ts-loader.mjs <registered-repository-relative-entry.ts> ...args`，且`workingDirectory`固定为仓库根的`.`。Loader只作为当前Node入口的显式argv存在，不得通过`NODE_OPTIONS`传播。构造器拒绝绝对路径、`..`逃逸、symlink/Junction逃逸、loader路径漂移、非`.ts`入口和未注册入口；loader本身继续由producer source manifest冻结，run plan不得记录`/mnt/...`或其他本机绝对路径。Setup 03、40个gate producer、shared live和browser入口使用同一构造器；普通npm、workspace Vitest、database authority、Kysely codegen、typecheck、build和contract lint命令不得携带loader。
+
+Formal与shared所有子进程从父环境复制现行正式运行所需的PATH、HOME、npm环境、required secrets、`ABG_*`身份、精确Podman compatibility `DOCKER_HOST`及其他受控值，但在合并命令环境前删除继承的`NODE_OPTIONS`；命令定义试图重新声明该变量时分别以`FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN`或`SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN`失败关闭。Database authority在nested npm workspace边界再次删除`NODE_OPTIONS`，仍从仓库根使用当前`npm_execpath`执行精确`db:types:verify`和governance-api workspace，保留原exit code及stdout/stderr失败关闭，不让Kysely使用仓库loader，也不对`ERR_MODULE_NOT_FOUND`特判放行。命令argv与`workingDirectory`继续进入command digest；这是命令内容修复，不改变run plan或其他reader-visible evidence schema，因此现行contract tuple保持不变。四个新增命令边界源文件以`NODE_COMMAND_BOUNDARY`角色进入producer source manifest，使AR-07R-01候选的47个冻结源文件扩展为51个。
+
+### 8.2.7 Formal shared producer运行时数据库连接绑定
+
+Sequence 12在Anolis WSL中的dry preflight为59/59 `PASSED`，setup 03也继续证明Evidence并发目录、显式loader和Machine cleanup修复有效，cleanup为`PASSED`。该次失败的精确调用链为：Setup 02 bootstrap在自己的Shell子进程内导出`DATABASE_URL`，子进程环境不能回流到formal runner父进程；Setup 03启动新的shared runner，shared plan又在Live之前执行`database-authority`，而旧`startApplication()`只在Live阶段构造连接串。因此nested `db:types:verify`没有收到`DATABASE_URL`。这属于运行时连接环境绑定缺口，不是Schema、migration、Kysely配置、loader或数据库业务规则失败；sequence 12保持`FAILED_HISTORY`且不得修补或复用。
+
+唯一连接构造权威是`runtime/formal-runtime-database-connection.ts`。用户名和数据库固定为`hdi_phase01`，host与port只取已加载frozen runtime authority的`network.bindAddress`和`network.ports.postgresRuntime`，原始`HDI_POSTGRES_PASSWORD`只在builder内部使用`encodeURIComponent`编码一次。Builder拒绝空密码；target assertion拒绝外部host、integration端口55433、query、fragment、SSL参数、Unix socket fallback和任何非固定身份。安全descriptor只包含protocol、username、host、port、database及`passwordPresent`，不得返回密码、编码密码或完整URL。
+
+Shared plan只冻结binding名称，不冻结值；严格矩阵如下：
+
+| command | runtime bindings | `DATABASE_URL` |
+|---|---|---|
+| `database-authority` | `FORMAL_RUNTIME_DATABASE_URL` | 同一canonical URL |
+| `live` | `FORMAL_RUNTIME_DATABASE_URL`, `FORMAL_LIVE_RUNTIME` | 同一canonical URL，用于live直接数据库闭环 |
+| `browser` | `FORMAL_BROWSER_RUNTIME` | 不注入 |
+| runtime/repo-layout/module-boundaries/typecheck/build/contract-lint/integration | 无 | 不注入 |
+
+Formal和shared确定性子进程环境都按大小写不敏感规则删除继承的`DATABASE_URL`。`command.environment`直接声明该名称分别以`FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN`或`SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN`失败；shared只有经过矩阵验证的database binding可把canonical值注入，缺失、未注册、重复或未授权绑定均失败关闭。Integration继续使用独立Testcontainers PostgreSQL 55433，不获得runtime连接；browser和static命令也不得获得。`startApplication()`复用同一canonical URL，shared runner不再通过修改`process.env['DATABASE_URL']`建立调用顺序依赖；live和browser所需的非数据库运行时值也分别通过显式binding提供。
+
+Database authority在启动nested npm前强制验证`DATABASE_URL`存在且非空，缺失时抛出`DATABASE_AUTHORITY_DATABASE_URL_MISSING`；随后从仓库根以当前`npm_execpath`执行精确governance-api workspace的`db:types:verify`，继续删除`NODE_OPTIONS`并原样保留canonical连接环境。非零Kysely结果仍失败关闭。所有stdout/stderr在写入evidence前对完整PostgreSQL URL、原始和编码密码、URL编码、JSON转义、Base64/Base64url及Shell/PowerShell引用形式执行脱敏；command plan、command identity、environment reference和runtime event只保存非敏感名称、身份或摘要，不保存连接值。
+
 ### 8.3 不可覆盖与完整性
 
 证据编排器在运行结束后生成规范化`manifest.json`，其中按稳定路径排序列出除清单自身及`manifest.sha256`外每个产物的媒体类型、字节数和SHA-256；再将规范化清单字节的SHA-256写入`manifest.sha256`，该值就是证据包身份。清单和包身份完成后运行进入终态，任何文件不得覆盖、补写或删除；需要纠正、补跑或重新取证时必须创建新的运行身份，并通过显式关系指向被取代或补充的运行。
@@ -225,6 +325,37 @@ Toxiproxy及Testcontainers生命周期负责验证：
 压缩包、对象存储副本或CI制品只是同一证据包的传输副本，不能成为另一份内容权威。解包后必须重新计算清单和包身份；不一致时证据无效。
 
 证据不得包含密码、客户端密钥、访问或刷新令牌、完整Cookie、真实业务数据或规范快照正文。完整POC中只含合成数据的派生交付ZIP是经ADR-0105批准的唯一正文例外：它必须作为生命周期与整体处置前置证据原样入包，不得借此收入真实业务数据或把规范快照正文复制进证据包。截图、trace和录像只用于辅助定位，不能替代公开API、审计、版本、快照、Outbox和回执等机器可核验证据。
+
+### 8.4 验证器对抗性基线
+
+AR-06 建立的合法 fixture 只用于验证验证器本身，协议身份为 `phase-01.validator-test-fixture.v1`，并显式记录 `formalAcceptanceEligible: false` 和 `servicesStarted: false`。fixture 使用固定运行身份、序号、时间、冻结输入和合成引用；同一代码版本下重复生成时，运行计划、40 项 producer 门禁证明、总结、manifest 和包摘要必须逐字节一致。它不连接 PostgreSQL、Keycloak、网络或浏览器，也不得被复制到正式 evidence 路径或表述为正式 ABG 证据。
+
+合法 fixture 仍完整模拟生产协议链，但没有正式验收资格：
+
+1. 每个 producer 生成 `phase-01.producer-evidence.v2`，其场景、断言、命令身份、冻结输入和业务引用由 producer evidence validator 校验。
+2. ABG-01～ABG-39 各自生成 `phase-01.abg-gate-result.v3`，随后 fixture 保存 preflight、started resources、producer evidence snapshot、failure summary、cleanup 和零残留 final resources；它不通过省略 lifecycle 文件获得 reviewer `PASSED`。
+3. fixture 从 cleanup 后的 `phase-01.formal-terminal-conclusion.v2` 生成 formal-run producer evidence，再生成具有两个终态断言的 ABG-40；仅含旧 preliminary conclusion 的新格式 fixture 必须失败关闭。
+4. `phase-01.abg-run.v5` 的正式总结验证器重新计算门禁数量、唯一性、顺序、通过/失败计数、完整 lifecycle、producer evidence cleanup 前落盘、runtime authority字节/语义摘要及cleanup后稳定性、终态和 seal eligibility、失败码一致性及 selector 集合唯一性。runner 只有在准备给出 `PASSED` 时通过该验证器，才能继续封包。
+5. fixture 在 Manifest 前写入一致且 `sealPendingAtWrite: true` 的 final outcome。独立 reviewer 从已封包目录重新读取每个字节，核对 manifest、完整 lifecycle、路径、媒体类型、长度、SHA-256、JSON Pointer、选中 claim、producer 索引和运行身份；review 输出写入独立且必须不存在的目录，源 evidence 在复核前后摘要必须相同。
+
+`npm run test:verification:adversarial`保留AR-11结束时的全部140个互不依赖mutation、既有10个AR-12 execution workspace隔离mutation、8个required-history mutation、12个AR-07R-01 mutation和8个AR-07R-03 loader/child-environment mutation，并新增10个AR-07R-05 runtime database binding mutation。新增范围覆盖操作员`DATABASE_URL`继承、database-authority binding缺失/错误target、runtime URL误注入integration/static、nested npm丢失、双重编码、日志与command identity泄漏及错误假设bootstrap子进程export会回流父进程；总数不得少于188。既有范围继续覆盖evidence父目录并发创建、Machine分类、缺失、重复、错配、伪造、目录穿越、符号链接、覆盖、cleanup越权、完整终态lifecycle、secret泄漏、producer source manifest、Git object provenance、contract compatibility、definition drift、reviewer工作区状态及AR-11 runtime authority回归。其中`placeholder`、`UNKNOWN`、`N/A`与空字符串分别作为独立mutation，另以malformed JSON中的裸配置secret证明解析失败也不会绕过泄漏扫描；带明显副作用的evidence内脚本只作为不可信普通字节读取，reviewer不执行它。每项都声明稳定mutationId、检测层和期望错误码，并把实际结果写入被根`.gitignore`的`.runtime/test-results/verification-adversarial-summary.json`。通过条件是`mutationCount >= 188`、`detectedCount = mutationCount`、`survivedCount = 0`；不得删除原178项，也不得通过更新snapshot、吞掉异常或依赖测试执行顺序改变结论。
+
+关键失败关闭错误码如下；完整逐 mutation 映射以测试源码和机器汇总为准：
+
+| 验证边界 | 关键错误码 |
+|---|---|
+| producer 总体与断言一致性 | `PRODUCER_EVIDENCE_SCENARIO_PASSED_WITH_NON_PASSED_ASSERTION`、`PRODUCER_EVIDENCE_PASSED_WITH_NON_PASSED_SCENARIO`、`PRODUCER_EVIDENCE_REFERENCE_INVALID` |
+| 正式总结的 40 项完整性 | `GATE_RESULT_COUNT_INVALID`、`GATE_ID_DUPLICATE`、`GATE_ORDER_OR_ID_MISMATCH`、`PASSED_COUNT_MISMATCH`、`RUN_STATUS_MISMATCH` |
+| gate-specific 证明 | `GATE_ASSERTIONS_MISMATCH`、`ABG_GATE_RESULT_EVIDENCE_SELECTOR_MISSING`、`SELECTED_CLAIM_DIGEST_MISMATCH` |
+| manifest 与终态字节 | `MANIFEST_UNLISTED_FILE`、`MANIFEST_SHA256_MISMATCH`、`MANIFEST_FILE_SHA256_MISMATCH` |
+| 终态 lifecycle 与预封存资格 | `FORMAL_LIFECYCLE_FILE_MISSING`、`FORMAL_CLEANUP_STATUS_NOT_PASSED`、`FORMAL_FINAL_RESOURCE_PRESENT`、`FORMAL_REQUIRED_PORT_OCCUPIED`、`FORMAL_TERMINAL_CONCLUSION_STATUS_NOT_PASSED`、`FORMAL_TERMINAL_SEAL_NOT_ELIGIBLE`、`FORMAL_FINAL_OUTCOME_MISMATCH` |
+| 路径与不可覆盖输出 | `ABG_GATE_RESULT_EVIDENCE_PATH_INVALID`、`EVIDENCE_SYMLINK_FORBIDDEN`、`REVIEW_OUTPUT_ALREADY_EXISTS`、`ABG_GATE_RESULT_ALREADY_EXISTS` |
+| cleanup 范围 | `FORMAL_CLEANUP_PODMAN_PRUNE_FORBIDDEN`、`FORMAL_CLEANUP_COMMAND_SCOPE_INVALID`、`FORMAL_CLEANUP_RESOURCE_OWNERSHIP_MISMATCH` |
+| runtime authority 与运行时隔离 | `RUNTIME_AUTHORITY_SCHEMA_INVALID`、`FORMAL_PREFLIGHT_DOCKER_SOCKET_PRESENT`、`FORMAL_PREFLIGHT_SECOND_RUNTIME_AUTHORITY_PRESENT`、`FORMAL_PREFLIGHT_DOCKER_HOST_INVALID`、`FORMAL_CLEANUP_RESTART_POLICY_MISMATCH`、`FORMAL_CLEANUP_RUNTIME_AUTHORITY_DRIFT`、`FORMAL_CLEANUP_PARTIAL_RECOVERY_INCOMPLETE` |
+| AR-12 execution workspace 隔离 | `AR12_EXECUTION_WORKSPACE_INSIDE_REPOSITORY`、`AR12_EXECUTION_WORKSPACE_INSIDE_EVIDENCE`、`AR12_EXECUTION_WORKSPACE_SYMLINK_ESCAPE`、`AR12_EXECUTION_WORKSPACE_ALREADY_EXISTS`、`AR12_EXECUTION_WORKSPACE_ROOT_UNSAFE`、`AR12_EXECUTION_WORKSPACE_CREATE_FAILED`、`AR12_EXECUTION_WORKSPACE_IDENTITY_MISMATCH`、`AR12_REPOSITORY_CONTAMINATED_BY_EXECUTION_WORKSPACE` |
+| secret 泄漏 | `EVIDENCE_STDOUT_SECRET_EXPOSED`、`EVIDENCE_STDERR_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_EXPOSED`、`EVIDENCE_JSON_SECRET_SCAN_INVALID` |
+
+失败证据遵循两类不同保留边界。正式运行或独立复核失败时，原 evidence 和 review findings 都必须保留，不得补写、覆盖或用后续成功结果替换；需要重跑时创建新运行身份。对抗性测试只操作操作系统临时目录中的 fixture 副本，测试结束后校验临时目录前缀再递归删除，绝不删除正式 evidence 路径；仓库内只保留忽略提交的机器汇总。无论该对抗测试是否全部通过，都只能说明验证器具有已列失败能力，不能表述为正式 ABG 通过、完整 POC 通过或生产就绪。
 
 ## 9. CI厂商中立执行
 
@@ -263,6 +394,8 @@ Toxiproxy及Testcontainers生命周期负责验证：
 
 完整POC扩展所称“冻结七类画像矩阵”和“完全相同的画像版本”均包含ADR-0109逐字段分布版本与适用字段清单；G04、G05、G12和U19共同验证该规则，不新增场景或Phase 01门禁。
 
+AR-11的代码、fake CLI、DI adapter及合成evidence验证只证明运行权威与生命周期约束可执行，不启动真实PostgreSQL、Keycloak、Chrome或Podman容器，也不执行shared readiness或正式ABG。AR-12才在另行授权下冻结当时的当前HEAD，并在真实`Anolis-8.9-HDI-POC`/rootful Podman环境重新建立baseline与readiness；因此AR-11结论不得写成Phase 01 accepted、Podman工作包accepted或生产就绪。
+
 ## 11. 禁止的平行权威
 
 下列做法不能进入Phase 01架构门禁或完整POC验收结论：
@@ -290,6 +423,8 @@ Toxiproxy及Testcontainers生命周期负责验证：
 - SQLite、内存数据库、内存Outbox、伪造IAM、预置消费者成功或直接业务数据库写入。
 - 测试专用公开接口、请求头、Cookie或生产可启用的故障开关。
 - 未冻结的在线工具、浮动容器标签、未记录浏览器版本或未锁定依赖。
+- 以receipt、`.observations`、Shell常量、环境变量或文档复制`runtime-baseline.lock.json`的`.authority`，把精确Podman兼容`DOCKER_HOST`解释为Docker Engine authority，允许Docker socket alias/TCP API/第二容器endpoint，或让`restart=always`、`unless-stopped`、`on-failure`、systemd生成单元、Quadlet或auto-update使临时资源在cleanup后复活。
+- 清理名称或部分标签“看起来像”当前运行的资源、标签缺失时猜测所有权、跳过删除前重新inspect、清理顺序不反向、吞掉原始启动/bootstrap错误或cleanup结果，或者调用任何Podman prune/system reset及删除历史`/var/lib/docker`数据。
 - 只提供截图、覆盖率或测试总数，不提供场景、请求、规则和服务副作用证据。
 - 覆盖旧证据目录、补写终态证据或让CI平台重新解释原始测试结果。
 - 外部混沌平台、随机故障或CI厂商专有能力成为POC通过前提。
@@ -327,5 +462,6 @@ Toxiproxy及Testcontainers生命周期负责验证：
 - [ADR-0108：冻结受控导出容量专用负载画像矩阵](../adr/0108-freeze-managed-export-capacity-workload-profile-matrix.md)
 - [ADR-0109：冻结受控导出容量画像字段分布规则](../adr/0109-freeze-managed-export-capacity-field-distribution-rules.md)
 - [ADR-0110：采用本机WSL2 Anolis OS 8.9作为受限容量实验环境](../adr/0110-use-local-wsl2-anolis-8-9-for-capacity-simulation.md)
+- [ADR-0111：Phase 01采用Podman作为唯一容器运行时](../adr/0111-use-podman-as-the-phase-01-container-runtime.md)
 - [Phase 01单仓库工作区拓扑](phase-01-workspace-topology.md)
 - [Phase 01 governance-api深模块结构](phase-01-governance-api-module-structure.md)

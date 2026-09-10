@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Generated database types drift from the migrated PostgreSQL schema.
+
+> @hospital-data-intelligence/governance-api@0.0.0 db:types:verify
+> kysely-codegen --config-file kysely-codegen.json --verify
+
+ReferenceError: Environment variable 'DATABASE_URL' could not be found.
+    at ConnectionStringParser.parse (node_modules/kysely-codegen/dist/generator/connection-string-parser.js:62:23)
+    at Cli.generate (node_modules/kysely-codegen/dist/cli/cli.js:41:83)
+    at Cli.run (node_modules/kysely-codegen/dist/cli/cli.js:189:27)
+
+npm error Lifecycle script `db:types:verify` failed with error:
+npm error code 1
+npm error workspace @hospital-data-intelligence/governance-api@0.0.0
+npm error command sh -c kysely-codegen --config-file kysely-codegen.json --verify

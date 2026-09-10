@@ -24,9 +24,16 @@ interface ResolutionReference {
   }[];
 }
 
-export function configureBrowserApi(csrfToken: string): void {
+export function configureBrowserApi(
+  csrfToken: string,
+  fetchImplementation?: typeof globalThis.fetch,
+): void {
   browserCsrfToken = csrfToken;
-  api = createGovernanceApiClient({ baseUrl: '', csrfToken });
+  api = createGovernanceApiClient({
+    baseUrl: '',
+    csrfToken,
+    ...(fetchImplementation ? { fetch: fetchImplementation } : {}),
+  });
 }
 
 export function AppLayout() {
@@ -753,14 +760,14 @@ export function GovernanceOperationsPage() {
   );
 }
 
-export function VerticalSlicePage() {
+export function VerticalSlicePage({ routePrefix = '' }: { readonly routePrefix?: string } = {}) {
   return (
     <section>
       <header className="page-header"><div><span className="eyebrow">GOVERNED VERTICAL SLICE</span><h1>收费项目—价表—解析闭环</h1><p>直接发布入口已停用。请依次建立草稿、提交版本化审批，并由独立身份完成复核与终审；发布成功后再执行价格解析。</p></div></header>
       <div className="step-grid">
-        <article className="panel step-card ready"><span className="step-number">01</span><h2>收费项目草稿</h2><p>建立稳定身份和初始草稿版本，不产生发布或消费事件。</p><NavLink to="/charge-items">进入收费项目治理</NavLink></article>
-        <article className="panel step-card ready"><span className="step-number">02</span><h2>价表完整草稿</h2><p>冻结收费项目明确版本、范围、场景和价格条目。</p><NavLink to="/price-lists">进入价表治理</NavLink></article>
-        <article className="panel step-card ready"><span className="step-number">03</span><h2>审批、发布与闭环</h2><p>提交变更请求，按冻结阶段切换独立人员身份审批，再查看解析、审计和消费证据。</p><NavLink to="/operations">进入治理操作</NavLink></article>
+        <article className="panel step-card ready"><span className="step-number">01</span><h2>收费项目草稿</h2><p>建立稳定身份和初始草稿版本，不产生发布或消费事件。</p><NavLink to={`${routePrefix}/charge-items`}>进入收费项目治理</NavLink></article>
+        <article className="panel step-card ready"><span className="step-number">02</span><h2>价表完整草稿</h2><p>冻结收费项目明确版本、范围、场景和价格条目。</p><NavLink to={`${routePrefix}/price-lists`}>进入价表治理</NavLink></article>
+        <article className="panel step-card ready"><span className="step-number">03</span><h2>审批、发布与闭环</h2><p>提交变更请求，按冻结阶段切换独立人员身份审批，再查看解析、审计和消费证据。</p><NavLink to={`${routePrefix}/operations`}>进入治理操作</NavLink></article>
       </div>
     </section>
   );

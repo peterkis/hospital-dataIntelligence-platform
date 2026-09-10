@@ -19,16 +19,38 @@ export const OUTBOX_RECOVERY_FAULT_POINTS = [
 export const CONTROLLED_PUBLICATION_FAULT_POINTS = [
   ...PUBLICATION_TRANSACTION_FAULT_POINTS,
   ...OUTBOX_RECOVERY_FAULT_POINTS,
+  'ASSIGNMENT_CLOSURE_VERSION_WRITTEN',
+  'ASSIGNMENT_CLOSURE_EVIDENCE_WRITTEN',
+  'ASSIGNMENT_CLOSURE_OUTCOME_WRITTEN',
+  'ASSIGNMENT_TRANSFER_HEADER_WRITTEN',
+  'ASSIGNMENT_TRANSFER_SOURCE_WRITTEN',
+  'ASSIGNMENT_TRANSFER_TARGET_STABLE_WRITTEN',
+  'ASSIGNMENT_TRANSFER_TARGET_VERSION_WRITTEN',
+  'ASSIGNMENT_TRANSFER_TARGET_SEGMENTS_WRITTEN',
+  'ASSIGNMENT_TRANSFER_TARGET_SEMANTICS_WRITTEN',
+  'ASSIGNMENT_TRANSFER_OUTCOME_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_SOURCE_LINK_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_STABLE_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_VERSION_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_SEGMENTS_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_SEMANTICS_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_OUTCOME_WRITTEN',
+  'ASSIGNMENT_TEMPORARY_AUDIT_WRITTEN',
 ] as const;
 
 export type ControlledPublicationFaultPoint =
   (typeof CONTROLLED_PUBLICATION_FAULT_POINTS)[number];
 
 let activeFaultPoint: ControlledPublicationFaultPoint | null = null;
+let remainingMatchingHits = 0;
 
-export function configureControlledPublicationFault(point: string | null): void {
+export function configureControlledPublicationFault(
+  point: string | null,
+  hitsBeforeFailure = 0,
+): void {
   if (point === null) {
     activeFaultPoint = null;
+    remainingMatchingHits = 0;
     return;
   }
   if (process.env['NODE_ENV'] !== 'test') {
@@ -37,11 +59,20 @@ export function configureControlledPublicationFault(point: string | null): void 
   if (!CONTROLLED_PUBLICATION_FAULT_POINTS.includes(point as ControlledPublicationFaultPoint)) {
     throw new Error('CONTROLLED_FAULT_POINT_UNKNOWN');
   }
+  if (!Number.isSafeInteger(hitsBeforeFailure) || hitsBeforeFailure < 0) {
+    throw new Error('CONTROLLED_FAULT_HIT_COUNT_INVALID');
+  }
   activeFaultPoint = point as ControlledPublicationFaultPoint;
+  remainingMatchingHits = hitsBeforeFailure;
 }
 
 export function hitControlledPublicationFault(point: ControlledPublicationFaultPoint): void {
-  if (activeFaultPoint === point) throw new Error(`CONTROLLED_PUBLICATION_FAULT:${point}`);
+  if (activeFaultPoint !== point) return;
+  if (remainingMatchingHits > 0) {
+    remainingMatchingHits -= 1;
+    return;
+  }
+  throw new Error(`CONTROLLED_PUBLICATION_FAULT:${point}`);
 }
 
 export function isControlledFaultActive(point: ControlledPublicationFaultPoint): boolean {

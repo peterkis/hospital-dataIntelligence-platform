@@ -1,7 +1,8 @@
 BEGIN;
 
 ALTER TABLE workflow.approval_template_version
-  DROP CONSTRAINT approval_template_version_stage_type_check;
+  DROP CONSTRAINT approval_template_version_stage_type_check,
+  ALTER COLUMN stage_type TYPE varchar(64);
 ALTER TABLE workflow.approval_template_version
   ADD CONSTRAINT approval_template_version_stage_type_check CHECK (stage_type IN (
     'OWNER_FINAL_APPROVAL',
@@ -38,7 +39,8 @@ ALTER TABLE workflow.change_request
 
 ALTER TABLE workflow.approval_action
   DROP CONSTRAINT approval_action_stage_type_check,
-  DROP CONSTRAINT approval_action_action_result_check;
+  DROP CONSTRAINT approval_action_action_result_check,
+  ALTER COLUMN stage_type TYPE varchar(64);
 ALTER TABLE workflow.approval_action
   ADD CONSTRAINT approval_action_stage_type_check CHECK (stage_type IN (
     'CAMPUS_PRE_CONFIRMATION',
@@ -55,7 +57,7 @@ ALTER TABLE workflow.approval_action
 CREATE TABLE workflow.approval_template_stage (
   approval_template_version_id uuid NOT NULL REFERENCES workflow.approval_template_version,
   stage_sequence bigint NOT NULL CHECK (stage_sequence > 0),
-  stage_type varchar(32) NOT NULL CHECK (stage_type IN (
+  stage_type varchar(64) NOT NULL CHECK (stage_type IN (
     'CAMPUS_PRE_CONFIRMATION',
     'PROFESSIONAL_REVIEW',
     'DOMAIN_SEMANTIC_CONFIRMATION',

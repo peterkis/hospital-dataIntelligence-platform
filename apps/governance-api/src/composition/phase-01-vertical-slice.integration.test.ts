@@ -1,18 +1,22 @@
-import { readFile, readdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { execFile } from 'node:child_process';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import { pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
 import { Pool } from 'pg';
 import { sql } from 'kysely';
+import { createConsumerReferenceReader } from '../platform/release-consumer/consumer-reference-reader.js';
 import {
   GenericContainer,
-  Wait,
   type StartedTestContainer,
+  type WaitStrategy,
 } from 'testcontainers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabase, type DatabaseHandle } from '../platform/database/create-database.js';
 import {
   configureControlledPublicationFault,
   PUBLICATION_TRANSACTION_FAULT_POINTS,
-  type ControlledPublicationFaultPoint,
 } from '../platform/fault-injection/controlled-faults.js';
 import { canonicalSha256, sha256Bytes } from '../platform/hashing/canonical-hash.js';
 import { createTransactionRunner } from '../platform/transaction/transaction-runner.js';
@@ -45,8 +49,45 @@ import { createScopedModules, type ScopedModules } from './create-scoped-modules
 import { createPhase01VerticalSlice } from './phase-01-vertical-slice.js';
 import { buildApplication } from './build-application.js';
 
-const POSTGRES_IMAGE =
-  'postgres@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382';
+interface IntegrationRuntimeAuthority {
+  readonly authority: {
+    readonly host: { readonly timezone: string };
+    readonly podman: { readonly restartPolicy: 'no' };
+    readonly network: {
+      readonly managedContainerMode: 'host';
+      readonly bindAddress: '127.0.0.1';
+      readonly ports: { readonly postgresIntegration: number };
+    };
+    readonly images: { readonly postgresql: { readonly runtimeReference: string } };
+    readonly labels: {
+      readonly static: Readonly<{
+        'hdi.repository': string;
+        'hdi.phase': string;
+        'hdi.managed-by': string;
+      }>;
+      readonly dynamic: readonly ['hdi.run-id', 'hdi.run-sequence'];
+    };
+  };
+}
+
+const execFileAsync = promisify(execFile);
+const REPOSITORY_ROOT = resolve(import.meta.dirname, '../../../..');
+const runtimeAuthorityModuleUrl = pathToFileURL(resolve(
+  REPOSITORY_ROOT,
+  'tooling/verification/src/runtime/podman-runtime-authority.ts',
+)).href;
+const { loadPodmanRuntimeAuthority } = await import(runtimeAuthorityModuleUrl) as Readonly<{
+  loadPodmanRuntimeAuthority(repositoryRoot?: string): IntegrationRuntimeAuthority;
+}>;
+const RUNTIME_AUTHORITY = loadPodmanRuntimeAuthority(REPOSITORY_ROOT).authority;
+const POSTGRES_IMAGE = RUNTIME_AUTHORITY.images.postgresql.runtimeReference;
+const POSTGRES_HOST_PORT = RUNTIME_AUTHORITY.network.ports.postgresIntegration;
+const TESTCONTAINER_LABELS = formalTestcontainerLabels();
+const TESTCONTAINER_GOVERNED_LABEL_NAMES = [
+  ...Object.keys(RUNTIME_AUTHORITY.labels.static),
+  ...RUNTIME_AUTHORITY.labels.dynamic,
+] as const;
+const POSTGRES_CONTAINER_NAME = integrationPostgresContainerName();
 const MIGRATION_DIRECTORY = resolve(
   import.meta.dirname,
   '../../../../db/migrations',
@@ -63,50 +104,227 @@ interface FoundationIds {
   readonly priceListObjectId: string;
 }
 
+interface IntegrationEvidenceObservation {
+  readonly producerId: 'database' | 'integration' | 'fault' | 'consumer' | 'capacity';
+  readonly scenarioId: string;
+  readonly assertionId: string;
+  readonly gateId: string;
+  readonly description: string;
+  readonly requestIds: readonly string[];
+  readonly principalIds: readonly string[];
+  readonly governanceObjectIds: readonly string[];
+  readonly versionIds: readonly string[];
+  readonly ruleVersions: readonly string[];
+}
+
+type PublicationTransactionFaultPoint = (typeof PUBLICATION_TRANSACTION_FAULT_POINTS)[number];
+
+interface PodmanCommandResult {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+type PodmanContainerCommandRunner = (
+  args: readonly string[],
+) => Promise<PodmanCommandResult>;
+
+interface GuardedTestcontainerCleanupResult {
+  readonly status: 'NOT_CREATED' | 'ABSENT' | 'REMOVED' | 'FAILED';
+  readonly containerId: string | null;
+  readonly containerName: string;
+  readonly errorCode: string | null;
+  readonly restartPolicyRemediated: boolean;
+}
+
+interface TestcontainerInspection {
+  readonly containerId: string;
+  readonly containerName: string;
+  readonly labels: Readonly<Record<string, string>>;
+  readonly restartPolicy: string;
+}
+
+class GuardedTestcontainerLifecycleError extends Error {
+  readonly originalFailure: unknown;
+  readonly cleanupResult: GuardedTestcontainerCleanupResult;
+
+  constructor(
+    phase: 'SETUP' | 'TEARDOWN',
+    originalFailure: unknown,
+    cleanupResult: GuardedTestcontainerCleanupResult,
+  ) {
+    super(
+      `FORMAL_TESTCONTAINER_${phase}_FAILED:${stableTestcontainerError(originalFailure)}` +
+        `;cleanup=${cleanupResult.status}` +
+        (cleanupResult.errorCode === null ? '' : `:${cleanupResult.errorCode}`),
+      { cause: originalFailure },
+    );
+    this.name = 'GuardedTestcontainerLifecycleError';
+    this.originalFailure = originalFailure;
+    this.cleanupResult = cleanupResult;
+  }
+}
+
+class GuardedExternalReadinessStrategy implements WaitStrategy {
+  async waitUntilReady(): Promise<void> {}
+
+  withStartupTimeout(_startupTimeoutMs: number): this {
+    return this;
+  }
+
+  isStartupTimeoutSet(): boolean {
+    return false;
+  }
+
+  getStartupTimeout(): number {
+    return 0;
+  }
+}
+
+class AuthorityBoundGenericContainer extends GenericContainer {
+  private createdContainerId: string | undefined;
+
+  constructor(
+    image: string,
+    restartPolicy: 'no',
+    private readonly expectedName: string,
+    private readonly expectedLabels: Readonly<Record<string, string>>,
+  ) {
+    super(image);
+    this.autoCleanup = false;
+    this.autoRemove = false;
+    this.hostConfig.RestartPolicy = {
+      Name: restartPolicy,
+      MaximumRetryCount: 0,
+    };
+  }
+
+  getCreatedContainerId(): string | undefined {
+    return this.createdContainerId;
+  }
+
+  protected override async containerCreated(containerId: string): Promise<void> {
+    this.createdContainerId = containerId;
+    const inspection = await inspectOwnedTestcontainer({
+      containerId,
+      containerName: this.expectedName,
+      expectedLabels: this.expectedLabels,
+    }, runPodmanContainerCommand);
+    if (typeof inspection === 'string') throw new Error(inspection);
+    if (inspection.restartPolicy !== RUNTIME_AUTHORITY.podman.restartPolicy) {
+      throw new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT');
+    }
+  }
+}
+
 let container: StartedTestContainer | undefined;
+let authorityBoundContainer: AuthorityBoundGenericContainer | undefined;
+let startedRuntimeEventWritten = false;
 let databaseHandle: DatabaseHandle | undefined;
 let foundation: FoundationIds;
+const integrationEvidenceObservations: IntegrationEvidenceObservation[] = [];
 
 process.env['TESTCONTAINERS_RYUK_DISABLED'] = 'true';
 
+describe('Phase 01 executable vertical slice', () => {
 beforeAll(async () => {
-  container = await new GenericContainer(POSTGRES_IMAGE)
-    .withEnvironment({
-      POSTGRES_HOST_AUTH_METHOD: 'trust',
-      TZ: 'Asia/Shanghai',
-    })
-    .withCommand(['-c', 'timezone=Asia/Shanghai'])
-    .withExposedPorts(5432)
-    .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/u, 2))
-    .start();
-
-  const poolConfig = {
-    host: container.getHost(),
-    port: container.getMappedPort(5432),
-    user: 'postgres',
-    database: 'postgres',
-  };
-  const bootstrapPool = new Pool(poolConfig);
+  authorityBoundContainer = new AuthorityBoundGenericContainer(
+    POSTGRES_IMAGE,
+    RUNTIME_AUTHORITY.podman.restartPolicy,
+    POSTGRES_CONTAINER_NAME,
+    TESTCONTAINER_LABELS,
+  );
   try {
-    const migrations = (await readdir(MIGRATION_DIRECTORY))
-      .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
-      .sort((left, right) => left.localeCompare(right));
-    for (const migration of migrations) {
-      await bootstrapPool.query(await readFile(resolve(MIGRATION_DIRECTORY, migration), 'utf8'));
+    container = await authorityBoundContainer
+      .withName(POSTGRES_CONTAINER_NAME)
+      .withLabels(TESTCONTAINER_LABELS)
+      .withEnvironment({
+        POSTGRES_HOST_AUTH_METHOD: 'trust',
+        TZ: RUNTIME_AUTHORITY.host.timezone,
+      })
+      .withCommand([
+        '-c', `timezone=${RUNTIME_AUTHORITY.host.timezone}`,
+        '-c', `listen_addresses=${RUNTIME_AUTHORITY.network.bindAddress}`,
+        '-p', String(POSTGRES_HOST_PORT),
+      ])
+      .withNetworkMode(RUNTIME_AUTHORITY.network.managedContainerMode)
+      .withWaitStrategy(new GuardedExternalReadinessStrategy())
+      .start();
+    await waitForPostgresReadiness(container.getId(), runPodmanContainerCommand);
+    await writeTestcontainerRuntimeEvent('STARTED', container.getId());
+    startedRuntimeEventWritten = true;
+
+    const poolConfig = {
+      host: '127.0.0.1',
+      port: POSTGRES_HOST_PORT,
+      user: 'postgres',
+      database: 'postgres',
+    };
+    const bootstrapPool = new Pool(poolConfig);
+    try {
+      const migrations = (await readdir(MIGRATION_DIRECTORY))
+        .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
+        .sort((left, right) => left.localeCompare(right));
+      for (const migration of migrations) {
+        await bootstrapPool.query(await readFile(resolve(MIGRATION_DIRECTORY, migration), 'utf8'));
+      }
+    } finally {
+      await bootstrapPool.end();
     }
-  } finally {
-    await bootstrapPool.end();
+    databaseHandle = createDatabase(poolConfig);
+    foundation = await seedFoundation(databaseHandle);
+  } catch (originalFailure) {
+    const failures = [originalFailure];
+    if (databaseHandle !== undefined) {
+      try {
+        await databaseHandle.close();
+      } catch (databaseCloseFailure) {
+        failures.push(databaseCloseFailure);
+      } finally {
+        databaseHandle = undefined;
+      }
+    }
+    const cleanupResult = await cleanupCurrentTestcontainer();
+    throw new GuardedTestcontainerLifecycleError(
+      'SETUP',
+      combineTestcontainerFailures(failures),
+      cleanupResult,
+    );
   }
-  databaseHandle = createDatabase(poolConfig);
-  foundation = await seedFoundation(databaseHandle);
 }, 120_000);
 
 afterAll(async () => {
-  await databaseHandle?.close();
-  await container?.stop();
+  const failures: unknown[] = [];
+  try {
+    await writeIntegrationEvidenceObservations();
+  } catch (evidenceFailure) {
+    failures.push(evidenceFailure);
+  }
+  if (databaseHandle !== undefined) {
+    try {
+      await databaseHandle.close();
+    } catch (databaseCloseFailure) {
+      failures.push(databaseCloseFailure);
+    } finally {
+      databaseHandle = undefined;
+    }
+  }
+  const cleanupResult = await cleanupCurrentTestcontainer();
+  if (cleanupResult.status === 'FAILED') {
+    failures.push(new Error(cleanupResult.errorCode ?? 'FORMAL_TESTCONTAINER_CLEANUP_FAILED'));
+  }
+  if (cleanupResult.restartPolicyRemediated) {
+    failures.push(new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT_REMEDIATED'));
+  }
+  if (failures.length > 0) {
+    throw new GuardedTestcontainerLifecycleError(
+      'TEARDOWN',
+      combineTestcontainerFailures(failures),
+      cleanupResult,
+    );
+  }
 }, 30_000);
 
-describe('Phase 01 executable vertical slice', () => {
   it('publishes, resolves, audits, snapshots, and closes simulated consumption', async () => {
     if (!databaseHandle) throw new Error('Integration database was not initialized');
     const rootDatabase = databaseHandle.database;
@@ -192,6 +410,7 @@ describe('Phase 01 executable vertical slice', () => {
         maxNotificationAttempts: 3,
         pollIntervalMilliseconds: 1_000,
         now: () => dispatcherNow,
+        references: createConsumerReferenceReader,
       },
     );
     const chargeContext = requestContext(foundation.actorId, 'charge-draft', '2026-08-08T09:00:00');
@@ -603,10 +822,36 @@ describe('Phase 01 executable vertical slice', () => {
       requestContext(foundation.actorId, 'price-version-2-snapshot', '2026-08-08T09:50:10'),
       (modules) => modules.releaseDistribution.getSnapshot(secondPrice.snapshotId),
     );
-    expect(
-      (JSON.parse(secondSnapshot.bytes.toString('utf8')) as { payload: { releaseNo: string } })
-        .payload.releaseNo,
-    ).toBe('2');
+    const secondSnapshotPayload = (
+      JSON.parse(secondSnapshot.bytes.toString('utf8')) as {
+        payload: { contentHash: string; recordedFrom: string; releaseNo: string };
+      }
+    ).payload;
+    expect(secondSnapshotPayload.releaseNo).toBe('2');
+    expect(secondSnapshotPayload.recordedFrom).toBe('2026-08-08T09:50:00');
+    const [firstPublishedRelease, secondPublishedRelease] = await Promise.all([
+      slice.getPriceListRelease(
+        requestContext(foundation.actorId, 'price-version-1-read', '2026-08-08T09:50:11'),
+        {
+          governanceObjectId: foundation.priceListObjectId,
+          priceListId: price.priceListId,
+          priceListReleaseId: price.priceListReleaseId,
+        },
+      ),
+      slice.getPriceListRelease(
+        requestContext(foundation.actorId, 'price-version-2-read', '2026-08-08T09:50:12'),
+        {
+          governanceObjectId: foundation.priceListObjectId,
+          priceListId: secondPrice.priceListId,
+          priceListReleaseId: secondPrice.priceListReleaseId,
+        },
+      ),
+    ]);
+    expect(firstPublishedRelease.recordedTo).toBe('2026-08-08T09:50:00');
+    expect(secondPublishedRelease.recordedFrom).toBe('2026-08-08T09:50:00');
+    expect(secondSnapshotPayload.contentHash).toBe(
+      secondPublishedRelease.contentHash.toString('hex'),
+    );
     const lateEvents = await runner.run(
       requestContext(foundation.servicePrincipalId, 'late-consumer-initial-pull', '2026-08-08T09:50:20'),
       (modules) =>
@@ -730,6 +975,114 @@ describe('Phase 01 executable vertical slice', () => {
       and data_type in ('timestamp with time zone', 'time with time zone')
     `.execute(databaseHandle.database);
     expect(timeZoneTypes.rows[0]?.count).toBe('0');
+    recordIntegrationObservation({
+      producerId: 'database',
+      scenarioId: 'INTEGRATION-DATABASE-TIMEZONE-TYPE-SCAN',
+      assertionId: 'ABG-03:asia-shanghai-no-timezone-contract',
+      gateId: 'ABG-03',
+      description: 'The integrated PostgreSQL schema has no timezone-aware timestamp columns.',
+      requestIds: ['request-audit-verify'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId, foundation.priceListObjectId],
+      versionIds: [charge.chargeItemVersionId, price.priceListReleaseId],
+      ruleVersions: ['phase-01.timezone-contract.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-CHARGE-CATALOG-VERSION-PUBLICATION',
+      assertionId: 'ABG-08:charge-item-stable-identity-version-candidate-immutable-publication',
+      gateId: 'ABG-08',
+      description: 'Charge publication retained a stable identity and immutable version.',
+      requestIds: ['request-charge-draft', 'request-charge-initial-approve'],
+      principalIds: [foundation.actorId, foundation.reviewerId, foundation.approverId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId],
+      versionIds: [charge.chargeItemVersionId],
+      ruleVersions: ['phase-01.workflow-template.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-VERTICAL-SLICE-PUBLICATION',
+      assertionId: 'ABG-10:price-list-draft-entry-change-complete-snapshot',
+      gateId: 'ABG-10',
+      description: 'Price-list publication produced a complete immutable snapshot.',
+      requestIds: ['request-price-draft', 'request-price-initial-approve'],
+      principalIds: [foundation.actorId, foundation.reviewerId, foundation.approverId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: ['phase-01.price-list-projection.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-PRICE-RESOLUTION-FAIL-CLOSED',
+      assertionId: 'ABG-12:two-level-price-resolution-fail-closed-evidence',
+      gateId: 'ABG-12',
+      description: 'The fixed two-level resolution path returned the expected amount and trace.',
+      requestIds: ['request-price-resolution'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [charge.chargeItemVersionId, price.priceListReleaseId],
+      ruleVersions: ['phase-01.fixed-two-level-price-resolution.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'consumer',
+      scenarioId: 'LIVE-CONSUMER-INCOMPATIBILITY-REPLAY',
+      assertionId: 'ABG-24:consumer-incompatibility-isolation-subscription-upgrade-replay',
+      gateId: 'ABG-24',
+      description: 'Incompatible consumer delivery remained isolated until explicit upgrade and replay.',
+      requestIds: ['request-legacy-consumer-poll-blocked', 'request-legacy-delivery-replay'],
+      principalIds: [foundation.incompatibleServicePrincipalId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: [PRICE_LIST_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'consumer',
+      scenarioId: 'CONSUMER-ISOLATION-GAP-BLOCKING',
+      assertionId: 'ABG-35:two-consumer-isolation-next-version-gap-block',
+      gateId: 'ABG-35',
+      description: 'Consumer checkpoints remain independent and compatible delivery resumes separately.',
+      requestIds: ['request-consumer-poll', 'request-legacy-consumer-poll-replayed'],
+      principalIds: [foundation.servicePrincipalId, foundation.incompatibleServicePrincipalId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: [PRICE_LIST_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'consumer',
+      scenarioId: 'CONSUMER-CANONICAL-SNAPSHOT-DUAL-DIGEST',
+      assertionId: 'ABG-36:uncompressed-canonical-snapshot-dual-digest-stream-client',
+      gateId: 'ABG-36',
+      description: 'Snapshot bytes and digest matched across subscription retrieval and API download.',
+      requestIds: ['request-snapshot-pull', 'request-legacy-snapshot-pull-replayed'],
+      principalIds: [foundation.servicePrincipalId, foundation.incompatibleServicePrincipalId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: [PRICE_LIST_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'integration',
+      scenarioId: 'INTEGRATION-CHARGE-CATALOG-BITEMPORAL-HISTORY',
+      assertionId: 'ABG-09:charge-item-bitemporal-history-and-difference',
+      gateId: 'ABG-09',
+      description: 'Historical and current price resolutions retained their distinct recorded-time results.',
+      requestIds: ['request-historical-price-resolution', 'request-current-price-resolution'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId, secondPrice.priceListReleaseId],
+      ruleVersions: ['phase-01.bitemporal-price-resolution.v1'],
+    });
+    recordIntegrationObservation({
+      producerId: 'database',
+      scenarioId: 'INTEGRATION-AUDIT-HASH-CHAIN-TAMPER',
+      assertionId: 'ABG-30:audit-hash-chain-recompute-first-tamper-position',
+      gateId: 'ABG-30',
+      description: 'Audit chain verification and append-only release snapshot guard both succeeded.',
+      requestIds: ['request-audit-verify'],
+      principalIds: [foundation.actorId],
+      governanceObjectIds: [foundation.priceListObjectId],
+      versionIds: [price.priceListReleaseId],
+      ruleVersions: ['phase-01.audit-chain.v1'],
+    });
   }, 120_000);
 
   it('rolls back the complete publication transaction at every durable write point', async () => {
@@ -784,7 +1137,7 @@ describe('Phase 01 executable vertical slice', () => {
       requestContext(foundation.actorId, 'fault-price-draft', '2026-08-08T10:05:00'),
       {
         governanceObjectId: foundation.priceListObjectId,
-        priceListCode: 'FAULT-MATRIX-PRICE',
+        priceListCode: 'HOSPITAL-DEFAULT-PRICE',
         displayName: '故障矩阵价表',
         currencyCode: 'CNY',
         businessValidFrom: '2026-08-08T00:00:00',
@@ -811,7 +1164,7 @@ describe('Phase 01 executable vertical slice', () => {
         entityType: 'PRICE_LIST_RELEASE',
         stableEntityId: priceDraft.priceListId,
         entityVersionId: priceDraft.priceListReleaseId,
-        changeKind: 'INITIAL_PUBLICATION',
+        changeKind: priceDraft.releaseNo === '1' ? 'INITIAL_PUBLICATION' : 'VERSION_CHANGE',
         riskClassification: 'HIGH',
         submittedContentDigest: priceDraft.contentHash.toString('hex'),
         changeReason: '验证发布事务逐写点回滚',
@@ -832,8 +1185,12 @@ describe('Phase 01 executable vertical slice', () => {
     );
 
     const baseline = await publicationSideEffectCounts(databaseHandle.database);
+    const recordingPeriodBaseline = await publishedPriceListRecordingPeriods(
+      databaseHandle.database,
+      priceDraft.priceListId,
+    );
     const results: {
-      readonly faultPoint: ControlledPublicationFaultPoint;
+      readonly faultPoint: PublicationTransactionFaultPoint;
       readonly rolledBack: boolean;
     }[] = [];
     for (const faultPoint of PUBLICATION_TRANSACTION_FAULT_POINTS) {
@@ -861,20 +1218,33 @@ describe('Phase 01 executable vertical slice', () => {
       }
       const afterFault = await publicationSideEffectCounts(databaseHandle.database);
       expect(afterFault).toEqual(baseline);
-      const unchangedDraft = await slice.getPriceListRelease(
-        requestContext(
-          foundation.actorId,
-          `fault-price-read-${faultPoint}`,
-          '2026-08-08T10:08:01',
+      expect(
+        await publishedPriceListRecordingPeriods(
+          databaseHandle.database,
+          priceDraft.priceListId,
         ),
-        {
-          governanceObjectId: foundation.priceListObjectId,
-          priceListId: priceDraft.priceListId,
-          priceListReleaseId: priceDraft.priceListReleaseId,
-        },
-      );
-      expect(unchangedDraft.governanceStatus).toBe('DRAFT');
+      ).toEqual(recordingPeriodBaseline);
+      const unchangedDraft = await databaseHandle.database
+        .selectFrom('price_list.price_list_release')
+        .select(['governance_status', 'recorded_from', 'content_hash'])
+        .where('price_list_release_id', '=', priceDraft.priceListReleaseId)
+        .executeTakeFirstOrThrow();
+      expect(unchangedDraft.governance_status).toBe('DRAFT');
+      expect(unchangedDraft.recorded_from).toBe('2026-08-08T10:05:00');
+      expect(unchangedDraft.content_hash.equals(priceDraft.contentHash)).toBe(true);
       results.push({ faultPoint, rolledBack: true });
+      recordIntegrationObservation({
+        producerId: 'fault',
+        scenarioId: 'FAULT-PUBLICATION-ATOMIC-WRITE-MATRIX',
+        assertionId: faultPointAssertionId(faultPoint),
+        gateId: 'ABG-32',
+        description: 'Publication transaction rolled back at controlled point ' + faultPoint + '.',
+        requestIds: ['request-fault-price-approve-' + faultPoint],
+        principalIds: [foundation.approverId],
+        governanceObjectIds: [foundation.priceListObjectId],
+        versionIds: [priceDraft.priceListReleaseId],
+        ruleVersions: ['phase-01.publication-atomicity.v1'],
+      });
     }
     expect(results).toEqual(
       PUBLICATION_TRANSACTION_FAULT_POINTS.map((faultPoint) => ({
@@ -1027,8 +1397,590 @@ describe('Phase 01 executable vertical slice', () => {
       ),
     ).rejects.toThrow('SNAPSHOT_ARTIFACT_TOO_LARGE');
     expect(await publicationSideEffectCounts(databaseHandle.database)).toEqual(beforeOversized);
+    recordIntegrationObservation({
+      producerId: 'capacity',
+      scenarioId: 'INTEGRATION-SNAPSHOT-16MIB-BOUNDARY',
+      assertionId: 'ABG-37:canonical-artifact-16mib-exact-accepted',
+      gateId: 'ABG-37',
+      description: 'Canonical snapshot exactly 16 MiB was accepted and downloaded with matching digest.',
+      requestIds: ['request-capacity-exact', 'request-capacity-download'],
+      principalIds: [foundation.approverId, foundation.actorId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId],
+      versionIds: [draft.chargeItemVersionId, exactPublication.releaseId],
+      ruleVersions: [CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION],
+    });
+    recordIntegrationObservation({
+      producerId: 'capacity',
+      scenarioId: 'INTEGRATION-SNAPSHOT-16MIB-BOUNDARY',
+      assertionId: 'ABG-37:canonical-artifact-16mib-plus-one-rejected',
+      gateId: 'ABG-37',
+      description: 'Canonical snapshot of 16 MiB plus one byte was rejected before publication writes.',
+      requestIds: ['request-capacity-oversized'],
+      principalIds: [foundation.approverId],
+      governanceObjectIds: [foundation.chargeCatalogObjectId],
+      versionIds: [draft.chargeItemVersionId],
+      ruleVersions: [CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION],
+    });
   }, 180_000);
 });
+
+describe('Testcontainers Podman lifecycle guard', () => {
+  it('remediates restart-only drift, re-inspects, and removes only the exact owned container', async () => {
+    const containerId = 'a'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(containerId, POSTGRES_CONTAINER_NAME, 'always'),
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(
+        containerId,
+        POSTGRES_CONTAINER_NAME,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+      ),
+      { exitCode: 0, stdout: '', stderr: '' },
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toEqual({
+      status: 'REMOVED',
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      errorCode: null,
+      restartPolicyRemediated: true,
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+      [
+        'container',
+        'update',
+        `--restart=${RUNTIME_AUTHORITY.podman.restartPolicy}`,
+        containerId,
+      ],
+      ['container', 'inspect', containerId],
+      ['container', 'rm', '--force', containerId],
+    ]);
+  });
+
+  it('preserves the original setup failure together with the guarded cleanup outcome', () => {
+    const originalFailure = new Error('SYNTHETIC_TESTCONTAINER_START_FAILURE');
+    const cleanupResult: GuardedTestcontainerCleanupResult = {
+      status: 'REMOVED',
+      containerId: 'b'.repeat(64),
+      containerName: POSTGRES_CONTAINER_NAME,
+      errorCode: null,
+      restartPolicyRemediated: false,
+    };
+
+    const failure = new GuardedTestcontainerLifecycleError(
+      'SETUP',
+      originalFailure,
+      cleanupResult,
+    );
+
+    expect(failure.cause).toBe(originalFailure);
+    expect(failure.originalFailure).toBe(originalFailure);
+    expect(failure.cleanupResult).toBe(cleanupResult);
+    expect(failure.message).toContain('SYNTHETIC_TESTCONTAINER_START_FAILURE');
+    expect(failure.message).toContain('cleanup=REMOVED');
+  });
+
+  it('preserves a container whose current-run ownership labels drift', async () => {
+    const containerId = 'c'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(
+        containerId,
+        POSTGRES_CONTAINER_NAME,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+        { ...TESTCONTAINER_LABELS, 'hdi.run-id': 'different-run' },
+      ),
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_OWNERSHIP_DRIFT',
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+    ]);
+  });
+
+  it('fails closed when the fresh inspect has an operational failure', async () => {
+    const containerId = 'd'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      { exitCode: 125, stdout: '', stderr: 'synthetic inspect failure' },
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_INSPECT_FAILED',
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+    ]);
+  });
+
+  it('surfaces readiness failure without invoking an unguarded stop or removal', async () => {
+    const containerId = '9'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      testcontainerInspectResult(
+        containerId,
+        POSTGRES_CONTAINER_NAME,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+      ),
+      { exitCode: 125, stdout: '', stderr: 'synthetic logs failure' },
+    ];
+
+    await expect(waitForPostgresReadiness(
+      containerId,
+      async (args: readonly string[]) => {
+        commands.push([...args]);
+        const response = responses.shift();
+        if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+        return response;
+      },
+      { maxAttempts: 1, retryDelayMs: 0, wait: async () => {} },
+    )).rejects.toThrow('FORMAL_TESTCONTAINER_READINESS_LOGS_FAILED');
+    expect(commands).toEqual([
+      ['container', 'inspect', containerId],
+      ['container', 'logs', containerId],
+    ]);
+  });
+
+  it('does not remove when restart remediation is not confirmed by a second fresh inspect', async () => {
+    const containerId = 'e'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(containerId, POSTGRES_CONTAINER_NAME, 'always'),
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(containerId, POSTGRES_CONTAINER_NAME, 'always'),
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT',
+      restartPolicyRemediated: true,
+    });
+    expect(commands).not.toContainEqual(['container', 'rm', '--force', containerId]);
+  });
+
+  it.each([
+    ['container id', 'f'.repeat(64), POSTGRES_CONTAINER_NAME],
+    ['container name', 'a'.repeat(64), `${POSTGRES_CONTAINER_NAME}-other`],
+  ])('preserves exact-identity drift in the %s', async (_field, inspectedId, inspectedName) => {
+    const containerId = 'a'.repeat(64);
+    const commands: string[][] = [];
+    const responses = [
+      { exitCode: 0, stdout: '', stderr: '' },
+      testcontainerInspectResult(
+        inspectedId,
+        inspectedName,
+        RUNTIME_AUTHORITY.podman.restartPolicy,
+      ),
+    ];
+
+    const result = await guardedRemoveTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+      expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+    }, async (args: readonly string[]) => {
+      commands.push([...args]);
+      const response = responses.shift();
+      if (response === undefined) throw new Error('UNEXPECTED_SYNTHETIC_PODMAN_COMMAND');
+      return response;
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      errorCode: 'FORMAL_TESTCONTAINER_IDENTITY_DRIFT',
+    });
+    expect(commands).toEqual([
+      ['container', 'exists', containerId],
+      ['container', 'inspect', containerId],
+    ]);
+  });
+});
+
+async function guardedRemoveTestcontainer(
+  input: {
+    readonly containerId: string | undefined;
+    readonly containerName: string;
+    readonly expectedLabels: Readonly<Record<string, string>>;
+    readonly expectedRestartPolicy: 'no';
+  },
+  runPodman: PodmanContainerCommandRunner,
+): Promise<GuardedTestcontainerCleanupResult> {
+  if (input.containerId === undefined) {
+    return {
+      status: 'NOT_CREATED',
+      containerId: null,
+      containerName: input.containerName,
+      errorCode: null,
+      restartPolicyRemediated: false,
+    };
+  }
+  const containerId = input.containerId;
+  const baseResult = {
+    containerId,
+    containerName: input.containerName,
+  } as const;
+  const expectedLabelNames = Object.keys(input.expectedLabels).sort();
+  const governedLabelNames = [...TESTCONTAINER_GOVERNED_LABEL_NAMES].sort();
+  if (
+    governedLabelNames.length !== 5 ||
+    new Set(governedLabelNames).size !== 5 ||
+    expectedLabelNames.length !== governedLabelNames.length ||
+    expectedLabelNames.some((name, index) => name !== governedLabelNames[index])
+  ) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_GOVERNED_LABEL_SET_INVALID',
+      false,
+    );
+  }
+  const exists = await runPodman(['container', 'exists', containerId]);
+  if (exists.exitCode === 1) {
+    return {
+      ...baseResult,
+      status: 'ABSENT',
+      errorCode: null,
+      restartPolicyRemediated: false,
+    };
+  }
+  if (exists.exitCode !== 0) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_EXISTS_CHECK_FAILED',
+      false,
+    );
+  }
+
+  const inspectionInput = { ...input, containerId };
+  let inspection = await inspectOwnedTestcontainer(inspectionInput, runPodman);
+  if (typeof inspection === 'string') {
+    return failedTestcontainerCleanup(baseResult, inspection, false);
+  }
+  let restartPolicyRemediated = false;
+  if (inspection.restartPolicy !== input.expectedRestartPolicy) {
+    const update = await runPodman([
+      'container',
+      'update',
+      `--restart=${input.expectedRestartPolicy}`,
+      containerId,
+    ]);
+    if (update.exitCode !== 0) {
+      return failedTestcontainerCleanup(
+        baseResult,
+        'FORMAL_TESTCONTAINER_RESTART_POLICY_REMEDIATION_FAILED',
+        false,
+      );
+    }
+    restartPolicyRemediated = true;
+    inspection = await inspectOwnedTestcontainer(inspectionInput, runPodman);
+    if (typeof inspection === 'string') {
+      return failedTestcontainerCleanup(baseResult, inspection, true);
+    }
+  }
+  if (inspection.restartPolicy !== input.expectedRestartPolicy) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT',
+      restartPolicyRemediated,
+    );
+  }
+  const removal = await runPodman(['container', 'rm', '--force', containerId]);
+  if (removal.exitCode !== 0) {
+    return failedTestcontainerCleanup(
+      baseResult,
+      'FORMAL_TESTCONTAINER_REMOVE_FAILED',
+      restartPolicyRemediated,
+    );
+  }
+  return {
+    ...baseResult,
+    status: 'REMOVED',
+    errorCode: null,
+    restartPolicyRemediated,
+  };
+}
+
+async function inspectOwnedTestcontainer(
+  input: {
+    readonly containerId: string;
+    readonly containerName: string;
+    readonly expectedLabels: Readonly<Record<string, string>>;
+  },
+  runPodman: PodmanContainerCommandRunner,
+): Promise<TestcontainerInspection | string> {
+  const response = await runPodman(['container', 'inspect', input.containerId]);
+  if (response.exitCode !== 0) return 'FORMAL_TESTCONTAINER_INSPECT_FAILED';
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response.stdout);
+  } catch {
+    return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 1) {
+    return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  }
+  const record = parsed[0];
+  if (!isRecord(record)) return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  const containerId = record['Id'];
+  const rawName = record['Name'];
+  const config = record['Config'];
+  const hostConfig = record['HostConfig'];
+  if (
+    typeof containerId !== 'string' ||
+    typeof rawName !== 'string' ||
+    !isRecord(config) ||
+    !isRecord(hostConfig)
+  ) return 'FORMAL_TESTCONTAINER_INSPECT_INVALID';
+  const containerName = rawName.startsWith('/') ? rawName.slice(1) : rawName;
+  if (containerId !== input.containerId || containerName !== input.containerName) {
+    return 'FORMAL_TESTCONTAINER_IDENTITY_DRIFT';
+  }
+  const rawLabels = config['Labels'];
+  if (!isRecord(rawLabels)) return 'FORMAL_TESTCONTAINER_OWNERSHIP_DRIFT';
+  const labels: Record<string, string> = {};
+  for (const [name, value] of Object.entries(rawLabels)) {
+    if (typeof value === 'string') labels[name] = value;
+  }
+  if (
+    !Object.entries(input.expectedLabels)
+      .every(([name, value]) => labels[name] === value)
+  ) return 'FORMAL_TESTCONTAINER_OWNERSHIP_DRIFT';
+  const rawRestartPolicy = hostConfig['RestartPolicy'];
+  if (!isRecord(rawRestartPolicy) || typeof rawRestartPolicy['Name'] !== 'string') {
+    return 'FORMAL_TESTCONTAINER_RESTART_POLICY_UNAVAILABLE';
+  }
+  return {
+    containerId,
+    containerName,
+    labels,
+    restartPolicy: rawRestartPolicy['Name'],
+  };
+}
+
+function failedTestcontainerCleanup(
+  input: { readonly containerId: string; readonly containerName: string },
+  errorCode: string,
+  restartPolicyRemediated: boolean,
+): GuardedTestcontainerCleanupResult {
+  return {
+    ...input,
+    status: 'FAILED',
+    errorCode,
+    restartPolicyRemediated,
+  };
+}
+
+function testcontainerInspectResult(
+  containerId: string,
+  containerName: string,
+  restartPolicy: string,
+  labels: Readonly<Record<string, string>> = TESTCONTAINER_LABELS,
+): PodmanCommandResult {
+  return {
+    exitCode: 0,
+    stdout: JSON.stringify([{
+      Id: containerId,
+      Name: containerName,
+      Config: { Labels: labels },
+      HostConfig: { RestartPolicy: { Name: restartPolicy } },
+    }]),
+    stderr: '',
+  };
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stableTestcontainerError(error: unknown): string {
+  if (error instanceof Error) return `${error.name}:${error.message}`;
+  return String(error);
+}
+
+function combineTestcontainerFailures(failures: readonly unknown[]): unknown {
+  if (failures.length === 1) return failures[0];
+  return new AggregateError(
+    [...failures],
+    'FORMAL_TESTCONTAINER_MULTIPLE_LIFECYCLE_FAILURES',
+  );
+}
+
+async function runPodmanContainerCommand(
+  args: readonly string[],
+): Promise<PodmanCommandResult> {
+  try {
+    const { stdout, stderr } = await execFileAsync('podman', [...args], {
+      windowsHide: true,
+      encoding: 'utf8',
+      timeout: 30_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    return { exitCode: 0, stdout, stderr };
+  } catch (error) {
+    if (!isRecord(error)) return { exitCode: 125, stdout: '', stderr: String(error) };
+    return {
+      exitCode: typeof error['code'] === 'number' ? error['code'] : 125,
+      stdout: typeof error['stdout'] === 'string' ? error['stdout'] : '',
+      stderr: typeof error['stderr'] === 'string'
+        ? error['stderr']
+        : stableTestcontainerError(error),
+    };
+  }
+}
+
+async function waitForPostgresReadiness(
+  containerId: string,
+  runPodman: PodmanContainerCommandRunner,
+  options: {
+    readonly maxAttempts?: number;
+    readonly retryDelayMs?: number;
+    readonly wait?: (milliseconds: number) => Promise<void>;
+  } = {},
+): Promise<void> {
+  const maxAttempts = options.maxAttempts ?? 300;
+  const retryDelayMs = options.retryDelayMs ?? 200;
+  const wait = options.wait ?? (async (milliseconds) => delay(milliseconds));
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const inspection = await inspectOwnedTestcontainer({
+      containerId,
+      containerName: POSTGRES_CONTAINER_NAME,
+      expectedLabels: TESTCONTAINER_LABELS,
+    }, runPodman);
+    if (typeof inspection === 'string') throw new Error(inspection);
+    if (inspection.restartPolicy !== RUNTIME_AUTHORITY.podman.restartPolicy) {
+      throw new Error('FORMAL_TESTCONTAINER_RESTART_POLICY_DRIFT');
+    }
+    const logs = await runPodman(['container', 'logs', containerId]);
+    if (logs.exitCode !== 0) throw new Error('FORMAL_TESTCONTAINER_READINESS_LOGS_FAILED');
+    const combinedLogs = `${logs.stdout}\n${logs.stderr}`;
+    if (
+      combinedLogs.split('database system is ready to accept connections').length - 1 >= 2
+    ) return;
+    if (attempt < maxAttempts) await wait(retryDelayMs);
+  }
+  throw new Error('FORMAL_TESTCONTAINER_READINESS_TIMEOUT');
+}
+
+async function cleanupCurrentTestcontainer(): Promise<GuardedTestcontainerCleanupResult> {
+  const containerId = container?.getId() ?? authorityBoundContainer?.getCreatedContainerId();
+  const runtimeEventWasWritten = startedRuntimeEventWritten;
+  const result = await guardedRemoveTestcontainer({
+    containerId,
+    containerName: POSTGRES_CONTAINER_NAME,
+    expectedLabels: TESTCONTAINER_LABELS,
+    expectedRestartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+  }, runPodmanContainerCommand);
+  if (result.status === 'REMOVED' || result.status === 'ABSENT' || result.status === 'NOT_CREATED') {
+    container = undefined;
+    authorityBoundContainer = undefined;
+    startedRuntimeEventWritten = false;
+  }
+  if (result.status === 'REMOVED' && runtimeEventWasWritten && containerId !== undefined) {
+    try {
+      await writeTestcontainerRuntimeEvent('STOPPED', containerId);
+    } catch {
+      return failedTestcontainerCleanup(
+        { containerId, containerName: POSTGRES_CONTAINER_NAME },
+        'FORMAL_TESTCONTAINER_STOPPED_EVENT_WRITE_FAILED',
+        result.restartPolicyRemediated,
+      );
+    }
+  }
+  return result;
+}
+
+function recordIntegrationObservation(observation: IntegrationEvidenceObservation): void {
+  integrationEvidenceObservations.push(observation);
+}
+
+function faultPointAssertionId(faultPoint: PublicationTransactionFaultPoint): string {
+  const assertionByFaultPoint: Readonly<Record<PublicationTransactionFaultPoint, string>> = {
+    WORKFLOW_DECISION_WRITTEN: 'ABG-32:publication-workflow-decision-rollback',
+    RELEASE_ENVELOPE_WRITTEN: 'ABG-32:publication-release-envelope-rollback',
+    SNAPSHOT_ARTIFACT_WRITTEN: 'ABG-32:publication-snapshot-artifact-rollback',
+    RELEASE_MEMBER_WRITTEN: 'ABG-32:publication-release-member-rollback',
+    OUTBOX_EVENT_WRITTEN: 'ABG-32:publication-outbox-event-rollback',
+    COMPATIBILITY_PRECHECK_WRITTEN: 'ABG-32:publication-compatibility-precheck-rollback',
+    DELIVERY_REGISTERED: 'ABG-32:publication-delivery-registration-rollback',
+    DOMAIN_CANDIDATE_CONFIRMED: 'ABG-32:publication-domain-candidate-confirmation-rollback',
+    AUDIT_EVENT_WRITTEN: 'ABG-32:publication-audit-event-rollback',
+  };
+  return assertionByFaultPoint[faultPoint];
+}
+
+async function writeIntegrationEvidenceObservations(): Promise<void> {
+  const path = process.env['PHASE01_INTEGRATION_EVIDENCE_PATH'];
+  if (!path) return;
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(
+    path,
+    JSON.stringify({
+      schemaVersion: 'phase-01.integration-observations.v1',
+      observations: integrationEvidenceObservations,
+    }, null, 2) + '\n',
+    { encoding: 'utf8', flag: 'wx', mode: 0o600 },
+  );
+}
 
 async function publicationSideEffectCounts(database: DatabaseHandle['database']) {
   const result = await sql<{
@@ -1057,6 +2009,23 @@ async function publicationSideEffectCounts(database: DatabaseHandle['database'])
       (select count(*)::bigint from workflow.approval_action) as approval_action_count
   `.execute(database);
   return result.rows[0];
+}
+
+function publishedPriceListRecordingPeriods(
+  database: DatabaseHandle['database'],
+  priceListId: string,
+) {
+  return database
+    .selectFrom('price_list.price_list_release')
+    .select([
+      'price_list_release_id as priceListReleaseId',
+      'recorded_from as recordedFrom',
+      'recorded_to as recordedTo',
+    ])
+    .where('price_list_id', '=', priceListId)
+    .where('governance_status', '=', 'PUBLISHED')
+    .orderBy('release_no', 'asc')
+    .execute();
 }
 
 async function loadNextReleaseNo(
@@ -1407,4 +2376,70 @@ function requestContext(
     correlationId: `correlation-${suffix}`,
     occurredAt,
   };
+}
+
+function formalTestcontainerLabels(): Readonly<Record<string, string>> {
+  const runId = process.env['ABG_RUN_ID'];
+  const runSequence = process.env['ABG_RUN_SEQUENCE'];
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  if (runId !== undefined && (runSequence === undefined || runtimeNamespace === undefined)) {
+    throw new Error('FORMAL_TESTCONTAINER_RUN_IDENTITY_INCOMPLETE');
+  }
+  return {
+    'hdi.repository': RUNTIME_AUTHORITY.labels.static['hdi.repository'],
+    'hdi.phase': RUNTIME_AUTHORITY.labels.static['hdi.phase'],
+    'hdi.run-id': runId ?? `integration-${process.pid}`,
+    'hdi.run-sequence': runSequence ?? '0',
+    'hdi.managed-by': runId === undefined
+      ? 'integration-test'
+      : RUNTIME_AUTHORITY.labels.static['hdi.managed-by'],
+  };
+}
+
+function integrationPostgresContainerName(): string {
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  return runtimeNamespace === undefined
+    ? `phase-01-integration-postgres-${process.pid}`
+    : `${runtimeNamespace}_integration_postgres`;
+}
+
+async function writeTestcontainerRuntimeEvent(
+  event: 'STARTED' | 'STOPPED',
+  containerId: string,
+): Promise<void> {
+  const eventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
+  if (eventDirectory === undefined) return;
+  const runId = process.env['ABG_RUN_ID'];
+  const runSequence = process.env['ABG_RUN_SEQUENCE'];
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  if (runId === undefined || runSequence === undefined || runtimeNamespace === undefined) {
+    throw new Error('FORMAL_TESTCONTAINER_EVENT_IDENTITY_INCOMPLETE');
+  }
+  await mkdir(eventDirectory, { recursive: true, mode: 0o700 });
+  await writeFile(
+    resolve(eventDirectory, `container-integration-postgres-${containerId}-${event.toLowerCase()}.json`),
+    JSON.stringify({
+      schemaVersion: 'phase-01.formal-runtime-event.v1',
+      runId,
+      runSequence: Number(runSequence),
+      runtimeNamespace,
+      event,
+      resourceType: 'container',
+      id: containerId,
+      name: POSTGRES_CONTAINER_NAME,
+      role: 'testcontainers-postgres',
+      labels: TESTCONTAINER_LABELS,
+      occurredAt: new Date().toISOString(),
+      imageReference: POSTGRES_IMAGE,
+      imageDigest: POSTGRES_IMAGE.split('@')[1] ?? null,
+      restartPolicy: RUNTIME_AUTHORITY.podman.restartPolicy,
+      ports: [{
+        containerPort: `${POSTGRES_HOST_PORT}/tcp`,
+        hostIp: RUNTIME_AUTHORITY.network.bindAddress,
+        hostPort: POSTGRES_HOST_PORT,
+      }],
+      ...(event === 'STOPPED' ? { exitStatus: 'REMOVED_BY_GUARDED_PODMAN_CLEANUP' } : {}),
+    }, null, 2) + '\n',
+    { encoding: 'utf8', flag: 'wx', mode: 0o600 },
+  );
 }

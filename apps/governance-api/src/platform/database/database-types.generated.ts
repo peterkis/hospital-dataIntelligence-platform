@@ -11,23 +11,19 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
 
-export type Numeric = ColumnType<string, number | string, number | string>;
+export type Json = JsonValue;
 
-export interface AccessControlObjectPermissionGrant {
-  campus_id: string | null;
-  created_at: Generated<string>;
-  governance_object_id: string;
-  grant_effect: string;
-  grant_sequence: Int8;
-  granted_by: string;
-  object_permission_grant_id: Generated<string>;
-  permission_code: string;
-  reason: string;
-  security_principal_id: string;
-  scope_level: Generated<string>;
-  valid_from: string;
-  valid_to: string | null;
-}
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [x: string]: JsonValue | undefined;
+};
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
+export type Numeric = ColumnType<string, number | string, number | string>;
 
 export interface AccessControlAuthorizationDecision {
   authorization_decision_id: Generated<string>;
@@ -43,6 +39,22 @@ export interface AccessControlAuthorizationDecision {
   security_principal_id: string;
 }
 
+export interface AccessControlObjectPermissionGrant {
+  campus_id: string | null;
+  created_at: Generated<string>;
+  governance_object_id: string;
+  grant_effect: string;
+  grant_sequence: Int8;
+  granted_by: string;
+  object_permission_grant_id: Generated<string>;
+  permission_code: string;
+  reason: string;
+  scope_level: Generated<string>;
+  security_principal_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface AuditAuditEvent {
   action: string;
   actor_principal_id: string;
@@ -56,10 +68,18 @@ export interface AuditAuditEvent {
   current_hash: Buffer;
   entity_type: string;
   entity_version_id: string | null;
+  /**
+   * Minimal business facts for typed governance events; credentials and complete request bodies are forbidden.
+   */
+  event_payload: Json | null;
   event_payload_hash: Buffer;
   governance_object_id: string;
   occurred_at: string;
   previous_hash: Buffer;
+  /**
+   * Asia/Shanghai local database time at which the audit event was durably recorded.
+   */
+  recorded_at: string | null;
   request_id: string;
   stable_entity_id: string;
 }
@@ -87,7 +107,7 @@ export interface BatchImportImportRow {
   entity_version_id: string | null;
   import_job_id: string;
   import_row_id: Generated<string>;
-  normalized_payload: unknown;
+  normalized_payload: Json;
   normalized_payload_digest: Buffer;
   result_kind: string | null;
   retryable: Generated<boolean>;
@@ -103,7 +123,7 @@ export interface BatchImportImportRowAttempt {
   attempted_at: string;
   attempted_by: string;
   error_code: string | null;
-  evidence: unknown;
+  evidence: Json;
   import_row_attempt_id: Generated<string>;
   import_row_id: string;
   rule_version: string;
@@ -148,6 +168,202 @@ export interface ChargeCatalogPricedObject {
   priced_object_id: Generated<string>;
 }
 
+export interface DepartmentMasterDepartment {
+  created_at: Generated<string>;
+  created_by: string;
+  department_code: string;
+  department_id: Generated<string>;
+  governance_object_id: string;
+  updated_at: Generated<string>;
+  updated_by: string;
+}
+
+export interface DepartmentMasterDepartmentAlias {
+  confidence_score: Numeric | null;
+  created_at: Generated<string>;
+  department_alias_id: Generated<string>;
+  department_id: string;
+  mapping_status: string;
+  source_code: string;
+  source_name: string;
+  source_system: string;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentCampusAssignment {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  campus_id: string;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_campus_assignment_id: Generated<string>;
+  department_id: string;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  updated_at: Generated<string>;
+  updated_by: string;
+}
+
+export interface DepartmentMasterDepartmentHierarchyGroup {
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_group_id: Generated<string>;
+  department_hierarchy_view_id: string;
+  group_code: string;
+  updated_at: Generated<string>;
+  updated_by: string;
+}
+
+export interface DepartmentMasterDepartmentHierarchyGroupVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_group_id: string;
+  department_hierarchy_group_version_id: Generated<string>;
+  department_hierarchy_view_id: string;
+  display_name: string;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  updated_at: Generated<string>;
+  updated_by: string;
+  version_no: Int8;
+}
+
+export interface DepartmentMasterDepartmentHierarchyNode {
+  created_at: Generated<string>;
+  department_hierarchy_group_id: string | null;
+  department_hierarchy_group_version_id: string | null;
+  department_hierarchy_node_id: Generated<string>;
+  department_hierarchy_view_id: string;
+  department_hierarchy_view_version_id: string;
+  department_id: string | null;
+  department_version_id: string | null;
+  display_name: string;
+  node_kind: string;
+  parent_node_id: string | null;
+  sort_order: Generated<number>;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentHierarchyView {
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_view_id: Generated<string>;
+  governance_object_id: string;
+  operational_enabled: boolean;
+  updated_at: Generated<string>;
+  updated_by: string;
+  view_code: string;
+  view_name: string;
+  view_type: string;
+}
+
+export interface DepartmentMasterDepartmentHierarchyViewVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_hierarchy_view_id: string;
+  department_hierarchy_view_version_id: Generated<string>;
+  governance_status: string;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  release_id: string | null;
+  updated_at: Generated<string>;
+  updated_by: string;
+  version_no: Int8;
+}
+
+export interface DepartmentMasterDepartmentPublishedProjection {
+  campuses: Json;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  department_code: string;
+  department_id: string;
+  department_published_projection_id: Generated<string>;
+  department_type: string;
+  department_version_id: string;
+  hierarchies: Json;
+  published_at: string;
+  published_release_id: string;
+  quality_score: Numeric | null;
+  standard_name: string;
+  subject_mapping_applicability: string;
+  superseded_at: string | null;
+  updated_at: Generated<string | null>;
+}
+
+export interface DepartmentMasterDepartmentQualityScore {
+  calculated_at: string;
+  completeness_score: Numeric;
+  created_at: Generated<string>;
+  department_id: string;
+  department_quality_score_id: Generated<string>;
+  overall_score: Numeric;
+  standardization_score: Numeric;
+  uniqueness_score: Numeric;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentSourceMapping {
+  created_at: Generated<string>;
+  department_id: string;
+  department_mapping_id: Generated<string>;
+  mapping_status: string;
+  match_method: string;
+  source_department_code: string;
+  source_department_name: string;
+  source_system: string;
+  updated_at: Generated<string>;
+}
+
+export interface DepartmentMasterDepartmentVersion {
+  business_period: Generated<string | null>;
+  business_status: string;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  clinical_flag: boolean;
+  content_hash: Buffer;
+  created_at: Generated<string>;
+  created_by: string;
+  department_id: string;
+  department_type: string;
+  department_version_id: Generated<string>;
+  description: string | null;
+  governance_status: string;
+  management_flag: boolean;
+  recorded_from: string;
+  recorded_period: Generated<string | null>;
+  recorded_to: string | null;
+  release_id: string | null;
+  short_name: string | null;
+  standard_name: string;
+  subject_mapping_applicability: string;
+  updated_at: Generated<string>;
+  updated_by: string;
+  version_no: Int8;
+}
+
+export interface DepartmentMasterMasterDataSource {
+  created_at: Generated<string>;
+  enabled: Generated<boolean>;
+  master_data_source_id: string;
+  source_code: string;
+  source_name: string;
+  system_type: string;
+  updated_at: Generated<string>;
+}
+
 export interface EmergencyControlImpactCase {
   case_status: string;
   closed_at: string | null;
@@ -163,7 +379,7 @@ export interface EmergencyControlImpactCaseAction {
   action_sequence: Int8;
   action_type: string;
   actor_principal_id: string;
-  evidence: unknown;
+  evidence: Json;
   impact_case_action_id: Generated<string>;
   impact_case_id: string;
   occurred_at: string;
@@ -176,7 +392,7 @@ export interface EmergencyControlSuspensionEvent {
   correlation_id: string;
   effective_from: string;
   event_sequence: Int8;
-  evidence: unknown;
+  evidence: Json;
   governance_object_id: string;
   price_list_id: string;
   price_list_release_id: string;
@@ -185,6 +401,468 @@ export interface EmergencyControlSuspensionEvent {
   request_id: string;
   scope_level: string;
   suspension_event_id: Generated<string>;
+}
+
+export interface PersonMasterAssignment {
+  assignment_id: Generated<string>;
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  department_governance_object_id: string;
+  department_id: string;
+  engagement_id: string;
+  governance_object_id: string;
+  person_id: string;
+  placement_scope: string;
+  relation_basis: string;
+}
+
+export interface PersonMasterAssignmentClosureEvidence {
+  assignment_id: string;
+  closure_assignment_version_id: string;
+  closure_evidence_fingerprint: Buffer;
+  closure_policy_code: string;
+  closure_policy_digest: Buffer;
+  closure_policy_version: number;
+  closure_recorded_from: string;
+  created_by: string;
+  ended_at: string;
+  governance_object_id: string;
+  is_period_preserving_end_confirmation: boolean;
+  operation_hash: Buffer;
+  previous_assignment_version_id: string;
+  previous_business_valid_from: string;
+  previous_business_valid_to: string | null;
+  previous_version_no: Int8;
+  proof_kind: string;
+  reason_code: string;
+  request_id: string;
+  semantic_inheritance: string;
+  source_acceptance_dependency_fingerprint: Buffer;
+  source_acceptance_version_id: string;
+  source_semantic_fingerprint: Buffer | null;
+  source_semantics_version_id: string | null;
+}
+
+export interface PersonMasterAssignmentCommandOutcome {
+  assignment_version_id: string | null;
+  created_by: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  operation_type: string;
+  recorded_at: Generated<string>;
+  rejection_code: string | null;
+  request_id: string;
+  transfer_id: string | null;
+}
+
+export interface PersonMasterAssignmentSemanticTerm {
+  code: string;
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  dimension: string;
+  governance_object_id: string;
+  term_id: Generated<string>;
+}
+
+export interface PersonMasterAssignmentSemanticTermVersion {
+  business_valid_from: string;
+  business_valid_to: string | null;
+  code: string;
+  created_by: string;
+  definition_state: string;
+  dimension: string;
+  governance_object_id: string;
+  label: string;
+  operation_hash: Buffer;
+  reason_code: string | null;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_term_version_id: string | null;
+  term_id: string;
+  term_version_id: Generated<string>;
+  version_no: Int8;
+}
+
+export interface PersonMasterAssignmentTemporarySource {
+  created_by: string;
+  engagement_id: string;
+  evaluation_record_as_of: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  policy_code: string;
+  policy_digest: Buffer;
+  policy_version: number;
+  preserved_purpose_code: string;
+  reason_code: string;
+  recorded_from: Generated<string>;
+  request_id: string;
+  source_acceptance_dependency_fingerprint: Buffer;
+  source_assignment_id: string;
+  source_assignment_version_id: string;
+  source_declared_from: string;
+  source_declared_to: string | null;
+  source_department_governance_object_id: string;
+  source_department_id: string;
+  source_department_version_id: string;
+  source_link_fingerprint: Generated<Buffer>;
+  source_primary_evaluation_evidence: Json;
+  source_semantic_fingerprint: Buffer;
+  source_semantic_version_id: string;
+  source_window_validation_evidence: Json;
+  target_admission_dependency_fingerprint: Buffer;
+  target_admission_version_id: Generated<string>;
+  target_assignment_id: Generated<string>;
+  target_department_governance_object_id: string;
+  target_department_id: string;
+  temporary_from: string;
+  temporary_mode_code: string;
+  temporary_overlap_evaluation_evidence: Json;
+  temporary_to: string;
+}
+
+export interface PersonMasterAssignmentTransfer {
+  created_by: string;
+  effective_at: string;
+  engagement_id: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  policy_code: string;
+  policy_digest: Buffer;
+  policy_version: number;
+  preserved_mode_code: string;
+  preserved_purpose_code: string;
+  recorded_from: Generated<string>;
+  root_request_id: string;
+  source_assignment_id: string;
+  source_closure_version_id: Generated<string>;
+  source_department_governance_object_id: string;
+  source_department_id: string;
+  source_operation_hash: Buffer;
+  source_original_from: string;
+  source_original_to: string | null;
+  source_previous_version_id: string;
+  source_request_id: string;
+  target_admission_version_id: Generated<string>;
+  target_assignment_id: Generated<string>;
+  target_department_governance_object_id: string;
+  target_department_id: string;
+  target_operation_hash: Buffer;
+  target_request_id: string;
+  transfer_id: Generated<string>;
+}
+
+export interface PersonMasterAssignmentValidationSegment {
+  assignment_version_id: string;
+  business_state: string;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  engagement_id: string;
+  last_applicable_lifecycle_event_id: string | null;
+  lifecycle_sequence: Int8;
+  segment_no: number;
+}
+
+export interface PersonMasterAssignmentVersion {
+  assignment_id: string;
+  assignment_version_id: Generated<string>;
+  authority_engagement_recorded_from: string | null;
+  authority_engagement_valid_from: string | null;
+  authority_engagement_valid_to: string | null;
+  authority_engagement_version_id: string | null;
+  authority_engagement_version_no: Int8 | null;
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  classification_category_code: string | null;
+  classification_type_code: string | null;
+  classification_type_version_id: string | null;
+  classification_type_version_no: Int8 | null;
+  classified_at: string | null;
+  created_by: string;
+  department_business_status: string | null;
+  department_content_hash: Buffer | null;
+  department_id: string;
+  department_publication_projection_id: string | null;
+  department_published_at: string | null;
+  department_recorded_from: string | null;
+  department_recorded_to: string | null;
+  department_release_id: string | null;
+  department_valid_from: string | null;
+  department_valid_to: string | null;
+  department_version_id: string | null;
+  department_version_no: Int8 | null;
+  dependency_fingerprint: Buffer | null;
+  engagement_id: string;
+  evaluation_record_as_of: string | null;
+  /**
+   * ADMISSION retains original positive evidence; CLOSURE has independent non-expansive proof and no new ACTIVE segments.
+   */
+  evidence_kind: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  reason_code: string | null;
+  record_visible_lifecycle_sequence: Int8 | null;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_assignment_version_id: string | null;
+  validation_policy_code: string | null;
+  version_no: Int8;
+}
+
+export interface PersonMasterAssignmentVersionSemantics {
+  assignment_id: string;
+  assignment_version_id: string;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  constraint_scope_code: string;
+  correction_reason_code: string | null;
+  created_by: string;
+  engagement_id: string;
+  evaluation: Json;
+  evaluation_record_as_of: string;
+  governance_object_id: string;
+  mode_code: string;
+  mode_dimension: Generated<string>;
+  mode_term_version_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  policy_code: string;
+  policy_digest: Buffer;
+  policy_version: number;
+  purpose_code: string;
+  purpose_dimension: Generated<string>;
+  purpose_term_version_id: string;
+  request_id: string;
+  semantic_fingerprint: Buffer;
+  semantic_operation_kind: string;
+  semantic_recorded_from: string;
+}
+
+export interface PersonMasterEngagement {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  engagement_id: Generated<string>;
+  governance_object_id: string;
+  person_id: string;
+}
+
+export interface PersonMasterEngagementClassification {
+  classified_at: Generated<string>;
+  classified_by: string;
+  engagement_id: string;
+  engagement_type_id: string;
+  engagement_type_version_id: string;
+  governance_object_id: string;
+  person_id: string;
+  request_id: string;
+}
+
+export interface PersonMasterEngagementLifecycleEvent {
+  /**
+   * Asia/Shanghai business-effective local timestamp; never replaced by record or creation time.
+   */
+  business_effective_at: string;
+  created_by: string;
+  engagement_id: string;
+  engagement_lifecycle_event_id: Generated<string>;
+  event_type: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  reason_code: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  /**
+   * Monotonic per-Engagement append sequence. Business-state ordering also respects business_effective_at and recordAsOf.
+   */
+  sequence_no: Int8;
+}
+
+export interface PersonMasterEngagementLifecycleRejection {
+  created_by: string;
+  engagement_id: string;
+  engagement_lifecycle_rejection_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  operation_type: string;
+  recorded_at: Generated<string>;
+  rejection_code: string;
+  request_id: string;
+}
+
+export interface PersonMasterEngagementOverlapRule {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  engagement_overlap_rule_id: Generated<string>;
+  governance_object_id: string;
+  left_type_code: string;
+  right_type_code: string;
+}
+
+export interface PersonMasterEngagementOverlapRuleVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  created_by: string;
+  decision: string;
+  engagement_overlap_rule_id: string;
+  engagement_overlap_rule_version_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_engagement_overlap_rule_version_id: string | null;
+  version_no: Int8;
+}
+
+export interface PersonMasterEngagementType {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  engagement_type_id: Generated<string>;
+  governance_object_id: string;
+  type_code: string;
+}
+
+export interface PersonMasterEngagementTypeVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  category_code: string;
+  created_by: string;
+  display_name: string;
+  engagement_type_id: string;
+  engagement_type_version_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_engagement_type_version_id: string | null;
+  version_no: Int8;
+}
+
+export interface PersonMasterEngagementVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  created_by: string;
+  engagement_id: string;
+  engagement_version_id: Generated<string>;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  /**
+   * Asia/Shanghai database record time, strictly increasing per Engagement.
+   */
+  recorded_from: Generated<string>;
+  request_id: string;
+  /**
+   * B-01 revision provenance only; it is not an Engagement lifecycle or business-state field.
+   */
+  revision_reason_code: string | null;
+  supersedes_engagement_version_id: string | null;
+  version_no: Int8;
+}
+
+export interface PersonMasterPersonIdentifier {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  governance_object_id: string;
+  identifier_system: string;
+  identifier_value: string;
+  person_id: string;
+  person_identifier_id: Generated<string>;
+}
+
+export interface PersonMasterPersonIdentifierVersion {
+  assertion_status: string;
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  created_by: string;
+  governance_object_id: string;
+  /**
+   * Retry identity for operation kind and assertion validity only. Never contains identifier value or its hash; never exported to audit.
+   */
+  operation_hash: Buffer;
+  person_id: string;
+  person_identifier_id: string;
+  person_identifier_version_id: Generated<string>;
+  recorded_from: Generated<string>;
+  request_id: string;
+  version_no: Int8;
+}
+
+export interface PersonMasterPersonSourceMapping {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  governance_object_id: string;
+  person_source_mapping_id: Generated<string>;
+  source_entity: string;
+  /**
+   * Opaque canonical source-adapter key. It is not a Person Identifier and must not enter audit, logs, errors or metrics.
+   */
+  source_record_key: string;
+  source_system: string;
+}
+
+export interface PersonMasterPersonSourceMappingVersion {
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  change_kind: string;
+  created_by: string;
+  governance_object_id: string;
+  mapping_status: string;
+  /**
+   * Internal retry identity only. Never exported to audit, logs or metrics.
+   */
+  operation_hash: Buffer;
+  person_id: string;
+  person_source_mapping_id: string;
+  person_source_mapping_version_id: Generated<string>;
+  reason_code: string | null;
+  recorded_from: Generated<string>;
+  request_id: string;
+  supersedes_mapping_version_id: string | null;
+  version_no: Int8;
+}
+
+export interface PersonMasterPersonSubject {
+  created_at: Generated<string>;
+  created_by: string;
+  creation_request_id: string;
+  governance_object_id: string;
+  person_id: Generated<string>;
+}
+
+export interface PersonMasterPersonSubjectVersion {
+  /**
+   * Optional calendar date, never a timestamp.
+   */
+  birth_date: string | null;
+  business_period: Generated<string | null>;
+  business_valid_from: string;
+  business_valid_to: string | null;
+  canonical_name: string;
+  created_by: string;
+  governance_object_id: string;
+  operation_hash: Buffer;
+  person_id: string;
+  person_version_id: Generated<string>;
+  /**
+   * Asia/Shanghai database record time; per-person version_no owns ordering.
+   */
+  recorded_from: Generated<string>;
+  request_id: string;
+  version_no: Int8;
 }
 
 export interface PlatformBrowserSession {
@@ -413,6 +1091,8 @@ export interface ReleaseDistributionConsumerSubscription {
   consumer_subscription_id: Generated<string>;
   created_at: Generated<string>;
   governance_object_id: string;
+  lifecycle_changed_at: Generated<string>;
+  lifecycle_status: Generated<string>;
   service_principal_id: string;
   subscription_code: string;
 }
@@ -421,7 +1101,10 @@ export interface ReleaseDistributionConsumerSubscriptionVersion {
   consumer_subscription_id: string;
   consumer_subscription_version_id: Generated<string>;
   created_at: Generated<string>;
+  criticality: Generated<string>;
+  expected_apply_within_seconds: number | null;
   recorded_sequence: Int8;
+  retry_window_seconds: number | null;
   status: string;
   version_no: Int8;
 }
@@ -530,6 +1213,28 @@ export interface ReleaseDistributionReleaseMemberChargeItem {
   snapshot_name: string;
 }
 
+export interface ReleaseDistributionReleaseMemberDepartment {
+  created_at: Generated<string>;
+  department_id: string;
+  department_version_id: string;
+  member_hash: Buffer;
+  release_id: string;
+  release_member_id: Generated<string>;
+  snapshot_name: string;
+  updated_at: Generated<string>;
+}
+
+export interface ReleaseDistributionReleaseMemberDepartmentHierarchy {
+  created_at: Generated<string>;
+  department_hierarchy_view_id: string;
+  department_hierarchy_view_version_id: string;
+  member_hash: Buffer;
+  release_id: string;
+  release_member_id: Generated<string>;
+  snapshot_name: string;
+  updated_at: Generated<string>;
+}
+
 export interface ReleaseDistributionReleaseMemberPriceList {
   member_hash: Buffer;
   price_list_id: string;
@@ -537,6 +1242,15 @@ export interface ReleaseDistributionReleaseMemberPriceList {
   release_id: string;
   release_member_id: Generated<string>;
   snapshot_name: string;
+}
+
+export interface ReleaseDistributionReleaseRelationship {
+  created_at: string;
+  reason: string;
+  relationship_type: string;
+  release_relationship_id: Generated<string>;
+  source_release_id: string;
+  target_release_id: string;
 }
 
 export interface ReleaseDistributionReleaseSnapshot {
@@ -577,6 +1291,14 @@ export interface WorkflowApprovalTemplate {
   template_code: string;
 }
 
+export interface WorkflowApprovalTemplateStage {
+  approval_template_version_id: string;
+  campus_scope_required: Generated<boolean>;
+  permission_code: string;
+  stage_sequence: Int8;
+  stage_type: string;
+}
+
 export interface WorkflowApprovalTemplateVersion {
   approval_template_id: string;
   approval_template_version_id: string;
@@ -588,14 +1310,6 @@ export interface WorkflowApprovalTemplateVersion {
   version_no: Int8;
 }
 
-export interface WorkflowApprovalTemplateStage {
-  approval_template_version_id: string;
-  campus_scope_required: Generated<boolean>;
-  permission_code: string;
-  stage_sequence: Int8;
-  stage_type: string;
-}
-
 export interface WorkflowChangeRequest {
   approval_template_version_id: string;
   change_kind: string;
@@ -604,24 +1318,15 @@ export interface WorkflowChangeRequest {
   created_at: Generated<string>;
   decided_at: string | null;
   entity_version_id: string;
+  frozen_evidence: Generated<Json>;
   governance_object_id: string;
-  frozen_evidence: Generated<unknown>;
   next_action_sequence: Generated<Int8>;
-  required_stage_count: Generated<number>;
   request_status: string;
+  required_stage_count: Generated<number>;
   risk_classification: Generated<string>;
   stable_entity_id: string;
   submitted_by: string;
   submitted_content_hash: Buffer;
-}
-
-export interface ReleaseDistributionReleaseRelationship {
-  created_at: string;
-  reason: string;
-  relationship_type: string;
-  release_relationship_id: Generated<string>;
-  source_release_id: string;
-  target_release_id: string;
 }
 
 export interface DB {
@@ -634,9 +1339,47 @@ export interface DB {
   "charge_catalog.charge_item": ChargeCatalogChargeItem;
   "charge_catalog.charge_item_version": ChargeCatalogChargeItemVersion;
   "charge_catalog.priced_object": ChargeCatalogPricedObject;
+  "department_master.department": DepartmentMasterDepartment;
+  "department_master.department_alias": DepartmentMasterDepartmentAlias;
+  "department_master.department_campus_assignment": DepartmentMasterDepartmentCampusAssignment;
+  "department_master.department_hierarchy_group": DepartmentMasterDepartmentHierarchyGroup;
+  "department_master.department_hierarchy_group_version": DepartmentMasterDepartmentHierarchyGroupVersion;
+  "department_master.department_hierarchy_node": DepartmentMasterDepartmentHierarchyNode;
+  "department_master.department_hierarchy_view": DepartmentMasterDepartmentHierarchyView;
+  "department_master.department_hierarchy_view_version": DepartmentMasterDepartmentHierarchyViewVersion;
+  "department_master.department_published_projection": DepartmentMasterDepartmentPublishedProjection;
+  "department_master.department_quality_score": DepartmentMasterDepartmentQualityScore;
+  "department_master.department_source_mapping": DepartmentMasterDepartmentSourceMapping;
+  "department_master.department_version": DepartmentMasterDepartmentVersion;
+  "department_master.master_data_source": DepartmentMasterMasterDataSource;
   "emergency_control.impact_case": EmergencyControlImpactCase;
   "emergency_control.impact_case_action": EmergencyControlImpactCaseAction;
   "emergency_control.suspension_event": EmergencyControlSuspensionEvent;
+  "person_master.assignment": PersonMasterAssignment;
+  "person_master.assignment_closure_evidence": PersonMasterAssignmentClosureEvidence;
+  "person_master.assignment_command_outcome": PersonMasterAssignmentCommandOutcome;
+  "person_master.assignment_semantic_term": PersonMasterAssignmentSemanticTerm;
+  "person_master.assignment_semantic_term_version": PersonMasterAssignmentSemanticTermVersion;
+  "person_master.assignment_temporary_source": PersonMasterAssignmentTemporarySource;
+  "person_master.assignment_transfer": PersonMasterAssignmentTransfer;
+  "person_master.assignment_validation_segment": PersonMasterAssignmentValidationSegment;
+  "person_master.assignment_version": PersonMasterAssignmentVersion;
+  "person_master.assignment_version_semantics": PersonMasterAssignmentVersionSemantics;
+  "person_master.engagement": PersonMasterEngagement;
+  "person_master.engagement_classification": PersonMasterEngagementClassification;
+  "person_master.engagement_lifecycle_event": PersonMasterEngagementLifecycleEvent;
+  "person_master.engagement_lifecycle_rejection": PersonMasterEngagementLifecycleRejection;
+  "person_master.engagement_overlap_rule": PersonMasterEngagementOverlapRule;
+  "person_master.engagement_overlap_rule_version": PersonMasterEngagementOverlapRuleVersion;
+  "person_master.engagement_type": PersonMasterEngagementType;
+  "person_master.engagement_type_version": PersonMasterEngagementTypeVersion;
+  "person_master.engagement_version": PersonMasterEngagementVersion;
+  "person_master.person_identifier": PersonMasterPersonIdentifier;
+  "person_master.person_identifier_version": PersonMasterPersonIdentifierVersion;
+  "person_master.person_source_mapping": PersonMasterPersonSourceMapping;
+  "person_master.person_source_mapping_version": PersonMasterPersonSourceMappingVersion;
+  "person_master.person_subject": PersonMasterPersonSubject;
+  "person_master.person_subject_version": PersonMasterPersonSubjectVersion;
   "platform.browser_session": PlatformBrowserSession;
   "platform.campus": PlatformCampus;
   "platform.external_identity_binding": PlatformExternalIdentityBinding;
@@ -668,12 +1411,14 @@ export interface DB {
   "release_distribution.outbox_event": ReleaseDistributionOutboxEvent;
   "release_distribution.release_consumer_compatibility": ReleaseDistributionReleaseConsumerCompatibility;
   "release_distribution.release_member_charge_item": ReleaseDistributionReleaseMemberChargeItem;
+  "release_distribution.release_member_department": ReleaseDistributionReleaseMemberDepartment;
+  "release_distribution.release_member_department_hierarchy": ReleaseDistributionReleaseMemberDepartmentHierarchy;
   "release_distribution.release_member_price_list": ReleaseDistributionReleaseMemberPriceList;
   "release_distribution.release_relationship": ReleaseDistributionReleaseRelationship;
   "release_distribution.release_snapshot": ReleaseDistributionReleaseSnapshot;
   "workflow.approval_action": WorkflowApprovalAction;
   "workflow.approval_template": WorkflowApprovalTemplate;
-  "workflow.approval_template_version": WorkflowApprovalTemplateVersion;
   "workflow.approval_template_stage": WorkflowApprovalTemplateStage;
+  "workflow.approval_template_version": WorkflowApprovalTemplateVersion;
   "workflow.change_request": WorkflowChangeRequest;
 }

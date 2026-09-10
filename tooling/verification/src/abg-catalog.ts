@@ -44,7 +44,7 @@ const titles = [
   ['16 MiB与16 MiB加1精确规范制品边界', 'CAPACITY'],
   ['TypeBox、OpenAPI 3.1和生成客户端唯一权威', 'STATIC'],
   ['深模块、表所有权与禁止旁路自动门禁', 'STATIC'],
-  ['全新环境统一运行、不可覆盖证据和退出结论', 'RUN'],
+  ['cleanup 后终态生命周期完整且 evidence 具备预封存资格', 'RUN'],
 ] as const satisfies readonly (readonly [string, AbgGateDefinition['evidenceClass']])[];
 
 export const ABG_GATES: readonly AbgGateDefinition[] = titles.map(([title, evidenceClass], index) => ({

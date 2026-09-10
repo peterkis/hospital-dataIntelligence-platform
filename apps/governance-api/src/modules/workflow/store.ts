@@ -37,10 +37,19 @@ export interface ExpectedApprovalStage {
   readonly campusScopeRequired: boolean;
 }
 
+export interface ChangeRequestQueueEntry {
+  readonly request: ChangeRequestView;
+  readonly submittedAt: string;
+}
+
 export interface WorkflowModule {
   submitChange(command: {
     readonly governanceObjectId: string;
-    readonly governedEntityType: 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE';
+    readonly governedEntityType:
+      | 'CHARGE_ITEM_VERSION'
+      | 'PRICE_LIST_RELEASE'
+      | 'DEPARTMENT_VERSION'
+      | 'DEPARTMENT_HIERARCHY_VIEW_VERSION';
     readonly stableEntityId: string;
     readonly entityVersionId: string;
     readonly changeKind:
@@ -56,6 +65,19 @@ export interface WorkflowModule {
     readonly frozenEvidence: Readonly<Record<string, unknown>>;
   }): Promise<ChangeRequestView>;
   getChangeRequest(changeRequestId: string): Promise<ChangeRequestView | null>;
+  findLatestChangeRequest(command: {
+    readonly governanceObjectId: string;
+    readonly stableEntityId: string;
+    readonly entityVersionId: string;
+  }): Promise<ChangeRequestView | null>;
+  findPendingChangeRequests(command: {
+    readonly governanceObjectId: string;
+    readonly governedEntityType:
+      | 'CHARGE_ITEM_VERSION'
+      | 'PRICE_LIST_RELEASE'
+      | 'DEPARTMENT_VERSION'
+      | 'DEPARTMENT_HIERARCHY_VIEW_VERSION';
+  }): Promise<readonly ChangeRequestQueueEntry[]>;
   getExpectedStage(changeRequestId: string): Promise<ExpectedApprovalStage>;
   actOnChange(command: {
     readonly changeRequestId: string;
@@ -133,6 +155,38 @@ export function createWorkflowModule(
 
     getChangeRequest(changeRequestId) {
       return getChangeRequest(database, changeRequestId);
+    },
+
+    async findLatestChangeRequest(command) {
+      const row = await database
+        .selectFrom('workflow.change_request')
+        .select('change_request_id')
+        .where('governance_object_id', '=', command.governanceObjectId)
+        .where('stable_entity_id', '=', command.stableEntityId)
+        .where('entity_version_id', '=', command.entityVersionId)
+        .orderBy('created_at', 'desc')
+        .orderBy('change_request_id', 'desc')
+        .limit(1)
+        .executeTakeFirst();
+      return row ? getChangeRequest(database, row.change_request_id) : null;
+    },
+
+    async findPendingChangeRequests(command) {
+      const rows = await database
+        .selectFrom('workflow.change_request')
+        .select(['change_request_id', 'created_at'])
+        .where('governance_object_id', '=', command.governanceObjectId)
+        .where('request_status', 'in', ['SUBMITTED', 'UNDER_REVIEW', 'AWAITING_FINAL'])
+        .where(sql<boolean>`frozen_evidence ->> 'entityType' = ${command.governedEntityType}`)
+        .orderBy('created_at')
+        .orderBy('change_request_id')
+        .execute();
+      const entries: ChangeRequestQueueEntry[] = [];
+      for (const row of rows) {
+        const request = await getChangeRequestOrThrow(database, row.change_request_id);
+        entries.push({ request, submittedAt: row.created_at });
+      }
+      return entries;
     },
 
     async getExpectedStage(changeRequestId) {
@@ -281,10 +335,20 @@ export function createWorkflowModule(
 }
 
 function templateVersionFor(
-  governedEntityType: 'CHARGE_ITEM_VERSION' | 'PRICE_LIST_RELEASE',
+  governedEntityType:
+    | 'CHARGE_ITEM_VERSION'
+    | 'PRICE_LIST_RELEASE'
+    | 'DEPARTMENT_VERSION'
+    | 'DEPARTMENT_HIERARCHY_VIEW_VERSION',
   changeKind: string,
   riskClassification: string,
 ): string {
+  if (governedEntityType === 'DEPARTMENT_VERSION') {
+    return '00000000-0000-7000-8000-000000000061';
+  }
+  if (governedEntityType === 'DEPARTMENT_HIERARCHY_VIEW_VERSION') {
+    return '00000000-0000-7000-8000-000000000071';
+  }
   if (changeKind === 'PROJECTION_SCHEMA_UPGRADE' && riskClassification === 'PURE_SCHEMA_UPGRADE') {
     return '00000000-0000-7000-8000-000000000041';
   }

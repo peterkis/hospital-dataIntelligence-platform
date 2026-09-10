@@ -5,14 +5,17 @@
     "access_control": "authorization",
     "batch_import": "batch-import",
     "charge_catalog": "charge-catalog",
+    "department_master": "department-master",
     "emergency_control": "emergency-control",
     "platform": "composition-root",
+    "person_master": "person-master",
     "price_list": "price-list",
     "price_resolution": "price-resolution",
     "release_distribution": "release-distribution",
     "workflow": "workflow"
   },
   "rules": [
+    "person_master Person subject, identifier, source-mapping, Engagement, classification, lifecycle, overlap-policy and Assignment placement/evidence/outcome, atomic transfer, source-linked temporary assignment evidence, non-expansive closure evidence and semantic-term/version/pairing tables are owned by person-master.",
     "Only versioned native SQL migrations own physical schema changes.",
     "A module may issue DML only against its owned schema.",
     "Cross-module reads and commands use public module interfaces, never direct SQL.",

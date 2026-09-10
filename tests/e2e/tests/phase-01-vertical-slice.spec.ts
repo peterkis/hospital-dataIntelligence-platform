@@ -14,7 +14,27 @@ const CAMPUS_ID =
   process.env['PHASE01_E2E_CAMPUS_ID'] ??
   '50000000-0000-7000-8000-000000000001';
 
-test('三个人员身份通过版本化审批完成收费项目、价表和解析纵向切片', async ({
+test('三个人员身份通过版本化审批完成收费项目、价表和解析纵向切片', {
+  annotation: [
+    { type: 'phase01-scenario-id', description: 'BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF' },
+    { type: 'phase01-scenario-id', description: 'BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION' },
+    {
+      type: 'phase01-assertion-id',
+      description: 'ABG-07:charge-item-draft-crud-and-csrf-rejection',
+    },
+    {
+      type: 'phase01-assertion-id',
+      description: 'ABG-10:price-list-draft-entry-change-complete-snapshot',
+    },
+    {
+      type: 'phase01-assertion-id',
+      description: 'ABG-21:high-risk-price-review-owner-final-approval',
+    },
+    { type: 'phase01-gate-id', description: 'ABG-07' },
+    { type: 'phase01-gate-id', description: 'ABG-10' },
+    { type: 'phase01-gate-id', description: 'ABG-21' },
+  ],
+}, async ({
   page,
   context,
 }, testInfo) => {
@@ -36,6 +56,7 @@ test('三个人员身份通过版本化审批完成收费项目、价表和解�
   });
 
   await loginThroughKeycloak(page, OWNER_USERNAME, password, '/admin/charge-items');
+  const ownerPrincipalId = await currentPrincipalId(page);
   expect(authorizationRequests).toHaveLength(1);
   const authorizationRequest = new URL(authorizationRequests[0]!);
   expect(authorizationRequest.searchParams.get('response_type')).toBe('code');
@@ -128,7 +149,52 @@ test('三个人员身份通过版本化审批完成收费项目、价表和解�
     expect(request.headers()['authorization']).toBeUndefined();
     expect(request.headers()['x-csrf-token']).toMatch(/^[A-Za-z0-9_-]{43}$/u);
   }
+  await testInfo.attach('phase-01-browser-observation.json', {
+    body: JSON.stringify({
+      schemaVersion: 'phase-01.browser-observations.v1',
+      scenarios: [
+        'BROWSER-CHARGE-DRAFT-CRUD-AND-CSRF',
+        'BROWSER-PRICE-DRAFT-APPROVAL-AND-RESOLUTION',
+      ],
+      assertions: [
+        'ABG-07:charge-item-draft-crud-and-csrf-rejection',
+        'ABG-10:price-list-draft-entry-change-complete-snapshot',
+        'ABG-21:high-risk-price-review-owner-final-approval',
+      ],
+      gateIds: ['ABG-07', 'ABG-10', 'ABG-21'],
+      requestIds: successfulMutationResponses
+        .map((response) => response.headers()['x-request-id'])
+        .filter((requestId): requestId is string => typeof requestId === 'string' && requestId.length > 0),
+      principalIds: [ownerPrincipalId],
+      governanceObjectIds: [CHARGE_GOVERNANCE_OBJECT_ID, PRICE_GOVERNANCE_OBJECT_ID],
+      versionIds: [chargeVersionId, priceReleaseId],
+      ruleVersions: ['phase-01.generated-client-contract.v1'],
+    }, null, 2),
+    contentType: 'application/json',
+  });
+  await testInfo.attach('phase-01-browser-final-page.png', {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  });
 });
+
+async function currentPrincipalId(page: Page): Promise<string> {
+  const principalId = await page.evaluate(async () => {
+    const response = await fetch('/auth/session');
+    if (!response.ok) return null;
+    const session: unknown = await response.json();
+    if (
+      typeof session !== 'object' ||
+      session === null ||
+      Array.isArray(session)
+    ) return null;
+    const record = session as Readonly<Record<string, unknown>>;
+    if (typeof record['principalId'] !== 'string' || record['principalId'].length === 0) return null;
+    return record['principalId'];
+  });
+  if (principalId === null) throw new Error('BROWSER_SESSION_PRINCIPAL_ID_MISSING');
+  return principalId;
+}
 
 async function submitChange(page: Page, input: {
   readonly governanceObjectId: string;

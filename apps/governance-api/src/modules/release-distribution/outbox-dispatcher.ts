@@ -1,5 +1,7 @@
 import { sql, type Kysely, type Transaction } from 'kysely';
 import type { DB } from '../../platform/database/database-types.generated.js';
+import type { ConsumerReferenceReader } from '../../platform/release-consumer/consumer-reference-reader.js';
+import { lockSubscription } from './subscription-lifecycle.js';
 import {
   hitControlledPublicationFault,
   isControlledFaultActive,
@@ -68,6 +70,7 @@ export function createReleaseDistributionDispatcher(
     readonly maxNotificationAttempts: number;
     readonly pollIntervalMilliseconds: number;
     now(): string;
+    references(transaction: Transaction<DB>): ConsumerReferenceReader;
   },
 ): ReleaseDistributionDispatcher {
   validateOptions(options);
@@ -86,10 +89,17 @@ export function createReleaseDistributionDispatcher(
   > {
     const occurredAt = options.now();
     const claimed = await database.transaction().execute((transaction) =>
-      claimNextDelivery(transaction, occurredAt, options.workerId, options.leaseSeconds),
+      claimNextDelivery(transaction, occurredAt, options.workerId, options.leaseSeconds, options.references(transaction)),
     );
     if (!claimed) return { claimed: false };
     hitControlledPublicationFault('OUTBOX_AFTER_CLAIM');
+
+    const eligible = await database.transaction().execute(async (transaction) => {
+      const subscription = await lockSubscription(transaction, claimed.subscriptionId);
+      return subscription.lifecycle_status === 'ACTIVE'
+        && await options.references(transaction).isActiveServicePrincipal(claimed.servicePrincipalId);
+    });
+    if (!eligible) return { claimed: false };
 
     let outcome:
       | {
@@ -128,6 +138,7 @@ export function createReleaseDistributionDispatcher(
         options.retryDelaySeconds,
         options.maxNotificationAttempts,
         options.workerId,
+        options.references(transaction),
       ),
     );
     return { claimed: true, eventId: claimed.eventId, result: outcome.result };
@@ -189,6 +200,8 @@ async function claimNextDelivery(
   occurredAt: string,
   workerId: string,
   leaseSeconds: number,
+  references: ConsumerReferenceReader,
+  excludedSubscriptions: readonly string[] = [],
 ): Promise<ClaimedDelivery | undefined> {
   const selected = await sql<{
     aggregate_version: string;
@@ -252,6 +265,8 @@ async function claimNextDelivery(
         and state.lease_expires_at <= cast(${occurredAt} as timestamp)
       )
     )
+    and subscription.lifecycle_status = 'ACTIVE'
+    and subscription.consumer_subscription_id != all(${excludedSubscriptions}::uuid[])
     and not exists (
       select 1
       from release_distribution.outbox_delivery as earlier_delivery
@@ -270,11 +285,15 @@ async function claimNextDelivery(
         and latest_earlier_state.delivery_status not in ('NOTIFIED', 'DELIVERED')
     )
     order by subscription.consumer_subscription_id, event.aggregate_version
-    for update of delivery skip locked
+    for update of subscription, delivery skip locked
     limit 1
   `.execute(transaction);
   const row = selected.rows[0];
   if (!row) return undefined;
+  if (!await references.isActiveServicePrincipal(row.service_principal_id)) {
+    return claimNextDelivery(transaction, occurredAt, workerId, leaseSeconds, references,
+      [...excludedSubscriptions, row.subscription_id]);
+  }
 
   const leasedStateSequence = (BigInt(row.state_sequence) + 1n).toString();
   const leasedState = await transaction
@@ -331,7 +350,13 @@ async function recordDeliveryOutcome(
   retryDelaySeconds: number,
   maxNotificationAttempts: number,
   workerId: string,
+  references: ConsumerReferenceReader,
 ): Promise<void> {
+  const subscription = await lockSubscription(transaction, claimed.subscriptionId);
+  // A lifecycle transition may commit while a notification is in flight.
+  // Keep the existing lease for recovery; inactive subscriptions gain no new state.
+  if (subscription.lifecycle_status !== 'ACTIVE') return;
+  if (!await references.isActiveServicePrincipal(claimed.servicePrincipalId)) return;
   await sql`select pg_advisory_xact_lock(hashtextextended(${claimed.deliveryId}, 61))`.execute(
     transaction,
   );

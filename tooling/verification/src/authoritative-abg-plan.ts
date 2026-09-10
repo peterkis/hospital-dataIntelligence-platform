@@ -1,11 +1,26 @@
 import { createHash } from 'node:crypto';
-import { execFile } from 'node:child_process';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import { ABG_GATES } from './abg-catalog.js';
+import {
+  getAbgCoverageMatrixDigest,
+  getAbgProducerProtocolIdentityDigest,
+} from './abg-gate-proof.js';
+import { readFrozenInputs } from './frozen-inputs.js';
+import {
+  CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+  RUN_PLAN_AUTHORITY_ID,
+  RUN_PLAN_SCHEMA_VERSION,
+} from './verification-contract-versions.js';
+import {
+  assertCommandEnvironmentDoesNotDeclareDatabaseUrl,
+  assertCommandEnvironmentDoesNotDeclareNodeOptions,
+  assertRepositoryTypeScriptCommand,
+  commandContainsRepositoryLoader,
+  repositoryTypeScriptCommand,
+} from './runtime/node-command-boundary.js';
 
-const execFileAsync = promisify(execFile);
+export { readFrozenInputs } from './frozen-inputs.js';
 
 export interface AuthoritativeCommandSpec {
   readonly executable: string;
@@ -19,10 +34,36 @@ export interface AuthoritativeGateCommandSpec extends AuthoritativeCommandSpec {
 }
 
 export interface FrozenRunPlan {
-  readonly schemaVersion: 'phase-01.abg-run-plan.v2';
-  readonly authorityId: 'phase-01.repository-authoritative-plan.v1';
+  readonly schemaVersion: typeof RUN_PLAN_SCHEMA_VERSION;
+  readonly authorityId: typeof RUN_PLAN_AUTHORITY_ID;
   readonly runSequence: number;
+  readonly producerSourceManifestPath: 'provenance/producer-source-manifest.json';
+  readonly producerSourceManifestSha256: string;
+  readonly producerGitCommitSha: string;
+  readonly contractIdentity: typeof CURRENT_EVIDENCE_CONTRACT_IDENTITY;
+  readonly runtimeAuthoritySha256: string;
+  readonly runtimeAuthoritySemanticDigest: string;
   readonly frozenInputs: Readonly<Record<string, string>>;
+  readonly authorityIdentity: VerificationAuthorityIdentity;
+  readonly setupCommands: readonly AuthoritativeCommandSpec[];
+  readonly gates: readonly AuthoritativeGateCommandSpec[];
+}
+
+export interface ProducerSourceManifestReference {
+  readonly path: 'provenance/producer-source-manifest.json';
+  readonly sha256: string;
+  readonly producerGitCommitSha: string;
+}
+
+export interface VerificationAuthorityIdentity {
+  readonly coverageMatrixDigest: string;
+  readonly coverageMatrixSourceSha256: string;
+  readonly producerProtocolIdentityDigest: string;
+  readonly producerProtocolSourceSha256: string;
+  readonly gateProofSourceSha256: string;
+}
+
+export interface AuthoritativeCommandPlan {
   readonly setupCommands: readonly AuthoritativeCommandSpec[];
   readonly gates: readonly AuthoritativeGateCommandSpec[];
 }
@@ -30,115 +71,119 @@ export interface FrozenRunPlan {
 export async function buildAuthoritativeRunPlan(
   repositoryRoot: string,
   runSequence: number,
+  producerSourceManifest: ProducerSourceManifestReference,
 ): Promise<FrozenRunPlan> {
+  const frozenInputs = await readFrozenInputs(repositoryRoot, producerSourceManifest.sha256);
+  if (frozenInputs['gitCommitSha'] !== producerSourceManifest.producerGitCommitSha) {
+    throw new Error('PRODUCER_SOURCE_MANIFEST_GIT_COMMIT_MISMATCH');
+  }
+  const commands = await buildAuthoritativeCommandPlan(repositoryRoot);
   return {
-    schemaVersion: 'phase-01.abg-run-plan.v2',
-    authorityId: 'phase-01.repository-authoritative-plan.v1',
+    schemaVersion: RUN_PLAN_SCHEMA_VERSION,
+    authorityId: RUN_PLAN_AUTHORITY_ID,
     runSequence,
-    frozenInputs: await readFrozenInputs(repositoryRoot),
+    producerSourceManifestPath: producerSourceManifest.path,
+    producerSourceManifestSha256: producerSourceManifest.sha256,
+    producerGitCommitSha: producerSourceManifest.producerGitCommitSha,
+    contractIdentity: CURRENT_EVIDENCE_CONTRACT_IDENTITY,
+    runtimeAuthoritySha256: requireFrozenInput(frozenInputs, 'runtimeAuthoritySha256'),
+    runtimeAuthoritySemanticDigest: requireFrozenInput(frozenInputs, 'runtimeAuthoritySemanticDigest'),
+    frozenInputs,
+    authorityIdentity: await readVerificationAuthorityIdentity(repositoryRoot),
+    setupCommands: commands.setupCommands,
+    gates: commands.gates,
+  };
+}
+
+export async function buildAuthoritativeCommandPlan(
+  repositoryRoot: string,
+): Promise<AuthoritativeCommandPlan> {
+  const sharedRunner = await repositoryTypeScriptCommand(
+    repositoryRoot,
+    'tooling/verification/src/run-shared-abg-verification.ts',
+  );
+  const gateProducer = await repositoryTypeScriptCommand(
+    repositoryRoot,
+    'tooling/verification/src/produce-abg-gate.ts',
+  );
+  const plan: AuthoritativeCommandPlan = {
     setupCommands: [
-      {
-        executable: 'npm',
-        args: ['ci'],
-      },
+      { executable: 'npm', args: ['ci'] },
       {
         executable: 'bash',
         args: ['phase-plan/environment/anolis-8.9-wsl2/bootstrap-phase-01-runtime.sh'],
       },
-      {
-        executable: 'node',
-        args: ['tooling/verification/src/run-shared-abg-verification.ts'],
-      },
+      sharedRunner,
     ],
-    gates: ABG_GATES.map((gate) => ({
-      gateId: gate.gateId,
-      executable: 'node',
-      args: ['tooling/verification/src/produce-abg-gate.ts'],
-    })),
+    gates: ABG_GATES.map((gate) => ({ gateId: gate.gateId, ...gateProducer })),
   };
+  await assertAuthoritativeCommandPlanSafety(repositoryRoot, plan);
+  return plan;
 }
 
-export async function readFrozenInputs(
+export async function assertAuthoritativeCommandPlanSafety(
   repositoryRoot: string,
-): Promise<Readonly<Record<string, string>>> {
-  const gitCommitSha = (await executeGit(repositoryRoot, ['rev-parse', 'HEAD'])).trim();
-  const worktree = (await executeGit(repositoryRoot, ['status', '--porcelain=v1'])).trim();
-  if (worktree.length > 0) throw new Error('ABG_WORKTREE_NOT_CLEAN');
-  const lockfileSha256 = await fileSha256(join(repositoryRoot, 'package-lock.json'));
-  const openapiPath = join(repositoryRoot, 'contracts/openapi/phase-01.openapi.json');
-  const openapiSha256 = await fileSha256(openapiPath);
-  const declaredOpenapiDigest = (await readFile(
-    join(repositoryRoot, 'contracts/openapi/phase-01.openapi.sha256'),
-    'utf8',
-  )).trim().split(/\s+/u)[0];
-  if (declaredOpenapiDigest !== openapiSha256) {
-    throw new Error('ABG_OPENAPI_SHA256_DRIFT');
+  plan: AuthoritativeCommandPlan,
+): Promise<void> {
+  if (plan.setupCommands.length !== 3 || plan.gates.length !== ABG_GATES.length) {
+    throw new Error('FORMAL_COMMAND_PLAN_INVALID');
   }
-  const migrations = (await readdir(join(repositoryRoot, 'db/migrations')))
-    .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
-    .sort((left, right) => left.localeCompare(right));
-  const migrationManifest = await Promise.all(
-    migrations.map(async (name) => ({
-      path: `db/migrations/${name}`,
-      sha256: await fileSha256(join(repositoryRoot, 'db/migrations', name)),
-    })),
-  );
-  const runtimeBaseline = JSON.parse(await readFile(
-    join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/runtime-baseline.lock.json'),
-    'utf8',
-  )) as unknown;
-  const compose = await readFile(
-    join(repositoryRoot, 'phase-plan/environment/anolis-8.9-wsl2/compose.phase-01.yml'),
-    'utf8',
-  );
-  const postgresImage = requireImage(compose, 'postgres');
-  const keycloakImage = requireImage(compose, 'quay.io/keycloak/keycloak');
-  const fixtureIdentity = sha256(Buffer.from(canonicalJson({
-    runtimeBaseline,
-    realmRendererSha256: await fileSha256(
-      join(repositoryRoot, 'tooling/runtime/render-keycloak-realm.ts'),
-    ),
-    seedSha256: await fileSha256(join(repositoryRoot, 'tooling/runtime/seed-phase-01.ts')),
-  }), 'utf8'));
-  const browserPackage = JSON.parse(await readFile(
-    join(repositoryRoot, 'tests/e2e/package.json'),
-    'utf8',
-  )) as { readonly devDependencies?: Readonly<Record<string, string>> };
-  const browserVersion = browserPackage.devDependencies?.['@playwright/test'];
-  if (!browserVersion) throw new Error('ABG_BROWSER_VERSION_MISSING');
-  return {
-    gitCommitSha,
-    workingTreeState: 'CLEAN',
-    lockfileSha256,
-    openapiSha256,
-    migrationManifestSha256: sha256(Buffer.from(canonicalJson(migrationManifest), 'utf8')),
-    fixtureIdentity,
-    nodeVersion: process.version,
-    postgresImage,
-    keycloakImage,
-    browserVersion,
-  };
+  const expectedGateIds = ABG_GATES.map((gate) => gate.gateId);
+  if (plan.gates.map((gate) => gate.gateId).join('\0') !== expectedGateIds.join('\0')) {
+    throw new Error('FORMAL_COMMAND_PLAN_INVALID');
+  }
+  for (const command of [...plan.setupCommands, ...plan.gates]) {
+    assertCommandEnvironmentDoesNotDeclareNodeOptions(
+      command.environment,
+      'FORMAL_COMMAND_NODE_OPTIONS_FORBIDDEN',
+    );
+    assertCommandEnvironmentDoesNotDeclareDatabaseUrl(
+      command.environment,
+      'FORMAL_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
+    );
+    const directTypeScriptEntry = command.executable === 'node' &&
+      command.args.some((argument) => argument.endsWith('.ts'));
+    if (directTypeScriptEntry) {
+      await assertRepositoryTypeScriptCommand(repositoryRoot, command);
+    } else if (commandContainsRepositoryLoader(command)) {
+      throw new Error('FORMAL_COMMAND_NODE_LOADER_CONTAMINATION');
+    }
+  }
 }
 
-async function executeGit(repositoryRoot: string, args: readonly string[]): Promise<string> {
-  const result = await execFileAsync('git', [...args], {
-    cwd: repositoryRoot,
-    windowsHide: true,
-    encoding: 'utf8',
-  });
-  return result.stdout;
+export function authoritativeCommandDigest(command: AuthoritativeCommandSpec): string {
+  return sha256(Buffer.from(canonicalJson(command), 'utf8'));
+}
+
+function requireFrozenInput(
+  frozenInputs: Readonly<Record<string, string>>,
+  name: string,
+): string {
+  const value = frozenInputs[name];
+  if (value === undefined || value.length === 0) throw new Error(`FROZEN_INPUT_MISSING:${name}`);
+  return value;
+}
+
+export async function readVerificationAuthorityIdentity(
+  repositoryRoot: string,
+): Promise<VerificationAuthorityIdentity> {
+  return {
+    coverageMatrixDigest: getAbgCoverageMatrixDigest(),
+    coverageMatrixSourceSha256: await fileSha256(
+      join(repositoryRoot, 'tooling/verification/src/abg-coverage-matrix.ts'),
+    ),
+    producerProtocolIdentityDigest: getAbgProducerProtocolIdentityDigest(),
+    producerProtocolSourceSha256: await fileSha256(
+      join(repositoryRoot, 'tooling/verification/src/evidence/protocol.ts'),
+    ),
+    gateProofSourceSha256: await fileSha256(
+      join(repositoryRoot, 'tooling/verification/src/abg-gate-proof.ts'),
+    ),
+  };
 }
 
 async function fileSha256(path: string): Promise<string> {
   return sha256(await readFile(path));
-}
-
-function requireImage(compose: string, imageName: string): string {
-  const line = compose.split(/\r?\n/u).find((candidate) =>
-    candidate.trim().startsWith(`image: ${imageName}`),
-  );
-  if (!line) throw new Error(`ABG_IMAGE_IDENTITY_MISSING:${imageName}`);
-  return line.trim().slice('image: '.length);
 }
 
 function canonicalJson(value: unknown): string {

@@ -3,12 +3,15 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { canonicalize } from 'json-canonicalize';
 import { buildApplication } from '../src/composition/build-application.js';
+import { createDepartmentGovernanceContractDependencies } from '../src/composition/department-governance-contract-dependencies.js';
 
 const outputDirectory = resolve(import.meta.dirname, '../../../contracts/openapi');
 const outputPath = resolve(outputDirectory, 'phase-01.openapi.json');
 const digestPath = resolve(outputDirectory, 'phase-01.openapi.sha256');
 
-const application = await buildApplication();
+const application = await buildApplication({
+  departmentGovernance: createDepartmentGovernanceContractDependencies(),
+});
 try {
   await application.ready();
   const document = application.swagger();

@@ -1,0 +1,259 @@
+import { describe, expect, it } from 'vitest';
+import {
+  formalRuntimeAuthority,
+  formalRuntimePorts,
+  type FormalRunIdentity,
+} from './formal-runtime-contract.js';
+import type { PodmanRuntimeAuthority } from './podman-runtime-authority-schema.js';
+import { buildFormalTerminalConclusion } from './formal-terminal-conclusion.js';
+import type {
+  FormalCleanupReport,
+  RuntimeResourceRecord,
+  RuntimeResourceSnapshot,
+} from './formal-teardown.js';
+
+const IDENTITY: FormalRunIdentity = {
+  runId: 'terminal-test-run',
+  runSequence: 17,
+  runtimeNamespace: 'hdi_phase01_abg_17_terminaltest',
+  gitCommitSha: 'a'.repeat(40),
+};
+const RUNTIME_AUTHORITY = formalRuntimeAuthority().authority;
+
+describe('formal terminal conclusion', () => {
+  it('derives a seal-eligible PASSED conclusion only from a complete cleanup terminal state', () => {
+    const conclusion = buildFormalTerminalConclusion(validInput());
+
+    expect(conclusion).toMatchObject({
+      schemaVersion: 'phase-01.formal-terminal-conclusion.v2',
+      status: 'PASSED',
+      preflightStatus: 'PASSED',
+      setupStatus: 'PASSED',
+      nonFormalGateCount: 39,
+      nonFormalPassedCount: 39,
+      nonFormalFailedCount: 0,
+      producerEvidencePersistedBeforeCleanup: true,
+      cleanupStatus: 'PASSED',
+      residualResourceCount: 0,
+      residualContainerCount: 0,
+      residualVolumeCount: 0,
+      residualNetworkCount: 0,
+      occupiedRequiredPorts: [],
+      requiredPortsObserved: formalRuntimePorts(RUNTIME_AUTHORITY),
+      pruneCommandsInvoked: false,
+      frozenInputsStableAfterCleanup: true,
+      authorityIdentityStableAfterCleanup: true,
+      runtimeAuthoritySha256: 'c'.repeat(64),
+      runtimeAuthoritySemanticDigest: 'd'.repeat(64),
+      runtimeAuthorityStableAfterCleanup: true,
+      producerSourceManifestSha256: 'b'.repeat(64),
+      producerSourceManifestStableAfterCleanup: true,
+      outputDirectoryExclusive: true,
+      failureCodes: [],
+      sealEligible: true,
+      assertions: {
+        terminalLifecycle: { status: 'PASSED', failureCodes: [] },
+        sealEligibility: { status: 'PASSED', failureCodes: [] },
+      },
+    });
+  });
+
+  it('fails cleanup and residual container terminal states closed', () => {
+    const input = validInput();
+    const residual = resource('container', 'residual-container');
+    const conclusion = buildFormalTerminalConclusion({
+      ...input,
+      cleanup: {
+        ...input.cleanup,
+        status: 'FAILED',
+        residualResources: [residual],
+      },
+      finalResources: {
+        ...input.finalResources,
+        resources: [residual],
+      },
+    });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.residualContainerCount).toBe(1);
+    expect(conclusion.assertions.terminalLifecycle.status).toBe('FAILED');
+    expect(conclusion.failureCodes).toEqual(expect.arrayContaining([
+      'FORMAL_TERMINAL_CLEANUP_NOT_PASSED',
+      'FORMAL_TERMINAL_RESIDUAL_RESOURCES_PRESENT',
+    ]));
+  });
+
+  it('fails when only 38 of the first 39 gates passed or a required port observation is missing', () => {
+    const input = validInput();
+    const conclusion = buildFormalTerminalConclusion({
+      ...input,
+      nonFormalGateResults: input.nonFormalGateResults.slice(0, 38),
+      finalResources: {
+        ...input.finalResources,
+        ports: input.finalResources.ports.slice(0, -1),
+      },
+    });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.failureCodes).toEqual(expect.arrayContaining([
+      'FORMAL_TERMINAL_NON_FORMAL_GATES_INCOMPLETE',
+      'FORMAL_TERMINAL_REQUIRED_PORT_OBSERVATION_MISSING',
+    ]));
+  });
+
+  it.each([
+    ['frozenInputsStableAfterCleanup', 'FORMAL_TERMINAL_FROZEN_INPUTS_DRIFT'],
+    ['authorityIdentityStableAfterCleanup', 'FORMAL_TERMINAL_AUTHORITY_IDENTITY_DRIFT'],
+    ['producerSourceManifestStableAfterCleanup', 'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DRIFT'],
+    ['outputDirectoryExclusive', 'FORMAL_TERMINAL_OUTPUT_DIRECTORY_NOT_EXCLUSIVE'],
+  ] as const)('fails seal eligibility when %s is false', (field, expectedCode) => {
+    const conclusion = buildFormalTerminalConclusion({ ...validInput(), [field]: false });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.assertions.sealEligibility.status).toBe('FAILED');
+    expect(conclusion.failureCodes).toContain(expectedCode);
+  });
+
+  it('fails seal eligibility with a stable code when runtime authority drifts after cleanup', () => {
+    const conclusion = buildFormalTerminalConclusion({
+      ...validInput(),
+      runtimeAuthorityStableAfterCleanup: false,
+    });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.runtimeAuthorityStableAfterCleanup).toBe(false);
+    expect(conclusion.failureCodes).toContain('FORMAL_TERMINAL_RUNTIME_AUTHORITY_DRIFT');
+  });
+
+  it.each(['runtimeAuthoritySha256', 'runtimeAuthoritySemanticDigest'] as const)(
+    'fails seal eligibility when %s is not a SHA-256 digest',
+    (field) => {
+      const conclusion = buildFormalTerminalConclusion({ ...validInput(), [field]: 'invalid' });
+      expect(conclusion.status).toBe('FAILED');
+      expect(conclusion.failureCodes).toContain('FORMAL_TERMINAL_RUNTIME_AUTHORITY_DIGEST_INVALID');
+    },
+  );
+
+  it('fails seal eligibility when the producer source manifest digest is unavailable', () => {
+    const conclusion = buildFormalTerminalConclusion({
+      ...validInput(),
+      producerSourceManifestSha256: null,
+    });
+
+    expect(conclusion.status).toBe('FAILED');
+    expect(conclusion.sealEligible).toBe(false);
+    expect(conclusion.failureCodes).toContain(
+      'FORMAL_TERMINAL_PRODUCER_SOURCE_MANIFEST_DIGEST_INVALID',
+    );
+  });
+
+  it('derives required ports from the frozen authority rather than reloading disk', () => {
+    const frozenAuthority = {
+      ...RUNTIME_AUTHORITY,
+      network: {
+        ...RUNTIME_AUTHORITY.network,
+        ports: {
+          postgresRuntime: 61_001,
+          postgresIntegration: 61_002,
+          keycloakHttp: 61_003,
+          keycloakManagement: 61_004,
+          governanceApi: 61_005,
+          consumerA: 61_006,
+          consumerB: 61_007,
+        },
+      },
+    } satisfies PodmanRuntimeAuthority;
+    const input = validInput();
+    const frozenPorts = formalRuntimePorts(frozenAuthority);
+    const conclusion = buildFormalTerminalConclusion({
+      ...input,
+      runtimeAuthority: frozenAuthority,
+      finalResources: {
+        ...input.finalResources,
+        ports: frozenPorts.map((port) => ({ port, occupied: false, verificationError: null })),
+      },
+    });
+
+    expect(conclusion.requiredPortsObserved).toEqual(frozenPorts);
+    expect(conclusion.assertions.terminalLifecycle.expected).toMatchObject({
+      requiredPortsObserved: frozenPorts,
+    });
+    expect(conclusion.status).toBe('PASSED');
+  });
+});
+
+function validInput() {
+  const finalResources: RuntimeResourceSnapshot = {
+    schemaVersion: 'phase-01.formal-runtime-resources.v1',
+    runIdentity: IDENTITY,
+    capturedAt: '2026-08-30T10:01:00',
+    resources: [],
+    ports: formalRuntimePorts(RUNTIME_AUTHORITY)
+      .map((port) => ({ port, occupied: false, verificationError: null })),
+  };
+  const cleanup: FormalCleanupReport = {
+    schemaVersion: 'phase-01.formal-cleanup.v1',
+    runIdentity: IDENTITY,
+    startedAt: '2026-08-30T10:00:30',
+    completedAt: '2026-08-30T10:01:00',
+    status: 'PASSED',
+    actions: [],
+    failedItems: [],
+    residualResources: [],
+    occupiedPorts: [],
+    pruneCommandsInvoked: false,
+  };
+  return {
+    runtimeAuthority: RUNTIME_AUTHORITY,
+    runIdentity: IDENTITY,
+    startedAt: '2026-08-30T10:00:00',
+    completedAt: '2026-08-30T10:01:01',
+    preflightStatus: 'PASSED' as const,
+    setupStatus: 'PASSED' as const,
+    nonFormalGateResults: Array.from({ length: 39 }, (_, index) => ({
+      gateId: `ABG-${String(index + 1).padStart(2, '0')}`,
+      status: 'PASSED' as const,
+    })),
+    producerEvidencePersistedBeforeCleanup: true,
+    producerProtocolEvidenceCount: 7,
+    cleanup,
+    finalResources,
+    frozenInputsStableAfterCleanup: true,
+    authorityIdentityStableAfterCleanup: true,
+    runtimeAuthoritySha256: 'c'.repeat(64),
+    runtimeAuthoritySemanticDigest: 'd'.repeat(64),
+    runtimeAuthorityStableAfterCleanup: true,
+    producerSourceManifestSha256: 'b'.repeat(64),
+    producerSourceManifestStableAfterCleanup: true,
+    outputDirectoryExclusive: true,
+    failureCodes: [] as readonly string[],
+  };
+}
+
+function resource(
+  resourceType: RuntimeResourceRecord['resourceType'],
+  id: string,
+): RuntimeResourceRecord {
+  return {
+    resourceType,
+    id,
+    name: id,
+    labels: {},
+    source: 'podman-inspect',
+    present: true,
+    active: true,
+    state: 'PRESENT',
+    imageReference: null,
+    imageId: null,
+    imageDigest: null,
+    ports: [],
+    startedAt: null,
+    stoppedAt: null,
+    exitStatus: null,
+    metrics: null,
+  };
+}

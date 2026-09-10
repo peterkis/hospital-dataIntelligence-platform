@@ -244,6 +244,7 @@ export interface PriceListModule {
     readonly governanceObjectId: string;
     readonly priceListId: string;
     readonly priceListReleaseId: string;
+    readonly recordedFrom: string;
   }): Promise<PreparedPriceListPublication>;
   prepareReleaseProjection(command: {
     readonly governanceObjectId: string;
@@ -253,6 +254,8 @@ export interface PriceListModule {
   confirmPublication(command: {
     readonly priceListReleaseId: string;
     readonly governanceReleaseId: string;
+    readonly recordedFrom: string;
+    readonly contentHash: Buffer;
   }): Promise<void>;
   getPublishedView(command: {
     readonly governanceObjectId: string;
@@ -514,6 +517,7 @@ export function createPriceListModule(
     },
 
     async prepareDraftPublication(command) {
+      parseLocalDateTime(command.recordedFrom);
       const draft = await loadReleaseView(
         database,
         chargeCatalog,
@@ -527,24 +531,28 @@ export function createPriceListModule(
       if (draft.governanceStatus !== 'DRAFT') {
         throw new Error('PRICE_LIST_PUBLICATION_STATE_CONFLICT');
       }
+      if (command.recordedFrom < draft.recordedFrom) {
+        throw new Error('PRICE_LIST_RECORDED_TIME_CONFLICT');
+      }
+      const releaseContent = {
+        businessValidFrom: draft.businessValidFrom,
+        businessValidTo: draft.businessValidTo,
+        currencyCode: draft.currencyCode,
+        displayName: draft.displayName,
+        entries: draft.entries,
+        priceListCode: draft.priceListCode,
+        priceListId: draft.priceListId,
+        priceListReleaseId: draft.priceListReleaseId,
+        recordedFrom: command.recordedFrom,
+        releaseNo: draft.releaseNo,
+      };
+      const contentHash = canonicalSha256(releaseContent);
       return {
         governanceObjectId: command.governanceObjectId,
         priceListId: draft.priceListId,
         priceListReleaseId: draft.priceListReleaseId,
-        contentHash: draft.contentHash,
-        projection: {
-          priceListId: draft.priceListId,
-          priceListReleaseId: draft.priceListReleaseId,
-          releaseNo: draft.releaseNo,
-          priceListCode: draft.priceListCode,
-          displayName: draft.displayName,
-          currencyCode: draft.currencyCode,
-          businessValidFrom: draft.businessValidFrom,
-          businessValidTo: draft.businessValidTo,
-          recordedFrom: draft.recordedFrom,
-          contentHash: digestHex(draft.contentHash),
-          entries: draft.entries,
-        },
+        contentHash,
+        projection: { ...releaseContent, contentHash: digestHex(contentHash) },
       };
     },
 
@@ -563,14 +571,19 @@ export function createPriceListModule(
     },
 
     async confirmPublication(command) {
+      parseLocalDateTime(command.recordedFrom);
+      if (command.contentHash.byteLength !== 32) throw new Error('PRICE_LIST_CONTENT_HASH_INVALID');
       const draft = await database
         .selectFrom('price_list.price_list_release')
-        .select(['price_list_id', 'recorded_from'])
+        .select(['price_list_id', 'business_valid_from', 'recorded_from'])
         .where('price_list_release_id', '=', command.priceListReleaseId)
         .where('governance_status', '=', 'DRAFT')
         .forUpdate()
         .executeTakeFirst();
       if (!draft) throw new Error('PRICE_LIST_PUBLICATION_STATE_CONFLICT');
+      if (command.recordedFrom < draft.recorded_from) {
+        throw new Error('PRICE_LIST_RECORDED_TIME_CONFLICT');
+      }
       const current = await database
         .selectFrom('price_list.price_list_release')
         .select(['price_list_release_id', 'recorded_from'])
@@ -582,12 +595,12 @@ export function createPriceListModule(
         .forUpdate()
         .executeTakeFirst();
       if (current) {
-        if (draft.recorded_from <= current.recorded_from) {
+        if (command.recordedFrom <= current.recorded_from) {
           throw new Error('PRICE_LIST_RECORDED_TIME_CONFLICT');
         }
         const closed = await database
           .updateTable('price_list.price_list_release')
-          .set({ recorded_to: draft.recorded_from })
+          .set({ recorded_to: command.recordedFrom })
           .where('price_list_release_id', '=', current.price_list_release_id)
           .where('recorded_to', 'is', null)
           .executeTakeFirst();
@@ -598,6 +611,9 @@ export function createPriceListModule(
         .set({
           governance_status: 'PUBLISHED',
           governance_release_id: command.governanceReleaseId,
+          recorded_from: command.recordedFrom,
+          business_status: draft.business_valid_from > command.recordedFrom ? 'PLANNED' : 'ACTIVE',
+          content_hash: command.contentHash,
         })
         .where('price_list_release_id', '=', command.priceListReleaseId)
         .where('governance_status', '=', 'DRAFT')

@@ -3,22 +3,48 @@ import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   access,
-  mkdir,
   readFile,
   readdir,
   writeFile,
 } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
 import { connect } from 'node:net';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createGovernanceApiClient } from '@hospital-data-intelligence/generated-api-client';
 import pg from 'pg';
+import {
+  buildLiveProducerEvidence,
+  parseFrozenInputRefs,
+} from './evidence/adapters.js';
+import {
+  createEvidenceItemFromFile,
+  createEvidenceOutputDirectory,
+  environmentReferenceDigest,
+  writeProducerEvidence,
+  writeRedactedJsonArtifact,
+  writeRedactedTextArtifact,
+} from './evidence/recorder.js';
+import { writeFormalRuntimeEvent } from './runtime/formal-runtime-controller.js';
+import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.js';
+import { createDeterministicChildEnvironment } from './runtime/node-command-boundary.js';
 
-process.env['TZ'] = 'Asia/Shanghai';
+const repositoryRoot = resolve(import.meta.dirname, '../../..');
+const runtimeAuthority = loadPodmanRuntimeAuthority(repositoryRoot).authority;
+const runtimeBindAddress = runtimeAuthority.network.bindAddress;
+const runtimePorts = runtimeAuthority.network.ports;
+process.env['TZ'] = runtimeAuthority.host.timezone;
 
 const API_BASE_URL = requireEnvironment('GOVERNANCE_API_BASE_URL').replace(/\/$/u, '');
 const KEYCLOAK_ISSUER_URL = requireEnvironment('KEYCLOAK_ISSUER_URL').replace(/\/$/u, '');
+if (API_BASE_URL !== `http://${runtimeBindAddress}:${runtimePorts.governanceApi}`) {
+  throw new Error('FORMAL_LIVE_GOVERNANCE_ENDPOINT_AUTHORITY_DRIFT');
+}
+if (
+  KEYCLOAK_ISSUER_URL !==
+    `http://${runtimeBindAddress}:${runtimePorts.keycloakHttp}/realms/hdi-phase01`
+) {
+  throw new Error('FORMAL_LIVE_KEYCLOAK_ENDPOINT_AUTHORITY_DRIFT');
+}
 const REALM_IMPORT_PATH = resolve(requireEnvironment('KEYCLOAK_REALM_IMPORT_PATH'));
 const REALM_IMPORT = JSON.parse(await readFile(REALM_IMPORT_PATH, 'utf8'));
 const OWNER = requireRealmUser(REALM_IMPORT, 'phase01-owner');
@@ -40,11 +66,10 @@ const CONSUMER_MAIN = resolve('apps/sim-consumer/dist/main.js');
 const OPENAPI_PATH = resolve('contracts/openapi/phase-01.openapi.json');
 const runId = randomUUID();
 const runSuffix = runId.slice(0, 8).toUpperCase();
+const runSequence = parseRunSequence(process.env['ABG_RUN_SEQUENCE']);
 const startedAt = nowInAsiaShanghai();
 
-await assertDirectoryAbsent(OUTPUT_DIR);
-await mkdir(dirname(OUTPUT_DIR), { recursive: true });
-await mkdir(OUTPUT_DIR, { recursive: false });
+await createEvidenceOutputDirectory(OUTPUT_DIR);
 
 const consumerProcesses = [];
 let verification;
@@ -115,7 +140,7 @@ try {
   consumerProcesses.push(
     await startConsumer({
       label: 'consumer-a',
-      port: 4101,
+      port: runtimePorts.consumerA,
       clientId: 'hdi-sim-consumer-a',
       clientSecret: CONSUMER_A_SECRET,
       notificationAuthorization: requireNotificationAuthorization(CONSUMER_A_PRINCIPAL_ID),
@@ -123,7 +148,7 @@ try {
     }),
     await startConsumer({
       label: 'consumer-b',
-      port: 4102,
+      port: runtimePorts.consumerB,
       clientId: 'hdi-sim-consumer-b',
       clientSecret: CONSUMER_B_SECRET,
       notificationAuthorization: requireNotificationAuthorization(CONSUMER_B_PRINCIPAL_ID),
@@ -264,7 +289,8 @@ try {
   const priceEvent = await waitForSubscriptionEvent(serviceAClient, subscriptionA.subscriptionId);
 
   const consumerAState = await waitForClosedState(consumerAStatePath, priceEvent.eventId);
-  assert.equal(await fileExists(consumerBStatePath), false, 'Legacy consumer must remain blocked.');
+  const consumerBWasBlockedBeforeUpgrade = !(await fileExists(consumerBStatePath));
+  assert.equal(consumerBWasBlockedBeforeUpgrade, true, 'Legacy consumer must remain blocked.');
 
   const resolutionRecordAsOf = nowInAsiaShanghai();
   const resolution = unwrap(
@@ -317,10 +343,10 @@ try {
   );
   const consumerBState = await waitForClosedState(consumerBStatePath, priceEvent.eventId);
   assert.deepEqual(consumerBState.lastAppliedPayload, consumerAState.lastAppliedPayload);
-  assert.equal(
-    consumerBState.appliedEvents[priceEvent.eventId].snapshotDigest,
-    consumerAState.appliedEvents[priceEvent.eventId].snapshotDigest,
-  );
+  const canonicalSnapshotDigestsMatch =
+    consumerBState.appliedEvents[priceEvent.eventId].snapshotDigest ===
+    consumerAState.appliedEvents[priceEvent.eventId].snapshotDigest;
+  assert.equal(canonicalSnapshotDigestsMatch, true);
   const consumerAAfterCheckpoint = unwrap(
     await serviceAClient.GET('/v1/phase-01/consumer-subscriptions/{subscriptionId}/events', {
       params: {
@@ -348,6 +374,26 @@ try {
     subscriptionBId: subscriptionB.subscriptionId,
     aggregateVersion: consumerAState.appliedAggregateVersion,
   });
+  const serviceIdentityBindingsVerified =
+    subscriptionA.servicePrincipalId === CONSUMER_A_PRINCIPAL_ID &&
+    subscriptionB.servicePrincipalId === CONSUMER_B_PRINCIPAL_ID;
+  const priceResolutionPathVerified =
+    resolution.status === 'SUCCEEDED' && resolution.finalAmount === '24.6800';
+  const dualConsumerIsolationVerified =
+    consumerBWasBlockedBeforeUpgrade &&
+    consumerAAfterCheckpoint.events.length === 0 &&
+    consumerBAfterCheckpoint.events.length === 0 &&
+    databaseVerification.consumerA.deliveryStatus === 'DELIVERED' &&
+    databaseVerification.consumerB.deliveryStatus === 'DELIVERED';
+  const snapshotDownloadAndDigestVerified =
+    typeof consumerAState.appliedEvents[priceEvent.eventId].snapshotId === 'string' &&
+    typeof consumerBState.appliedEvents[priceEvent.eventId].snapshotId === 'string' &&
+    canonicalSnapshotDigestsMatch;
+  const receiptAndCheckpointVerified =
+    databaseVerification.consumerA.receiptCount >= 1 &&
+    databaseVerification.consumerB.receiptCount >= 1 &&
+    databaseVerification.consumerA.checkpoint === consumerAState.appliedAggregateVersion &&
+    databaseVerification.consumerB.checkpoint === consumerBState.appliedAggregateVersion;
 
   verification = {
     status: 'PASSED',
@@ -364,6 +410,7 @@ try {
       pkceMethod: 'S256',
       principalId: browserIdentity.session.principalId,
       principalKind: browserIdentity.session.principalKind,
+      serviceIdentityBindingsVerified,
       csrfNegativeStatus: negativeCsrf.response.status,
       csrfNegativeCode: negativeCsrf.error.code,
     },
@@ -374,13 +421,16 @@ try {
     charge,
     price,
     resolution,
+    priceResolutionPathVerified,
     consumption: {
       consumerA: summarizeConsumerState(consumerAState, priceEvent.eventId),
       consumerB: summarizeConsumerState(consumerBState, priceEvent.eventId),
-      identicalCanonicalSnapshotDigest:
-        consumerAState.appliedEvents[priceEvent.eventId].snapshotDigest ===
-        consumerBState.appliedEvents[priceEvent.eventId].snapshotDigest,
-      checkpointsClosed: true,
+      consumerBWasBlockedBeforeUpgrade,
+      dualConsumerIsolationVerified,
+      snapshotDownloadAndDigestVerified,
+      identicalCanonicalSnapshotDigest: canonicalSnapshotDigestsMatch,
+      receiptAndCheckpointVerified,
+      checkpointsClosed: receiptAndCheckpointVerified,
     },
     databaseVerification,
     governanceObjectIds: [CHARGE_OBJECT_ID, PRICE_OBJECT_ID],
@@ -396,17 +446,62 @@ try {
     error: error instanceof Error ? error.message : String(error),
   };
 } finally {
-  await Promise.allSettled(consumerProcesses.map((consumer) => stopConsumer(consumer)));
+  const stopResults = await Promise.allSettled(
+    consumerProcesses.map((consumer) => stopConsumer(consumer)),
+  );
+  const rejected = stopResults.find((result) => result.status === 'rejected');
+  if (rejected?.status === 'rejected') {
+    failure ??= rejected.reason;
+    verification = {
+      ...verification,
+      status: 'FAILED',
+      completedAt: nowInAsiaShanghai(),
+      error: rejected.reason instanceof Error
+        ? rejected.reason.message
+        : String(rejected.reason),
+    };
+  }
 }
 
-await writeFile(join(OUTPUT_DIR, 'live-verification.json'), `${JSON.stringify(verification, null, 2)}\n`, {
-  encoding: 'utf8',
-  flag: 'wx',
-  mode: 0o600,
+await writeRedactedJsonArtifact(OUTPUT_DIR, 'live-verification.json', verification);
+const liveEvidenceItem = await createEvidenceItemFromFile(OUTPUT_DIR, {
+  artifactId: 'phase-01-live-verification-summary',
+  relativePath: 'live-verification.json',
+  mediaType: 'application/json',
+  jsonPointer: '/status',
+  claim: { status: verification.status },
 });
+const producerEvidence = buildLiveProducerEvidence({
+  producerId: 'live',
+  runId,
+  runSequence,
+  startedAt,
+  completedAt: verification.completedAt,
+  processStatus: verification.status === 'PASSED' ? 'PASSED' : 'FAILED',
+  commandIdentity: {
+    executable: 'node',
+    arguments: ['tooling/verification/src/verify-phase-01-live.ts'],
+    workingDirectory: 'repository-root',
+    commandDigest: sha256(Buffer.from('tooling/verification/src/verify-phase-01-live.ts', 'utf8')),
+  },
+  environmentRefs: environmentReferenceDigest(process.env, [
+    'GOVERNANCE_API_BASE_URL',
+    'KEYCLOAK_ISSUER_URL',
+    'TZ',
+  ]),
+  frozenInputRefs: parseFrozenInputRefs(parseFrozenInputEnvironment()),
+  defaultEvidenceItems: [liveEvidenceItem],
+  verification,
+});
+await writeProducerEvidence(OUTPUT_DIR, 'producer-evidence.json', producerEvidence);
 await writeManifest(OUTPUT_DIR);
 process.stdout.write(
-  `${JSON.stringify({ status: verification.status, runId, evidenceDirectory: OUTPUT_DIR })}\n`,
+  JSON.stringify({
+    status: verification.status,
+    producerEvidenceStatus: producerEvidence.status,
+    runId,
+    evidenceDirectory: OUTPUT_DIR,
+  }) + '\n',
 );
 if (failure) throw failure;
 
@@ -533,15 +628,12 @@ async function startConsumer(options: {
   readonly clientSecret: string;
   readonly notificationAuthorization: string;
   readonly stateDirectory: string;
-}) {
-  const stdoutPath = join(OUTPUT_DIR, `${options.label}.stdout.log`);
-  const stderrPath = join(OUTPUT_DIR, `${options.label}.stderr.log`);
-  const stdout = createWriteStream(stdoutPath, { flags: 'wx', mode: 0o600 });
-  const stderr = createWriteStream(stderrPath, { flags: 'wx', mode: 0o600 });
+}): Promise<RunningConsumer> {
   const child = spawn(process.execPath, [CONSUMER_MAIN], {
     cwd: process.cwd(),
-    env: {
-      ...process.env,
+    env: createDeterministicChildEnvironment({
+      inheritedEnvironment: process.env,
+      injectedEnvironment: {
       GOVERNANCE_API_BASE_URL: API_BASE_URL,
       SIM_CONSUMER_STATE_DIRECTORY: options.stateDirectory,
       KEYCLOAK_TOKEN_ENDPOINT: `${KEYCLOAK_ISSUER_URL}/protocol/openid-connect/token`,
@@ -549,29 +641,108 @@ async function startConsumer(options: {
       KEYCLOAK_CLIENT_SECRET: options.clientSecret,
       SIM_CONSUMER_MODE: 'server',
       SIM_CONSUMER_NOTIFICATION_AUTHORIZATION: options.notificationAuthorization,
-      HOST: '127.0.0.1',
+      HOST: runtimeBindAddress,
       PORT: String(options.port),
-    },
+      },
+      nodeOptionsForbiddenCode: 'SHARED_COMMAND_NODE_OPTIONS_FORBIDDEN',
+      databaseUrlDeclarationForbiddenCode:
+        'SHARED_COMMAND_DATABASE_URL_DECLARATION_FORBIDDEN',
+    }),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  child.stdout.pipe(stdout);
-  child.stderr.pipe(stderr);
-  const consumer = { child, stdout, stderr, label: options.label };
-  await waitForPort(options.port, child);
+  const stdout: Buffer[] = [];
+  const stderr: Buffer[] = [];
+  child.stdout?.on('data', (chunk: Buffer) => stdout.push(chunk));
+  child.stderr?.on('data', (chunk: Buffer) => stderr.push(chunk));
+  const consumer: RunningConsumer = { child, stdout, stderr, label: options.label };
+  try {
+    await recordConsumerRuntimeEvent('STARTED', consumer, options.port);
+    await waitForPort(options.port, child);
+  } catch (error) {
+    await stopConsumer(consumer, options.port).catch(() => undefined);
+    throw error;
+  }
   return consumer;
 }
 
-async function stopConsumer(consumer: any) {
-  if (consumer.child.exitCode === null && consumer.child.signalCode === null) {
-    consumer.child.kill('SIGTERM');
-    await Promise.race([
-      new Promise((resolveClose) => consumer.child.once('close', resolveClose)),
-      delay(5_000).then(() => consumer.child.kill('SIGKILL')),
+interface RunningConsumer {
+  readonly child: ReturnType<typeof spawn>;
+  readonly stdout: readonly Buffer[];
+  readonly stderr: readonly Buffer[];
+  readonly label: string;
+}
+
+async function stopConsumer(consumer: RunningConsumer, port?: number): Promise<void> {
+  const failures: unknown[] = [];
+  try {
+    await Promise.all([
+      writeRedactedTextArtifact(
+        OUTPUT_DIR,
+        `${consumer.label}.stdout.log`,
+        Buffer.concat(consumer.stdout).toString('utf8'),
+      ),
+      writeRedactedTextArtifact(
+        OUTPUT_DIR,
+        `${consumer.label}.stderr.log`,
+        Buffer.concat(consumer.stderr).toString('utf8'),
+      ),
     ]);
+  } catch (error) {
+    failures.push(error);
   }
-  consumer.stdout.end();
-  consumer.stderr.end();
-  await delay(50);
+  try {
+    if (consumer.child.exitCode === null && consumer.child.signalCode === null) {
+      consumer.child.kill('SIGTERM');
+      await Promise.race([
+        new Promise((resolveClose) => consumer.child.once('close', resolveClose)),
+        delay(5_000).then(() => consumer.child.kill('SIGKILL')),
+      ]);
+    }
+    await recordConsumerRuntimeEvent('STOPPED', consumer, port);
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length > 0) throw new AggregateError(failures, 'SIM_CONSUMER_STOP_FAILED');
+}
+
+async function recordConsumerRuntimeEvent(
+  event: 'STARTED' | 'STOPPED',
+  consumer: RunningConsumer,
+  port?: number,
+): Promise<void> {
+  const eventDirectory = process.env['ABG_RUNTIME_EVENT_DIR'];
+  if (eventDirectory === undefined) return;
+  const formalRunId = process.env['ABG_RUN_ID'];
+  const formalRunSequence = process.env['ABG_RUN_SEQUENCE'];
+  const runtimeNamespace = process.env['ABG_RUNTIME_NAMESPACE'];
+  if (
+    formalRunId === undefined ||
+    formalRunSequence === undefined ||
+    runtimeNamespace === undefined
+  ) throw new Error('FORMAL_CONSUMER_RUN_IDENTITY_INCOMPLETE');
+  if (consumer.child.pid === undefined) throw new Error('FORMAL_CONSUMER_PID_MISSING');
+  await writeFormalRuntimeEvent(eventDirectory, {
+    runtimeAuthority,
+    identity: {
+      runId: formalRunId,
+      runSequence: parseRunSequence(formalRunSequence),
+      runtimeNamespace,
+    },
+    event,
+    resourceType: 'process',
+    id: String(consumer.child.pid),
+    name: consumer.label,
+    role: 'sim-' + consumer.label,
+    pid: consumer.child.pid,
+    ports: port === undefined ? [] : [{
+      containerPort: String(port),
+      hostIp: runtimeBindAddress,
+      hostPort: port,
+    }],
+    exitStatus: event === 'STOPPED'
+      ? consumer.child.exitCode ?? consumer.child.signalCode
+      : null,
+  });
 }
 
 async function waitForPort(port: number, child: any): Promise<void> {
@@ -579,7 +750,7 @@ async function waitForPort(port: number, child: any): Promise<void> {
   while (Date.now() < deadline) {
     if (child.exitCode !== null) throw new Error(`SIM_CONSUMER_${port}_EXITED_${child.exitCode}`);
     const connected = await new Promise((resolveConnected) => {
-      const socket = connect({ host: '127.0.0.1', port });
+      const socket = connect({ host: runtimeBindAddress, port });
       socket.once('connect', () => {
         socket.destroy();
         resolveConnected(true);
@@ -984,4 +1155,22 @@ function requireEnvironment(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`REQUIRED_ENVIRONMENT_MISSING:${name}`);
   return value;
+}
+
+function parseRunSequence(value: string | undefined): number {
+  const parsed = value === undefined ? 1 : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error('ABG_RUN_SEQUENCE_INVALID');
+  }
+  return parsed;
+}
+
+function parseFrozenInputEnvironment(): unknown {
+  const value = process.env['ABG_FROZEN_INPUTS_JSON'];
+  if (value === undefined || value.length === 0) return {};
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw new Error('ABG_FROZEN_INPUTS_JSON_INVALID');
+  }
 }

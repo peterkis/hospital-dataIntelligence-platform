@@ -13,6 +13,7 @@ const EXPECTED_PACKAGES = new Map([
   ['apps/admin-web', '@hospital-data-intelligence/admin-web'],
   ['apps/sim-consumer', '@hospital-data-intelligence/sim-consumer'],
   ['packages/generated-api-client', '@hospital-data-intelligence/generated-api-client'],
+  ['packages/release-consumer-sdk', '@hospital-data-intelligence/release-consumer-sdk'],
   ['tests/api', '@hospital-data-intelligence/api-tests'],
   ['tests/e2e', '@hospital-data-intelligence/e2e-tests'],
   ['tests/fault', '@hospital-data-intelligence/fault-tests'],
@@ -85,4 +86,3 @@ assert.equal(gitRoot.status, 0, gitRoot.stderr);
 assert.equal(resolve(gitRoot.stdout.trim()), ROOT, 'Current project directory must be the only Git root.');
 
 console.log(`Repository topology verified: ${EXPECTED_PACKAGES.size} workspaces, one Git root, one npm lock.`);
-

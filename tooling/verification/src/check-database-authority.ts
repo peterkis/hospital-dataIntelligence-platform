@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { Pool } from 'pg';
 
 interface TableOwnership {
   readonly schemas: Readonly<Record<string, string>>;
@@ -17,92 +18,275 @@ const GENERATED_TYPES = join(
   ROOT,
   'apps/governance-api/src/platform/database/database-types.generated.ts',
 );
-const ownership = JSON.parse(
-  readFileSync(join(ROOT, 'db/table-ownership.json'), 'utf8'),
-) as TableOwnership;
 
-const migrationFiles = readdirSync(MIGRATIONS)
-  .filter((name) => /^\d{4}_.+\.sql$/u.test(name))
-  .sort();
-assert.ok(migrationFiles.length > 0, 'At least one migration is required.');
-for (const [index, name] of migrationFiles.entries()) {
-  assert.equal(name.slice(0, 4), String(index + 1).padStart(4, '0'), `Migration sequence gap: ${name}`);
+export const DATABASE_AUTHORITY_WORKSPACE =
+  '@hospital-data-intelligence/governance-api' as const;
+export const DATABASE_AUTHORITY_VERIFY_SCRIPT = 'db:types:verify' as const;
+
+export interface DatabaseAuthoritySpawnResult {
+  readonly status: number | null;
+  readonly stdout: string | Buffer | null;
+  readonly stderr: string | Buffer | null;
 }
 
-const migrationManifest = migrationFiles.map((name) => {
-  const bytes = readFileSync(join(MIGRATIONS, name));
-  const source = bytes.toString('utf8');
-  assert.equal(/\btimestamp\s+with\s+time\s+zone\b/iu.test(source), false, `${name} contains timestamp with time zone`);
-  assert.equal(/\btimestamptz\b/iu.test(source), false, `${name} contains timestamptz`);
-  assert.equal(/\btime\s+with\s+time\s+zone\b/iu.test(source), false, `${name} contains time with time zone`);
-  return { file: name, sha256: createHash('sha256').update(bytes).digest('hex') };
-});
+export type DatabaseAuthoritySpawn = (
+  executable: string,
+  args: string[],
+  options: { readonly cwd: string; readonly encoding: 'utf8'; readonly env: NodeJS.ProcessEnv },
+) => DatabaseAuthoritySpawnResult;
 
-const generatedTypes = readFileSync(GENERATED_TYPES, 'utf8');
-for (const { file } of migrationManifest) {
-  const source = readFileSync(join(MIGRATIONS, file), 'utf8');
-  for (const match of source.matchAll(/\bcreate\s+table\s+([a-z_]+\.[a-z_]+)/giu)) {
-    const tableName = match[1];
-    if (tableName) {
-      assert.ok(
-        generatedTypes.includes(`"${tableName}"`),
-        `Generated database types are missing ${tableName}`,
-      );
+export interface ForbiddenDatabaseColumn {
+  readonly schemaName: string;
+  readonly tableName: string;
+  readonly columnName: string;
+  readonly dataType: string;
+}
+
+export type DatabaseCatalogQuery = (
+  queryText: string,
+  values: readonly unknown[],
+) => Promise<{ readonly rows: readonly Record<string, unknown>[] }>;
+
+export async function runDatabaseAuthorityCheck(): Promise<void> {
+  const ownership = JSON.parse(
+    readFileSync(join(ROOT, 'db/table-ownership.json'), 'utf8'),
+  ) as TableOwnership;
+  const migrationFiles = readdirSync(MIGRATIONS)
+    .filter((name) => /^\d{4}_.+\.sql$/u.test(name))
+    .sort();
+  assert.ok(migrationFiles.length > 0, 'At least one migration is required.');
+  for (const [index, name] of migrationFiles.entries()) {
+    assert.equal(
+      name.slice(0, 4),
+      String(index + 1).padStart(4, '0'),
+      `Migration sequence gap: ${name}`,
+    );
+  }
+
+  const migrationManifest = migrationFiles.map((name) => {
+    const bytes = readFileSync(join(MIGRATIONS, name));
+    const source = bytes.toString('utf8');
+    assertMigrationDateTimeTypesAllowed(name, source);
+    return { file: name, sha256: createHash('sha256').update(bytes).digest('hex') };
+  });
+
+  const databaseUrl = requireDatabaseAuthorityDatabaseUrl(process.env);
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    application_name: 'hdi-database-authority-time-contract',
+    max: 1,
+  });
+  let forbiddenDatabaseColumns: readonly ForbiddenDatabaseColumn[];
+  try {
+    forbiddenDatabaseColumns = await findForbiddenDatabaseColumns(
+      (queryText, values) => pool.query(queryText, [...values]),
+      Object.keys(ownership.schemas),
+    );
+  } finally {
+    await pool.end();
+  }
+  assert.equal(
+    forbiddenDatabaseColumns.length,
+    0,
+    `Governance schemas contain forbidden date/time types: ${JSON.stringify(forbiddenDatabaseColumns)}`,
+  );
+
+  const generatedTypes = readFileSync(GENERATED_TYPES, 'utf8');
+  const effectiveTables = new Set<string>();
+  for (const { file } of migrationManifest) {
+    const source = readFileSync(join(MIGRATIONS, file), 'utf8');
+    for (const match of source.matchAll(/\bcreate\s+table\s+([a-z_]+\.[a-z_]+)/giu)) {
+      const tableName = match[1];
+      if (tableName) effectiveTables.add(tableName.toLowerCase());
+    }
+    for (const match of source.matchAll(
+      /\balter\s+table\s+([a-z_]+)\.([a-z_]+)\s+rename\s+to\s+([a-z_]+)/giu,
+    )) {
+      const [, schemaName, oldName, newName] = match;
+      if (!schemaName || !oldName || !newName) continue;
+      effectiveTables.delete(`${schemaName}.${oldName}`.toLowerCase());
+      effectiveTables.add(`${schemaName}.${newName}`.toLowerCase());
     }
   }
-}
+  for (const tableName of effectiveTables) {
+    assert.ok(
+      generatedTypes.includes(`"${tableName}"`),
+      `Generated database types are missing ${tableName}`,
+    );
+  }
 
-const ownerByModule = new Map(
-  Object.entries(ownership.schemas).map(([schema, module]) => [module, schema]),
-);
-for (const entry of readdirSync(MODULES, { withFileTypes: true })) {
-  if (!entry.isDirectory()) continue;
-  const ownedSchema = ownerByModule.get(entry.name);
-  assert.ok(ownedSchema, `Module has no declared schema ownership: ${entry.name}`);
-  for (const file of collectTypeScriptFiles(join(MODULES, entry.name))) {
-    const content = readFileSync(file, 'utf8');
-    const patterns = [
-      /\.(?:selectFrom|innerJoin|leftJoin|rightJoin|fullJoin|insertInto|updateTable|deleteFrom)\(['"]([a-z_]+)\./gu,
-      /\b(?:from|join|insert\s+into|update|delete\s+from)\s+([a-z_]+)\./giu,
-    ];
-    for (const pattern of patterns) {
-      for (const match of content.matchAll(pattern)) {
-        assert.equal(
-          match[1],
-          ownedSchema,
-          `Cross-module SQL access in ${relative(ROOT, file)}: ${match[1]} is not owned by ${entry.name}`,
-        );
+  const ownerByModule = new Map(
+    Object.entries(ownership.schemas).map(([schema, module]) => [module, schema]),
+  );
+  for (const entry of readdirSync(MODULES, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const ownedSchema = ownerByModule.get(entry.name);
+    assert.ok(ownedSchema, `Module has no declared schema ownership: ${entry.name}`);
+    for (const file of collectTypeScriptFiles(join(MODULES, entry.name))) {
+      const content = readFileSync(file, 'utf8');
+      const patterns = [
+        /\.(?:selectFrom|innerJoin|leftJoin|rightJoin|fullJoin|insertInto|updateTable|deleteFrom)\(['"]([a-z_]+)\./gu,
+        /\b(?:from|join|insert\s+into|update|delete\s+from)\s+([a-z_]+)\./giu,
+      ];
+      for (const pattern of patterns) {
+        for (const match of content.matchAll(pattern)) {
+          assert.equal(
+            match[1],
+            ownedSchema,
+            `Cross-module SQL access in ${relative(ROOT, file)}: ${match[1]} is not owned by ${entry.name}`,
+          );
+        }
       }
     }
   }
+
+  runDatabaseTypeVerification({
+    repositoryRoot: ROOT,
+    npmCli: process.env['npm_execpath'],
+    inheritedEnvironment: process.env,
+  });
+  const schemaFingerprint = createHash('sha256')
+    .update(migrationManifest.map((entry) => `${entry.file}:${entry.sha256}`).join('\n'))
+    .digest('hex');
+  process.stdout.write(`${JSON.stringify({
+    gate: 'database-authority',
+    migrationCount: migrationManifest.length,
+    forbiddenDatabaseTypeCount: forbiddenDatabaseColumns.length,
+    schemaFingerprint,
+    status: 'PASSED',
+  })}\n`);
 }
 
-const npmCli = process.env['npm_execpath'];
-assert.ok(npmCli, 'npm_execpath is required for database type verification.');
-const generatedTypeVerification = spawnSync(
-  process.execPath,
-  [npmCli, 'run', 'db:types:verify', '--workspace', '@hospital-data-intelligence/governance-api'],
-  { cwd: ROOT, encoding: 'utf8', env: process.env },
-);
-assert.equal(
-  generatedTypeVerification.status,
-  0,
-  [
-    'Generated database types drift from the migrated PostgreSQL schema.',
-    generatedTypeVerification.stdout,
-    generatedTypeVerification.stderr,
-  ].filter(Boolean).join('\n'),
-);
+export function assertMigrationDateTimeTypesAllowed(fileName: string, source: string): void {
+  const forbiddenPatterns: readonly (readonly [RegExp, string])[] = [
+    [/\btimestamp\s*(?:\(\s*\d+\s*\)\s*)?with\s+time\s+zone\b/iu, 'timestamp with time zone'],
+    [/\btimestamptz\b/iu, 'timestamptz'],
+    [/\btime\s*(?:\(\s*\d+\s*\)\s*)?with\s+time\s+zone\b/iu, 'time with time zone'],
+    [/\btimetz\b/iu, 'timetz'],
+    [/\btstzrange\b/iu, 'tstzrange'],
+    [/\btstzmultirange\b/iu, 'tstzmultirange'],
+  ];
+  for (const [pattern, typeName] of forbiddenPatterns) {
+    assert.equal(pattern.test(source), false, `${fileName} contains ${typeName}`);
+  }
+}
 
-const schemaFingerprint = createHash('sha256')
-  .update(migrationManifest.map((entry) => `${entry.file}:${entry.sha256}`).join('\n'))
-  .digest('hex');
-process.stdout.write(`${JSON.stringify({
-  gate: 'database-authority',
-  migrationCount: migrationManifest.length,
-  schemaFingerprint,
-  status: 'PASSED',
-})}\n`);
+export async function findForbiddenDatabaseColumns(
+  query: DatabaseCatalogQuery,
+  schemaNames: readonly string[],
+): Promise<readonly ForbiddenDatabaseColumn[]> {
+  const result = await query(`
+    select
+      namespace.nspname as "schemaName",
+      relation.relname as "tableName",
+      attribute.attname as "columnName",
+      pg_catalog.format_type(attribute.atttypid, attribute.atttypmod) as "dataType"
+    from pg_catalog.pg_attribute as attribute
+    inner join pg_catalog.pg_class as relation
+      on relation.oid = attribute.attrelid
+    inner join pg_catalog.pg_namespace as namespace
+      on namespace.oid = relation.relnamespace
+    inner join pg_catalog.pg_type as data_type
+      on data_type.oid = attribute.atttypid
+    where namespace.nspname::text = any($1::text[])
+      and relation.relkind in ('r', 'p', 'v', 'm', 'f')
+      and attribute.attnum > 0
+      and not attribute.attisdropped
+      and data_type.typname in ('timestamptz', 'timetz', 'tstzrange', 'tstzmultirange')
+    order by namespace.nspname, relation.relname, attribute.attname
+  `, [schemaNames]);
+  return result.rows.map((row) => ({
+    schemaName: safeCatalogIdentifier(row['schemaName']),
+    tableName: safeCatalogIdentifier(row['tableName']),
+    columnName: safeCatalogIdentifier(row['columnName']),
+    dataType: safeCatalogType(row['dataType']),
+  }));
+}
+
+export function runDatabaseTypeVerification(input: {
+  readonly repositoryRoot: string;
+  readonly npmCli: string | undefined;
+  readonly inheritedEnvironment: Readonly<NodeJS.ProcessEnv>;
+  readonly spawn?: DatabaseAuthoritySpawn;
+}): void {
+  assert.ok(input.npmCli, 'npm_execpath is required for database type verification.');
+  const databaseUrl = requireDatabaseAuthorityDatabaseUrl(input.inheritedEnvironment);
+  const spawn = input.spawn ?? ((executable, args, options) =>
+    spawnSync(executable, args, options));
+  const generatedTypeVerification = spawn(
+    process.execPath,
+    [
+      input.npmCli,
+      'run',
+      DATABASE_AUTHORITY_VERIFY_SCRIPT,
+      '--workspace',
+      DATABASE_AUTHORITY_WORKSPACE,
+    ],
+    {
+      cwd: input.repositoryRoot,
+      encoding: 'utf8',
+      env: databaseAuthorityChildEnvironment(input.inheritedEnvironment),
+    },
+  );
+  assert.equal(
+    generatedTypeVerification.status,
+    0,
+    [
+      'Generated database types drift from the migrated PostgreSQL schema.',
+      redactDatabaseAuthorityOutput(
+        String(generatedTypeVerification.stdout ?? ''),
+        databaseUrl,
+      ),
+      redactDatabaseAuthorityOutput(
+        String(generatedTypeVerification.stderr ?? ''),
+        databaseUrl,
+      ),
+    ].filter(Boolean).join('\n'),
+  );
+}
+
+export function databaseAuthorityChildEnvironment(
+  inheritedEnvironment: Readonly<NodeJS.ProcessEnv>,
+): NodeJS.ProcessEnv {
+  const databaseUrl = requireDatabaseAuthorityDatabaseUrl(inheritedEnvironment);
+  const environment = Object.fromEntries(Object.entries(inheritedEnvironment).filter(
+    ([name, value]) =>
+      name.toUpperCase() !== 'NODE_OPTIONS' &&
+      name.toUpperCase() !== 'DATABASE_URL' &&
+      value !== undefined,
+  ));
+  environment['DATABASE_URL'] = databaseUrl;
+  return environment;
+}
+
+export function requireDatabaseAuthorityDatabaseUrl(
+  environment: Readonly<NodeJS.ProcessEnv>,
+): string {
+  const matches = Object.entries(environment).filter(
+    ([name]) => name.toUpperCase() === 'DATABASE_URL',
+  );
+  if (matches.length !== 1 || (matches[0]?.[1] ?? '').length === 0) {
+    throw new Error('DATABASE_AUTHORITY_DATABASE_URL_MISSING');
+  }
+  return matches[0]![1]!;
+}
+
+function redactDatabaseAuthorityOutput(value: string, databaseUrl: string): string {
+  const json = JSON.stringify(databaseUrl);
+  const variants = [...new Set([
+    databaseUrl,
+    encodeURIComponent(databaseUrl),
+    json,
+    json.slice(1, -1),
+    Buffer.from(databaseUrl, 'utf8').toString('base64'),
+    Buffer.from(databaseUrl, 'utf8').toString('base64url'),
+    `'${databaseUrl.replaceAll("'", `'"'"'`)}'`,
+    `'${databaseUrl.replaceAll("'", "''")}'`,
+  ])].sort((left, right) => right.length - left.length);
+  let redacted = value;
+  for (const variant of variants) redacted = redacted.replaceAll(variant, '[REDACTED]');
+  return redacted.replace(/\bpostgres(?:ql)?:\/\/[^\s"'`]+/giu, '[REDACTED]');
+}
 
 function collectTypeScriptFiles(directory: string): readonly string[] {
   if (!existsSync(directory)) return [];
@@ -111,4 +295,25 @@ function collectTypeScriptFiles(directory: string): readonly string[] {
     if (entry.isDirectory()) return collectTypeScriptFiles(path);
     return extname(entry.name) === '.ts' ? [path] : [];
   });
+}
+
+function safeCatalogIdentifier(value: unknown): string {
+  if (typeof value !== 'string' || !/^[a-z_][a-z0-9_]*$/u.test(value)) {
+    throw new Error('DATABASE_CATALOG_IDENTIFIER_INVALID');
+  }
+  return value;
+}
+
+function safeCatalogType(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    !/^(?:timestamp|time)(?:\(\d+\))? with time zone$|^(?:timestamptz|timetz|tstzrange|tstzmultirange)$/u.test(value)
+  ) {
+    throw new Error('DATABASE_CATALOG_TYPE_INVALID');
+  }
+  return value;
+}
+
+if (resolve(process.argv[1] ?? '') === resolve(fileURLToPath(import.meta.url))) {
+  await runDatabaseAuthorityCheck();
 }

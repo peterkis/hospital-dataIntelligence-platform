@@ -1,15 +1,18 @@
-import { randomUUID } from 'node:crypto';
+import { consumerFailureCode } from '../../modules/audit/index.js';
+import { ConsumerAuditReportSchema, ConsumerAuditQuerySchema, ConsumerAuditAcknowledgementSchema, ConsumerAuditPageSchema } from './consumer-audit-schemas.js';
 import {
   Type,
   type TypeBoxTypeProvider,
 } from '@fastify/type-provider-typebox';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import type { Static } from 'typebox';
+import { BrowserMutationHeadersSchema } from './browser-mutation-headers.js';
 import type { TransactionRunner } from '../transaction/transaction-runner.js';
+import { LOCAL_DATE_TIME_JSON_PATTERN } from '../local-datetime/local-datetime.js';
 import {
-  LOCAL_DATE_TIME_JSON_PATTERN,
-  parseLocalDateTime,
-} from '../local-datetime/local-datetime.js';
+  createHttpRequestContext as createRequestContext,
+  type HttpRequestContextDependencies,
+} from './request-context.js';
 import type { ScopedModules } from '../../composition/create-scoped-modules.js';
 import type { Phase01VerticalSlice } from '../../composition/phase-01-vertical-slice.js';
 import type { ObjectPermissionCode } from '../../modules/authorization/index.js';
@@ -18,19 +21,16 @@ import type {
   ChangeRequestView,
   WorkflowApplication,
 } from '../../modules/workflow/index.js';
+import type { PriceEntryInput } from '../../modules/price-list/index.js';
 import {
-  CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
-  CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
-} from '../../modules/charge-catalog/index.js';
-import {
-  PRICE_LIST_LEGACY_PROJECTION_SCHEMA_ID,
-  PRICE_LIST_PROJECTION_SCHEMA_ID,
-  PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION,
-  PRICE_LIST_PROJECTION_SCHEMA_VERSION,
-  PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2,
-  PRICE_LIST_PROJECTION_TYPE,
-  type PriceEntryInput,
-} from '../../modules/price-list/index.js';
+  CreateSubscriptionBodySchema,
+  CreateSubscriptionVersionBodySchema,
+  SnapshotBinarySchema,
+  ChangeSubscriptionLifecycleBodySchema,
+  SubscriptionLifecycleResponseSchema,
+  ConsumerOperationalQuerySchema,
+  ConsumerOperationalResponseSchema,
+} from './release-consumer-schemas.js';
 
 const UuidSchema = Type.String({
   pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
@@ -38,9 +38,6 @@ const UuidSchema = Type.String({
 const LocalDateTimeSchema = Type.String({ pattern: LOCAL_DATE_TIME_JSON_PATTERN });
 const DigestHexSchema = Type.String({ pattern: '^[0-9a-f]{64}$' });
 const PositiveSequenceSchema = Type.String({ pattern: '^(?:0|[1-9]\\d*)$' });
-const BrowserMutationHeadersSchema = Type.Object({
-  'x-csrf-token': Type.String({ minLength: 32 }),
-});
 const ServiceHeadersSchema = Type.Object({
   authorization: Type.String({ pattern: '^Bearer .+$' }),
 });
@@ -463,32 +460,6 @@ const ResolutionResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 
-const PriceListProjectionSchemaVersionSchema = Type.Union([
-  Type.Literal(PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION),
-  Type.Literal(PRICE_LIST_PROJECTION_SCHEMA_VERSION),
-  Type.Literal(PRICE_LIST_PROJECTION_SCHEMA_VERSION_V2),
-]);
-
-const CreateSubscriptionBodySchema = Type.Object(
-  {
-    subscriptionCode: Type.String({ minLength: 1, maxLength: 128 }),
-    servicePrincipalId: UuidSchema,
-    governanceObjectId: UuidSchema,
-    projectionType: Type.Literal(PRICE_LIST_PROJECTION_TYPE),
-    projectionSchemaVersion: PriceListProjectionSchemaVersionSchema,
-  },
-  { additionalProperties: false },
-);
-
-const CreateSubscriptionVersionBodySchema = Type.Object(
-  {
-    governanceObjectId: UuidSchema,
-    projectionType: Type.Literal(PRICE_LIST_PROJECTION_TYPE),
-    projectionSchemaVersion: PriceListProjectionSchemaVersionSchema,
-  },
-  { additionalProperties: false },
-);
-
 const SubscriptionVersionResponseSchema = Type.Object(
   {
     subscriptionId: UuidSchema,
@@ -559,6 +530,9 @@ const ReceiptBodySchema = Type.Object(
     applyResult: Type.Union([Type.Literal('APPLIED'), Type.Literal('NOT_APPLIED')]),
     processingDigest: DigestHexSchema,
     processedAt: LocalDateTimeSchema,
+    replay: Type.Optional(Type.Object({ releaseId: UuidSchema, subscriptionVersionId: UuidSchema,
+      operationId: UuidSchema, reason: Type.String({ minLength: 1, maxLength: 256, pattern: '^[^\\u0000-\\u001f\\u007f<>]+$' }),
+    }, { additionalProperties: false })),
   },
   { additionalProperties: false },
 );
@@ -568,63 +542,27 @@ const ReceiptResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 
-function createSnapshotEnvelopeSchema(
-  aggregateType: 'CHARGE_CATALOG' | 'PRICE_LIST',
-  projectionSchemaVersion: '0' | '1',
-  payloadSchemaId: string,
-) {
-  return Type.Object(
-    {
-      envelopeContractVersion: Type.Literal('phase-01.v1'),
-      release: Type.Object(
-        {
-          aggregateType: Type.Literal(aggregateType),
-          governanceObjectId: UuidSchema,
-          releaseId: UuidSchema,
-          releaseNo: Type.String({ pattern: '^[1-9]\\d*$' }),
-          businessValidFrom: LocalDateTimeSchema,
-          businessValidTo: Type.Union([LocalDateTimeSchema, Type.Null()]),
-        },
-        { additionalProperties: false },
-      ),
-      projectionContract: Type.Object(
-        {
-          projectionType: Type.String({ minLength: 1, maxLength: 128 }),
-          schemaVersion: Type.Literal(projectionSchemaVersion),
-          schemaDigestAlgorithm: Type.Literal('SHA-256'),
-          schemaDigest: DigestHexSchema,
-        },
-        { additionalProperties: false },
-      ),
-      serializationProfileVersion: Type.Literal('canonical-json.v1'),
-      payload: Type.Ref(payloadSchemaId),
-    },
-    { additionalProperties: false },
-  );
-}
-
-const SnapshotEnvelopeSchema = Type.Union([
-  createSnapshotEnvelopeSchema(
-    'CHARGE_CATALOG',
-    CHARGE_CATALOG_PROJECTION_SCHEMA_VERSION,
-    CHARGE_CATALOG_PROJECTION_SCHEMA_ID,
-  ),
-  createSnapshotEnvelopeSchema(
-    'PRICE_LIST',
-    PRICE_LIST_LEGACY_PROJECTION_SCHEMA_VERSION,
-    PRICE_LIST_LEGACY_PROJECTION_SCHEMA_ID,
-  ),
-  createSnapshotEnvelopeSchema(
-    'PRICE_LIST',
-    PRICE_LIST_PROJECTION_SCHEMA_VERSION,
-    PRICE_LIST_PROJECTION_SCHEMA_ID,
-  ),
-]);
-
-const SnapshotBinarySchema = Type.Unsafe<Buffer>({
-  ...SnapshotEnvelopeSchema,
-  contentMediaType: 'application/vnd.hdi.canonical-snapshot+json',
-});
+const ReplayContextParamsSchema = Type.Object({ subscriptionId: UuidSchema, releaseId: UuidSchema }, { additionalProperties: false });
+const ReplaySequenceSchema = Type.String({ pattern: '^(?:0|[1-9]\\d*)$', maxLength: 19 });
+const ReplayReceiptSchema = Type.Union([Type.Object({
+  receiptId: UuidSchema, receiptSequence: ReplaySequenceSchema,
+  receiveResult: Type.Union([Type.Literal('ACCEPTED'), Type.Literal('REJECTED')]),
+  validationResult: Type.Union([Type.Literal('VALID'), Type.Literal('INVALID')]),
+  applyResult: Type.Union([Type.Literal('APPLIED'), Type.Literal('NOT_APPLIED')]), processingDigest: DigestHexSchema,
+}, { additionalProperties: false }), Type.Null()]);
+const ReplayContextResponseSchema = Type.Object({
+  subscriptionId: UuidSchema, servicePrincipalId: UuidSchema, lifecycleStatus: Type.Literal('ACTIVE'),
+  subscriptionVersion: Type.Object({ subscriptionVersionId: UuidSchema, versionNo: ReplaySequenceSchema,
+    projectionType: Type.String({ maxLength: 128 }), projectionSchemaVersion: Type.String({ maxLength: 32 }), projectionSchemaDigest: DigestHexSchema,
+  }, { additionalProperties: false }),
+  event: Type.Object({ ...AvailableEventsResponseSchema.properties.events.items.properties,
+    aggregateVersion: Type.String({ pattern: '^[1-9]\\d*$', maxLength: 19 }),
+    projectionType: Type.String({ maxLength: 128 }), projectionSchemaVersion: Type.String({ maxLength: 32 }),
+  }, { additionalProperties: false }),
+  checkpoint: Type.Object({ appliedAggregateVersion: ReplaySequenceSchema,
+    recordedAt: Type.Union([LocalDateTimeSchema, Type.Null()]) }, { additionalProperties: false }),
+  latestReceipt: ReplayReceiptSchema, appliedReceipt: ReplayReceiptSchema, processingDigestMismatch: Type.Boolean(),
+}, { additionalProperties: false });
 
 const ErrorResponseSchema = Type.Object(
   {
@@ -634,17 +572,10 @@ const ErrorResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 
-export interface ResolvedPrincipal {
-  readonly principalId: string;
-  readonly principalKind: 'PERSON' | 'SERVICE';
-}
-
-export interface Phase01HttpDependencies {
+export interface Phase01HttpDependencies extends HttpRequestContextDependencies {
   readonly verticalSlice: Phase01VerticalSlice;
   readonly transactionRunner: TransactionRunner<ScopedModules>;
   readonly workflowApplication: WorkflowApplication;
-  resolvePrincipal(request: FastifyRequest): Promise<ResolvedPrincipal>;
-  now(): string;
 }
 
 export async function registerPhase01Routes(
@@ -1091,6 +1022,7 @@ export async function registerPhase01Routes(
           })),
         };
       });
+      return result;
     },
   );
 
@@ -1791,6 +1723,32 @@ export async function registerPhase01Routes(
   );
 
   typed.post(
+    '/v1/phase-01/consumer-subscriptions/:subscriptionId/lifecycle-transitions',
+    {
+      schema: {
+        operationId: 'changePhase01ConsumerSubscriptionLifecycle',
+        summary: '暂停、恢复、撤销或归档消费者订阅',
+        description: '同状态请求幂等，不重复写入生命周期或审计事件。原因仅允许1至256个字符的单行纯文本，不得包含凭据、密钥或患者数据。',
+        security: [{ browserSession: [] }],
+        headers: BrowserMutationHeadersSchema,
+        params: SubscriptionParamsSchema,
+        body: ChangeSubscriptionLifecycleBodySchema,
+        response: { 200: SubscriptionLifecycleResponseSchema, 400: ErrorResponseSchema,
+          401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema,
+          409: ErrorResponseSchema, 503: ErrorResponseSchema },
+      },
+    },
+    async (request) => {
+      const runtime = requireRuntime(dependencies);
+      const context = await createRequestContext(request, runtime, 'PERSON');
+      return runtime.transactionRunner.run(context, (modules) =>
+        modules.releaseDistribution.changeSubscriptionLifecycle({
+          subscriptionId: request.params.subscriptionId, ...request.body,
+        }));
+    },
+  );
+
+  typed.post(
     '/v1/phase-01/consumer-subscriptions/:subscriptionId/versions',
     {
       schema: {
@@ -1827,6 +1785,61 @@ export async function registerPhase01Routes(
       return reply.code(201).send(version);
     },
   );
+
+  typed.post('/v1/phase-01/consumer-subscriptions/:subscriptionId/audit-reports', {
+    schema: { operationId: 'reportPhase01ConsumerReleaseAudit', summary: 'Append consumer-reported evidence without changing receipts or checkpoints',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema, params: SubscriptionParamsSchema,
+      body: ConsumerAuditReportSchema, response: { 201: ConsumerAuditAcknowledgementSchema,
+        400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema,
+        409: ErrorResponseSchema, 503: ErrorResponseSchema } },
+  }, async (request, reply) => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    const result = await runtime.transactionRunner.run(context, modules =>
+      modules.releaseDistribution.reportConsumerAudit(request.params.subscriptionId, request.body));
+    return reply.code(201).send(result);
+  });
+  typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/audit-events', {
+    schema: { operationId: 'queryPhase01ConsumerReleaseAudit', summary: 'Consumer support evidence: own subscription, sequence pages of at most 100, time ranges of at most 31 days',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema, params: SubscriptionParamsSchema,
+      querystring: ConsumerAuditQuerySchema, response: { 200: ConsumerAuditPageSchema,
+        400: ErrorResponseSchema, 401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 503: ErrorResponseSchema } },
+  }, async request => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    return runtime.transactionRunner.run(context, modules =>
+      modules.releaseDistribution.queryConsumerAudit({ ...request.params, ...request.query }));
+  });
+
+  typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/operational-status', {
+    schema: {
+      operationId: 'getPhase01ConsumerOperationalStatus',
+      summary: '读取当前消费事实与不可变订阅版本的运营SLA状态',
+      description: '仅本订阅的有效服务主体可读。省略版本时选择最新版本；指定历史版本只改变评估策略，不表示历史时点查询。时间展示为Asia/Shanghai，时限按绝对时刻计算。',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema,
+      params: SubscriptionParamsSchema, querystring: ConsumerOperationalQuerySchema,
+      response: { 200: ConsumerOperationalResponseSchema, 400: ErrorResponseSchema,
+        401: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 503: ErrorResponseSchema },
+    },
+  }, async (request) => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    return runtime.transactionRunner.run(context, (modules) => modules.releaseDistribution.getConsumerOperationalStatus({
+      subscriptionId: request.params.subscriptionId, ...request.query,
+    }));
+  });
+
+  typed.get('/v1/phase-01/consumer-subscriptions/:subscriptionId/releases/:releaseId/replay-context', {
+    schema: { operationId: 'getPhase01ConsumerReplayContext',
+      summary: '只读解析精确历史发布、冻结订阅版本和回执；不追加投递尝试',
+      security: [{ serviceBearer: [] }], headers: ServiceHeadersSchema, params: ReplayContextParamsSchema,
+      response: { 200: ReplayContextResponseSchema, 400: ErrorResponseSchema, 401: ErrorResponseSchema,
+        403: ErrorResponseSchema, 404: ErrorResponseSchema, 503: ErrorResponseSchema } },
+  }, async (request) => {
+    const runtime = requireRuntime(dependencies);
+    const context = await createRequestContext(request, runtime, 'SERVICE');
+    return runtime.transactionRunner.run(context, (modules) => modules.releaseDistribution.getConsumerReplayContext(request.params));
+  });
 
   typed.post(
     '/v1/phase-01/consumer-subscriptions/:subscriptionId/replays',
@@ -1918,8 +1931,10 @@ export async function registerPhase01Routes(
         headers: ServiceHeadersSchema,
         produces: ['application/vnd.hdi.canonical-snapshot+json'],
         params: SnapshotParamsSchema,
+        querystring: Type.Object({ replayReleaseId: Type.Optional(UuidSchema) }, { additionalProperties: false }),
         response: {
           200: SnapshotBinarySchema,
+          400: ErrorResponseSchema,
           401: ErrorResponseSchema,
           403: ErrorResponseSchema,
           404: ErrorResponseSchema,
@@ -1934,6 +1949,7 @@ export async function registerPhase01Routes(
         modules.releaseDistribution.getSnapshotForSubscription({
           subscriptionId: request.params.subscriptionId,
           snapshotId: request.params.snapshotId,
+          ...request.query,
           servicePrincipalId: context.actorPrincipalId,
         }),
       );
@@ -1970,7 +1986,9 @@ export async function registerPhase01Routes(
     async (request, reply) => {
       const runtime = requireRuntime(dependencies);
       const context = await createRequestContext(request, runtime, 'SERVICE');
-      const receipt = await runtime.transactionRunner.run(context, (modules) =>
+      const receipt = await (async () => {
+        try {
+        return await runtime.transactionRunner.run(context, (modules) =>
         modules.releaseDistribution.recordReceipt({
           subscriptionId: request.params.subscriptionId,
           servicePrincipalId: context.actorPrincipalId,
@@ -1980,8 +1998,25 @@ export async function registerPhase01Routes(
           applyResult: request.body.applyResult,
           processingDigest: Buffer.from(request.body.processingDigest, 'hex'),
           processedAt: request.body.processedAt,
+          ...(request.body.replay ? { replay: request.body.replay } : {}),
         }),
       );
+        } catch (error) {
+          // Rejection evidence commits only after the business transaction has rolled back.
+          if (error instanceof Error && error.message === 'CONSUMER_AUDIT_UNAVAILABLE') throw error;
+          try {
+            await runtime.transactionRunner.run(context, modules => modules.releaseDistribution.recordConsumerReceiptRejection({
+              subscriptionId: request.params.subscriptionId, eventId: request.body.eventId,
+              failureCode: consumerFailureCode(error), ...(request.body.replay ? { replay: request.body.replay } : {}),
+            }));
+          } catch (auditError) {
+            if (!(auditError instanceof Error && auditError.message === 'CONSUMER_SUBSCRIPTION_NOT_FOUND')) {
+              throw new Error('CONSUMER_AUDIT_UNAVAILABLE');
+            }
+          }
+          throw error;
+        }
+      })();
       return reply.code(201).send(receipt);
     },
   );
@@ -1992,28 +2027,6 @@ function requireRuntime(
 ): Phase01HttpDependencies {
   if (!dependencies) throw new Error('PHASE_01_RUNTIME_NOT_CONFIGURED');
   return dependencies;
-}
-
-async function createRequestContext(
-  request: FastifyRequest,
-  dependencies: Phase01HttpDependencies,
-  requiredKind: 'PERSON' | 'SERVICE',
-) {
-  const principal = await dependencies.resolvePrincipal(request);
-  if (principal.principalKind !== requiredKind) throw new Error('PRINCIPAL_KIND_FORBIDDEN');
-  const occurredAt = parseLocalDateTime(dependencies.now());
-  const requestId = headerValue(request, 'x-request-id') ?? request.id ?? randomUUID();
-  return {
-    actorPrincipalId: principal.principalId,
-    requestId,
-    correlationId: headerValue(request, 'x-correlation-id') ?? requestId,
-    occurredAt,
-  };
-}
-
-function headerValue(request: FastifyRequest, name: string): string | undefined {
-  const value = request.headers[name];
-  return Array.isArray(value) ? value[0] : value;
 }
 
 export type ResolvePriceBody = Static<typeof ResolvePriceBodySchema>;

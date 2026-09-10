@@ -1,10 +1,12 @@
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { buildApplication } from './composition/build-application.js';
+import { createDepartmentGovernanceHttpDependencies } from './composition/create-department-governance-http-dependencies.js';
 import { createScopedModules, type ScopedModules } from './composition/create-scoped-modules.js';
 import { createPhase01VerticalSlice } from './composition/phase-01-vertical-slice.js';
 import { createKeycloakAuthentication } from './platform/authentication/keycloak-authentication.js';
 import { createDatabase } from './platform/database/create-database.js';
+import { createConsumerReferenceReader } from './platform/release-consumer/consumer-reference-reader.js';
 import { createTransactionRunner } from './platform/transaction/transaction-runner.js';
 import {
   createHttpReleaseNotificationTransport,
@@ -48,6 +50,7 @@ const dispatcher = createReleaseDistributionDispatcher(
     maxNotificationAttempts: 5,
     pollIntervalMilliseconds: 5_000,
     now: nowInAsiaShanghai,
+    references: createConsumerReferenceReader,
   },
 );
 const transactionRunner = createTransactionRunner<ScopedModules>(
@@ -64,6 +67,13 @@ const adminStaticRoot =
 const application = await buildApplication({
   adminStaticRoot,
   authentication,
+  departmentGovernance: createDepartmentGovernanceHttpDependencies({
+    database: databaseHandle.database,
+    transactionRunner,
+    workflowApplication,
+    resolvePrincipal: (request) => authentication.resolvePrincipal(request),
+    now: nowInAsiaShanghai,
+  }),
   phase01: {
     verticalSlice,
     transactionRunner,
