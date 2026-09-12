@@ -8,6 +8,431 @@
     "schemas": {}
   },
   "paths": {
+    "/api/vnext/catalog/effective": {
+      "get": {
+        "operationId": "listEffectiveCatalog",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BASELINE"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "SYNTHETIC"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "scope",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+            },
+            "in": "query",
+            "name": "businessAt",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+            },
+            "in": "query",
+            "name": "asOf",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "domains"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "kind",
+                          "scope",
+                          "code",
+                          "version",
+                          "versionId",
+                          "head",
+                          "status",
+                          "payload",
+                          "reviewDigest",
+                          "validFrom",
+                          "validTo",
+                          "recordedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "DATASET"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SOURCE"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RESPONSIBILITY"
+                                ]
+                              }
+                            ]
+                          },
+                          "scope": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "BASELINE"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC"
+                                ]
+                              }
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "versionId": {
+                            "type": "string"
+                          },
+                          "head": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "DRAFT"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "REVIEW"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "PUBLISHED"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RETIRED"
+                                ]
+                              }
+                            ]
+                          },
+                          "payload": {
+                            "type": "object",
+                            "properties": {
+                              "fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "original",
+                                    "pointer",
+                                    "routing"
+                                  ],
+                                  "properties": {
+                                    "original": {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    },
+                                    "pointer": {
+                                      "type": "string"
+                                    },
+                                    "routing": {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "adopted": {
+                                "type": "object",
+                                "required": [
+                                  "name",
+                                  "explanation"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "explanation": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "original": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string"
+                                }
+                              },
+                              "domain": {
+                                "type": "string"
+                              },
+                              "dependencies": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "model": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "dataset": {
+                                "type": "string"
+                              },
+                              "authorityScope": {
+                                "type": "string"
+                              },
+                              "fieldGroup": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "type": "string"
+                              },
+                              "assigneeRole": {
+                                "type": "string"
+                              },
+                              "sourceEvidence": {
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": true
+                          },
+                          "reviewDigest": {
+                            "type": "string"
+                          },
+                          "validFrom": {
+                            "type": "string"
+                          },
+                          "validTo": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "recordedAt": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "domains": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "code",
+                          "name",
+                          "datasets"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "datasets": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/vnext/catalog": {
       "get": {
         "operationId": "listCatalog",
@@ -914,212 +1339,452 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "action",
-                  "scope",
-                  "requestId",
-                  "reason"
-                ],
-                "properties": {
-                  "action": {
-                    "anyOf": [
-                      {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "action",
+                      "kind",
+                      "code",
+                      "values",
+                      "validFrom"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASELINE"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          }
+                        ]
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "action": {
                         "type": "string",
                         "enum": [
                           "CREATE"
                         ]
                       },
-                      {
+                      "kind": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "DATASET"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SOURCE"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "RESPONSIBILITY"
+                            ]
+                          }
+                        ]
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,64}$"
+                      },
+                      "values": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "explanation": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "environment": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "sourceKind": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "deploymentScope": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "vendor": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "systemVersion": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "businessOwnerRole": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "technicalRole": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "sourceEvidence": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_BOOTSTRAP"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            ]
+                          },
+                          "interfaceContractRef": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "dataset": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "authorityScope": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "fieldGroup": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "role": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "assigneeRole": {
+                            "type": "string",
+                            "maxLength": 2000
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "validFrom": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                      },
+                      "validTo": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "action",
+                      "target",
+                      "expectedHead",
+                      "values",
+                      "validFrom"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASELINE"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          }
+                        ]
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "action": {
                         "type": "string",
                         "enum": [
                           "REVISE"
                         ]
                       },
-                      {
+                      "target": {
                         "type": "string",
-                        "enum": [
-                          "SUBMIT"
-                        ]
+                        "format": "uuid"
                       },
-                      {
+                      "expectedHead": {
                         "type": "string",
-                        "enum": [
-                          "PUBLISH"
-                        ]
+                        "pattern": "^[0-9]+$"
                       },
-                      {
-                        "type": "string",
-                        "enum": [
-                          "REJECT"
-                        ]
+                      "values": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "explanation": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "environment": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "sourceKind": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "deploymentScope": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "vendor": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "systemVersion": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "businessOwnerRole": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "technicalRole": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "sourceEvidence": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_BOOTSTRAP"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            ]
+                          },
+                          "interfaceContractRef": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "dataset": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "authorityScope": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "fieldGroup": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "role": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "assigneeRole": {
+                            "type": "string",
+                            "maxLength": 2000
+                          }
+                        },
+                        "additionalProperties": false
                       },
-                      {
+                      "validFrom": {
                         "type": "string",
-                        "enum": [
-                          "RETIRE"
-                        ]
-                      }
-                    ]
-                  },
-                  "scope": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "BASELINE"
-                        ]
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                       },
-                      {
-                        "type": "string",
-                        "enum": [
-                          "SYNTHETIC"
-                        ]
-                      }
-                    ]
-                  },
-                  "requestId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "reason": {
-                    "type": "string",
-                    "pattern": "^[A-Z0-9_]{1,64}$"
-                  },
-                  "target": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "expectedHead": {
-                    "type": "string",
-                    "pattern": "^[0-9]+$"
-                  },
-                  "kind": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "DATASET"
-                        ]
-                      },
-                      {
-                        "type": "string",
-                        "enum": [
-                          "SOURCE"
-                        ]
-                      },
-                      {
-                        "type": "string",
-                        "enum": [
-                          "RESPONSIBILITY"
-                        ]
-                      }
-                    ]
-                  },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^[A-Z0-9_]{2,64}$"
-                  },
-                  "values": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "explanation": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "environment": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "sourceKind": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "deploymentScope": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "vendor": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "systemVersion": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "businessOwnerRole": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "technicalRole": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "sourceEvidence": {
+                      "validTo": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "enum": [
-                              "SYNTHETIC_BOOTSTRAP"
-                            ]
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                           },
                           {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "null"
                           }
                         ]
-                      },
-                      "interfaceContractRef": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "dataset": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "authorityScope": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "fieldGroup": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "role": {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      "assigneeRole": {
-                        "type": "string",
-                        "maxLength": 2000
                       }
                     },
                     "additionalProperties": false
                   },
-                  "validFrom": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
-                  },
-                  "validTo": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "action",
+                      "target",
+                      "expectedHead"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASELINE"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          }
+                        ]
                       },
-                      {
-                        "type": "null"
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "action": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SUBMIT"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "REJECT"
+                            ]
+                          }
+                        ]
+                      },
+                      "target": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "expectedHead": {
+                        "type": "string",
+                        "pattern": "^[0-9]+$"
                       }
-                    ]
+                    },
+                    "additionalProperties": false
                   },
-                  "reviewDigest": {
-                    "type": "string"
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "action",
+                      "target",
+                      "expectedHead",
+                      "reviewDigest"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASELINE"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          }
+                        ]
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "action": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "PUBLISH"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "RETIRE"
+                            ]
+                          }
+                        ]
+                      },
+                      "target": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "expectedHead": {
+                        "type": "string",
+                        "pattern": "^[0-9]+$"
+                      },
+                      "reviewDigest": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
                   }
-                },
-                "additionalProperties": false
+                ]
               }
             }
           }

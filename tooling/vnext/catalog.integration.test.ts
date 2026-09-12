@@ -27,7 +27,7 @@ test('governance permissions, lifecycle, concurrency, history and source readine
   const {openCatalog}=await import('../../apps/governance-api/src/modules/governance-catalog/index.js');
   const catalog=await openCatalog();
   const command=(action:Command['action'],extra:Partial<Command>={}):Command=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_TEST',...extra});
-  const transition=(action:Command['action'],o:Outcome)=>command(action,{target:o.id,expectedHead:o.head,...(action==='PUBLISH'?{reviewDigest:o.reviewDigest}:{})});
+  const transition=(action:Command['action'],o:Outcome)=>command(action,{target:o.id,expectedHead:o.head,...(['PUBLISH','RETIRE'].includes(action)?{reviewDigest:o.reviewDigest}:{})});
   const publish=async(o:Outcome)=>catalog.command('reviewer',transition('PUBLISH',await catalog.command('maker',transition('SUBMIT',o))));
   let dataset:Outcome;
   try{
@@ -52,7 +52,7 @@ test('governance permissions, lifecycle, concurrency, history and source readine
       const revised=revisions.find(r=>r.status==='fulfilled');
       assert.ok(revised&&revised.status==='fulfilled');
       dataset=await publish(revised.value);
-      const retired=await catalog.command('maker',transition('RETIRE',dataset));
+      const retired=await catalog.command('reviewer',transition('RETIRE',dataset));
       assert.equal(retired.status,'RETIRED');
       assert.equal((await catalog.history('maker','SYNTHETIC',dataset.id))[0]?.payload.adopted?.name,'合成目录候选');
     });
@@ -81,7 +81,7 @@ test('governance permissions, lifecycle, concurrency, history and source readine
       await assert.rejects(catalog.command('maker',command('REVISE',{target:publishedChild.id,expectedHead:publishedChild.head,values:{sourceEvidence:grandchild.id},validFrom:'2026-01-01T00:00:00',validTo:'2027-01-01T00:00:00'})),/SOURCE_REFERENCE_CYCLE/);
       await assert.rejects(catalog.command('maker',{...childCommand,code:'INVALID_SOURCE_ID',requestId:randomUUID(),values:{...childCommand.values,sourceEvidence:'source-1'}}),/SOURCE_REFERENCE_INVALID/);
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',source.id,'2027-01-01T00:00:00'),/SOURCE_NOT_READY/);
-      await catalog.command('maker',transition('RETIRE',source));
+      await catalog.command('reviewer',{...transition('RETIRE',source),reviewDigest:approvedSource.reviewDigest});
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',publishedChild.id,'2026-05-01T00:00:00'),/SOURCE_EVIDENCE_NOT_READY/);
       await assert.rejects(catalog.command('reviewer',transition('PUBLISH',childReview)),/SOURCE_EVIDENCE_NOT_READY/);
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',source.id,'2026-05-01T00:00:00'),/SOURCE_NOT_READY/);

@@ -27,6 +27,9 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
       const response=await sql<{result:CatalogResult}>`select governance_catalog.read_catalog(${actor},${query.scope},${query.asOf??null}) as result`.execute(db);
       return response.rows[0]!.result;
     },
+    async readEffective(actor:string,query:{scope:'BASELINE'|'SYNTHETIC';businessAt:string;asOf?:string}):Promise<CatalogResult> {
+      return (await sql<{result:CatalogResult}>`select governance_catalog.read_effective(${actor},${query.scope},${query.businessAt},${query.asOf??null}) as result`.execute(db)).rows[0]!.result;
+    },
     async command(actor:string,input:Command):Promise<Outcome> {
       const response=await sql<{result:Outcome}>`select governance_catalog.command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db);
       return response.rows[0]!.result;

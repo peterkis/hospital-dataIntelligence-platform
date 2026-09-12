@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/api/vnext/catalog/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listEffectiveCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/catalog": {
         parameters: {
             query?: never;
@@ -96,6 +112,149 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listEffectiveCatalog: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                businessAt: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            kind: "DATASET" | "SOURCE" | "RESPONSIBILITY";
+                            scope: "BASELINE" | "SYNTHETIC";
+                            code: string;
+                            version: number;
+                            versionId: string;
+                            head: string;
+                            status: "DRAFT" | "REVIEW" | "PUBLISHED" | "RETIRED";
+                            payload: {
+                                fields?: {
+                                    original: {
+                                        [key: string]: unknown;
+                                    };
+                                    pointer: string;
+                                    routing: {
+                                        [key: string]: string;
+                                    };
+                                }[];
+                                adopted?: {
+                                    name: string;
+                                    explanation: string;
+                                };
+                                original?: {
+                                    [key: string]: string;
+                                };
+                                domain?: string;
+                                dependencies?: {
+                                    [key: string]: unknown;
+                                }[];
+                                model?: {
+                                    [key: string]: unknown;
+                                };
+                                name?: string;
+                                dataset?: string;
+                                authorityScope?: string;
+                                fieldGroup?: string;
+                                role?: string;
+                                assigneeRole?: string;
+                                sourceEvidence?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                            reviewDigest: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                        }[];
+                        domains: {
+                            code: string;
+                            name: string;
+                            datasets: string[];
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
     listCatalog: {
         parameters: {
             query: {
@@ -392,17 +551,15 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    action: "CREATE" | "REVISE" | "SUBMIT" | "PUBLISH" | "REJECT" | "RETIRE";
                     scope: "BASELINE" | "SYNTHETIC";
                     /** Format: uuid */
                     requestId: string;
                     reason: string;
-                    /** Format: uuid */
-                    target?: string;
-                    expectedHead?: string;
-                    kind?: "DATASET" | "SOURCE" | "RESPONSIBILITY";
-                    code?: string;
-                    values?: {
+                    /** @enum {string} */
+                    action: "CREATE";
+                    kind: "DATASET" | "SOURCE" | "RESPONSIBILITY";
+                    code: string;
+                    values: {
                         name?: string;
                         explanation?: string;
                         environment?: string;
@@ -420,9 +577,57 @@ export interface operations {
                         role?: string;
                         assigneeRole?: string;
                     };
-                    validFrom?: string;
+                    validFrom: string;
                     validTo?: string | null;
-                    reviewDigest?: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    action: "REVISE";
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    values: {
+                        name?: string;
+                        explanation?: string;
+                        environment?: string;
+                        sourceKind?: string;
+                        deploymentScope?: string;
+                        vendor?: string;
+                        systemVersion?: string;
+                        businessOwnerRole?: string;
+                        technicalRole?: string;
+                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
+                        interfaceContractRef?: string;
+                        dataset?: string;
+                        authorityScope?: string;
+                        fieldGroup?: string;
+                        role?: string;
+                        assigneeRole?: string;
+                    };
+                    validFrom: string;
+                    validTo?: string | null;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    action: "SUBMIT" | "REJECT";
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    action: "PUBLISH" | "RETIRE";
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    reviewDigest: string;
                 };
             };
         };

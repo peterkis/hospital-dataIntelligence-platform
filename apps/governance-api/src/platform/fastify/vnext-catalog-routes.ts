@@ -12,12 +12,22 @@ const Payload=Type.Object({fields:Type.Optional(Type.Array(Field)),adopted:Type.
 const Item=Type.Object({id:Type.String(),kind:Kind,scope:Scope,code:Type.String(),version:Type.Integer(),versionId:Type.String(),head:Type.String(),status:Status,payload:Payload,reviewDigest:Type.String(),validFrom:Type.String(),validTo:Type.Union([Type.String(),Type.Null()]),recordedAt:Type.String()});
 const Outcome=Type.Object({id:Type.String(),head:Type.String(),version:Type.Integer(),versionId:Type.String(),status:Status,reviewDigest:Type.String(),recordedAt:Type.String()});
 const Values=Type.Object(Object.fromEntries(['name','explanation','environment','sourceKind','deploymentScope','vendor','systemVersion','businessOwnerRole','technicalRole','sourceEvidence','interfaceContractRef','dataset','authorityScope','fieldGroup','role','assigneeRole'].map(k=>[k,Type.Optional(k==='sourceEvidence'?Type.Union([Type.Literal('SYNTHETIC_BOOTSTRAP'),Type.String({format:'uuid'})]):Text)])),{additionalProperties:false});
-export const CatalogCommandSchema=Type.Object({action:Type.Union(['CREATE','REVISE','SUBMIT','PUBLISH','REJECT','RETIRE'].map(v=>Type.Literal(v))),scope:Scope,requestId:Type.String({format:'uuid'}),reason:Type.String({pattern:'^[A-Z0-9_]{1,64}$'}),target:Type.Optional(Type.String({format:'uuid'})),expectedHead:Type.Optional(Type.String({pattern:'^[0-9]+$'})),kind:Type.Optional(Kind),code:Type.Optional(Type.String({pattern:'^[A-Z0-9_]{2,64}$'})),values:Type.Optional(Values),validFrom:Type.Optional(Time),validTo:Type.Optional(Type.Union([Time,Type.Null()])),reviewDigest:Type.Optional(Type.String())},{additionalProperties:false});
+const CommandBase={scope:Scope,requestId:Type.String({format:'uuid'}),reason:Type.String({pattern:'^[A-Z0-9_]{1,64}$'})};
+const Target={target:Type.String({format:'uuid'}),expectedHead:Type.String({pattern:'^[0-9]+$'})};
+const Revision={values:Values,validFrom:Time,validTo:Type.Optional(Type.Union([Time,Type.Null()]))};
+export const CatalogCommandSchema=Type.Union([
+  Type.Object({...CommandBase,action:Type.Literal('CREATE'),kind:Kind,code:Type.String({pattern:'^[A-Z0-9_]{2,64}$'}),...Revision},{additionalProperties:false}),
+  Type.Object({...CommandBase,action:Type.Literal('REVISE'),...Target,...Revision},{additionalProperties:false}),
+  Type.Object({...CommandBase,action:Type.Union([Type.Literal('SUBMIT'),Type.Literal('REJECT')]),...Target},{additionalProperties:false}),
+  Type.Object({...CommandBase,action:Type.Union([Type.Literal('PUBLISH'),Type.Literal('RETIRE')]),...Target,reviewDigest:Type.String()},{additionalProperties:false}),
+]);
 const Query=Type.Object({scope:Scope,asOf:Type.Optional(Time),page:Type.Optional(Type.Integer({minimum:1,maximum:100})),domain:Type.Optional(Type.String()),owner:Type.Optional(Type.String()),status:Type.Optional(Status),kind:Type.Optional(Kind)},{additionalProperties:false});
 const ErrorSchema=Type.Object({code:Type.String(),message:Type.String(),field:Type.Optional(Type.String())});
 const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,500:ErrorSchema};
 export async function registerCatalogRoutes(app:FastifyInstance,catalog?:Catalog) {
   const owner=()=>{if(!catalog)throw new Error('CATALOG_RUNTIME_REQUIRED');return catalog;};
+  const EffectiveQuery=Type.Object({scope:Scope,businessAt:Time,asOf:Type.Optional(Time)},{additionalProperties:false});
+  app.get<{Querystring:Static<typeof EffectiveQuery>}>('/api/vnext/catalog/effective',{schema:{operationId:'listEffectiveCatalog',querystring:EffectiveQuery,response:{200:Type.Object({items:Type.Array(Item),domains:Type.Array(Type.Object({code:Type.String(),name:Type.String(),datasets:Type.Array(Type.String())}))}),...errors}}},async request=>owner().readEffective(actor(request.headers),request.query));
   app.get<{Querystring:Static<typeof Query>}>('/api/vnext/catalog',{schema:{operationId:'listCatalog',querystring:Query,response:{200:Type.Object({items:Type.Array(Item),total:Type.Integer(),page:Type.Integer(),domains:Type.Array(Type.Object({code:Type.String(),name:Type.String(),datasets:Type.Array(Type.String())}))}),...errors}}},async request=>{
     const q=request.query; const data=await owner().read(actor(request.headers),{scope:q.scope,...(q.asOf?{asOf:q.asOf}:{})});
     const filtered=data.items.filter(item=>(!q.kind||item.kind===q.kind)&&(!q.domain||item.payload.domain===q.domain)&&(!q.owner||item.payload.original?.['owner']?.includes(q.owner))&&(!q.status||item.status===q.status));
