@@ -19,7 +19,7 @@ try{
  await check('BASELINE_IMPORT_AUDIT',async()=>{
   assert.equal(peer(owned.receipt.name,"SELECT count(*) FROM vnext_control.audit WHERE action='BASELINE_IMPORT';"),'53');
   assert.equal(peer(owned.receipt.name,"SELECT count(*) FROM vnext_control.audit WHERE action='BASELINE_IMPORT_BATCH';"),'1');
-  const before=await catalog.verifyAudit('auditor');assert.equal(before.eventCount,'54');await seed(owned.receipt);assert.deepEqual(await catalog.verifyAudit('auditor'),before);
+  const before=await catalog.verifyAudit('auditor');assert.equal(before.eventCount,'213');await seed(owned.receipt);assert.deepEqual(await catalog.verifyAudit('auditor'),before);
  });
  await check('UPSTREAM_IMPACT_CLOSURE',async()=>{
   const source=async(code,evidence)=>publish(await catalog.command('maker',command('CREATE',{kind:'SOURCE',code,values:{name:'合成影响 '+code,environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:evidence},validFrom:'2026-01-01T00:00:00'})));

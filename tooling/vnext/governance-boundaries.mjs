@@ -45,7 +45,7 @@ try{
   const future=await catalog.command('maker',command('REVISE',{target:owner.id,expectedHead:owner.head,values:{},validFrom:'2027-01-01T00:00:00',validTo:null}));
   assert.equal((await catalog.readEffective('maker',{scope:'SYNTHETIC',businessAt:'2026-09-12T00:00:00'})).items.find(i=>i.id===owner.id).versionId,owner.versionId);
   await publish(future);
-  assert.ok(!(await catalog.readEffective('maker',{scope:'SYNTHETIC',businessAt:'2026-09-12T00:00:00'})).items.some(i=>i.id===owner.id));
+  assert.equal((await catalog.readEffective('maker',{scope:'SYNTHETIC',businessAt:'2026-09-12T00:00:00'})).items.find(i=>i.id===owner.id).versionId,owner.versionId);
   assert.ok((await catalog.readEffective('maker',{scope:'SYNTHETIC',businessAt:'2027-01-01T00:00:00'})).items.some(i=>i.id===owner.id));
  });
  const app=await buildCatalogServer(catalog);await app.listen({host:'127.0.0.1',port:0});

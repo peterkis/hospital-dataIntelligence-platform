@@ -203,7 +203,9 @@
     "vnext:catalog:serve:impact": "node --import tsx tooling/vnext/serve.mjs --fresh --impact",
     "vnext:catalog:import:upgrade": "node tooling/vnext/import-upgrade.mjs",
     "vnext:catalog:impact:upgrade": "node --import tsx tooling/vnext/impact-upgrade.mjs",
-    "vnext:catalog:reference:logs": "node tooling/vnext/reference-log-validate.mjs"
+    "vnext:catalog:reference:logs": "node tooling/vnext/reference-log-validate.mjs",
+    "vnext:catalog:serve:access": "node --import tsx tooling/vnext/serve.mjs --fresh --access",
+    "vnext:catalog:object:access": "node --import tsx tooling/vnext/object-access.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

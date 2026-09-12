@@ -26,6 +26,7 @@ DO ${seedTag} DECLARE snapshot_id uuid; d jsonb; o uuid; v uuid; BEGIN
  INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES('SOURCE_PROPOSAL',o,'BASELINE_IMPORT','SOURCE_METADATA_ONLY',encode(sha256(convert_to(jsonb_build_object('code',d->>'code','versionId',v,'payload',d,'validFrom',timestamp '2026-01-01','sourceDigest',${quote(hash)})::text,'UTF8')),'hex'));
  END LOOP;
  INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES('SOURCE_PROPOSAL',snapshot_id,'BASELINE_IMPORT_BATCH','SOURCE_METADATA_ONLY',encode(sha256(convert_to(jsonb_build_object('sourceDigest',${quote(hash)},'datasets',53,'manifestFiles',116)::text,'UTF8')),'hex'));
+ IF to_regprocedure('vnext_control.bootstrap_catalog_grants()') IS NOT NULL THEN PERFORM vnext_control.bootstrap_catalog_grants(); END IF;
 END ${seedTag}; COMMIT;`;
   peer(receipt.name, sql);
   console.log(JSON.stringify({status:'PASS', seed:'PACKAGE_V2', sha256:hash, datasets:53, fields:866, sourceApproval:'待院方确认', businessInstances:0}));

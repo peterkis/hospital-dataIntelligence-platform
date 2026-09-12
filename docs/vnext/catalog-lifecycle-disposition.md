@@ -16,7 +16,9 @@ PR #2 的审查补充。本文件明确当前能力及尚未实施的承接要�
 
 临床/人事/机构等业务对象的暂停、恢复、结束、更替继续由各自 P1–P7 Owner 票承担，不能套用此目录状态机替代业务事实。
 
-维护 `GET /api/vnext/catalog` 和详情/history 返回 head/历史认知，包含未批准候选，不是有效权威读取。`GET /api/vnext/catalog/effective?scope=SYNTHETIC&businessAt=<本地B>&asOf=<可选R>` 单独读取有效元数据：先选 R 截止前按 head 排序的最新 PUBLISHED/RETIRED 事件，再验证其版本覆盖半开 B。DRAFT/REVIEW 不替换已接受版本；RETIRED、未来或已过期的最新接受版本被排除，不回退捞取旧版本。DATASET、RESPONSIBILITY 和 SOURCE 使用相同规则；SOURCE 的受信引用仍须额外通过递归来源资格 port，元数据有效不代表真实接入已批准。R 只筛选知识范围，授权始终用当前身份。
+维护 `GET /api/vnext/catalog` 和详情/history 返回 head/历史认知，包含未批准候选，不是有效权威读取。`GET /api/vnext/catalog/effective?scope=SYNTHETIC&businessAt=<本地B>&asOf=<可选R>` 单独读取有效元数据。0007 修正原 0005 的单一最新版本算法：先取 R 内已发布定义，同一 B 起点仅保留最后一次修正；不同起点的定义按发布顺序覆盖其半开区间。根据所得有效区间匹配 B，再选择结果。因此未来定义尚未生效时原定义仍可用；同起点缩短期限不复活被替代的同起点旧版本。不同起点的局部覆盖结束后可能重新显露早期定义，所以责任发布必须检查整个拟发布时间线的 Owner 冲突。DRAFT/REVIEW 不参与有效区间；当前 R 已知的 RETIRED 永久结束整个对象。旧 R 仍能读取当时定义，但始终检查当前对象权限。
+
+上述规则适用于目录定义，不能作为 E/A 业务实体的区间算法。SOURCE 的受信引用仍必须额外通过递归资格 port：它要求当前接受的定义和固定父版本一致，并检验 B；目录有效展示本身不授予来源引用资格或真实 apply 权限。
 
 废止页面先载入并展示被结束的已发布版本完整内容、期间和摘要，再允许独立复核者提交。存在候选时，废止摘要绑定已发布版本，expectedHead 仍绑定当前候选 head。新命令按动作封闭字段：CREATE/REVISE 携带版本内容/B，SUBMIT/REJECT 仅目标/head，PUBLISH/RETIRE 另带复核摘要；不适用字段不能被静默忽略。
 

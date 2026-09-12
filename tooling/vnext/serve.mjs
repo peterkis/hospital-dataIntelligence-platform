@@ -4,19 +4,26 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import staticPlugin from '@fastify/static';
 import { createTemporary,dropTemporary } from './fresh.mjs';
-import { migrate,root } from './lineage.mjs';
+import { migrate,root,peer,quote } from './lineage.mjs';
 import { seed } from './catalog-seed.mjs';
 import { runtime } from './catalog-runtime.mjs';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.ts';
 
 const owned=process.argv.includes('--fresh')?createTemporary():null;
-if((process.argv.includes('--race')||process.argv.includes('--impact'))&&!owned)throw new Error('RACE_REQUIRES_OWNED_FRESH');
+if((process.argv.includes('--race')||process.argv.includes('--impact')||process.argv.includes('--access'))&&!owned)throw new Error('RACE_REQUIRES_OWNED_FRESH');
 let catalog;let app;
 try{
  if(owned){await migrate(owned.receipt);await seed(owned.receipt);}
  catalog=await runtime(owned?.receiptPath);
  app=await buildCatalogServer(catalog);
  let race;
+ if(process.argv.includes('--access')){
+  const command=(action,extra)=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'BROWSER_ACCESS',...extra});
+  await catalog.command('maker',command('CREATE',{kind:'DATASET',code:'ORG01',values:{name:'合成重复编码'},validFrom:'2026-01-01T00:00:00'}));
+  let entry=await catalog.command('maker',command('CREATE',{kind:'RESPONSIBILITY',code:'HISTORY_ACCESS',values:{dataset:'ORG07',authorityScope:'ALL',fieldGroup:'ALL',role:'OWNER',assigneeRole:'SYNTHETIC_OWNER_A'},validFrom:'2026-01-01T00:00:00'}));
+  peer(owned.receipt.name,`INSERT INTO vnext_control.object_grant VALUES('maker',${quote(entry.id)},'SYNTHETIC','RESPONSIBILITY','SYNTHETIC_NORTH','METADATA','ALL','WRITE'),('maker',${quote(entry.id)},'SYNTHETIC','RESPONSIBILITY','SYNTHETIC_NORTH','METADATA','ALL','READ'),('maker-alias',${quote(entry.id)},'SYNTHETIC','RESPONSIBILITY','SYNTHETIC_NORTH','METADATA','ALL','READ'); DELETE FROM vnext_control.object_grant WHERE actor_code='maker-alias' AND object_id=${quote(entry.id)} AND campus='SYNTHETIC_ALL';`);
+  await catalog.command('maker',command('REVISE',{target:entry.id,expectedHead:entry.head,values:{authorityScope:'NORTH'},validFrom:'2026-07-01T00:00:00'}));
+ }
  if(process.argv.includes('--race')||process.argv.includes('--impact')){
   const ids=[];
   for(const code of ['ORG01','ORG02'])ids.push((await catalog.command('maker',{action:'CREATE',scope:'SYNTHETIC',kind:'DATASET',code,requestId:randomUUID(),reason:'BROWSER_RACE',values:{name:'合成选择 '+code},validFrom:'2026-01-01T00:00:00'})).id);

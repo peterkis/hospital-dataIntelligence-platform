@@ -48,7 +48,7 @@ Q04 仅覆盖元数据责任/来源/签审；Q31/32/33/34/35/37/38/39 按源 qua
 
 责任 OWNER/STEWARD/COLLABORATOR 是元数据职责，来源 Owner 建议不自动成为授权主体。ALL 覆盖 NORTH/SOUTH，字段 ALL 覆盖 IDENTITY/CONTACT；同 dataset/重叠事实范围/重叠 B 的已发布 Owner 冲突，协同方允许。更替通过新版本的完整期间，并保留旧 R。审批、字段或期间变动都产生新 candidate。
 
-权限粒度为当前 actor × BASELINE/SYNTHETIC × READ/WRITE/REVIEW。BASELINE 只开放读取；可操作发布测试在 SYNTHETIC 范围进行。审计不存 raw source payload、密码或个人标识，仅技术 refs/action/reason code/digest/R。有限 source evidence、权限和责任是目录底座，不是全域 BPM、P6 IAM 或业务实例。
+初始交付权限为当前 actor × BASELINE/SYNTHETIC × READ/WRITE/REVIEW；此模型已由 PR 修复 0007 的精确对象授权替代，见下文。BASELINE 只开放读取；可操作发布测试在 SYNTHETIC 范围进行。审计不存 raw source payload、密码或个人标识，仅技术 refs/action/reason code/digest/R。有限 source evidence、权限和责任是目录底座，不是全域 BPM、P6 IAM 或业务实例。
 
 ## 实际验证与交接
 
@@ -83,3 +83,14 @@ PR 修复日志、浏览器证据和本地/远端复审结果单独保存于 ign
 0005 进一步收紧废止的独立复核和动作字段，新增单独的有效读取入口，并将非法日历日期转换为稳定输入错误。当前链为五份 SQL，表数仍为 11。页面详情、历史、命令反馈与来源资格读取按请求代次拒绝旧上下文响应；receipt-owned 浏览器 race runner 可延迟真实详情/资格 HTTP 响应验证选择和权限切换。前文两份/四份迁移均为相应交付阶段的历史记录。
 
 0006 增加逐项/批次基线导入审计，以及仅针对本目录来源元数据的影响预览和只追加问题闭环；涵盖废止、重发及旧前缀已存在失效的升级观察，原记录不回填成历史审计。Owner 筛选读取责任 assignee，动作受控值在 TypeBox/生成客户端中为有限枚举，反向/零长度 B 返回字段级 400。最新链为六份 SQL、12 张表；前述链数量保留为各轮历史观察。具体入口、证明范围和闭环见 [导入审计与来源影响问题](catalog-import-and-impact.md)。
+
+
+## PR #2 对象授权与有效定义修复
+
+0007 增加 object_grant、creation_policy、audit_stream_grant，共七份迁移、15 张表。范围权限只作为第一道条件，随后按当前 actor、具体对象 UUID、对象类型、campus、purpose、fieldGroup、permission 精确匹配；N_A 和 ALL 标签不充当授权通配符。READ、WRITE、REVIEW、PUBLISH 独立，发布与废止要求 REVIEW + PUBLISH，maker-checker 规则不变。目录对象含 BASELINE，列表、历史、有效读取与来源引用都受当前对象权限约束。来源递归引用另需 SYNTHETIC_REFERENCE 用途，影响预览/问题历史要求所有被披露对象及历史维度的读取权限。
+
+本地合成工作台由迁移管理员配置固定的创建策略。策略明确创建者、接收主体、对象类型、合成院区和字段组；创建成功后只为该新 UUID 同事务发放精确授权。已有对象不继承以后策略，普通 scope grant 不允许创建，重放不重新发放已撤销授权。升级将已存在对象显式列为授权行，种子重复运行不恢复撤权。应用无法直接维护这些表；授权变动和命令共用事务锁，对象授权变动进入最小审计链。审计读取另需固定流 GOVERNANCE_CATALOG 的 AUDIT_VERIFY 授权。这些是本地元数据主体，不是正式登录或 P6 IAM。
+
+发布要求当前候选以及原有效时间线、拟发布时间线各维度的 REVIEW/PUBLISH 权限；废止要求候选及全部有效定义维度权限，不能利用窄范围候选结束宽范围权威。有效定义按 B/R 选择和完整拟发布 Owner 冲突检查见生命周期处置。重复对象编码在串行命令锁内返回字段 code 的 HTTP 409 CATALOG_CODE_CONFLICT；不会向用户暴露数据库唯一约束异常。页面历史请求失败时明确显示不可用，不能将空数组当成完整历史。
+
+对象矩阵入口为 `npm run prototype:db:with -- vnext:catalog:object:access`，使用 receipt-owned fresh 库，覆盖范围不继承对象、别名撤权重放、独立发布权限、类型/院区/字段组/用途、审计流、真实撤权竞态、跨维度废止与发布、完整时间线冲突、未来生效/旧 R/同起点修正及重复创建并发。既有 migration 字节和历史交付证据不覆盖；本轮证据单列于 `.runtime/vnext/pr-2/round5-*`。

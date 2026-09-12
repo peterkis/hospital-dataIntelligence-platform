@@ -105,12 +105,39 @@ export interface VnextControlAuditChain {
   previous_hash: string;
 }
 
+export interface VnextControlAuditStreamGrant {
+  actor_code: string;
+  purpose: string;
+  stream_id: string;
+}
+
+export interface VnextControlCreationPolicy {
+  campus: string;
+  creator_actor: string;
+  field_group: string;
+  object_kind: string;
+  permission: string;
+  purpose: string;
+  recipient_actor: string;
+}
+
 export interface VnextControlMigration {
   applied_at: Generated<string>;
   id: string;
   lineage: string;
   runner_version: string;
   sha256: string;
+}
+
+export interface VnextControlObjectGrant {
+  actor_code: string;
+  campus: string;
+  field_group: string;
+  object_id: string;
+  object_kind: string;
+  permission: string;
+  purpose: string;
+  scope: string;
 }
 
 export interface VnextControlOutcome {
@@ -137,7 +164,10 @@ export interface DB {
   "vnext_control.actor_grant": VnextControlActorGrant;
   "vnext_control.audit": VnextControlAudit;
   "vnext_control.audit_chain": VnextControlAuditChain;
+  "vnext_control.audit_stream_grant": VnextControlAuditStreamGrant;
+  "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.migration": VnextControlMigration;
+  "vnext_control.object_grant": VnextControlObjectGrant;
   "vnext_control.outcome": VnextControlOutcome;
   "vnext_control.request_identity": VnextControlRequestIdentity;
 }

@@ -100,7 +100,7 @@ test('governance permissions, lifecycle, concurrency, history and source readine
     });
     await t.test('GV04: current access, closed fields and invalid business times',async()=>{
       await assert.rejects(catalog.read('outsider',{scope:'BASELINE',asOf:'2020-01-01T00:00:00'}),/ACCESS_DENIED/);
-      await assert.rejects(catalog.history('maker','BASELINE',dataset.id),/NOT_FOUND/);
+      await assert.rejects(catalog.history('maker','BASELINE',dataset.id),/ACCESS_DENIED/);
       await assert.rejects(catalog.command('maker',command('CREATE',{kind:'DATASET',code:'ORG04',values:{personId:randomUUID()},validFrom:'2026-01-01T00:00:00'})),/CLOSED_FIELDS_REQUIRED/);
       await assert.rejects(catalog.command('maker',command('CREATE',{kind:'DATASET',code:'ORG04',values:{name:'合成'},validFrom:'2026-01-01T00:00:00Z'})),/LOCAL_TIME_REQUIRED/);
     });
