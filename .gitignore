@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-prototype/
+dist-vnext/
 .runtime/
 coverage/
 playwright-report/

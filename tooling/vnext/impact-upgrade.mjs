@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { createTemporary,dropTemporary } from './fresh.mjs';
+import { migrate,migrationFiles,resolveTarget,peer,quote } from './lineage.mjs';
+import { seed } from './catalog-seed.mjs';
+import { openCatalog } from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+const owned=createTemporary();let catalog;
+try{
+ await migrate(owned.receipt,migrationFiles().slice(0,5));await seed(owned.receipt);catalog=await openCatalog(resolveTarget(owned.receipt));
+ const command=(action,extra={})=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'IMPACT_UPGRADE',...extra});
+ const publish=async o=>{const review=await catalog.command('maker',command('SUBMIT',{target:o.id,expectedHead:o.head}));return catalog.command('reviewer',command('PUBLISH',{target:o.id,expectedHead:review.head,reviewDigest:review.reviewDigest}));};
+ const source=async(code,evidence)=>publish(await catalog.command('maker',command('CREATE',{kind:'SOURCE',code,values:{name:'合成升级 '+code,environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:evidence},validFrom:'2026-01-01T00:00:00'})));
+ let root=await source('UPGRADE_ROOT','SYNTHETIC_BOOTSTRAP');const child=await source('UPGRADE_OLD_CHILD',root.id.toUpperCase());const grandchild=await source('UPGRADE_OLD_GRANDCHILD',child.id.toUpperCase());
+ root=await publish(await catalog.command('maker',command('REVISE',{target:root.id,expectedHead:root.head,values:{name:'合成根v2'},validFrom:'2026-01-01T00:00:00'})));
+ const healthy=await source('UPGRADE_HEALTHY_CHILD',root.id);
+ await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',grandchild.id,'2026-09-12T00:00:00'),/SOURCE_EVIDENCE_NOT_READY/);
+ assert.equal((await catalog.resolveSource('maker','SYNTHETIC',healthy.id,'2026-09-12T00:00:00')).realApply,'NOT_IMPLEMENTED');
+ const auditIds=JSON.parse(peer(owned.receipt.name,"SELECT jsonb_agg(id ORDER BY id) FROM vnext_control.audit;"));
+ const auditBefore=peer(owned.receipt.name,"SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM vnext_control.audit a;");
+ const outcomeBefore=peer(owned.receipt.name,"SELECT jsonb_agg(to_jsonb(o) ORDER BY actor_code,request_id) FROM vnext_control.outcome o;");
+ await catalog.close();catalog=null;await migrate(owned.receipt);await migrate(owned.receipt);catalog=await openCatalog(resolveTarget(owned.receipt));
+ const cases=await catalog.impactCases('reviewer','SYNTHETIC',root.id);
+ assert.deepEqual(cases.map(c=>c.downstream_object).sort(),[child.id,grandchild.id].sort());
+ assert.ok(cases.every(c=>c.status==='OPEN'&&c.reason==='UPGRADE_IMPACT_OBSERVATION'));
+ assert.equal((await catalog.impactCases('reviewer','SYNTHETIC',healthy.id)).length,0);
+ const inherited=await catalog.impactCases('reviewer','SYNTHETIC',child.id);
+ assert.equal(inherited.length,1);assert.equal(inherited[0].downstream_object,grandchild.id);assert.equal(inherited[0].status,'OPEN');assert.equal(inherited[0].reason,'UPGRADE_TEMPORAL_IMPACT_OBSERVATION');
+ assert.equal(peer(owned.receipt.name,`SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM vnext_control.audit a WHERE id=ANY(ARRAY[${auditIds.map(id=>quote(id)+'::uuid').join(',')}]);`),auditBefore);
+ assert.equal(peer(owned.receipt.name,"SELECT jsonb_agg(to_jsonb(o) ORDER BY actor_code,request_id) FROM vnext_control.outcome o;"),outcomeBefore);
+ assert.equal((await catalog.verifyAudit('auditor')).status,'PASS');
+ console.log(JSON.stringify({status:'PASS',scenario:'REAL_V5_REPUBLISH_TO_CURRENT_IMPACT_OBSERVATION',outdatedDirectAndTransitive:2,inheritedUnqualifiedParentObservation:1,healthyExcluded:true,originalAuditAndOutcomesUnchanged:true,receipt:owned.receipt}));
+}finally{await catalog?.close();dropTemporary(owned.receipt);}

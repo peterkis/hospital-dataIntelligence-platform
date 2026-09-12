@@ -1,0 +1,13 @@
+# HDIP-MC-VNEXT lineage
+
+PR #2 remediation appends `0003_catalog_published_authority_and_identity_replay.sql`. The current lineage has three migrations and ten tables: the extra append-only request-identity index preserves legacy outcome rows while enabling alias-independent replay. Earlier two-migration/nine-table evidence below describes the initial P0-01 delivery. Current lifecycle limits and future ownership are explicit in `docs/vnext/catalog-lifecycle-disposition.md`.
+
+P0-00 selected this independent native SQL lineage and created an empty development database. P0-01 now supplies `migrations/0001_control_plane_bootstrap.sql` and `0002_governance_catalog.sql`: nine control-plane/catalog tables and no ORG/PER business instances. The retained `db/migrations` chain is not installed here. The legacy migration runner rejects `hdi_mc_vnext_` database names before connecting.
+
+Create and inspect the empty local development database using `npm run prototype:db:with -- vnext:db:create` and `npm run prototype:db:with -- vnext:db:verify`. The exact name/OID/owner/request/time is in ignored `.runtime/vnext/creation.json`; pre-create intent is saved separately. Existing intent or receipt blocks another creation. A failed or ambiguous create requires inspection, never automatic adoption or deletion.
+
+P0-01 seed registers 11 themes, 53 dataset proposals and 866 source field descriptors, plus synthetic control identities. Source approval remains pending hospital confirmation. The new catalog has independent API/client and `vnext-types.generated.ts`; old clients retain their own database/types. `npm run prototype:db:with -- check` verifies the old database/types and combined source-module ownership; `vnext:authority:check` and `vnext:db:types:verify` independently verify vNext.
+
+Use `npm run prototype:db:with -- vnext:db:migrate`, `vnext:catalog:seed` and `vnext:db:types:generate` for the current independent pipeline. `vnext:db:verify` checks the receipt identity and an exact known checksum prefix after installation; it no longer requires an installed database to be empty. Fresh/upgrade validation uses separate creation receipts. See `docs/vnext/P0-01-governance-catalog.md` for commands and evidence. Installed SQL bytes are immutable, including line endings: later tickets append migrations, never overwrite checksums. Do not use `prototype:validate`, demo reset or legacy seed here.
+
+No disposal implementation is exposed. `node tooling/vnext/baseline.mjs cleanup` refuses even a supplied receipt. A future disposal ticket needs exact name/OID/owner/session verification and separate authorization; the development evidence database is retained.

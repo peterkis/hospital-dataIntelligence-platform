@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { createTemporary,dropTemporary } from './fresh.mjs';
+import { migrate,migrationFiles,resolveTarget,peer,quote } from './lineage.mjs';
+import { seed } from './catalog-seed.mjs';
+import { openCatalog } from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+const owned=createTemporary();let catalog;
+try{
+ await migrate(owned.receipt,migrationFiles().slice(0,8));await seed(owned.receipt);catalog=await openCatalog(resolveTarget(owned.receipt));
+ const cmd=(action,extra={})=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'SOURCE_TIME_UPGRADE',...extra});
+ const publish=async item=>{const review=await catalog.command('maker',cmd('SUBMIT',{target:item.id,expectedHead:item.head}));const impact=JSON.parse(peer(owned.receipt.name,`SELECT governance_catalog.change_impact('reviewer','SYNTHETIC',${quote(item.id)});`));return catalog.command('reviewer',cmd('PUBLISH',{target:item.id,expectedHead:review.head,reviewDigest:review.reviewDigest,impactDigest:impact.impactDigest}));};
+ const source=async(code,evidence)=>publish(await catalog.command('maker',cmd('CREATE',{kind:'SOURCE',code,values:{name:'合成升级时态观察',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:evidence},validFrom:'2026-01-01T00:00:00'})));
+ const root=await source('UPGRADE_ROOT','SYNTHETIC_BOOTSTRAP');const child=await source('UPGRADE_CHILD',root.id);
+ await publish(await catalog.command('maker',cmd('REVISE',{target:root.id,expectedHead:root.head,values:{},validFrom:'2027-01-01T00:00:00'})));
+ await publish(await catalog.command('maker',cmd('REVISE',{target:child.id,expectedHead:child.head,values:{},validFrom:'2027-01-01T00:00:00',validTo:'2028-01-01T00:00:00'})));
+ const oldCase=(await catalog.impactCases('reviewer','SYNTHETIC',root.id))[0];assert.equal(oldCase.status,'CLOSED');
+ const originalCases=peer(owned.receipt.name,'SELECT jsonb_agg(to_jsonb(i) ORDER BY case_id,event_sequence) FROM governance_catalog.impact_event i;');
+ const originalAudit=peer(owned.receipt.name,'SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM vnext_control.audit a;');
+ const auditIds=JSON.parse(originalAudit).map(r=>r.id);
+ const facts=()=>peer(owned.receipt.name,'SELECT jsonb_build_array((SELECT jsonb_agg(to_jsonb(v) ORDER BY id) FROM governance_catalog.version v),(SELECT jsonb_agg(to_jsonb(e) ORDER BY head) FROM governance_catalog.event e),(SELECT jsonb_agg(to_jsonb(o) ORDER BY request_id) FROM vnext_control.outcome o));');
+ const before=facts();await catalog.close();catalog=null;await migrate(owned.receipt);await migrate(owned.receipt);
+ assert.equal(facts(),before);
+ assert.equal(peer(owned.receipt.name,`SELECT jsonb_agg(to_jsonb(i)-'assessment_head' ORDER BY case_id,event_sequence) FROM governance_catalog.impact_event i WHERE case_id=${quote(oldCase.case_id)};`),originalCases);
+ assert.equal(peer(owned.receipt.name,`SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM vnext_control.audit a WHERE id IN(${auditIds.map(quote).join(',')});`),originalAudit);
+ catalog=await openCatalog(resolveTarget(owned.receipt));const cases=await catalog.impactCases('reviewer','SYNTHETIC',root.id);
+ assert.equal(cases.find(c=>c.case_id===oldCase.case_id).status,'CLOSED');
+ const observed=cases.filter(c=>c.reason==='UPGRADE_TEMPORAL_IMPACT_OBSERVATION');assert.equal(observed.length,1);assert.equal(observed[0].status,'OPEN');
+ assert.notEqual(observed[0].case_id,oldCase.case_id);
+ await catalog.resolveSource('maker','SYNTHETIC',child.id,'2026-09-12T00:00:00');
+ await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',child.id,'2028-01-01T00:00:00'),/SOURCE_EVIDENCE_NOT_READY/);
+ await catalog.verifyAudit('auditor');
+ console.log(JSON.stringify({status:'PASS',historicalClosurePreserved:true,originalAuditRowsPreserved:auditIds.length,metadataAndOutcomesUnchanged:true,currentObservationCount:1,migrationReplayNoDuplicate:true,receipt:owned.receipt}));
+}finally{await catalog?.close();dropTemporary(owned.receipt);}

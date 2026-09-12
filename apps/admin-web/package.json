@@ -8,7 +8,8 @@
     "build:prototype": "node build-prototype.mjs",
     "dev": "vite",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:vnext": "vite build --config vnext.vite.config.ts"
   },
   "dependencies": {
     "@hospital-data-intelligence/generated-api-client": "0.0.0",

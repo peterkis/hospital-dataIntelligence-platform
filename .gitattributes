@@ -15,3 +15,5 @@
 *.gz binary
 *.xz binary
 
+# Installed vNext migration checksums cover raw bytes, including existing line endings.
+db/vnext/migrations/*.sql -text whitespace=cr-at-eol,-blank-at-eof

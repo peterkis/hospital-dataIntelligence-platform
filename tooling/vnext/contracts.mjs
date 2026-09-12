@@ -1,0 +1,13 @@
+import { writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.ts';
+const app=await buildCatalogServer();
+await app.ready();
+writeFileSync('contracts/openapi/vnext-catalog.openapi.json',JSON.stringify(app.swagger(),null,2)+'\n');
+await app.close();
+const cache='D:/npm-cache/_npx';
+const cli=readdirSync(cache).map(name=>resolve(cache,name,'node_modules/openapi-typescript/bin/cli.js')).find(path=>existsSync(path));
+if(!cli)throw new Error('LOCAL_OPENAPI_GENERATOR_MISSING');
+const result=spawnSync(process.execPath,[cli,'contracts/openapi/vnext-catalog.openapi.json','-o','packages/generated-api-client/src/vnext-schema.generated.ts'],{stdio:'inherit',windowsHide:true});
+if(result.status!==0)process.exitCode=1;
