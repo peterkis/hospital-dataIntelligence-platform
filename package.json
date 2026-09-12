@@ -194,7 +194,9 @@
     "vnext:catalog:recovery:prepare": "node --import tsx tooling/vnext/recovery.mjs prepare",
     "vnext:catalog:recovery:verify": "node --import tsx tooling/vnext/recovery.mjs recover",
     "vnext:authority:check": "node tooling/vnext/authority.mjs",
-    "vnext:catalog:replay:upgrade": "node --import tsx tooling/vnext/replay-upgrade.mjs"
+    "vnext:catalog:replay:upgrade": "node --import tsx tooling/vnext/replay-upgrade.mjs",
+    "vnext:catalog:audit:validate": "node --import tsx tooling/vnext/audit-validate.mjs",
+    "vnext:catalog:audit:verify": "node --import tsx tooling/vnext/audit-verify.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

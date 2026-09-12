@@ -76,6 +76,10 @@ test('governance permissions, lifecycle, concurrency, history and source readine
       const childReview=await catalog.command('maker',transition('SUBMIT',await catalog.command('maker',childCommand)));
       const publishedChild=await publish(await catalog.command('maker',{...childCommand,code:'CHILD_WITH_PENDING_PARENT',requestId:randomUUID()}));
       assert.equal((await catalog.resolveSource('maker','SYNTHETIC',publishedChild.id,'2026-05-01T00:00:00'))['versionId'],publishedChild.versionId);
+      await assert.rejects(catalog.command('maker',command('REVISE',{target:source.id,expectedHead:source.head,values:{sourceEvidence:publishedChild.id},validFrom:'2026-01-01T00:00:00',validTo:'2027-01-01T00:00:00'})),/BOOTSTRAP_ROOT_IMMUTABLE/);
+      const grandchild=await publish(await catalog.command('maker',{...childCommand,code:'SYNTHETIC_GRANDCHILD',requestId:randomUUID(),values:{...childCommand.values,sourceEvidence:publishedChild.id}}));
+      await assert.rejects(catalog.command('maker',command('REVISE',{target:publishedChild.id,expectedHead:publishedChild.head,values:{sourceEvidence:grandchild.id},validFrom:'2026-01-01T00:00:00',validTo:'2027-01-01T00:00:00'})),/SOURCE_REFERENCE_CYCLE/);
+      await assert.rejects(catalog.command('maker',{...childCommand,code:'INVALID_SOURCE_ID',requestId:randomUUID(),values:{...childCommand.values,sourceEvidence:'source-1'}}),/SOURCE_REFERENCE_INVALID/);
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',source.id,'2027-01-01T00:00:00'),/SOURCE_NOT_READY/);
       await catalog.command('maker',transition('RETIRE',source));
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',publishedChild.id,'2026-05-01T00:00:00'),/SOURCE_EVIDENCE_NOT_READY/);

@@ -187,6 +187,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -199,6 +200,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -211,6 +213,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -223,6 +226,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -235,6 +239,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -319,6 +324,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -331,6 +337,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -343,6 +350,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -355,6 +363,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -367,6 +376,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -402,7 +412,7 @@ export interface operations {
                         systemVersion?: string;
                         businessOwnerRole?: string;
                         technicalRole?: string;
-                        sourceEvidence?: string;
+                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
                         interfaceContractRef?: string;
                         dataset?: string;
                         authorityScope?: string;
@@ -443,6 +453,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -455,6 +466,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -467,6 +479,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -479,6 +492,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -491,6 +505,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -568,6 +583,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -580,6 +596,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -592,6 +609,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -604,6 +622,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -616,6 +635,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -655,6 +675,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -667,6 +688,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -679,6 +701,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -691,6 +714,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };
@@ -703,6 +727,7 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                        field?: string;
                     };
                 };
             };

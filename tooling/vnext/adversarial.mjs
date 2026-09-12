@@ -76,6 +76,8 @@ try{
   const list=await fetch(base+'/api/vnext/catalog?scope=BASELINE',{headers});assert.equal(list.status,200);const body=await list.json();assert.equal(body.total,53);assert.equal(body.items.length,10);
   const denied=await fetch(base+'/api/vnext/catalog?scope=BASELINE',{headers:{'x-catalog-actor':'outsider'}});assert.equal(denied.status,403);
   const invalid=await fetch(base+'/api/vnext/catalog/commands',{method:'POST',headers,body:JSON.stringify({...cmd,rawPersonIdentifier:'SYNTHETIC_PRIVACY_CANARY'})});assert.equal(invalid.status,400);assert.ok(!(await invalid.text()).includes('SYNTHETIC_PRIVACY_CANARY'));
+  const invalidRef=await fetch(base+'/api/vnext/catalog/commands',{method:'POST',headers,body:JSON.stringify({...cmd,kind:'SOURCE',code:'INVALID_REF',requestId:randomUUID(),values:{name:'合成',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'source-1'}})});
+  assert.equal(invalidRef.status,400);assert.equal((await invalidRef.json()).code,'SOURCE_REFERENCE_INVALID');
   checks.push('UI04_REAL_HTTP_CONTRACT','UI06_ERROR_PRIVACY');
  }finally{await app.close();}
  console.log(JSON.stringify({status:'PASS',checks,receipt:owned.receipt,baselineCount:(await catalog.read('reviewer',{scope:'BASELINE'})).items.length}));

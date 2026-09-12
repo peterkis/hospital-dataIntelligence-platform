@@ -37,6 +37,9 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     async resolveSource(actor:string,scope:string,id:string,businessAt:string):Promise<Record<string,string>> {
       return (await sql<{result:Record<string,string>}>`select governance_catalog.resolve_source(${actor},${scope},${id}::uuid,${businessAt}) as result`.execute(db)).rows[0]!.result;
     },
+    async verifyAudit(actor:string,checkpoint?:{auditSequence:string;currentHash:string}):Promise<{status:string;auditStreamId:string;auditSequence:string;currentHash:string;eventCount:string;legacyCount:string;legacyProtection:string}> {
+      return (await sql<{result:{status:string;auditStreamId:string;auditSequence:string;currentHash:string;eventCount:string;legacyCount:string;legacyProtection:string}}>`select vnext_control.verify_audit(${actor},${checkpoint?.auditSequence??null}::bigint,${checkpoint?.currentHash??null}) as result`.execute(db)).rows[0]!.result;
+    },
     async close(){await db.destroy();},
   };
 }

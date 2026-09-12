@@ -58,6 +58,8 @@ Q04 仅覆盖元数据责任/来源/签审；Q31/32/33/34/35/37/38/39 按源 qua
 
 ## 本次实测结果与保留事项
 
+本节记录最初 P0-01 交付树的历史观察；PR #2 的前向修复与当前链入口见文末，不把后续验证回填为原交付证据。
+
 持久库仍为 creation receipt 的 `hdi_mc_vnext_a7049c9e5c2a4364` / OID `206108` / owner `hdi_prototype`。新链两份 SQL 已安装；9 张控制平面/目录表，无 ORG/PER 业务实例表。fresh 与合法前缀升级的结构指纹均为 `e247902528f9dc1b8157ef1a591c90cd5c3419c390f53cb8300b9e634cbdb0ef`。独立 codegen generate/verify 已真实执行。来源快照摘要 `31b3deb563b7667a9daf64447446745641cd35ebbee3ba87e9d8223003be3d7c`；原116份来源文件逐一匹配。
 
 重启准备 postmaster 为 `2026-09-12 20:01:47.130539+08`，恢复时为 `2026-09-12 20:02:11.572386+08`（此处是实例诊断时间，不是领域 B/R）。新进程恢复了 baseline53/866、source、责任更替的旧 R/当前状态及原 request outcome。持久库保留来源基线 DRAFT 和独立合成恢复样例。浏览器先在 fresh scope 执行完整维护闭环，再在持久库只读复验修复后的版本差异及 source summary。
@@ -71,3 +73,9 @@ Q04 仅覆盖元数据责任/来源/签审；Q31/32/33/34/35/37/38/39 按源 qua
 新链 checksum 绑定原始 SQL bytes；0002 安装时含 CRLF 和末尾空行，因此 `.gitattributes` 对 `db/vnext/migrations/*.sql` 禁止 Git 换行转换，并仅允许保留该类文件的末尾空行。没有在安装后改写 SQL 来迎合格式检查；最终 Git blob SHA-256 必须与 live ledger 相同。旧39份迁移的属性与内容未修改。
 
 GOV01 的18个源字段三组处置见 `GOV01-thin-profile.json`；字段名称/来源条件与平台薄切不是同一批准结论。源和规则业务采纳、正式认证、真实系统连接、导入 adapter/apply、P0-02 可执行契约以及生产/ABG均未实现或未授权。
+
+## PR #2 前向修复
+
+0003 保留历史 outcome，增加底层 identity 的 request 索引；旧别名碰撞使升级原子失败。已发布来源在候选修订期间继续提供原批准版本。0004 增加审计链和独立 AUDIT 权限、来源根锚定与循环检查，HTTP 非法来源引用返回字段级 400，页面提供退回复核。当前链共四份 SQL、11 张表；以前安装的 SQL bytes 不变。当前审计权限、验证入口、升级基线的证明限制与可信 checkpoint 使用见 [目录审计批次验证](catalog-audit-verification.md)。
+
+PR 修复日志、浏览器证据和本地/远端复审结果单独保存于 ignored `.runtime/vnext/pr-2/`。它们补充原 P0-01 证据，不能改写历史 RED 或原交付结论。P0-02 仍未执行。

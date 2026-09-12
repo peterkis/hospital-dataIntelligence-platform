@@ -81,6 +81,16 @@ export interface VnextControlAudit {
   recorded_at: Generated<string>;
 }
 
+export interface VnextControlAuditChain {
+  audit_id: string | null;
+  audit_sequence: Int8;
+  audit_stream_id: string;
+  canonical_payload: Json;
+  current_hash: string;
+  kind: string;
+  previous_hash: string;
+}
+
 export interface VnextControlMigration {
   applied_at: Generated<string>;
   id: string;
@@ -111,6 +121,7 @@ export interface DB {
   "vnext_control.actor": VnextControlActor;
   "vnext_control.actor_grant": VnextControlActorGrant;
   "vnext_control.audit": VnextControlAudit;
+  "vnext_control.audit_chain": VnextControlAuditChain;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.outcome": VnextControlOutcome;
   "vnext_control.request_identity": VnextControlRequestIdentity;

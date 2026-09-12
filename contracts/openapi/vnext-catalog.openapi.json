@@ -406,6 +406,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -427,6 +430,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -450,6 +456,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -472,6 +481,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -493,6 +505,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -779,6 +794,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -800,6 +818,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -823,6 +844,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -845,6 +869,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -866,6 +893,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -1030,8 +1060,18 @@
                         "maxLength": 2000
                       },
                       "sourceEvidence": {
-                        "type": "string",
-                        "maxLength": 2000
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC_BOOTSTRAP"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        ]
                       },
                       "interfaceContractRef": {
                         "type": "string",
@@ -1168,6 +1208,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1189,6 +1232,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -1212,6 +1258,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1234,6 +1283,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1255,6 +1307,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -1479,6 +1534,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1500,6 +1558,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -1523,6 +1584,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1545,6 +1609,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1566,6 +1633,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -1650,6 +1720,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1671,6 +1744,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
@@ -1694,6 +1770,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1716,6 +1795,9 @@
                     },
                     "message": {
                       "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
                     }
                   }
                 }
@@ -1737,6 +1819,9 @@
                       "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "field": {
                       "type": "string"
                     }
                   }
