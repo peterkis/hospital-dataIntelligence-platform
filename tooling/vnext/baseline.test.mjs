@@ -88,3 +88,15 @@ test('database endpoint rejects query overrides before connecting', async () => 
   assert.throws(() => localDatabaseUrl('postgresql://synthetic@127.0.0.1:55434'), /LOCAL_DATABASE_REQUIRED/);
   assert.equal(localDatabaseUrl('postgresql://synthetic@127.0.0.1:55434/hdi_prototype').hostname, '127.0.0.1');
 });
+
+
+test('new receipt clock values use Shanghai local calendar without offsets', async () => {
+ const { localReceiptTime } = await import('./receipt.mjs');
+ assert.throws(()=>localReceiptTime('2026-01-01T00:00:00'),/CLOCK_INSTANT_REQUIRED/);
+ assert.equal(localReceiptTime(Date.UTC(2026,11,31,16,0,0,123)), '2027-01-01T00:00:00.123');
+ assert.equal(localReceiptTime(Date.UTC(2024,1,28,16,0,0,1)), '2024-02-29T00:00:00.001');
+ for (const TZ of ['UTC','America/New_York','Asia/Shanghai']) {
+  const result=spawnSync(process.execPath,['--input-type=module','-e',"import {localReceiptTime} from './tooling/vnext/receipt.mjs'; console.log(localReceiptTime(Date.UTC(2026,11,31,16,0,0,123)));"],{encoding:'utf8',env:{...process.env,TZ}});
+  assert.equal(result.status,0);assert.equal(result.stdout.trim(),'2027-01-01T00:00:00.123');
+ }
+});

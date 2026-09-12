@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pg from 'pg';
-import { saveExclusiveReceipt as save } from './receipt.mjs';
+import { saveExclusiveReceipt as save, localReceiptTime } from './receipt.mjs';
 import { localDatabaseUrl } from './connection.mjs';
 
 const receiptPath = resolve('.runtime/vnext/creation.json');
@@ -49,7 +49,7 @@ try {
     if (!roles.some(role => role.rolname === owner && role.rolcanlogin && !role.rolsuper && !role.rolcreatedb)) throw new Error('APPLICATION_ROLE_DRIFT');
     const name = `hdi_mc_vnext_${randomUUID().replaceAll('-', '').slice(0, 16)}`;
     if (catalog(name).length !== 0) throw new Error('DATABASE_ALREADY_EXISTS');
-    const intent = { taskId: 'P0-00', lineage, name, owner, distro, port: 55434, requestId: randomUUID(), recordedAt: new Date().toISOString(), roles, oldDatabase: observation };
+    const intent = { taskId: 'P0-00', lineage, name, owner, distro, port: 55434, requestId: randomUUID(), recordedAt: localReceiptTime(), roles, oldDatabase: observation };
     save(intentPath, intent);
     peer('postgres', `CREATE DATABASE ${name} OWNER ${owner} TEMPLATE template0;`);
     const actual = catalog(name)[0];

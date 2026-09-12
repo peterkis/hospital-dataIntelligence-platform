@@ -12,7 +12,7 @@ assert.equal(new Set(records.map(row=>row.requestId)).size,3);
 for(const record of records){
  assert.deepEqual(Object.keys(record).sort(),['completedAt','elapsedMs','event','requestId','route','status']);
  assert.match(record.requestId,/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[a-f0-9]{4}-[a-f0-9]{12}$/u);
- assert.equal(record.route,'/api/vnext/catalog');assert.ok(record.elapsedMs>=0);assert.ok(Number.isFinite(Date.parse(record.completedAt)));
+ assert.equal(record.route,'/api/vnext/catalog');assert.ok(record.elapsedMs>=0);assert.match(record.completedAt,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/u);
 }
 assert.ok(!(run.stdout+run.stderr).includes('SYNTHETIC_READ_CANARY'));
 assert.ok(!(run.stdout+run.stderr).includes('SYNTHETIC_PRIVACY_CANARY'));

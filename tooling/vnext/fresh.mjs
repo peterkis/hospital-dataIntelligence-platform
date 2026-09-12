@@ -2,14 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { saveExclusiveReceipt } from './receipt.mjs';
+import { saveExclusiveReceipt, localReceiptTime } from './receipt.mjs';
 import { peer, quote, root, identitySQL, migrate, migrationFiles, inspect,resolveTarget } from './lineage.mjs';
 import { seed } from './catalog-seed.mjs';
 
 export function createTemporary() {
   const name = 'hdi_mc_vnext_' + randomUUID().replaceAll('-', '').slice(0, 16);
   const receiptPath = resolve(root, '.runtime/vnext/fresh', name + '.json');
-  const intent = { taskId:'P0-01', purpose:'TEMPORARY_VALIDATION', lineage:'HDIP-MC-VNEXT', name, owner:'hdi_prototype', distro:'Anolis-8.9-HDI-POC', port:55434, requestId:randomUUID(), recordedAt:new Date().toISOString() };
+  const intent = { taskId:'P0-01', purpose:'TEMPORARY_VALIDATION', lineage:'HDIP-MC-VNEXT', name, owner:'hdi_prototype', distro:'Anolis-8.9-HDI-POC', port:55434, requestId:randomUUID(), recordedAt:localReceiptTime() };
   saveExclusiveReceipt(receiptPath + '.intent', intent);
   peer('postgres', `CREATE DATABASE ${name} OWNER hdi_prototype TEMPLATE template0;`);
   const oid = peer('postgres', `SELECT oid::text FROM pg_database WHERE datname=${quote(name)} AND pg_get_userbyid(datdba)='hdi_prototype';`);
@@ -28,7 +28,7 @@ export function dropTemporary(receipt) {
   const sessions = peer('postgres', `SELECT count(*) FROM pg_stat_activity WHERE datname=${quote(receipt.name)};`);
   if (sessions !== '0') throw new Error('UNRELATED_SESSIONS_PRESENT');
   peer('postgres', `DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_database WHERE datname=${quote(receipt.name)} AND oid::text=${quote(receipt.oid)} AND pg_get_userbyid(datdba)=${quote(receipt.owner)}) THEN RAISE EXCEPTION 'RECEIPT_IDENTITY_MISMATCH'; END IF; END $$;\nDROP DATABASE ${receipt.name};`);
-  saveExclusiveReceipt(resolve(root, '.runtime/vnext/fresh', receipt.name + '.disposed.json'), { name:receipt.name, oid:receipt.oid, disposed:true, time:new Date().toISOString() });
+  saveExclusiveReceipt(resolve(root, '.runtime/vnext/fresh', receipt.name + '.disposed.json'), { name:receipt.name, oid:receipt.oid, disposed:true, time:localReceiptTime() });
 }
 export async function freshValidation(prefix = false) {
   const owned = createTemporary();

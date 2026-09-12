@@ -19,11 +19,22 @@ const Values=Type.Object({...Object.fromEntries(['name','explanation','vendor','
   authorityScope:Type.Optional(literalValues('ALL','NORTH','SOUTH')),fieldGroup:Type.Optional(literalValues('ALL','IDENTITY','CONTACT')),
   role:Type.Optional(literalValues('OWNER','STEWARD','COLLABORATOR')),assigneeRole:Type.Optional(literalValues('SYNTHETIC_OWNER_A','SYNTHETIC_OWNER_B','SYNTHETIC_STEWARD')),
 },{additionalProperties:false});
+const RequiredText=Type.String({minLength:1,maxLength:2000});
+const SourceReference=Type.Union([Type.Literal('SYNTHETIC_BOOTSTRAP'),Type.String({format:'uuid'})]);
+const DatasetValues=Type.Object({name:Type.Optional(RequiredText),explanation:Type.Optional(Text)},{additionalProperties:false});
+const SourceFields={name:RequiredText,environment:Type.Literal('SYNTHETIC'),deploymentScope:literalValues('UNRESOLVED_DECLARATION','SYNTHETIC_ALL'),businessOwnerRole:RequiredText,technicalRole:RequiredText,sourceEvidence:SourceReference,interfaceContractRef:Type.Optional(Text)};
+const SourceValues=Type.Union([
+ Type.Object({...SourceFields,sourceKind:Type.Literal('MANUAL'),vendor:Type.Optional(Text),systemVersion:Type.Optional(Text)},{additionalProperties:false}),
+ Type.Object({...SourceFields,sourceKind:Type.Literal('SOFTWARE'),vendor:RequiredText,systemVersion:RequiredText},{additionalProperties:false}),
+]);
+const ResponsibilityValues=Type.Object({dataset:RequiredText,authorityScope:literalValues('ALL','NORTH','SOUTH'),fieldGroup:literalValues('ALL','IDENTITY','CONTACT'),role:literalValues('OWNER','STEWARD','COLLABORATOR'),assigneeRole:literalValues('SYNTHETIC_OWNER_A','SYNTHETIC_OWNER_B','SYNTHETIC_STEWARD')},{additionalProperties:false});
 const CommandBase={scope:Scope,requestId:Type.String({format:'uuid'}),reason:Type.String({pattern:'^[A-Z0-9_]{1,64}$'})};
 const Target={target:Type.String({format:'uuid'}),expectedHead:Type.String({pattern:'^[0-9]+$'})};
 const Revision={values:Values,validFrom:Time,validTo:Type.Optional(Type.Union([Time,Type.Null()]))};
 export const CatalogCommandSchema=Type.Union([
-  Type.Object({...CommandBase,action:Type.Literal('CREATE'),kind:Kind,code:Type.String({pattern:'^[A-Z0-9_]{2,64}$'}),...Revision},{additionalProperties:false}),
+  Type.Object({...CommandBase,...Revision,action:Type.Literal('CREATE'),kind:Type.Literal('DATASET'),code:Type.String({pattern:'^[A-Z0-9_]{2,64}$'}),values:DatasetValues},{additionalProperties:false}),
+  Type.Object({...CommandBase,...Revision,action:Type.Literal('CREATE'),kind:Type.Literal('SOURCE'),code:Type.String({pattern:'^[A-Z0-9_]{2,64}$'}),values:SourceValues},{additionalProperties:false}),
+  Type.Object({...CommandBase,...Revision,action:Type.Literal('CREATE'),kind:Type.Literal('RESPONSIBILITY'),code:Type.String({pattern:'^[A-Z0-9_]{2,64}$'}),values:ResponsibilityValues},{additionalProperties:false}),
   Type.Object({...CommandBase,action:Type.Literal('REVISE'),...Target,...Revision},{additionalProperties:false}),
   Type.Object({...CommandBase,action:Type.Union([Type.Literal('SUBMIT'),Type.Literal('REJECT')]),...Target},{additionalProperties:false}),
   Type.Object({...CommandBase,action:Type.Literal('PUBLISH'),...Target,reviewDigest:Type.String(),impactDigest:Type.Optional(Type.String())},{additionalProperties:false}),

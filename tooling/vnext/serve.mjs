@@ -10,13 +10,19 @@ import { runtime } from './catalog-runtime.mjs';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.ts';
 
 const owned=process.argv.includes('--fresh')?createTemporary():null;
-if((process.argv.includes('--race')||process.argv.includes('--impact')||process.argv.includes('--access'))&&!owned)throw new Error('RACE_REQUIRES_OWNED_FRESH');
+if((process.argv.includes('--race')||process.argv.includes('--impact')||process.argv.includes('--access')||process.argv.includes('--time'))&&!owned)throw new Error('RACE_REQUIRES_OWNED_FRESH');
 let catalog;let app;
 try{
  if(owned){await migrate(owned.receipt);await seed(owned.receipt);}
  catalog=await runtime(owned?.receiptPath);
  app=await buildCatalogServer(catalog);
  let race;
+ if(process.argv.includes('--time')){
+  const command=(action,extra)=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'BROWSER_BUSINESS_TIME',...extra});
+  const publish=async item=>{const review=await catalog.command('maker',command('SUBMIT',{target:item.id,expectedHead:item.head}));return catalog.command('reviewer',command('PUBLISH',{target:item.id,expectedHead:review.head,reviewDigest:review.reviewDigest}));};
+  const first=await publish(await catalog.command('maker',command('CREATE',{kind:'SOURCE',code:'TIMED_BROWSER_SOURCE',values:{name:'合成分期来源',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'SYNTHETIC_BOOTSTRAP'},validFrom:'2026-01-01T00:00:00',validTo:'2027-01-01T00:00:00'})));
+  await publish(await catalog.command('maker',command('REVISE',{target:first.id,expectedHead:first.head,values:{name:'合成分期来源'},validFrom:'2027-01-01T00:00:00',validTo:'2028-01-01T00:00:00'})));
+ }
  if(process.argv.includes('--access')){
   const command=(action,extra)=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'BROWSER_ACCESS',...extra});
   await catalog.command('maker',command('CREATE',{kind:'DATASET',code:'ORG01',values:{name:'合成重复编码'},validFrom:'2026-01-01T00:00:00'}));

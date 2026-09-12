@@ -23,9 +23,10 @@ try{
  assert.deepEqual(cases.map(c=>c.downstream_object).sort(),[child.id,grandchild.id].sort());
  assert.ok(cases.every(c=>c.status==='OPEN'&&c.reason==='UPGRADE_IMPACT_OBSERVATION'));
  assert.equal((await catalog.impactCases('reviewer','SYNTHETIC',healthy.id)).length,0);
- assert.equal((await catalog.impactCases('reviewer','SYNTHETIC',child.id)).length,0);
+ const inherited=await catalog.impactCases('reviewer','SYNTHETIC',child.id);
+ assert.equal(inherited.length,1);assert.equal(inherited[0].downstream_object,grandchild.id);assert.equal(inherited[0].status,'OPEN');assert.equal(inherited[0].reason,'UPGRADE_TEMPORAL_IMPACT_OBSERVATION');
  assert.equal(peer(owned.receipt.name,`SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM vnext_control.audit a WHERE id=ANY(ARRAY[${auditIds.map(id=>quote(id)+'::uuid').join(',')}]);`),auditBefore);
  assert.equal(peer(owned.receipt.name,"SELECT jsonb_agg(to_jsonb(o) ORDER BY actor_code,request_id) FROM vnext_control.outcome o;"),outcomeBefore);
  assert.equal((await catalog.verifyAudit('auditor')).status,'PASS');
- console.log(JSON.stringify({status:'PASS',scenario:'REAL_V5_REPUBLISH_TO_V6_IMPACT_OBSERVATION',outdatedDirectAndTransitive:2,healthyExcluded:true,originalAuditAndOutcomesUnchanged:true,receipt:owned.receipt}));
+ console.log(JSON.stringify({status:'PASS',scenario:'REAL_V5_REPUBLISH_TO_CURRENT_IMPACT_OBSERVATION',outdatedDirectAndTransitive:2,inheritedUnqualifiedParentObservation:1,healthyExcluded:true,originalAuditAndOutcomesUnchanged:true,receipt:owned.receipt}));
 }finally{await catalog?.close();dropTemporary(owned.receipt);}

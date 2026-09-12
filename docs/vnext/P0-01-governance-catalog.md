@@ -97,3 +97,10 @@ PR 修复日志、浏览器证据和本地/远端复审结果单独保存于 ign
 
 
 0008 修正已接受定义的读取授权：有效 B/R 读取依据选中的持久化版本维度匹配当前对象 READ 授权，来源资格沿实际读取的已接受/固定父版本核验 SYNTHETIC_REFERENCE。未批准候选改变院区或字段组不会撤销既有已发布权威的读取资格。真实撤权仍立即生效，旧 R 不绕过当前授权。候选维护、历史和写命令的检查不放宽。当前为八份不可变迁移、15 表；`vnext:catalog:accepted:access` 先安装七份迁移并建立跨维度 DRAFT/REVIEW，再升级，证明事实/outcome/audit 未改写及直接/递归读取、旧 R 和撤权边界。
+
+
+0009 的来源时态与影响语义见生命周期处置；当前九份迁移、15 表。`vnext:catalog:source:time` 验证业务版本/固定链路、完整期间准入、三层历史引用、部分/完整影响关闭、发布时再次检查、当前用途撤权及 CREATE 类型字段；`vnext:catalog:source:time:upgrade` 实际安装八份迁移形成提前关闭，升级后保留原事实/事件/outcome/audit，并只追加一份当前 OPEN 观察。
+
+CREATE 的 TypeBox/OpenAPI/client 按 DATASET、SOURCE、RESPONSIBILITY 区分封闭 values；SOURCE 强制名称、环境、来源类别、部署声明、两类责任岗位、来源证据，SOFTWARE 另强制厂商和版本。REVISE 仍为目标对象的部分修订，领域 Owner 按真实目标类型校验。网页按对象类型构造命令，不以类型断言绕过契约。
+
+新 creation intent/receipt、fresh/disposal receipt 采用固定 IANA Asia/Shanghai 本地毫秒字符串，无 Z 或偏移；HTTP 完成日志也遵循此表达，耗时仍使用单调时钟。时间格式测试覆盖年界、闰日和不同宿主 TZ。原 P0-00 及既有运行 receipt 中的 UTC Z 值是历史偏差，保留原字节并明确其局限，不宣称当时已符合 ADR-0074，也不剥离 Z 后伪造本地时刻。

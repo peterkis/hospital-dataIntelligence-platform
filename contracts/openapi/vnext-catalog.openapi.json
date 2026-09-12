@@ -1346,11 +1346,11 @@
                       "scope",
                       "requestId",
                       "reason",
+                      "values",
+                      "validFrom",
                       "action",
                       "kind",
-                      "code",
-                      "values",
-                      "validFrom"
+                      "code"
                     ],
                     "properties": {
                       "scope": {
@@ -1377,6 +1377,36 @@
                         "type": "string",
                         "pattern": "^[A-Z0-9_]{1,64}$"
                       },
+                      "values": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
+                          },
+                          "explanation": {
+                            "type": "string",
+                            "maxLength": 2000
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "validFrom": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                      },
+                      "validTo": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "action": {
                         "type": "string",
                         "enum": [
@@ -1384,117 +1414,316 @@
                         ]
                       },
                       "kind": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "DATASET"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "SOURCE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "RESPONSIBILITY"
-                            ]
-                          }
+                        "type": "string",
+                        "enum": [
+                          "DATASET"
                         ]
                       },
                       "code": {
                         "type": "string",
                         "pattern": "^[A-Z0-9_]{2,64}$"
-                      },
-                      "values": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "values",
+                      "validFrom",
+                      "action",
+                      "kind",
+                      "code"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
                             "type": "string",
-                            "maxLength": 2000
+                            "enum": [
+                              "BASELINE"
+                            ]
                           },
-                          "explanation": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "vendor": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "systemVersion": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "businessOwnerRole": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "technicalRole": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "interfaceContractRef": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "dataset": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "environment": {
+                          {
                             "type": "string",
                             "enum": [
                               "SYNTHETIC"
                             ]
-                          },
-                          "sourceKind": {
-                            "anyOf": [
-                              {
+                          }
+                        ]
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "values": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "environment",
+                              "deploymentScope",
+                              "businessOwnerRole",
+                              "technicalRole",
+                              "sourceEvidence",
+                              "sourceKind"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "environment": {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC"
+                                ]
+                              },
+                              "deploymentScope": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "UNRESOLVED_DECLARATION"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "SYNTHETIC_ALL"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "businessOwnerRole": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "technicalRole": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "sourceEvidence": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "SYNTHETIC_BOOTSTRAP"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                ]
+                              },
+                              "interfaceContractRef": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "sourceKind": {
                                 "type": "string",
                                 "enum": [
                                   "MANUAL"
                                 ]
                               },
-                              {
+                              "vendor": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "systemVersion": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "environment",
+                              "deploymentScope",
+                              "businessOwnerRole",
+                              "technicalRole",
+                              "sourceEvidence",
+                              "sourceKind",
+                              "vendor",
+                              "systemVersion"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "environment": {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC"
+                                ]
+                              },
+                              "deploymentScope": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "UNRESOLVED_DECLARATION"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "SYNTHETIC_ALL"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "businessOwnerRole": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "technicalRole": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "sourceEvidence": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "SYNTHETIC_BOOTSTRAP"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                ]
+                              },
+                              "interfaceContractRef": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "sourceKind": {
                                 "type": "string",
                                 "enum": [
                                   "SOFTWARE"
                                 ]
+                              },
+                              "vendor": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "systemVersion": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
                               }
+                            },
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "validFrom": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                      },
+                      "validTo": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "CREATE"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "SOURCE"
+                        ]
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,64}$"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "values",
+                      "validFrom",
+                      "action",
+                      "kind",
+                      "code"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASELINE"
                             ]
                           },
-                          "deploymentScope": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "UNRESOLVED_DECLARATION"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "SYNTHETIC_ALL"
-                                ]
-                              }
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
                             ]
-                          },
-                          "sourceEvidence": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "SYNTHETIC_BOOTSTRAP"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              }
-                            ]
+                          }
+                        ]
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "values": {
+                        "type": "object",
+                        "required": [
+                          "dataset",
+                          "authorityScope",
+                          "fieldGroup",
+                          "role",
+                          "assigneeRole"
+                        ],
+                        "properties": {
+                          "dataset": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
                           },
                           "authorityScope": {
                             "anyOf": [
@@ -1601,6 +1830,22 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "CREATE"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "RESPONSIBILITY"
+                        ]
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{2,64}$"
                       }
                     },
                     "additionalProperties": false

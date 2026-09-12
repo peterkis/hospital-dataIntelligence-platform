@@ -587,31 +587,75 @@ export interface operations {
                     /** Format: uuid */
                     requestId: string;
                     reason: string;
-                    /** @enum {string} */
-                    action: "CREATE";
-                    kind: "DATASET" | "SOURCE" | "RESPONSIBILITY";
-                    code: string;
                     values: {
                         name?: string;
                         explanation?: string;
-                        vendor?: string;
-                        systemVersion?: string;
-                        businessOwnerRole?: string;
-                        technicalRole?: string;
-                        interfaceContractRef?: string;
-                        dataset?: string;
-                        /** @enum {string} */
-                        environment?: "SYNTHETIC";
-                        sourceKind?: "MANUAL" | "SOFTWARE";
-                        deploymentScope?: "UNRESOLVED_DECLARATION" | "SYNTHETIC_ALL";
-                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
-                        authorityScope?: "ALL" | "NORTH" | "SOUTH";
-                        fieldGroup?: "ALL" | "IDENTITY" | "CONTACT";
-                        role?: "OWNER" | "STEWARD" | "COLLABORATOR";
-                        assigneeRole?: "SYNTHETIC_OWNER_A" | "SYNTHETIC_OWNER_B" | "SYNTHETIC_STEWARD";
                     };
                     validFrom: string;
                     validTo?: string | null;
+                    /** @enum {string} */
+                    action: "CREATE";
+                    /** @enum {string} */
+                    kind: "DATASET";
+                    code: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    values: {
+                        name: string;
+                        /** @enum {string} */
+                        environment: "SYNTHETIC";
+                        deploymentScope: "UNRESOLVED_DECLARATION" | "SYNTHETIC_ALL";
+                        businessOwnerRole: string;
+                        technicalRole: string;
+                        sourceEvidence: "SYNTHETIC_BOOTSTRAP" | string;
+                        interfaceContractRef?: string;
+                        /** @enum {string} */
+                        sourceKind: "MANUAL";
+                        vendor?: string;
+                        systemVersion?: string;
+                    } | {
+                        name: string;
+                        /** @enum {string} */
+                        environment: "SYNTHETIC";
+                        deploymentScope: "UNRESOLVED_DECLARATION" | "SYNTHETIC_ALL";
+                        businessOwnerRole: string;
+                        technicalRole: string;
+                        sourceEvidence: "SYNTHETIC_BOOTSTRAP" | string;
+                        interfaceContractRef?: string;
+                        /** @enum {string} */
+                        sourceKind: "SOFTWARE";
+                        vendor: string;
+                        systemVersion: string;
+                    };
+                    validFrom: string;
+                    validTo?: string | null;
+                    /** @enum {string} */
+                    action: "CREATE";
+                    /** @enum {string} */
+                    kind: "SOURCE";
+                    code: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    values: {
+                        dataset: string;
+                        authorityScope: "ALL" | "NORTH" | "SOUTH";
+                        fieldGroup: "ALL" | "IDENTITY" | "CONTACT";
+                        role: "OWNER" | "STEWARD" | "COLLABORATOR";
+                        assigneeRole: "SYNTHETIC_OWNER_A" | "SYNTHETIC_OWNER_B" | "SYNTHETIC_STEWARD";
+                    };
+                    validFrom: string;
+                    validTo?: string | null;
+                    /** @enum {string} */
+                    action: "CREATE";
+                    /** @enum {string} */
+                    kind: "RESPONSIBILITY";
+                    code: string;
                 } | {
                     scope: "BASELINE" | "SYNTHETIC";
                     /** Format: uuid */

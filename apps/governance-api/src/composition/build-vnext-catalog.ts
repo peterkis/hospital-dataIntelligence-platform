@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import swagger from '@fastify/swagger';
 import type { Catalog } from '../modules/governance-catalog/index.js';
 import { registerCatalogRoutes } from '../platform/fastify/vnext-catalog-routes.js';
-import { validCatalogLocalTime } from '../platform/fastify/vnext-local-time.js';
+import { validCatalogLocalTime, catalogClockTime } from '../platform/fastify/vnext-local-time.js';
 
 export async function buildCatalogServer(catalog?:Catalog) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
@@ -11,7 +11,7 @@ export async function buildCatalogServer(catalog?:Catalog) {
   app.addHook('onRequest',async request=>{if(request.method==='GET')started.set(request,performance.now());});
   app.addHook('onResponse',async(request,reply)=>{
     const route=request.routeOptions.url;
-    if(request.method==='GET'&&route?.startsWith('/api/vnext/'))process.stdout.write(JSON.stringify({event:'VNEXT_REFERENCE_READ',requestId:request.id,route,status:reply.statusCode,completedAt:new Date().toISOString(),elapsedMs:Math.max(0,Math.round(performance.now()-(started.get(request)??performance.now())))})+'\n');
+    if(request.method==='GET'&&route?.startsWith('/api/vnext/'))process.stdout.write(JSON.stringify({event:'VNEXT_REFERENCE_READ',requestId:request.id,route,status:reply.statusCode,completedAt:catalogClockTime(),elapsedMs:Math.max(0,Math.round(performance.now()-(started.get(request)??performance.now())))})+'\n');
     started.delete(request);
   });
   await app.register(swagger,{openapi:{openapi:'3.1.0',info:{title:'SYNTHETIC vNext governance catalog',version:'P0-01'}}});
