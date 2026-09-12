@@ -1,0 +1,37 @@
+{
+  "method": "rg import/package reference inventory; full workspace typecheck/build covers additional structural callers",
+  "callers": [
+    "apps/admin-web/src/pages.tsx",
+    "apps/admin-web/src/prototype/prototype-api.ts",
+    "apps/sim-consumer/src/consumer.ts",
+    "packages/release-consumer-sdk/src/consumer.compile-test.ts",
+    "packages/release-consumer-sdk/src/consumer.test.ts",
+    "packages/release-consumer-sdk/src/replay.test.ts",
+    "packages/release-consumer-sdk/src/types.ts",
+    "tooling/prototype/check-consumer-audit-flow.ts",
+    "tooling/prototype/check-consumer-lifecycle-flow.ts",
+    "tooling/prototype/check-consumer-metrics-flow.ts",
+    "tooling/prototype/check-consumer-replay-flow.ts",
+    "tooling/prototype/check-release-consumer-sdk-flow.ts",
+    "tooling/prototype/consumer-replay-command.ts",
+    "tooling/prototype/consumer-replay-store.ts",
+    "tooling/prototype/person-assignment-closure-gates.ts",
+    "tooling/prototype/person-assignment-freeze.ts",
+    "tooling/prototype/person-assignment-transfer-gates.ts",
+    "tooling/prototype/run-department-consumer-flow.ts",
+    "tooling/prototype/run-http-flow.ts",
+    "tooling/verification/src/verify-phase-01-live.ts"
+  ],
+  "currentApiDelta": 0,
+  "anchors": [
+    "contracts/openapi/phase-01.openapi.json",
+    "apps/governance-api/scripts/generate-openapi.ts",
+    "packages/generated-api-client",
+    "packages/release-consumer-sdk",
+    "apps/governance-api/src/platform/fastify",
+    "apps/admin-web/src/prototype",
+    "apps/sim-consumer/src",
+    "tooling/prototype"
+  ],
+  "observedAtHead": "b84ebca6a1eb277172531014e1fe11e03db7e7b4"
+}

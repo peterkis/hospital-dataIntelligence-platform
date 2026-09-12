@@ -170,7 +170,13 @@
     "prototype:person:assignment-transfer:scope": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --scope-probe",
     "prototype:person:assignment-transfer:gates": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-gates.ts",
     "prototype:person:assignment-transfer:prepare-recovery": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-application-probe.ts --prepare-recovery",
-    "prototype:person:assignment-transfer:definition-repair": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-definition-repair.ts"
+    "prototype:person:assignment-transfer:definition-repair": "node --env-file-if-exists=.env.prototype.local --import tsx tooling/prototype/person-assignment-transfer-definition-repair.ts",
+    "vnext:db:inspect": "node tooling/vnext/database.mjs inspect",
+    "vnext:db:create": "node tooling/vnext/database.mjs create",
+    "vnext:db:verify": "node tooling/vnext/database.mjs verify",
+    "test:vnext:baseline": "node --test tooling/vnext/baseline.test.mjs",
+    "vnext:baseline:inspect": "node tooling/vnext/baseline.mjs inspect",
+    "vnext:registry:check": "node tooling/vnext/baseline.mjs check-registry docs/vnext/compatibility-replacements.json"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

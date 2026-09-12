@@ -2,6 +2,13 @@ import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import pg from 'pg';
 
+const databaseUrl = requireEnvironment('DATABASE_URL');
+// pg resolves URL query overrides and PGDATABASE defaults before connecting.
+const effectiveDatabase = new pg.Client({ connectionString: databaseUrl }).connectionParameters.database;
+if (effectiveDatabase.startsWith('hdi_mc_vnext_')) {
+  throw new Error('VNEXT_LEGACY_LINEAGE_FORBIDDEN');
+}
+
 const migrationDirectory = resolve(process.argv[2] ?? 'db/migrations');
 const migrationFiles = (await readdir(migrationDirectory))
   .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
@@ -9,7 +16,7 @@ const migrationFiles = (await readdir(migrationDirectory))
 if (migrationFiles.length === 0) throw new Error('NO_DATABASE_MIGRATIONS_FOUND');
 
 const pool = new pg.Pool({
-  connectionString: requireEnvironment('DATABASE_URL'),
+  connectionString: databaseUrl,
   application_name: 'hdi-phase01-migration-runner',
   max: 1,
 });

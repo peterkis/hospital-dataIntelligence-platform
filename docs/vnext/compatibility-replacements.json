@@ -1,0 +1,38 @@
+[
+  {
+    "id": "legacy-import-wire",
+    "oldConstraint": "CHARGE_ITEM/PRICE_ENTRY V1 adapter and wire compatibility",
+    "replacement": "P0-03/P0-04 replace wire and adapters together with callers; preserve current charge behavior, owner-only apply and explicit rejection",
+    "semanticTests": ["apps/governance-api/src/composition/phase-01-vertical-slice.integration.test.ts"]
+  },
+  {
+    "id": "seven-bytes-openapi-paths",
+    "oldConstraint": "Seven canonical bytes, fixed OpenAPI hash and 15 old paths cannot change",
+    "replacement": "P2/P8 may evolve current contract, fixtures, generated client and SDK together; published historical artifacts remain immutable; canonical determinism and rejection tests move to the new published identity",
+    "semanticTests": ["tooling/prototype/department-projection-freeze.test.ts", "packages/release-consumer-sdk/src/consumer.test.ts", "packages/generated-api-client/src/department-consumer.compile-test.ts"]
+  },
+  {
+    "id": "campus-authority",
+    "oldConstraint": "platform.campus requires permanent compatible migration",
+    "replacement": "P1 organization Owner becomes the single campus authority; update typed references, authorization and all current consumers in the changing ticket",
+    "semanticTests": ["apps/governance-api/src/composition/phase-01-vertical-slice.integration.test.ts", "tooling/prototype/person-assignment-effective-contract.test.ts"]
+  },
+  {
+    "id": "fixed-person-branch",
+    "oldConstraint": "Future tickets require a fixed old Person branch/SHA",
+    "replacement": "Use actual predecessor handoff HEAD/tree; local refs are observations only; remote remains NOT_OBSERVED",
+    "semanticTests": ["tooling/vnext/baseline.test.mjs"]
+  },
+  {
+    "id": "all-old-tests-unchanged",
+    "oldConstraint": "All tests and architecture assertions remain unchanged forever",
+    "replacement": "Replacement must name tests for still-valid identity, approval, privacy, temporal, atomic and immutable-history semantics. These paths are migration anchors, not permission to delete their assertions wholesale",
+    "semanticTests": ["tooling/prototype/person-assignment-effective-contract.test.ts", "apps/governance-api/src/composition/phase-01-vertical-slice.integration.test.ts", "packages/release-consumer-sdk/src/consumer.test.ts"]
+  },
+  {
+    "id": "in-place-database-upgrade",
+    "oldConstraint": "Upgrade every retained evidence database in place",
+    "replacement": "Independent empty receipt-owned vNext database; native versioned SQL authority retained; old database untouched; migration/seed/codegen for new schema must be delivered by first DDL ticket",
+    "semanticTests": ["tooling/vnext/baseline.test.mjs"]
+  }
+]
