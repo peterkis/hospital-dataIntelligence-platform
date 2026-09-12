@@ -27,3 +27,11 @@
 source_assessment 保存复核 actor/底层 identity、request ID、reason、完整拟变更内容和摘要，以延迟复合外键绑定同一治理事件及对象。事件触发器只按冻结数组追加 OPEN/CLOSED，所有影响事件携带该 assessment_head；审计记录 SOURCE_IMPACT_REVIEWED。任一步失败使审批、治理事件、影响、outcome、重放索引及审计一起回滚。重复请求仍检查当前授权，不生成第二份审批或重新决定影响。
 
 升级前的影响事件保留 NULL assessment_head。若旧版局部修正重新显露尚无 OPEN 的失效版本，0010 只追加 UPGRADE_ASSESSMENT_IMPACT_OBSERVATION，审批关联仍为 NULL；既有关闭事件和审计均保留，不能据此声称原操作曾审核这份影响。
+
+## 0011 的事件区间义务
+
+0010 仍将新问题范围写成变更后全部失效片段，可能包含以前事件的失效；0011 前向修正为 `拟变更后失效 - 变更前失效`，同时覆盖下游引用和目标旧版本重新显露。新 opening 标记 EVENT_DELTA_V1。每个 case 的关闭条件为“拟变更后失效与该 case 区间的交集为空”，与无关 case 是否仍未解决分别判断。只修复义务的一部分不能关闭剩余部分；不同 case 即使区间重叠也独立保留。
+
+预览 closing 及问题读取显示 obligation 的 affectedSpans、basis、derivationVersion 和原知识时点。新审批直接使用冻结区间，标记 FROZEN_EVENT_DELTA。已安装 0010 的原审批和摘要保持原文，按原冻结 asOf 重建变更前失效并从原记录的变更后失效中扣除，标记 DERIVED_LEGACY_ASSESSMENT_DELTA。没有审批的旧 case 仅使用原 OPEN 记录时点的失效观察，标记 LEGACY_OBSERVED_UNSUPPORTED，不能视作审批或事件归因证明。推导版本固定为 1；未来改变推导规则必须显式版本化，不得静默重释历史义务。
+
+审批条目按上游对象/事件、下游对象/版本及原因准确匹配，缺失或多匹配会阻断，不能降级为空区间来允许关闭。区间推导不覆盖历史 CLOSED 决定，也不写入新审批或改写既有审计。当前对象、原事件维度及固定来源链用途权限仍须通过；撤权后不能经问题读取或关闭预览披露区间。触发器继续只消费冻结关闭清单。`vnext:catalog:impact:delta` 覆盖相互独立和重叠的区间义务、部分修复、重新显露、当前撤权和六个写入阶段回滚；`-- --upgrade` 在实际十份迁移上建立旧记录，再升级并验证原事件、审批、审计全部保留。

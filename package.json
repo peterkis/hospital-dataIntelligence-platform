@@ -211,7 +211,9 @@
     "vnext:catalog:serve:time": "node --import tsx tooling/vnext/serve.mjs --fresh --time",
     "vnext:catalog:impact:assessment": "node --import tsx tooling/vnext/impact-assessment.mjs",
     "vnext:catalog:assessment:upgrade": "node --import tsx tooling/vnext/assessment-upgrade.mjs",
-    "vnext:catalog:object:access": "node --import tsx tooling/vnext/object-access.mjs"
+    "vnext:catalog:object:access": "node --import tsx tooling/vnext/object-access.mjs",
+    "vnext:catalog:impact:delta": "node --import tsx tooling/vnext/impact-delta.mjs",
+    "vnext:catalog:serve:delta": "node --import tsx tooling/vnext/serve.mjs --fresh --impact --delta"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

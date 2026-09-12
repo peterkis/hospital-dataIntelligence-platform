@@ -47,6 +47,15 @@ try{
    child=await catalog.command('maker',{action:'SUBMIT',scope:'SYNTHETIC',target:child.id,expectedHead:child.head,requestId:randomUUID(),reason:'BROWSER_IMPACT'});
    child=await catalog.command('reviewer',{action:'PUBLISH',scope:'SYNTHETIC',target:child.id,expectedHead:child.head,reviewDigest:child.reviewDigest,requestId:randomUUID(),reason:'BROWSER_IMPACT'});
    race.impactChildId=child.id;
+   if(process.argv.includes('--delta')){
+    const command=(action,extra)=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'BROWSER_EVENT_DELTA',...extra});
+    source=await catalog.command('maker',command('REVISE',{target:source.id,expectedHead:source.head,values:{},validFrom:'2027-01-01T00:00:00',validTo:'2028-01-01T00:00:00'}));
+    source=await catalog.command('maker',command('SUBMIT',{target:source.id,expectedHead:source.head}));
+    const firstImpact=await catalog.sourceImpact('reviewer','SYNTHETIC',source.id,'PUBLISH');
+    source=await catalog.command('reviewer',command('PUBLISH',{target:source.id,expectedHead:source.head,reviewDigest:source.reviewDigest,impactDigest:firstImpact.impactDigest}));
+    source=await catalog.command('maker',command('REVISE',{target:source.id,expectedHead:source.head,values:{},validFrom:'2029-01-01T00:00:00',validTo:'2030-01-01T00:00:00'}));
+    await catalog.command('maker',command('SUBMIT',{target:source.id,expectedHead:source.head}));
+   }
    await catalog.command('maker',{action:'CREATE',scope:'SYNTHETIC',kind:'RESPONSIBILITY',code:'FILTER_OWNER',requestId:randomUUID(),reason:'BROWSER_IMPACT',values:{dataset:'ORG07',authorityScope:'ALL',fieldGroup:'ALL',role:'OWNER',assigneeRole:'SYNTHETIC_OWNER_A'},validFrom:'2026-01-01T00:00:00'});
    writeFileSync(race.releaseFile,'NO_DELAY');writeFileSync(race.qualificationRelease,'NO_DELAY');
   }
