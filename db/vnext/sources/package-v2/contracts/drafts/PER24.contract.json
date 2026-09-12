@@ -1,0 +1,412 @@
+{
+  "contractId": "PER24-FULL",
+  "contractVersion": "DRAFT-1",
+  "status": "DRAFT_NOT_APPROVED",
+  "datasetId": "PER24",
+  "sourceModel": {
+    "id": "PER24",
+    "name": "人员状态变更事件",
+    "kind": "治理记录",
+    "priority": "P0",
+    "owner": "组织人事部",
+    "view": "生命周期",
+    "grain": "一行一个入职、调动、离院、返聘、合并身份等事件",
+    "trigger": "本轮上线范围",
+    "sources": "本次设计建议",
+    "fields": [
+      {
+        "code": "person_event_id",
+        "label": "人员变更事件ID",
+        "type": "id",
+        "required": "R",
+        "ref": "",
+        "definition": "人员状态变更事件的永久稳定记录/对象标识；不可由名称、工号或院区拼接决定，不复用停用标识。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "person_id",
+        "label": "人员ID",
+        "type": "id",
+        "required": "R",
+        "ref": "PER01.person_id",
+        "definition": "人员ID；引用PER01.person_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "event_type",
+        "label": "事件类型",
+        "type": "text",
+        "required": "R",
+        "ref": "",
+        "definition": "入职/任职变更/离院/返聘/身份纠错/合并；不可混同账号锁定",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "256",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "employment_id",
+        "label": "关联聘用关系",
+        "type": "id",
+        "required": "C",
+        "ref": "PER04.employment_id",
+        "definition": "关联聘用关系；引用PER04.employment_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "条件必填：事件针对某一聘用关系的入职、离职、返聘或调动时必填。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "effective_at",
+        "label": "业务生效时间",
+        "type": "datetime",
+        "required": "R",
+        "ref": "",
+        "definition": "人员状态变更事件记录的业务生效时间；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "ISO 8601含时区",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "decision_ref",
+        "label": "批准依据",
+        "type": "text",
+        "required": "R",
+        "ref": "",
+        "definition": "人员状态变更事件记录的批准依据；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "2000",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "affected_assignments",
+        "label": "受影响任职范围说明",
+        "type": "text",
+        "required": "C",
+        "ref": "",
+        "definition": "受影响任职范围说明；事件影响一个以上任职或需批量停用关系时必填，并可列举受影响ID。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "256",
+        "conditional_requirement": "条件必填：事件影响一个以上任职或需批量停用关系时必填，并可列举受影响ID。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "access_revocation_ticket",
+        "label": "撤权执行工单号",
+        "type": "text",
+        "required": "C",
+        "ref": "",
+        "definition": "撤权执行工单号；离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "256",
+        "conditional_requirement": "条件必填：离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "access_verified_at",
+        "label": "撤权验证完成时间",
+        "type": "datetime",
+        "required": "C",
+        "ref": "",
+        "definition": "撤权验证完成时间；离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "ISO 8601含时区",
+        "conditional_requirement": "条件必填：离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "recorded_at",
+        "label": "事件记录时间",
+        "type": "datetime",
+        "required": "R",
+        "ref": "",
+        "definition": "人员状态变更事件记录的事件记录时间；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "ISO 8601含时区",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      }
+    ],
+    "pk": [
+      "person_event_id"
+    ],
+    "lifecycle": false,
+    "accept": "离院必须触发并核验任职终止、处方权撤销、账号撤权、证书处理；历史签名不可删除",
+    "sheet": "PER24_人员状态变更事件"
+  },
+  "sourceSchemaPath": "contracts/source-row-schemas/PER24.schema.json",
+  "targetOwnerModuleProposal": "person-master",
+  "primaryImplementationTask": "P4-06",
+  "secondaryTasks": [
+    "P4-12",
+    "P6-06",
+    "P5-14"
+  ],
+  "fullReadinessTasks": [
+    "P4-01",
+    "P4-03",
+    "P4-06",
+    "P4-12",
+    "P5-14",
+    "P6-06"
+  ],
+  "operations": "Only explicitly registered owner semantic commands; no generic upsert",
+  "formatPolicy": {
+    "formats": [
+      "CSV",
+      "JSON",
+      "XLSX"
+    ],
+    "sourceCsvBom": "ALLOW_ONE_LEADING_UTF8_BOM_WITH_EVIDENCE",
+    "normalization": "NO_GLOBAL_TRIM_CASE_OR_LEADING_ZERO_LOSS",
+    "formulaMacroExternalLink": "REJECT",
+    "hiddenContent": "REJECT_UNLESS_CONTRACT_EXPLICIT"
+  },
+  "timePolicy": "DOMAIN_ASIA_SHANGHAI_LOCAL; SOURCE_PLUS08_ONLY_EXPLICIT_TRANSFORM; DB_RECORDED_FROM",
+  "identityPolicy": "CREATE_ALIAS_NOT_PLATFORM_ID; EXISTING_PLATFORM_REF_VALIDATED_FOR_UPDATE",
+  "applyPolicy": {
+    "default": "VALIDATE_ALL_THEN_APPLY",
+    "unit": "BOUNDED_APPROVED_DEPENDENCY_COHERENT_ATOMIC_UNIT",
+    "partialApply": "DISABLED_UNLESS_EXPLICIT_LOW_COUPLING_CONTRACT"
+  },
+  "fieldRouting": [
+    {
+      "dataset_id": "PER24",
+      "field_code": "person_event_id",
+      "source_field_label": "人员变更事件ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "人员状态变更事件的永久稳定记录/对象标识；不可由名称、工号或院区拼接决定，不复用停用标识。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "SOURCE_CREATE_ALIAS",
+      "proposed_logical_path": "PersonnelGovernanceEvent.sourceClientKey",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "CREATE中为源alias；平台stableId由DB生成。UPDATE需单独已授权platformRef+expectedVersion，不能伪造新ID。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/0"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "person_id",
+      "source_field_label": "人员ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "PER01.person_id",
+      "source_definition": "人员ID；引用PER01.person_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "TYPED_RELATION_REFERENCE",
+      "proposed_logical_path": "PersonnelGovernanceEvent.person_id",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-01",
+        "P4-06"
+      ],
+      "conversion_and_authority": "按精确dataset/type/namespace解析，验证owner/scope/full interval；未ready目标不能忽略或按名猜测。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/1"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "event_type",
+      "source_field_label": "事件类型",
+      "source_type": "text",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "入职/任职变更/离院/返聘/身份纠错/合并；不可混同账号锁定",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "EVENT_OR_SUCCESSION_FACT",
+      "proposed_logical_path": "PersonnelGovernanceEvent.event_type",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "变更/承继是明确事实，不等于立即执行全部受影响业务。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/2"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "employment_id",
+      "source_field_label": "关联聘用关系",
+      "source_type": "id",
+      "source_required": "C",
+      "source_ref": "PER04.employment_id",
+      "source_definition": "关联聘用关系；引用PER04.employment_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：事件针对某一聘用关系的入职、离职、返聘或调动时必填。",
+      "source_trace": "本次设计建议",
+      "target_category": "TYPED_RELATION_REFERENCE",
+      "proposed_logical_path": "PersonnelGovernanceEvent.employment_id",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-03",
+        "P4-06"
+      ],
+      "conversion_and_authority": "按精确dataset/type/namespace解析，验证owner/scope/full interval；未ready目标不能忽略或按名猜测。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/3"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "effective_at",
+      "source_field_label": "业务生效时间",
+      "source_type": "datetime",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "人员状态变更事件记录的业务生效时间；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "EVENT_OR_SUCCESSION_FACT",
+      "proposed_logical_path": "PersonnelGovernanceEvent.effective_at",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "变更/承继是明确事实，不等于立即执行全部受影响业务。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/4"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "decision_ref",
+      "source_field_label": "批准依据",
+      "source_type": "text",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "人员状态变更事件记录的批准依据；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "EVENT_OR_SUCCESSION_FACT",
+      "proposed_logical_path": "PersonnelGovernanceEvent.decision_ref",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "变更/承继是明确事实，不等于立即执行全部受影响业务。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/5"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "affected_assignments",
+      "source_field_label": "受影响任职范围说明",
+      "source_type": "text",
+      "source_required": "C",
+      "source_ref": "",
+      "source_definition": "受影响任职范围说明；事件影响一个以上任职或需批量停用关系时必填，并可列举受影响ID。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：事件影响一个以上任职或需批量停用关系时必填，并可列举受影响ID。",
+      "source_trace": "本次设计建议",
+      "target_category": "IMPACT_REFERENCE_SET",
+      "proposed_logical_path": "PersonnelEvent.affectedAssignmentRefs",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "解析为typed refs并检查完整范围，不猜UUID/不复制权限",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/6"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "access_revocation_ticket",
+      "source_field_label": "撤权执行工单号",
+      "source_type": "text",
+      "source_required": "C",
+      "source_ref": "",
+      "source_definition": "撤权执行工单号；离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+      "source_trace": "本次设计建议",
+      "target_category": "EVENT_OR_SUCCESSION_FACT",
+      "proposed_logical_path": "PersonnelGovernanceEvent.access_revocation_ticket",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "变更/承继是明确事实，不等于立即执行全部受影响业务。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/7"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "access_verified_at",
+      "source_field_label": "撤权验证完成时间",
+      "source_type": "datetime",
+      "source_required": "C",
+      "source_ref": "",
+      "source_definition": "撤权验证完成时间；离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+      "source_trace": "本次设计建议",
+      "target_category": "RECEIPT_DERIVED",
+      "proposed_logical_path": "DeprovisionCase.actualVerifiedAt",
+      "implementation_task": "P6-06",
+      "required_owner_tasks": [
+        "P6-06"
+      ],
+      "conversion_and_authority": "仅实际完整消费者回执得出；源时间仅证据不能预填完成",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/8"
+    },
+    {
+      "dataset_id": "PER24",
+      "field_code": "recorded_at",
+      "source_field_label": "事件记录时间",
+      "source_type": "datetime",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "人员状态变更事件记录的事件记录时间；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "SOURCE_RECORDED_TIME",
+      "proposed_logical_path": "ImportSourceEvidence.sourceRecordedAt",
+      "implementation_task": "P4-06",
+      "required_owner_tasks": [
+        "P4-06"
+      ],
+      "conversion_and_authority": "保存来源记录时间；目标recordedFrom由DB实际生成，不能回填伪知识",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/PER24/fields/9"
+    }
+  ],
+  "conditionalRuleRefs": [
+    "SRC-COND-073",
+    "SRC-COND-074",
+    "SRC-COND-075",
+    "SRC-COND-076"
+  ],
+  "manualEvidence": "UNRESOLVED_SOURCE_RULE_BLOCKS_FULL_PUBLISH",
+  "mappingReviewStatus": "PROPOSED_NOT_EXECUTED"
+}

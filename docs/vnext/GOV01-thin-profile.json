@@ -1,0 +1,39 @@
+{
+  "laterConnectionRequired": [
+    "interface_contract_ref"
+  ],
+  "additionalControlFields": [
+    "sourceKind",
+    "sourceEvidence",
+    "sourceEvidenceVersion"
+  ],
+  "profile": "GOV01-CATALOG-SYNTHETIC-THIN",
+  "sourceFieldCount": 18,
+  "notes": [
+    "sourceEvidence is controlled synthetic provenance; raw source row protocol is not an importer",
+    "first manual root uses one SYNTHETIC_BOOTSTRAP; no recursive source creation",
+    "published source only qualifies synthetic registry references; real interface/apply/campus/official approval NOT_READY",
+    "source version and platform version differ; source descriptors unchanged; platform B/R use local time"
+  ],
+  "supported": [
+    "system_id",
+    "system_code",
+    "system_name",
+    "vendor_name",
+    "deployment_scope",
+    "system_version",
+    "business_owner",
+    "technical_contact_role",
+    "environment",
+    "version_no",
+    "record_status",
+    "recorded_at",
+    "valid_from",
+    "valid_to"
+  ],
+  "sourceMetadataOnly": [
+    "source_system_id",
+    "source_record_id",
+    "approval_ref"
+  ]
+}

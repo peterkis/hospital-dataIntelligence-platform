@@ -115,8 +115,12 @@ export async function runDatabaseAuthorityCheck(): Promise<void> {
     );
   }
 
+  // Source ownership spans both runtimes; database/type verification above remains
+  // bound to the legacy lineage. vNext has its own receipt-bound live checker.
+  const vnextOwnership = JSON.parse(readFileSync(join(ROOT, 'db/vnext/table-ownership.json'), 'utf8')) as TableOwnership & { lineage: string };
+  assert.equal(vnextOwnership.lineage, 'HDIP-MC-VNEXT');
   const ownerByModule = new Map(
-    Object.entries(ownership.schemas).map(([schema, module]) => [module, schema]),
+    Object.entries({ ...ownership.schemas, ...vnextOwnership.schemas }).map(([schema, module]) => [module, schema]),
   );
   for (const entry of readdirSync(MODULES, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;

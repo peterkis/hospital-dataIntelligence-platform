@@ -1,0 +1,49 @@
+{
+  "org_target": {
+    "mapping": {
+      "LEGAL": "ORG01.legal_entity_id",
+      "CAMPUS": "ORG02.campus_id",
+      "ORG": "ORG04.org_id",
+      "UNIT": "ORG07.unit_id",
+      "WARD": "ORG08.ward_id",
+      "NURSING": "ORG09.nursing_unit_id",
+      "TEAM": "ORG14.team_id",
+      "LOCATION": "ORG12.location_id",
+      "COST": "ORG19.cost_center_id",
+      "BED": "ORG24.bed_id"
+    },
+    "default_discriminator": "target_type",
+    "field_overrides": {
+      "ORG27.from_target_id": "from_target_type",
+      "ORG27.to_target_id": "to_target_type"
+    }
+  },
+  "person_target": {
+    "mapping": {
+      "PERSON": "PER01.person_id",
+      "EMPLOYMENT": "PER04.employment_id",
+      "PRACTITIONER": "PER07.practitioner_id",
+      "ACCOUNT": "PER17.account_id"
+    },
+    "default_discriminator": "target_entity_type",
+    "field_overrides": {}
+  },
+  "product_target": {
+    "mapping": {
+      "DRUG": "BIZ11.drug_product_id",
+      "CONSUMABLE": "BIZ13.material_id"
+    },
+    "default_discriminator": "product_type",
+    "field_overrides": {}
+  },
+  "payer_item": {
+    "mapping": {
+      "CHARGE": "BIZ02.charge_item_id",
+      "SERVICE": "BIZ01.service_id",
+      "DRUG": "BIZ11.drug_product_id",
+      "CONSUMABLE": "BIZ13.material_id"
+    },
+    "default_discriminator": "item_type",
+    "field_overrides": {}
+  }
+}

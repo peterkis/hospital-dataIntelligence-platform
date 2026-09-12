@@ -1,0 +1,139 @@
+[
+  {
+    "reference": "BIZ02.charge_item_id",
+    "fields": [
+      "ORG24.charge_item_id"
+    ],
+    "implementation_tasks": [
+      "P0-03",
+      "P7-05"
+    ],
+    "decision": "Reuse/refactor current charge-catalog owner typed read port. Resolve existing approved item; not new full BIZ domain implementation or direct price logic.",
+    "status": "NOT_RUN"
+  },
+  {
+    "reference": "GOV01.system_id",
+    "fields": [
+      "ORG01.source_system_id",
+      "ORG02.source_system_id",
+      "ORG03.source_system_id",
+      "ORG04.source_system_id",
+      "ORG05.source_system_id",
+      "ORG06.source_system_id",
+      "ORG07.source_system_id",
+      "ORG08.source_system_id",
+      "ORG09.source_system_id",
+      "ORG10.source_system_id",
+      "ORG11.source_system_id",
+      "ORG12.source_system_id",
+      "ORG13.source_system_id",
+      "ORG14.source_system_id",
+      "ORG15.source_system_id",
+      "ORG16.source_system_id",
+      "ORG17.source_system_id",
+      "ORG18.source_system_id",
+      "ORG19.source_system_id",
+      "ORG20.source_system_id",
+      "ORG21.source_system_id",
+      "ORG22.from_system_id",
+      "ORG22.source_system_id",
+      "ORG23.source_system_id",
+      "ORG24.source_system_id",
+      "ORG25.source_system_id",
+      "PER01.source_system_id",
+      "PER02.source_system_id",
+      "PER03.source_system_id",
+      "PER04.source_system_id",
+      "PER05.source_system_id",
+      "PER06.source_system_id",
+      "PER07.source_system_id",
+      "PER08.source_system_id",
+      "PER09.source_system_id",
+      "PER10.source_system_id",
+      "PER11.source_system_id",
+      "PER12.source_system_id",
+      "PER13.source_system_id",
+      "PER14.source_system_id",
+      "PER15.source_system_id",
+      "PER16.source_system_id",
+      "PER17.system_id",
+      "PER17.source_system_id",
+      "PER18.system_id",
+      "PER18.source_system_id",
+      "PER19.source_system_id",
+      "PER20.source_system_id",
+      "PER21.from_system_id",
+      "PER21.source_system_id",
+      "PER22.source_system_id",
+      "PER23.source_system_id",
+      "PER25.source_system_id",
+      "PER26.source_system_id"
+    ],
+    "implementation_tasks": [
+      "P0-01"
+    ],
+    "decision": "Bounded source/consumer system registry; supported public owner reference; does not create all governance datasets",
+    "status": "NOT_RUN"
+  },
+  {
+    "reference": "GOV09.config_id",
+    "fields": [
+      "ORG16.rule_ref"
+    ],
+    "implementation_tasks": [
+      "P0-02",
+      "P3-08"
+    ],
+    "decision": "Minimal versioned application-parameter reference for unit rule_ref. Whitelisted declarative content, system/campus scope, no arbitrary code; nonempty unresolved ref blocks FULL apply. Not general hospital configuration platform.",
+    "status": "NOT_RUN"
+  },
+  {
+    "reference": "REF01.code_system_id",
+    "fields": [
+      "ORG17.code_system_id",
+      "ORG18.scheme_id"
+    ],
+    "implementation_tasks": [
+      "P0-02",
+      "P3-09",
+      "P7-01"
+    ],
+    "decision": "Versioned code system adoption metadata and verified source evidence; 93 standard-review items not automatically accepted",
+    "status": "NOT_RUN"
+  },
+  {
+    "reference": "poly:org_target",
+    "fields": [
+      "ORG13.target_id",
+      "ORG15.target_id",
+      "ORG17.target_id",
+      "ORG18.target_id",
+      "ORG20.target_id",
+      "ORG21.target_id",
+      "ORG22.target_id",
+      "ORG23.target_id",
+      "ORG25.target_id",
+      "ORG27.from_target_id",
+      "ORG27.to_target_id"
+    ],
+    "implementation_tasks": [
+      "P0-02",
+      "P0-05"
+    ],
+    "decision": "Use exact source polymorphic registry discriminator; all target owner capabilities must be ready for the row. No untyped targetId.",
+    "status": "NOT_RUN"
+  },
+  {
+    "reference": "poly:person_target",
+    "fields": [
+      "PER21.target_id"
+    ],
+    "implementation_tasks": [
+      "P0-02",
+      "P4-05",
+      "P6-07"
+    ],
+    "decision": "Use exact person_target discriminator including ACCOUNT/EMPLOYMENT/PRACTITIONER; missing type/owner fails closed",
+    "status": "NOT_RUN"
+  }
+]

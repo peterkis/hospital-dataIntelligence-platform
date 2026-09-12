@@ -1,5 +1,7 @@
 import createClient from 'openapi-fetch';
 import type { paths } from './schema.generated.js';
+export { createVNextCatalogClient } from './vnext-client.js';
+export type { VNextEntry, VNextCommand, VNextOutcome, VNextHistory } from './vnext-client.js';
 export type { operations as GovernanceApiOperations } from './schema.generated.js';
 
 export type GovernanceApiPaths = paths;
