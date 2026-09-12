@@ -81,7 +81,7 @@ test('governance permissions, lifecycle, concurrency, history and source readine
       await assert.rejects(catalog.command('maker',command('REVISE',{target:publishedChild.id,expectedHead:publishedChild.head,values:{sourceEvidence:grandchild.id},validFrom:'2026-01-01T00:00:00',validTo:'2027-01-01T00:00:00'})),/SOURCE_REFERENCE_CYCLE/);
       await assert.rejects(catalog.command('maker',{...childCommand,code:'INVALID_SOURCE_ID',requestId:randomUUID(),values:{...childCommand.values,sourceEvidence:'source-1'}}),/SOURCE_REFERENCE_INVALID/);
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',source.id,'2027-01-01T00:00:00'),/SOURCE_NOT_READY/);
-      await catalog.command('reviewer',{...transition('RETIRE',source),reviewDigest:approvedSource.reviewDigest,impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',source.id)).impactDigest});
+      await catalog.command('reviewer',{...transition('RETIRE',source),reviewDigest:approvedSource.reviewDigest,impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',source.id,'RETIRE')).impactDigest});
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',publishedChild.id,'2026-05-01T00:00:00'),/SOURCE_EVIDENCE_NOT_READY/);
       await assert.rejects(catalog.command('reviewer',transition('PUBLISH',childReview)),/SOURCE_EVIDENCE_NOT_READY/);
       await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',source.id,'2026-05-01T00:00:00'),/SOURCE_NOT_READY/);

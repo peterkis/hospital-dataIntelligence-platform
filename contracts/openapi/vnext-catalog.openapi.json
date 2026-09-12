@@ -3017,6 +3017,27 @@
           },
           {
             "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PUBLISH"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "RETIRE"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "action",
+            "required": true
+          },
+          {
+            "schema": {
               "type": "string",
               "format": "uuid"
             },
@@ -3035,8 +3056,19 @@
                   "required": [
                     "impactDigest",
                     "effectiveMode",
+                    "target",
+                    "head",
+                    "action",
+                    "asOf",
+                    "catalogHead",
+                    "candidateVersionId",
+                    "definitionVersionId",
+                    "definitionDigest",
+                    "targetDefinitions",
                     "current",
-                    "history"
+                    "history",
+                    "opening",
+                    "closing"
                   ],
                   "properties": {
                     "impactDigest": {
@@ -3047,6 +3079,65 @@
                       "enum": [
                         "ON_COMMIT"
                       ]
+                    },
+                    "target": {
+                      "type": "string"
+                    },
+                    "head": {
+                      "type": "string"
+                    },
+                    "action": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PUBLISH"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "RETIRE"
+                          ]
+                        }
+                      ]
+                    },
+                    "asOf": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
+                    },
+                    "catalogHead": {
+                      "type": "string"
+                    },
+                    "candidateVersionId": {
+                      "type": "string"
+                    },
+                    "definitionVersionId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "definitionDigest": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "targetDefinitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
                     },
                     "current": {
                       "type": "array",
@@ -3061,8 +3152,23 @@
                         "type": "object",
                         "additionalProperties": {}
                       }
+                    },
+                    "opening": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "closing": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
                     }
-                  }
+                  },
+                  "additionalProperties": false
                 }
               }
             }

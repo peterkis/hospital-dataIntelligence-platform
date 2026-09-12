@@ -17,3 +17,13 @@
 升级观察也覆盖此前重发造成的失效：对仍为 PUBLISHED 的上游，只为固定到旧定义版本的当前直接/间接下游建问题，排除固定到当前已接受版本的健康引用。`vnext:catalog:impact:upgrade` 真实安装五份迁移，执行旧发布行为形成失效引用及健康引用，再升级到 0006，验证观察覆盖、健康排除和原审计/outcome 保留。
 
 普通目录 GET 按 ADR 0006 保留请求级完成日志：仅服务器签发的随机 request ID、固定路由模板、状态、完成时间和耗时，经本地进程日志捕获保存。客户请求 ID、原始 URL/查询、路径实体 ID、headers/body 和响应内容不进入记录；本目录没有真实敏感业务实体查询。`vnext:catalog:reference:logs` 对真实 HTTP 成功、拒绝、无效 GET 各验证一条记录，并核对合成 canary 未进入日志。该日志不是新增遥测服务或敏感实体审计平台。
+
+## 0010 的拟变更审批
+
+前述预览是早期轮次行为。当前 change-impact 必须提供 action=PUBLISH 或 RETIRE；旧三参数数据库入口移除，当前 API、生成客户端、页面和测试同步更新。返回当前/历史引用作为上下文，并单独列出拟变更前后 targetDefinitions、opening 与 closing。opening 包括新增加的不支持片段，也包括局部修正重新显露的目标旧版本；closing 仅列出原问题版本在拟变更后已无不支持片段的义务。部分支持恢复不能提前关闭。
+
+审批摘要同时绑定动作、目标维护 head、候选/被废止定义、目录 head 和稳定知识水位。预览及提交都按当前权限检查所披露的对象、有效版本和实际引用事件的维度。命令发现 opening 或 closing 时必须收到准确摘要；即使影响为空，传入错误摘要也拒绝。首次无影响发布可以不额外传摘要，仍保存完整审批记录。
+
+source_assessment 保存复核 actor/底层 identity、request ID、reason、完整拟变更内容和摘要，以延迟复合外键绑定同一治理事件及对象。事件触发器只按冻结数组追加 OPEN/CLOSED，所有影响事件携带该 assessment_head；审计记录 SOURCE_IMPACT_REVIEWED。任一步失败使审批、治理事件、影响、outcome、重放索引及审计一起回滚。重复请求仍检查当前授权，不生成第二份审批或重新决定影响。
+
+升级前的影响事件保留 NULL assessment_head。若旧版局部修正重新显露尚无 OPEN 的失效版本，0010 只追加 UPGRADE_ASSESSMENT_IMPACT_OBSERVATION，审批关联仍为 NULL；既有关闭事件和审计均保留，不能据此声称原操作曾审核这份影响。

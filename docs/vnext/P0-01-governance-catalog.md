@@ -104,3 +104,7 @@ PR 修复日志、浏览器证据和本地/远端复审结果单独保存于 ign
 CREATE 的 TypeBox/OpenAPI/client 按 DATASET、SOURCE、RESPONSIBILITY 区分封闭 values；SOURCE 强制名称、环境、来源类别、部署声明、两类责任岗位、来源证据，SOFTWARE 另强制厂商和版本。REVISE 仍为目标对象的部分修订，领域 Owner 按真实目标类型校验。网页按对象类型构造命令，不以类型断言绕过契约。
 
 新 creation intent/receipt、fresh/disposal receipt 采用固定 IANA Asia/Shanghai 本地毫秒字符串，无 Z 或偏移；HTTP 完成日志也遵循此表达，耗时仍使用单调时钟。时间格式测试覆盖年界、闰日和不同宿主 TZ。原 P0-00 及既有运行 receipt 中的 UTC Z 值是历史偏差，保留原字节并明确其局限，不宣称当时已符合 ADR-0074，也不剥离 Z 后伪造本地时刻。
+
+0010 将来源影响审批绑定到拟发布或拟废止之后的有效片段。最新链为十份迁移、16 张表，新增只追加的 source_assessment；应用不能直接读写该表。预览显式指定 PUBLISH/RETIRE，绑定目标 head、定义摘要、稳定知识水位及逐项 opening/closing。命令在同一锁和事务内重新核验摘要与当前权限，先冻结完整审批记录，再由事件触发器仅执行冻结清单，影响事件以 assessment_head 指向审批记录。旧迁移和历史审批事实不改写。
+
+`vnext:catalog:impact:assessment` 覆盖预览与实际效果一致、重放、历史事件维度授权、部分修正重新显露旧版本、陈旧摘要、真实撤权竞态、六个写入阶段的原子回滚和直接伪造拒绝。`vnext:catalog:assessment:upgrade` 在实际九份迁移上形成已关闭但又重新显露的旧版本，升级只追加当前观察，保留原 case/audit，且不伪造历史 source_assessment。证据单列于 `.runtime/vnext/pr-2/round8-*`，不替换前述各轮历史记录。

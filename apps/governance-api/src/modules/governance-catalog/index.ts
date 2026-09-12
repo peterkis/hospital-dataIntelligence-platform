@@ -19,6 +19,8 @@ export interface Command {
 export interface Outcome { id:string; head:string; version:number; versionId:string; status:CatalogItem['status']; reviewDigest:string; recordedAt:string }
 export interface HistoryRow { head:string; status:CatalogItem['status']; version:number; payload:CatalogPayload; validFrom:string; validTo:string|null; recordedAt:string }
 
+export interface SourceImpact {impactDigest:string;effectiveMode:'ON_COMMIT';target:string;head:string;action:'PUBLISH'|'RETIRE';asOf:string;catalogHead:string;candidateVersionId:string;definitionVersionId:string|null;definitionDigest:string|null;targetDefinitions:Array<Record<string,unknown>>;current:Array<Record<string,unknown>>;history:Array<Record<string,unknown>>;opening:Array<Record<string,unknown>>;closing:Array<Record<string,unknown>>}
+
 export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL']) {
   if (!connectionString) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
   const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,application_name:'hdi-vnext-catalog',options:'-c timezone=Asia/Shanghai'})})});
@@ -27,8 +29,8 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
       const response=await sql<{result:CatalogResult}>`select governance_catalog.read_catalog(${actor},${query.scope},${query.asOf??null}) as result`.execute(db);
       return response.rows[0]!.result;
     },
-    async sourceImpact(actor:string,scope:string,id:string):Promise<{impactDigest:string;effectiveMode:string;current:Array<Record<string,unknown>>;history:Array<Record<string,unknown>>}> {
-      return (await sql<{result:{impactDigest:string;effectiveMode:string;current:Array<Record<string,unknown>>;history:Array<Record<string,unknown>>}}>`select governance_catalog.change_impact(${actor},${scope},${id}::uuid) as result`.execute(db)).rows[0]!.result;
+    async sourceImpact(actor:string,scope:string,id:string,action:'PUBLISH'|'RETIRE'):Promise<SourceImpact> {
+      return (await sql<{result:SourceImpact}>`select governance_catalog.change_impact(${actor},${scope},${id}::uuid,${action}) as result`.execute(db)).rows[0]!.result;
     },
     async impactCases(actor:string,scope:string,id:string):Promise<Array<Record<string,unknown>>> {
       return (await sql<{result:Array<Record<string,unknown>>}>`select governance_catalog.impact_cases(${actor},${scope},${id}::uuid) as result`.execute(db)).rows[0]!.result;

@@ -86,13 +86,13 @@ try{
   const source=async(code,evidence)=>publish(await catalog.command('maker',command('CREATE',{kind:'SOURCE',code,values:{name:'合成间接授权',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:evidence},validFrom:'2026-01-01T00:00:00'})));
   const root=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.code==='PURPOSE_SOURCE');const child=await source('ACCESS_CHILD',root.id);
   grant('outsider',root.id,'READ','SOURCE','SYNTHETIC_ALL');
-  await assert.rejects(catalog.sourceImpact('outsider','SYNTHETIC',root.id),/ACCESS_DENIED/,'indirect impact preview');
+  await assert.rejects(catalog.sourceImpact('outsider','SYNTHETIC',root.id,'RETIRE'),/ACCESS_DENIED/,'indirect impact preview');
   assert.deepEqual(await catalog.impactCases('outsider','SYNTHETIC',root.id),[]);
-  const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',root.id);
+  const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',root.id,'RETIRE');
   await catalog.command('reviewer',command('RETIRE',{target:root.id,expectedHead:root.head,reviewDigest:root.reviewDigest,impactDigest:impact.impactDigest}));
   await assert.rejects(catalog.impactCases('outsider','SYNTHETIC',root.id),/ACCESS_DENIED/,'indirect impact cases');
   grant('outsider',child.id,'READ','SOURCE','SYNTHETIC_ALL');
-  assert.equal((await catalog.sourceImpact('outsider','SYNTHETIC',root.id)).current.length,1);
+  assert.equal((await catalog.sourceImpact('outsider','SYNTHETIC',root.id,'RETIRE')).current.length,1);
   const counts=()=>peer(owned.receipt.name,'SELECT jsonb_build_array((SELECT count(*) FROM governance_catalog.object),(SELECT count(*) FROM governance_catalog.version),(SELECT count(*) FROM governance_catalog.event),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM vnext_control.audit),(SELECT count(*) FROM vnext_control.request_identity),(SELECT count(*) FROM vnext_control.object_grant));');
   const before=counts();
   peer(owned.receipt.name,'CREATE TRIGGER object_grant_fault BEFORE INSERT ON vnext_control.object_grant FOR EACH ROW EXECUTE FUNCTION vnext_control.immutable();');

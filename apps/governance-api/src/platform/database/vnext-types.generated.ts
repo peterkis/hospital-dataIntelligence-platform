@@ -35,6 +35,7 @@ export interface GovernanceCatalogEvent {
 
 export interface GovernanceCatalogImpactEvent {
   actor_code: string;
+  assessment_head: Int8 | null;
   case_id: string;
   downstream_object: string;
   downstream_version: string;
@@ -52,6 +53,19 @@ export interface GovernanceCatalogObject {
   id: Generated<string>;
   kind: string;
   scope: string;
+}
+
+export interface GovernanceCatalogSourceAssessment {
+  action: string;
+  content: Json;
+  digest: string;
+  event_head: Int8;
+  object_id: string;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  reviewer_actor: string;
+  reviewer_identity: string;
 }
 
 export interface GovernanceCatalogSourceSnapshot {
@@ -158,6 +172,7 @@ export interface DB {
   "governance_catalog.event": GovernanceCatalogEvent;
   "governance_catalog.impact_event": GovernanceCatalogImpactEvent;
   "governance_catalog.object": GovernanceCatalogObject;
+  "governance_catalog.source_assessment": GovernanceCatalogSourceAssessment;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.version": GovernanceCatalogVersion;
   "vnext_control.actor": VnextControlActor;

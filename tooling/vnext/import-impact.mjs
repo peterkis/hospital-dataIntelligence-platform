@@ -27,18 +27,18 @@ try{
   const revise=async item=>catalog.command('maker',command('REVISE',{target:item.id,expectedHead:item.head,values:{name:'合成重发 '+item.id},validFrom:'2026-01-01T00:00:00'}));
   const reviewedRoot=await catalog.command('maker',transition('SUBMIT',await revise(root)));
   await assert.rejects(catalog.command('reviewer',transition('PUBLISH',reviewedRoot)),/IMPACT_REVIEW_MISMATCH/);
-  root=await catalog.command('reviewer',{...transition('PUBLISH',reviewedRoot),impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',root.id)).impactDigest});
+  root=await catalog.command('reviewer',{...transition('PUBLISH',reviewedRoot),impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',root.id,'PUBLISH')).impactDigest});
   assert.equal((await catalog.impactCases('reviewer','SYNTHETIC',root.id)).filter(c=>c.status==='OPEN').length,2);
-  const requalify=async item=>{const reviewed=await catalog.command('maker',transition('SUBMIT',await revise(item)));return catalog.command('reviewer',{...transition('PUBLISH',reviewed),impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',item.id)).impactDigest});};
+  const requalify=async item=>{const reviewed=await catalog.command('maker',transition('SUBMIT',await revise(item)));return catalog.command('reviewer',{...transition('PUBLISH',reviewed),impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',item.id,'PUBLISH')).impactDigest});};
   child=await requalify(child);grandchild=await requalify(grandchild);
   assert.equal((await catalog.impactCases('reviewer','SYNTHETIC',root.id)).filter(c=>c.status==='CLOSED').length,2);
   assert.equal((await catalog.resolveSource('maker','SYNTHETIC',grandchild.id,'2026-09-12T00:00:00')).realApply,'NOT_IMPLEMENTED');
-  const preview=await catalog.sourceImpact('reviewer','SYNTHETIC',root.id);assert.equal(preview.current.length,2);assert.ok(preview.history.length>=2);
+  const preview=await catalog.sourceImpact('reviewer','SYNTHETIC',root.id,'RETIRE');assert.equal(preview.current.length,2);assert.ok(preview.history.length>=2);
   await assert.rejects(catalog.command('reviewer',{...transition('RETIRE',root),impactDigest:'wrong'}),/IMPACT_REVIEW_MISMATCH/);
   await assert.rejects(catalog.command('reviewer',transition('RETIRE',root)),/IMPACT_REVIEW_MISMATCH/);
   const grandRevision=await catalog.command('maker',command('REVISE',{target:grandchild.id,expectedHead:grandchild.head,values:{name:'合成下游候选'},validFrom:'2026-01-01T00:00:00'}));
   await assert.rejects(catalog.command('reviewer',{...transition('RETIRE',root),impactDigest:preview.impactDigest}),/IMPACT_REVIEW_MISMATCH/);
-  const currentPreview=await catalog.sourceImpact('reviewer','SYNTHETIC',root.id);
+  const currentPreview=await catalog.sourceImpact('reviewer','SYNTHETIC',root.id,'RETIRE');
   const request={...transition('RETIRE',root),impactDigest:currentPreview.impactDigest};
   const beforeFault=peer(owned.receipt.name,'SELECT jsonb_build_array((SELECT count(*) FROM governance_catalog.event),(SELECT count(*) FROM vnext_control.audit),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM governance_catalog.impact_event));');
   peer(owned.receipt.name,"CREATE FUNCTION governance_catalog.impact_fault() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'IMPACT_WRITE_FAILURE'; END $$; CREATE TRIGGER impact_fault BEFORE INSERT ON governance_catalog.impact_event FOR EACH ROW EXECUTE FUNCTION governance_catalog.impact_fault();");
@@ -47,7 +47,7 @@ try{
   const cases=await catalog.impactCases('reviewer','SYNTHETIC',root.id);assert.equal(cases.filter(c=>c.status==='OPEN').length,2);
   assert.deepEqual(await catalog.command('reviewer',request),retired);assert.deepEqual(await catalog.impactCases('reviewer','SYNTHETIC',root.id),cases);
   await assert.rejects(catalog.resolveSource('maker','SYNTHETIC',grandchild.id,'2026-09-12T00:00:00'),/SOURCE_EVIDENCE_NOT_READY/);
-  for(const downstream of [child,{...grandchild,head:grandRevision.head}]){const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',downstream.id);await catalog.command('reviewer',{...transition('RETIRE',downstream),impactDigest:impact.impactDigest});}
+  for(const downstream of [child,{...grandchild,head:grandRevision.head}]){const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',downstream.id,'RETIRE');await catalog.command('reviewer',{...transition('RETIRE',downstream),impactDigest:impact.impactDigest});}
   const closed=await catalog.impactCases('reviewer','SYNTHETIC',root.id);assert.equal(closed.filter(c=>c.status==='CLOSED').length,4);
   assert.ok(closed.every(c=>typeof c.resolution_event==='string'&&c.events.length===2&&c.events[0].status==='OPEN'&&c.events[1].status==='CLOSED'));
   assert.equal((await catalog.history('maker','SYNTHETIC',root.id)).length,7);

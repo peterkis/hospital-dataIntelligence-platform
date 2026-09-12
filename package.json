@@ -209,6 +209,8 @@
     "vnext:catalog:source:time": "node --import tsx tooling/vnext/source-time.mjs",
     "vnext:catalog:source:time:upgrade": "node --import tsx tooling/vnext/source-time-upgrade.mjs",
     "vnext:catalog:serve:time": "node --import tsx tooling/vnext/serve.mjs --fresh --time",
+    "vnext:catalog:impact:assessment": "node --import tsx tooling/vnext/impact-assessment.mjs",
+    "vnext:catalog:assessment:upgrade": "node --import tsx tooling/vnext/assessment-upgrade.mjs",
     "vnext:catalog:object:access": "node --import tsx tooling/vnext/object-access.mjs"
   },
   "devDependencies": {

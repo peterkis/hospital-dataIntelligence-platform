@@ -1034,6 +1034,7 @@ export interface operations {
         parameters: {
             query: {
                 scope: "BASELINE" | "SYNTHETIC";
+                action: "PUBLISH" | "RETIRE";
             };
             header?: never;
             path: {
@@ -1053,10 +1054,27 @@ export interface operations {
                         impactDigest: string;
                         /** @enum {string} */
                         effectiveMode: "ON_COMMIT";
+                        target: string;
+                        head: string;
+                        action: "PUBLISH" | "RETIRE";
+                        asOf: string;
+                        catalogHead: string;
+                        candidateVersionId: string;
+                        definitionVersionId: string | null;
+                        definitionDigest: string | null;
+                        targetDefinitions: {
+                            [key: string]: unknown;
+                        }[];
                         current: {
                             [key: string]: unknown;
                         }[];
                         history: {
+                            [key: string]: unknown;
+                        }[];
+                        opening: {
+                            [key: string]: unknown;
+                        }[];
+                        closing: {
                             [key: string]: unknown;
                         }[];
                     };
