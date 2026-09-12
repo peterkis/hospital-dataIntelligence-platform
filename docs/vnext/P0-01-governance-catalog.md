@@ -1,5 +1,7 @@
 # P0-01 治理目录
 
+后续 PR #2 审查修复：新增 `0003_catalog_published_authority_and_identity_replay`，已发布来源权威与未批准候选分离；同一 identity 的不同 alias 共用原请求结果，仍检查当前 alias 权限。新增只追加请求身份索引表，保留原 outcome/audit 行，当前共10张表。下文初始交付两份迁移/9表及其指纹为历史证据；新的迁移/复验记录另存 `.runtime/vnext/pr-2/`。未实现生命周期的明确处置见 `catalog-lifecycle-disposition.md`。
+
 来源：`D:/Agent-Prompts/HDIP-MC-P0-01-catalog-execution/P0-01-governance-catalog.local-only.prompt.md`，原 v2 开发包 P0-01。开工 HEAD `7d5d7838e983bb21b445bd4f0d8cfe0be817969e`、tree `321c2ca28a7eba399cb83a1d464ca5151aeae32e`、parent `b84ebca6a1eb277172531014e1fe11e03db7e7b4` 已现场核对，初始工作区干净。P0-00 handoff 原字节保存在 `.runtime/vnext/history/P0-00-handoff.json`；creation receipt 保持原样。
 
 ## 入口、权限与迁移

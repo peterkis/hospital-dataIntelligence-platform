@@ -193,7 +193,8 @@
     "vnext:contract:generate": "node --import tsx tooling/vnext/contracts.mjs",
     "vnext:catalog:recovery:prepare": "node --import tsx tooling/vnext/recovery.mjs prepare",
     "vnext:catalog:recovery:verify": "node --import tsx tooling/vnext/recovery.mjs recover",
-    "vnext:authority:check": "node tooling/vnext/authority.mjs"
+    "vnext:authority:check": "node tooling/vnext/authority.mjs",
+    "vnext:catalog:replay:upgrade": "node --import tsx tooling/vnext/replay-upgrade.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

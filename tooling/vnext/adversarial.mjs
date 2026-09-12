@@ -36,7 +36,7 @@ try{
  checks.push('DB05_CONCURRENT_MIGRATION','DB08_PREFIX_PRESERVED');
  await assert.rejects(migrate(owned.receipt,[{...files[0],sha256:'0'.repeat(64)},...files.slice(1)]),/LINEAGE_MISMATCH/);
  await assert.rejects(migrate(owned.receipt,files.slice(0,1)),/LINEAGE_MISMATCH/);
- const fault={id:'0003_injected_fault',sha256:'f'.repeat(64),sql:'CREATE TABLE governance_catalog.fault_marker(id integer); SELECT 1/0;'};
+ const fault={id:String(files.length+1).padStart(4,'0')+'_injected_fault',sha256:'f'.repeat(64),sql:'CREATE TABLE governance_catalog.fault_marker(id integer); SELECT 1/0;'};
  await assert.rejects(migrate(owned.receipt,[...files,fault]));
  assert.equal(peer(owned.receipt.name,"SELECT to_regclass('governance_catalog.fault_marker') IS NULL;"),'t');
  assert.equal((await inspect(owned.receipt)).ledger.length,files.length);

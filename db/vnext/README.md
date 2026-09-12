@@ -1,5 +1,7 @@
 # HDIP-MC-VNEXT lineage
 
+PR #2 remediation appends `0003_catalog_published_authority_and_identity_replay.sql`. The current lineage has three migrations and ten tables: the extra append-only request-identity index preserves legacy outcome rows while enabling alias-independent replay. Earlier two-migration/nine-table evidence below describes the initial P0-01 delivery. Current lifecycle limits and future ownership are explicit in `docs/vnext/catalog-lifecycle-disposition.md`.
+
 P0-00 selected this independent native SQL lineage and created an empty development database. P0-01 now supplies `migrations/0001_control_plane_bootstrap.sql` and `0002_governance_catalog.sql`: nine control-plane/catalog tables and no ORG/PER business instances. The retained `db/migrations` chain is not installed here. The legacy migration runner rejects `hdi_mc_vnext_` database names before connecting.
 
 Create and inspect the empty local development database using `npm run prototype:db:with -- vnext:db:create` and `npm run prototype:db:with -- vnext:db:verify`. The exact name/OID/owner/request/time is in ignored `.runtime/vnext/creation.json`; pre-create intent is saved separately. Existing intent or receipt blocks another creation. A failed or ambiguous create requires inspection, never automatic adoption or deletion.

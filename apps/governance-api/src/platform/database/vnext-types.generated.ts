@@ -97,6 +97,12 @@ export interface VnextControlOutcome {
   result: Json;
 }
 
+export interface VnextControlRequestIdentity {
+  identity_code: string;
+  original_actor_code: string;
+  request_id: string;
+}
+
 export interface DB {
   "governance_catalog.event": GovernanceCatalogEvent;
   "governance_catalog.object": GovernanceCatalogObject;
@@ -107,4 +113,5 @@ export interface DB {
   "vnext_control.audit": VnextControlAudit;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.outcome": VnextControlOutcome;
+  "vnext_control.request_identity": VnextControlRequestIdentity;
 }
