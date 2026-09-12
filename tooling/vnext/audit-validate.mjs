@@ -21,7 +21,7 @@ try{
  await migrate(owned.receipt);
  assert.equal(peer(owned.receipt.name,'SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM vnext_control.audit a;'),original);
  catalog=await openCatalog(resolveTarget(owned.receipt));
- const baseline=await catalog.verifyAudit('auditor');assert.equal(baseline.legacyCount,'1');assert.equal(baseline.eventCount,'0');
+ const baseline=await catalog.verifyAudit('auditor');assert.equal(baseline.legacyCount,'55');assert.equal(baseline.eventCount,'0');
  await assert.rejects(catalog.verifyAudit('maker'),/ACCESS_DENIED/);
  await assert.rejects(catalog.command('auditor',command('ORG02')),/ACCESS_DENIED/);
  const requests=['ORG02','ORG03','ORG04'].map(command);

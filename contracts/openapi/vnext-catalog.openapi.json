@@ -1420,18 +1420,6 @@
                             "type": "string",
                             "maxLength": 2000
                           },
-                          "environment": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "sourceKind": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "deploymentScope": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
                           "vendor": {
                             "type": "string",
                             "maxLength": 2000
@@ -1448,6 +1436,52 @@
                             "type": "string",
                             "maxLength": 2000
                           },
+                          "interfaceContractRef": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "dataset": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "environment": {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          },
+                          "sourceKind": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MANUAL"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SOFTWARE"
+                                ]
+                              }
+                            ]
+                          },
+                          "deploymentScope": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "UNRESOLVED_DECLARATION"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_ALL"
+                                ]
+                              }
+                            ]
+                          },
                           "sourceEvidence": {
                             "anyOf": [
                               {
@@ -1462,29 +1496,93 @@
                               }
                             ]
                           },
-                          "interfaceContractRef": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "dataset": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
                           "authorityScope": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ALL"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "NORTH"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SOUTH"
+                                ]
+                              }
+                            ]
                           },
                           "fieldGroup": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ALL"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "IDENTITY"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "CONTACT"
+                                ]
+                              }
+                            ]
                           },
                           "role": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "OWNER"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "STEWARD"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "COLLABORATOR"
+                                ]
+                              }
+                            ]
                           },
                           "assigneeRole": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_OWNER_A"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_OWNER_B"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_STEWARD"
+                                ]
+                              }
+                            ]
                           }
                         },
                         "additionalProperties": false
@@ -1569,18 +1667,6 @@
                             "type": "string",
                             "maxLength": 2000
                           },
-                          "environment": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "sourceKind": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "deploymentScope": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
                           "vendor": {
                             "type": "string",
                             "maxLength": 2000
@@ -1597,6 +1683,52 @@
                             "type": "string",
                             "maxLength": 2000
                           },
+                          "interfaceContractRef": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "dataset": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "environment": {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          },
+                          "sourceKind": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MANUAL"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SOFTWARE"
+                                ]
+                              }
+                            ]
+                          },
+                          "deploymentScope": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "UNRESOLVED_DECLARATION"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_ALL"
+                                ]
+                              }
+                            ]
+                          },
                           "sourceEvidence": {
                             "anyOf": [
                               {
@@ -1611,29 +1743,93 @@
                               }
                             ]
                           },
-                          "interfaceContractRef": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
-                          "dataset": {
-                            "type": "string",
-                            "maxLength": 2000
-                          },
                           "authorityScope": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ALL"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "NORTH"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SOUTH"
+                                ]
+                              }
+                            ]
                           },
                           "fieldGroup": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ALL"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "IDENTITY"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "CONTACT"
+                                ]
+                              }
+                            ]
                           },
                           "role": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "OWNER"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "STEWARD"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "COLLABORATOR"
+                                ]
+                              }
+                            ]
                           },
                           "assigneeRole": {
-                            "type": "string",
-                            "maxLength": 2000
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_OWNER_A"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_OWNER_B"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "SYNTHETIC_STEWARD"
+                                ]
+                              }
+                            ]
                           }
                         },
                         "additionalProperties": false
@@ -1755,19 +1951,9 @@
                         "pattern": "^[A-Z0-9_]{1,64}$"
                       },
                       "action": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "PUBLISH"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "RETIRE"
-                            ]
-                          }
+                        "type": "string",
+                        "enum": [
+                          "PUBLISH"
                         ]
                       },
                       "target": {
@@ -1779,6 +1965,68 @@
                         "pattern": "^[0-9]+$"
                       },
                       "reviewDigest": {
+                        "type": "string"
+                      },
+                      "impactDigest": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "scope",
+                      "requestId",
+                      "reason",
+                      "action",
+                      "target",
+                      "expectedHead",
+                      "reviewDigest"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "BASELINE"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "SYNTHETIC"
+                            ]
+                          }
+                        ]
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "pattern": "^[A-Z0-9_]{1,64}$"
+                      },
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "RETIRE"
+                        ]
+                      },
+                      "target": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "expectedHead": {
+                        "type": "string",
+                        "pattern": "^[0-9]+$"
+                      },
+                      "reviewDigest": {
+                        "type": "string"
+                      },
+                      "impactDigest": {
                         "type": "string"
                       }
                     },
@@ -2364,6 +2612,389 @@
                   "type": "object",
                   "additionalProperties": {
                     "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vnext/sources/{id}/change-impact": {
+      "get": {
+        "operationId": "sourceChangeImpact",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BASELINE"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "SYNTHETIC"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "scope",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "impactDigest",
+                    "effectiveMode",
+                    "current",
+                    "history"
+                  ],
+                  "properties": {
+                    "impactDigest": {
+                      "type": "string"
+                    },
+                    "effectiveMode": {
+                      "type": "string",
+                      "enum": [
+                        "ON_COMMIT"
+                      ]
+                    },
+                    "current": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "field": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vnext/sources/{id}/impact-cases": {
+      "get": {
+        "operationId": "sourceImpactCases",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "BASELINE"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "SYNTHETIC"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "scope",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {}
                   }
                 }
               }

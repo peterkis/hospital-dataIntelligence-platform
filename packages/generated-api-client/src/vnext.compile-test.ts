@@ -16,3 +16,6 @@ void extraLifecycle;
 // @ts-expect-error Retirement requires an exact reviewed digest.
 const unreviewedRetirement:VNextCommand={action:'RETIRE',scope:'SYNTHETIC',requestId:'test',reason:'TEST',target:'test',expectedHead:'1'};
 void unreviewedRetirement;
+// @ts-expect-error Controlled governance roles are a finite vocabulary.
+const invalidRole:VNextCommand={...valid,values:{role:'TYPO'}};
+void invalidRole;

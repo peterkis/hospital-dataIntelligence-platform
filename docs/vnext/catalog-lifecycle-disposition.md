@@ -19,3 +19,5 @@ PR #2 的审查补充。本文件明确当前能力及尚未实施的承接要�
 维护 `GET /api/vnext/catalog` 和详情/history 返回 head/历史认知，包含未批准候选，不是有效权威读取。`GET /api/vnext/catalog/effective?scope=SYNTHETIC&businessAt=<本地B>&asOf=<可选R>` 单独读取有效元数据：先选 R 截止前按 head 排序的最新 PUBLISHED/RETIRED 事件，再验证其版本覆盖半开 B。DRAFT/REVIEW 不替换已接受版本；RETIRED、未来或已过期的最新接受版本被排除，不回退捞取旧版本。DATASET、RESPONSIBILITY 和 SOURCE 使用相同规则；SOURCE 的受信引用仍须额外通过递归来源资格 port，元数据有效不代表真实接入已批准。R 只筛选知识范围，授权始终用当前身份。
 
 废止页面先载入并展示被结束的已发布版本完整内容、期间和摘要，再允许独立复核者提交。存在候选时，废止摘要绑定已发布版本，expectedHead 仍绑定当前候选 head。新命令按动作封闭字段：CREATE/REVISE 携带版本内容/B，SUBMIT/REJECT 仅目标/head，PUBLISH/RETIRE 另带复核摘要；不适用字段不能被静默忽略。
+
+0006 要求 SOURCE RETIRE 另带当前引用影响摘要，SOURCE 重发且存在当前引用时也必须核对影响；其他目录类型不接受该字段。来源变化引起的问题通过独立复核的下游合格重发或废止关闭，保留原引用、问题事件和精确 resolution_event。见 [导入审计与来源影响问题](catalog-import-and-impact.md)。

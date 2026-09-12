@@ -10,20 +10,28 @@ import { runtime } from './catalog-runtime.mjs';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.ts';
 
 const owned=process.argv.includes('--fresh')?createTemporary():null;
-if(process.argv.includes('--race')&&!owned)throw new Error('RACE_REQUIRES_OWNED_FRESH');
+if((process.argv.includes('--race')||process.argv.includes('--impact'))&&!owned)throw new Error('RACE_REQUIRES_OWNED_FRESH');
 let catalog;let app;
 try{
  if(owned){await migrate(owned.receipt);await seed(owned.receipt);}
  catalog=await runtime(owned?.receiptPath);
  app=await buildCatalogServer(catalog);
  let race;
- if(process.argv.includes('--race')){
+ if(process.argv.includes('--race')||process.argv.includes('--impact')){
   const ids=[];
   for(const code of ['ORG01','ORG02'])ids.push((await catalog.command('maker',{action:'CREATE',scope:'SYNTHETIC',kind:'DATASET',code,requestId:randomUUID(),reason:'BROWSER_RACE',values:{name:'合成选择 '+code},validFrom:'2026-01-01T00:00:00'})).id);
   let source=await catalog.command('maker',{action:'CREATE',scope:'SYNTHETIC',kind:'SOURCE',code:'RACE_SOURCE',requestId:randomUUID(),reason:'BROWSER_RACE',values:{name:'合成资格延迟验证',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'SYNTHETIC_BOOTSTRAP'},validFrom:'2026-01-01T00:00:00'});
   source=await catalog.command('maker',{action:'SUBMIT',scope:'SYNTHETIC',target:source.id,expectedHead:source.head,requestId:randomUUID(),reason:'BROWSER_RACE'});
   source=await catalog.command('reviewer',{action:'PUBLISH',scope:'SYNTHETIC',target:source.id,expectedHead:source.head,reviewDigest:source.reviewDigest,requestId:randomUUID(),reason:'BROWSER_RACE'});
   race={slowId:ids[0],fastId:ids[1],sourceId:source.id,releaseFile:resolve(root,'.runtime/vnext/race-release-'+process.pid),startedFile:resolve(root,'.runtime/vnext/race-started-'+process.pid),completedFile:resolve(root,'.runtime/vnext/race-completed-'+process.pid),qualificationRelease:resolve(root,'.runtime/vnext/qualification-release-'+process.pid),qualificationStarted:resolve(root,'.runtime/vnext/qualification-started-'+process.pid),qualificationCompleted:resolve(root,'.runtime/vnext/qualification-completed-'+process.pid)};
+  if(process.argv.includes('--impact')){
+   let child=await catalog.command('maker',{action:'CREATE',scope:'SYNTHETIC',kind:'SOURCE',code:'IMPACT_CHILD',requestId:randomUUID(),reason:'BROWSER_IMPACT',values:{name:'合成影响下游',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:source.id.toUpperCase()},validFrom:'2026-01-01T00:00:00'});
+   child=await catalog.command('maker',{action:'SUBMIT',scope:'SYNTHETIC',target:child.id,expectedHead:child.head,requestId:randomUUID(),reason:'BROWSER_IMPACT'});
+   child=await catalog.command('reviewer',{action:'PUBLISH',scope:'SYNTHETIC',target:child.id,expectedHead:child.head,reviewDigest:child.reviewDigest,requestId:randomUUID(),reason:'BROWSER_IMPACT'});
+   race.impactChildId=child.id;
+   await catalog.command('maker',{action:'CREATE',scope:'SYNTHETIC',kind:'RESPONSIBILITY',code:'FILTER_OWNER',requestId:randomUUID(),reason:'BROWSER_IMPACT',values:{dataset:'ORG07',authorityScope:'ALL',fieldGroup:'ALL',role:'OWNER',assigneeRole:'SYNTHETIC_OWNER_A'},validFrom:'2026-01-01T00:00:00'});
+   writeFileSync(race.releaseFile,'NO_DELAY');writeFileSync(race.qualificationRelease,'NO_DELAY');
+  }
   app.addHook('preHandler',async request=>{
    if(request.method==='GET'&&request.url.includes('/api/vnext/catalog/'+race.slowId)){
     writeFileSync(race.startedFile,'SLOW_DETAIL_REQUESTED');

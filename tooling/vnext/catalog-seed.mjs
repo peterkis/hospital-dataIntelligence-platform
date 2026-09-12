@@ -23,7 +23,9 @@ DO ${seedTag} DECLARE snapshot_id uuid; d jsonb; o uuid; v uuid; BEGIN
  INSERT INTO governance_catalog.object(kind,scope,code) VALUES ('DATASET','BASELINE',d->>'code') RETURNING id INTO o;
  INSERT INTO governance_catalog.version(object_id,number,payload,maker_identity,valid_from) VALUES (o,1,d,'SOURCE_PROPOSAL',timestamp '2026-01-01') RETURNING id INTO v;
  INSERT INTO governance_catalog.event(object_id,version_id,status,actor_code,reason) VALUES(o,v,'DRAFT','SOURCE_PROPOSAL','SOURCE_METADATA_ONLY');
+ INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES('SOURCE_PROPOSAL',o,'BASELINE_IMPORT','SOURCE_METADATA_ONLY',encode(sha256(convert_to(jsonb_build_object('code',d->>'code','versionId',v,'payload',d,'validFrom',timestamp '2026-01-01','sourceDigest',${quote(hash)})::text,'UTF8')),'hex'));
  END LOOP;
+ INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES('SOURCE_PROPOSAL',snapshot_id,'BASELINE_IMPORT_BATCH','SOURCE_METADATA_ONLY',encode(sha256(convert_to(jsonb_build_object('sourceDigest',${quote(hash)},'datasets',53,'manifestFiles',116)::text,'UTF8')),'hex'));
 END ${seedTag}; COMMIT;`;
   peer(receipt.name, sql);
   console.log(JSON.stringify({status:'PASS', seed:'PACKAGE_V2', sha256:hash, datasets:53, fields:866, sourceApproval:'待院方确认', businessInstances:0}));

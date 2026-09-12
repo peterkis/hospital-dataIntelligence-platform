@@ -100,6 +100,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/sources/{id}/change-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sourceChangeImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/sources/{id}/impact-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sourceImpactCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -562,20 +594,21 @@ export interface operations {
                     values: {
                         name?: string;
                         explanation?: string;
-                        environment?: string;
-                        sourceKind?: string;
-                        deploymentScope?: string;
                         vendor?: string;
                         systemVersion?: string;
                         businessOwnerRole?: string;
                         technicalRole?: string;
-                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
                         interfaceContractRef?: string;
                         dataset?: string;
-                        authorityScope?: string;
-                        fieldGroup?: string;
-                        role?: string;
-                        assigneeRole?: string;
+                        /** @enum {string} */
+                        environment?: "SYNTHETIC";
+                        sourceKind?: "MANUAL" | "SOFTWARE";
+                        deploymentScope?: "UNRESOLVED_DECLARATION" | "SYNTHETIC_ALL";
+                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
+                        authorityScope?: "ALL" | "NORTH" | "SOUTH";
+                        fieldGroup?: "ALL" | "IDENTITY" | "CONTACT";
+                        role?: "OWNER" | "STEWARD" | "COLLABORATOR";
+                        assigneeRole?: "SYNTHETIC_OWNER_A" | "SYNTHETIC_OWNER_B" | "SYNTHETIC_STEWARD";
                     };
                     validFrom: string;
                     validTo?: string | null;
@@ -592,20 +625,21 @@ export interface operations {
                     values: {
                         name?: string;
                         explanation?: string;
-                        environment?: string;
-                        sourceKind?: string;
-                        deploymentScope?: string;
                         vendor?: string;
                         systemVersion?: string;
                         businessOwnerRole?: string;
                         technicalRole?: string;
-                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
                         interfaceContractRef?: string;
                         dataset?: string;
-                        authorityScope?: string;
-                        fieldGroup?: string;
-                        role?: string;
-                        assigneeRole?: string;
+                        /** @enum {string} */
+                        environment?: "SYNTHETIC";
+                        sourceKind?: "MANUAL" | "SOFTWARE";
+                        deploymentScope?: "UNRESOLVED_DECLARATION" | "SYNTHETIC_ALL";
+                        sourceEvidence?: "SYNTHETIC_BOOTSTRAP" | string;
+                        authorityScope?: "ALL" | "NORTH" | "SOUTH";
+                        fieldGroup?: "ALL" | "IDENTITY" | "CONTACT";
+                        role?: "OWNER" | "STEWARD" | "COLLABORATOR";
+                        assigneeRole?: "SYNTHETIC_OWNER_A" | "SYNTHETIC_OWNER_B" | "SYNTHETIC_STEWARD";
                     };
                     validFrom: string;
                     validTo?: string | null;
@@ -623,11 +657,25 @@ export interface operations {
                     /** Format: uuid */
                     requestId: string;
                     reason: string;
-                    action: "PUBLISH" | "RETIRE";
+                    /** @enum {string} */
+                    action: "PUBLISH";
                     /** Format: uuid */
                     target: string;
                     expectedHead: string;
                     reviewDigest: string;
+                    impactDigest?: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    action: "RETIRE";
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    reviewDigest: string;
+                    impactDigest?: string;
                 };
             };
         };
@@ -869,6 +917,196 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    sourceChangeImpact: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        impactDigest: string;
+                        /** @enum {string} */
+                        effectiveMode: "ON_COMMIT";
+                        current: {
+                            [key: string]: unknown;
+                        }[];
+                        history: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    sourceImpactCases: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Default Response */

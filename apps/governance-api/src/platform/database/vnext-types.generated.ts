@@ -33,6 +33,20 @@ export interface GovernanceCatalogEvent {
   version_id: string;
 }
 
+export interface GovernanceCatalogImpactEvent {
+  actor_code: string;
+  case_id: string;
+  downstream_object: string;
+  downstream_version: string;
+  event_sequence: Int8;
+  reason: string;
+  recorded_at: Generated<string>;
+  resolution_event: Int8 | null;
+  status: string;
+  upstream_event: Int8;
+  upstream_object: string;
+}
+
 export interface GovernanceCatalogObject {
   code: string;
   id: Generated<string>;
@@ -115,6 +129,7 @@ export interface VnextControlRequestIdentity {
 
 export interface DB {
   "governance_catalog.event": GovernanceCatalogEvent;
+  "governance_catalog.impact_event": GovernanceCatalogImpactEvent;
   "governance_catalog.object": GovernanceCatalogObject;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.version": GovernanceCatalogVersion;

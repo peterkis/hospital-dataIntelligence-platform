@@ -198,7 +198,12 @@
     "vnext:catalog:audit:validate": "node --import tsx tooling/vnext/audit-validate.mjs",
     "vnext:catalog:audit:verify": "node --import tsx tooling/vnext/audit-verify.mjs",
     "vnext:catalog:boundaries": "node --import tsx tooling/vnext/governance-boundaries.mjs",
-    "vnext:catalog:serve:race": "node --import tsx tooling/vnext/serve.mjs --fresh --race"
+    "vnext:catalog:serve:race": "node --import tsx tooling/vnext/serve.mjs --fresh --race",
+    "vnext:catalog:import:impact": "node --import tsx tooling/vnext/import-impact.mjs",
+    "vnext:catalog:serve:impact": "node --import tsx tooling/vnext/serve.mjs --fresh --impact",
+    "vnext:catalog:import:upgrade": "node tooling/vnext/import-upgrade.mjs",
+    "vnext:catalog:impact:upgrade": "node --import tsx tooling/vnext/impact-upgrade.mjs",
+    "vnext:catalog:reference:logs": "node tooling/vnext/reference-log-validate.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

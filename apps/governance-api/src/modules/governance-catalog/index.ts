@@ -7,14 +7,14 @@ export interface CatalogPayload {
   fields?: CatalogField[]; adopted?: { name: string; explanation: string }; original?: Record<string,string>;
   domain?: string; dependencies?: Array<Record<string,unknown>>; model?: Record<string,unknown>;
   name?: string; readiness?: string; adapter?: string; dataset?: string; authorityScope?: string; fieldGroup?: string; role?: string; assigneeRole?: string;
-  environment?: string; sourceKind?: string; deploymentScope?: string; sourceEvidence?: string;
+  environment?: string; sourceKind?: string; deploymentScope?: string; sourceEvidence?: string; businessOwnerRole?:string;
 }
 export interface CatalogItem { id:string; kind:'DATASET'|'SOURCE'|'RESPONSIBILITY'; code:string; scope:'BASELINE'|'SYNTHETIC'; version:number; versionId:string; head:string; status:'DRAFT'|'REVIEW'|'PUBLISHED'|'RETIRED'; payload:CatalogPayload; validFrom:string; validTo:string|null; recordedAt:string }
 export interface CatalogResult { items:CatalogItem[]; domains:Array<{code:string;name:string;datasets:string[]}> }
 export interface Command {
   action:'CREATE'|'REVISE'|'SUBMIT'|'PUBLISH'|'REJECT'|'RETIRE'; scope:'BASELINE'|'SYNTHETIC'; requestId:string; reason:string;
   target?:string; expectedHead?:string; kind?:'DATASET'|'SOURCE'|'RESPONSIBILITY'; code?:string;
-  values?:Record<string,string>; validFrom?:string; validTo?:string|null; reviewDigest?:string;
+  impactDigest?:string; values?:Record<string,string>; validFrom?:string; validTo?:string|null; reviewDigest?:string;
 }
 export interface Outcome { id:string; head:string; version:number; versionId:string; status:CatalogItem['status']; reviewDigest:string; recordedAt:string }
 export interface HistoryRow { head:string; status:CatalogItem['status']; version:number; payload:CatalogPayload; validFrom:string; validTo:string|null; recordedAt:string }
@@ -26,6 +26,12 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     async read(actor:string, query:{scope:'BASELINE'|'SYNTHETIC';asOf?:string}):Promise<CatalogResult> {
       const response=await sql<{result:CatalogResult}>`select governance_catalog.read_catalog(${actor},${query.scope},${query.asOf??null}) as result`.execute(db);
       return response.rows[0]!.result;
+    },
+    async sourceImpact(actor:string,scope:string,id:string):Promise<{impactDigest:string;effectiveMode:string;current:Array<Record<string,unknown>>;history:Array<Record<string,unknown>>}> {
+      return (await sql<{result:{impactDigest:string;effectiveMode:string;current:Array<Record<string,unknown>>;history:Array<Record<string,unknown>>}}>`select governance_catalog.change_impact(${actor},${scope},${id}::uuid) as result`.execute(db)).rows[0]!.result;
+    },
+    async impactCases(actor:string,scope:string,id:string):Promise<Array<Record<string,unknown>>> {
+      return (await sql<{result:Array<Record<string,unknown>>}>`select governance_catalog.impact_cases(${actor},${scope},${id}::uuid) as result`.execute(db)).rows[0]!.result;
     },
     async readEffective(actor:string,query:{scope:'BASELINE'|'SYNTHETIC';businessAt:string;asOf?:string}):Promise<CatalogResult> {
       return (await sql<{result:CatalogResult}>`select governance_catalog.read_effective(${actor},${query.scope},${query.businessAt},${query.asOf??null}) as result`.execute(db)).rows[0]!.result;
