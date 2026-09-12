@@ -23,6 +23,11 @@ try{
   let entry=await catalog.command('maker',command('CREATE',{kind:'RESPONSIBILITY',code:'HISTORY_ACCESS',values:{dataset:'ORG07',authorityScope:'ALL',fieldGroup:'ALL',role:'OWNER',assigneeRole:'SYNTHETIC_OWNER_A'},validFrom:'2026-01-01T00:00:00'}));
   peer(owned.receipt.name,`INSERT INTO vnext_control.object_grant VALUES('maker',${quote(entry.id)},'SYNTHETIC','RESPONSIBILITY','SYNTHETIC_NORTH','METADATA','ALL','WRITE'),('maker',${quote(entry.id)},'SYNTHETIC','RESPONSIBILITY','SYNTHETIC_NORTH','METADATA','ALL','READ'),('maker-alias',${quote(entry.id)},'SYNTHETIC','RESPONSIBILITY','SYNTHETIC_NORTH','METADATA','ALL','READ'); DELETE FROM vnext_control.object_grant WHERE actor_code='maker-alias' AND object_id=${quote(entry.id)} AND campus='SYNTHETIC_ALL';`);
   await catalog.command('maker',command('REVISE',{target:entry.id,expectedHead:entry.head,values:{authorityScope:'NORTH'},validFrom:'2026-07-01T00:00:00'}));
+  let source=await catalog.command('maker',command('CREATE',{kind:'SOURCE',code:'ACCEPTED_BROWSER_SOURCE',values:{name:'合成已发布来源',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'SYNTHETIC_BOOTSTRAP'},validFrom:'2026-01-01T00:00:00'}));
+  source=await catalog.command('maker',command('SUBMIT',{target:source.id,expectedHead:source.head}));
+  source=await catalog.command('reviewer',command('PUBLISH',{target:source.id,expectedHead:source.head,reviewDigest:source.reviewDigest}));
+  peer(owned.receipt.name,`INSERT INTO vnext_control.object_grant SELECT 'maker',${quote(source.id)},'SYNTHETIC','SOURCE','UNRESOLVED_DECLARATION','METADATA','DEFINITION',p FROM unnest(ARRAY['READ','WRITE']) p;`);
+  await catalog.command('maker',command('REVISE',{target:source.id,expectedHead:source.head,values:{deploymentScope:'UNRESOLVED_DECLARATION'},validFrom:'2026-01-01T00:00:00'}));
  }
  if(process.argv.includes('--race')||process.argv.includes('--impact')){
   const ids=[];

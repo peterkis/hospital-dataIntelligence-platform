@@ -205,6 +205,7 @@
     "vnext:catalog:impact:upgrade": "node --import tsx tooling/vnext/impact-upgrade.mjs",
     "vnext:catalog:reference:logs": "node tooling/vnext/reference-log-validate.mjs",
     "vnext:catalog:serve:access": "node --import tsx tooling/vnext/serve.mjs --fresh --access",
+    "vnext:catalog:accepted:access": "node --import tsx tooling/vnext/accepted-access.mjs",
     "vnext:catalog:object:access": "node --import tsx tooling/vnext/object-access.mjs"
   },
   "devDependencies": {

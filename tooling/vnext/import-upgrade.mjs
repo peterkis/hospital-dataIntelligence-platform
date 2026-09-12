@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { readReceipt,inspect,migrate,peer,quote,root } from './lineage.mjs';
 
 const receipt=readReceipt();const observation=await inspect(receipt);
-if(![5,6,7].includes(observation.ledger.length))throw new Error('IMPORT_UPGRADE_PREFIX_REQUIRED');
+if(![5,6,7,8].includes(observation.ledger.length))throw new Error('IMPORT_UPGRADE_PREFIX_REQUIRED');
 const evidence=resolve(root,'.runtime/vnext/pr-2/import-upgrade-before.json');
 const tables=['governance_catalog.source_snapshot','governance_catalog.object','governance_catalog.version','governance_catalog.event','vnext_control.outcome'];
 const hash=text=>createHash('sha256').update(text).digest('hex');
