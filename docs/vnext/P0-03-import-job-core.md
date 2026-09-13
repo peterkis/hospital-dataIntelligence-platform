@@ -1,5 +1,11 @@
 # P0-03 作业与静态适配器骨架
 
+## 后续授权与旧库退役（2026-09-13）
+
+用户在下述初始交付后确认删除精确旧库，并进一步授权提交、推送、创建 PR、请求 Codex review、修复审查问题直至通过、合并和快进本地 main。下文 local-only / PENDING_DISPOSAL 是初始交付时点记录，不再代表当前授权或物理库状态。
+
+旧 database `hdi_prototype`（OID 16389）于 2026-09-13 22:23:26 Asia/Shanghai 删除；24-legacy-delete.log 记录目标再次核对、零会话、删除 exit 0。25-post-delete-inventory.log 独立确认旧库不存在、当前库 OID 206108 不变；26-post-delete-authority.log 核实 21 项迁移、26 表和 authority 通过，托管 cleanupPassed=true。同名角色、PostgreSQL 服务及 WSL 均保留；本机默认连接引用改为当前库，共享凭据原样保留。23 日志记录直接调用 wrapper 被 NPM_ENTRYPOINT_REQUIRED 拒绝，未执行删除；随后通过 npm.cmd 正式入口完成。当前状态为 **LEGACY_DATABASE_DELETED**。P0-02 的 BROWSER_BLOCKED 与初始 RED 顺序限制继续保留。
+
 2026-09-13，执行 `HDIP-Codex-Multicampus-Development-Pack-v3/START-P0-03.prompt.md`，单票、本地提交、不 push。工程骨架及适用测试完成；旧库物理退役仍待精确对象确认，不能宣称只有一个物理数据库。P0-02 保持 **BROWSER_BLOCKED**，P0 保持 **IN_PROGRESS**。未重跑 P0-00/01/02 的建设工作。
 
 ## 设计与调用面
