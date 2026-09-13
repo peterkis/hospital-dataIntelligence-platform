@@ -1,5 +1,13 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
+import type { ImportJob, ImportJobOutcome } from './import-job.js';
+import {ImportJobCommandSchema,ImportJobReadSchema,ImportMetadataSchema} from './import-job.js';
+import {Check} from 'typebox/value';
+import {selectImportAdapter} from './import-adapter.js';
+export {ImportJobCommandSchema,ImportJobReadSchema} from './import-job.js';
+export type {ImportJobCommand,ImportJob,ImportJobOutcome} from './import-job.js';
+export {selectImportAdapter,assertJobLocalAlias,requireImportExecution} from './import-adapter.js';
+export type {ImportAdapterBoundary,JobRevisionContext,JobLocalAlias} from './import-adapter.js';
 import type { DB as VNextDB } from '../../platform/database/vnext-types.generated.js';
 import type { ImportContractItem, ImportContractOutcome } from './contract-schema.js';
 export { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,ContractTimeSchema,contractInputSchemas } from './contract-schema.js';
@@ -30,7 +38,22 @@ export interface SourceImpact {contractCurrent:Array<Record<string,unknown>>;con
 export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL']) {
   if (!connectionString) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
   const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,application_name:'hdi-vnext-catalog',options:'-c timezone=Asia/Shanghai'})})});
+  const readImportJob=async(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';jobId:string}):Promise<ImportJob>=>{
+    if(!Check(ImportJobReadSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');
+    return (await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
+  };
   return {
+    async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
+      if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');
+      if(!Check(ImportMetadataSchema,input['input']))throw new Error('CLOSED_METADATA_REQUIRED');
+      if(!Check(ImportJobCommandSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');
+      return (await sql<{result:ImportJobOutcome}>`select governance_catalog.import_job_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
+    },
+    importJobRead:readImportJob,
+    async importJobAdapter(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';jobId:string}) {
+      const job=await readImportJob(actor,input);
+      return selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version});
+    },
     async parameterCommand(actor:string,input:Record<string,unknown>):Promise<ParameterOutcome> {
       return (await sql<{result:ParameterOutcome}>`select governance_catalog.parameter_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
     },

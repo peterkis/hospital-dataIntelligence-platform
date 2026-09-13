@@ -218,7 +218,13 @@
     "vnext:catalog:assessment:upgrade": "node --import tsx tooling/vnext/assessment-upgrade.mjs",
     "vnext:catalog:object:access": "node --import tsx tooling/vnext/object-access.mjs",
     "vnext:catalog:impact:delta": "node --import tsx tooling/vnext/impact-delta.mjs",
-    "vnext:catalog:serve:delta": "node --import tsx tooling/vnext/serve.mjs --fresh --impact --delta"
+    "vnext:catalog:serve:delta": "node --import tsx tooling/vnext/serve.mjs --fresh --impact --delta",
+    "vnext:jobs:validate": "node --import tsx tooling/vnext/run-import-job-tests.mjs",
+    "vnext:legacy:retire": "node tooling/vnext/retire-legacy.mjs",
+    "vnext:jobs:fresh": "node --import tsx tooling/vnext/run-import-job-tests.mjs --fresh",
+    "vnext:jobs:upgrade": "node --import tsx tooling/vnext/run-import-job-tests.mjs --upgrade",
+    "vnext:p0-03:validate": "node --import tsx tooling/vnext/p0-03-validate.mjs",
+    "vnext:jobs:typecheck": "tsc -p tooling/vnext/tsconfig.import-job.json"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

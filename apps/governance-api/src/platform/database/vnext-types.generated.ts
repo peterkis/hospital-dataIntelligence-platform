@@ -95,6 +95,31 @@ export interface GovernanceCatalogImportContractVersion {
   valid_to: string | null;
 }
 
+export interface GovernanceCatalogImportInputRevision {
+  digest_status: Generated<string>;
+  id: Generated<string>;
+  job_id: string;
+  metadata: Json;
+  metadata_digest: string;
+  number: Int8;
+  previous_revision_id: string | null;
+  recorded_at: Generated<string>;
+  request_id: string;
+  request_identity: string;
+}
+
+export interface GovernanceCatalogImportJob {
+  contract_id: string;
+  contract_snapshot: Json;
+  contract_version_id: string;
+  current_revision_id: string;
+  id: Generated<string>;
+  profile: string;
+  scope: string;
+  status: Generated<string>;
+  submitter_identity: string;
+}
+
 export interface GovernanceCatalogObject {
   code: string;
   id: Generated<string>;
@@ -260,6 +285,8 @@ export interface DB {
   "governance_catalog.import_contract": GovernanceCatalogImportContract;
   "governance_catalog.import_contract_event": GovernanceCatalogImportContractEvent;
   "governance_catalog.import_contract_version": GovernanceCatalogImportContractVersion;
+  "governance_catalog.import_input_revision": GovernanceCatalogImportInputRevision;
+  "governance_catalog.import_job": GovernanceCatalogImportJob;
   "governance_catalog.object": GovernanceCatalogObject;
   "governance_catalog.parameter": GovernanceCatalogParameter;
   "governance_catalog.parameter_approval": GovernanceCatalogParameterApproval;
