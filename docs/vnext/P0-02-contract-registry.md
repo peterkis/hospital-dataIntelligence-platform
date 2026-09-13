@@ -6,6 +6,8 @@
 
 PR #3 首轮 Codex review 指出同一引用字段可绑定两个参数版本。新增前向迁移 0015 拒绝重复 reference field，并阻止既有歧义候选通过 VALIDATE/APPROVE/PUBLISH；不改已应用 0012–0014 或任何历史版本。69 日志为真实数据库 Missing expected rejection，70 为修复后 fresh 11→15 前缀/codegen 和五组契约测试通过（包括旧候选负例），71 为 typecheck。修复不改变表结构、OpenAPI 或维护页。
 
+第二轮指出指定 schema 下载不应被无关历史版本的权限阻断。0016 在数据库进入逐版本授权前按 contract ID/version ID 限定候选；schema 路由直接传递指定版本。74 实际复现可访问旧版本却返回 403，75 验证旧版 200、被撤权新版 403、契约/版本不匹配 404，并通过 11→16/codegen；76 typecheck 通过。原 HISTORY 仍保留完整历史授权，已有版本不改写。
+
 2026-09-13。当前不是完成报告；没有完成提交。执行规范为 `D:/Agent-Prompts/HDIP-MC-P0-02-single-active-db/P0-02-contract-registry.current-main.single-active-db.prompt.md`，原开发包继续作为来源资料。P0-03 未执行。
 
 ## 基线和数据库

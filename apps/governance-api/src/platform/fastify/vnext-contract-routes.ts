@@ -26,7 +26,7 @@ export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalo
   app.get<{Params:{id:string};Querystring:{scope:'BASELINE'|'SYNTHETIC'}}>('/api/vnext/contracts/:id/impact-cases',{schema:{operationId:'importContractImpactCases',params:Type.Object({id:Type.String({format:'uuid'})}),querystring:Type.Object({scope:ContractScopeSchema},{additionalProperties:false}),response:{200:Type.Array(Type.Record(Type.String(),Type.Unknown())),...errors}}},request=>owner().contractImpactCases(actor(request.headers),request.query.scope,request.params.id));
   const SchemaQuery=Type.Object({scope:ContractScopeSchema,versionId:Type.String({format:'uuid'})},{additionalProperties:false});
   app.get<{Params:{id:string};Querystring:Static<typeof SchemaQuery>}>('/api/vnext/contracts/:id/schema',{schema:{operationId:'getImportContractSchema',params:Type.Object({id:Type.String({format:'uuid'})}),querystring:SchemaQuery,response:{200:Type.Record(Type.String(),Type.Unknown()),...errors}}},async request=>{
-    const items=await owner().contractRead(actor(request.headers),{scope:request.query.scope,mode:'HISTORY',target:request.params.id});
+    const items=await owner().contractRead(actor(request.headers),{scope:request.query.scope,mode:'HISTORY',target:request.params.id,versionId:request.query.versionId});
     const item=items.find(item=>item.versionId===request.query.versionId);
     if(!item)throw new Error('NOT_FOUND');
     return contractInputSchemas(item);

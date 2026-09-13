@@ -43,7 +43,7 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     async contractImpactCases(actor:string,scope:string,id:string):Promise<Array<Record<string,unknown>>> {
       return (await sql<{result:Array<Record<string,unknown>>}>`select governance_catalog.contract_impact_cases(${actor},${scope},${id}::uuid) as result`.execute(db)).rows[0]!.result;
     },
-    async contractRead(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';mode:'CURRENT'|'HISTORY'|'EFFECTIVE';target?:string;asOf?:string;businessAt?:string}):Promise<ImportContractItem[]> {
+    async contractRead(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';mode:'CURRENT'|'HISTORY'|'EFFECTIVE';target?:string;versionId?:string;asOf?:string;businessAt?:string}):Promise<ImportContractItem[]> {
       return (await sql<{result:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
     },
     async contractCommand(actor:string,input:Record<string,unknown>):Promise<ImportContractOutcome> {

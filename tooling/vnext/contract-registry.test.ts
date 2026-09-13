@@ -91,6 +91,16 @@ test('GOV09 registers immutable parameter definitions under an actual source own
   assert.equal((await catalog.parameterRead('maker',{scope:'SYNTHETIC',target:draft.id,mode:'APPROVED'}))[0]?.versionId,approved.versionId,'an unapproved parameter candidate does not replace the accepted definition');
   const pinned=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT',target:contract.id}))[0]!;
   assert.equal(pinned.definition.references[0]?.['parameterVersionId'],approved.versionId);
+  const newerContract=await catalog.contractCommand('maker',cmd('REVISE',{target:contract.id,expectedHead:pinned.head,validFrom:contractInput['validFrom'],validTo:contractInput['validTo'],definition:{...(contractInput['definition'] as Record<string,unknown>),ruleVersion:'PARAMETER_REF_2',references:[otherReference]}}));
+  peer(testReceipt.name,`DELETE FROM governance_catalog.parameter_grant WHERE parameter_id=${quote(otherParameter.id)}::uuid AND actor_code='maker' AND permission='READ';`);
+  const schemaApi=await buildCatalogServer(catalog);
+  try{
+   const schemaResponse=await schemaApi.inject({method:'GET',url:`/api/vnext/contracts/${contract.id}/schema?scope=SYNTHETIC&versionId=${contract.versionId}`,headers:{'x-catalog-actor':'maker'}});
+   assert.equal(schemaResponse.statusCode,200,'an inaccessible newer parameter must not block an authorized exact-version schema');
+   assert.equal(schemaResponse.json().contractVersionId,contract.versionId);
+   assert.equal((await schemaApi.inject({method:'GET',url:`/api/vnext/contracts/${contract.id}/schema?scope=SYNTHETIC&versionId=${newerContract.versionId}`,headers:{'x-catalog-actor':'maker'}})).statusCode,403);
+   assert.equal((await schemaApi.inject({method:'GET',url:`/api/vnext/contracts/${randomUUID()}/schema?scope=SYNTHETIC&versionId=${contract.versionId}`,headers:{'x-catalog-actor':'maker'}})).statusCode,404,'version must belong to the requested contract');
+  }finally{await schemaApi.close();}
   peer(testReceipt.name,`DELETE FROM governance_catalog.parameter_grant WHERE parameter_id=${quote(draft.id)}::uuid AND actor_code='maker' AND permission='READ';`);
   await assert.rejects(catalog.contractCommand('maker',contractInput),/ACCESS_DENIED/,'source ownership alone does not bypass an exact parameter read revocation');
  }finally{await catalog.close();}
