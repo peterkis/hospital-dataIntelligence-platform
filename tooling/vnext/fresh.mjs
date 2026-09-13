@@ -6,10 +6,11 @@ import { saveExclusiveReceipt, localReceiptTime } from './receipt.mjs';
 import { peer, quote, root, identitySQL, migrate, migrationFiles, inspect,resolveTarget } from './lineage.mjs';
 import { seed } from './catalog-seed.mjs';
 
-export function createTemporary() {
+export function createTemporary(taskId='P0-01') {
+  if(!['P0-01','P0-02'].includes(taskId))throw new Error('TEMPORARY_TASK_INVALID');
   const name = 'hdi_mc_vnext_' + randomUUID().replaceAll('-', '').slice(0, 16);
   const receiptPath = resolve(root, '.runtime/vnext/fresh', name + '.json');
-  const intent = { taskId:'P0-01', purpose:'TEMPORARY_VALIDATION', lineage:'HDIP-MC-VNEXT', name, owner:'hdi_prototype', distro:'Anolis-8.9-HDI-POC', port:55434, requestId:randomUUID(), recordedAt:localReceiptTime() };
+  const intent = { taskId, purpose:'TEMPORARY_VALIDATION', lineage:'HDIP-MC-VNEXT', name, owner:'hdi_prototype', distro:'Anolis-8.9-HDI-POC', port:55434, requestId:randomUUID(), recordedAt:localReceiptTime() };
   saveExclusiveReceipt(receiptPath + '.intent', intent);
   peer('postgres', `CREATE DATABASE ${name} OWNER hdi_prototype TEMPLATE template0;`);
   const oid = peer('postgres', `SELECT oid::text FROM pg_database WHERE datname=${quote(name)} AND pg_get_userbyid(datdba)='hdi_prototype';`);
@@ -19,7 +20,7 @@ export function createTemporary() {
 }
 export function dropTemporary(receipt) {
   resolveTarget(receipt);
-  if (receipt.taskId!=='P0-01' || receipt.purpose!=='TEMPORARY_VALIDATION' || !/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name)) throw new Error('DISPOSAL_NOT_AUTHORIZED');
+  if (!['P0-01','P0-02'].includes(receipt.taskId) || receipt.purpose!=='TEMPORARY_VALIDATION' || !/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name)) throw new Error('DISPOSAL_NOT_AUTHORIZED');
   const path=resolve(root,'.runtime/vnext/fresh',receipt.name+'.json');
   const persisted=JSON.parse(readFileSync(path,'utf8'));
   const intent=JSON.parse(readFileSync(path+'.intent','utf8'));

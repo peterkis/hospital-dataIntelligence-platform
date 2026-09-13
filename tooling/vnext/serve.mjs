@@ -75,6 +75,8 @@ try{
  }
  await app.register(staticPlugin,{root:resolve(root,'apps/admin-web/dist-vnext'),prefix:'/admin/vnext/'});
  app.get('/admin/vnext/catalog',(_request,reply)=>reply.sendFile('vnext.html'));
+ app.get('/admin/vnext/contracts',(_request,reply)=>reply.sendFile('vnext.html'));
+ app.get('/admin/vnext/parameter-definitions',(_request,reply)=>reply.sendFile('vnext.html'));
  await app.listen({host:'127.0.0.1',port:4317});
  const stopFile=resolve(root,'.runtime/vnext/stop-'+process.pid);
  writeFileSync(resolve(root,'.runtime/vnext/server.json'),JSON.stringify({pid:process.pid,url:'http://127.0.0.1:4317/admin/vnext/catalog',stopFile,receipt:owned?.receiptPath??'.runtime/vnext/creation.json',race}));

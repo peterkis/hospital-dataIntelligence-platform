@@ -8,7 +8,7 @@ test('PF03/PF04: receipt is mandatory; endpoint overrides never select a target'
   const env = { DATABASE_URL: 'postgresql://hdi_prototype@127.0.0.1:55434/hdi_prototype' };
   assert.throws(() => resolveTarget(null, env), /RECEIPT_REQUIRED/);
   assert.throws(() => resolveTarget({ ...receipt, name: 'hdi_prototype' }, env), /RECEIPT_INVALID/);
-  for (const override of [{ PGDATABASE: 'other' }, { PGSERVICE: 'other' }, { DATABASE_URL: env.DATABASE_URL + '?host=example.invalid' }]) {
+  for (const override of [{ PGDATABASE: 'other' }, { pgdatabase:'other' }, { PGSSLMODE:'disable' }, { PGPASSWORD:'SYNTHETIC_ONLY' }, { PGSERVICE: 'other' }, { DATABASE_URL: env.DATABASE_URL + '?host=example.invalid' }]) {
     assert.throws(() => resolveTarget(receipt, { ...env, ...override }), /OVERRIDE_FORBIDDEN/);
   }
   const target = resolveTarget(receipt, env);

@@ -1,6 +1,10 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
 import type { DB as VNextDB } from '../../platform/database/vnext-types.generated.js';
+import type { ImportContractItem, ImportContractOutcome } from './contract-schema.js';
+export { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,ContractTimeSchema,contractInputSchemas } from './contract-schema.js';
+import type {ParameterItem,ParameterOutcome} from './parameter-schema.js';
+export {ParameterCommandSchema,ParameterItemSchema,ParameterOutcomeSchema} from './parameter-schema.js';
 
 export interface CatalogField { original: { code: string; label: string; type: string; required: string; ref: string; definition: string; privacy: string; conditional_requirement: string; source_trace: string; max_length_or_format: string }; pointer: string; routing: Record<string,string> }
 export interface CatalogPayload {
@@ -21,10 +25,32 @@ export interface HistoryRow { head:string; status:CatalogItem['status']; version
 
 export interface SourceImpact {impactDigest:string;effectiveMode:'ON_COMMIT';target:string;head:string;action:'PUBLISH'|'RETIRE';asOf:string;catalogHead:string;candidateVersionId:string;definitionVersionId:string|null;definitionDigest:string|null;targetDefinitions:Array<Record<string,unknown>>;current:Array<Record<string,unknown>>;history:Array<Record<string,unknown>>;opening:Array<Record<string,unknown>>;closing:Array<Record<string,unknown>>}
 
+export interface SourceImpact {contractCurrent:Array<Record<string,unknown>>;contractHistory:Array<Record<string,unknown>>;contractOpening:Array<Record<string,unknown>>;contractClosing:Array<Record<string,unknown>>;contractHead:string}
+
 export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL']) {
   if (!connectionString) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
   const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,application_name:'hdi-vnext-catalog',options:'-c timezone=Asia/Shanghai'})})});
   return {
+    async parameterCommand(actor:string,input:Record<string,unknown>):Promise<ParameterOutcome> {
+      return (await sql<{result:ParameterOutcome}>`select governance_catalog.parameter_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
+    },
+    async parameterRead(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';target?:string;versionId?:string;asOf?:string;mode?:'CURRENT'|'APPROVED'}):Promise<ParameterItem[]> {
+      return (await sql<{result:ParameterItem[]}>`select governance_catalog.parameter_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
+    },
+    async contractImpact(actor:string,scope:string,id:string,action:'PUBLISH'|'RETIRE'):Promise<{impactDigest:string;closing:Array<Record<string,unknown>>;contractVersionId:string;contractId:string;action:string}> {
+      return (await sql<{result:{impactDigest:string;closing:Array<Record<string,unknown>>;contractVersionId:string;contractId:string;action:string}}>`select governance_catalog.contract_change_impact(${actor},${scope},${id}::uuid,${action}) as result`.execute(db)).rows[0]!.result;
+    },
+    async contractImpactCases(actor:string,scope:string,id:string):Promise<Array<Record<string,unknown>>> {
+      return (await sql<{result:Array<Record<string,unknown>>}>`select governance_catalog.contract_impact_cases(${actor},${scope},${id}::uuid) as result`.execute(db)).rows[0]!.result;
+    },
+    async contractRead(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';mode:'CURRENT'|'HISTORY'|'EFFECTIVE';target?:string;versionId?:string;asOf?:string;businessAt?:string}):Promise<ImportContractItem[]> {
+      return (await sql<{result:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
+    },
+    async contractCommand(actor:string,input:Record<string,unknown>):Promise<ImportContractOutcome> {
+      const allowed=['action','scope','requestId','reason','datasetVersionId','profile','definition','validFrom','validTo','target','expectedHead','reviewDigest','impactDigest'];
+      if(Object.keys(input).some(key=>!allowed.includes(key)))throw new Error('CLOSED_INPUT_REQUIRED');
+      return (await sql<{result:ImportContractOutcome}>`select governance_catalog.contract_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
+    },
     async read(actor:string, query:{scope:'BASELINE'|'SYNTHETIC';asOf?:string}):Promise<CatalogResult> {
       const response=await sql<{result:CatalogResult}>`select governance_catalog.read_catalog(${actor},${query.scope},${query.asOf??null}) as result`.execute(db);
       return response.rows[0]!.result;

@@ -1,0 +1,365 @@
+{
+  "contractId": "ORG25-FULL",
+  "contractVersion": "DRAFT-1",
+  "status": "DRAFT_NOT_APPROVED",
+  "datasetId": "ORG25",
+  "sourceModel": {
+    "id": "ORG25",
+    "name": "床位口径快照",
+    "kind": "业务快照",
+    "priority": "P1",
+    "owner": "运营部",
+    "view": "统计运营",
+    "grain": "一行一个统计对象在某日的某种床位口径值；非稳定科室属性",
+    "trigger": "上线报表依赖时升P0",
+    "sources": "科室原模板OPEN_BEDS",
+    "fields": [
+      {
+        "code": "bed_snapshot_id",
+        "label": "床位快照ID",
+        "type": "id",
+        "required": "R",
+        "ref": "",
+        "definition": "床位口径快照的永久稳定记录/对象标识；不可由名称、工号或院区拼接决定，不复用停用标识。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "target_type",
+        "label": "统计对象类型",
+        "type": "code",
+        "required": "R",
+        "ref": "enum:target_type",
+        "definition": "统计对象类型；取值见建议码表target_type，采用前需院方确认；不可用显示名称替代代码。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "target_id",
+        "label": "统计对象ID",
+        "type": "id",
+        "required": "R",
+        "ref": "poly:org_target",
+        "definition": "床位口径快照记录的统计对象ID；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "as_of_date",
+        "label": "统计日期",
+        "type": "date",
+        "required": "R",
+        "ref": "",
+        "definition": "床位口径快照记录的统计日期；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "YYYY-MM-DD",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "bed_count_type",
+        "label": "床位口径",
+        "type": "text",
+        "required": "R",
+        "ref": "",
+        "definition": "编制床、开放床、实际可用床、占用床分别填",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "256",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "bed_count",
+        "label": "床位数",
+        "type": "integer",
+        "required": "R",
+        "ref": "",
+        "definition": "床位口径快照记录的床位数；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "32位整数",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室信息表-标准定义模板V1.01.xlsx#科室信息表!A16:OPEN_BEDS"
+      },
+      {
+        "code": "calculation_rule",
+        "label": "计算规则或依据",
+        "type": "text",
+        "required": "R",
+        "ref": "",
+        "definition": "床位口径快照记录的计算规则或依据；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "2000",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "source_system_id",
+        "label": "来源系统ID",
+        "type": "id",
+        "required": "R",
+        "ref": "GOV01.system_id",
+        "definition": "来源系统ID；引用GOV01.system_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      },
+      {
+        "code": "recorded_at",
+        "label": "记录时间",
+        "type": "datetime",
+        "required": "R",
+        "ref": "",
+        "definition": "床位口径快照记录的记录时间；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "ISO 8601含时区",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "科室原模板OPEN_BEDS"
+      }
+    ],
+    "pk": [
+      "bed_snapshot_id"
+    ],
+    "lifecycle": false,
+    "accept": "必填齐全；主键唯一；关联可解析；有效期无冲突；业务负责人签审",
+    "sheet": "ORG25_床位口径快照"
+  },
+  "sourceSchemaPath": "contracts/source-row-schemas/ORG25.schema.json",
+  "targetOwnerModuleProposal": "bed-resource",
+  "primaryImplementationTask": "P7-06",
+  "secondaryTasks": [
+    "P8-04"
+  ],
+  "fullReadinessTasks": [
+    "P7-06",
+    "P8-04"
+  ],
+  "operations": "Only explicitly registered owner semantic commands; no generic upsert",
+  "formatPolicy": {
+    "formats": [
+      "CSV",
+      "JSON",
+      "XLSX"
+    ],
+    "sourceCsvBom": "ALLOW_ONE_LEADING_UTF8_BOM_WITH_EVIDENCE",
+    "normalization": "NO_GLOBAL_TRIM_CASE_OR_LEADING_ZERO_LOSS",
+    "formulaMacroExternalLink": "REJECT",
+    "hiddenContent": "REJECT_UNLESS_CONTRACT_EXPLICIT"
+  },
+  "timePolicy": "DOMAIN_ASIA_SHANGHAI_LOCAL; SOURCE_PLUS08_ONLY_EXPLICIT_TRANSFORM; DB_RECORDED_FROM",
+  "identityPolicy": "CREATE_ALIAS_NOT_PLATFORM_ID; EXISTING_PLATFORM_REF_VALIDATED_FOR_UPDATE",
+  "applyPolicy": {
+    "default": "VALIDATE_ALL_THEN_APPLY",
+    "unit": "BOUNDED_APPROVED_DEPENDENCY_COHERENT_ATOMIC_UNIT",
+    "partialApply": "DISABLED_UNLESS_EXPLICIT_LOW_COUPLING_CONTRACT"
+  },
+  "fieldRouting": [
+    {
+      "dataset_id": "ORG25",
+      "field_code": "bed_snapshot_id",
+      "source_field_label": "床位快照ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "床位口径快照的永久稳定记录/对象标识；不可由名称、工号或院区拼接决定，不复用停用标识。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "SOURCE_CREATE_ALIAS",
+      "proposed_logical_path": "BedMetricSnapshot.sourceClientKey",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "CREATE中为源alias；平台stableId由DB生成。UPDATE需单独已授权platformRef+expectedVersion，不能伪造新ID。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/0"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "target_type",
+      "source_field_label": "统计对象类型",
+      "source_type": "code",
+      "source_required": "R",
+      "source_ref": "enum:target_type",
+      "source_definition": "统计对象类型；取值见建议码表target_type，采用前需院方确认；不可用显示名称替代代码。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "VERSIONED_CODE_BINDING",
+      "proposed_logical_path": "BedMetricSnapshot.target_type",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "建议枚举需采纳版本；错误码/未批准码阻断；显示标签不当key。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/1"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "target_id",
+      "source_field_label": "统计对象ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "poly:org_target",
+      "source_definition": "床位口径快照记录的统计对象ID；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "TYPED_RELATION_REFERENCE",
+      "proposed_logical_path": "BedMetricSnapshot.target_id",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "按精确dataset/type/namespace解析，验证owner/scope/full interval；未ready目标不能忽略或按名猜测。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/2"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "as_of_date",
+      "source_field_label": "统计日期",
+      "source_type": "date",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "床位口径快照记录的统计日期；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "SNAPSHOT_FACT",
+      "proposed_logical_path": "BedMetricSnapshot.as_of_date",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "口径snapshot事实，来源时点与record时点分开；修正新revision。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/3"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "bed_count_type",
+      "source_field_label": "床位口径",
+      "source_type": "text",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "编制床、开放床、实际可用床、占用床分别填",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "SNAPSHOT_FACT",
+      "proposed_logical_path": "BedMetricSnapshot.bed_count_type",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "口径snapshot事实，来源时点与record时点分开；修正新revision。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/4"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "bed_count",
+      "source_field_label": "床位数",
+      "source_type": "integer",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "床位口径快照记录的床位数；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室信息表-标准定义模板V1.01.xlsx#科室信息表!A16:OPEN_BEDS",
+      "target_category": "SNAPSHOT_FACT",
+      "proposed_logical_path": "BedMetricSnapshot.bed_count",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "口径snapshot事实，来源时点与record时点分开；修正新revision。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/5"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "calculation_rule",
+      "source_field_label": "计算规则或依据",
+      "source_type": "text",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "床位口径快照记录的计算规则或依据；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "SNAPSHOT_FACT",
+      "proposed_logical_path": "BedMetricSnapshot.calculation_rule",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "口径snapshot事实，来源时点与record时点分开；修正新revision。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/6"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "source_system_id",
+      "source_field_label": "来源系统ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "GOV01.system_id",
+      "source_definition": "来源系统ID；引用GOV01.system_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "SOURCE_NAMESPACE",
+      "proposed_logical_path": "SourceSystemReference",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "精确GOV01源系统注册；MANUAL也要登记，非账号system身份默认映射",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/7"
+    },
+    {
+      "dataset_id": "ORG25",
+      "field_code": "recorded_at",
+      "source_field_label": "记录时间",
+      "source_type": "datetime",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "床位口径快照记录的记录时间；按本表一行粒度维护，由运营部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "科室原模板OPEN_BEDS",
+      "target_category": "SOURCE_RECORDED_TIME",
+      "proposed_logical_path": "ImportSourceEvidence.sourceRecordedAt",
+      "implementation_task": "P7-06",
+      "required_owner_tasks": [
+        "P7-06"
+      ],
+      "conversion_and_authority": "保存来源记录时间；目标recordedFrom由DB实际生成，不能回填伪知识",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG25/fields/8"
+    }
+  ],
+  "conditionalRuleRefs": [],
+  "manualEvidence": "UNRESOLVED_SOURCE_RULE_BLOCKS_FULL_PUBLISH",
+  "mappingReviewStatus": "PROPOSED_NOT_EXECUTED"
+}

@@ -1,0 +1,373 @@
+{
+  "contractId": "ORG27-FULL",
+  "contractVersion": "DRAFT-1",
+  "status": "DRAFT_NOT_APPROVED",
+  "datasetId": "ORG27",
+  "sourceModel": {
+    "id": "ORG27",
+    "name": "组织变更承继明细",
+    "kind": "关系数据",
+    "priority": "P0",
+    "owner": "组织人事部",
+    "view": "生命周期",
+    "grain": "一行一个组织变更事件的前后继对应；拆分和合并均分多行",
+    "trigger": "本轮上线范围",
+    "sources": "本次设计建议",
+    "fields": [
+      {
+        "code": "succession_id",
+        "label": "承继关系ID",
+        "type": "id",
+        "required": "R",
+        "ref": "",
+        "definition": "组织变更承继明细的永久稳定记录/对象标识；不可由名称、工号或院区拼接决定，不复用停用标识。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "org_event_id",
+        "label": "组织变更事件ID",
+        "type": "id",
+        "required": "R",
+        "ref": "ORG26.org_event_id",
+        "definition": "组织变更事件ID；引用ORG26.org_event_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "from_target_type",
+        "label": "原对象类型",
+        "type": "code",
+        "required": "C",
+        "ref": "enum:target_type",
+        "definition": "原对象类型；取值见建议码表target_type，采用前需院方确认；不可用显示名称替代代码。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "条件必填：撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "from_target_id",
+        "label": "原对象ID",
+        "type": "id",
+        "required": "C",
+        "ref": "poly:org_target",
+        "definition": "原对象ID；撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "条件必填：撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "to_target_type",
+        "label": "新对象类型",
+        "type": "code",
+        "required": "C",
+        "ref": "enum:target_type",
+        "definition": "新对象类型；取值见建议码表target_type，采用前需院方确认；不可用显示名称替代代码。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "条件必填：新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "to_target_id",
+        "label": "新对象ID",
+        "type": "id",
+        "required": "C",
+        "ref": "poly:org_target",
+        "definition": "新对象ID；新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "64",
+        "conditional_requirement": "条件必填：新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "transfer_scope",
+        "label": "承继范围",
+        "type": "text",
+        "required": "R",
+        "ref": "",
+        "definition": "人员、床位、业务或全部；不自动重写历史交易",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "2000",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "context_rule",
+        "label": "业务迁移判定规则",
+        "type": "text",
+        "required": "C",
+        "ref": "",
+        "definition": "业务迁移判定规则；一对多承继或不同业务采取不同迁移去向时必填；不按比例盲目改写历史业务外键。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "2000",
+        "conditional_requirement": "条件必填：一对多承继或不同业务采取不同迁移去向时必填；不按比例盲目改写历史业务外键。",
+        "source_trace": "本次设计建议"
+      },
+      {
+        "code": "recorded_at",
+        "label": "记录时间",
+        "type": "datetime",
+        "required": "R",
+        "ref": "",
+        "definition": "组织变更承继明细记录的记录时间；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+        "privacy": "INTERNAL",
+        "business": true,
+        "max_length_or_format": "ISO 8601含时区",
+        "conditional_requirement": "是：任何实际记录必填",
+        "source_trace": "本次设计建议"
+      }
+    ],
+    "pk": [
+      "succession_id"
+    ],
+    "lifecycle": false,
+    "accept": "新增允许无前继；停用允许无后继；拆分一对多均可追踪且无自动平均分摊",
+    "sheet": "ORG27_组织变更承继明细"
+  },
+  "sourceSchemaPath": "contracts/source-row-schemas/ORG27.schema.json",
+  "targetOwnerModuleProposal": "department-master",
+  "primaryImplementationTask": "P2-05",
+  "secondaryTasks": [
+    "P2-06",
+    "P2-08"
+  ],
+  "fullReadinessTasks": [
+    "P2-05",
+    "P2-06",
+    "P2-08"
+  ],
+  "operations": "Only explicitly registered owner semantic commands; no generic upsert",
+  "formatPolicy": {
+    "formats": [
+      "CSV",
+      "JSON",
+      "XLSX"
+    ],
+    "sourceCsvBom": "ALLOW_ONE_LEADING_UTF8_BOM_WITH_EVIDENCE",
+    "normalization": "NO_GLOBAL_TRIM_CASE_OR_LEADING_ZERO_LOSS",
+    "formulaMacroExternalLink": "REJECT",
+    "hiddenContent": "REJECT_UNLESS_CONTRACT_EXPLICIT"
+  },
+  "timePolicy": "DOMAIN_ASIA_SHANGHAI_LOCAL; SOURCE_PLUS08_ONLY_EXPLICIT_TRANSFORM; DB_RECORDED_FROM",
+  "identityPolicy": "CREATE_ALIAS_NOT_PLATFORM_ID; EXISTING_PLATFORM_REF_VALIDATED_FOR_UPDATE",
+  "applyPolicy": {
+    "default": "VALIDATE_ALL_THEN_APPLY",
+    "unit": "BOUNDED_APPROVED_DEPENDENCY_COHERENT_ATOMIC_UNIT",
+    "partialApply": "DISABLED_UNLESS_EXPLICIT_LOW_COUPLING_CONTRACT"
+  },
+  "fieldRouting": [
+    {
+      "dataset_id": "ORG27",
+      "field_code": "succession_id",
+      "source_field_label": "承继关系ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "组织变更承继明细的永久稳定记录/对象标识；不可由名称、工号或院区拼接决定，不复用停用标识。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "SOURCE_CREATE_ALIAS",
+      "proposed_logical_path": "OrganizationSuccessionRelation.sourceClientKey",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "CREATE中为源alias；平台stableId由DB生成。UPDATE需单独已授权platformRef+expectedVersion，不能伪造新ID。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/0"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "org_event_id",
+      "source_field_label": "组织变更事件ID",
+      "source_type": "id",
+      "source_required": "R",
+      "source_ref": "ORG26.org_event_id",
+      "source_definition": "组织变更事件ID；引用ORG26.org_event_id的稳定标识；跨表关联须使用相同业务时点下的有效记录。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "TYPED_RELATION_REFERENCE",
+      "proposed_logical_path": "OrganizationSuccessionRelation.org_event_id",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "按精确dataset/type/namespace解析，验证owner/scope/full interval；未ready目标不能忽略或按名猜测。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/1"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "from_target_type",
+      "source_field_label": "原对象类型",
+      "source_type": "code",
+      "source_required": "C",
+      "source_ref": "enum:target_type",
+      "source_definition": "原对象类型；取值见建议码表target_type，采用前需院方确认；不可用显示名称替代代码。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+      "source_trace": "本次设计建议",
+      "target_category": "VERSIONED_CODE_BINDING",
+      "proposed_logical_path": "OrganizationSuccessionRelation.from_target_type",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "建议枚举需采纳版本；错误码/未批准码阻断；显示标签不当key。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/2"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "from_target_id",
+      "source_field_label": "原对象ID",
+      "source_type": "id",
+      "source_required": "C",
+      "source_ref": "poly:org_target",
+      "source_definition": "原对象ID；撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+      "source_trace": "本次设计建议",
+      "target_category": "TYPED_RELATION_REFERENCE",
+      "proposed_logical_path": "OrganizationSuccessionRelation.from_target_id",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "按精确dataset/type/namespace解析，验证owner/scope/full interval；未ready目标不能忽略或按名猜测。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/3"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "to_target_type",
+      "source_field_label": "新对象类型",
+      "source_type": "code",
+      "source_required": "C",
+      "source_ref": "enum:target_type",
+      "source_definition": "新对象类型；取值见建议码表target_type，采用前需院方确认；不可用显示名称替代代码。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+      "source_trace": "本次设计建议",
+      "target_category": "VERSIONED_CODE_BINDING",
+      "proposed_logical_path": "OrganizationSuccessionRelation.to_target_type",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "建议枚举需采纳版本；错误码/未批准码阻断；显示标签不当key。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/4"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "to_target_id",
+      "source_field_label": "新对象ID",
+      "source_type": "id",
+      "source_required": "C",
+      "source_ref": "poly:org_target",
+      "source_definition": "新对象ID；新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+      "source_trace": "本次设计建议",
+      "target_category": "TYPED_RELATION_REFERENCE",
+      "proposed_logical_path": "OrganizationSuccessionRelation.to_target_id",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "按精确dataset/type/namespace解析，验证owner/scope/full interval；未ready目标不能忽略或按名猜测。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/5"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "transfer_scope",
+      "source_field_label": "承继范围",
+      "source_type": "text",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "人员、床位、业务或全部；不自动重写历史交易",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "EVENT_OR_SUCCESSION_FACT",
+      "proposed_logical_path": "OrganizationSuccessionRelation.transfer_scope",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "变更/承继是明确事实，不等于立即执行全部受影响业务。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/6"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "context_rule",
+      "source_field_label": "业务迁移判定规则",
+      "source_type": "text",
+      "source_required": "C",
+      "source_ref": "",
+      "source_definition": "业务迁移判定规则；一对多承继或不同业务采取不同迁移去向时必填；不按比例盲目改写历史业务外键。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "条件必填：一对多承继或不同业务采取不同迁移去向时必填；不按比例盲目改写历史业务外键。",
+      "source_trace": "本次设计建议",
+      "target_category": "EVENT_OR_SUCCESSION_FACT",
+      "proposed_logical_path": "OrganizationSuccessionRelation.context_rule",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "变更/承继是明确事实，不等于立即执行全部受影响业务。",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/7"
+    },
+    {
+      "dataset_id": "ORG27",
+      "field_code": "recorded_at",
+      "source_field_label": "记录时间",
+      "source_type": "datetime",
+      "source_required": "R",
+      "source_ref": "",
+      "source_definition": "组织变更承继明细记录的记录时间；按本表一行粒度维护，由组织人事部确认，历史值不得直接覆盖。",
+      "source_privacy": "INTERNAL",
+      "source_condition": "是：任何实际记录必填",
+      "source_trace": "本次设计建议",
+      "target_category": "SOURCE_RECORDED_TIME",
+      "proposed_logical_path": "ImportSourceEvidence.sourceRecordedAt",
+      "implementation_task": "P2-05",
+      "required_owner_tasks": [
+        "P2-05"
+      ],
+      "conversion_and_authority": "保存来源记录时间；目标recordedFrom由DB实际生成，不能回填伪知识",
+      "mapping_status": "PROPOSED_REQUIRES_TASK_VALIDATION",
+      "source_json_pointer": "/ORG27/fields/8"
+    }
+  ],
+  "conditionalRuleRefs": [
+    "SRC-COND-027",
+    "SRC-COND-028",
+    "SRC-COND-029",
+    "SRC-COND-030",
+    "SRC-COND-031"
+  ],
+  "manualEvidence": "UNRESOLVED_SOURCE_RULE_BLOCKS_FULL_PUBLISH",
+  "mappingReviewStatus": "PROPOSED_NOT_EXECUTED"
+}

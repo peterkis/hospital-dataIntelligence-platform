@@ -132,6 +132,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/contracts/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listImportContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getImportContractHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listEffectiveImportContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importContractCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/parameter-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listParameterDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/parameter-definitions/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["parameterDefinitionCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/{id}/change-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["importContractChangeImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/{id}/impact-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["importContractImpactCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/{id}/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getImportContractSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -176,7 +320,17 @@ export interface operations {
                             payload: {
                                 fields?: {
                                     original: {
-                                        [key: string]: unknown;
+                                        code: string;
+                                        label: string;
+                                        type: string;
+                                        required: string;
+                                        ref: string;
+                                        definition: string;
+                                        privacy: string;
+                                        business: boolean;
+                                        max_length_or_format: string;
+                                        conditional_requirement: string;
+                                        source_trace: string;
                                     };
                                     pointer: string;
                                     routing: {
@@ -323,7 +477,17 @@ export interface operations {
                             payload: {
                                 fields?: {
                                     original: {
-                                        [key: string]: unknown;
+                                        code: string;
+                                        label: string;
+                                        type: string;
+                                        required: string;
+                                        ref: string;
+                                        definition: string;
+                                        privacy: string;
+                                        business: boolean;
+                                        max_length_or_format: string;
+                                        conditional_requirement: string;
+                                        source_trace: string;
                                     };
                                     pointer: string;
                                     routing: {
@@ -468,7 +632,17 @@ export interface operations {
                         payload: {
                             fields?: {
                                 original: {
-                                    [key: string]: unknown;
+                                    code: string;
+                                    label: string;
+                                    type: string;
+                                    required: string;
+                                    ref: string;
+                                    definition: string;
+                                    privacy: string;
+                                    business: boolean;
+                                    max_length_or_format: string;
+                                    conditional_requirement: string;
+                                    source_trace: string;
                                 };
                                 pointer: string;
                                 routing: {
@@ -834,7 +1008,17 @@ export interface operations {
                         payload: {
                             fields?: {
                                 original: {
-                                    [key: string]: unknown;
+                                    code: string;
+                                    label: string;
+                                    type: string;
+                                    required: string;
+                                    ref: string;
+                                    definition: string;
+                                    privacy: string;
+                                    business: boolean;
+                                    max_length_or_format: string;
+                                    conditional_requirement: string;
+                                    source_trace: string;
                                 };
                                 pointer: string;
                                 routing: {
@@ -1062,6 +1246,19 @@ export interface operations {
                         candidateVersionId: string;
                         definitionVersionId: string | null;
                         definitionDigest: string | null;
+                        contractHead: string;
+                        contractCurrent: {
+                            [key: string]: unknown;
+                        }[];
+                        contractHistory: {
+                            [key: string]: unknown;
+                        }[];
+                        contractOpening: {
+                            [key: string]: unknown;
+                        }[];
+                        contractClosing: {
+                            [key: string]: unknown;
+                        }[];
                         targetDefinitions: {
                             [key: string]: unknown;
                         }[];
@@ -1169,6 +1366,1342 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listImportContracts: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                asOf?: string;
+                page?: number;
+                target?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: number;
+                            /** Format: uuid */
+                            datasetVersionId: string;
+                            head: string;
+                            status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                            recordedAt: string;
+                            reviewDigest: string;
+                            /** @enum {string} */
+                            adapterReadiness: "NOT_READY";
+                            dataset: string;
+                            profile: "CORE" | "FULL";
+                            definition: {
+                                ruleVersion: string;
+                                templateVersion: string;
+                                sourceVersionId: string | null;
+                                fields: {
+                                    code: string;
+                                    type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    required: "R" | "C" | "O";
+                                    privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    enumValues: string[];
+                                }[];
+                                codeSets: {
+                                    field: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                    codes: string[];
+                                    validFrom: string;
+                                    validTo: string | null;
+                                    /** Format: uuid */
+                                    sourceVersionId: string;
+                                }[];
+                                rules: {
+                                    id: string;
+                                    field: string;
+                                    text: string;
+                                    /** @enum {string} */
+                                    status: "UNRESOLVED";
+                                    version: string;
+                                }[];
+                                references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                } | {
+                                    field: string;
+                                    /** @enum {string} */
+                                    target: "GOV09.config_id";
+                                    /** @enum {string} */
+                                    status: "DECLARED_PARAMETER";
+                                    /** Format: uuid */
+                                    parameterVersionId: string;
+                                    parameterDigest: string;
+                                })[];
+                            };
+                            schemas: {
+                                [key: string]: unknown;
+                            };
+                            semanticsDigest: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            sourceDraftDigest: string;
+                            sourcePolicies: {
+                                format: {
+                                    [key: string]: unknown;
+                                };
+                                time: string;
+                                identity: string;
+                                apply: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        }[];
+                        total: number;
+                        page: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getImportContractHistory: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                asOf?: string;
+                page?: number;
+                target: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: number;
+                            /** Format: uuid */
+                            datasetVersionId: string;
+                            head: string;
+                            status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                            recordedAt: string;
+                            reviewDigest: string;
+                            /** @enum {string} */
+                            adapterReadiness: "NOT_READY";
+                            dataset: string;
+                            profile: "CORE" | "FULL";
+                            definition: {
+                                ruleVersion: string;
+                                templateVersion: string;
+                                sourceVersionId: string | null;
+                                fields: {
+                                    code: string;
+                                    type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    required: "R" | "C" | "O";
+                                    privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    enumValues: string[];
+                                }[];
+                                codeSets: {
+                                    field: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                    codes: string[];
+                                    validFrom: string;
+                                    validTo: string | null;
+                                    /** Format: uuid */
+                                    sourceVersionId: string;
+                                }[];
+                                rules: {
+                                    id: string;
+                                    field: string;
+                                    text: string;
+                                    /** @enum {string} */
+                                    status: "UNRESOLVED";
+                                    version: string;
+                                }[];
+                                references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                } | {
+                                    field: string;
+                                    /** @enum {string} */
+                                    target: "GOV09.config_id";
+                                    /** @enum {string} */
+                                    status: "DECLARED_PARAMETER";
+                                    /** Format: uuid */
+                                    parameterVersionId: string;
+                                    parameterDigest: string;
+                                })[];
+                            };
+                            schemas: {
+                                [key: string]: unknown;
+                            };
+                            semanticsDigest: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            sourceDraftDigest: string;
+                            sourcePolicies: {
+                                format: {
+                                    [key: string]: unknown;
+                                };
+                                time: string;
+                                identity: string;
+                                apply: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        }[];
+                        total: number;
+                        page: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listEffectiveImportContracts: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                asOf?: string;
+                page?: number;
+                target?: string;
+                businessAt: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: number;
+                            /** Format: uuid */
+                            datasetVersionId: string;
+                            head: string;
+                            status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                            recordedAt: string;
+                            reviewDigest: string;
+                            /** @enum {string} */
+                            adapterReadiness: "NOT_READY";
+                            dataset: string;
+                            profile: "CORE" | "FULL";
+                            definition: {
+                                ruleVersion: string;
+                                templateVersion: string;
+                                sourceVersionId: string | null;
+                                fields: {
+                                    code: string;
+                                    type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    required: "R" | "C" | "O";
+                                    privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    enumValues: string[];
+                                }[];
+                                codeSets: {
+                                    field: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                    codes: string[];
+                                    validFrom: string;
+                                    validTo: string | null;
+                                    /** Format: uuid */
+                                    sourceVersionId: string;
+                                }[];
+                                rules: {
+                                    id: string;
+                                    field: string;
+                                    text: string;
+                                    /** @enum {string} */
+                                    status: "UNRESOLVED";
+                                    version: string;
+                                }[];
+                                references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                } | {
+                                    field: string;
+                                    /** @enum {string} */
+                                    target: "GOV09.config_id";
+                                    /** @enum {string} */
+                                    status: "DECLARED_PARAMETER";
+                                    /** Format: uuid */
+                                    parameterVersionId: string;
+                                    parameterDigest: string;
+                                })[];
+                            };
+                            schemas: {
+                                [key: string]: unknown;
+                            };
+                            semanticsDigest: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            sourceDraftDigest: string;
+                            sourcePolicies: {
+                                format: {
+                                    [key: string]: unknown;
+                                };
+                                time: string;
+                                identity: string;
+                                apply: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        }[];
+                        total: number;
+                        page: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    importContractCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    definition: {
+                        ruleVersion: string;
+                        templateVersion: string;
+                        sourceVersionId: string | null;
+                        fields: {
+                            code: string;
+                            type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                            required: "R" | "C" | "O";
+                            privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                            enumValues: string[];
+                        }[];
+                        codeSets: {
+                            field: string;
+                            codeSystem: string;
+                            version: string;
+                            status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                            codes: string[];
+                            validFrom: string;
+                            validTo: string | null;
+                            /** Format: uuid */
+                            sourceVersionId: string;
+                        }[];
+                        rules: {
+                            id: string;
+                            field: string;
+                            text: string;
+                            /** @enum {string} */
+                            status: "UNRESOLVED";
+                            version: string;
+                        }[];
+                        references: ({
+                            field: string;
+                            target: string;
+                            /** @enum {string} */
+                            status: "BLOCKED_DEPENDENCY";
+                        } | {
+                            field: string;
+                            /** @enum {string} */
+                            target: "GOV09.config_id";
+                            /** @enum {string} */
+                            status: "DECLARED_PARAMETER";
+                            /** Format: uuid */
+                            parameterVersionId: string;
+                            parameterDigest: string;
+                        })[];
+                    };
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {string} */
+                    action: "CREATE";
+                    /** Format: uuid */
+                    datasetVersionId: string;
+                    profile: "CORE" | "FULL";
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    definition: {
+                        ruleVersion: string;
+                        templateVersion: string;
+                        sourceVersionId: string | null;
+                        fields: {
+                            code: string;
+                            type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                            required: "R" | "C" | "O";
+                            privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                            enumValues: string[];
+                        }[];
+                        codeSets: {
+                            field: string;
+                            codeSystem: string;
+                            version: string;
+                            status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                            codes: string[];
+                            validFrom: string;
+                            validTo: string | null;
+                            /** Format: uuid */
+                            sourceVersionId: string;
+                        }[];
+                        rules: {
+                            id: string;
+                            field: string;
+                            text: string;
+                            /** @enum {string} */
+                            status: "UNRESOLVED";
+                            version: string;
+                        }[];
+                        references: ({
+                            field: string;
+                            target: string;
+                            /** @enum {string} */
+                            status: "BLOCKED_DEPENDENCY";
+                        } | {
+                            field: string;
+                            /** @enum {string} */
+                            target: "GOV09.config_id";
+                            /** @enum {string} */
+                            status: "DECLARED_PARAMETER";
+                            /** Format: uuid */
+                            parameterVersionId: string;
+                            parameterDigest: string;
+                        })[];
+                    };
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {string} */
+                    action: "REVISE";
+                    /** Format: uuid */
+                    datasetVersionId?: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    /** @enum {string} */
+                    action: "VALIDATE";
+                    reviewDigest?: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    action: "APPROVE" | "PUBLISH" | "RETIRE";
+                    reviewDigest: string;
+                    impactDigest?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        version: number;
+                        /** Format: uuid */
+                        datasetVersionId: string;
+                        head: string;
+                        status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                        recordedAt: string;
+                        reviewDigest: string;
+                        /** @enum {string} */
+                        adapterReadiness: "NOT_READY";
+                        decision: "ACCEPT" | "REVIEW";
+                        blockers: string[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listParameterDefinitions: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                target?: string;
+                versionId?: string;
+                asOf?: string;
+                mode?: "CURRENT" | "APPROVED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: number;
+                            status: "DRAFT" | "APPROVED";
+                            reviewDigest: string;
+                            recordedAt: string;
+                            /** @enum {string} */
+                            runtimeReadiness: "NOT_READY";
+                            /** Format: uuid */
+                            systemVersionId: string;
+                            /** Format: uuid */
+                            systemObjectId: string;
+                            parameterKey: string;
+                            group: string;
+                            /** @enum {string} */
+                            campus: "SYNTHETIC_ALL";
+                            /** @enum {string} */
+                            purpose: "GOV09_METADATA";
+                            ownerRole: string;
+                            definition: {
+                                /** @enum {string} */
+                                kind: "VALUE_SCHEMA_V1";
+                                valueType: "TEXT" | "INTEGER" | "DECIMAL" | "BOOLEAN";
+                                enumValues: string[];
+                                description: string;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                        }[];
+                        total: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    parameterDefinitionCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    systemVersionId: string;
+                    group: string;
+                    /** @enum {string} */
+                    campus: "SYNTHETIC_ALL";
+                    definition: {
+                        /** @enum {string} */
+                        kind: "VALUE_SCHEMA_V1";
+                        valueType: "TEXT" | "INTEGER" | "DECIMAL" | "BOOLEAN";
+                        enumValues: string[];
+                        description: string;
+                    };
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {string} */
+                    action: "CREATE";
+                    parameterKey: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    systemVersionId: string;
+                    group: string;
+                    /** @enum {string} */
+                    campus: "SYNTHETIC_ALL";
+                    definition: {
+                        /** @enum {string} */
+                        kind: "VALUE_SCHEMA_V1";
+                        valueType: "TEXT" | "INTEGER" | "DECIMAL" | "BOOLEAN";
+                        enumValues: string[];
+                        description: string;
+                    };
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {string} */
+                    action: "REVISE";
+                    /** Format: uuid */
+                    target: string;
+                    /** Format: uuid */
+                    expectedCurrentVersion: string;
+                } | {
+                    scope: "BASELINE" | "SYNTHETIC";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    action: "APPROVE";
+                    /** Format: uuid */
+                    target: string;
+                    /** Format: uuid */
+                    versionId: string;
+                    reviewDigest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        version: number;
+                        status: "DRAFT" | "APPROVED";
+                        reviewDigest: string;
+                        recordedAt: string;
+                        /** @enum {string} */
+                        runtimeReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    importContractChangeImpact: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                action: "PUBLISH" | "RETIRE";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        impactDigest: string;
+                        head: string;
+                        contractId: string;
+                        contractVersionId: string;
+                        action: string;
+                        closing: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    importContractImpactCases: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getImportContractSchema: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                versionId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Default Response */
