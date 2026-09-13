@@ -1,5 +1,8 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
+import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.js';
+export { LocalSyntheticKeyProvider, ProtectedStoreSchema, ProtectedReadSchema } from './protected-artifact.js';
+export type { KeyProviderPort, ProtectedStoreInput, ProtectedReadInput, ProtectedReference } from './protected-artifact.js';
 import type { ImportJob, ImportJobOutcome } from './import-job.js';
 import {ImportJobCommandSchema,ImportJobReadSchema,ImportMetadataSchema} from './import-job.js';
 import {Check} from 'typebox/value';
@@ -35,7 +38,7 @@ export interface SourceImpact {impactDigest:string;effectiveMode:'ON_COMMIT';tar
 
 export interface SourceImpact {contractCurrent:Array<Record<string,unknown>>;contractHistory:Array<Record<string,unknown>>;contractOpening:Array<Record<string,unknown>>;contractClosing:Array<Record<string,unknown>>;contractHead:string}
 
-export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL']) {
+export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL'], keyProvider?: KeyProviderPort) {
   if (!connectionString) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
   const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,application_name:'hdi-vnext-catalog',options:'-c timezone=Asia/Shanghai'})})});
   const readImportJob=async(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';jobId:string}):Promise<ImportJob>=>{
@@ -43,6 +46,7 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     return (await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
   };
   return {
+    ...protectedArtifacts(db,keyProvider),
     async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');
       if(!Check(ImportMetadataSchema,input['input']))throw new Error('CLOSED_METADATA_REQUIRED');
