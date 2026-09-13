@@ -12,6 +12,8 @@ PR #3 首轮 Codex review 指出同一引用字段可绑定两个参数版本。
 
 第四轮修复：0018 将参数列表中的来源 ACCESS_DENIED 行跳过，显式 target/versionId 保持 403；其他异常仍传播。参数集合按 key、唯一参数 ID 和版本排序，保证同名参数分页的确定顺序。90 为来源撤权导致整个列表 403 的实际 RED；91 验证两个列表模式保留可访问项、精确读取拒绝、同名参数顺序，以及七组测试/11→18/codegen；92 typecheck 通过。排序断言为预防回归，不冒称曾观察到随机分页错误。
 
+第五轮修复：契约 businessAt/asOf 和参数 asOf 复用命令的 ContractTimeSchema，97 重新冻结 OpenAPI。0019 增加 contract_id + stream_sequence 唯一正数流内序号，服务端锁内分配；原 head 保留为事件身份和外键，不再作为新事件的生命周期/乐观并发权威。已有事件的流内序号沿用原 token（保留合法历史空洞），不改旧结果、审批引用或审计。跨契约影响快照使用流头集合摘要而非全局序号。95 实际 RED 为新契约序号 67 而非 1；96 的对象白名单配置错误保留，98 修正后通过 11→19/七组测试/codegen。100 从已有 18 项契约数据升级到 19，完整比对原 token/schema/元数据不变，并通过相同测试；99 类型检查、101 owner 边界通过。
+
 2026-09-13。当前不是完成报告；没有完成提交。执行规范为 `D:/Agent-Prompts/HDIP-MC-P0-02-single-active-db/P0-02-contract-registry.current-main.single-active-db.prompt.md`，原开发包继续作为来源资料。P0-03 未执行。
 
 ## 基线和数据库

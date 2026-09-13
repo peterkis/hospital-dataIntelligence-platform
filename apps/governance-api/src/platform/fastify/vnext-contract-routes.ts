@@ -1,12 +1,12 @@
 import { Type, type Static } from 'typebox';
 import type { FastifyInstance } from 'fastify';
 import type { Catalog } from '../../modules/governance-catalog/index.js';
-import { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,contractInputSchemas,ParameterCommandSchema,ParameterItemSchema,ParameterOutcomeSchema } from '../../modules/governance-catalog/index.js';
+import { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,ContractTimeSchema,contractInputSchemas,ParameterCommandSchema,ParameterItemSchema,ParameterOutcomeSchema } from '../../modules/governance-catalog/index.js';
 import { actor } from './vnext-catalog-routes.js';
 
 const ErrorSchema=Type.Object({code:Type.String(),message:Type.String(),field:Type.Optional(Type.String())});
 const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,500:ErrorSchema};
-const Query=Type.Object({scope:ContractScopeSchema,mode:Type.Union([Type.Literal('CURRENT'),Type.Literal('HISTORY'),Type.Literal('EFFECTIVE')]),target:Type.Optional(Type.String({format:'uuid'})),businessAt:Type.Optional(Type.String()),asOf:Type.Optional(Type.String()),page:Type.Optional(Type.Integer({minimum:1,maximum:100}))},{additionalProperties:false});
+const Query=Type.Object({scope:ContractScopeSchema,mode:Type.Union([Type.Literal('CURRENT'),Type.Literal('HISTORY'),Type.Literal('EFFECTIVE')]),target:Type.Optional(Type.String({format:'uuid'})),businessAt:Type.Optional(ContractTimeSchema),asOf:Type.Optional(ContractTimeSchema),page:Type.Optional(Type.Integer({minimum:1,maximum:100}))},{additionalProperties:false});
 export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalog) {
   const owner=()=>{if(!catalog)throw new Error('CATALOG_RUNTIME_REQUIRED');return catalog;};
   app.get<{Querystring:Static<typeof Query>}>('/api/vnext/contracts',{schema:{operationId:'listImportContracts',querystring:Query,response:{200:Type.Object({items:Type.Array(ContractItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors}}},async request=>{
@@ -15,7 +15,7 @@ export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalo
     return {items:items.slice((page-1)*10,page*10),total:items.length,page};
   });
   app.post<{Body:Static<typeof ContractCommandSchema>}>('/api/vnext/contracts/commands',{schema:{operationId:'importContractCommand',body:ContractCommandSchema,response:{200:ContractOutcomeSchema,...errors}}},request=>owner().contractCommand(actor(request.headers),request.body));
-  const ParameterQuery=Type.Object({scope:ContractScopeSchema,target:Type.Optional(Type.String({format:'uuid'})),versionId:Type.Optional(Type.String({format:'uuid'})),asOf:Type.Optional(Type.String()),mode:Type.Optional(Type.Union([Type.Literal('CURRENT'),Type.Literal('APPROVED')])),page:Type.Optional(Type.Integer({minimum:1,maximum:100}))},{additionalProperties:false});
+  const ParameterQuery=Type.Object({scope:ContractScopeSchema,target:Type.Optional(Type.String({format:'uuid'})),versionId:Type.Optional(Type.String({format:'uuid'})),asOf:Type.Optional(ContractTimeSchema),mode:Type.Optional(Type.Union([Type.Literal('CURRENT'),Type.Literal('APPROVED')])),page:Type.Optional(Type.Integer({minimum:1,maximum:100}))},{additionalProperties:false});
   app.get<{Querystring:Static<typeof ParameterQuery>}>('/api/vnext/parameter-definitions',{schema:{operationId:'listParameterDefinitions',querystring:ParameterQuery,response:{200:Type.Object({items:Type.Array(ParameterItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors}}},async request=>{
     const {page=1,...query}=request.query;const items=await owner().parameterRead(actor(request.headers),query);
     return {items:items.slice((page-1)*10,page*10),total:items.length,page};

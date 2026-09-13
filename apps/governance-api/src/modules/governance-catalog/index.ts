@@ -2,7 +2,7 @@ import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
 import type { DB as VNextDB } from '../../platform/database/vnext-types.generated.js';
 import type { ImportContractItem, ImportContractOutcome } from './contract-schema.js';
-export { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,contractInputSchemas } from './contract-schema.js';
+export { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,ContractTimeSchema,contractInputSchemas } from './contract-schema.js';
 import type {ParameterItem,ParameterOutcome} from './parameter-schema.js';
 export {ParameterCommandSchema,ParameterItemSchema,ParameterOutcomeSchema} from './parameter-schema.js';
 

@@ -76,6 +76,7 @@ export interface GovernanceCatalogImportContractEvent {
   head: Generated<Int8>;
   recorded_at: Generated<string>;
   status: string;
+  stream_sequence: Int8;
   version_id: string;
 }
 

@@ -155,6 +155,7 @@ test('contract draft fixes an existing dataset version and allocates its stable 
     }finally{await api.close();}
     const result = await catalog.contractCommand('maker',input);
     assert.equal(result['status'],'DRAFT');
+    assert.equal(result.head,'1','new contract lifecycle starts at sequence 1 despite unrelated events');
     assert.match(String(result['id']), /^[a-f0-9-]{36}$/);
     assert.equal(result['datasetVersionId'],dataset.versionId);
     assert.deepEqual(await catalog.contractCommand('maker-alias',input),result);
@@ -166,6 +167,7 @@ test('contract draft fixes an existing dataset version and allocates its stable 
     assert.equal(approved['status'],'APPROVED');
     const published = await catalog.contractCommand('reviewer',command('PUBLISH',approved));
     assert.equal(published['status'],'PUBLISHED');
+    assert.equal(published.head,'3','draft/approval/publication allocate within this contract only');
     assert.equal(published['adapterReadiness'],'NOT_READY');
     const retry = await catalog.contractCommand('reviewer',command('PUBLISH',published));
     assert.equal(retry['head'],published['head'],'P0-02-AC-03: same rule version publication creates no second event');

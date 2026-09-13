@@ -4,6 +4,7 @@ const values = <T extends string>(...items:T[]) => Type.Union(items.map(item=>Ty
 const Id=Type.String({format:'uuid'});
 const Token=Type.String({pattern:'^[A-Z0-9_.-]{1,64}$'});
 const Time=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'});
+export const ContractTimeSchema=Time;
 const End=Type.Union([Time,Type.Null()]);
 export const ContractScopeSchema=values('BASELINE','SYNTHETIC');
 export const ContractFieldSchema=Type.Object({code:Type.String(),type:values('id','text','date','datetime','integer','decimal','code'),required:values('R','C','O'),privacy:values('INTERNAL','RESTRICTED','HIGH_RESTRICTED'),condition:values('ALWAYS','OPTIONAL','UNRESOLVED','MANUAL_EVIDENCE'),enumValues:Type.Array(Type.String({minLength:1,maxLength:256}),{uniqueItems:true})},{additionalProperties:false});
