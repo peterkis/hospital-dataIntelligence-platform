@@ -5802,16 +5802,6 @@
             "in": "query",
             "name": "mode",
             "required": false
-          },
-          {
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "in": "query",
-            "name": "page",
-            "required": false
           }
         ],
         "responses": {
@@ -5823,8 +5813,7 @@
                   "type": "object",
                   "required": [
                     "items",
-                    "total",
-                    "page"
+                    "total"
                   ],
                   "properties": {
                     "items": {
@@ -6003,9 +5992,6 @@
                       }
                     },
                     "total": {
-                      "type": "integer"
-                    },
-                    "page": {
                       "type": "integer"
                     }
                   }

@@ -9,14 +9,14 @@ export function ParameterApp(){
  const [page,setPage]=useState(1);const [total,setTotal]=useState(0);const [reload,setReload]=useState(0);const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const epoch=useRef(0);
  const client=()=>createVNextCatalogClient(window.location.origin,actor);
  useEffect(()=>{
-  const turn=++epoch.current;setSelected(null);setItems([]);setSources([]);
-  void Promise.all([client().GET('/api/vnext/parameter-definitions',{params:{query:{scope:'SYNTHETIC',page,...(versionId?{versionId}:{})}}}),client().GET('/api/vnext/catalog/effective',{params:{query:{scope:'SYNTHETIC',businessAt:from}}})]).then(([parameters,catalog])=>{
+  const turn=++epoch.current;setSelected(null);setItems([]);setSources([]);setPage(1);
+  void Promise.all([client().GET('/api/vnext/parameter-definitions',{params:{query:{scope:'SYNTHETIC',...(versionId?{versionId}:{})}}}),client().GET('/api/vnext/catalog/effective',{params:{query:{scope:'SYNTHETIC',businessAt:from}}})]).then(([parameters,catalog])=>{
    if(turn!==epoch.current)return;
    if(parameters.error){setMessage(parameters.error.message+' ['+parameters.error.code+']');setTotal(0);}else{setItems(parameters.data.items);setTotal(parameters.data.total);}
    if(catalog.error){setMessage(catalog.error.message+' ['+catalog.error.code+']');}else setSources(catalog.data.items.filter(item=>item.kind==='SOURCE'));
   });
   return ()=>{++epoch.current;};
- },[actor,page,reload]);
+ },[actor,reload]);
  function choose(item:VNextParameterDefinition){setSelected(item);setSystem(item.systemVersionId);setKey(item.parameterKey);setGroup(item.group);setType(item.definition.valueType);setCodes(item.definition.enumValues.join(','));setDescription(item.definition.description);setFrom(item.validFrom);setTo(item.validTo??'');}
  async function send(command:VNextParameterCommand){
   const turn=epoch.current;setBusy(true);
@@ -35,7 +35,7 @@ export function ParameterApp(){
   <header><h2>将参数结构固定到已批准版本</h2><label>合成操作者<select disabled={busy} value={actor} onChange={event=>{++epoch.current;setSelected(null);setItems([]);setSources([]);setSystem('');setKey('');setGroup('SYNTHETIC');setType('TEXT');setCodes('');setDescription('');setActor(event.target.value);setMessage('');}}><option value="maker">提交人</option><option value="reviewer">独立复核人</option><option value="maker-alias">提交人同身份别名</option><option value="outsider">无权限身份</option></select></label></header>
   <p>权限同时核验精确参数授权、来源 owner 及固定来源版本；owner 名称由服务端复制，不能由表单指定。</p>
   <div className="toolbar"><label>指定原版本 ID（空为当前）<input value={versionId} onChange={event=>setVersionId(event.target.value)}/></label><button onClick={()=>setReload(n=>n+1)}>刷新参数定义</button><button onClick={()=>{setSelected(null);setKey('');setDescription('');}}>新建参数定义</button></div><div className="message" role="status">{message}</div>
-  <div className="panels"><section className="list"><div className="section-title">参数定义 <span>{total} 项</span></div>{items.map(item=><button className="entry" key={item.versionId} onClick={()=>choose(item)}><b>{item.parameterKey}</b><code>{item.status} · v{item.version}</code><span>{item.group} · {item.ownerRole}</span></button>)}<div className="pagination"><button disabled={page===1} onClick={()=>setPage(page-1)}>上一页</button>{page}<button disabled={page*10>=total} onClick={()=>setPage(page+1)}>下一页</button></div></section><section className="detail">
+  <div className="panels"><section className="list"><div className="section-title">参数定义 <span>{total} 项</span></div>{items.slice((page-1)*10,page*10).map(item=><button className="entry" key={item.versionId} onClick={()=>choose(item)}><b>{item.parameterKey}</b><code>{item.status} · v{item.version}</code><span>{item.group} · {item.ownerRole}</span></button>)}<div className="pagination"><button disabled={page===1} onClick={()=>setPage(page-1)}>上一页</button>{page}<button disabled={page*10>=total} onClick={()=>setPage(page+1)}>下一页</button></div></section><section className="detail">
    <h3>{selected?'新增不可变修订 / 独立批准':'新建参数结构草稿'}</h3>{selected&&<p className="provenance">固定版本：{selected.versionId}<br/>Owner：{selected.ownerRole}<br/>摘要：{selected.reviewDigest}<br/>状态：{selected.status} · 不代表运行参数已启用</p>}
    <label>来源系统已接受版本<select value={system} onChange={event=>setSystem(event.target.value)}><option value="">请选择</option>{selected&&!sources.some(source=>source.versionId===selected.systemVersionId)&&<option value={selected.systemVersionId}>固定历史来源 · {selected.systemVersionId}</option>}{sources.filter(source=>!selected||source.id===selected.systemObjectId).map(source=><option key={source.versionId} value={source.versionId}>{source.code} · v{source.version}</option>)}</select></label>
    <div className="toolbar"><label>参数键<input disabled={!!selected} value={key} onChange={event=>setKey(event.target.value)}/></label><label>参数组<input value={group} onChange={event=>setGroup(event.target.value)}/></label><label>显式范围<input readOnly value="SYNTHETIC_ALL / GOV09_METADATA"/></label></div>

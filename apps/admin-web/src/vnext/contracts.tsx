@@ -24,14 +24,10 @@ export function ContractApp(){
  const client=()=>createVNextCatalogClient(window.location.origin,actor);
  function clear(){++generation.current;++detailGeneration.current;setItems([]);setSelected(null);setRevision(null);setHistory([]);setCatalog([]);setCreating(false);setMessage('');setImpact(null);setImpactCases([]);setParameters([]);setParameterId('');}
  async function loadParameters(context:number,detail?:number){
-  const approved:VNextParameterDefinition[]=[];
-  for(let page=1;page<=100;page++){
-   const response=await client().GET('/api/vnext/parameter-definitions',{params:{query:{scope,mode:'APPROVED',page}}});
-   if(context!==generation.current||(detail!==undefined&&detail!==detailGeneration.current))return;
-   if(response.error){setParameters([]);setMessage('参数定义选择不可用：'+response.error.code);return;}
-   approved.push(...response.data.items);if(approved.length>=response.data.total)break;
-  }
-  setParameters(approved);
+  const response=await client().GET('/api/vnext/parameter-definitions',{params:{query:{scope,mode:'APPROVED'}}});
+  if(context!==generation.current||(detail!==undefined&&detail!==detailGeneration.current))return;
+  if(response.error){setParameters([]);setMessage('参数定义选择不可用：'+response.error.code);return;}
+  setParameters(response.data.items);
  }
  async function detail(item:VNextImportContract){
   const turn=++detailGeneration.current;const context=generation.current;
@@ -67,14 +63,7 @@ export function ContractApp(){
   if(turn!==generation.current)return;
   if(response.error){setCatalog([]);setMessage(response.error.message+' ['+response.error.code+']');return;}
   setCatalog(response.data.items);setDatasetId('');setSourceId('');setParameters([]);setParameterId('');setMessage('选择独立 CORE 或完整 FULL；条件与引用未就绪时，契约仍只能保持候选。');
-  const approved:VNextParameterDefinition[]=[];
-  for(let page=1;page<=100;page++){
-   const result=await client().GET('/api/vnext/parameter-definitions',{params:{query:{scope:'SYNTHETIC',mode:'APPROVED',page}}});
-   if(turn!==generation.current)return;
-   if(result.error){setMessage('参数定义选择不可用：'+result.error.code);return;}
-   approved.push(...result.data.items);if(approved.length>=result.data.total)break;
-  }
-  setParameters(approved);
+  await loadParameters(turn);
  }
  async function send(command:VNextImportCommand){
   const turn=generation.current;setBusy(true);setMessage('正在核验当前权限、固定版本与完整适用期间…');

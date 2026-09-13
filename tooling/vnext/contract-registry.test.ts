@@ -148,6 +148,12 @@ test('contract draft fixes an existing dataset version and allocates its stable 
       definition:{ruleVersion:'SYNTHETIC_1',templateVersion:'SYNTHETIC_1',fields:[{code:'legal_name',type:'text',required:'R',privacy:'INTERNAL',condition:'ALWAYS',enumValues:[]}],codeSets:[],rules:[],references:[],sourceVersionId:source.versionId} };
     await assert.rejects(catalog.contractCommand('maker',{...input,requestId:randomUUID(),impactDigest:'0'.repeat(64)}),/CLOSED_INPUT_REQUIRED/);
     await assert.rejects(catalog.contractCommand('maker',{...input,requestId:randomUUID(),definition:{...input.definition,fields:[{...input.definition.fields[0],enumValues:['A','A']}],codeSets:[{field:'legal_name',codeSystem:'SYNTHETIC_CODES',version:'SYNTHETIC_1',status:'SYNTHETIC_ADOPTED',codes:['A','A'],validFrom:input.validFrom,validTo:null,sourceVersionId:source.versionId}]}}),/DUPLICATE_ENUM/);
+    for(const [code,type,literal,required] of [['version_no','integer','A','R'],['license_valid_to','date','2026-02-30','O'],['valid_from','datetime','2026-01-01T24:00:00','R']]){
+     await assert.rejects(catalog.contractCommand('maker',{...input,requestId:randomUUID(),definition:{...input.definition,fields:[{code,type,required,privacy:'INTERNAL',condition:required==='R'?'ALWAYS':'OPTIONAL',enumValues:[literal]}],codeSets:[{field:code,codeSystem:'SYNTHETIC_CODES',version:'SYNTHETIC_1',status:'SYNTHETIC_ADOPTED',codes:[literal],validFrom:input.validFrom,validTo:null,sourceVersionId:source.versionId}]}}),/ENUM_LITERAL_TYPE_MISMATCH/);
+    }
+    for(const [type,literal,valid] of [['integer','1',true],['integer','01',false],['decimal','1.25',true],['decimal','A',false],['decimal','1e3',false],['date','2024-02-29',true],['date','2026-02-30',false],['datetime','2026-01-01T00:00:00.123456',true],['datetime','2026-01-01T00:00:00Z',false]] as const){
+     assert.equal(peer(testReceipt.name,`SELECT governance_catalog.contract_enum_types_valid(${quote(JSON.stringify({fields:[{type,enumValues:[literal]}]}))}::jsonb);`),valid?'t':'f');
+    }
     const api=await buildCatalogServer(catalog);
     try {
       const created=await api.inject({method:'POST',url:'/api/vnext/contracts/commands',headers:{'x-catalog-actor':'maker'},payload:input});
@@ -269,10 +275,15 @@ test('parameter collections omit revoked sources, preserve exact-read denial and
   }
   const before=await catalog.parameterRead('maker',{scope:'SYNTHETIC',mode:'APPROVED'});
   assert.deepEqual(before.filter(item=>item.parameterKey==='SAME_KEY').map(item=>item.id),parameters.map(item=>item.id).sort());
+  for(let index=0;index<11;index++){
+   const parameter=await catalog.parameterCommand('maker',cmd('CREATE',{systemVersionId:root.versionId,parameterKey:'ZZ_OPTION_'+index,group:'SYNTHETIC',campus:'SYNTHETIC_ALL',definition:{kind:'VALUE_SCHEMA_V1',valueType:'TEXT',enumValues:[],description:'合成完整参数选项'},validFrom:'2026-01-01T00:00:00',validTo:null}));
+   await catalog.parameterCommand('reviewer',cmd('APPROVE',{target:parameter.id,versionId:parameter.versionId,reviewDigest:parameter.reviewDigest}));
+  }
   peer(testReceipt.name,`DELETE FROM vnext_control.object_grant WHERE actor_code='maker' AND object_id=${quote(source.id)}::uuid AND permission='READ';`);
   for(const mode of ['CURRENT','APPROVED'] as const){
    const response=await api.inject({method:'GET',url:`/api/vnext/parameter-definitions?scope=SYNTHETIC&mode=${mode}`,headers:{'x-catalog-actor':'maker'}});
    assert.equal(response.statusCode,200,'revoked source must not abort all parameter options');
+   assert.equal(response.json().items.length,response.json().total,'all authorized options come from one transaction, without page limits');
    assert.ok(response.json().items.some((item:{id:string})=>item.id===parameters[0]!.id));
    assert.ok(response.json().items.every((item:{id:string})=>item.id!==parameters[1]!.id));
   }

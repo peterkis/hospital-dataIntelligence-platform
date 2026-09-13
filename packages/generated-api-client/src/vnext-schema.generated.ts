@@ -1834,7 +1834,6 @@ export interface operations {
                 versionId?: string;
                 asOf?: string;
                 mode?: "CURRENT" | "APPROVED";
-                page?: number;
             };
             header?: never;
             path?: never;
@@ -1882,7 +1881,6 @@ export interface operations {
                             validTo: string | null;
                         }[];
                         total: number;
-                        page: number;
                     };
                 };
             };

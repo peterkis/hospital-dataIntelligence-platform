@@ -15,10 +15,10 @@ export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalo
     return {items:items.slice((page-1)*10,page*10),total:items.length,page};
   });
   app.post<{Body:Static<typeof ContractCommandSchema>}>('/api/vnext/contracts/commands',{schema:{operationId:'importContractCommand',body:ContractCommandSchema,response:{200:ContractOutcomeSchema,...errors}}},request=>owner().contractCommand(actor(request.headers),request.body));
-  const ParameterQuery=Type.Object({scope:ContractScopeSchema,target:Type.Optional(Type.String({format:'uuid'})),versionId:Type.Optional(Type.String({format:'uuid'})),asOf:Type.Optional(ContractTimeSchema),mode:Type.Optional(Type.Union([Type.Literal('CURRENT'),Type.Literal('APPROVED')])),page:Type.Optional(Type.Integer({minimum:1,maximum:100}))},{additionalProperties:false});
-  app.get<{Querystring:Static<typeof ParameterQuery>}>('/api/vnext/parameter-definitions',{schema:{operationId:'listParameterDefinitions',querystring:ParameterQuery,response:{200:Type.Object({items:Type.Array(ParameterItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors}}},async request=>{
-    const {page=1,...query}=request.query;const items=await owner().parameterRead(actor(request.headers),query);
-    return {items:items.slice((page-1)*10,page*10),total:items.length,page};
+  const ParameterQuery=Type.Object({scope:ContractScopeSchema,target:Type.Optional(Type.String({format:'uuid'})),versionId:Type.Optional(Type.String({format:'uuid'})),asOf:Type.Optional(ContractTimeSchema),mode:Type.Optional(Type.Union([Type.Literal('CURRENT'),Type.Literal('APPROVED')]))},{additionalProperties:false});
+  app.get<{Querystring:Static<typeof ParameterQuery>}>('/api/vnext/parameter-definitions',{schema:{operationId:'listParameterDefinitions',querystring:ParameterQuery,response:{200:Type.Object({items:Type.Array(ParameterItemSchema),total:Type.Integer()}),...errors}}},async request=>{
+    const items=await owner().parameterRead(actor(request.headers),request.query);
+    return {items,total:items.length};
   });
   app.post<{Body:Static<typeof ParameterCommandSchema>}>('/api/vnext/parameter-definitions/commands',{schema:{operationId:'parameterDefinitionCommand',body:ParameterCommandSchema,response:{200:ParameterOutcomeSchema,...errors}}},request=>owner().parameterCommand(actor(request.headers),request.body));
   const ImpactQuery=Type.Object({scope:ContractScopeSchema,action:Type.Union([Type.Literal('PUBLISH'),Type.Literal('RETIRE')])},{additionalProperties:false});
