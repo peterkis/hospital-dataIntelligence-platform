@@ -24,13 +24,10 @@ export function assertJobLocalAlias(context:JobRevisionContext,reference:JobLoca
  if(reference.datasetId!==context.datasetId)throw new Error('CROSS_DATASET_ALIAS');
  if(!/^[A-Z_]{1,64}$/.test(reference.clientKey))throw new Error('INVALID_CLIENT_KEY');
 }
-/** Typed future ports, with no production implementation or raw inputs in P0-03. */
-export interface ImportAdapterBoundary {
- validate(context:JobRevisionContext):Promise<{status:'NOT_READY'}>;
- plan(context:JobRevisionContext):Promise<{status:'NOT_READY'}>;
- apply(context:JobRevisionContext):Promise<never>;
-}
-export function requireImportExecution(request:AdapterRequest):never {
+/** Finite execution gate, not a pluggable owner interface. */
+export type ImportStage='validate'|'plan'|'apply';
+export function requireImportExecution(request:AdapterRequest,stage:ImportStage):never {
+ if(!['validate','plan','apply'].includes(stage))throw new Error('INVALID_IMPORT_STAGE');
  selectImportAdapter(request);
  throw new Error('ADAPTER_NOT_READY');
 }

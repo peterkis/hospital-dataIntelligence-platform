@@ -1,5 +1,15 @@
 # P0-03 作业与静态适配器骨架
 
+## PR #4 首轮修复
+
+Codex 对 5378507 提出三项 P2。删除无实际生产实现的 ImportAdapterBoundary 与仅为接口而设的 fake；保留实际使用的静态 selector，并以有限 ImportStage 类型让 validate/plan/apply 全部在 requireImportExecution 拒绝。以后真实 Owner 加入时再定义实现接口。
+
+新增前向迁移 0022，以 `(contract_version_id,contract_id)` 复合外键确保版本归属于同一契约；0021 已安装 checksum 不变。27-review-fk-red.log 在临时库实际复现错配 UPDATE 未被拒绝（Missing expected exception），28-review-upgrade.log 的 21→22 与 8/8 测试 GREEN，测试同时核对具体约束名称。当前已有 job 随 0022 正常通过约束校验。
+
+作业测试 runner 默认也使用 receipt-owned 临时库，测试模块启动时强制 TEMPORARY_VALIDATION；不再在持久库消耗固定 53 个目录代码。此前持久合成记录保留，不删除历史事实。当前库只承担 migrate/codegen/authority 等检查；所有变更测试均在用后清理的临时库。后续验证记录为 29 专项类型检查、30 当前迁移、31 默认临时作业/P0-02/P0-01回归；初始交付的 CURRENT 6 PASS/1 SKIP 是历史测试方法，不是当前 runner 行为。
+
+31 中 job 8/8、契约 9/9 通过，但契约临时库清理遇到 UNRELATED_SESSIONS_PRESENT，聚合命令 exit 1、目录回归尚未执行。33 再核对同一 receipt/OID 363049 及零会话，精确清理成功（未 FORCE）；35 单独补跑目录回归。32 build、34 module boundaries 通过。该清理失败保留，不把聚合命令记成全部通过。
+
 ## 后续授权与旧库退役（2026-09-13）
 
 用户在下述初始交付后确认删除精确旧库，并进一步授权提交、推送、创建 PR、请求 Codex review、修复审查问题直至通过、合并和快进本地 main。下文 local-only / PENDING_DISPOSAL 是初始交付时点记录，不再代表当前授权或物理库状态。

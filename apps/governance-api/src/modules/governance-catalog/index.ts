@@ -7,7 +7,7 @@ import {selectImportAdapter} from './import-adapter.js';
 export {ImportJobCommandSchema,ImportJobReadSchema} from './import-job.js';
 export type {ImportJobCommand,ImportJob,ImportJobOutcome} from './import-job.js';
 export {selectImportAdapter,assertJobLocalAlias,requireImportExecution} from './import-adapter.js';
-export type {ImportAdapterBoundary,JobRevisionContext,JobLocalAlias} from './import-adapter.js';
+export type {ImportStage,JobRevisionContext,JobLocalAlias} from './import-adapter.js';
 import type { DB as VNextDB } from '../../platform/database/vnext-types.generated.js';
 import type { ImportContractItem, ImportContractOutcome } from './contract-schema.js';
 export { ContractCommandSchema,ContractItemSchema,ContractOutcomeSchema,ContractScopeSchema,ContractTimeSchema,contractInputSchemas } from './contract-schema.js';

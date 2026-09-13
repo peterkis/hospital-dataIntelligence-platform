@@ -6,6 +6,18 @@ import * as owner from '../../apps/governance-api/src/modules/governance-catalog
 import {readFileSync} from 'node:fs';
 const {peer,quote}=await import('./lineage.mjs');
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
+assert.equal(receipt.purpose,'TEMPORARY_VALIDATION','mutating suite requires a disposable receipt');
+
+test('job contract and version must belong to the same contract at the database boundary',async()=>{
+ assert.equal(receipt.purpose,'TEMPORARY_VALIDATION');
+ const catalog=await openCatalog();
+ try{
+  const first=await fixture(catalog);const second=await fixture(catalog);
+  const job=await catalog.importJobCommand('maker',first.create);
+  assert.throws(()=>peer(receipt.name,`BEGIN; UPDATE governance_catalog.import_job SET contract_version_id=${quote(second.contract.versionId)}::uuid WHERE id=${quote(job.id)}::uuid; ROLLBACK;`),/VNEXT_ADMIN_COMMAND_FAILED/);
+  assert.match(readFileSync('.runtime/vnext/last-admin-error.log','utf8'),/import_job_contract_version_pair/);
+ }finally{await catalog.close();}
+});
 
 test('P0-03 unknown adapter refuses execution and cross-job aliases cannot escape their revision', async () => {
   assert.throws(()=>owner.selectImportAdapter({dataset:'UNKNOWN',profile:'CORE',contractVersion:1}),/UNKNOWN_ADAPTER/);
@@ -14,14 +26,9 @@ test('P0-03 unknown adapter refuses execution and cross-job aliases cannot escap
   assert.throws(()=>owner.assertJobLocalAlias(context,{...context,revisionId:randomUUID(),clientKey:'ROW_A'}),/CROSS_REVISION_ALIAS/);
   assert.throws(()=>owner.assertJobLocalAlias(context,{...context,datasetId:randomUUID(),clientKey:'ROW_A'}),/CROSS_DATASET_ALIAS/);
   owner.assertJobLocalAlias(context,{...context,clientKey:'ROW_A'});
-  // Test-only adapter fixture is never registered as production READY.
-  const testAdapter:owner.ImportAdapterBoundary={validate:async()=>({status:'NOT_READY'}),plan:async()=>({status:'NOT_READY'}),apply:async()=>{throw new Error('TEST_ONLY_NOT_READY');}};
-  assert.deepEqual(await testAdapter.validate(context),{status:'NOT_READY'});
-  assert.deepEqual(await testAdapter.plan(context),{status:'NOT_READY'});
-  await assert.rejects(testAdapter.apply(context),/TEST_ONLY_NOT_READY/);
   for(const dataset of ['ORG01','ORG24','PER01']) for(const profile of ['CORE','FULL'] as const){
    assert.equal(owner.selectImportAdapter({dataset,profile,contractVersion:1}).capability,'NOT_READY');
-   assert.throws(()=>owner.requireImportExecution({dataset,profile,contractVersion:1}),/ADAPTER_NOT_READY/);
+   for(const stage of ['validate','plan','apply'] as const)assert.throws(()=>owner.requireImportExecution({dataset,profile,contractVersion:1},stage),/ADAPTER_NOT_READY/);
   }
 });
 
