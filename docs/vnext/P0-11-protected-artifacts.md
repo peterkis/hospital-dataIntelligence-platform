@@ -1,5 +1,17 @@
 # P0-11 受限文件保护
 
+## PR #5 审阅修复（2026-09-14）
+
+用户在初始本地交付后明确授权推送、创建 PR、修复 Codex 意见至通过、合并和分支清理；以下初始 local-only 记录保持为历史事实。远端 Codex 对 `0424015` 提出一项 P2：READ/MASKED/PURGE 在最初 scope 授权被拒绝时，旧函数用 requestId 作 audit.object_id，无法追溯请求制品。
+
+新增前向迁移 0024，只替换有限函数中的审计目标表达式：非 STORE 始终用输入 artifactId；STORE 成功用新制品 ID，拒绝用所引用 jobId。不为审计额外查询目标存在性，不改变拒绝结果、权限、payload 或既有审计。已安装 0023 的 checksum 保持 `47b9aca0a43b26250eeaabda31fefb390895bc241adb974a6f1dc97f7a7d7b66`，不改写历史错指向的记录。
+
+`.runtime/vnext/p0-11/17-pr5-denial-red.log` 是真实 tests-only RED：object_id 实测为 request UUID。18-pr5-upgrade 与 20-pr5-fresh 修复后均 6/6，通过 scope 无权/未知 actor、存在/不存在制品、READ/MASKED/PURGE 与 STORE 拒绝的目标断言。23→24 升级另逐字核对原制品 metadata、密文和 audit，旧 job/契约读取不变，旧密文仍可读取，审计链验证通过。19 为专项类型检查；21–23 为当前原库迁移、生成类型 verify 和 authority。未改变表结构和 TS 运行时代码，沿用初始全仓 build/类型检查与作业回归，不把它们记成本轮重跑。当前迁移数 24，OID 206108/29 表/零业务实例 schema 保持。
+
+本地独立增量 Spec/Standards 复核未发现剩余阻断项；它不代替远端 Codex 的新 head 复审。最终远端审查、合并及本地/远端分支清理事实另存 ignored 交接。P0-02 BROWSER_BLOCKED、P0 IN_PROGRESS 和 P0-04 未开始均保留。
+
+## 初始本地交付
+
 范围：v3 P0-11，仅本地合成保护底座。基线 `00612a81f7b2221d0f4bd4f12670de15b5df1968` / tree `6162d77c457158aac26724e955241d7f71b6efcd`，进入时 main 工作树干净。当前 receipt OID 206108，22 项已安装 checksum 核实。P0-02 **BROWSER_BLOCKED** 保留，P0 仍 **IN_PROGRESS**；P0-04 未开始。
 
 ## 设计及调用

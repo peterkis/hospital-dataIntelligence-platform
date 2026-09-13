@@ -19,6 +19,25 @@ async function setup() {
   return {catalog,keys,f,job,input,grant,ref};
  } catch(error){await catalog.close();throw error;}
 }
+test('PR5: scope-denied and unknown-actor attempts retain the queried artifact or job in the audit',async()=>{
+ const s=await setup();try{
+  s.grant();const artifact=await s.catalog.storeProtectedArtifact('maker',s.input,raw);
+  const auditedObject=(input:ProtectedReadInput|ProtectedStoreInput)=>peer(receipt.name,`SELECT object_id::text FROM vnext_control.audit WHERE content_digest=encode(sha256(convert_to(${quote(JSON.stringify(input))}::jsonb::text,'UTF8')),'hex') ORDER BY recorded_at DESC LIMIT 1;`);
+  for(const actor of ['outsider','unregistered-synthetic']) {
+   for(const artifactId of [artifact.artifactId,randomUUID()]) {
+    for(const read of [s.catalog.authorizeSensitiveRead,s.catalog.readMasked,s.catalog.purgeOwnedExpiredArtifact]) {
+     const input=s.ref(artifactId);
+     await assert.rejects(read(actor,input),/^Error: ACCESS_DENIED$/);
+     assert.equal(auditedObject(input),artifactId,'denial audit must identify the queried artifact, not the request');
+    }
+   }
+   const input={...s.input,requestId:randomUUID()};
+   await assert.rejects(s.catalog.storeProtectedArtifact(actor,input,raw),/^Error: ACCESS_DENIED$/);
+   assert.equal(auditedObject(input),s.job.id,'denied storage must identify the referenced job');
+  }
+  assert.equal((await s.catalog.verifyAudit('auditor')).status,'PASS');
+ }finally{await s.catalog.close();}
+});
 test('AC01: metadata read does not confer raw access; wrong purpose/campus/identity and revoked grants deny',async()=>{
  const s=await setup();try{
   await assert.rejects(s.catalog.storeProtectedArtifact('maker',s.input,raw),/ACCESS_DENIED/);
