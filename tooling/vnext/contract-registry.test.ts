@@ -251,3 +251,29 @@ test('collection reads omit inaccessible dependencies without hiding unrelated c
   }
  }finally{await api.close();await catalog.close();}
 });
+
+test('parameter collections omit revoked sources, preserve exact-read denial and order equal keys',async()=>{
+ const catalog=await openCatalog();const api=await buildCatalogServer(catalog);
+ const cmd=(action:string,extra:Record<string,unknown>={})=>({action,scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_PARAMETER_LIST',...extra});
+ try{
+  const root=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(item=>item.code==='GOV09_SYSTEM')!;
+  const source=await catalog.command('maker',cmd('CREATE',{kind:'SOURCE',code:'PARAMETER_LIST_SOURCE',values:{name:'合成参数列表来源',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:root.id},validFrom:'2026-01-01T00:00:00'}));
+  const sourceReview=await catalog.command('maker',cmd('SUBMIT',{target:source.id,expectedHead:source.head}));
+  const sourcePublished=await catalog.command('reviewer',cmd('PUBLISH',{target:source.id,expectedHead:sourceReview.head,reviewDigest:sourceReview.reviewDigest}));
+  const parameters=[];
+  for(const systemVersionId of [root.versionId,sourcePublished.versionId]){
+   const parameter=await catalog.parameterCommand('maker',cmd('CREATE',{systemVersionId,parameterKey:'SAME_KEY',group:'SYNTHETIC',campus:'SYNTHETIC_ALL',definition:{kind:'VALUE_SCHEMA_V1',valueType:'TEXT',enumValues:[],description:'合成同名参数'},validFrom:'2026-01-01T00:00:00',validTo:null}));
+   parameters.push(await catalog.parameterCommand('reviewer',cmd('APPROVE',{target:parameter.id,versionId:parameter.versionId,reviewDigest:parameter.reviewDigest})));
+  }
+  const before=await catalog.parameterRead('maker',{scope:'SYNTHETIC',mode:'APPROVED'});
+  assert.deepEqual(before.filter(item=>item.parameterKey==='SAME_KEY').map(item=>item.id),parameters.map(item=>item.id).sort());
+  peer(testReceipt.name,`DELETE FROM vnext_control.object_grant WHERE actor_code='maker' AND object_id=${quote(source.id)}::uuid AND permission='READ';`);
+  for(const mode of ['CURRENT','APPROVED'] as const){
+   const response=await api.inject({method:'GET',url:`/api/vnext/parameter-definitions?scope=SYNTHETIC&mode=${mode}`,headers:{'x-catalog-actor':'maker'}});
+   assert.equal(response.statusCode,200,'revoked source must not abort all parameter options');
+   assert.ok(response.json().items.some((item:{id:string})=>item.id===parameters[0]!.id));
+   assert.ok(response.json().items.every((item:{id:string})=>item.id!==parameters[1]!.id));
+  }
+  for(const query of [`target=${parameters[1]!.id}`,`versionId=${parameters[1]!.versionId}`])assert.equal((await api.inject({method:'GET',url:`/api/vnext/parameter-definitions?scope=SYNTHETIC&${query}`,headers:{'x-catalog-actor':'maker'}})).statusCode,403);
+ }finally{await api.close();await catalog.close();}
+});
