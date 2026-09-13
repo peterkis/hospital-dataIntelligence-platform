@@ -6,12 +6,24 @@ import { actor } from './vnext-catalog-routes.js';
 
 const ErrorSchema=Type.Object({code:Type.String(),message:Type.String(),field:Type.Optional(Type.String())});
 const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,500:ErrorSchema};
-const Query=Type.Object({scope:ContractScopeSchema,mode:Type.Union([Type.Literal('CURRENT'),Type.Literal('HISTORY'),Type.Literal('EFFECTIVE')]),target:Type.Optional(Type.String({format:'uuid'})),businessAt:Type.Optional(ContractTimeSchema),asOf:Type.Optional(ContractTimeSchema),page:Type.Optional(Type.Integer({minimum:1}))},{additionalProperties:false});
+const ReadQuery={scope:ContractScopeSchema,asOf:Type.Optional(ContractTimeSchema),page:Type.Optional(Type.Integer({minimum:1}))};
+const CurrentQuery=Type.Object({...ReadQuery,target:Type.Optional(Type.String({format:'uuid'}))},{additionalProperties:false});
+const HistoryQuery=Type.Object({...ReadQuery,target:Type.String({format:'uuid'})},{additionalProperties:false});
+const EffectiveQuery=Type.Object({...ReadQuery,target:Type.Optional(Type.String({format:'uuid'})),businessAt:ContractTimeSchema},{additionalProperties:false});
+const ReadResponse={200:Type.Object({items:Type.Array(ContractItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors};
 export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalog) {
   const owner=()=>{if(!catalog)throw new Error('CATALOG_RUNTIME_REQUIRED');return catalog;};
-  app.get<{Querystring:Static<typeof Query>}>('/api/vnext/contracts',{schema:{operationId:'listImportContracts',querystring:Query,response:{200:Type.Object({items:Type.Array(ContractItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors}}},async request=>{
+  app.get<{Querystring:Static<typeof CurrentQuery>}>('/api/vnext/contracts/current',{schema:{operationId:'listImportContracts',querystring:CurrentQuery,response:ReadResponse}},async request=>{
     const {page=1,...query}=request.query;
-    const items=await owner().contractRead(actor(request.headers),query);
+    const items=await owner().contractRead(actor(request.headers),{...query,mode:'CURRENT'});
+    return {items:items.slice((page-1)*10,page*10),total:items.length,page};
+  });
+  app.get<{Querystring:Static<typeof HistoryQuery>}>('/api/vnext/contracts/history',{schema:{operationId:'getImportContractHistory',querystring:HistoryQuery,response:ReadResponse}},async request=>{
+    const {page=1,...query}=request.query;const items=await owner().contractRead(actor(request.headers),{...query,mode:'HISTORY'});
+    return {items:items.slice((page-1)*10,page*10),total:items.length,page};
+  });
+  app.get<{Querystring:Static<typeof EffectiveQuery>}>('/api/vnext/contracts/effective',{schema:{operationId:'listEffectiveImportContracts',querystring:EffectiveQuery,response:ReadResponse}},async request=>{
+    const {page=1,...query}=request.query;const items=await owner().contractRead(actor(request.headers),{...query,mode:'EFFECTIVE'});
     return {items:items.slice((page-1)*10,page*10),total:items.length,page};
   });
   app.post<{Body:Static<typeof ContractCommandSchema>}>('/api/vnext/contracts/commands',{schema:{operationId:'importContractCommand',body:ContractCommandSchema,response:{200:ContractOutcomeSchema,...errors}}},request=>owner().contractCommand(actor(request.headers),request.body));

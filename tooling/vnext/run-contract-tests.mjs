@@ -21,7 +21,7 @@ try {
     const generated=spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-generate',owned.receiptPath],{cwd:root,env:{...process.env,VNEXT_TEST_RECEIPT:owned.receiptPath,NODE_OPTIONS:`${process.env.NODE_OPTIONS??''} --import=${new URL('./connection-guard.mjs',import.meta.url).href}`},stdio:'inherit',windowsHide:true});
     if(generated.status!==0)throw new Error('CONTRACT_CODEGEN_FAILED');
   }
-  const run = spawnSync(process.execPath, ['--import', './tooling/vnext/connection-guard.mjs', '--import', 'tsx', '--test', 'tooling/vnext/contract-registry.test.ts'], {
+  const run = spawnSync(process.execPath, ['--import', './tooling/vnext/connection-guard.mjs', '--import', 'tsx', '--test', 'tooling/vnext/contract-registry.test.ts', 'tooling/vnext/contract-editor-state.test.ts'], {
     cwd: root, env: { ...process.env, VNEXT_DATABASE_URL: resolveTarget(owned.receipt), VNEXT_TEST_RECEIPT: owned.receiptPath },
     stdio: 'inherit', windowsHide: true,
   });

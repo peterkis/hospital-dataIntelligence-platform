@@ -18,6 +18,8 @@ PR #3 首轮 Codex review 指出同一引用字段可绑定两个参数版本。
 
 第七轮修复：契约查询 page 保留正整数约束，移除第 100 页上限，所有已报告的历史页都可请求。117 实际复现 page=101 返回 400；118 重新生成 OpenAPI，119 七组真实数据库测试通过（空的第 101 页合法返回 200），120 typecheck 通过。此修复无 DDL。
 
+第八轮修复：读取传输拆为 `/api/vnext/contracts/current`、`/history`、`/effective`，全部调用同一 owner；history 强制 target、effective 强制 businessAt，current 不接受 businessAt，不保留原歧义 mode 查询路径。OpenAPI/client/页面同步更新，125 验证真实 API 的模式必填与拒绝条件，126 typecheck 通过。页面废止按完整历史的最新流头配合最新 publication 摘要；代码集换字段同步迁移 enumValues，原定义不原位变动。`contract-editor-state.test.ts` 的两个纯状态测试验证这两项行为，并纳入契约 runner；这些单元测试不是浏览器验收。
+
 2026-09-13。当前不是完成报告；没有完成提交。执行规范为 `D:/Agent-Prompts/HDIP-MC-P0-02-single-active-db/P0-02-contract-registry.current-main.single-active-db.prompt.md`，原开发包继续作为来源资料。P0-03 未执行。
 
 ## 基线和数据库

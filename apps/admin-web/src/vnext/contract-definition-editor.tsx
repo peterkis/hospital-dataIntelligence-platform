@@ -1,13 +1,11 @@
 import React from 'react';
 import type {VNextImportContract,VNextParameterDefinition} from '@hospital-data-intelligence/generated-api-client';
+import {updateContractCodeSet} from './contract-editor-state.js';
 
 type Definition=VNextImportContract['definition'];
 export function ContractDefinitionEditor({definition,onChange,parameters,disabled}:{definition:Definition;onChange:(value:Definition)=>void;parameters:VNextParameterDefinition[];disabled:boolean}){
  const field=(index:number,patch:Partial<Definition['fields'][number]>)=>onChange({...definition,fields:definition.fields.map((value,i)=>i===index?{...value,...patch}:value)});
- const codes=(index:number,patch:Partial<Definition['codeSets'][number]>)=>{
-  const updated=definition.codeSets.map((value,i)=>i===index?{...value,...patch}:value);
-  onChange({...definition,codeSets:updated,...(patch.codes?{fields:definition.fields.map(value=>value.code===updated[index]?.field?{...value,enumValues:patch.codes!}:value)}:{})});
- };
+ const codes=(index:number,patch:Partial<Definition['codeSets'][number]>)=>onChange(updateContractCodeSet(definition,index,patch));
  const reference=(index:number,value:Definition['references'][number])=>onChange({...definition,references:definition.references.map((old,i)=>i===index?value:old)});
  return <fieldset disabled={disabled}><legend>修订完整定义</legend>
   <p>以当前固定定义为起点另存版本。保留未修改的字段、条件、代码集和引用；原版本不会被覆盖。字段类型与 R/C/O 必须符合固定目录版本。</p>

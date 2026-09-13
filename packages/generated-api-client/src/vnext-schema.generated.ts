@@ -132,7 +132,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/vnext/contracts": {
+    "/api/vnext/contracts/current": {
         parameters: {
             query?: never;
             header?: never;
@@ -140,6 +140,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listImportContracts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getImportContractHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/contracts/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listEffectiveImportContracts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1407,11 +1439,358 @@ export interface operations {
         parameters: {
             query: {
                 scope: "BASELINE" | "SYNTHETIC";
-                mode: "CURRENT" | "HISTORY" | "EFFECTIVE";
-                target?: string;
-                businessAt?: string;
                 asOf?: string;
                 page?: number;
+                target?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: number;
+                            /** Format: uuid */
+                            datasetVersionId: string;
+                            head: string;
+                            status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                            recordedAt: string;
+                            reviewDigest: string;
+                            /** @enum {string} */
+                            adapterReadiness: "NOT_READY";
+                            dataset: string;
+                            profile: "CORE" | "FULL";
+                            definition: {
+                                ruleVersion: string;
+                                templateVersion: string;
+                                sourceVersionId: string | null;
+                                fields: {
+                                    code: string;
+                                    type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    required: "R" | "C" | "O";
+                                    privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    enumValues: string[];
+                                }[];
+                                codeSets: {
+                                    field: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                    codes: string[];
+                                    validFrom: string;
+                                    validTo: string | null;
+                                    /** Format: uuid */
+                                    sourceVersionId: string;
+                                }[];
+                                rules: {
+                                    id: string;
+                                    field: string;
+                                    text: string;
+                                    /** @enum {string} */
+                                    status: "UNRESOLVED";
+                                    version: string;
+                                }[];
+                                references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                } | {
+                                    field: string;
+                                    /** @enum {string} */
+                                    target: "GOV09.config_id";
+                                    /** @enum {string} */
+                                    status: "DECLARED_PARAMETER";
+                                    /** Format: uuid */
+                                    parameterVersionId: string;
+                                    parameterDigest: string;
+                                })[];
+                            };
+                            schemas: {
+                                [key: string]: unknown;
+                            };
+                            semanticsDigest: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            sourceDraftDigest: string;
+                            sourcePolicies: {
+                                format: {
+                                    [key: string]: unknown;
+                                };
+                                time: string;
+                                identity: string;
+                                apply: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        }[];
+                        total: number;
+                        page: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getImportContractHistory: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                asOf?: string;
+                page?: number;
+                target: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: number;
+                            /** Format: uuid */
+                            datasetVersionId: string;
+                            head: string;
+                            status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                            recordedAt: string;
+                            reviewDigest: string;
+                            /** @enum {string} */
+                            adapterReadiness: "NOT_READY";
+                            dataset: string;
+                            profile: "CORE" | "FULL";
+                            definition: {
+                                ruleVersion: string;
+                                templateVersion: string;
+                                sourceVersionId: string | null;
+                                fields: {
+                                    code: string;
+                                    type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    required: "R" | "C" | "O";
+                                    privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    enumValues: string[];
+                                }[];
+                                codeSets: {
+                                    field: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                    codes: string[];
+                                    validFrom: string;
+                                    validTo: string | null;
+                                    /** Format: uuid */
+                                    sourceVersionId: string;
+                                }[];
+                                rules: {
+                                    id: string;
+                                    field: string;
+                                    text: string;
+                                    /** @enum {string} */
+                                    status: "UNRESOLVED";
+                                    version: string;
+                                }[];
+                                references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                } | {
+                                    field: string;
+                                    /** @enum {string} */
+                                    target: "GOV09.config_id";
+                                    /** @enum {string} */
+                                    status: "DECLARED_PARAMETER";
+                                    /** Format: uuid */
+                                    parameterVersionId: string;
+                                    parameterDigest: string;
+                                })[];
+                            };
+                            schemas: {
+                                [key: string]: unknown;
+                            };
+                            semanticsDigest: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            sourceDraftDigest: string;
+                            sourcePolicies: {
+                                format: {
+                                    [key: string]: unknown;
+                                };
+                                time: string;
+                                identity: string;
+                                apply: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        }[];
+                        total: number;
+                        page: number;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listEffectiveImportContracts: {
+        parameters: {
+            query: {
+                scope: "BASELINE" | "SYNTHETIC";
+                asOf?: string;
+                page?: number;
+                target?: string;
+                businessAt: string;
             };
             header?: never;
             path?: never;

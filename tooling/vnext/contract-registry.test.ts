@@ -21,14 +21,15 @@ test('53 source contracts remain unapproved and readable through the current own
     await assert.rejects(catalog.contractRead('outsider',{scope:'BASELINE',mode:'CURRENT'}),/ACCESS_DENIED/);
     const app=await buildCatalogServer(catalog);
     try {
-      const response=await app.inject({method:'GET',url:'/api/vnext/contracts?scope=BASELINE&mode=CURRENT',headers:{'x-catalog-actor':'maker'}});
+      const response=await app.inject({method:'GET',url:'/api/vnext/contracts/current?scope=BASELINE',headers:{'x-catalog-actor':'maker'}});
       assert.equal(response.statusCode,200);
+      for(const url of ['/api/vnext/contracts/history?scope=BASELINE','/api/vnext/contracts/effective?scope=BASELINE','/api/vnext/contracts/current?scope=BASELINE&businessAt=2026-01-01T00:00:00'])assert.equal((await app.inject({method:'GET',url,headers:{'x-catalog-actor':'maker'}})).statusCode,400,'transport enforces mode-specific query requirements');
       assert.equal(response.json().total,53);
-      const laterHistory=await app.inject({method:'GET',url:`/api/vnext/contracts?scope=BASELINE&mode=HISTORY&target=${drafts[0]!.id}&page=101`,headers:{'x-catalog-actor':'maker'}});
+      const laterHistory=await app.inject({method:'GET',url:`/api/vnext/contracts/history?scope=BASELINE&target=${drafts[0]!.id}&page=101`,headers:{'x-catalog-actor':'maker'}});
       assert.equal(laterHistory.statusCode,200,'history pages beyond 100 remain addressable');
       assert.deepEqual(laterHistory.json().items,[],'an empty later page is not a schema error');
       assert.ok(response.json().items[0].schemas,'persisted schemas are part of the current response contract');
-      assert.equal((await app.inject({method:'GET',url:'/api/vnext/contracts?scope=BASELINE&mode=CURRENT',headers:{'x-catalog-actor':'outsider'}})).statusCode,403);
+      assert.equal((await app.inject({method:'GET',url:'/api/vnext/contracts/current?scope=BASELINE',headers:{'x-catalog-actor':'outsider'}})).statusCode,403);
     } finally { await app.close(); }
   } finally { await catalog.close(); }
 });
@@ -255,7 +256,7 @@ test('collection reads omit inaccessible dependencies without hiding unrelated c
  const catalog=await openCatalog();const api=await buildCatalogServer(catalog);
  try{
   for(const mode of ['CURRENT','EFFECTIVE'] as const){
-   const response=await api.inject({method:'GET',url:`/api/vnext/contracts?scope=SYNTHETIC&mode=${mode}${mode==='EFFECTIVE'?'&businessAt=2026-07-15T00:00:00':''}`,headers:{'x-catalog-actor':'maker'}});
+   const response=await api.inject({method:'GET',url:`/api/vnext/contracts/${mode.toLowerCase()}?scope=SYNTHETIC${mode==='EFFECTIVE'?'&businessAt=2026-07-15T00:00:00':''}`,headers:{'x-catalog-actor':'maker'}});
    assert.equal(response.statusCode,200,'one revoked parameter must not abort an untargeted collection');
    assert.ok(response.json().items.some((item:{dataset:string})=>item.dataset==='ORG02'));
    assert.ok(response.json().items.every((item:{dataset:string})=>item.dataset!=='ORG16'));

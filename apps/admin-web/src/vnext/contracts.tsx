@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {createVNextCatalogClient,type VNextImportContract,type VNextImportCommand,type VNextEntry,type VNextParameterDefinition} from '@hospital-data-intelligence/generated-api-client';
 import {ContractDefinitionEditor} from './contract-definition-editor.js';
+import {contractRetirement} from './contract-editor-state.js';
 
 type Definition=VNextImportContract['definition'];
 const statusName:Record<string,string>={DRAFT:'草稿',APPROVED:'已批准',PUBLISHED:'已发布',RETIRED:'已废止'};
@@ -34,12 +35,12 @@ export function ContractApp(){
   setSelected(item);setHistory([]);setRule(item.definition.ruleVersion);setTemplate(item.definition.templateVersion);setFrom(item.validFrom);setTo(item.validTo??'');setCreating(false);setImpact(null);setImpactCases([]);
   setRevision(structuredClone(item.definition));setParameters([]);if(scope==='SYNTHETIC')void loadParameters(context,turn);
   window.history.replaceState(null,'',`?scope=${scope}&id=${item.id}`);
-  const response=await client().GET('/api/vnext/contracts',{params:{query:{scope,mode:'HISTORY',target:item.id,page:1}}});
+  const response=await client().GET('/api/vnext/contracts/history',{params:{query:{scope,target:item.id,page:1}}});
   if(context!==generation.current||turn!==detailGeneration.current)return;
   if(response.error){setMessage('完整历史不可读取：'+response.error.message+' ['+response.error.code+']');return;}
   const events=response.data.items;
   for(let next=2;next<=Math.ceil(response.data.total/10);next++){
-   const more=await client().GET('/api/vnext/contracts',{params:{query:{scope,mode:'HISTORY',target:item.id,page:next}}});
+   const more=await client().GET('/api/vnext/contracts/history',{params:{query:{scope,target:item.id,page:next}}});
    if(context!==generation.current||turn!==detailGeneration.current)return;
    if(more.error){setHistory([]);setMessage('完整历史不可读取：'+more.error.message);return;}
    events.push(...more.data.items);
@@ -48,7 +49,9 @@ export function ContractApp(){
  }
  useEffect(()=>{
   const turn=++generation.current;++detailGeneration.current;setSelected(null);setHistory([]);setItems([]);
-  void client().GET('/api/vnext/contracts',{params:{query:{scope,mode,page,...(mode==='EFFECTIVE'?{businessAt}:{}),...(asOf?{asOf}:{})}}}).then(response=>{
+  const query={scope,page,...(asOf?{asOf}:{})};
+  const load=mode==='EFFECTIVE'?client().GET('/api/vnext/contracts/effective',{params:{query:{...query,businessAt}}}):client().GET('/api/vnext/contracts/current',{params:{query}});
+  void load.then(response=>{
    if(turn!==generation.current)return;
    if(response.error){setMessage(response.error.message+' ['+response.error.code+']');setTotal(0);return;}
    setItems(response.data.items);setTotal(response.data.total);
@@ -102,9 +105,9 @@ export function ContractApp(){
    void send({...base,action,definition:{...revision,ruleVersion:rule,templateVersion:template},validFrom:from,validTo:to||null});
   }
   else if(action==='RETIRE'){
-   const published=[...history].reverse().find(event=>event.status==='PUBLISHED'||event.status==='RETIRED');
-   if(!published||published.status!=='PUBLISHED'){setMessage('没有可废止的已发布版本。');return;}
-   void send({...base,action,reviewDigest:published.reviewDigest,...(impact?.action==='RETIRE'&&impact.id===selected.id&&impact.selectionHead===selected.head?{impactDigest:impact.digest,expectedHead:impact.head}:{})});
+   const retirement=contractRetirement(history);
+   if(!retirement){setMessage('没有可废止的已发布版本，或当前历史尚未完整加载。');return;}
+   void send({...base,action,...retirement,...(impact?.action==='RETIRE'&&impact.id===selected.id&&impact.selectionHead===selected.head?{impactDigest:impact.digest,expectedHead:impact.head}:{})});
   }else void send({...base,action,reviewDigest:selected.reviewDigest,...(action!=='VALIDATE'&&impact?.action==='PUBLISH'&&impact.id===selected.id&&impact.selectionHead===selected.head?{impactDigest:impact.digest}:{})});
  }
  async function previewImpact(action:'PUBLISH'|'RETIRE'){
