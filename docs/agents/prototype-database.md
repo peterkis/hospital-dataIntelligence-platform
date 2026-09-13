@@ -1,5 +1,13 @@
 # Prototype PostgreSQL session
 
+## Current execution policy — P0-02, 2026-09-13
+
+The current persistent development database is the receipt-bound vNext database. Use `npm run prototype:db:with -- vnext:<script>` for its database tasks. The same managed entry permits the current `typecheck`, `build`, and static module/runtime/layout checks, and always probes vNext. Pure compiler commands can also run directly without a database session.
+
+Historical `prototype:*` database/application targets and the old aggregate `test` target are rejected with `LEGACY_OUT_OF_CURRENT_EXECUTION` before WSL/service startup. The previous workflow below is retained as historical documentation; its old target examples are not current execution instructions. Do not re-create, probe, migrate, or require the retired database to run vNext. The shared host/role/secret file is not a requirement that the old database exist.
+
+WSL/service ownership, keepalive and final cleanup still follow this runbook. Current readiness verifies the receipt identity, installed checksum prefix and explicit vNext schema objects. Never use a legacy probe as a fallback for a failed vNext check.
+
 Use this runbook for local Windows development and tests that require the repository's prototype PostgreSQL database. It is a synthetic, non-production convenience path; it is not formal acceptance, capacity evidence, or deployment certification.
 
 ## Default path

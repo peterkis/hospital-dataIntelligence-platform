@@ -23,6 +23,21 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export interface GovernanceCatalogContractImpactEvent {
+  assessment_head: Int8;
+  case_id: Generated<string>;
+  contract_id: string;
+  contract_version: string;
+  event_sequence: number;
+  evidence: Json;
+  obligation_spans: string;
+  recorded_at: Generated<string>;
+  resolution_contract_event: Int8 | null;
+  resolution_source_event: Int8 | null;
+  upstream_event: Int8;
+  upstream_object: string;
+}
+
 export interface GovernanceCatalogEvent {
   actor_code: string;
   head: Generated<Int8>;
@@ -48,11 +63,80 @@ export interface GovernanceCatalogImpactEvent {
   upstream_object: string;
 }
 
+export interface GovernanceCatalogImportContract {
+  dataset_id: string;
+  id: Generated<string>;
+  profile: string;
+}
+
+export interface GovernanceCatalogImportContractEvent {
+  actor_code: string;
+  approval_context: Json | null;
+  contract_id: string;
+  head: Generated<Int8>;
+  recorded_at: Generated<string>;
+  status: string;
+  version_id: string;
+}
+
+export interface GovernanceCatalogImportContractVersion {
+  contract_id: string;
+  dataset_version_id: string;
+  definition: Json;
+  id: Generated<string>;
+  maker_identity: string;
+  number: number;
+  recorded_at: Generated<string>;
+  schemas: Json;
+  semantics_digest: string;
+  source_snapshot_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface GovernanceCatalogObject {
   code: string;
   id: Generated<string>;
   kind: string;
   scope: string;
+}
+
+export interface GovernanceCatalogParameter {
+  id: Generated<string>;
+  parameter_key: string;
+  system_object_id: string;
+}
+
+export interface GovernanceCatalogParameterApproval {
+  actor_code: string;
+  definition_digest: string;
+  id: Generated<string>;
+  recorded_at: Generated<string>;
+  reviewer_identity: string;
+  version_id: string;
+}
+
+export interface GovernanceCatalogParameterGrant {
+  actor_code: string;
+  parameter_id: string;
+  permission: string;
+}
+
+export interface GovernanceCatalogParameterVersion {
+  campus: string;
+  definition: Json;
+  definition_digest: string;
+  id: Generated<string>;
+  maker_identity: string;
+  number: number;
+  owner_role: string;
+  parameter_group: string;
+  parameter_id: string;
+  purpose: string;
+  recorded_at: Generated<string>;
+  system_version_id: string;
+  valid_from: string;
+  valid_to: string | null;
 }
 
 export interface GovernanceCatalogSourceAssessment {
@@ -169,9 +253,17 @@ export interface VnextControlRequestIdentity {
 }
 
 export interface DB {
+  "governance_catalog.contract_impact_event": GovernanceCatalogContractImpactEvent;
   "governance_catalog.event": GovernanceCatalogEvent;
   "governance_catalog.impact_event": GovernanceCatalogImpactEvent;
+  "governance_catalog.import_contract": GovernanceCatalogImportContract;
+  "governance_catalog.import_contract_event": GovernanceCatalogImportContractEvent;
+  "governance_catalog.import_contract_version": GovernanceCatalogImportContractVersion;
   "governance_catalog.object": GovernanceCatalogObject;
+  "governance_catalog.parameter": GovernanceCatalogParameter;
+  "governance_catalog.parameter_approval": GovernanceCatalogParameterApproval;
+  "governance_catalog.parameter_grant": GovernanceCatalogParameterGrant;
+  "governance_catalog.parameter_version": GovernanceCatalogParameterVersion;
   "governance_catalog.source_assessment": GovernanceCatalogSourceAssessment;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.version": GovernanceCatalogVersion;

@@ -10,15 +10,19 @@ const SERVICE = 'postgresql-18';
 const READY_TIMEOUT_MILLISECONDS = 30_000;
 const repositoryRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const environmentFile = resolve(repositoryRoot, '.env.prototype.local');
-const databaseCheckScript = resolve(repositoryRoot, 'tooling/prototype/check-database.mjs');
 
 const [targetScript, ...targetArguments] = process.argv.slice(2);
+const databaseCheckScript = resolve(repositoryRoot, 'tooling/vnext/readiness.mjs');
 
 if (!targetScript || !/^[a-z0-9][a-z0-9:._-]*$/u.test(targetScript)) {
   fail('PROTOTYPE_DATABASE_TARGET_SCRIPT_REQUIRED');
 }
 if (targetScript === 'prototype:db:with') {
   fail('PROTOTYPE_DATABASE_RECURSIVE_TARGET');
+}
+const currentCompilerTargets = new Set(['typecheck','build','check:module-boundaries','check:runtime','check:repo:layout']);
+if (!targetScript.startsWith('vnext:') && !targetScript.startsWith('test:vnext:') && !currentCompilerTargets.has(targetScript)) {
+  fail('LEGACY_OUT_OF_CURRENT_EXECUTION');
 }
 if (process.platform !== 'win32') {
   fail('PROTOTYPE_DATABASE_WINDOWS_HOST_REQUIRED');

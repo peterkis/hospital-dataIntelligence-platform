@@ -1,0 +1,277 @@
+[
+  {
+    "sourcePath": "contracts/drafts/ORG01.contract.json",
+    "file": "ORG01.contract.json",
+    "sha256": "ca7365b076faa1cdc8e34073c658f862a6b3363d844b11d1c6274bf103d38624"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG02.contract.json",
+    "file": "ORG02.contract.json",
+    "sha256": "96b78e1a9db4b55106ed4c741d7bcdea553a03809f4ef6d2e3ee85431f18d294"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG03.contract.json",
+    "file": "ORG03.contract.json",
+    "sha256": "e875ebb101cc802b7bd65147dab8ef448cba2636353826a7cad192c997f2fe9e"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG04.contract.json",
+    "file": "ORG04.contract.json",
+    "sha256": "adc0bacec9d0c133d20a128ae2bbb6dae7e76c9ec8d04b0256a8c8a74e568ffd"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG05.contract.json",
+    "file": "ORG05.contract.json",
+    "sha256": "5e57409f96ac175f1f0ba5dc081dac81f7bc7ba87ab5f4afc701cc834faeb6d5"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG06.contract.json",
+    "file": "ORG06.contract.json",
+    "sha256": "4a55436a5bd9adf21ce790d19f217dc13209259dce5db02602964b2a677770cc"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG07.contract.json",
+    "file": "ORG07.contract.json",
+    "sha256": "70846f839b7e7cf546b485b9a0144523650d84f24bb83c39c918e96c49bacc81"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG08.contract.json",
+    "file": "ORG08.contract.json",
+    "sha256": "c872ceb2ba1aa4b7ae49cc5d31204d589154c2313a704ddf66985eb180cb99b0"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG09.contract.json",
+    "file": "ORG09.contract.json",
+    "sha256": "d2faa14fa5d925403508fb04fdedbdb6a731823e1c631d060bd5b71d41f17c94"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG10.contract.json",
+    "file": "ORG10.contract.json",
+    "sha256": "bbbbe5976f5ebcf073bf32878b0508eb93ddb255619bd8fdf3d936548270ca24"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG11.contract.json",
+    "file": "ORG11.contract.json",
+    "sha256": "0146723e4cc59880c5d19adba5d11d34209f0610d77d94c546a38798e58eb67c"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG12.contract.json",
+    "file": "ORG12.contract.json",
+    "sha256": "d9c798334839dead2e186abc0a7f936a08c7a41d247ae095e2e0793a9854acc5"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG13.contract.json",
+    "file": "ORG13.contract.json",
+    "sha256": "a31ca677353e982fa7262eeac50c7e5db9b5e6a24adf1abf285ed20d1dd09536"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG14.contract.json",
+    "file": "ORG14.contract.json",
+    "sha256": "9e2ee7b74bc570e6f6779fe6e78da22907aeb66e46d859a242b8725a3f4235e8"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG15.contract.json",
+    "file": "ORG15.contract.json",
+    "sha256": "89ebcd42787b9ef50af72d5824d59548face12512b2d2668999b50ddb4457085"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG16.contract.json",
+    "file": "ORG16.contract.json",
+    "sha256": "27c0e8afeb512576ca21db8d63dd85204171167dfd07712d3f05f2d5ad5f98e5"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG17.contract.json",
+    "file": "ORG17.contract.json",
+    "sha256": "8b9e225d72cee40ed310c7d04ec4e98988144d2c0298cc59f04bfab53da2c5bd"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG18.contract.json",
+    "file": "ORG18.contract.json",
+    "sha256": "c56a7f2cde9e9bf1c6e3cd3d208721974f256de196eeb3a1acf57578c65590de"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG19.contract.json",
+    "file": "ORG19.contract.json",
+    "sha256": "c90a07f03734a60c0105c29b3cedb6825c542372f8c23d1911f965dd34f73239"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG20.contract.json",
+    "file": "ORG20.contract.json",
+    "sha256": "fff54f7bfc4a59129d7ce882dc012223198cf17366771d54e7f905dc5a9607b5"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG21.contract.json",
+    "file": "ORG21.contract.json",
+    "sha256": "2596d1eb48ab21a079f862f037b8d9a6c86156cc3df3b2f187e5a66cf037b514"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG22.contract.json",
+    "file": "ORG22.contract.json",
+    "sha256": "bc08e065383cc2fa2fdab9af3484b8de30a8d5a8da23411b52ae191935ce8472"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG23.contract.json",
+    "file": "ORG23.contract.json",
+    "sha256": "7debf2466289315fe1246417e029a21c6892b8083f5f187ad3726a37c3c51c12"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG24.contract.json",
+    "file": "ORG24.contract.json",
+    "sha256": "f3f6a36edce6a7c537743571e9dc238740b2b855995edbe14b407f4819a3ebc6"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG25.contract.json",
+    "file": "ORG25.contract.json",
+    "sha256": "59b9fb5ae750635d4c3f907b4e5ae67ea92887f52da15bd1008a470077cf35ed"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG26.contract.json",
+    "file": "ORG26.contract.json",
+    "sha256": "bf83f5fa6a4f82ffd42fd3eab933f1d941f588c08ea0490d8beadda8842e9d05"
+  },
+  {
+    "sourcePath": "contracts/drafts/ORG27.contract.json",
+    "file": "ORG27.contract.json",
+    "sha256": "31637e4e60e9ac864dc4897ac63391197749a3dead637770fcc8a1aa1440754e"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER01.contract.json",
+    "file": "PER01.contract.json",
+    "sha256": "aeced1e75e8d657282fe3373ab2998442d3d91d84b0a7d7583f3b6a6606927d1"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER02.contract.json",
+    "file": "PER02.contract.json",
+    "sha256": "65422316c6efbc19171706e7abc30b25536f4e3485e8f34c4aa6aac26bbc4c71"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER03.contract.json",
+    "file": "PER03.contract.json",
+    "sha256": "e5596c24608e921ce6226d57b4afafd299dde88ba95b8a071052c8bb9ecfc1b7"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER04.contract.json",
+    "file": "PER04.contract.json",
+    "sha256": "25d570c32a0d6df60dd30caa61cc3a916c8e5b9eea42bd6a505c613e3c5f45b6"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER05.contract.json",
+    "file": "PER05.contract.json",
+    "sha256": "4e84964833db65a635ba5cf1ca84648e04fed831b18692ff6a24b1708efccb42"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER06.contract.json",
+    "file": "PER06.contract.json",
+    "sha256": "864320b512a05b7004e8d93ea673bb1fd79915c4685d7127bc49f794a2f4de29"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER07.contract.json",
+    "file": "PER07.contract.json",
+    "sha256": "ad1193aa76f5e0a0cc3fc7e098141e10da126186d06496ddea364cb23ffc41f9"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER08.contract.json",
+    "file": "PER08.contract.json",
+    "sha256": "8f8a0bd44da1963cccd295bf833c05b8da895dfb6b78122dd841c29359a5495a"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER09.contract.json",
+    "file": "PER09.contract.json",
+    "sha256": "9ccd3b06487be5c8ae49084387659fab76edc11588519922692800c919e53031"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER10.contract.json",
+    "file": "PER10.contract.json",
+    "sha256": "4a30f98b70e9a0cb7798700fba44feb2aa3b2b68819f27b92b6707d922504b6c"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER11.contract.json",
+    "file": "PER11.contract.json",
+    "sha256": "368fdd8f9bf92d4f7548a4ef01737ec01bbc8177bf0b648516c26384168a9e0b"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER12.contract.json",
+    "file": "PER12.contract.json",
+    "sha256": "04634d79824008076ffebe733f33cfc10568c06ce64ff61f376380c42b066326"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER13.contract.json",
+    "file": "PER13.contract.json",
+    "sha256": "6fa65a7cde9eda4eab4e4a18c70441d940078532d45184d373db270c5203b1ea"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER14.contract.json",
+    "file": "PER14.contract.json",
+    "sha256": "89a619bdbd8ea47f291b5ae2b4eafd44a6a92984b1c114ab72d8120d9816c57e"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER15.contract.json",
+    "file": "PER15.contract.json",
+    "sha256": "465b5ee74b98f38440fa53362cd81e7c7af5959652887594ec8aeddde382efd4"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER16.contract.json",
+    "file": "PER16.contract.json",
+    "sha256": "d3a2b0bae47cb8132cd60857a00ffd73ef42a01a0353dbd12013b87cd17a3507"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER17.contract.json",
+    "file": "PER17.contract.json",
+    "sha256": "b6e69226b618e66aa424a3892c64addb766895aa833e6e42141ce1da35344b9f"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER18.contract.json",
+    "file": "PER18.contract.json",
+    "sha256": "81630f0da94afd89f756d2c64b54cfa9728241862524f8bb15d2fe8c22b2377e"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER19.contract.json",
+    "file": "PER19.contract.json",
+    "sha256": "06c3f071f5182a0882f777caca12af9268bab1d795197a4f454e7e6cb249b146"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER20.contract.json",
+    "file": "PER20.contract.json",
+    "sha256": "1c404c6f1821858f087b426e090cdb0dbcf3241f3526ec3a79dcffcee5af644d"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER21.contract.json",
+    "file": "PER21.contract.json",
+    "sha256": "bbbbbe08ed17341dcac03f45014adcb7664a94f19e49d167d59ab4e990a33f8c"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER22.contract.json",
+    "file": "PER22.contract.json",
+    "sha256": "8eaa99db8b93b4e2251dd968adc68b1f37d7f68815881737008f98be5206f97c"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER23.contract.json",
+    "file": "PER23.contract.json",
+    "sha256": "30c8560e488965bd900db34ba5a6137c60216ffbbed424c1ccb51d8349ae7817"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER24.contract.json",
+    "file": "PER24.contract.json",
+    "sha256": "51d8a2c0863145f219fe756e16eef89cc85fc05ef4a3a420952b46c4caa352a4"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER25.contract.json",
+    "file": "PER25.contract.json",
+    "sha256": "854c40f1b2259ebaee9da174aca4738a5cbf8adb348c80ebff5f8804d6bfe5c0"
+  },
+  {
+    "sourcePath": "contracts/drafts/PER26.contract.json",
+    "file": "PER26.contract.json",
+    "sha256": "112859c5048ba25fe24e3ebc867383fef8932400f1d2b770876e473cacaf5737"
+  },
+  {
+    "sourcePath": "maps/conditional-rule-disposition.json",
+    "file": "conditional-rule-disposition.json",
+    "sha256": "f9e76e57d9298f95cff6bc0281a93367f4065e0c2ddb456109ba1f2840e1e1a3"
+  },
+  {
+    "sourcePath": "inputs/dataset-v2/standard_review_queue.json",
+    "file": "standard_review_queue.json",
+    "sha256": "8783fb3c2d1419c16d17a97cbb698507341b56dd43da16148e0f61630342b284"
+  }
+]
