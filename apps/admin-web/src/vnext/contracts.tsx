@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {createVNextCatalogClient,type VNextImportContract,type VNextImportCommand,type VNextEntry,type VNextParameterDefinition} from '@hospital-data-intelligence/generated-api-client';
+import {ContractDefinitionEditor} from './contract-definition-editor.js';
 
 type Definition=VNextImportContract['definition'];
 const statusName:Record<string,string>={DRAFT:'草稿',APPROVED:'已批准',PUBLISHED:'已发布',RETIRED:'已废止'};
@@ -18,21 +19,33 @@ export function ContractApp(){
  const [impact,setImpact]=useState<{action:'PUBLISH'|'RETIRE';id:string;head:string;selectionHead:string;digest:string;closing:Array<Record<string,unknown>>}|null>(null);
  const [impactCases,setImpactCases]=useState<Array<Record<string,unknown>>>([]);
  const [parameters,setParameters]=useState<VNextParameterDefinition[]>([]);const [parameterId,setParameterId]=useState('');
+ const [revision,setRevision]=useState<Definition|null>(null);
  const generation=useRef(0);const detailGeneration=useRef(0);
  const client=()=>createVNextCatalogClient(window.location.origin,actor);
- function clear(){++generation.current;++detailGeneration.current;setItems([]);setSelected(null);setHistory([]);setCatalog([]);setCreating(false);setMessage('');setImpact(null);setImpactCases([]);setParameters([]);setParameterId('');}
+ function clear(){++generation.current;++detailGeneration.current;setItems([]);setSelected(null);setRevision(null);setHistory([]);setCatalog([]);setCreating(false);setMessage('');setImpact(null);setImpactCases([]);setParameters([]);setParameterId('');}
+ async function loadParameters(context:number,detail?:number){
+  const approved:VNextParameterDefinition[]=[];
+  for(let page=1;page<=100;page++){
+   const response=await client().GET('/api/vnext/parameter-definitions',{params:{query:{scope,mode:'APPROVED',page}}});
+   if(context!==generation.current||(detail!==undefined&&detail!==detailGeneration.current))return;
+   if(response.error){setParameters([]);setMessage('参数定义选择不可用：'+response.error.code);return;}
+   approved.push(...response.data.items);if(approved.length>=response.data.total)break;
+  }
+  setParameters(approved);
+ }
  async function detail(item:VNextImportContract){
   const turn=++detailGeneration.current;const context=generation.current;
   setSelected(item);setHistory([]);setRule(item.definition.ruleVersion);setTemplate(item.definition.templateVersion);setFrom(item.validFrom);setTo(item.validTo??'');setCreating(false);setImpact(null);setImpactCases([]);
+  setRevision(structuredClone(item.definition));setParameters([]);if(scope==='SYNTHETIC')void loadParameters(context,turn);
   window.history.replaceState(null,'',`?scope=${scope}&id=${item.id}`);
   const response=await client().GET('/api/vnext/contracts',{params:{query:{scope,mode:'HISTORY',target:item.id,page:1}}});
   if(context!==generation.current||turn!==detailGeneration.current)return;
-  if(response.error){setSelected(null);setMessage(response.error.message+' ['+response.error.code+']');return;}
+  if(response.error){setMessage('完整历史不可读取：'+response.error.message+' ['+response.error.code+']');return;}
   const events=response.data.items;
   for(let next=2;next<=Math.ceil(response.data.total/10);next++){
    const more=await client().GET('/api/vnext/contracts',{params:{query:{scope,mode:'HISTORY',target:item.id,page:next}}});
    if(context!==generation.current||turn!==detailGeneration.current)return;
-   if(more.error){setSelected(null);setHistory([]);setMessage(more.error.message);return;}
+   if(more.error){setHistory([]);setMessage('完整历史不可读取：'+more.error.message);return;}
    events.push(...more.data.items);
   }
   setHistory(events);
@@ -93,8 +106,12 @@ export function ContractApp(){
  }
  function action(action:'VALIDATE'|'APPROVE'|'PUBLISH'|'RETIRE'|'REVISE'){
   if(!selected)return;
+  if(action!=='REVISE'&&action!=='RETIRE'&&revision&&(JSON.stringify(revision)!==JSON.stringify(selected.definition)||rule!==selected.definition.ruleVersion||template!==selected.definition.templateVersion||from!==selected.validFrom||to!==(selected.validTo??''))){setMessage('定义有未保存的修订，请先另存新规则版本，再校验或批准。');return;}
   const base={scope,requestId:crypto.randomUUID(),reason:'SYNTHETIC_CONTRACT_UI',target:selected.id,expectedHead:selected.head};
-  if(action==='REVISE')void send({...base,action,definition:{...selected.definition,ruleVersion:rule,templateVersion:template},validFrom:from,validTo:to||null});
+  if(action==='REVISE'){
+   if(!revision)return;
+   void send({...base,action,definition:{...revision,ruleVersion:rule,templateVersion:template},validFrom:from,validTo:to||null});
+  }
   else if(action==='RETIRE'){
    const published=[...history].reverse().find(event=>event.status==='PUBLISHED'||event.status==='RETIRED');
    if(!published||published.status!=='PUBLISHED'){setMessage('没有可废止的已发布版本。');return;}
@@ -114,10 +131,10 @@ export function ContractApp(){
   if(turn!==detailGeneration.current||context!==generation.current)return;
   if(response.error){setImpactCases([]);if(response.error.code==='ACCESS_DENIED')clear();setMessage(response.error.message);return;}setImpactCases(response.data);
  }
- async function download(){
-  if(!selected)return;const turn=generation.current;const item=selected;
+ async function download(item:VNextImportContract|null=selected){
+  if(!item)return;const turn=generation.current;const detail=detailGeneration.current;
   const response=await client().GET('/api/vnext/contracts/{id}/schema',{params:{path:{id:item.id},query:{scope,versionId:item.versionId}}});
-  if(turn!==generation.current)return;
+  if(turn!==generation.current||detail!==detailGeneration.current)return;
   if(response.error){setMessage(response.error.message);return;}
   const url=URL.createObjectURL(new Blob([JSON.stringify(response.data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`${item.dataset}-${item.profile}-v${item.version}.schema.json`;link.click();URL.revokeObjectURL(url);
  }
@@ -133,8 +150,9 @@ export function ContractApp(){
    <label>GOV09 固定参数定义（适用于已选 rule_ref）<select value={parameterId} onChange={event=>setParameterId(event.target.value)}><option value="">未选择，保持依赖未就绪</option>{parameters.map(parameter=><option key={parameter.versionId} value={parameter.versionId}>{parameter.parameterKey} · v{parameter.version} · {parameter.ownerRole}</option>)}</select></label><a href="/admin/vnext/parameter-definitions">维护参数结构定义</a>
   </>:selected?<><div className="detail-heading"><h3>{selected.dataset} · {selected.profile}</h3><span className="badge">{statusName[selected.status]} / v{selected.version}</span></div><p className="provenance">目录版本：{selected.datasetVersionId}<br/>契约版本：{selected.versionId}<br/>规则：{selected.definition.ruleVersion} · 模板：{selected.definition.templateVersion}<br/>源资料摘要：{selected.sourceDraftDigest}</p><div className="field-table"><table><thead><tr><th>字段</th><th>类型 / 隐私</th><th>条件 / 枚举</th></tr></thead><tbody>{selected.definition.fields.map(field=><tr key={field.code}><td>{field.code}<small>{field.required}</small></td><td>{field.type}<small>{field.privacy}</small></td><td>{field.condition}<small>{field.enumValues.join(' / ')}</small></td></tr>)}</tbody></table></div><p>未解析规则 {selected.definition.rules.length} 条 · 未就绪引用 {selected.definition.references.filter(ref=>ref.status==='BLOCKED_DEPENDENCY').length} 项 · 代码集 {selected.definition.codeSets.length} 版</p><details><summary>固定来源条件与引用</summary>{selected.definition.rules.map(rule=><p key={rule.id}>{rule.id} · {rule.field}：{rule.text}（{rule.status}）</p>)}{selected.definition.references.map(ref=><p key={ref.field}>{ref.field} → {ref.target}（{ref.status}）{'parameterVersionId' in ref&&<small>{ref.parameterVersionId} · {ref.parameterDigest}</small>}</p>)}{selected.definition.codeSets.map(codes=><p key={codes.field}>{codes.field} · {codes.codeSystem} / {codes.version} · {codes.status}</p>)}</details><div className="actions"><button disabled={busy} onClick={()=>void download()}>下载此版本 schema</button>{scope==='SYNTHETIC'&&(['VALIDATE','APPROVE','PUBLISH','RETIRE'] as const).map(command=><button key={command} disabled={busy} onClick={()=>action(command)}>{{VALIDATE:'校验契约',APPROVE:'批准此版本',PUBLISH:'发布此版本',RETIRE:'废止发布'}[command]}</button>)}</div>
   </>:<div className="empty">选择契约查看固定字段、来源与版本历史。</div>}
+  {selected&&scope==='SYNTHETIC'&&revision&&<ContractDefinitionEditor definition={revision} onChange={setRevision} parameters={parameters} disabled={busy}/>}
   {(creating||(selected&&scope==='SYNTHETIC'))&&<div className="editor"><div className="toolbar"><label>规则版本<input aria-label="规则版本" value={rule} onChange={event=>setRule(event.target.value)}/></label><label>模板版本<input value={template} onChange={event=>setTemplate(event.target.value)}/></label><label>生效时间<input value={from} onChange={event=>setFrom(event.target.value)}/></label><label>结束时间（空为无界）<input value={to} onChange={event=>setTo(event.target.value)}/></label></div><div className="actions"><button disabled={busy} onClick={()=>creating?void create():action('REVISE')}>{creating?'保存契约草稿':'另存新规则版本'}</button></div></div>}
   {selected&&<section><div className="actions"><button onClick={()=>void previewImpact('PUBLISH')}>查看发布影响</button><button onClick={()=>void previewImpact('RETIRE')}>查看废止影响</button><button onClick={()=>void loadCases()}>查看契约影响问题</button></div>{impact&&<div className="provenance"><strong>{impact.action==='RETIRE'?'废止':'发布'}将关闭 {impact.closing.length} 项已冻结义务</strong>{impact.closing.map(row=><p key={String(row['caseId'])}>{String(row['caseId'])} · {String(row['obligationSpans'])}</p>)}<small>审批绑定摘要：{impact.digest}</small></div>}{impactCases.map(row=><div className="history" key={String(row['caseId'])+String(row['eventSequence'])}>{row['eventSequence']===1?'新增义务':'义务已关闭'} · {String(row['obligationSpans'])}<small>来源事件 {String(row['upstreamEvent'])} / 审批 {String(row['assessmentHead'])}</small></div>)}</section>}
-  {!!history.length&&<section><h4>原版本与治理历史</h4>{history.map(event=><div className="history" key={event.head}>{statusName[event.status]} · v{event.version} · {event.definition.ruleVersion}<time>{event.recordedAt}</time><small>[{event.validFrom}, {event.validTo??'无界'})</small></div>)}</section>}
+  {!!history.length&&<section><h4>原版本与治理历史</h4>{history.map(event=><div className="history" key={event.head}>{statusName[event.status]} · v{event.version} · {event.definition.ruleVersion}<time>{event.recordedAt}</time><small>[{event.validFrom}, {event.validTo??'无界'})</small><button disabled={busy} onClick={()=>void download(event)}>下载 v{event.version} 原版本 schema</button></div>)}</section>}
   </section></div></main></div>;
 }

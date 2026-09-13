@@ -8,6 +8,8 @@ PR #3 首轮 Codex review 指出同一引用字段可绑定两个参数版本。
 
 第二轮指出指定 schema 下载不应被无关历史版本的权限阻断。0016 在数据库进入逐版本授权前按 contract ID/version ID 限定候选；schema 路由直接传递指定版本。74 实际复现可访问旧版本却返回 403，75 验证旧版 200、被撤权新版 403、契约/版本不匹配 404，并通过 11→16/codegen；76 typecheck 通过。原 HISTORY 仍保留完整历史授权，已有版本不改写。
 
+第三轮修复：0017 对无 target 的集合查询跳过来源/参数 ACCESS_DENIED 行，显式 target 仍抛出 403，其他异常不吞掉。81 为集合 403 的实际 RED，82 六组测试及 11→17/codegen GREEN。维护页以完整已选定义初始化独立修订状态，可编辑字段、来源、代码集及参数引用；未修改规则不丢弃，保存仍走 REVISE，未保存修订不能被误当成已批准内容。历史每个事件提供绑定其 versionId 的 schema 下载按钮。83 的类型缩窄错误保留，84/85 为修正后的类型检查与页面构建；实际浏览器验收限制未消失。
+
 2026-09-13。当前不是完成报告；没有完成提交。执行规范为 `D:/Agent-Prompts/HDIP-MC-P0-02-single-active-db/P0-02-contract-registry.current-main.single-active-db.prompt.md`，原开发包继续作为来源资料。P0-03 未执行。
 
 ## 基线和数据库

@@ -239,3 +239,15 @@ test('contract draft fixes an existing dataset version and allocates its stable 
     await assert.rejects(catalog.command('reviewer',{...retireSource,impactDigest:impact.impactDigest}),/ACCESS_DENIED/,'a replayed source approval rechecks its original contract consumer access');
   } finally { await catalog.close(); }
 });
+
+test('collection reads omit inaccessible dependencies without hiding unrelated contracts',async()=>{
+ const catalog=await openCatalog();const api=await buildCatalogServer(catalog);
+ try{
+  for(const mode of ['CURRENT','EFFECTIVE'] as const){
+   const response=await api.inject({method:'GET',url:`/api/vnext/contracts?scope=SYNTHETIC&mode=${mode}${mode==='EFFECTIVE'?'&businessAt=2026-07-15T00:00:00':''}`,headers:{'x-catalog-actor':'maker'}});
+   assert.equal(response.statusCode,200,'one revoked parameter must not abort an untargeted collection');
+   assert.ok(response.json().items.some((item:{dataset:string})=>item.dataset==='ORG02'));
+   assert.ok(response.json().items.every((item:{dataset:string})=>item.dataset!=='ORG16'));
+  }
+ }finally{await api.close();await catalog.close();}
+});
