@@ -1,8 +1,9 @@
-import { createCipheriv, createDecipheriv, createHmac, createSecretKey, randomBytes, type KeyObject } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, createSecretKey, randomBytes, type KeyObject } from 'node:crypto';
 import { sql, type Kysely } from 'kysely';
 import { Type, type Static } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/vnext-types.generated.js';
+import type { ImportJob } from './import-job.js';
 
 /** Local synthetic development only. No implicit key, no production key service. */
 export interface KeyProviderPort {
@@ -36,7 +37,7 @@ export type ProtectedReadInput = Static<typeof ProtectedReadSchema>;
 export interface ProtectedReference { artifactId: string; status: 'QUARANTINED'; masked: '[REDACTED]'; purged: boolean; expiresAt: string }
 type Envelope = { keyId: string; nonce: string; tag: string; ciphertext: string };
 type Result = ProtectedReference & { error?: string; envelope?: Envelope; binding?: string };
-const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
+const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PUBLIC_DIGEST_CONFLICT']);
 function safeError(error: unknown): Error { return new Error(error instanceof Error && safeCodes.has(error.message) ? error.message : 'PROTECTED_OPERATION_FAILED'); }
 
 export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
@@ -51,7 +52,8 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
   return {
     async storeProtectedArtifact(actor: string, input: ProtectedStoreInput, bytes: Uint8Array): Promise<ProtectedReference> {
       if (!Check(ProtectedStoreSchema, input) || !(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > 1048576) throw new Error('CLOSED_INPUT_REQUIRED');
-      // Copy before asynchronous work: callers cannot mutate the authenticated payload in flight.
+      // Copy before asynchronous work: callers cannot mutate authenticated metadata or bytes in flight.
+      input={...input};
       const raw = Buffer.from(bytes);
       try {
         const keys = keyProvider(); const {id, key} = keys.current();
@@ -63,7 +65,20 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
         const digest = createHmac('sha256',keys.lookup()).update('PROTECTED_STORE_V1\0').update(JSON.stringify([
           input.scope,input.campus,input.purpose,input.requestId,input.jobId,input.revisionId,input.kind,input.retentionSeconds,
         ])).update(raw).digest('hex');
-        return await call(actor,'STORE',input,{keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:ciphertext.toString('hex')},digest);
+        const envelope={keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:ciphertext.toString('hex')};
+        const result=await db.transaction().execute(async trx=>{
+          const result=(await sql<{result:Result}>`select governance_catalog.protected_command(${actor},'STORE',${JSON.stringify(input)}::jsonb,${JSON.stringify(envelope)}::jsonb,${digest}) as result`.execute(trx)).rows[0]!.result;
+          // A normal SQL denial must commit its minimal audit before the caller receives the error.
+          if(result.error)return result;
+          // Both owner calls retain 901002 until commit: revision changes cannot race this check.
+          const job=(await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:input.scope,jobId:input.jobId})}::jsonb) as result`.execute(trx)).rows[0]!.result;
+          // Compare only in memory. Never persist/log the low-entropy hash or rewrite old metadata.
+          const publicDigest=createHash('sha256').update(raw).digest('hex');
+          if(job.revisions.some(revision=>revision.input.declaredSha256===publicDigest))throw new Error('PUBLIC_DIGEST_CONFLICT');
+          return result;
+        });
+        if(result.error)throw new Error(result.error);
+        return result;
       } catch (error) { throw safeError(error); } finally { raw.fill(0); }
     },
     async readMasked(actor: string, input: ProtectedReadInput): Promise<ProtectedReference> {

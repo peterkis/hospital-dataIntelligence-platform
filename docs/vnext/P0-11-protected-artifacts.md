@@ -1,6 +1,6 @@
 # P0-11 受限文件保护
 
-## PR #5 审阅修复（2026-09-14）
+## PR #5 第一轮审阅修复（2026-09-14）
 
 用户在初始本地交付后明确授权推送、创建 PR、修复 Codex 意见至通过、合并和分支清理；以下初始 local-only 记录保持为历史事实。远端 Codex 对 `0424015` 提出一项 P2：READ/MASKED/PURGE 在最初 scope 授权被拒绝时，旧函数用 requestId 作 audit.object_id，无法追溯请求制品。
 
@@ -9,6 +9,14 @@
 `.runtime/vnext/p0-11/17-pr5-denial-red.log` 是真实 tests-only RED：object_id 实测为 request UUID。18-pr5-upgrade 与 20-pr5-fresh 修复后均 6/6，通过 scope 无权/未知 actor、存在/不存在制品、READ/MASKED/PURGE 与 STORE 拒绝的目标断言。23→24 升级另逐字核对原制品 metadata、密文和 audit，旧 job/契约读取不变，旧密文仍可读取，审计链验证通过。19 为专项类型检查；21–23 为当前原库迁移、生成类型 verify 和 authority。未改变表结构和 TS 运行时代码，沿用初始全仓 build/类型检查与作业回归，不把它们记成本轮重跑。当前迁移数 24，OID 206108/29 表/零业务实例 schema 保持。
 
 本地独立增量 Spec/Standards 复核未发现剩余阻断项；它不代替远端 Codex 的新 head 复审。最终远端审查、合并及本地/远端分支清理事实另存 ignored 交接。P0-02 BROWSER_BLOCKED、P0 IN_PROGRESS 和 P0-04 未开始均保留。
+
+## PR #5 第二轮：公开摘要旁路（2026-09-14）
+
+Codex 对 `b21ec8e` 提出 P1：绑定作业的公开 declaredSha256 若等于受限 bytes 的普通 SHA，HMAC 隔离仍被旧 metadata 绕过。24-pr5-public-digest-red 真实复现旧代码接受该组合；新增同根事务保护后 25 为 7/7。存储先执行原权限/接收命令，再在提交前经同 Owner 读取该 job 全部历史修订，在内存比对普通 SHA；命中则 `PUBLIC_DIGEST_CONFLICT` 回滚 artifact/payload/outcome/request_identity 及暂存成功审计。普通 SHA 不作为 SQL 参数、不持久化、不进入错误；原 metadata 不改写。SQL 正常授权拒绝仍先提交原非敏感拒绝 ledger，再向调用方抛错。入参和 bytes 在异步前复制，901002 持有至提交。
+
+相邻反向顺序也单独由 27-pr5-reverse-digest-red 复现：先保护、再新增匹配摘要。因此 0025 对 import_input_revision 增加有限 INSERT guard：job 有任意 protected_artifact 后，只能复用该 job 既有 declaredSha256 集合，不能追加新的普通摘要。清理 payload 后也保留约束；无受限制品的 job 保持 P0-03 行为。沿用已有非内容 marker 的修订仍可追加，后续解析票不能把真实敏感 bytes 摘要放回普通 job。该限制没有通用策略引擎或业务 Apply。
+
+28-pr5-digest-upgrade 的 24→25 与专项 8/8 通过，原 job/契约/制品/审计仍保留。测试覆盖 RAW_FILE/RAW_CELL/ERROR_REPORT、历史声明命中、反向追加、同事务全回滚、并发两命令只能提交一个且最终不得同时存在 payload 和匹配公开 SHA；入参突变不能改变已验证 payload/AAD。后续 29–36 为最终 fresh、当前库25迁移/types/authority、P0-03回归、专项类型检查、API build 和 lineage 检查。审阅、最终合并状态以 ignored 交接的对应 head 为准；不将先前候选的测试冒充为本轮重跑。
 
 ## 初始本地交付
 

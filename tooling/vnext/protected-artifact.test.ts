@@ -94,12 +94,54 @@ test('AC05: closed input and safe failures; no plaintext or ordinary raw SHA in 
   assert.equal((await s.catalog.readMasked('maker',s.ref(a.artifactId))).status,'QUARANTINED');
  }finally{await s.catalog.close();}
 });
+test('PR5: reject protected bytes whose plain SHA is published in any bound job revision',async()=>{
+ const s=await setup();try{
+  s.grant();const exposed=createHash('sha256').update(raw).digest('hex');
+  const job=await s.catalog.importJobCommand('maker',{...s.f.create,requestId:randomUUID(),input:{kind:'METADATA_ONLY',declaredSha256:exposed}});
+  const before=()=>peer(receipt.name,"SELECT json_build_array((SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM governance_catalog.protected_payload),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM vnext_control.request_identity),(SELECT count(*) FROM vnext_control.audit),(SELECT count(*) FROM vnext_control.audit_chain))::text;");
+  for(const kind of ['RAW_FILE','RAW_CELL','ERROR_REPORT'] as const){
+   const count=before();
+   await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,jobId:job.id,revisionId:job.revisionId,requestId:randomUUID(),kind},raw),/^Error: PUBLIC_DIGEST_CONFLICT$/);
+   assert.equal(before(),count,'rejection cannot leave a stored artifact, payload or accepted outcome');
+  }
+  // Changing the current declaration cannot erase exposure in immutable earlier revisions.
+  const revised=await s.catalog.importJobCommand('maker',{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_JOB',jobId:job.id,expectedCurrentRevision:job.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'b'.repeat(64)}});
+  await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,jobId:job.id,revisionId:revised.revisionId,requestId:randomUUID()},raw),/^Error: PUBLIC_DIGEST_CONFLICT$/);
+  assert.equal((await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:job.id})).revisions[0]!.input.declaredSha256,exposed,'existing metadata evidence is not rewritten');
+ }finally{await s.catalog.close();}
+});
+test('PR5: protected jobs cannot later publish a new plain digest; safe revisions and races remain bounded',async()=>{
+ const s=await setup();try{
+  s.grant();const exposed=createHash('sha256').update(raw).digest('hex');
+  await s.catalog.storeProtectedArtifact('maker',s.input,raw);
+  const revise={action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_JOB',jobId:s.job.id,expectedCurrentRevision:s.job.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:exposed}};
+  await assert.rejects(s.catalog.importJobCommand('maker',revise),/PUBLIC_DIGEST_AFTER_PROTECTION_FORBIDDEN/);
+  assert.equal((await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:s.job.id})).revisions.length,1);
+  const safe=await s.catalog.importJobCommand('maker',{...revise,requestId:randomUUID(),input:s.f.create.input});
+  assert.equal(safe.revision,'2','a protected job may still append revisions using its existing non-content declaration');
+  const job=await s.catalog.importJobCommand('maker',{...s.f.create,requestId:randomUUID()});
+  const raced=await Promise.allSettled([
+   s.catalog.storeProtectedArtifact('maker',{...s.input,requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId},raw),
+   s.catalog.importJobCommand('maker',{...revise,requestId:randomUUID(),jobId:job.id,expectedCurrentRevision:job.revisionId}),
+  ]);
+  assert.equal(raced.filter(result=>result.status==='fulfilled').length,1,'sensitive storage and conflicting metadata publication cannot both commit');
+  const rejected=raced.find(result=>result.status==='rejected');assert.ok(rejected?.status==='rejected');
+  assert.match(String(rejected.reason),/STALE_REVISION|PUBLIC_DIGEST_AFTER_PROTECTION_FORBIDDEN/);
+  const history=await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:job.id});
+  const payloads=Number(peer(receipt.name,`SELECT count(*) FROM governance_catalog.protected_payload p JOIN governance_catalog.protected_artifact a ON a.id=p.artifact_id WHERE a.job_id=${quote(job.id)}::uuid;`));
+  assert.ok(payloads===0||history.revisions.every(revision=>revision.input.declaredSha256!==exposed),'resulting state cannot contain protected bytes together with their public SHA');
+ }finally{await s.catalog.close();}
+});
 test('atomic replay, concurrent stores, cross revision, current authorization and audit rollback',async()=>{
  const s=await setup();try{
   s.grant();s.grant('maker-alias');s.grant('maker','READ');const results=await Promise.all(Array.from({length:4},()=>s.catalog.storeProtectedArtifact('maker',s.input,raw)));
   for(const result of results)assert.deepEqual(result,results[0]);assert.deepEqual(await s.catalog.storeProtectedArtifact('maker-alias',s.input,raw),results[0]);
   const reordered:ProtectedStoreInput={retentionSeconds:s.input.retentionSeconds,kind:s.input.kind,revisionId:s.input.revisionId,jobId:s.input.jobId,requestId:s.input.requestId,purpose:s.input.purpose,campus:s.input.campus,scope:s.input.scope};
   assert.deepEqual(await s.catalog.storeProtectedArtifact('maker',reordered,raw),results[0]);
+  const mutable={...s.input,requestId:randomUUID()};const callerBytes=Buffer.from(raw);
+  const pending=s.catalog.storeProtectedArtifact('maker',mutable,callerBytes);
+  mutable.jobId=randomUUID();callerBytes.fill(0);
+  assert.deepEqual(await s.catalog.authorizeSensitiveRead('maker',s.ref((await pending).artifactId)),raw,'store snapshots metadata and bytes before yielding');
   await assert.rejects(s.catalog.storeProtectedArtifact('maker',s.input,Buffer.from('different')),/REQUEST_CONFLICT/);
   await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,requestId:randomUUID(),revisionId:randomUUID()},raw),/STALE_REVISION/);
   const count=()=>peer(receipt.name,"SELECT json_build_array((SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM governance_catalog.protected_payload),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM vnext_control.audit),(SELECT count(*) FROM vnext_control.request_identity))::text;");const before=count();
