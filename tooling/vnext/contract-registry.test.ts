@@ -68,8 +68,23 @@ test('GOV09 registers immutable parameter definitions under an actual source own
   const dataset=await catalog.command('reviewer',{action:'PUBLISH',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_PARAMETER',target:datasetDraft.id,expectedHead:datasetReview.head,reviewDigest:datasetReview.reviewDigest});
   const reference={field:'rule_ref',target:'GOV09.config_id',status:'DECLARED_PARAMETER',parameterVersionId:approved.versionId,parameterDigest:approved.reviewDigest};
   const contractInput=cmd('CREATE',{datasetVersionId:dataset.versionId,profile:'CORE',validFrom:'2026-01-01T00:00:00',validTo:'2026-06-01T00:00:00',definition:{ruleVersion:'PARAMETER_REF_1',templateVersion:'PARAMETER_REF_1',sourceVersionId:published.versionId,fields:[{code:'rule_ref',type:'id',required:'O',privacy:'INTERNAL',condition:'OPTIONAL',enumValues:[]}],rules:[],codeSets:[],references:[reference]}});
+  const otherParameter=await catalog.parameterCommand('maker',{...input,requestId:randomUUID(),parameterKey:'OTHER_WARD_RULE'});
+  const otherApproval=await catalog.parameterCommand('reviewer',cmd('APPROVE',{target:otherParameter.id,versionId:otherParameter.versionId,reviewDigest:otherParameter.reviewDigest}));
+  const otherReference={...reference,parameterVersionId:otherApproval.versionId,parameterDigest:otherApproval.reviewDigest};
+  const duplicateDefinition={...(contractInput['definition'] as Record<string,unknown>),references:[reference,otherReference]};
+  await assert.rejects(catalog.contractCommand('maker',{...contractInput,requestId:randomUUID(),definition:duplicateDefinition}),/DUPLICATE_REFERENCE_FIELD/,'two valid parameter versions cannot govern one reference field');
   await assert.rejects(catalog.contractCommand('maker',{...contractInput,requestId:randomUUID(),validTo:'2026-08-01T00:00:00'}),/PARAMETER_PERIOD_NOT_COVERED/);
   const contract=await catalog.contractCommand('maker',contractInput);
+  await assert.rejects(catalog.contractCommand('maker',cmd('REVISE',{target:contract.id,expectedHead:contract.head,validFrom:contractInput['validFrom'],validTo:contractInput['validTo'],definition:{...duplicateDefinition,ruleVersion:'DUPLICATE_REF_2'}})),/DUPLICATE_REFERENCE_FIELD/);
+  // Owned fresh database only: emulate a candidate accepted before migration 0015.
+  const fixtureDefinition=(definition:Record<string,unknown>)=>peer(testReceipt.name,`BEGIN; ALTER TABLE governance_catalog.import_contract_version DISABLE TRIGGER import_contract_version_immutable; UPDATE governance_catalog.import_contract_version SET definition=${quote(JSON.stringify(definition))}::jsonb WHERE id=${quote(contract.versionId)}::uuid; ALTER TABLE governance_catalog.import_contract_version ENABLE TRIGGER import_contract_version_immutable; COMMIT;`);
+  fixtureDefinition(duplicateDefinition);
+  try{
+   const oldCandidate=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT',target:contract.id}))[0]!;
+   const validation=await catalog.contractCommand('maker',cmd('VALIDATE',{target:contract.id,expectedHead:contract.head,reviewDigest:oldCandidate.reviewDigest}));
+   assert.ok(validation.blockers.includes('DUPLICATE_REFERENCE_FIELD'));
+   await assert.rejects(catalog.contractCommand('reviewer',cmd('APPROVE',{target:contract.id,expectedHead:contract.head,reviewDigest:oldCandidate.reviewDigest})),/CONTRACT_VALIDATION_BLOCKED/);
+  }finally{fixtureDefinition(contractInput['definition'] as Record<string,unknown>);}
   const contractApproval=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:contract.id,expectedHead:contract.head,reviewDigest:contract.reviewDigest}));
   await catalog.contractCommand('reviewer',cmd('PUBLISH',{target:contract.id,expectedHead:contractApproval.head,reviewDigest:contractApproval.reviewDigest}));
   await catalog.parameterCommand('maker',cmd('REVISE',{target:draft.id,expectedCurrentVersion:draft.versionId,systemVersionId:published.versionId,group:'CARE',campus:'SYNTHETIC_ALL',definition:{kind:'VALUE_SCHEMA_V1',valueType:'INTEGER',enumValues:['1','2'],description:'新的未批准参数结构'},validFrom:'2026-01-01T00:00:00',validTo:'2026-07-01T00:00:00'}));

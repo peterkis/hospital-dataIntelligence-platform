@@ -1,5 +1,11 @@
 # P0-02 数据集契约注册表（维护页门禁阻断）
 
+## 后续授权与 PR 修复（2026-09-13）
+
+用户在原阻断交接后明确授权提交、推送、创建 PR，修复 Codex review 问题直至通过，再合并并清理分支。以下无提交/local-only描述保留为此前执行事实，不代表后续禁止；浏览器验收仍未通过，也不将代码合并等同于完整业务验收。
+
+PR #3 首轮 Codex review 指出同一引用字段可绑定两个参数版本。新增前向迁移 0015 拒绝重复 reference field，并阻止既有歧义候选通过 VALIDATE/APPROVE/PUBLISH；不改已应用 0012–0014 或任何历史版本。69 日志为真实数据库 Missing expected rejection，70 为修复后 fresh 11→15 前缀/codegen 和五组契约测试通过（包括旧候选负例），71 为 typecheck。修复不改变表结构、OpenAPI 或维护页。
+
 2026-09-13。当前不是完成报告；没有完成提交。执行规范为 `D:/Agent-Prompts/HDIP-MC-P0-02-single-active-db/P0-02-contract-registry.current-main.single-active-db.prompt.md`，原开发包继续作为来源资料。P0-03 未执行。
 
 ## 基线和数据库
