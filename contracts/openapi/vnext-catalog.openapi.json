@@ -3789,8 +3789,7 @@
           {
             "schema": {
               "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "minimum": 1
             },
             "in": "query",
             "name": "page",

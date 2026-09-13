@@ -6,7 +6,7 @@ import { actor } from './vnext-catalog-routes.js';
 
 const ErrorSchema=Type.Object({code:Type.String(),message:Type.String(),field:Type.Optional(Type.String())});
 const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,500:ErrorSchema};
-const Query=Type.Object({scope:ContractScopeSchema,mode:Type.Union([Type.Literal('CURRENT'),Type.Literal('HISTORY'),Type.Literal('EFFECTIVE')]),target:Type.Optional(Type.String({format:'uuid'})),businessAt:Type.Optional(ContractTimeSchema),asOf:Type.Optional(ContractTimeSchema),page:Type.Optional(Type.Integer({minimum:1,maximum:100}))},{additionalProperties:false});
+const Query=Type.Object({scope:ContractScopeSchema,mode:Type.Union([Type.Literal('CURRENT'),Type.Literal('HISTORY'),Type.Literal('EFFECTIVE')]),target:Type.Optional(Type.String({format:'uuid'})),businessAt:Type.Optional(ContractTimeSchema),asOf:Type.Optional(ContractTimeSchema),page:Type.Optional(Type.Integer({minimum:1}))},{additionalProperties:false});
 export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalog) {
   const owner=()=>{if(!catalog)throw new Error('CATALOG_RUNTIME_REQUIRED');return catalog;};
   app.get<{Querystring:Static<typeof Query>}>('/api/vnext/contracts',{schema:{operationId:'listImportContracts',querystring:Query,response:{200:Type.Object({items:Type.Array(ContractItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors}}},async request=>{

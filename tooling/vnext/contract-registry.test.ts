@@ -24,6 +24,9 @@ test('53 source contracts remain unapproved and readable through the current own
       const response=await app.inject({method:'GET',url:'/api/vnext/contracts?scope=BASELINE&mode=CURRENT',headers:{'x-catalog-actor':'maker'}});
       assert.equal(response.statusCode,200);
       assert.equal(response.json().total,53);
+      const laterHistory=await app.inject({method:'GET',url:`/api/vnext/contracts?scope=BASELINE&mode=HISTORY&target=${drafts[0]!.id}&page=101`,headers:{'x-catalog-actor':'maker'}});
+      assert.equal(laterHistory.statusCode,200,'history pages beyond 100 remain addressable');
+      assert.deepEqual(laterHistory.json().items,[],'an empty later page is not a schema error');
       assert.ok(response.json().items[0].schemas,'persisted schemas are part of the current response contract');
       assert.equal((await app.inject({method:'GET',url:'/api/vnext/contracts?scope=BASELINE&mode=CURRENT',headers:{'x-catalog-actor':'outsider'}})).statusCode,403);
     } finally { await app.close(); }
