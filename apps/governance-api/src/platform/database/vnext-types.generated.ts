@@ -165,6 +165,27 @@ export interface GovernanceCatalogParameterVersion {
   valid_to: string | null;
 }
 
+export interface GovernanceCatalogProtectedArtifact {
+  campus: string;
+  expires_at: string;
+  id: Generated<string>;
+  job_id: string;
+  kind: string;
+  purpose: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision_id: string;
+  status: Generated<string>;
+}
+
+export interface GovernanceCatalogProtectedPayload {
+  artifact_id: string;
+  ciphertext: Buffer;
+  key_id: string;
+  nonce: Buffer;
+  tag: Buffer;
+}
+
 export interface GovernanceCatalogSourceAssessment {
   action: string;
   content: Json;
@@ -272,6 +293,14 @@ export interface VnextControlOutcome {
   result: Json;
 }
 
+export interface VnextControlProtectedGrant {
+  actor_code: string;
+  campus: string;
+  dataset_id: string;
+  permission: string;
+  purpose: string;
+}
+
 export interface VnextControlRequestIdentity {
   identity_code: string;
   original_actor_code: string;
@@ -292,6 +321,8 @@ export interface DB {
   "governance_catalog.parameter_approval": GovernanceCatalogParameterApproval;
   "governance_catalog.parameter_grant": GovernanceCatalogParameterGrant;
   "governance_catalog.parameter_version": GovernanceCatalogParameterVersion;
+  "governance_catalog.protected_artifact": GovernanceCatalogProtectedArtifact;
+  "governance_catalog.protected_payload": GovernanceCatalogProtectedPayload;
   "governance_catalog.source_assessment": GovernanceCatalogSourceAssessment;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.version": GovernanceCatalogVersion;
@@ -304,5 +335,6 @@ export interface DB {
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.object_grant": VnextControlObjectGrant;
   "vnext_control.outcome": VnextControlOutcome;
+  "vnext_control.protected_grant": VnextControlProtectedGrant;
   "vnext_control.request_identity": VnextControlRequestIdentity;
 }
