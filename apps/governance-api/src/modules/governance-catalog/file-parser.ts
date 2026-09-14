@@ -6,10 +6,11 @@ const {parseLocalDateTime}:typeof import('../../platform/local-datetime/local-da
 );
 
 export type FileFormat = 'CSV' | 'JSON' | 'XLSX';
+type XlsxCellType='inlineStr'|'s';
 export interface ParserField { code: string; type: string }
 export interface ParserIssue { code: string; row: number; column: number }
 export type CanonicalRow = Record<string,string>;
-export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:string}
+export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:'CSV'|'JSON'|XlsxCellType}
 export interface ParserResult {
   policy: 'STRICT_V1'; structuralStatus: 'PARSED' | 'REJECTED';
   manifest: { bomDetected: boolean; bomMembers:string[]; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
@@ -217,7 +218,16 @@ function booleanAttribute(node:Xml,name:string):boolean|undefined {
   if(!['0','1','false','true'].includes(value))return fail('XML_ATTRIBUTE_INVALID');
   return value==='1'||value==='true';
 }
-function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][] {
+function assertTextSafety(value:string,row=0,column=0):void {
+  if(value.length>8192)fail('CELL_LIMIT',row,column);
+  if(value.includes('\uFEFF'))fail('BOM_NOT_PREFIX',row,column);
+  if(!value.isWellFormed()||/[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(value))fail('TEXT_CONTROL',row,column);
+}
+function decodeXlsxText(value:string,row=0,column=0):string {
+  const decoded=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
+  assertTextSafety(decoded,row,column);return decoded;
+}
+function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:string[][];sourceTypes:XlsxCellType[][]} {
   const files = unzip(bytes);
   manifest.bomMembers=[...files].filter(([,value])=>value.startsWith('\uFEFF')).map(([name])=>name);
   manifest.bomDetected=manifest.bomMembers.length>0;
@@ -277,7 +287,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   if (!wr.children.some(r => r.attrs['Id'] === sheet!.attrs['r:id'] && r.attrs['Target'] === 'worksheets/sheet1.xml')) fail('RELATIONSHIP_REJECTED');
   const shared = docs.get('xl/sharedStrings.xml'); const strings: string[] = [];
   let declaredCount:number|undefined,sharedReferences=0;
-  if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(leaf(one(si,'t'))); } }
+  if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(decodeXlsxText(leaf(one(si,'t')))); } }
   if(shared){
     if(shared.attrs['count']!==undefined)declaredCount=unsignedAttribute(shared.attrs['count']);
     if(shared.attrs['uniqueCount']!==undefined&&unsignedAttribute(shared.attrs['uniqueCount'])!==strings.length)fail('SHARED_STRING_COUNT');
@@ -295,7 +305,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     if(min>max||max>16384)fail('COLUMN_RANGE');
     if (booleanAttribute(col,'hidden')) manifest.hiddenColumns.push(`${min}:${max}`);
   } }
-  const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];
+  const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];const sourceTypes:XlsxCellType[][]=[];
   if(manifest.defaultRowsHidden){
     manifest.hiddenRows=data.children.filter(r=>booleanAttribute(r,'hidden')!==false).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
     fail('HIDDEN_UNDECLARED');
@@ -303,22 +313,21 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   for (const r of data.children) {
     const rowNum = rows.length + 1; if (r.attrs['r'] !== String(rowNum)) fail('ROW_GAP', rowNum); only(r,['c']);
     if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
-    const values: string[] = [];
+    const values: string[] = [];const rowTypes:XlsxCellType[]=[];
     for (const c of r.children) {
       const col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
       if (c.attrs['r'] !== `${letters}${rowNum}`) fail('COLUMN_GAP',rowNum,col);
-      only(c,['v','is']); let value: string;
-      if (c.attrs['t'] === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = leaf(one(inline,'t')); }
-      else if (c.attrs['t'] === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
+      only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
+      if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
+      else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
       else return fail('TEXT_CELL_REQUIRED',rowNum,col);
-      value=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
-      if (value.length > 8192) fail('CELL_LIMIT',rowNum,col); values.push(value); if (values.length > 100) fail('COLUMN_LIMIT');
+      values.push(value);rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT');
     }
-    rows.push(values); if (rows.length > 1001) fail('ROW_LIMIT');
+    rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT');
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
   if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
-  return rows;
+  return {rows,sourceTypes};
 }
 
 export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[]): ParserResult {
@@ -327,9 +336,9 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
     if (!fields.length || fields.length > 100 || new Set(fields.map(f=>f.code)).size !== fields.length) fail('FIELD_CONTRACT');
     let objects: Array<Record<string, string | number | null>>;
-    let physicalRows:number[]=[];
+    let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
-      const table = xlsx(bytes,result.manifest); objects = tableObjects(table,fields);physicalRows=table.slice(1).map((_,i)=>i+2);
+      const table = xlsx(bytes,result.manifest); objects = tableObjects(table.rows,fields);physicalRows=table.rows.slice(1).map((_,i)=>i+2);sourceTypes=table.sourceTypes.slice(1);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
@@ -345,9 +354,8 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
         const column=Object.keys(obj).indexOf(f.code)+1;
         const value = obj[f.code]; if (typeof value !== 'string') fail('TEXT_CELL_REQUIRED',rowNum,column);
         const text = value as string;
-        result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? 'TEXT' : format});
-        if(text.includes('\uFEFF'))fail('BOM_NOT_PREFIX',rowNum,column);
-        if(!text.isWellFormed() || /[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(text))fail('TEXT_CONTROL',rowNum,column);
+        result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
+        assertTextSafety(text,rowNum,column);
         if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
         if (f.type === 'datetime') {try{parseLocalDateTime(text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}
         row[f.code] = text;

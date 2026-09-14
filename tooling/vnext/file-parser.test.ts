@@ -7,6 +7,28 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+function sharedFixture(unused:string){
+ const files=Object.fromEntries(unzip(workbook));
+ files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>');
+ files['xl/_rels/workbook.xml.rels']=files['xl/_rels/workbook.xml.rels']!.replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('<c r="A2" t="inlineStr"><is><t xml:space="preserve">0012</t></is></c>','<c r="A2" t="s"><v>0</v></c>');
+ files['xl/sharedStrings.xml']=`<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="2"><si><t>0012</t></si><si><t>${unused}</t></si></sst>`;
+ return zipText(files);
+}
+test('PR6 round12: unused shared strings are decoded and bounded before admission',()=>{
+ for(const unused of ['_x0000_','_xFEFF_','_xD800_','x'.repeat(8193)])assert.equal(parseBytes(sharedFixture(unused),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(sharedFixture('unused'),'XLSX',fields).structuralStatus,'PARSED');
+});
+test('PR6 round12: original XLSX representation survives canonical conversion',()=>{
+ const result=parseBytes(sharedFixture('unused'),'XLSX',fields);
+ assert.equal(result.cells.find(c=>c.field==='code')?.sourceType,'s');assert.equal(result.cells.find(c=>c.field==='label')?.sourceType,'inlineStr');
+ assert.deepEqual(result.rows,parse('code,label\n0012,DEMO').rows);
+ const files=Object.fromEntries(unzip(sharedFixture('unused')));
+ files['xl/sharedStrings.xml']=files['xl/sharedStrings.xml']!.replace('<t>0012</t>','<t>_x005F_x0041_</t>');
+ const literal=parseBytes(zipText(files),'XLSX',fields);assert.equal(literal.rows[0]?.['code'],'_x0041_','shared text is decoded once');
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('>code</t>','>temporary</t>').replace('>label</t>','>code</t>').replace('>temporary</t>','>label</t>');
+ const reordered=parseBytes(zipText(files),'XLSX',fields);assert.equal(reordered.cells.find(c=>c.field==='label')?.sourceType,'s');assert.equal(reordered.cells.find(c=>c.field==='code')?.sourceType,'inlineStr');
+});
 test('PR6 round11: relationship TargetMode must be absent or exactly Internal',()=>{
  for(const part of ['_rels/.rels','xl/_rels/workbook.xml.rels'])for(const mode of ['', 'internal',' Internal','invalid'])assert.equal(parseBytes(edit(part,'<Relationship Id=',`<Relationship TargetMode="${mode}" Id=`),'XLSX',fields).structuralStatus,'REJECTED');
  assert.equal(parseBytes(edit('_rels/.rels','<Relationship Id=','<Relationship TargetMode="Internal" Id='),'XLSX',fields).structuralStatus,'PARSED');

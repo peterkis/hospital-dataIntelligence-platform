@@ -14,6 +14,8 @@
 
 单元格 sourceRow 保存 CSV 记录实际起始物理行／XLSX 原表行（JSON 为对象序号），与规范 row 分开。CSV 多行引号记录后的字段数量错误使用 tokenizer 保留的物理起始行，不从规范数组索引倒推。
 
+sourceType 为 CSV、JSON 或 XLSX 原始 t 值 inlineStr/s；XLSX 共享与内联表示不再合并成 TEXT，且随源列而非契约列顺序保存。共享字符串表的每个条目（包括未引用条目）在加载时即解码一次并检查字符/BOM/8192 长度；引用时不再二次解码。
+
 `inspectEnvelope` 执行同一有界结构解析并保存受限证据，没有第二套准入。解析成功仅代表结构 PARSED；文件仍 QUARANTINED、字段规则 NOT_RUN、安全扫描 NOT_RUN、adapter NOT_READY。解析结果、错误报告不进入普通 job、日志或浏览器缓存。
 
 ## STRICT_V1 固定契约
@@ -109,3 +111,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `96681d3` 提出 TargetMode 空值及不可能 datetime 两项 P2。110 RED 后，关系 TargetMode 仅允许缺省或精确 Internal；datetime 复用平台 parseLocalDateTime，校验真实月日、闰年及钟表分量，保留原文本与微秒，不使用 Date 或时区转换。原生 TS worker／编译 JS worker 仅选择两个固定本地 helper 路径，不接受输入控制的模块地址。
 
 111 parser **34/34**，112 Owner **7/7**，113 类型检查、114 API build 通过；115 编译后 JS worker 的合法/非法历法值 **2/2**。独立 Spec/Standards 窄复核无阻断。没有扩展其他字段业务规则或改变数据库。
+
+## PR #6 第十二轮修复
+
+远端 Codex 对 `5f8de8d` 提出未引用 sharedStrings 绕过解码/限额与原来源表示丢失两项 P2。116 RED 后统一检查所有共享条目，拒绝未引用的控制字符、FEFF、孤立代理和超长值；内联与共享值分别只解码一次。原单元格 sourceType 改为精确 inlineStr/s，沿源列映射进入规范证据。117 parser **36/36**、118 Owner **7/7**、119 类型检查和 120 API build 通过；121 补强字面转义不得二次解码、重排字段仍保留原表示的断言。独立 Spec/Standards 窄复核无阻断，无 DDL/授权/存储变化。
