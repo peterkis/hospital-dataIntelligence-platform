@@ -28,6 +28,21 @@ async function setup() {
 test('PR6: public metadata command cannot commit a FILE revision without intake',async()=>{
  const s=await setup();try{await assert.rejects(s.catalog.importJobCommand('maker',s.input.job),/FILE_RECEIVE_REQUIRED/);}finally{await s.catalog.close();}
 });
+test('PR6 round23: digest kind/status pairs remain constrained with triggers disabled',async()=>{
+ const s=await setup();try{
+  s.grant('STORE');const file=await s.catalog.receiveFile('maker',s.input,Buffer.from(`${s.field}\n0012`));
+  const id=quote(file.job.revisionId);
+  for(const assignment of ["digest_status='DECLARED'","metadata='{}'::jsonb","metadata=jsonb_build_object('kind','METADATA_ONLY')"]){
+   peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; DO $$ BEGIN BEGIN UPDATE governance_catalog.import_input_revision SET ${assignment} WHERE id=${id}::uuid; RAISE EXCEPTION 'EXPECTED_DECLARATIVE_CHECK'; EXCEPTION WHEN check_violation THEN NULL; END; END $$; ROLLBACK;`);
+  }
+ }finally{await s.catalog.close();}
+});
+test('PR6 round23: RAW_FILE uniqueness survives trigger bypass',async()=>{
+ const s=await setup();try{
+  s.grant('STORE');const file=await s.catalog.receiveFile('maker',s.input,Buffer.from(`${s.field}\n0012`));
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; DO $$ BEGIN BEGIN INSERT INTO governance_catalog.protected_artifact(job_id,revision_id,request_id,campus,purpose,kind,expires_at) SELECT job_id,revision_id,uuidv7(),campus,purpose,kind,expires_at FROM governance_catalog.protected_artifact WHERE id=${quote(file.artifact.artifactId)}::uuid; RAISE EXCEPTION 'EXPECTED_DECLARATIVE_UNIQUE'; EXCEPTION WHEN unique_violation THEN NULL; END; END $$; ROLLBACK;`);
+ }finally{await s.catalog.close();}
+});
 test('PR6: deferred database invariant rejects an orphan FILE revision and rolls back outcome',async()=>{
  const s=await setup();const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});try{
   const before=peer(receipt.name,'SELECT count(*) FROM governance_catalog.import_input_revision;');

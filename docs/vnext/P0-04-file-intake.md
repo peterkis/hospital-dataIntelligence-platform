@@ -169,3 +169,11 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第二十二轮修复
 
 远端 Codex 对 `f5a8a63` 指出 CSV 行限额定位、引号内 bare CR 行计数及 XLSX 限额坐标三项 P2。177 tests-only RED 后，CSV ROW_LIMIT 使用 recordStart（无具体字段时列 0），引号内 CR 仅在不属于 CRLF 时计行；LF 与未引号 CRLF 的原行为保留。XLSX COLUMN_LIMIT 附当前 rowNum/col，ROW_LIMIT 附 rowNum。178 Vitest parser **51/51** 覆盖多行超限、CR/CRLF/LF 后续来源坐标及 XLSX 超限位置；179 Vitest Owner **8/8** 且临时数据库清理成功，180 类型检查和 181 API build 通过。独立 Spec/Standards 窄复核无阻断，无 DDL/授权/存储变化。
+
+## PR #6 第二十三轮数据库修复
+
+远端 Codex 对 `54cc820` 指出摘要状态配对及 RAW_FILE 唯一性缺少声明式约束。182 tests-only 真实数据库 RED 为新增两项失败、既有 8 项通过。新增前向迁移 **0029**，不改已安装 0027/0028：CHECK 要求 METADATA_ONLY/DECLARED 或 FILE/PROTECTED_REFERENCE，并用 IS TRUE 拒绝缺失 kind 的 NULL 结果；RAW_FILE 的 revision_id 部分唯一索引约束同一修订仅一个原文件，其他制品仍可多次产生。原 deferred existence trigger 保留。
+
+183 fresh **10/10** 后，升级断言因管理工具将原数据库错误包装为固定码而失败；修正为同时检查固定错误码与立即读取的本地诊断中的具体约束名，避免把任意设施失败误算作预期拒绝。184 类型检查通过；185 完整聚合通过：Vitest parser **51/51**、fresh Owner **10/10**、upgrade Owner **10/10**，prefix28 错配/缺失 kind/重复原文件三种旧状态均升级拒绝且 ledger28 和原快照保持，prefix27 原孤立修订拒绝及合法原文件跨 28→29 保留，P0-11 **10/10**、P0-03 **8/8**，当前库迁移、类型生成/核对及 authority 通过。持久库仍 OID 206108，现 **29 migrations、29 tables、0 业务实例 schema**；wrapper cleanupPassed=true，本票 55 份临时 receipt 均有 disposal 记录。
+
+独立 Spec/Standards 窄复核无阻断。没有更改应用运行时代码；API build 保留 181 的已验证结果，不称本轮重跑。仍仅为已说明的本地合成工程验证，不代表管理员不可绕过授权或 Testcontainers 环境验证通过。
