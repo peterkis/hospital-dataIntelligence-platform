@@ -1,6 +1,10 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
 import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.js';
+import { fileIntake } from './file-intake.js';
+export { ReceiveFileSchema, ParseFileSchema } from './file-intake.js';
+export type { ReceiveFileInput, ParseFileInput } from './file-intake.js';
+export type { CanonicalRow, RawCellProvenance, ParserResult } from './file-parser.js';
 export { LocalSyntheticKeyProvider, ProtectedStoreSchema, ProtectedReadSchema } from './protected-artifact.js';
 export type { KeyProviderPort, ProtectedStoreInput, ProtectedReadInput, ProtectedReference } from './protected-artifact.js';
 import type { ImportJob, ImportJobOutcome } from './import-job.js';
@@ -46,11 +50,13 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     return (await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
   };
   return {
+    ...fileIntake(db,keyProvider),
     ...protectedArtifacts(db,keyProvider),
     async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');
       if(!Check(ImportMetadataSchema,input['input']))throw new Error('CLOSED_METADATA_REQUIRED');
       if(!Check(ImportJobCommandSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');
+      if(input.input.kind==='FILE')throw new Error('FILE_RECEIVE_REQUIRED');
       return (await sql<{result:ImportJobOutcome}>`select governance_catalog.import_job_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
     },
     importJobRead:readImportJob,
