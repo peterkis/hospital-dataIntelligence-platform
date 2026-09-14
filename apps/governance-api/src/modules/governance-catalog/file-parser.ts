@@ -302,7 +302,12 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     if(shared.attrs['uniqueCount']!==undefined&&unsignedAttribute(shared.attrs['uniqueCount'])!==strings.length)fail('SHARED_STRING_COUNT');
   }
   const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['sheetFormatPr','cols','sheetData']);
-  if(new Set(worksheet.children.map(n=>n.name)).size!==worksheet.children.length)fail('XLSX_STRUCTURE');
+  let previousWorksheetChild = -1;
+  for(const child of worksheet.children){
+    const position = ['sheetFormatPr','cols','sheetData'].indexOf(child.name);
+    if(position<=previousWorksheetChild)fail('XLSX_STRUCTURE');
+    previousWorksheetChild=position;
+  }
   for(const metadata of children(worksheet,'sheetFormatPr')) {
     only(metadata,[]);
     const zeroHeight=booleanAttribute(metadata,'zeroHeight');

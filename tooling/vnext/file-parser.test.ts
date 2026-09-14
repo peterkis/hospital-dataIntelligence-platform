@@ -7,6 +7,12 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round15: supported worksheet children retain their required sequence',()=>{
+ const cols='<cols><col min="1" max="2" hidden="0"/></cols>',format='<sheetFormatPr zeroHeight="0"/>';
+ for(const metadata of [cols,format])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','</worksheet>',metadata+'</worksheet>'),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',cols+format+'<sheetData>'),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',format+cols+'<sheetData>'),'XLSX',fields).structuralStatus,'PARSED');
+});
 test('PR6 round14: paired ZIP header time, date and needed version must agree',()=>{
  const central=workbook.readUInt32LE(workbook.length-22+16);
  for(const [localOffset,centralOffset,value] of [[10,12,1],[12,14,33],[4,6,10]] as const){

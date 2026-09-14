@@ -125,3 +125,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第十四轮修复
 
 远端 Codex 对 `daad18f` 指出 ZIP 本地头/中央目录的修改时间和日期未比较。130 RED 后增加 time/date 对应字段比较，并补齐同样成对出现的 needed version；原头部范围检查在读取这些字段之前执行。131 parser **39/39** 覆盖每个不匹配拒绝及匹配通过，132 Owner **7/7**，133 类型检查与 134 API build 通过，独立 Spec/Standards 窄复核确认偏移和边界无阻断。ZIP 时间字段不作为平台业务时间依据，无 DDL/权限/存储变化。
+
+## PR #6 第十五轮修复
+
+远端 Codex 对 `4b745d4` 指出 worksheet 支持的子节点未校验顺序。135 tests-only RED 后，使用严格递增位置校验要求 sheetFormatPr → cols → sheetData，前两项可省略；同一检查拒绝重复，既有 sheetData 必需性检查保留。136 parser **40/40** 覆盖元数据放在数据之后、前置元数据互换及合法顺序；137 Owner **7/7** 且临时数据库清理成功，138 类型检查和 139 API build 通过。独立 Spec/Standards 窄复核无发现，无 DDL/授权/存储变化。
