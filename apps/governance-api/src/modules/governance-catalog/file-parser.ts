@@ -1,5 +1,9 @@
 import { inflateRawSync, crc32 } from 'node:zlib';
 import { parentPort, workerData, isMainThread } from 'node:worker_threads';
+// Resolve the same platform primitive in native TS test workers and compiled JS workers.
+const {parseLocalDateTime}:typeof import('../../platform/local-datetime/local-datetime.js') = await import(
+  new URL(import.meta.url.endsWith('.ts')?'../../platform/local-datetime/local-datetime.ts':'../../platform/local-datetime/local-datetime.js',import.meta.url).href,
+);
 
 export type FileFormat = 'CSV' | 'JSON' | 'XLSX';
 export interface ParserField { code: string; type: string }
@@ -252,7 +256,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     const ids=new Set<string>(),targets=new Set<string>();
     for(const rel of node.children){
       only(rel,[]);const id=rel.attrs['Id']??'',target=rel.attrs['Target']??'';
-      if(!/^[A-Za-z_][\w.-]*$/.test(id)||ids.has(id)||targets.has(target)||!Object.hasOwn(mapping,target)||rel.attrs['Type']!==mapping[target]||!files.has(prefix+target)||rel.attrs['TargetMode']&&rel.attrs['TargetMode']!=='Internal')fail('RELATIONSHIP_REJECTED');
+      if(!/^[A-Za-z_][\w.-]*$/.test(id)||ids.has(id)||targets.has(target)||!Object.hasOwn(mapping,target)||rel.attrs['Type']!==mapping[target]||!files.has(prefix+target)||rel.attrs['TargetMode']!==undefined&&rel.attrs['TargetMode']!=='Internal')fail('RELATIONSHIP_REJECTED');
       ids.add(id);targets.add(target);
     }
     if(!targets.has(required))fail('RELATIONSHIP_REJECTED');
@@ -345,7 +349,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
         if(text.includes('\uFEFF'))fail('BOM_NOT_PREFIX',rowNum,column);
         if(!text.isWellFormed() || /[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(text))fail('TEXT_CONTROL',rowNum,column);
         if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
-        if (f.type === 'datetime' && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/.test(text)) fail('LOCAL_TIME_REQUIRED',rowNum,column);
+        if (f.type === 'datetime') {try{parseLocalDateTime(text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}
         row[f.code] = text;
       }
       if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',rowNum); result.rows.push(row);

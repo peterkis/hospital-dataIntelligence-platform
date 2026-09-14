@@ -7,6 +7,15 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round11: relationship TargetMode must be absent or exactly Internal',()=>{
+ for(const part of ['_rels/.rels','xl/_rels/workbook.xml.rels'])for(const mode of ['', 'internal',' Internal','invalid'])assert.equal(parseBytes(edit(part,'<Relationship Id=',`<Relationship TargetMode="${mode}" Id=`),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(edit('_rels/.rels','<Relationship Id=','<Relationship TargetMode="Internal" Id='),'XLSX',fields).structuralStatus,'PARSED');
+});
+test('PR6 round11: local datetime calendar and clock components are real',()=>{
+ const field=[{code:'time',type:'datetime'}];
+ for(const value of ['2026-13-40T25:61:61','2025-02-29T00:00:00','1900-02-29T00:00:00','2026-04-31T00:00:00','2026-01-01T24:00:00'])assert.equal(parseBytes(Buffer.from(`time\n${value}`),'CSV',field).structuralStatus,'REJECTED');
+ const value='2000-02-29T23:59:59.123456';const parsed=parseBytes(Buffer.from(`time\n${value}`),'CSV',field);assert.equal(parsed.structuralStatus,'PARSED');assert.equal(parsed.rows[0]?.['time'],value);
+});
 test('PR6 round10: rejected JSON values retain their object and property ordinal',()=>{
  for(const value of ['true','[]','{}']){
   const result=parseBytes(Buffer.from(`[{"code":"0012","label":"ok"},{"code":"0013","label":${value}}]`),'JSON',fields);

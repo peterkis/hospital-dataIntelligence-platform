@@ -103,3 +103,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `9e8ff56` 提出 JSON 拒绝值位置缺失、空可见性属性被当缺省、解构 inspectEnvelope 丢失 this 三项 P2。104/105 分别为纯函数与真实 Owner 解构调用 RED。JSON 对象内的标量/语法/长度错误带当前对象及属性序号；sheet state、row/col hidden 仅在属性缺失时使用默认值，显式值必须匹配精确枚举。inspectEnvelope 和 parseFile 共用不依赖 receiver 的闭包，保留原授权/修订/受保护读写路径。
 
 106 parser **32/32**，107 Owner **7/7**（包含解构 inspectEnvelope），108 类型检查及 109 API build 通过，独立 Spec/Standards 窄复核无阻断。无 DDL或权限放宽。
+
+## PR #6 第十一轮修复
+
+远端 Codex 对 `96681d3` 提出 TargetMode 空值及不可能 datetime 两项 P2。110 RED 后，关系 TargetMode 仅允许缺省或精确 Internal；datetime 复用平台 parseLocalDateTime，校验真实月日、闰年及钟表分量，保留原文本与微秒，不使用 Date 或时区转换。原生 TS worker／编译 JS worker 仅选择两个固定本地 helper 路径，不接受输入控制的模块地址。
+
+111 parser **34/34**，112 Owner **7/7**，113 类型检查、114 API build 通过；115 编译后 JS worker 的合法/非法历法值 **2/2**。独立 Spec/Standards 窄复核无阻断。没有扩展其他字段业务规则或改变数据库。
