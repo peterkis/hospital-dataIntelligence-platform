@@ -42,6 +42,7 @@ const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT
 function safeError(error: unknown): Error { return new Error(error instanceof Error && safeCodes.has(error.message) ? error.message : 'PROTECTED_OPERATION_FAILED'); }
 
 export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
+  const transaction = <T>(work: (trx: Kysely<DB>) => Promise<T>): Promise<T> => db.isTransaction ? work(db) : db.transaction().execute(work);
   const keyProvider = () => { if (!provider) throw new Error('KEY_UNAVAILABLE'); return provider; };
   const call = async (actor: string, action: string, input: unknown, envelope: Envelope | null = null, digest: string | null = null): Promise<Result> => {
     try {
@@ -67,7 +68,7 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
           input.scope,input.campus,input.purpose,input.requestId,input.jobId,input.revisionId,input.kind,input.retentionSeconds,
         ])).update(raw).digest('hex');
         const envelope={keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:ciphertext.toString('hex')};
-        const result=await db.transaction().execute(async trx=>{
+        const result=await transaction(async trx=>{
           const result=(await sql<{result:Result}>`select governance_catalog.protected_command(${actor},'STORE',${JSON.stringify(input)}::jsonb,${JSON.stringify(envelope)}::jsonb,${digest}) as result`.execute(trx)).rows[0]!.result;
           // A normal SQL denial must commit its minimal audit before the caller receives the error.
           if(result.error)return result;
@@ -75,13 +76,15 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
           const job=(await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:input.scope,jobId:input.jobId})}::jsonb) as result`.execute(trx)).rows[0]!.result;
           // Compare only in memory. Never persist/log the low-entropy hash or rewrite old metadata.
           const publicDigest=createHash('sha256').update(raw).digest('hex');
-          if(job.revisions.some(revision=>revision.input.declaredSha256===publicDigest))throw publicDigestConflict;
+          if(job.revisions.some(revision=>revision.input.kind==='METADATA_ONLY' && revision.input.declaredSha256===publicDigest))throw publicDigestConflict;
           return result;
         });
         if(result.error)throw new Error(result.error);
         return result;
       } catch (error) {
         if(error===publicDigestConflict) {
+          // The receive root owns rollback and its separate bounded failure audit.
+          if(db.isTransaction)throw new Error('PUBLIC_DIGEST_CONFLICT');
           // The payload transaction has rolled back. Commit a distinct minimal denial
           // without the bytes, their ordinary SHA, or a false accepted outcome.
           const denial={scope:input.scope,campus:input.campus,purpose:input.purpose,jobId:input.jobId,revisionId:input.revisionId,requestId:input.requestId};
@@ -97,14 +100,18 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
       return call(actor,'MASKED',input);
     },
     /** Authorization is consumed by this read, never returned as a reusable bearer token. */
-    async authorizeSensitiveRead(actor: string, input: ProtectedReadInput): Promise<Uint8Array> {
+    async authorizeSensitiveRead(actor: string, input: ProtectedReadInput, expected?: {jobId:string;revisionId:string;kind:ProtectedStoreInput['kind']}): Promise<Uint8Array> {
       if (!Check(ProtectedReadSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
       try {
-        return await db.transaction().execute(async trx => {
+        return await transaction(async trx => {
           const result = (await sql<{result: Result}>`select governance_catalog.protected_command(${actor},'READ',${JSON.stringify(input)}::jsonb,'null'::jsonb,null) as result`.execute(trx)).rows[0]!.result;
           // Commit the non-sensitive denial/request ledger even if crypto cannot release bytes.
           if (result.error) return new Error(result.error);
           try {
+            if (expected) {
+              const binding: unknown[] = JSON.parse(result.binding!);
+              if (binding[0] !== expected.jobId || binding[1] !== expected.revisionId || binding[2] !== expected.kind) return new Error('ACCESS_DENIED');
+            }
             const e = result.envelope!; const decipher = createDecipheriv('aes-256-gcm',keyProvider().payload(e.keyId),Buffer.from(e.nonce,'hex'));
             decipher.setAAD(Buffer.from(JSON.stringify(JSON.parse(result.binding!)))); decipher.setAuthTag(Buffer.from(e.tag,'hex'));
             return Buffer.concat([decipher.update(Buffer.from(e.ciphertext,'hex')),decipher.final()]);

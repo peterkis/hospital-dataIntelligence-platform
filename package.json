@@ -227,7 +227,12 @@
     "vnext:jobs:typecheck": "tsc -p tooling/vnext/tsconfig.import-job.json",
     "vnext:protected:validate": "node --import tsx tooling/vnext/run-protected-tests.mjs",
     "vnext:protected:upgrade": "node --import tsx tooling/vnext/run-protected-tests.mjs --upgrade",
-    "vnext:protected:typecheck": "tsc -p tooling/vnext/tsconfig.protected.json"
+    "vnext:protected:typecheck": "tsc -p tooling/vnext/tsconfig.protected.json",
+    "vnext:files:validate": "node --import tsx tooling/vnext/run-file-tests.mjs",
+    "vnext:files:upgrade": "node --import tsx tooling/vnext/run-file-tests.mjs --upgrade",
+    "vnext:files:unit": "node --import tsx --test tooling/vnext/file-parser.test.ts",
+    "vnext:files:typecheck": "tsc -p tooling/vnext/tsconfig.files.json",
+    "vnext:p0-04:validate": "node tooling/vnext/p0-04-validate.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",
