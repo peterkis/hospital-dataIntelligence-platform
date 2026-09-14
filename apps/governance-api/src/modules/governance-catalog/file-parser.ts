@@ -196,6 +196,10 @@ const children = (node: Xml, name: string) => node.children.filter(n => n.name =
 function only(node: Xml, allowed: string[]) { if (node.text.trim() || node.children.some(n => !allowed.includes(n.name))) fail('XLSX_STRUCTURE'); }
 function leaf(node:Xml):string {if(node.children.length)fail('XLSX_STRUCTURE');return node.text;}
 function one(node: Xml, name: string): Xml { const list = children(node, name); if (list.length !== 1) return fail('XLSX_STRUCTURE'); return list[0]!; }
+function unsignedAttribute(value:string|undefined,positive=false):number {
+  if(value===undefined||!/^\d+$/.test(value))return fail('XML_ATTRIBUTE_INVALID');
+  const n=Number(value);if(!Number.isSafeInteger(n)||n>(2**32-1)||n<(positive?1:0))return fail('XML_ATTRIBUTE_INVALID');return n;
+}
 function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][] {
   const files = unzip(bytes); const docs = new Map([...files].map(([name, value]) => [name, xml(value)]));
   const get = (name: string, root: string): Xml => {
@@ -250,11 +254,17 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   for(const entry of sheets.children)only(entry,[]);
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state'] && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
   const sheet = sheets.children[0]; if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') fail('SHEET_CONTRACT');
+  unsignedAttribute(sheet!.attrs['sheetId'],true);
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
   const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings'},'xl/','worksheets/sheet1.xml');
   if (!wr.children.some(r => r.attrs['Id'] === sheet!.attrs['r:id'] && r.attrs['Target'] === 'worksheets/sheet1.xml')) fail('RELATIONSHIP_REJECTED');
   const shared = docs.get('xl/sharedStrings.xml'); const strings: string[] = [];
+  let declaredCount:number|undefined,sharedReferences=0;
   if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(leaf(one(si,'t'))); } }
+  if(shared){
+    if(shared.attrs['count']!==undefined)declaredCount=unsignedAttribute(shared.attrs['count']);
+    if(shared.attrs['uniqueCount']!==undefined&&unsignedAttribute(shared.attrs['uniqueCount'])!==strings.length)fail('SHARED_STRING_COUNT');
+  }
   const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['dimension','sheetViews','sheetFormatPr','cols','sheetData','pageMargins']);
   if(new Set(worksheet.children.map(n=>n.name)).size!==worksheet.children.length)fail('XLSX_STRUCTURE');
   for(const metadata of worksheet.children.filter(n=>!['cols','sheetData'].includes(n.name))) {
@@ -280,7 +290,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
       if (c.attrs['r'] !== `${letters}${rowNum}`) fail('COLUMN_GAP',rowNum,col);
       only(c,['v','is']); let value: string;
       if (c.attrs['t'] === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = leaf(one(inline,'t')); }
-      else if (c.attrs['t'] === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; }
+      else if (c.attrs['t'] === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
       else return fail('TEXT_CELL_REQUIRED',rowNum,col);
       value=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
       if (value.length > 8192) fail('CELL_LIMIT',rowNum,col); values.push(value); if (values.length > 100) fail('COLUMN_LIMIT');
@@ -288,6 +298,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     rows.push(values); if (rows.length > 1001) fail('ROW_LIMIT');
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
+  if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
   return rows;
 }
 

@@ -81,3 +81,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第六轮修复
 
 远端 Codex 对 `47f4304` 指出无前缀未知 XML 属性仍被忽略。75 tests-only RED 后，为固定子集内每种元素定义封闭的无前缀属性集合；row/c/t/workbook 与元数据节点均不能静默接收额外属性。命名空间声明及 r:id/xml:space 继续走既有独立校验。尚未实现的视图、计算、排版属性明确拒绝，空元数据容器不授予额外语义，不扩成通用 XSD 验证器。76 parser **22/22**、77 文件 Owner **7/7**、78 类型检查与 79 API build 通过，独立 Spec/Standards 窄范围复核无阻断。无 DDL/权限/存储变化。
+
+## PR #6 第七轮修复
+
+远端 Codex 对 `422e9c3` 提出 sharedStrings 数量声明与必需 sheetId 未验证两项 P2。80 tests-only RED 后，sheetId 必须为正 uint32 十进制整数；可选 count/uniqueCount 提供时必须为有效无符号整数，分别等于实际 s 单元格引用数（包括表头）和 si 条目数，不按声明值分配内存。省略计数的合法共享字符串仍可解析。81 parser **24/24**、82 文件 Owner **7/7**、83 类型检查和 84 API build 通过；独立 Spec/Standards 窄范围复核无阻断。无 DDL/权限/存储变化，既有资源限额不变。

@@ -7,6 +7,20 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round7: sheetId is required and a positive unsigned integer',()=>{
+ for(const replacement of ['', 'sheetId="0"','sheetId="-1"','sheetId="nonsense"','sheetId="4294967296"'])assert.equal(parseBytes(edit('xl/workbook.xml','sheetId="1"',replacement),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(edit('xl/workbook.xml','sheetId="1"','sheetId="17"'),'XLSX',fields).structuralStatus,'PARSED');
+});
+test('PR6 round7: optional shared-string counts match actual entries and references',()=>{
+ const files=Object.fromEntries(unzip(workbook));
+ files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>');
+ files['xl/_rels/workbook.xml.rels']=files['xl/_rels/workbook.xml.rels']!.replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('<c r="A2" t="inlineStr"><is><t xml:space="preserve">0012</t></is></c>','<c r="A2" t="s"><v>0</v></c>');
+ for(const [attrs,expected] of [['count="nonsense" uniqueCount="999"','REJECTED'],['count="1" uniqueCount="2"','REJECTED'],['count="2" uniqueCount="1"','REJECTED'],['count="-1"','REJECTED'],['count="1" uniqueCount="1"','PARSED'],['','PARSED']]){
+  files['xl/sharedStrings.xml']=`<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ${attrs}><si><t>0012</t></si></sst>`;
+  assert.equal(parseBytes(zipText(files),'XLSX',fields).structuralStatus,expected);
+ }
+});
 test('PR6 round6: unqualified attributes are closed for every supported XLSX element',()=>{
  for(const [part,from,to] of [
   ['xl/worksheets/sheet1.xml','<row r="2">','<row r="2" mystery="payload">'],
