@@ -4,6 +4,8 @@
 
 ## 当前接线
 
+本票验证环境遵循用户指定的 v3 P0-04 §4–5（唯一当前研发库或 owned 临时测试库、DOMAIN 档位）及 `docs/agents/prototype-database.md` 当前执行策略：通过 managed wrapper 在 receipt-owned 临时库验证。本轮属于本地合成工程验证，未执行 ADR-0081 所述 Testcontainers/PostgreSQL 18.4/Keycloak/Toxiproxy 容器集成环境验证，不声称满足该 ADR 的全部环境要求，也不构成正式验收、容量证据或部署认证。本说明记录任务范围与证据边界，不改写或废止 ADR-0081；Vitest 运行器统一不代表依赖环境同时通过。
+
 现有 `openCatalog(connectionString, provider)` 唯一 Owner 增加 typed `receiveFile`、`inspectEnvelope`、`parseFile`、`exportIssueWorkbook`。显式复用一个 `LocalSyntheticKeyProvider`。没有新增库、业务表、HTTP 文件路由或页面。FILE schema 用于 receiveFile 的内部作业接线；公开 importJobCommand 只接受 METADATA_ONLY，对 FILE 返回 FILE_RECEIVE_REQUIRED。文件入口集成测试为真实调用方。
 
 0027 扩展现有输入元数据为 `{kind: FILE, format: CSV|JSON|XLSX, parserPolicy: STRICT_V1}`，digestStatus 为 PROTECTED_REFERENCE；不填占位 SHA。METADATA_ONLY 历史声明不改写，其反向摘要保护继续执行。metadataDigest 只覆盖格式/策略元数据，不是文件摘要。receiveFile 在一根事务内调用原作业命令和原受限存储，原文件引用绑定本次修订，任一失败回滚。数据库触发器在原授权锁内限制每个 FILE 修订一个 RAW_FILE；换文件请求号不能把新文件挂回旧修订。新文件必须新建修订，expectedCurrentRevision 和原请求重放检查不变。
@@ -153,3 +155,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 162 Vitest parser **46/46**、163 类型检查通过。164 完整聚合通过：Vitest parser **46/46**、fresh Owner **7/7**、upgrade Owner **7/7**（27 孤立修订升级拒绝及合法原文件保留）、既有 P0-11 **10/10** 与 P0-03 **8/8** 回归、当前 receipt 迁移/类型生成及验证/authority；持久库仍 OID 206108、28 migrations、29 tables、0 业务实例 schema。既有两票回归运行器保持原状，本轮统一的是 P0-04 新增套件，不将历史 Node 实测重新标成 Vitest。
 
 聚合后补充 Vitest setup 对非 receipt 连接的拒绝回归，并将配置纳入类型检查：165 类型检查、166 最终 fresh Owner **8/8** 通过，wrapper cleanupPassed=true。没有改动业务运行时，上一轮 API build 160 的结果保留，不冒称本轮重跑。最终独立 Spec/Standards 窄复核无阻断。
+
+## PR #6 第二十轮修复与范围澄清
+
+远端 Codex 对 `d98db68` 指出整数形式字段代码会被 JS 对象枚举重排。167 tests-only RED 后，内部 SourceObject 显式保存 values 与原始 columns：CSV/XLSX 使用表头顺序，JSON 每个对象使用词法属性顺序，持久单元格列号及 XLSX 原来源类型按此定位。168 Vitest parser **47/47** 覆盖数值字段代码、逐对象 JSON 次序变化及混合 inlineStr/s；169 Vitest Owner **8/8** 且临时数据库清理成功，170 类型检查、171 API build 通过。独立 Spec/Standards 窄复核无阻断。
+
+同轮 Testcontainers 评论按原票显式授权及当前 runbook 处理为验证环境边界澄清，依据已写入本文当前接线开头；保留 receipt-owned 本地测试路径，ADR-0081 容器环境验证为未执行。没有将未执行项目改称通过，也未新增 Keycloak/Toxiproxy 或改变数据库权限。

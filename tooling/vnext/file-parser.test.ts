@@ -7,6 +7,18 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round20: integer-like codes preserve lexical source columns and XLSX types',()=>{
+ const numericFields=[{code:'2',type:'text'},{code:'10',type:'text'}];
+ const csvResult=parseBytes(Buffer.from('10,2\nfirst,second'),'CSV',numericFields);
+ const jsonResult=parseBytes(Buffer.from('[{"10":"first","2":"second"},{"2":"second","10":"first"}]'),'JSON',numericFields);
+ const files=Object.fromEntries(unzip(sharedFixture('unused')));
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('>code<','>10<').replace('>label<','>2<');
+ const xlsxResult=parseBytes(zipText(files),'XLSX',numericFields);
+ for(const result of [csvResult,jsonResult,xlsxResult]){assert.equal(result.structuralStatus,'PARSED');assert.equal(result.cells.find(c=>c.row===1&&c.field==='10')?.column,1);assert.equal(result.cells.find(c=>c.row===1&&c.field==='2')?.column,2);}
+ assert.equal(jsonResult.cells.find(c=>c.row===2&&c.field==='2')?.column,1);
+ assert.equal(jsonResult.cells.find(c=>c.row===2&&c.field==='10')?.column,2);
+ assert.equal(xlsxResult.cells.find(c=>c.field==='10')?.sourceType,'s');assert.equal(xlsxResult.cells.find(c=>c.field==='2')?.sourceType,'inlineStr');
+});
 test('PR6 round18: multiline CSV limits identify the starting physical row',()=>{
  for(const value of ['a'.repeat(8192),'😀'.repeat(8192)])for(const suffix of ['',',next','\n'])assert.deepEqual(parse('code,label\n0012,"start\n'+value+'"'+suffix).issues[0],{code:'CELL_LIMIT',row:2,column:2});
  assert.deepEqual(parse('code,label\n"start\nend",'+Array.from({length:100},()=> 'value').join(',')).issues[0],{code:'COLUMN_LIMIT',row:2,column:101});

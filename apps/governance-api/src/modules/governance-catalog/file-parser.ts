@@ -65,8 +65,9 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
 
 // Only an array of flat objects is accepted. Tokenize keys before object construction,
 // so escaped duplicate keys cannot disappear through JSON.parse's last-write behavior.
-function jsonRows(text: string): Array<Record<string, string | number | null>> {
-  let i = 0; const rows: Array<Record<string, string | number | null>> = [];
+interface SourceObject { values:Record<string,string|number|null>; columns:string[] }
+function jsonRows(text: string): SourceObject[] {
+  let i = 0; const rows: SourceObject[] = [];
   let currentRow=0,currentColumn=0;
   const jsonFailure=(code:string):never=>fail(code,currentRow,currentColumn);
   const ws = () => { while (/^[\x20\t\r\n]$/.test(text[i] ?? '')) i++; };
@@ -81,10 +82,10 @@ function jsonRows(text: string): Array<Record<string, string | number | null>> {
   expect('['); ws();
   while (text[i] !== ']') {
     currentRow=rows.length+1;currentColumn=0;
-    expect('{'); const row: Record<string, string | number | null> = Object.create(null); ws();
+    expect('{'); const row: Record<string, string | number | null> = Object.create(null); const columns:string[]=[]; ws();
     while (text[i] !== '}') {
       currentColumn=Object.keys(row).length+1;
-      const key = string(); if (Object.hasOwn(row, key)) jsonFailure('DUPLICATE_FIELD'); expect(':'); ws();
+      const key = string(); if (Object.hasOwn(row, key)) jsonFailure('DUPLICATE_FIELD'); columns.push(key); expect(':'); ws();
       if (text[i] === '"') row[key] = string();
       else {
         const match = /^(?:null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(text.slice(i));
@@ -95,7 +96,7 @@ function jsonRows(text: string): Array<Record<string, string | number | null>> {
       if (Object.keys(row).length > 100) jsonFailure('COLUMN_LIMIT'); ws();
       if (text[i] !== ',') break; i++; ws(); if (text[i] === '}') jsonFailure('JSON_SYNTAX');
     }
-    expect('}'); rows.push(row); if (rows.length > 1000) jsonFailure('ROW_LIMIT'); currentRow=0;currentColumn=0;ws();
+    expect('}'); rows.push({values:row,columns}); if (rows.length > 1000) jsonFailure('ROW_LIMIT'); currentRow=0;currentColumn=0;ws();
     if (text[i] !== ',') break; i++; ws(); if (text[i] === ']') jsonFailure('JSON_SYNTAX');
   }
   expect(']'); ws(); if (i !== text.length) jsonFailure('JSON_SYNTAX'); return rows;
@@ -356,7 +357,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
   try {
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
     if (!fields.length || fields.length > 100 || new Set(fields.map(f=>f.code)).size !== fields.length) fail('FIELD_CONTRACT');
-    let objects: Array<Record<string, string | number | null>>;
+    let objects: SourceObject[];
     let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
       const table = xlsx(bytes,result.manifest); objects = tableObjects(table.rows,fields);physicalRows=table.rows.slice(1).map((_,i)=>i+2);sourceTypes=table.sourceTypes.slice(1);
@@ -368,11 +369,12 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    for (const [index, obj] of objects.entries()) {
+    for (const [index, source] of objects.entries()) {
+      const obj=source.values;
       const row: Record<string,string> = Object.create(null); const rowNum = index + 1;
       if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',rowNum);
       for (const f of fields) {
-        const column=Object.keys(obj).indexOf(f.code)+1;
+        const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code]; if (typeof value !== 'string') fail('TEXT_CELL_REQUIRED',rowNum,column);
         const text = value as string;
         result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
@@ -388,11 +390,11 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
   return result;
 }
-function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): Array<Record<string,string>> {
+function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): SourceObject[] {
   const header = table[0]; if (!header) return fail('NO_DATA');
   if (new Set(header).size !== header.length) fail('DUPLICATE_FIELD',1);
   if (header.length !== fields.length || header.some(h=>!fields.some(f=>f.code===h))) fail('FIELD_CONTRACT',1);
-  return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return Object.fromEntries(header.map((key,col)=>[key,row[col]!])); });
+  return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });
 }
 
 if (!isMainThread && parentPort) {
