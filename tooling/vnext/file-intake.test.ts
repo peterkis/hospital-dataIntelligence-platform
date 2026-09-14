@@ -78,7 +78,8 @@ test('malformed input preserves original bytes and protected issue export withou
  const s=await setup();try{
   s.grant('STORE');s.grant('READ');const raw=Buffer.from(`\uFEFF${s.field}\n =SYNTHETIC_PRIVATE_SENTINEL`);
   const file=await s.catalog.receiveFile('maker',s.input,raw),input=s.parseInput(file.job.id,file.job.revisionId,file.artifact.artifactId);
-  const parsed=await s.catalog.inspectEnvelope('maker',input);assert.equal(parsed.structuralStatus,'REJECTED');assert.deepEqual(Buffer.from(await s.read(file.artifact.artifactId)),raw);
+  const {inspectEnvelope}=s.catalog;
+  const parsed=await inspectEnvelope('maker',input);assert.equal(parsed.structuralStatus,'REJECTED');assert.deepEqual(Buffer.from(await s.read(file.artifact.artifactId)),raw);
   assert.ok(!JSON.stringify(parsed).includes('SYNTHETIC_PRIVATE_SENTINEL'));
   const report=await s.catalog.exportIssueWorkbook('maker',s.parseInput(file.job.id,file.job.revisionId,parsed.artifact.artifactId));assert.equal(report.status,'QUARANTINED');
   const reportBytes=await s.read(report.artifactId);assert.equal(Buffer.from(reportBytes).readUInt32LE(0),0x04034b50);

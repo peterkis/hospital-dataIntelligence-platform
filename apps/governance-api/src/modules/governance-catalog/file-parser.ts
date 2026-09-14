@@ -57,34 +57,38 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
 // so escaped duplicate keys cannot disappear through JSON.parse's last-write behavior.
 function jsonRows(text: string): Array<Record<string, string | number | null>> {
   let i = 0; const rows: Array<Record<string, string | number | null>> = [];
+  let currentRow=0,currentColumn=0;
+  const jsonFailure=(code:string):never=>fail(code,currentRow,currentColumn);
   const ws = () => { while (/^[\x20\t\r\n]$/.test(text[i] ?? '')) i++; };
-  const expect = (c: string) => { ws(); if (text[i++] !== c) fail('JSON_SYNTAX'); };
+  const expect = (c: string) => { ws(); if (text[i++] !== c) jsonFailure('JSON_SYNTAX'); };
   const string = (): string => {
-    ws(); const start = i; if (text[i++] !== '"') return fail('JSON_SYNTAX');
+    ws(); const start = i; if (text[i++] !== '"') return jsonFailure('JSON_SYNTAX');
     while (i < text.length) { const c = text[i++]; if (c === '\\') i++; else if (c === '"') {
-      try { const value: string = JSON.parse(text.slice(start, i)); if (value.length > 8192) fail('CELL_LIMIT'); return value; } catch (e) { if (e instanceof ParseFailure) throw e; return fail('JSON_SYNTAX'); }
+      try { const value: string = JSON.parse(text.slice(start, i)); if (value.length > 8192) jsonFailure('CELL_LIMIT'); return value; } catch (e) { if (e instanceof ParseFailure) throw e; return jsonFailure('JSON_SYNTAX'); }
     } }
-    return fail('JSON_SYNTAX');
+    return jsonFailure('JSON_SYNTAX');
   };
   expect('['); ws();
   while (text[i] !== ']') {
+    currentRow=rows.length+1;currentColumn=0;
     expect('{'); const row: Record<string, string | number | null> = Object.create(null); ws();
     while (text[i] !== '}') {
-      const key = string(); if (Object.hasOwn(row, key)) fail('DUPLICATE_FIELD', rows.length + 1); expect(':'); ws();
+      currentColumn=Object.keys(row).length+1;
+      const key = string(); if (Object.hasOwn(row, key)) jsonFailure('DUPLICATE_FIELD'); expect(':'); ws();
       if (text[i] === '"') row[key] = string();
       else {
         const match = /^(?:null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(text.slice(i));
-        if (!match) fail('JSON_SCALAR_REQUIRED');
+        if (!match) jsonFailure('JSON_SCALAR_REQUIRED');
         // Numeric lexemes are rejected below; do not coerce precision-sensitive input.
         row[key] = match![0] === 'null' ? null : Number.NaN; i += match![0].length;
       }
-      if (Object.keys(row).length > 100) fail('COLUMN_LIMIT'); ws();
-      if (text[i] !== ',') break; i++; ws(); if (text[i] === '}') fail('JSON_SYNTAX');
+      if (Object.keys(row).length > 100) jsonFailure('COLUMN_LIMIT'); ws();
+      if (text[i] !== ',') break; i++; ws(); if (text[i] === '}') jsonFailure('JSON_SYNTAX');
     }
-    expect('}'); rows.push(row); if (rows.length > 1000) fail('ROW_LIMIT'); ws();
-    if (text[i] !== ',') break; i++; ws(); if (text[i] === ']') fail('JSON_SYNTAX');
+    expect('}'); rows.push(row); if (rows.length > 1000) jsonFailure('ROW_LIMIT'); currentRow=0;currentColumn=0;ws();
+    if (text[i] !== ',') break; i++; ws(); if (text[i] === ']') jsonFailure('JSON_SYNTAX');
   }
-  expect(']'); ws(); if (i !== text.length) fail('JSON_SYNTAX'); return rows;
+  expect(']'); ws(); if (i !== text.length) jsonFailure('JSON_SYNTAX'); return rows;
 }
 
 export function unzip(bytes: Uint8Array): Map<string, string> {
@@ -204,6 +208,11 @@ function unsignedAttribute(value:string|undefined,positive=false):number {
   if(value===undefined||!/^\d+$/.test(value))return fail('XML_ATTRIBUTE_INVALID');
   const n=Number(value);if(!Number.isSafeInteger(n)||n>(2**32-1)||n<(positive?1:0))return fail('XML_ATTRIBUTE_INVALID');return n;
 }
+function booleanAttribute(node:Xml,name:string):boolean|undefined {
+  const value=node.attrs[name];if(value===undefined)return undefined;
+  if(!['0','1','false','true'].includes(value))return fail('XML_ATTRIBUTE_INVALID');
+  return value==='1'||value==='true';
+}
 function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][] {
   const files = unzip(bytes);
   manifest.bomMembers=[...files].filter(([,value])=>value.startsWith('\uFEFF')).map(([name])=>name);
@@ -255,7 +264,8 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   if(workbook.attrs['xmlns:r']!=='http://schemas.openxmlformats.org/officeDocument/2006/relationships')fail('XML_NAMESPACE');
   const sheets = one(workbook,'sheets'); only(sheets,['sheet']);
   for(const entry of sheets.children)only(entry,[]);
-  manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state'] && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
+  for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
+  manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
   const sheet = sheets.children[0]; if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') fail('SHEET_CONTRACT');
   unsignedAttribute(sheet!.attrs['sheetId'],true);
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
@@ -272,23 +282,23 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   if(new Set(worksheet.children.map(n=>n.name)).size!==worksheet.children.length)fail('XLSX_STRUCTURE');
   for(const metadata of children(worksheet,'sheetFormatPr')) {
     only(metadata,[]);
-    const zeroHeight=metadata.attrs['zeroHeight'];
-    if(zeroHeight===undefined||!['0','1','false','true'].includes(zeroHeight))fail('XLSX_STRUCTURE');
-    manifest.defaultRowsHidden=['1','true'].includes(zeroHeight!);
+    const zeroHeight=booleanAttribute(metadata,'zeroHeight');
+    if(zeroHeight===undefined)fail('XLSX_STRUCTURE');
+    manifest.defaultRowsHidden=zeroHeight!;
   }
   for (const cols of children(worksheet,'cols')) { only(cols,['col']); for (const col of cols.children) {
     only(col,[]);const min=unsignedAttribute(col.attrs['min'],true),max=unsignedAttribute(col.attrs['max'],true);
     if(min>max||max>16384)fail('COLUMN_RANGE');
-    if (col.attrs['hidden'] && col.attrs['hidden'] !== '0' && col.attrs['hidden'] !== 'false') manifest.hiddenColumns.push(`${min}:${max}`);
+    if (booleanAttribute(col,'hidden')) manifest.hiddenColumns.push(`${min}:${max}`);
   } }
   const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];
   if(manifest.defaultRowsHidden){
-    manifest.hiddenRows=data.children.filter(r=>!['0','false'].includes(r.attrs['hidden']??'')).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
+    manifest.hiddenRows=data.children.filter(r=>booleanAttribute(r,'hidden')!==false).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
     fail('HIDDEN_UNDECLARED');
   }
   for (const r of data.children) {
     const rowNum = rows.length + 1; if (r.attrs['r'] !== String(rowNum)) fail('ROW_GAP', rowNum); only(r,['c']);
-    if (r.attrs['hidden'] && r.attrs['hidden'] !== '0' && r.attrs['hidden'] !== 'false') manifest.hiddenRows.push(rowNum);
+    if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
     const values: string[] = [];
     for (const c of r.children) {
       const col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }

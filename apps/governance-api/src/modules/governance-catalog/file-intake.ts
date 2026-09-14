@@ -45,6 +45,22 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
   };
   const readInput = (input:ParseFileInput)=>({scope:input.scope,campus:input.campus,purpose:input.purpose,requestId:input.requestId,artifactId:input.artifactId});
   const storeInput = (input:ParseFileInput,kind:'RAW_CELL'|'ERROR_REPORT')=>({scope:input.scope,campus:input.campus,purpose:input.purpose,requestId:input.outputRequestId,jobId:input.jobId,revisionId:input.revisionId,retentionSeconds:input.retentionSeconds,kind});
+  const parseFile=async(actor:string,input:ParseFileInput)=> {
+      if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED'); input={...input};
+      const job=await jobRead(actor,input);const metadata=job.revisions.at(-1)!.input;
+      if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
+      const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
+      try {
+        const result=await boundedParse(raw,metadata.format,job.contract.definition.fields);
+        // All values, hidden names and detailed issues remain in P0-11; only status/ref escape.
+        const payload=Buffer.from(JSON.stringify({sourceArtifactId:input.artifactId,result}));
+        if(payload.length>1048576)throw new Error('RESULT_LIMIT');
+        try {
+          const artifact=await protectedStore.storeProtectedArtifact(actor,storeInput(input,'RAW_CELL'),payload);
+          return {artifact,structuralStatus:result.structuralStatus,fieldValidation:'NOT_RUN' as const,securityScan:'NOT_RUN' as const,adapterReadiness:'NOT_READY' as const};
+        } finally {payload.fill(0);}
+      } finally {raw.fill(0);}
+  };
   return {
     async receiveFile(actor:string,input:ReceiveFileInput,bytes:Uint8Array) {
       if(!Check(ReceiveFileSchema,input)||input.job.scope!=='SYNTHETIC'||input.job.input.kind!=='FILE'||input.extension!==`.${input.job.input.format.toLowerCase()}`||!(bytes instanceof Uint8Array)||bytes.length<1||bytes.length>1048576)throw new Error('CLOSED_FILE_REQUIRED');
@@ -63,26 +79,9 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
         throw new Error(['ACCESS_DENIED','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT'].includes(code)?code:'FILE_RECEIVE_FAILED');
       } finally {raw.fill(0);}
     },
-    async inspectEnvelope(actor:string,input:ParseFileInput) {
-      // Same bounded parser and protected evidence as parseFile: no second inspection authority.
-      return this.parseFile(actor,input);
-    },
-    async parseFile(actor:string,input:ParseFileInput) {
-      if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED'); input={...input};
-      const job=await jobRead(actor,input);const metadata=job.revisions.at(-1)!.input;
-      if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
-      const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
-      try {
-        const result=await boundedParse(raw,metadata.format,job.contract.definition.fields);
-        // All values, hidden names and detailed issues remain in P0-11; only status/ref escape.
-        const payload=Buffer.from(JSON.stringify({sourceArtifactId:input.artifactId,result}));
-        if(payload.length>1048576)throw new Error('RESULT_LIMIT');
-        try {
-          const artifact=await protectedStore.storeProtectedArtifact(actor,storeInput(input,'RAW_CELL'),payload);
-          return {artifact,structuralStatus:result.structuralStatus,fieldValidation:'NOT_RUN' as const,securityScan:'NOT_RUN' as const,adapterReadiness:'NOT_READY' as const};
-        } finally {payload.fill(0);}
-      } finally {raw.fill(0);}
-    },
+    // Both commands close over the same authorized parser, independent of the receiver.
+    inspectEnvelope:parseFile,
+    parseFile,
     async exportIssueWorkbook(actor:string,input:ParseFileInput) {
       if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');input={...input};await jobRead(actor,input);
       const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_CELL'});

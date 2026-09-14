@@ -7,6 +7,20 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round10: rejected JSON values retain their object and property ordinal',()=>{
+ for(const value of ['true','[]','{}']){
+  const result=parseBytes(Buffer.from(`[{"code":"0012","label":"ok"},{"code":"0013","label":${value}}]`),'JSON',fields);
+  assert.equal(result.issues[0]?.code,'JSON_SCALAR_REQUIRED');assert.equal(result.issues[0]?.row,2);assert.equal(result.issues[0]?.column,2);
+ }
+});
+test('PR6 round10: present visibility values require exact enums',()=>{
+ for(const value of ['', 'invalid','FALSE',' 0'])for(const bytes of [
+  edit('xl/workbook.xml','name="Data"',`name="Data" state="${value}"`),
+  edit('xl/worksheets/sheet1.xml','<row r="2">',`<row r="2" hidden="${value}">`),
+  edit('xl/worksheets/sheet1.xml','<sheetData>',`<cols><col min="1" max="1" hidden="${value}"/></cols><sheetData>`),
+ ])assert.equal(parseBytes(bytes,'XLSX',fields).structuralStatus,'REJECTED');
+ for(const value of ['0','false'])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<row r="2">',`<row r="2" hidden="${value}">`),'XLSX',fields).structuralStatus,'PARSED');
+});
 test('PR6 round9: unsupported worksheet and workbook metadata nodes reject',()=>{
  for(const node of ['<dimension ref="nonsense"/>','<pageMargins/>','<sheetViews/>','<sheetFormatPr/>'])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',node+'<sheetData>'),'XLSX',fields).structuralStatus,'REJECTED');
  for(const node of ['<workbookPr/>','<bookViews/>','<calcPr/>'])assert.equal(parseBytes(edit('xl/workbook.xml','<sheets>',node+'<sheets>'),'XLSX',fields).structuralStatus,'REJECTED');

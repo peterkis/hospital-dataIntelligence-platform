@@ -97,3 +97,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第九轮修复
 
 远端 Codex 对 `84c9e24` 指出 dimension/pageMargins 等已允许元数据未验证。99 RED 后明确拒绝所有未实现的视图、尺寸、页边距与 workbook 设置节点，替代早期允许空容器的策略；保留 cols 范围和显式 zeroHeight 的实际校验，隐藏 manifest 不变。相邻关系 Id 空白名称也由 ASCII NCName 校验拒绝。100 parser **30/30**，101 Owner **7/7**，102 类型检查和 103 API build 通过；独立 Spec/Standards 窄复核无阻断。无 DDL/授权/存储变化。
+
+## PR #6 第十轮修复
+
+远端 Codex 对 `9e8ff56` 提出 JSON 拒绝值位置缺失、空可见性属性被当缺省、解构 inspectEnvelope 丢失 this 三项 P2。104/105 分别为纯函数与真实 Owner 解构调用 RED。JSON 对象内的标量/语法/长度错误带当前对象及属性序号；sheet state、row/col hidden 仅在属性缺失时使用默认值，显式值必须匹配精确枚举。inspectEnvelope 和 parseFile 共用不依赖 receiver 的闭包，保留原授权/修订/受保护读写路径。
+
+106 parser **32/32**，107 Owner **7/7**（包含解构 inspectEnvelope），108 类型检查及 109 API build 通过，独立 Spec/Standards 窄复核无阻断。无 DDL或权限放宽。
