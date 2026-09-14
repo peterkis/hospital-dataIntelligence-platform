@@ -85,3 +85,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第七轮修复
 
 远端 Codex 对 `422e9c3` 提出 sharedStrings 数量声明与必需 sheetId 未验证两项 P2。80 tests-only RED 后，sheetId 必须为正 uint32 十进制整数；可选 count/uniqueCount 提供时必须为有效无符号整数，分别等于实际 s 单元格引用数（包括表头）和 si 条目数，不按声明值分配内存。省略计数的合法共享字符串仍可解析。81 parser **24/24**、82 文件 Owner **7/7**、83 类型检查和 84 API build 通过；独立 Spec/Standards 窄范围复核无阻断。无 DDL/权限/存储变化，既有资源限额不变。
+
+## PR #6 第八轮修复
+
+远端 Codex 对 `9824284` 提出 XML 成员 BOM 变换未记录及列范围未验证两项 P2。85 RED 后在 XML 处理前收集 bomMembers 并设置 bomDetected，原 ZIP bytes 不修改；列 min/max 必须为正整数，且 min≤max≤16384，不按声明范围展开单元格。86 parser 26/26、87 Owner 7/7。
+
+独立复核发现 XML declaration 的宽泛空白正则会先吞掉内部 FEFF，90 RED 后改为仅去首个 BOM、立即检查其余 FEFF、再处理 declaration。XML 语法空白仅允许空格/TAB/CR/LF；非法字符及数值实体、字面 `]]>` 不接受。95 RED 进一步关闭根外字符引用冒充空白。96 最终 parser **28/28**，97 类型检查和 98 API build 通过；92 Owner **7/7** 在最后根外引用检查之前。独立 Spec/Standards 窄复核无阻断。无 DDL、授权或存储改变，验收仍限于既有固定子集。

@@ -8,7 +8,7 @@ export type CanonicalRow = Record<string,string>;
 export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:string}
 export interface ParserResult {
   policy: 'STRICT_V1'; structuralStatus: 'PARSED' | 'REJECTED';
-  manifest: { bomDetected: boolean; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
+  manifest: { bomDetected: boolean; bomMembers:string[]; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
   rows: CanonicalRow[];
   cells: RawCellProvenance[];
   issues: ParserIssue[];
@@ -135,31 +135,35 @@ function entities(text: string): string {
     if (name && Object.hasOwn(predefined, name)) return predefined[name]!;
     if (name && /^#(?:x[0-9a-fA-F]+|\d+)$/.test(name)) {
       const value = name[1] === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1));
-      if (value === 9 || value === 10 || value === 13 || value >= 32 && value <= 0x10ffff && !(value >= 0xd800 && value <= 0xdfff)) return String.fromCodePoint(value);
+      if(value===0xfeff)fail('BOM_NOT_PREFIX');
+      if (value === 9 || value === 10 || value === 13 || value>=0x20&&value<=0xd7ff || value>=0xe000&&value<=0xfffd || value>=0x10000&&value<=0x10ffff) return String.fromCodePoint(value);
     }
     return fail('XML_ENTITY');
   });
 }
 // Deliberately restricted XML grammar, with no DTD/entity resolver, recovery, or execution.
 function xml(text: string): Xml {
-  text = text.replace(/^\uFEFF/, '').replace(/^<\?xml\s+version="1\.0"(?:\s+encoding="UTF-8")?(?:\s+standalone="yes")?\s*\?>/i, '');
+  text = text.replace(/^\uFEFF/, '');
+  if(text.includes('\uFEFF'))fail('BOM_NOT_PREFIX');
+  if(/[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(text))fail('XML_SYNTAX');
+  text=text.replace(/^<\?xml[ \t\r\n]+version="1\.0"(?:[ \t\r\n]+encoding="[Uu][Tt][Ff]-8")?(?:[ \t\r\n]+standalone="yes")?[ \t\r\n]*\?>/,'');
   const root: Xml = { name: '#root', attrs: {}, children: [], text: '' }; const stack = [root]; let i = 0; let nodes = 0;
   while (i < text.length) {
     const current = stack.at(-1)!;
-    if (text[i] !== '<') { const end = text.indexOf('<', i); const stop = end < 0 ? text.length : end; current.text += entities(text.slice(i, stop)); i = stop; continue; }
-    if (text.startsWith('</', i)) { const match = /^<\/([A-Za-z_][\w.:-]*)\s*>/.exec(text.slice(i)); if (!match || stack.length === 1 || current.name !== match[1]) fail('XML_SYNTAX'); stack.pop(); i += match![0].length; continue; }
+    if (text[i] !== '<') { const end = text.indexOf('<', i); const stop = end < 0 ? text.length : end; const chunk=text.slice(i,stop);if(chunk.includes(']]>')||current===root&&!/^[ \t\r\n]*$/.test(chunk))fail('XML_SYNTAX');current.text += entities(chunk); i = stop; continue; }
+    if (text.startsWith('</', i)) { const match = /^<\/([A-Za-z_][\w.:-]*)[ \t\r\n]*>/.exec(text.slice(i)); if (!match || stack.length === 1 || current.name !== match[1]) fail('XML_SYNTAX'); stack.pop(); i += match![0].length; continue; }
     const match = /^<([A-Za-z_][\w.:-]*)/.exec(text.slice(i)); if (!match) fail('XML_UNSUPPORTED');
     i += match![0].length; const node: Xml = { name: match![1]!, attrs: Object.create(null), children: [], text: '' };
     while (true) {
-      const tail = text.slice(i); const close = /^\s*(\/?>)/.exec(tail);
+      const tail = text.slice(i); const close = /^[ \t\r\n]*(\/?>)/.exec(tail);
       if (close) { i += close[0].length; current.children.push(node); if (++nodes > 120000) fail('XML_LIMIT'); if (close[1] === '>') { stack.push(node); if (stack.length > 16) fail('XML_LIMIT'); } break; }
-      const attr = /^\s+([A-Za-z_][\w.:-]*)\s*=\s*(?:"([^"<]*)"|'([^'<]*)')/.exec(tail);
+      const attr = /^[ \t\r\n]+([A-Za-z_][\w.:-]*)[ \t\r\n]*=[ \t\r\n]*(?:"([^"<]*)"|'([^'<]*)')/.exec(tail);
       if (!attr || Object.hasOwn(node.attrs, attr[1]!)) fail('XML_SYNTAX');
       node.attrs[attr![1]!] = entities(attr![2] ?? attr![3]!); i += attr![0].length;
       if (Object.keys(node.attrs).length > 32) fail('XML_LIMIT');
     }
   }
-  if (stack.length !== 1 || root.children.length !== 1 || root.text.trim()) fail('XML_SYNTAX');
+  if (stack.length !== 1 || root.children.length !== 1 || !/^[ \t\r\n]*$/.test(root.text)) fail('XML_SYNTAX');
   const document=root.children[0]!,xmlNamespace='http://www.w3.org/XML/1998/namespace';
   const relationshipNamespace='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   const supportedNamespaces=new Set([xmlNamespace,relationshipNamespace,'http://schemas.openxmlformats.org/spreadsheetml/2006/main','http://schemas.openxmlformats.org/package/2006/content-types','http://schemas.openxmlformats.org/package/2006/relationships']);
@@ -193,7 +197,7 @@ function xml(text: string): Xml {
   validateNames(document);return document;
 }
 const children = (node: Xml, name: string) => node.children.filter(n => n.name === name);
-function only(node: Xml, allowed: string[]) { if (node.text.trim() || node.children.some(n => !allowed.includes(n.name))) fail('XLSX_STRUCTURE'); }
+function only(node: Xml, allowed: string[]) { if (!/^[ \t\r\n]*$/.test(node.text) || node.children.some(n => !allowed.includes(n.name))) fail('XLSX_STRUCTURE'); }
 function leaf(node:Xml):string {if(node.children.length)fail('XLSX_STRUCTURE');return node.text;}
 function one(node: Xml, name: string): Xml { const list = children(node, name); if (list.length !== 1) return fail('XLSX_STRUCTURE'); return list[0]!; }
 function unsignedAttribute(value:string|undefined,positive=false):number {
@@ -201,7 +205,10 @@ function unsignedAttribute(value:string|undefined,positive=false):number {
   const n=Number(value);if(!Number.isSafeInteger(n)||n>(2**32-1)||n<(positive?1:0))return fail('XML_ATTRIBUTE_INVALID');return n;
 }
 function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][] {
-  const files = unzip(bytes); const docs = new Map([...files].map(([name, value]) => [name, xml(value)]));
+  const files = unzip(bytes);
+  manifest.bomMembers=[...files].filter(([,value])=>value.startsWith('\uFEFF')).map(([name])=>name);
+  manifest.bomDetected=manifest.bomMembers.length>0;
+  const docs = new Map([...files].map(([name, value]) => [name, xml(value)]));
   const get = (name: string, root: string): Xml => {
     const doc = docs.get(name);
     const namespace=root==='Types'?'http://schemas.openxmlformats.org/package/2006/content-types':root==='Relationships'?'http://schemas.openxmlformats.org/package/2006/relationships':'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
@@ -275,7 +282,11 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     if(metadata.name==='sheetViews'){only(metadata,['sheetView']);for(const view of metadata.children){only(view,['pane','selection']);for(const item of view.children)only(item,[]);}}
     else only(metadata,[]);
   }
-  for (const cols of children(worksheet,'cols')) { only(cols,['col']); for (const col of cols.children) {only(col,[]);if (col.attrs['hidden'] && col.attrs['hidden'] !== '0' && col.attrs['hidden'] !== 'false') manifest.hiddenColumns.push(`${col.attrs['min']}:${col.attrs['max']}`);} }
+  for (const cols of children(worksheet,'cols')) { only(cols,['col']); for (const col of cols.children) {
+    only(col,[]);const min=unsignedAttribute(col.attrs['min'],true),max=unsignedAttribute(col.attrs['max'],true);
+    if(min>max||max>16384)fail('COLUMN_RANGE');
+    if (col.attrs['hidden'] && col.attrs['hidden'] !== '0' && col.attrs['hidden'] !== 'false') manifest.hiddenColumns.push(`${min}:${max}`);
+  } }
   const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];
   if(manifest.defaultRowsHidden){
     manifest.hiddenRows=data.children.filter(r=>!['0','false'].includes(r.attrs['hidden']??'')).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
@@ -303,7 +314,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
 }
 
 export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[]): ParserResult {
-  const result: ParserResult = { policy:'STRICT_V1', structuralStatus:'REJECTED', manifest:{bomDetected:false,defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
+  const result: ParserResult = { policy:'STRICT_V1', structuralStatus:'REJECTED', manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
   try {
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
     if (!fields.length || fields.length > 100 || new Set(fields.map(f=>f.code)).size !== fields.length) fail('FIELD_CONTRACT');

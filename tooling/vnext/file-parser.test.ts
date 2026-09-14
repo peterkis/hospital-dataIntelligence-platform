@@ -7,6 +7,25 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round8: accepted XLSX member BOMs are recorded without changing source bytes',()=>{
+ const files=Object.fromEntries(unzip(workbook));const part='xl/worksheets/sheet1.xml';files[part]='\uFEFF'+files[part];
+ const result=parseBytes(zipText(files),'XLSX',fields);assert.equal(result.structuralStatus,'PARSED');assert.equal(result.manifest.bomDetected,true);
+ assert.deepEqual(result.manifest.bomMembers,[part]);
+});
+test('PR6 round8 adjacent: declaration whitespace cannot consume an interior BOM',()=>{
+ for(const declaration of ['<?xml \uFEFFversion="1.0"?>','<?xml version="1.0"\uFEFF?>']){
+  assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<worksheet ',declaration+'<worksheet '),'XLSX',fields).structuralStatus,'REJECTED');
+ }
+});
+test('PR6 round8 adjacent: XML lexical whitespace and character data remain strict',()=>{
+ for(const [from,to] of [['<worksheet ','\u00a0<worksheet '],['<worksheet ','&#32;<worksheet '],['<row r="2">','<row\u00a0r="2">'],['<sheetData>','<dimension ref="&#65534;"/><sheetData>'],['DEMO','DEMO]]>']]){
+  assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml',from!,to!),'XLSX',fields).structuralStatus,'REJECTED');
+ }
+});
+test('PR6 round8: worksheet column ranges are required, bounded and ordered',()=>{
+ for(const attrs of ['min="999999" max="1"','min="2" max="1"','min="0" max="1"','min="1"','min="x" max="2"','min="1" max="16385"'])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',`<cols><col ${attrs} hidden="0"/></cols><sheetData>`),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>','<cols><col min="1" max="16384" hidden="0"/></cols><sheetData>'),'XLSX',fields).structuralStatus,'PARSED');
+});
 test('PR6 round7: sheetId is required and a positive unsigned integer',()=>{
  for(const replacement of ['', 'sheetId="0"','sheetId="-1"','sheetId="nonsense"','sheetId="4294967296"'])assert.equal(parseBytes(edit('xl/workbook.xml','sheetId="1"',replacement),'XLSX',fields).structuralStatus,'REJECTED');
  assert.equal(parseBytes(edit('xl/workbook.xml','sheetId="1"','sheetId="17"'),'XLSX',fields).structuralStatus,'PARSED');
