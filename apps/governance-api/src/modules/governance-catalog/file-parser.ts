@@ -101,7 +101,7 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
     if ((flags & ~0x800) || ![0, 8].includes(method) || extra || comment || b.readUInt16LE(p + 34)) fail('ZIP_UNSUPPORTED');
     if (p + 46 + nameSize > end) fail('ZIP_FORMAT');
     const nameBytes = b.subarray(p + 46, p + 46 + nameSize), name = utf8(nameBytes);
-    if (!['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/worksheets/sheet1.xml','xl/sharedStrings.xml','xl/styles.xml','docProps/core.xml','docProps/app.xml'].includes(name) || files.has(name)) fail('ZIP_MEMBER_REJECTED');
+    if (!['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/worksheets/sheet1.xml','xl/sharedStrings.xml'].includes(name) || files.has(name)) fail('ZIP_MEMBER_REJECTED');
     total += size;
     if (size > 2097152 || total > 4194304 || size > Math.max(1, compressed) * 100) fail('ZIP_LIMIT');
     if (local !== nextLocal || local + 30 > central || b.readUInt32LE(local) !== 0x04034b50 || b.readUInt16LE(local + 6) !== flags || b.readUInt16LE(local + 8) !== method || b.readUInt32LE(local + 14) !== crc || b.readUInt32LE(local + 18) !== compressed || b.readUInt32LE(local + 22) !== size || b.readUInt16LE(local + 26) !== nameSize || b.readUInt16LE(local + 28) !== 0) fail('ZIP_FORMAT');
@@ -185,7 +185,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     if (!doc || doc.name !== root || doc.attrs['xmlns']!==namespace) return fail('XLSX_STRUCTURE'); return doc;
   };
   for (const doc of docs.values()) {
-    const visit = (n: Xml) => { if(n!==doc && Object.keys(n.attrs).some(a=>a==='xmlns'||a.startsWith('xmlns:')))fail('XML_NAMESPACE'); if (['f','externalLink','oleObject','extLst','AlternateContent'].includes(n.name) || n.attrs['TargetMode'] === 'External') fail('ACTIVE_CONTENT'); for (const child of n.children) visit(child); }; visit(doc);
+    const visit = (n: Xml) => { if(n.attrs['s']!==undefined||n.attrs['style']!==undefined)fail('XLSX_STYLE_UNSUPPORTED');if(n!==doc && Object.keys(n.attrs).some(a=>a==='xmlns'||a.startsWith('xmlns:')))fail('XML_NAMESPACE'); if (['f','externalLink','oleObject','extLst','AlternateContent'].includes(n.name) || n.attrs['TargetMode'] === 'External') fail('ACTIVE_CONTENT'); for (const child of n.children) visit(child); }; visit(doc);
   }
   const types = get('[Content_Types].xml', 'Types'); only(types, ['Default','Override']);
   for(const entry of types.children)only(entry,[]);
@@ -193,8 +193,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   const spreadsheetMime='application/vnd.openxmlformats-officedocument.spreadsheetml.';
   const partTypes:Record<string,string>={
     '/xl/workbook.xml':spreadsheetMime+'sheet.main+xml','/xl/worksheets/sheet1.xml':spreadsheetMime+'worksheet+xml',
-    '/xl/sharedStrings.xml':spreadsheetMime+'sharedStrings+xml','/xl/styles.xml':spreadsheetMime+'styles+xml',
-    '/docProps/core.xml':'application/vnd.openxmlformats-package.core-properties+xml','/docProps/app.xml':'application/vnd.openxmlformats-officedocument.extended-properties+xml',
+    '/xl/sharedStrings.xml':spreadsheetMime+'sharedStrings+xml',
   };
   const defaults:Record<string,string>={xml:'application/xml',rels:'application/vnd.openxmlformats-package.relationships+xml'};
   const declarations=new Map<string,string>();
@@ -220,7 +219,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     if(!targets.has(required))fail('RELATIONSHIP_REJECTED');
     return targets;
   };
-  relationships(rels,{'xl/workbook.xml':office+'officeDocument','docProps/core.xml':'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties','docProps/app.xml':office+'extended-properties'},'','xl/workbook.xml');
+  relationships(rels,{'xl/workbook.xml':office+'officeDocument'},'','xl/workbook.xml');
   const workbook = get('xl/workbook.xml','workbook'); only(workbook,['workbookPr','bookViews','sheets','calcPr']);
   for(const metadata of workbook.children.filter(n=>n.name!=='sheets')) {
     if(metadata.name==='bookViews'){only(metadata,['workbookView']);for(const view of metadata.children)only(view,[]);}
@@ -232,7 +231,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state'] && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
   const sheet = sheets.children[0]; if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') fail('SHEET_CONTRACT');
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
-  const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings','styles.xml':office+'styles'},'xl/','worksheets/sheet1.xml');
+  const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings'},'xl/','worksheets/sheet1.xml');
   if (!wr.children.some(r => r.attrs['Id'] === sheet!.attrs['r:id'] && r.attrs['Target'] === 'worksheets/sheet1.xml')) fail('RELATIONSHIP_REJECTED');
   const shared = docs.get('xl/sharedStrings.xml'); const strings: string[] = [];
   if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(leaf(one(si,'t'))); } }

@@ -22,6 +22,8 @@ CSV 为固定逗号 RFC4180 子集、LF/CRLF、双引号转义；JSON 为 flat o
 
 XLSX 固定一个名为 Data 的 sheet，逐行连续、列坐标连续，inlineStr/sharedStrings 文本单元格。校验核心 XML 命名空间，拒绝嵌套重新绑定；Excel 文本转义在受限边界内解码，原 XML 字节仍保留。三格式解码后的非法控制字符和不成对代理字符均拒绝。隐藏 sheet/行/列先记录于受限 manifest 再拒绝，STRICT_V1 不声明隐藏内容。拒绝公式（包括带缓存值的公式）、宏、外链、OLE、未知成员、DTD/实体声明、重复成员、加密、多盘、ZIP64、ZIP 注释、extra/data-descriptor、富文本及非固定结构。此严格子集不承诺所有 Excel 保存器产物都可导入；不尝试修复、猜测或运行计算。
 
+当前 XLSX 部件白名单为 Content Types、根关系、workbook、workbook 关系、sheet1，加可选 sharedStrings；后者须有完整 MIME/关系/结构校验。未实现结构校验的 styles、docProps/core、docProps/app 明确拒绝，相关声明/关系和 s/style 样式引用也拒绝。因此带这些部件的普通 Excel 另存产物不属于此固定子集；不会静默丢弃部件后当作原文件接收。
+
 接收上限 1 MiB，与 P0-11 一致；ZIP 成员 16、单成员展开 2 MiB、总展开 4 MiB、压缩比 100，先核实中央/本地目录一致与 CRC，再解析。100 列、1000 数据行、8192 字符/值；worker 限制 old heap 64 MiB、young heap 16 MiB、stack 2 MiB，2 秒终止、最多两个并行 worker，无无限队列。结果与导出各自不得超过 1 MiB；限额失败不进入领域。
 
 错误导出为真正 ZIP32 XLSX，每个值都显式 inlineStr，无公式节点；不生成 CSV。原值含 =/+/−/@ 等也只作文本写入，不修改受限原值。ERROR_REPORT 同样经 P0-11 授权保存与读取。
@@ -63,3 +65,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `6b30856` 指出未声明 XML 属性前缀仍被接受。52 tests-only RED 后，解析器按根命名空间声明与隐式 xml 绑定解析元素/属性 QName，拒绝未声明前缀、多冒号 QName、保留 xml/xmlns URI 的错误绑定，并按展开后的命名空间/本地名检测别名前缀重复属性。无前缀属性不继承默认命名空间；原 STRICT_V1 禁止嵌套重绑定的规则保持。
 
 53 第一候选 parser 15/15，54 文件 Owner 7/7；独立 Standards 复核进一步找到 `xmlns:` 空前缀绕过，57 RED 后补非空 NCName 校验，58 最终 parser **16/16**，59 类型检查与 60 API build 通过。独立纯函数检查保留合法 r:id/隐式 xml:space 与正确显式 xml 绑定，重复展开属性拒绝。本轮无新 DDL/存储/权限修改；不将此前总 DB 验证冒称为本轮重跑。
+
+## PR #6 第四轮修复
+
+远端 Codex 对 `f95af60` 指出 styles/docProps 部件有 MIME 声明但缺完整 XML 结构校验。61 tests-only RED 后采取其建议的固定子集方案：在 ZIP、Content Types 和关系三层均拒绝这些尚未支持的可选部件，并拒绝悬空样式引用，避免扩成通用 OOXML 校验器。保留的 sharedStrings 继续接受全部既有检查。62 parser **17/17**，63 文件 Owner **7/7**，64 类型检查和 65 API build 通过；独立 Spec/Standards 窄范围复核无阻断。无 DDL/权限/存储变化；数据库仍 28 项迁移。

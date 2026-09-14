@@ -7,6 +7,18 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round4: unsupported optional XLSX parts reject even with matching declarations',()=>{
+ for(const [part,mime] of [
+  ['xl/styles.xml','application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml'],
+  ['docProps/core.xml','application/vnd.openxmlformats-package.core-properties+xml'],
+  ['docProps/app.xml','application/vnd.openxmlformats-officedocument.extended-properties+xml'],
+ ]){
+  const files=Object.fromEntries(unzip(workbook));files[part!]='<evil xmlns="urn:not-spreadsheet">ignored</evil>';
+  files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>',`<Override PartName="/${part}" ContentType="${mime}"/></Types>`);
+  assert.equal(parseBytes(zipText(files),'XLSX',fields).structuralStatus,'REJECTED');
+ }
+ assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<c r="A2"','<c s="1" r="A2"'),'XLSX',fields).structuralStatus,'REJECTED');
+});
 test('PR6 round3: XML attribute and element prefixes must be declared and reserved bindings remain fixed',()=>{
  for(const bytes of [
   edit('xl/worksheets/sheet1.xml','<row r="2">','<row r="2" evil:attr="x">'),
