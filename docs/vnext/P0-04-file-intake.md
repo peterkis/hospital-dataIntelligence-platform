@@ -145,3 +145,11 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第十八轮修复
 
 远端 Codex 对 `f64e841` 指出多行 CSV 记录的限额错误仍使用结束物理行。156 tests-only RED 后，精确/粗 CELL_LIMIT 与 COLUMN_LIMIT 均使用已跟踪的 recordStart，列仍为源字段序号；语法位置保持物理字符位置。157 parser **46/46** 覆盖多行值精确/粗限额的 EOF、逗号、换行结束以及第 101 列；158 Owner **7/7** 且临时数据库清理成功，159 类型检查及 160 API build 通过。独立 Spec/Standards 窄复核无发现，无 DDL/授权/存储变化。
+
+## PR #6 第十九轮修复
+
+远端 Codex 对 `eb66ef7` 指出新增测试没有遵循 ADR-0081 的 Vitest 权威。161 记录仅把两套测试导入改为 Vitest 后旧 Node runner 的真实失败；随后将 P0-04 单元入口、聚合中的 parser 入口及 fresh/upgrade 的 Owner 子进程统一接到现有固定 Vitest **4.1.6**，未新增依赖或替代 ADR。专用配置限定两套文件测试、forks 顺序执行；原生 TS worker 保留 tsx，Owner 测试前通过 setupFiles 加载现有 receipt 连接保护，原临时库 finally 清理保持。
+
+162 Vitest parser **46/46**、163 类型检查通过。164 完整聚合通过：Vitest parser **46/46**、fresh Owner **7/7**、upgrade Owner **7/7**（27 孤立修订升级拒绝及合法原文件保留）、既有 P0-11 **10/10** 与 P0-03 **8/8** 回归、当前 receipt 迁移/类型生成及验证/authority；持久库仍 OID 206108、28 migrations、29 tables、0 业务实例 schema。既有两票回归运行器保持原状，本轮统一的是 P0-04 新增套件，不将历史 Node 实测重新标成 Vitest。
+
+聚合后补充 Vitest setup 对非 receipt 连接的拒绝回归，并将配置纳入类型检查：165 类型检查、166 最终 fresh Owner **8/8** 通过，wrapper cleanupPassed=true。没有改动业务运行时，上一轮 API build 160 的结果保留，不冒称本轮重跑。最终独立 Spec/Standards 窄复核无阻断。

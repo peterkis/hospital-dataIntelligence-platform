@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { deflateRawSync, crc32 } from 'node:zlib';
 import { parseBytes, unzip } from '../../apps/governance-api/src/modules/governance-catalog/file-parser.js';

@@ -1,4 +1,4 @@
-import {test} from 'node:test';
+import {test} from 'vitest';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -10,6 +10,10 @@ import {fixture} from './protected-fixture.js';
 const {peer,quote}=await import('./lineage.mjs');
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
 assert.equal(receipt.purpose,'TEMPORARY_VALIDATION');
+test('Vitest setup blocks a non-receipt connection before database access',async()=>{
+ const pool=new Pool({database:'synthetic_non_receipt_probe'});
+ try{assert.throws(()=>pool.connect(),/NON_RECEIPT_CONNECTION_FORBIDDEN/);}finally{await pool.end();}
+});
 async function setup() {
  const keys=new LocalSyntheticKeyProvider(),catalog=await openCatalog(undefined,keys);
  try {

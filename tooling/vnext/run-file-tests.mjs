@@ -46,7 +46,7 @@ try {
   assert.equal(Buffer.from(await catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:originalFile.artifact.artifactId})).toString(),'SYNTHETIC_UPGRADE_BYTES');
   assert.equal((await catalog.verifyAudit('auditor')).status,'PASS');console.log('PREFIX_27_FILE_AND_AUDIT_PRESERVED');
  }finally{await catalog.close();}}
- const run=spawnSync(process.execPath,['--import','./tooling/vnext/connection-guard.mjs','--import','tsx','--test','tooling/vnext/file-intake.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-04-FILES'},stdio:'inherit',windowsHide:true});
+ const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.files.config.ts','tooling/vnext/file-intake.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-04-FILES'},stdio:'inherit',windowsHide:true});
  process.exitCode=run.status??1;
  console.log(JSON.stringify({gate:'P0-04',mode:previous?'PREFIX_27':'FRESH',exit:run.status,oid:owned.receipt.oid}));
 }finally{dropTemporary(owned.receipt);}

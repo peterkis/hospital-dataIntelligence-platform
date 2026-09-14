@@ -1,1 +1,1 @@
-{"extends":"../../tsconfig.base.json","compilerOptions":{"noEmit":true,"allowJs":true,"checkJs":false,"types":["node"]},"include":["file-parser.test.ts","file-intake.test.ts","protected-fixture.ts"]}
+{"extends":"../../tsconfig.base.json","compilerOptions":{"noEmit":true,"allowJs":true,"checkJs":false,"types":["node"]},"include":["file-parser.test.ts","file-intake.test.ts","protected-fixture.ts","vitest.files.config.ts"]}
