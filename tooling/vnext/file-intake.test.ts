@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+import {Pool} from 'pg';
 import {openCatalog,LocalSyntheticKeyProvider,type ReceiveFileInput,type ParseFileInput} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {textWorkbook} from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.js';
 import type {ParserResult} from '../../apps/governance-api/src/modules/governance-catalog/file-parser.js';
@@ -20,6 +21,16 @@ async function setup() {
   return {keys,catalog,f,field,grant,input,parseInput,read};
  }catch(e){await catalog.close();throw e;}
 }
+test('PR6: public metadata command cannot commit a FILE revision without intake',async()=>{
+ const s=await setup();try{await assert.rejects(s.catalog.importJobCommand('maker',s.input.job),/FILE_RECEIVE_REQUIRED/);}finally{await s.catalog.close();}
+});
+test('PR6: deferred database invariant rejects an orphan FILE revision and rolls back outcome',async()=>{
+ const s=await setup();const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});try{
+  const before=peer(receipt.name,'SELECT count(*) FROM governance_catalog.import_input_revision;');
+  await assert.rejects(pool.query('SELECT governance_catalog.import_job_command($1,$2::jsonb)',['maker',JSON.stringify(s.input.job)]),/FILE_ORIGINAL_REQUIRED/);
+  assert.equal(peer(receipt.name,'SELECT count(*) FROM governance_catalog.import_input_revision;'),before);
+ }finally{await pool.end();await s.catalog.close();}
+});
 test('review: changed file request cannot attach another raw file to an existing FILE revision',async()=>{
  const s=await setup();try{s.grant('STORE');await s.catalog.receiveFile('maker',s.input,Buffer.from(`${s.field}\n0012`));
   await assert.rejects(s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID()},Buffer.from(`${s.field}\n0099`)),/REQUEST_CONFLICT/);

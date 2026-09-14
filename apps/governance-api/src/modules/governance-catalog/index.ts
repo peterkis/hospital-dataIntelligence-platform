@@ -56,6 +56,7 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');
       if(!Check(ImportMetadataSchema,input['input']))throw new Error('CLOSED_METADATA_REQUIRED');
       if(!Check(ImportJobCommandSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');
+      if(input.input.kind==='FILE')throw new Error('FILE_RECEIVE_REQUIRED');
       return (await sql<{result:ImportJobOutcome}>`select governance_catalog.import_job_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
     },
     importJobRead:readImportJob,

@@ -28,21 +28,25 @@ function utf8(bytes: Uint8Array): string {
 // Fixed RFC 4180 dialect; no delimiter guessing or silent empty-row removal.
 function csv(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = []; let value = ''; let quoted = false; let closed = false;
-  const cell = () => { row.push(value); value = ''; closed = false; if (row.length > 100) fail('COLUMN_LIMIT'); };
+  let physicalRow=1,physicalColumn=1;
+  const syntax=()=>fail('CSV_SYNTAX',physicalRow,physicalColumn);
+  const cell = () => { row.push(value); value = ''; closed = false; if (row.length > 100) fail('COLUMN_LIMIT',physicalRow,physicalColumn); };
+  const record=()=>{rows.push(row);row=[];if(rows.length>1001)fail('ROW_LIMIT',physicalRow,physicalColumn);};
   for (let i = 0; i < text.length; i++) {
     const c = text[i]!;
     if (quoted) {
-      if (c === '"') { if (text[i + 1] === '"') { value += '"'; i++; } else { quoted = false; closed = true; } }
+      if (c === '"') { if (text[i + 1] === '"') { value += '"'; i++; physicalColumn++; } else { quoted = false; closed = true; } }
       else value += c;
     } else if (c === ',' || c === '\n' || c === '\r') {
       cell();
-      if (c !== ',') { if (c === '\r') { if (text[++i] !== '\n') fail('CSV_SYNTAX'); } rows.push(row); row = []; if (rows.length > 1001) fail('ROW_LIMIT'); }
+      if (c !== ',') { if (c === '\r') { if (text[i+1] !== '\n') syntax(); i++; } record(); }
     } else if (c === '"' && !value && !closed) quoted = true;
-    else { if (closed || c === '"') fail('CSV_SYNTAX'); value += c; }
-    if (value.length > 8192) fail('CELL_LIMIT');
+    else { if (closed || c === '"') syntax(); value += c; }
+    if (value.length > 8192) fail('CELL_LIMIT',physicalRow,physicalColumn);
+    if(c==='\n'||c==='\r'&&!quoted){physicalRow++;physicalColumn=1;}else physicalColumn++;
   }
-  if (quoted) fail('CSV_SYNTAX');
-  if (value || row.length || closed) { cell(); rows.push(row); }
+  if (quoted) syntax();
+  if (value || row.length || closed) { cell(); record(); }
   return rows;
 }
 
@@ -163,8 +167,18 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   for(const entry of types.children)only(entry,[]);
   if (types.children.some(n => /macro|vba|ole|external/i.test(n.attrs['ContentType'] ?? ''))) fail('ACTIVE_CONTENT');
   const rels = get('_rels/.rels','Relationships'); only(rels,['Relationship']);
-  for(const rel of rels.children)only(rel,[]);
-  for (const r of rels.children) if (!['xl/workbook.xml','docProps/core.xml','docProps/app.xml'].includes(r.attrs['Target'] ?? '')) fail('RELATIONSHIP_REJECTED');
+  const office='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+  const relationships=(node:Xml,mapping:Record<string,string>,prefix:string,required:string)=>{
+    const ids=new Set<string>(),targets=new Set<string>();
+    for(const rel of node.children){
+      only(rel,[]);const id=rel.attrs['Id']??'',target=rel.attrs['Target']??'';
+      if(!id||ids.has(id)||targets.has(target)||!Object.hasOwn(mapping,target)||rel.attrs['Type']!==mapping[target]||!files.has(prefix+target)||rel.attrs['TargetMode']&&rel.attrs['TargetMode']!=='Internal')fail('RELATIONSHIP_REJECTED');
+      ids.add(id);targets.add(target);
+    }
+    if(!targets.has(required))fail('RELATIONSHIP_REJECTED');
+    return targets;
+  };
+  relationships(rels,{'xl/workbook.xml':office+'officeDocument','docProps/core.xml':'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties','docProps/app.xml':office+'extended-properties'},'','xl/workbook.xml');
   const workbook = get('xl/workbook.xml','workbook'); only(workbook,['workbookPr','bookViews','sheets','calcPr']);
   for(const metadata of workbook.children.filter(n=>n.name!=='sheets')) {
     if(metadata.name==='bookViews'){only(metadata,['workbookView']);for(const view of metadata.children)only(view,[]);}
@@ -176,12 +190,10 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state'] && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
   const sheet = sheets.children[0]; if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') fail('SHEET_CONTRACT');
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
-  for(const rel of wr.children)only(rel,[]);
-  const ids = new Set<string>();
-  for (const r of wr.children) { const id = r.attrs['Id'] ?? ''; if (!id || ids.has(id) || !['worksheets/sheet1.xml','sharedStrings.xml','styles.xml'].includes(r.attrs['Target'] ?? '')) fail('RELATIONSHIP_REJECTED'); ids.add(id); }
+  const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings','styles.xml':office+'styles'},'xl/','worksheets/sheet1.xml');
   if (!wr.children.some(r => r.attrs['Id'] === sheet!.attrs['r:id'] && r.attrs['Target'] === 'worksheets/sheet1.xml')) fail('RELATIONSHIP_REJECTED');
   const shared = docs.get('xl/sharedStrings.xml'); const strings: string[] = [];
-  if (shared) { get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(leaf(one(si,'t'))); } }
+  if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(leaf(one(si,'t'))); } }
   const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['dimension','sheetViews','sheetFormatPr','cols','sheetData','pageMargins']);
   for(const metadata of worksheet.children.filter(n=>!['cols','sheetData'].includes(n.name))) {
     if(metadata.name==='sheetViews'){only(metadata,['sheetView']);for(const view of metadata.children){only(view,['pane','selection']);for(const item of view.children)only(item,[]);}}

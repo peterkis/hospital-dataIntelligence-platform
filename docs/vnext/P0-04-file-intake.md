@@ -4,7 +4,7 @@
 
 ## 当前接线
 
-现有 `openCatalog(connectionString, provider)` 唯一 Owner 增加 typed `receiveFile`、`inspectEnvelope`、`parseFile`、`exportIssueWorkbook`。显式复用一个 `LocalSyntheticKeyProvider`。没有新增库、业务表、HTTP 文件路由或页面。现有 P0-03 metadata API 的当前类型同时接受 FILE 修订，文件入口集成测试为真实调用方。
+现有 `openCatalog(connectionString, provider)` 唯一 Owner 增加 typed `receiveFile`、`inspectEnvelope`、`parseFile`、`exportIssueWorkbook`。显式复用一个 `LocalSyntheticKeyProvider`。没有新增库、业务表、HTTP 文件路由或页面。FILE schema 用于 receiveFile 的内部作业接线；公开 importJobCommand 只接受 METADATA_ONLY，对 FILE 返回 FILE_RECEIVE_REQUIRED。文件入口集成测试为真实调用方。
 
 0027 扩展现有输入元数据为 `{kind: FILE, format: CSV|JSON|XLSX, parserPolicy: STRICT_V1}`，digestStatus 为 PROTECTED_REFERENCE；不填占位 SHA。METADATA_ONLY 历史声明不改写，其反向摘要保护继续执行。metadataDigest 只覆盖格式/策略元数据，不是文件摘要。receiveFile 在一根事务内调用原作业命令和原受限存储，原文件引用绑定本次修订，任一失败回滚。数据库触发器在原授权锁内限制每个 FILE 修订一个 RAW_FILE；换文件请求号不能把新文件挂回旧修订。新文件必须新建修订，expectedCurrentRevision 和原请求重放检查不变。
 
@@ -39,3 +39,13 @@ XLSX 固定一个名为 Data 的 sheet，逐行连续、列坐标连续，inline
 最终 Standards 复核又复现 XML t 节点嵌套内容被静默忽略；24 为 tests-only RED，修复同时约束 t/v 文本叶子和 workbook/worksheet 结构容器，禁止非空游离文本及未知嵌套内容。25 纯解析 **8/8**，26 文件 Owner **5/5**，27 类型检查与 28 API build 通过。此轮仅解析器及测试/文档变化，0027 SQL 与已完成的 26→27 升级/原库 checksum 不变，不重复声称 DB 回归全部重跑。
 
 本票责任字段 0，不改 datasets 或 field-routing。Q42/IMP001–004/IMP008–009/A001–004 仅对上述合成固定格式与保护接线提供证据，P0-05 规则、P0-10 集成、P0-09 UI 后票责任不消失。P0-02 BROWSER_BLOCKED 保留；P0 仍 IN_PROGRESS。本票不执行浏览器和服务实际重启，不证明跨进程密钥恢复、病毒扫描或生产安全。
+
+## PR #6 第一轮修复
+
+用户在本地交付后授权完整 push/PR/Codex review/修复/合并/清理流程。远端 Codex 对 `2ef88e0` 提出 4 项 P2：公开 FILE 命令会留下无原文件修订；CSV EOF 末行漏检限额；CSV_SYNTAX 丢失位置；根 relationship 不强制指定 workbook。29/30 为对应 parser/真实 DB 的 tests-only RED。
+
+公开 metadata 命令现在拒绝 FILE；新增前向 0028 延迟约束，确保每个 FILE 修订提交时恰有一个 RAW_FILE。原子 receive 中的暂时无原文件状态可以存在至同根提交；直接 SQL 命令也不能提交孤立修订。0028 安装前遇到既有孤立 FILE 失败关闭且不改写其事实；不会清理或伪造原文件。已安装 0027 字节不变。33 验证 27→28：孤立修订升级拒绝并保留、旧合法制品修订/密文/审计保持，新版专项 7/7。
+
+CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行边界；语法错误跟踪物理行号及 UTF-16 字符列（EOF 指向下一字符位置），覆盖多行引号、引号后多余字符、未闭合引号和坏 CRLF。这类语法错误不会被伪造为规范单元格坐标。XLSX 根关系必须有唯一且类型正确的 officeDocument→workbook，workbook 必须引用 worksheet；所有关系 ID/target 唯一、目标存在、Type 与路径吻合。实际使用 sharedStrings 也必须经该 typed relationship，不能消费孤立 ZIP 部件。36 的相邻反例 RED 后，37 纯解析 12/12。
+
+32 fresh 专项 7/7，38–40 原库迁移、类型生成、authority 通过：仍 OID 206108/29 表/零业务实例 schema，迁移数 28。最终运行结果及当前 head 远端复审单独写 ignored pr6-progress/evidence；未把首轮 review 的 Completed 状态当作无发现通过，未把无 GitHub checks 写成 CI 全绿。旧记录中的 27 项迁移与初始测试数字是对应候选的历史结果。
