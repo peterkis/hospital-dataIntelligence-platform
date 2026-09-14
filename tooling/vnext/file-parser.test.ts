@@ -7,6 +7,14 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round14: paired ZIP header time, date and needed version must agree',()=>{
+ const central=workbook.readUInt32LE(workbook.length-22+16);
+ for(const [localOffset,centralOffset,value] of [[10,12,1],[12,14,33],[4,6,10]] as const){
+  const bytes=Buffer.from(workbook);bytes.writeUInt16LE(value,localOffset);
+  assert.equal(parseBytes(bytes,'XLSX',fields).structuralStatus,'REJECTED');
+  bytes.writeUInt16LE(value,central+centralOffset);assert.equal(parseBytes(bytes,'XLSX',fields).structuralStatus,'PARSED');
+ }
+});
 function deflatedWorksheet(suffix:Buffer,padding=0):Buffer {
  const files=Object.fromEntries(unzip(workbook)),part='xl/worksheets/sheet1.xml';files[part]=files[part]!.replace('<sheetData>',' '.repeat(padding)+'<sheetData>');
  const bytes=zipText(files),end=bytes.length-22,central=bytes.readUInt32LE(end+16);let entry=central;

@@ -116,7 +116,7 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
     if (!['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/worksheets/sheet1.xml','xl/sharedStrings.xml'].includes(name) || files.has(name)) fail('ZIP_MEMBER_REJECTED');
     total += size;
     if (size > 2097152 || total > 4194304 || size > Math.max(1, compressed) * 100) fail('ZIP_LIMIT');
-    if (local !== nextLocal || local + 30 > central || b.readUInt32LE(local) !== 0x04034b50 || b.readUInt16LE(local + 6) !== flags || b.readUInt16LE(local + 8) !== method || b.readUInt32LE(local + 14) !== crc || b.readUInt32LE(local + 18) !== compressed || b.readUInt32LE(local + 22) !== size || b.readUInt16LE(local + 26) !== nameSize || b.readUInt16LE(local + 28) !== 0) fail('ZIP_FORMAT');
+    if (local !== nextLocal || local + 30 > central || b.readUInt32LE(local) !== 0x04034b50 || b.readUInt16LE(local + 4) !== b.readUInt16LE(p + 6) || b.readUInt16LE(local + 10) !== b.readUInt16LE(p + 12) || b.readUInt16LE(local + 12) !== b.readUInt16LE(p + 14) || b.readUInt16LE(local + 6) !== flags || b.readUInt16LE(local + 8) !== method || b.readUInt32LE(local + 14) !== crc || b.readUInt32LE(local + 18) !== compressed || b.readUInt32LE(local + 22) !== size || b.readUInt16LE(local + 26) !== nameSize || b.readUInt16LE(local + 28) !== 0) fail('ZIP_FORMAT');
     const start = local + 30 + nameSize; nextLocal = start + compressed;
     if (nextLocal > central || !b.subarray(local + 30, start).equals(nameBytes)) fail('ZIP_FORMAT');
     const payload = b.subarray(start, nextLocal);

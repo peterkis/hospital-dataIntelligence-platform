@@ -121,3 +121,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `2528efa` 指出 DEFLATE 流后尾随数据被原 inflater 忽略。123 RED 覆盖正常压缩、尾随任意字节及填充压缩长度以降低表面压缩比。现在使用 Node info 返回的实际消耗字节数，必须与完整声明 payload 长度相等；运行时返回结构不符合预期同样拒绝。原展开上限、比例、长度和 CRC 检查保持。
 
 124 parser **38/38**、125 Owner **7/7**；126/127 记录 TypeScript unknown 收窄问题，调整显式失败返回后 128 类型检查和 129 API build 通过。独立 Spec/Standards 窄复核无阻断。本轮无 DDL/权限/存储变化。
+
+## PR #6 第十四轮修复
+
+远端 Codex 对 `daad18f` 指出 ZIP 本地头/中央目录的修改时间和日期未比较。130 RED 后增加 time/date 对应字段比较，并补齐同样成对出现的 needed version；原头部范围检查在读取这些字段之前执行。131 parser **39/39** 覆盖每个不匹配拒绝及匹配通过，132 Owner **7/7**，133 类型检查与 134 API build 通过，独立 Spec/Standards 窄复核确认偏移和边界无阻断。ZIP 时间字段不作为平台业务时间依据，无 DDL/权限/存储变化。
