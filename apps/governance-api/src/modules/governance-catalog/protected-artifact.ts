@@ -79,7 +79,16 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
         });
         if(result.error)throw new Error(result.error);
         return result;
-      } catch (error) { throw safeError(error); } finally { raw.fill(0); }
+      } catch (error) {
+        if(error instanceof Error && error.message==='PUBLIC_DIGEST_CONFLICT') {
+          // The payload transaction has rolled back. Commit a distinct minimal denial
+          // without the bytes, their ordinary SHA, or a false accepted outcome.
+          const denial={scope:input.scope,campus:input.campus,purpose:input.purpose,jobId:input.jobId,revisionId:input.revisionId,requestId:input.requestId};
+          try {await sql`select governance_catalog.protected_digest_denial(${actor},${JSON.stringify(denial)}::jsonb)`.execute(db);}
+          catch {throw new Error('PROTECTED_OPERATION_FAILED');}
+        }
+        throw safeError(error);
+      } finally { raw.fill(0); }
     },
     async readMasked(actor: string, input: ProtectedReadInput): Promise<ProtectedReference> {
       if (!Check(ProtectedReadSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');

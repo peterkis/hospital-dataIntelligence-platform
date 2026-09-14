@@ -98,12 +98,28 @@ test('PR5: reject protected bytes whose plain SHA is published in any bound job 
  const s=await setup();try{
   s.grant();const exposed=createHash('sha256').update(raw).digest('hex');
   const job=await s.catalog.importJobCommand('maker',{...s.f.create,requestId:randomUUID(),input:{kind:'METADATA_ONLY',declaredSha256:exposed}});
-  const before=()=>peer(receipt.name,"SELECT json_build_array((SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM governance_catalog.protected_payload),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM vnext_control.request_identity),(SELECT count(*) FROM vnext_control.audit),(SELECT count(*) FROM vnext_control.audit_chain))::text;");
+  const before=():number[]=>JSON.parse(peer(receipt.name,"SELECT json_build_array((SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM governance_catalog.protected_payload),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM vnext_control.request_identity),(SELECT count(*) FROM vnext_control.audit),(SELECT count(*) FROM vnext_control.audit_chain))::text;"));
   for(const kind of ['RAW_FILE','RAW_CELL','ERROR_REPORT'] as const){
    const count=before();
    await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,jobId:job.id,revisionId:job.revisionId,requestId:randomUUID(),kind},raw),/^Error: PUBLIC_DIGEST_CONFLICT$/);
-   assert.equal(before(),count,'rejection cannot leave a stored artifact, payload or accepted outcome');
+   const after=before();
+   assert.deepEqual(after.slice(0,4),count.slice(0,4),'rejection cannot leave a stored artifact, payload or accepted outcome');
+   assert.equal(after[4],count[4]!+1,'a digest-conflict denial must survive the payload rollback');
+   assert.equal(after[5],count[5]!+1,'the denial must extend the tamper-evident audit chain');
+   assert.equal(peer(receipt.name,`SELECT reason FROM vnext_control.audit WHERE object_id=${quote(job.id)}::uuid AND actor_code='maker' ORDER BY recorded_at DESC LIMIT 1;`),'PUBLIC_DIGEST_CONFLICT');
   }
+  peer(receipt.name,"CREATE FUNCTION governance_catalog.test_digest_denial_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.reason='PUBLIC_DIGEST_CONFLICT' THEN RAISE EXCEPTION 'TEST_DENIAL_AUDIT_FAILURE'; END IF; RETURN NEW; END $$; CREATE TRIGGER test_digest_denial_failure BEFORE INSERT ON vnext_control.audit FOR EACH ROW EXECUTE FUNCTION governance_catalog.test_digest_denial_failure();");
+  try{
+   const count=before();
+   await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,jobId:job.id,revisionId:job.revisionId,requestId:randomUUID()},raw),/^Error: PROTECTED_OPERATION_FAILED$/);
+   assert.deepEqual(before(),count,'audit failure must not claim a recorded denial or leave accepted data');
+  }finally{peer(receipt.name,'DROP TRIGGER test_digest_denial_failure ON vnext_control.audit; DROP FUNCTION governance_catalog.test_digest_denial_failure();');}
+  const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+  try{
+   const count=before();
+   await assert.rejects(pool.query('SELECT governance_catalog.protected_digest_denial($1,$2::jsonb)',['maker',JSON.stringify({...s.ref(job.id),raw:raw.toString()})]),/CLOSED_INPUT_REQUIRED/);
+   assert.deepEqual(before(),count,'denial recorder must reject unstructured sensitive content');
+  }finally{await pool.end();}
   // Changing the current declaration cannot erase exposure in immutable earlier revisions.
   const revised=await s.catalog.importJobCommand('maker',{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_JOB',jobId:job.id,expectedCurrentRevision:job.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'b'.repeat(64)}});
   await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,jobId:job.id,revisionId:revised.revisionId,requestId:randomUUID()},raw),/^Error: PUBLIC_DIGEST_CONFLICT$/);

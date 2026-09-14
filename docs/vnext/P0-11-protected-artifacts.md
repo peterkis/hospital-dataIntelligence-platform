@@ -18,6 +18,16 @@ Codex 对 `b21ec8e` 提出 P1：绑定作业的公开 declaredSha256 若等于�
 
 28-pr5-digest-upgrade 的 24→25 与专项 8/8 通过，原 job/契约/制品/审计仍保留。测试覆盖 RAW_FILE/RAW_CELL/ERROR_REPORT、历史声明命中、反向追加、同事务全回滚、并发两命令只能提交一个且最终不得同时存在 payload 和匹配公开 SHA；入参突变不能改变已验证 payload/AAD。后续 29–36 为最终 fresh、当前库25迁移/types/authority、P0-03回归、专项类型检查、API build 和 lineage 检查。审阅、最终合并状态以 ignored 交接的对应 head 为准；不将先前候选的测试冒充为本轮重跑。
 
+## PR #5 第三轮：旧冲突升级与拒绝证据（2026-09-14）
+
+Codex 对 `8a59319` 新增两项发现：旧版本可能已存在冲突制品，0025 只限制后续写入；摘要冲突回滚也丢掉拒绝审计。37 的真实 RED 证明少一条拒绝 audit；38 使用 0024 原 SQL 服务路径和真实 AES 密文复现两种旧顺序，并证明原升级没有拒绝这些状态。
+
+0026 首次安装时发现任何既有 protected_artifact（包括 payload 已清理的引用）便以 `PROTECTED_LEGACY_SCAN_REQUIRED` 阻断，整次 0026 及 ledger 不提交。这个保守准入不猜测旧密文安全、不要求回填密钥、不删除或恢复旧记录；有既有制品的库须另行受控扫描与处置才能升级，本票没有自动绕过标志或生产扫描器。当前唯一研发库没有持久制品，允许正常升级；先前临时库“旧合法制品仍可读”的 23/24→25 结果是历史验证，不代表带旧制品的库自动获准进入 26。
+
+摘要冲突先整体回滚 payload/outcome，再通过 closed `protected_digest_denial` 记录固定拒绝原因、job/revision/request 引用及目的/院区；临时普通 SHA、bytes 和自由文字不进入该命令。拒绝记录失败返回 `PROTECTED_OPERATION_FAILED`，不宣称审计成功。只有拒绝证据已提交后才向调用方返回 `PUBLIC_DIGEST_CONFLICT`；这不声称两个事务间进程崩溃时仍具备原子记录，实际重启/恢复门禁保持本阶段既有边界。
+
+39 的 upgrade runner 顺序使用两座 owned 临时库：第一座含真实旧冲突，25→26 必须拒绝且原 metadata/密文/audit 不变；清理后才创建第二座，无旧制品的 25→26 正常升级，原契约/job/audit 保留且专项 8/8。41 为补强拒绝审计故障和非法输入后的最终 fresh；40/45 为专项 tsc/API build；42–44 为当前库26迁移、types verify 与 authority。已有 0023–0025 checksum 保持，最终合并事实另存 ignored handoff。
+
 ## 初始本地交付
 
 范围：v3 P0-11，仅本地合成保护底座。基线 `00612a81f7b2221d0f4bd4f12670de15b5df1968` / tree `6162d77c457158aac26724e955241d7f71b6efcd`，进入时 main 工作树干净。当前 receipt OID 206108，22 项已安装 checksum 核实。P0-02 **BROWSER_BLOCKED** 保留，P0 仍 **IN_PROGRESS**；P0-04 未开始。
