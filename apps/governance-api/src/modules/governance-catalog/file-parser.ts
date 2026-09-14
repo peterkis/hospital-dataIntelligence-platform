@@ -85,7 +85,7 @@ function jsonRows(text: string): SourceObject[] {
     expect('{'); const row: Record<string, string | number | null> = Object.create(null); const columns:string[]=[]; ws();
     while (text[i] !== '}') {
       currentColumn=Object.keys(row).length+1;
-      const key = string(); if (Object.hasOwn(row, key)) jsonFailure('DUPLICATE_FIELD'); columns.push(key); expect(':'); ws();
+      const key = string(); assertTextSafety(key,currentRow,currentColumn); if (Object.hasOwn(row, key)) jsonFailure('DUPLICATE_FIELD'); columns.push(key); expect(':'); ws();
       if (text[i] === '"') row[key] = string();
       else {
         const match = /^(?:null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(text.slice(i));
@@ -392,6 +392,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
 }
 function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): SourceObject[] {
   const header = table[0]; if (!header) return fail('NO_DATA');
+  header.forEach((key,column)=>assertTextSafety(key,1,column+1));
   if (new Set(header).size !== header.length) fail('DUPLICATE_FIELD',1);
   if (header.length !== fields.length || header.some(h=>!fields.some(f=>f.code===h))) fail('FIELD_CONTRACT',1);
   return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });

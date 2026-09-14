@@ -7,6 +7,16 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round21: decoded field names reject unsafe text before matching',()=>{
+ for(const code of ['a\ufeffb','a\u0001b','a\ufffeb','a\uffffb','a\ud800b']){
+  const contract=[{code,type:'text'}];
+  for(const selected of [contract,[{code:'other',type:'text'}]]){
+   const result=parseBytes(Buffer.from(JSON.stringify([{[code]:'safe'}])),'JSON',selected);
+   assert.equal(result.structuralStatus,'REJECTED');assert.notEqual(result.issues[0]?.code,'FIELD_CONTRACT');
+  }
+  if(!code.includes('\ud800'))assert.equal(parseBytes(Buffer.from(code+'\nsafe'),'CSV',contract).structuralStatus,'REJECTED');
+ }
+});
 test('PR6 round20: integer-like codes preserve lexical source columns and XLSX types',()=>{
  const numericFields=[{code:'2',type:'text'},{code:'10',type:'text'}];
  const csvResult=parseBytes(Buffer.from('10,2\nfirst,second'),'CSV',numericFields);

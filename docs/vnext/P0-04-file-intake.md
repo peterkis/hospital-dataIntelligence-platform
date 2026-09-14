@@ -161,3 +161,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `d98db68` 指出整数形式字段代码会被 JS 对象枚举重排。167 tests-only RED 后，内部 SourceObject 显式保存 values 与原始 columns：CSV/XLSX 使用表头顺序，JSON 每个对象使用词法属性顺序，持久单元格列号及 XLSX 原来源类型按此定位。168 Vitest parser **47/47** 覆盖数值字段代码、逐对象 JSON 次序变化及混合 inlineStr/s；169 Vitest Owner **8/8** 且临时数据库清理成功，170 类型检查、171 API build 通过。独立 Spec/Standards 窄复核无阻断。
 
 同轮 Testcontainers 评论按原票显式授权及当前 runbook 处理为验证环境边界澄清，依据已写入本文当前接线开头；保留 receipt-owned 本地测试路径，ADR-0081 容器环境验证为未执行。没有将未执行项目改称通过，也未新增 Keycloak/Toxiproxy 或改变数据库权限。
+
+## PR #6 第二十一轮修复
+
+远端 Codex 对 `b48f077` 指出 CSV 表头和 JSON 属性名绕过解码文本安全检查。172 tests-only RED 后，JSON 键在词法解码后、重复/契约匹配前执行 assertTextSafety；表格 header 同样在匹配前逐列检查。173 Vitest parser **48/48** 覆盖 FEFF、转义控制字符、非字符及孤立代理，且含匹配/不匹配契约的 JSON 键；174 Vitest Owner **8/8** 且临时数据库清理成功，175 类型检查与 176 API build 通过，独立 Spec/Standards 窄复核无阻断。无 DDL/授权/存储变化。
