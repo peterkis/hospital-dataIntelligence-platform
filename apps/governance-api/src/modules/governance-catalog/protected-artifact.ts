@@ -37,7 +37,8 @@ export type ProtectedReadInput = Static<typeof ProtectedReadSchema>;
 export interface ProtectedReference { artifactId: string; status: 'QUARANTINED'; masked: '[REDACTED]'; purged: boolean; expiresAt: string }
 type Envelope = { keyId: string; nonce: string; tag: string; ciphertext: string };
 type Result = ProtectedReference & { error?: string; envelope?: Envelope; binding?: string };
-const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PUBLIC_DIGEST_CONFLICT']);
+const publicDigestConflict = Symbol('verified-public-digest-conflict');
+const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
 function safeError(error: unknown): Error { return new Error(error instanceof Error && safeCodes.has(error.message) ? error.message : 'PROTECTED_OPERATION_FAILED'); }
 
 export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
@@ -74,18 +75,19 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
           const job=(await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:input.scope,jobId:input.jobId})}::jsonb) as result`.execute(trx)).rows[0]!.result;
           // Compare only in memory. Never persist/log the low-entropy hash or rewrite old metadata.
           const publicDigest=createHash('sha256').update(raw).digest('hex');
-          if(job.revisions.some(revision=>revision.input.declaredSha256===publicDigest))throw new Error('PUBLIC_DIGEST_CONFLICT');
+          if(job.revisions.some(revision=>revision.input.declaredSha256===publicDigest))throw publicDigestConflict;
           return result;
         });
         if(result.error)throw new Error(result.error);
         return result;
       } catch (error) {
-        if(error instanceof Error && error.message==='PUBLIC_DIGEST_CONFLICT') {
+        if(error===publicDigestConflict) {
           // The payload transaction has rolled back. Commit a distinct minimal denial
           // without the bytes, their ordinary SHA, or a false accepted outcome.
           const denial={scope:input.scope,campus:input.campus,purpose:input.purpose,jobId:input.jobId,revisionId:input.revisionId,requestId:input.requestId};
           try {await sql`select governance_catalog.protected_digest_denial(${actor},${JSON.stringify(denial)}::jsonb)`.execute(db);}
           catch {throw new Error('PROTECTED_OPERATION_FAILED');}
+          throw new Error('PUBLIC_DIGEST_CONFLICT');
         }
         throw safeError(error);
       } finally { raw.fill(0); }

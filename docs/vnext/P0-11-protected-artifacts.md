@@ -28,6 +28,12 @@ Codex 对 `8a59319` 新增两项发现：旧版本可能已存在冲突制品，
 
 39 的 upgrade runner 顺序使用两座 owned 临时库：第一座含真实旧冲突，25→26 必须拒绝且原 metadata/密文/audit 不变；清理后才创建第二座，无旧制品的 25→26 正常升级，原契约/job/audit 保留且专项 8/8。41 为补强拒绝审计故障和非法输入后的最终 fresh；40/45 为专项 tsc/API build；42–44 为当前库26迁移、types verify 与 authority。已有 0023–0025 checksum 保持，最终合并事实另存 ignored handoff。
 
+## PR #5 第四轮：拒绝原因的可信来源（2026-09-14）
+
+Codex 对 `6f0f61b` 指出，自定义 KeyProvider 抛出同名 `PUBLIC_DIGEST_CONFLICT` 错误可能被误认作真实比较结果。46 真实 RED 证明未执行授权/摘要比对也能多出审计。现在用模块私有 Symbol，只有实际内存比较命中才能抛出；catch 仅按标记身份进入审计分支，提交成功后才产生对外错误码。同名字串已从通用错误白名单移除，provider 异常仅为 `PROTECTED_OPERATION_FAILED`。
+
+47 最终 fresh 专项 9/9，无 SKIP，覆盖 provider.current/lookup 两路径及真实冲突审计；48 tsc、49 API build 通过。本轮无 DDL，26 迁移及此前升级/authority 证据保留，不重复报告为新执行。本地实际增量 Spec/Standards 复核无阻断，远端当前 head 的最终结论仍单独核验。
+
 ## 初始本地交付
 
 范围：v3 P0-11，仅本地合成保护底座。基线 `00612a81f7b2221d0f4bd4f12670de15b5df1968` / tree `6162d77c457158aac26724e955241d7f71b6efcd`，进入时 main 工作树干净。当前 receipt OID 206108，22 项已安装 checksum 核实。P0-02 **BROWSER_BLOCKED** 保留，P0 仍 **IN_PROGRESS**；P0-04 未开始。

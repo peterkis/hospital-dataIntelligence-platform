@@ -70,6 +70,25 @@ test('AC02/03: rotated payload keys preserve old bytes, missing keys and tamperi
   await assert.rejects(s.catalog.authorizeSensitiveRead('maker',s.ref(a.artifactId)),/^Error: PROTECTED_OPERATION_FAILED$/);
  }finally{await s.catalog.close();}
 });
+test('PR5: key-provider error text cannot manufacture a digest-conflict audit',async()=>{
+ const s=await setup();try{
+  const auditCount=()=>peer(receipt.name,'SELECT count(*) FROM vnext_control.audit;');
+  for(const failingMethod of ['current','lookup']) {
+   const catalog=await openCatalog(undefined,{
+    current(){if(failingMethod==='current')throw new Error('PUBLIC_DIGEST_CONFLICT');return s.keys.current();},
+    payload(id:string){return s.keys.payload(id);},
+    lookup(){if(failingMethod==='lookup')throw new Error('PUBLIC_DIGEST_CONFLICT');return s.keys.lookup();},
+   });
+   try{
+    const count=auditCount();
+    const error=await catalog.storeProtectedArtifact('maker',{...s.input,requestId:randomUUID(),jobId:randomUUID(),revisionId:randomUUID()},raw).catch(error=>error);
+    assert.ok(error instanceof Error);
+    assert.equal(auditCount(),count,'provider failure before authorization must not create conflict evidence');
+    assert.equal(error.message,'PROTECTED_OPERATION_FAILED');
+   }finally{await catalog.close();}
+  }
+ }finally{await s.catalog.close();}
+});
 test('AC04: retention uses database time; purge survives upstream revocation, removes payload only and retains audit',async()=>{
  const s=await setup();try{
   s.grant();s.grant('maker','READ');s.grant('maker','PURGE');const a=await s.catalog.storeProtectedArtifact('maker',{...s.input,retentionSeconds:1},raw);const r=s.ref(a.artifactId);
