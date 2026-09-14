@@ -115,3 +115,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第十二轮修复
 
 远端 Codex 对 `5f8de8d` 提出未引用 sharedStrings 绕过解码/限额与原来源表示丢失两项 P2。116 RED 后统一检查所有共享条目，拒绝未引用的控制字符、FEFF、孤立代理和超长值；内联与共享值分别只解码一次。原单元格 sourceType 改为精确 inlineStr/s，沿源列映射进入规范证据。117 parser **36/36**、118 Owner **7/7**、119 类型检查和 120 API build 通过；121 补强字面转义不得二次解码、重排字段仍保留原表示的断言。独立 Spec/Standards 窄复核无阻断，无 DDL/授权/存储变化。
+
+## PR #6 第十三轮修复
+
+远端 Codex 对 `2528efa` 指出 DEFLATE 流后尾随数据被原 inflater 忽略。123 RED 覆盖正常压缩、尾随任意字节及填充压缩长度以降低表面压缩比。现在使用 Node info 返回的实际消耗字节数，必须与完整声明 payload 长度相等；运行时返回结构不符合预期同样拒绝。原展开上限、比例、长度和 CRC 检查保持。
+
+124 parser **38/38**、125 Owner **7/7**；126/127 记录 TypeScript unknown 收窄问题，调整显式失败返回后 128 类型检查和 129 API build 通过。独立 Spec/Standards 窄复核无阻断。本轮无 DDL/权限/存储变化。

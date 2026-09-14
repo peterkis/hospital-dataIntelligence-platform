@@ -7,6 +7,25 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+function deflatedWorksheet(suffix:Buffer,padding=0):Buffer {
+ const files=Object.fromEntries(unzip(workbook)),part='xl/worksheets/sheet1.xml';files[part]=files[part]!.replace('<sheetData>',' '.repeat(padding)+'<sheetData>');
+ const bytes=zipText(files),end=bytes.length-22,central=bytes.readUInt32LE(end+16);let entry=central;
+ while(bytes.subarray(entry+46,entry+46+bytes.readUInt16LE(entry+28)).toString()!==part)entry+=46+bytes.readUInt16LE(entry+28);
+ const local=bytes.readUInt32LE(entry+42),start=local+30+bytes.readUInt16LE(local+26),size=bytes.readUInt32LE(local+22);
+ assert.equal(start+size,central,'fixture worksheet is last local member');
+ const packed=Buffer.concat([deflateRawSync(bytes.subarray(start,start+size)),suffix]);
+ const prefix=Buffer.from(bytes.subarray(0,start)),directory=Buffer.from(bytes.subarray(central,end)),footer=Buffer.from(bytes.subarray(end));
+ prefix.writeUInt16LE(8,local+8);prefix.writeUInt32LE(packed.length,local+18);directory.writeUInt16LE(8,entry-central+10);directory.writeUInt32LE(packed.length,entry-central+20);footer.writeUInt32LE(central+packed.length-size,16);
+ return Buffer.concat([prefix,packed,directory,footer]);
+}
+test('PR6 round13: inflater consumes the entire declared compressed member',()=>{
+ assert.equal(parseBytes(deflatedWorksheet(Buffer.alloc(0)),'XLSX',fields).structuralStatus,'PARSED');
+ for(const suffix of [Buffer.from('HIDDEN_SUFFIX'),Buffer.from([0,1,2,3])])assert.equal(parseBytes(deflatedWorksheet(suffix),'XLSX',fields).structuralStatus,'REJECTED');
+});
+test('PR6 round13: trailing compressed padding cannot weaken ratio admission',()=>{
+ assert.equal(parseBytes(deflatedWorksheet(Buffer.alloc(0),100000),'XLSX',fields).issues[0]?.code,'ZIP_LIMIT');
+ assert.equal(parseBytes(deflatedWorksheet(Buffer.alloc(2048),100000),'XLSX',fields).structuralStatus,'REJECTED');
+});
 function sharedFixture(unused:string){
  const files=Object.fromEntries(unzip(workbook));
  files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>');

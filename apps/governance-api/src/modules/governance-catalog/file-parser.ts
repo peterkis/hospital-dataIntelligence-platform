@@ -120,8 +120,17 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
     const start = local + 30 + nameSize; nextLocal = start + compressed;
     if (nextLocal > central || !b.subarray(local + 30, start).equals(nameBytes)) fail('ZIP_FORMAT');
     const payload = b.subarray(start, nextLocal);
-    let raw: Buffer;
-    try { raw = method === 0 ? payload : inflateRawSync(payload, { maxOutputLength: Math.max(1, size) }); } catch { return fail('ZIP_LIMIT'); }
+    let raw: Buffer;let consumed=payload.length;
+    try {
+      if(method===0)raw=payload;
+      else {
+        // Node's info mode exposes actual consumed input; installed typings omit this overload.
+        const decoded:unknown=inflateRawSync(payload,{maxOutputLength:Math.max(1,size),info:true});
+        if(decoded===null||typeof decoded!=='object'||!('buffer' in decoded)||!Buffer.isBuffer(decoded.buffer)||!('engine' in decoded)||decoded.engine===null||typeof decoded.engine!=='object'||!('bytesWritten' in decoded.engine)||typeof decoded.engine.bytesWritten!=='number')return fail('ZIP_INTEGRITY');
+        raw=decoded.buffer;consumed=decoded.engine.bytesWritten;
+      }
+    } catch { return fail('ZIP_LIMIT'); }
+    if(consumed!==payload.length)fail('ZIP_INTEGRITY');
     if (raw.length !== size || crc32(raw) !== crc) fail('ZIP_INTEGRITY');
     files.set(name, utf8(raw)); p += 46 + nameSize;
   }
