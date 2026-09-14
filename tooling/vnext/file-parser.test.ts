@@ -7,6 +7,27 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round5: table-width errors after multiline CSV retain physical record start',()=>{
+ const result=parse('code,label\n0012,"first\nsecond"\nBROKEN');assert.equal(result.issues[0]?.code,'FIELD_CONTRACT');assert.equal(result.issues[0]?.row,4);
+});
+test('PR6 round5: worksheet default hidden rows are manifested and rejected',()=>{
+ for(const flag of ['1','true']){
+  const result=parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',`<sheetFormatPr zeroHeight="${flag}"/><sheetData>`),'XLSX',fields);
+  assert.equal(result.structuralStatus,'REJECTED');assert.deepEqual(result.manifest.hiddenRows,[1,2]);
+ }
+ assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>','<sheetFormatPr zeroHeight="0"/><sheetData>'),'XLSX',fields).structuralStatus,'PARSED');
+});
+test('PR6 round5 adjacent: repeated singleton metadata cannot override hidden defaults',()=>{
+ assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>','<sheetFormatPr zeroHeight="1"/><sheetFormatPr zeroHeight="0"/><sheetData>'),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(edit('xl/workbook.xml','<sheets>','<workbookPr/><workbookPr/><sheets>'),'XLSX',fields).structuralStatus,'REJECTED');
+ const result=parse('code,label\n0012,"first\nsecond"\n0013,DEMO');
+ assert.equal(result.cells.find(c=>c.row===2)?.sourceRow,4);
+});
+test('PR6 round5: declared foreign namespaces and unsupported qualified attributes reject',()=>{
+ for(const attributes of ['xmlns:evil="urn:evil" evil:attr="payload"','xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:unknown="payload"']){
+  assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<worksheet ',`<worksheet ${attributes} `),'XLSX',fields).structuralStatus,'REJECTED');
+ }
+});
 test('PR6 round4: unsupported optional XLSX parts reject even with matching declarations',()=>{
  for(const [part,mime] of [
   ['xl/styles.xml','application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml'],

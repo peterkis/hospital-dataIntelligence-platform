@@ -12,6 +12,8 @@
 
 解析先通过当前 job 权限及独立 raw READ，再校验加密绑定中的 job/revision/kind。结果以 RAW_CELL 密文保存，包括 sourceArtifactId、CanonicalRow、原单元格值/坐标/来源类型、manifest 和有限问题码；API 只返回受限引用和状态。原始文件字节含 BOM/CSV 转义/JSON lexeme/XLSX cell XML 完整保存在 RAW_FILE。单元格证据中的 row 是规范数据行号，CSV/XLSX header 占物理第 1 行；结构错误坐标按原表行号，字段错误按规范行号。存储时再执行当前权限及修订检查，过期读取由 P0-11 拒绝。
 
+单元格 sourceRow 保存 CSV 记录实际起始物理行／XLSX 原表行（JSON 为对象序号），与规范 row 分开。CSV 多行引号记录后的字段数量错误使用 tokenizer 保留的物理起始行，不从规范数组索引倒推。
+
 `inspectEnvelope` 执行同一有界结构解析并保存受限证据，没有第二套准入。解析成功仅代表结构 PARSED；文件仍 QUARANTINED、字段规则 NOT_RUN、安全扫描 NOT_RUN、adapter NOT_READY。解析结果、错误报告不进入普通 job、日志或浏览器缓存。
 
 ## STRICT_V1 固定契约
@@ -69,3 +71,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第四轮修复
 
 远端 Codex 对 `f95af60` 指出 styles/docProps 部件有 MIME 声明但缺完整 XML 结构校验。61 tests-only RED 后采取其建议的固定子集方案：在 ZIP、Content Types 和关系三层均拒绝这些尚未支持的可选部件，并拒绝悬空样式引用，避免扩成通用 OOXML 校验器。保留的 sharedStrings 继续接受全部既有检查。62 parser **17/17**，63 文件 Owner **7/7**，64 类型检查和 65 API build 通过；独立 Spec/Standards 窄范围复核无阻断。无 DDL/权限/存储变化；数据库仍 28 项迁移。
+
+## PR #6 第五轮修复
+
+远端 Codex 对 `a64696e` 提出 CSV 多行后 FIELD_CONTRACT 位置、worksheet 默认 zeroHeight 隐藏、已声明外来命名空间三项 P2。66 RED 后保留记录物理起始行，并在受限 manifest 中记录 defaultRowsHidden 和受影响行；zeroHeight 为 true/1 时拒绝，即使部分行显式可见也不放行未声明的默认隐藏政策。命名空间声明仅允许支持的 SpreadsheetML/package/relationship/XML URI，带前缀属性仅支持 xml:space 和 sheet 的 relationship id，未知扩展内容不能被静默忽略。
+
+67 parser 20/20，68 文件 Owner 7/7；独立复核又复现重复 sheetFormatPr 后值覆盖隐藏标志，71 RED 后对 workbook/worksheet 单例子节点统一拒绝重复，72 最终 parser **21/21**，73 类型检查与 74 API build 通过。此前 Owner 验证与最后两行单例检查的纯函数验证分开记录。无 DDL、权限或存储修改。

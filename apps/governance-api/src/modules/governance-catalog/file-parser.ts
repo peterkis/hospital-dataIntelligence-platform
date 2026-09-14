@@ -5,10 +5,10 @@ export type FileFormat = 'CSV' | 'JSON' | 'XLSX';
 export interface ParserField { code: string; type: string }
 export interface ParserIssue { code: string; row: number; column: number }
 export type CanonicalRow = Record<string,string>;
-export interface RawCellProvenance {row:number;column:number;field:string;value:string;sourceType:string}
+export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:string}
 export interface ParserResult {
   policy: 'STRICT_V1'; structuralStatus: 'PARSED' | 'REJECTED';
-  manifest: { bomDetected: boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
+  manifest: { bomDetected: boolean; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
   rows: CanonicalRow[];
   cells: RawCellProvenance[];
   issues: ParserIssue[];
@@ -26,28 +26,31 @@ function utf8(bytes: Uint8Array): string {
 }
 
 // Fixed RFC 4180 dialect; no delimiter guessing or silent empty-row removal.
-function csv(text: string): string[][] {
+function csv(text: string): {rows:string[][];physicalRows:number[]} {
   const rows: string[][] = []; let row: string[] = []; let value = ''; let quoted = false; let closed = false;
+  const physicalRows:number[]=[];let recordStart=1;
   let physicalRow=1,physicalColumn=1;
   const syntax=()=>fail('CSV_SYNTAX',physicalRow,physicalColumn);
   const cell = () => { row.push(value); value = ''; closed = false; if (row.length > 100) fail('COLUMN_LIMIT',physicalRow,physicalColumn); };
-  const record=()=>{rows.push(row);row=[];if(rows.length>1001)fail('ROW_LIMIT',physicalRow,physicalColumn);};
+  const record=()=>{rows.push(row);physicalRows.push(recordStart);row=[];if(rows.length>1001)fail('ROW_LIMIT',physicalRow,physicalColumn);};
   for (let i = 0; i < text.length; i++) {
     const c = text[i]!;
+    let finishedRecord=false;
     if (quoted) {
       if (c === '"') { if (text[i + 1] === '"') { value += '"'; i++; physicalColumn++; } else { quoted = false; closed = true; } }
       else value += c;
     } else if (c === ',' || c === '\n' || c === '\r') {
       cell();
-      if (c !== ',') { if (c === '\r') { if (text[i+1] !== '\n') syntax(); i++; } record(); }
+      if (c !== ',') { if (c === '\r') { if (text[i+1] !== '\n') syntax(); i++; } record(); finishedRecord=true; }
     } else if (c === '"' && !value && !closed) quoted = true;
     else { if (closed || c === '"') syntax(); value += c; }
     if (value.length > 8192) fail('CELL_LIMIT',physicalRow,physicalColumn);
     if(c==='\n'||c==='\r'&&!quoted){physicalRow++;physicalColumn=1;}else physicalColumn++;
+    if(finishedRecord)recordStart=physicalRow;
   }
   if (quoted) syntax();
   if (value || row.length || closed) { cell(); record(); }
-  return rows;
+  return {rows,physicalRows};
 }
 
 // Only an array of flat objects is accepted. Tokenize keys before object construction,
@@ -149,10 +152,13 @@ function xml(text: string): Xml {
   }
   if (stack.length !== 1 || root.children.length !== 1 || root.text.trim()) fail('XML_SYNTAX');
   const document=root.children[0]!,xmlNamespace='http://www.w3.org/XML/1998/namespace';
+  const relationshipNamespace='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const supportedNamespaces=new Set([xmlNamespace,relationshipNamespace,'http://schemas.openxmlformats.org/spreadsheetml/2006/main','http://schemas.openxmlformats.org/package/2006/content-types','http://schemas.openxmlformats.org/package/2006/relationships']);
   const namespaces=new Map<string,string>([['xml',xmlNamespace]]);
   for(const [name,uri] of Object.entries(document.attrs)) {
     if(name!=='xmlns'&&!name.startsWith('xmlns:'))continue;
     const prefix=name==='xmlns'?'':name.slice(6);
+    if(!supportedNamespaces.has(uri))fail('XML_NAMESPACE');
     if(name!=='xmlns'&&!/^[A-Za-z_][\w.-]*$/.test(prefix)||prefix==='xmlns'||prefix==='xml'&&uri!==xmlNamespace||prefix!=='xml'&&uri===xmlNamespace||uri==='http://www.w3.org/2000/xmlns/'||prefix&&!uri)fail('XML_NAMESPACE');
     namespaces.set(prefix,uri);
   }
@@ -168,6 +174,10 @@ function xml(text: string): Xml {
     for(const name of Object.keys(node.attrs)){
       if(name==='xmlns'||name.startsWith('xmlns:')){if(node!==document)fail('XML_NAMESPACE');continue;}
       const identity=expanded(name,true);if(attributes.has(identity))fail('XML_NAMESPACE');attributes.add(identity);
+      if(name.includes(':')){
+        const [prefix,local]=name.split(':'),uri=namespaces.get(prefix!);
+        if(!(uri===xmlNamespace&&local==='space'&&['default','preserve'].includes(node.attrs[name]!))&&!(uri===relationshipNamespace&&local==='id'&&node.name==='sheet'))fail('XML_NAMESPACE');
+      }
     }
     for(const child of node.children)validateNames(child);
   };
@@ -221,6 +231,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   };
   relationships(rels,{'xl/workbook.xml':office+'officeDocument'},'','xl/workbook.xml');
   const workbook = get('xl/workbook.xml','workbook'); only(workbook,['workbookPr','bookViews','sheets','calcPr']);
+  if(new Set(workbook.children.map(n=>n.name)).size!==workbook.children.length)fail('XLSX_STRUCTURE');
   for(const metadata of workbook.children.filter(n=>n.name!=='sheets')) {
     if(metadata.name==='bookViews'){only(metadata,['workbookView']);for(const view of metadata.children)only(view,[]);}
     else only(metadata,[]);
@@ -236,12 +247,21 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   const shared = docs.get('xl/sharedStrings.xml'); const strings: string[] = [];
   if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(leaf(one(si,'t'))); } }
   const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['dimension','sheetViews','sheetFormatPr','cols','sheetData','pageMargins']);
+  if(new Set(worksheet.children.map(n=>n.name)).size!==worksheet.children.length)fail('XLSX_STRUCTURE');
   for(const metadata of worksheet.children.filter(n=>!['cols','sheetData'].includes(n.name))) {
+    if(metadata.name==='sheetFormatPr'&&metadata.attrs['zeroHeight']!==undefined){
+      if(!['0','1','false','true'].includes(metadata.attrs['zeroHeight']))fail('XLSX_STRUCTURE');
+      manifest.defaultRowsHidden=['1','true'].includes(metadata.attrs['zeroHeight']);
+    }
     if(metadata.name==='sheetViews'){only(metadata,['sheetView']);for(const view of metadata.children){only(view,['pane','selection']);for(const item of view.children)only(item,[]);}}
     else only(metadata,[]);
   }
   for (const cols of children(worksheet,'cols')) { only(cols,['col']); for (const col of cols.children) {only(col,[]);if (col.attrs['hidden'] && col.attrs['hidden'] !== '0' && col.attrs['hidden'] !== 'false') manifest.hiddenColumns.push(`${col.attrs['min']}:${col.attrs['max']}`);} }
   const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];
+  if(manifest.defaultRowsHidden){
+    manifest.hiddenRows=data.children.filter(r=>!['0','false'].includes(r.attrs['hidden']??'')).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
+    fail('HIDDEN_UNDECLARED');
+  }
   for (const r of data.children) {
     const rowNum = rows.length + 1; if (r.attrs['r'] !== String(rowNum)) fail('ROW_GAP', rowNum); only(r,['c']);
     if (r.attrs['hidden'] && r.attrs['hidden'] !== '0' && r.attrs['hidden'] !== 'false') manifest.hiddenRows.push(rowNum);
@@ -263,17 +283,18 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
 }
 
 export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[]): ParserResult {
-  const result: ParserResult = { policy:'STRICT_V1', structuralStatus:'REJECTED', manifest:{bomDetected:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
+  const result: ParserResult = { policy:'STRICT_V1', structuralStatus:'REJECTED', manifest:{bomDetected:false,defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
   try {
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
     if (!fields.length || fields.length > 100 || new Set(fields.map(f=>f.code)).size !== fields.length) fail('FIELD_CONTRACT');
     let objects: Array<Record<string, string | number | null>>;
+    let physicalRows:number[]=[];
     if (format === 'XLSX') {
-      const table = xlsx(bytes,result.manifest); objects = tableObjects(table,fields);
+      const table = xlsx(bytes,result.manifest); objects = tableObjects(table,fields);physicalRows=table.slice(1).map((_,i)=>i+2);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
-      if (format === 'CSV') objects = tableObjects(csv(text),fields);
+      if (format === 'CSV') {const table=csv(text);objects = tableObjects(table.rows,fields,table.physicalRows);physicalRows=table.physicalRows.slice(1);}
       else if (format === 'JSON') objects = jsonRows(text);
       else return fail('FORMAT_UNSUPPORTED');
     }
@@ -285,7 +306,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
         const column=Object.keys(obj).indexOf(f.code)+1;
         const value = obj[f.code]; if (typeof value !== 'string') fail('TEXT_CELL_REQUIRED',rowNum,column);
         const text = value as string;
-        result.cells.push({row:rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? 'TEXT' : format});
+        result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? 'TEXT' : format});
         if(text.includes('\uFEFF'))fail('BOM_NOT_PREFIX',rowNum,column);
         if(!text.isWellFormed() || /[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(text))fail('TEXT_CONTROL',rowNum,column);
         if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
@@ -299,11 +320,11 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
   return result;
 }
-function tableObjects(table: string[][], fields: ParserField[]): Array<Record<string,string>> {
+function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): Array<Record<string,string>> {
   const header = table[0]; if (!header) return fail('NO_DATA');
   if (new Set(header).size !== header.length) fail('DUPLICATE_FIELD',1);
   if (header.length !== fields.length || header.some(h=>!fields.some(f=>f.code===h))) fail('FIELD_CONTRACT',1);
-  return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',index+2); return Object.fromEntries(header.map((key,col)=>[key,row[col]!])); });
+  return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return Object.fromEntries(header.map((key,col)=>[key,row[col]!])); });
 }
 
 if (!isMainThread && parentPort) {
