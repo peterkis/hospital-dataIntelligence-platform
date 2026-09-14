@@ -56,6 +56,23 @@ test('AC01: metadata read does not confer raw access; wrong purpose/campus/ident
   }finally{await pool.end();}
  }finally{await s.catalog.close();}
 });
+test('PR5: STORE preserves the inherited READ plus WRITE admission contract and independent raw permission',async()=>{
+ const s=await setup();try{
+  s.grant();
+  const acceptedState=()=>peer(receipt.name,'SELECT json_build_array((SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM governance_catalog.protected_payload),(SELECT count(*) FROM vnext_control.outcome),(SELECT count(*) FROM vnext_control.request_identity))::text;');
+  const before=acceptedState();
+  peer(receipt.name,"DELETE FROM vnext_control.actor_grant WHERE actor_code='maker' AND scope='SYNTHETIC' AND permission='READ';");
+  try{
+   await assert.rejects(s.catalog.storeProtectedArtifact('maker',s.input,raw),/^Error: ACCESS_DENIED$/);
+   assert.equal(acceptedState(),before,'incomplete admission must not accept payload or outcome');
+   assert.equal(peer(receipt.name,`SELECT reason FROM vnext_control.audit WHERE object_id=${quote(s.job.id)}::uuid AND action='PROTECTED_STORE_IDENTITY_VERIFY_NORTH' ORDER BY recorded_at DESC LIMIT 1;`),'ACCESS_DENIED');
+  }finally{peer(receipt.name,"INSERT INTO vnext_control.actor_grant VALUES('maker','SYNTHETIC','READ');");}
+  const artifact=await s.catalog.storeProtectedArtifact('maker',s.input,raw);
+  assert.ok(artifact.artifactId,'restored full admission may retry the originally denied request');
+  await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:s.job.id});
+  await assert.rejects(s.catalog.authorizeSensitiveRead('maker',s.ref(artifact.artifactId)),/^Error: ACCESS_DENIED$/,'job READ plus STORE never grants sensitive READ');
+ }finally{await s.catalog.close();}
+});
 test('AC02/03: rotated payload keys preserve old bytes, missing keys and tampering fail closed',async()=>{
  const s=await setup();try{
   s.grant();s.grant('maker','READ');const a=await s.catalog.storeProtectedArtifact('maker',s.input,raw);s.keys.rotate();

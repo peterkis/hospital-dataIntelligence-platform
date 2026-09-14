@@ -34,6 +34,12 @@ Codex 对 `6f0f61b` 指出，自定义 KeyProvider 抛出同名 `PUBLIC_DIGEST_C
 
 47 最终 fresh 专项 9/9，无 SKIP，覆盖 provider.current/lookup 两路径及真实冲突审计；48 tsc、49 API build 通过。本轮无 DDL，26 迁移及此前升级/authority 证据保留，不重复报告为新执行。本地实际增量 Spec/Standards 复核无阻断，远端当前 head 的最终结论仍单独核验。
 
+## PR #5 第五轮：完整准入的文档补齐（2026-09-14）
+
+Codex 对 `803494d` 指出 STORE 的 READ 依赖未在本页存储条件中写全。此处接受文档遗漏，保留既有 Owner 的完整准入，而不是绕过已有授权：P0-11 §2/§4 要求复用当前 owner、当前权限及新建完整准入，并未要求 write-only STORE。0021 的 job 写入明确要求 READ + WRITE；0012 的 `contract_require_access(...,'WRITE')` 仍要求 definition/source/parameter 读取许可，0008 的来源访问也明确要求 scope READ。允许 P0-11 绕过这些 owner 检查会改变已合并依赖的契约。
+
+因此存储明确要求 **scope READ + WRITE、本人 underlying identity、当前精确契约/依赖访问、对象 WRITE、独立 STORE grant**。READ_JOB 不赋予 STORE，也不赋予受限 payload READ。50 新增撤 READ 负例：保留 WRITE/STORE 仍拒绝、不增加 payload/outcome/request_identity、拒绝 audit 保留；恢复 READ 后原请求可成功，普通 job READ 仍不能获取 raw。50 最终 fresh 10/10，51 专项类型检查通过。该既有行为是 GREEN 契约回归，不伪称 runtime 修复或 tests-only RED；本轮只改文档和测试，无 DDL/运行时代码变化。
+
 ## 初始本地交付
 
 范围：v3 P0-11，仅本地合成保护底座。基线 `00612a81f7b2221d0f4bd4f12670de15b5df1968` / tree `6162d77c457158aac26724e955241d7f71b6efcd`，进入时 main 工作树干净。当前 receipt OID 206108，22 项已安装 checksum 核实。P0-02 **BROWSER_BLOCKED** 保留，P0 仍 **IN_PROGRESS**；P0-04 未开始。
@@ -48,7 +54,7 @@ Codex 对 `6f0f61b` 指出，自定义 KeyProvider 抛出同名 `PUBLIC_DIGEST_C
 
 使用 Node 内置 OpenSSL AES-GCM/HMAC，无自制算法或新增依赖。每次加密有随机 96-bit nonce 与 128-bit tag；AAD 绑定 job、revision、kind、campus、purpose、存储 requestId，防止跨制品替换。输入上限 1 MiB，仅允许 RAW_FILE/RAW_CELL/ERROR_REPORT 的不透明 bytes，不解析字段。普通 job 接口仍只接受 METADATA_ONLY。掩码固定 `[REDACTED]`，不会泄露短值或尾号。所有制品永远 QUARANTINED，没有 CLEAN 命令或假扫描结果；敏感读取仅供明确目的下受限检查，不产生扫描/业务准入资格。
 
-现有 READ_JOB 不赋予 raw 读取。新存储要求当前 exact 契约、当前修订、本人 underlying identity、对象 WRITE 和独立 STORE grant；明文读取要求当前对象/契约访问、本人身份、精确院区/目的 READ grant。认证来自受信调用方，与现有 Owner 同边界。没有可重用授权 token；读取与授权锁同根事务，审计提交后才返回 bytes。grant 变更复用 901002 锁并留审计。生产/BASELINE 存储尚未开放。
+现有 READ_JOB 不赋予 raw 读取。新存储要求 scope READ + WRITE、当前 exact 契约及 definition/source/parameter 依赖访问、当前修订、本人 underlying identity、对象 WRITE 和独立 STORE grant；明文读取要求当前对象/契约访问、本人身份、精确院区/目的 READ grant。认证来自受信调用方，与现有 Owner 同边界。没有可重用授权 token；读取与授权锁同根事务，审计提交后才返回 bytes。grant 变更复用 901002 锁并留审计。生产/BASELINE 存储尚未开放。
 
 PURGE 要求当前 WRITE 主体、本人作业、独立精确 PURGE grant 和 DB 到期时间（1–2592000 秒），不重检上游契约/对象资格，避免上游撤权阻挡非扩张清理；过期即拒绝明文，即使尚未物理清理。只删除 payload；metadata/outcome/audit 保留。该删除不承诺擦除 PostgreSQL WAL、备份或介质。原请求重放返回原接收结果，不代表 payload 当前仍存在；实际读取每次重检。
 
