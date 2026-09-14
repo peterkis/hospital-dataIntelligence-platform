@@ -57,3 +57,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 统一解码后的值入口拒绝任何 U+FEFF，涵盖 JSON/Excel 转义；仅文件开头允许的 UTF-8 BOM 仍记录并保留原 bytes。XLSX Content Types 对 workbook、worksheet 及实际存在的 sharedStrings/styles/docProps 要求正确且唯一的 PartName/MIME 对，未知声明、重复、缺失、错误 MIME 均拒绝；关系部件要求正确 rels 默认类型。原 typed relationship 校验继续执行。
 
 49 总验收完整通过：parser **14/14**、fresh Owner **7/7**、27→28 升级 **7/7**（含既有孤立拒绝和合法文件保留）、P0-11 **10/10**、P0-03 **8/8**、当前库迁移/生成类型/类型 verify/authority；wrapper targetExitCode=0、cleanupPassed=true。50 类型检查及 51 API build 通过。独立 Spec/Standards 增量源码复核无阻断。本轮无新 DDL，当前原库仍为 28 项迁移和 29 表，已安装 SQL 未改写。
+
+## PR #6 第三轮修复
+
+远端 Codex 对 `6b30856` 指出未声明 XML 属性前缀仍被接受。52 tests-only RED 后，解析器按根命名空间声明与隐式 xml 绑定解析元素/属性 QName，拒绝未声明前缀、多冒号 QName、保留 xml/xmlns URI 的错误绑定，并按展开后的命名空间/本地名检测别名前缀重复属性。无前缀属性不继承默认命名空间；原 STRICT_V1 禁止嵌套重绑定的规则保持。
+
+53 第一候选 parser 15/15，54 文件 Owner 7/7；独立 Standards 复核进一步找到 `xmlns:` 空前缀绕过，57 RED 后补非空 NCName 校验，58 最终 parser **16/16**，59 类型检查与 60 API build 通过。独立纯函数检查保留合法 r:id/隐式 xml:space 与正确显式 xml 绑定，重复展开属性拒绝。本轮无新 DDL/存储/权限修改；不将此前总 DB 验证冒称为本轮重跑。

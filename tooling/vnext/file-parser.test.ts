@@ -7,6 +7,20 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round3: XML attribute and element prefixes must be declared and reserved bindings remain fixed',()=>{
+ for(const bytes of [
+  edit('xl/worksheets/sheet1.xml','<row r="2">','<row r="2" evil:attr="x">'),
+  edit('xl/workbook.xml','<sheets>','<sheets evil:attr="x">'),
+  edit('xl/worksheets/sheet1.xml','<worksheet ','<worksheet xmlns:xml="urn:wrong" '),
+  edit('xl/worksheets/sheet1.xml','<row r="2">','<row r="2" evil:more:attr="x">'),
+ ])assert.equal(parseBytes(bytes,'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(workbook,'XLSX',fields).structuralStatus,'PARSED','implicit xml:space and declared r:id remain legal');
+});
+test('PR6 round3 adjacent: empty namespace prefixes and duplicate expanded attribute names reject',()=>{
+ for(const attributes of ['xmlns:="urn:invalid"','xmlns:a="urn:same" xmlns:b="urn:same" a:value="x" b:value="y"']){
+  assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<worksheet ',`<worksheet ${attributes} `),'XLSX',fields).structuralStatus,'REJECTED');
+ }
+});
 test('PR6 round2: BOM is allowed only at the file prefix, never inside decoded values',()=>{
  for(const result of [parse('code,label\n0012,a\uFEFFb'),parseBytes(Buffer.from('[{"code":"0012","label":"a\\ufeffb"}]'),'JSON',fields),parseBytes(textWorkbook([['code','label'],['0012','a\uFEFFb']]),'XLSX',fields)])assert.equal(result.structuralStatus,'REJECTED');
  assert.equal(parse('\uFEFFcode,label\n0012,DEMO').structuralStatus,'PARSED');

@@ -147,7 +147,31 @@ function xml(text: string): Xml {
       if (Object.keys(node.attrs).length > 32) fail('XML_LIMIT');
     }
   }
-  if (stack.length !== 1 || root.children.length !== 1 || root.text.trim()) fail('XML_SYNTAX'); return root.children[0]!;
+  if (stack.length !== 1 || root.children.length !== 1 || root.text.trim()) fail('XML_SYNTAX');
+  const document=root.children[0]!,xmlNamespace='http://www.w3.org/XML/1998/namespace';
+  const namespaces=new Map<string,string>([['xml',xmlNamespace]]);
+  for(const [name,uri] of Object.entries(document.attrs)) {
+    if(name!=='xmlns'&&!name.startsWith('xmlns:'))continue;
+    const prefix=name==='xmlns'?'':name.slice(6);
+    if(name!=='xmlns'&&!/^[A-Za-z_][\w.-]*$/.test(prefix)||prefix==='xmlns'||prefix==='xml'&&uri!==xmlNamespace||prefix!=='xml'&&uri===xmlNamespace||uri==='http://www.w3.org/2000/xmlns/'||prefix&&!uri)fail('XML_NAMESPACE');
+    namespaces.set(prefix,uri);
+  }
+  const expanded=(name:string,attribute:boolean):string=>{
+    if(!/^[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?$/.test(name))return fail('XML_NAMESPACE');
+    const parts=name.split(':');
+    if(parts.length===1)return (attribute?'':namespaces.get('')??'')+'\0'+name;
+    if(!namespaces.has(parts[0]!))return fail('XML_NAMESPACE');
+    return namespaces.get(parts[0]!)+'\0'+parts[1];
+  };
+  const validateNames=(node:Xml)=>{
+    expanded(node.name,false);const attributes=new Set<string>();
+    for(const name of Object.keys(node.attrs)){
+      if(name==='xmlns'||name.startsWith('xmlns:')){if(node!==document)fail('XML_NAMESPACE');continue;}
+      const identity=expanded(name,true);if(attributes.has(identity))fail('XML_NAMESPACE');attributes.add(identity);
+    }
+    for(const child of node.children)validateNames(child);
+  };
+  validateNames(document);return document;
 }
 const children = (node: Xml, name: string) => node.children.filter(n => n.name === name);
 function only(node: Xml, allowed: string[]) { if (node.text.trim() || node.children.some(n => !allowed.includes(n.name))) fail('XLSX_STRUCTURE'); }
