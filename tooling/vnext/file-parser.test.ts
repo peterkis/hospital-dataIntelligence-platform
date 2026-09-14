@@ -7,6 +7,22 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round22: CSV row limit identifies multiline record start',()=>{
+ for(const suffix of ['', '\n'])assert.equal(parse('code,label\n'+'0012,safe\n'.repeat(1000)+'0012,"start\nend"'+suffix).issues[0]?.row,1002);
+});
+test('PR6 round22: quoted CR and CRLF each advance one physical line',()=>{
+ for(const newline of ['\r','\r\n','\n']){
+  const prefix='code,label\n0012,"first'+newline+'second"\n';
+  assert.deepEqual(parse(prefix+'BROKEN').issues[0],{code:'FIELD_CONTRACT',row:4,column:0});
+  const result=parse(prefix+'0013,safe');assert.equal(result.structuralStatus,'PARSED');assert.equal(result.cells.find(c=>c.row===2)?.sourceRow,4);
+ }
+});
+test('PR6 round22: XLSX limits retain worksheet coordinates',()=>{
+ const columns=textWorkbook([Array.from({length:101},(_,i)=>'field'+i)]);
+ assert.deepEqual(parseBytes(columns,'XLSX',fields).issues[0],{code:'COLUMN_LIMIT',row:1,column:101});
+ const rows=textWorkbook([['code','label'],...Array.from({length:1001},()=>['0012','safe'])]);
+ assert.deepEqual(parseBytes(rows,'XLSX',fields).issues[0],{code:'ROW_LIMIT',row:1002,column:0});
+});
 test('PR6 round21: decoded field names reject unsafe text before matching',()=>{
  for(const code of ['a\ufeffb','a\u0001b','a\ufffeb','a\uffffb','a\ud800b']){
   const contract=[{code,type:'text'}];

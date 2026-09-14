@@ -165,3 +165,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第二十一轮修复
 
 远端 Codex 对 `b48f077` 指出 CSV 表头和 JSON 属性名绕过解码文本安全检查。172 tests-only RED 后，JSON 键在词法解码后、重复/契约匹配前执行 assertTextSafety；表格 header 同样在匹配前逐列检查。173 Vitest parser **48/48** 覆盖 FEFF、转义控制字符、非字符及孤立代理，且含匹配/不匹配契约的 JSON 键；174 Vitest Owner **8/8** 且临时数据库清理成功，175 类型检查与 176 API build 通过，独立 Spec/Standards 窄复核无阻断。无 DDL/授权/存储变化。
+
+## PR #6 第二十二轮修复
+
+远端 Codex 对 `f5a8a63` 指出 CSV 行限额定位、引号内 bare CR 行计数及 XLSX 限额坐标三项 P2。177 tests-only RED 后，CSV ROW_LIMIT 使用 recordStart（无具体字段时列 0），引号内 CR 仅在不属于 CRLF 时计行；LF 与未引号 CRLF 的原行为保留。XLSX COLUMN_LIMIT 附当前 rowNum/col，ROW_LIMIT 附 rowNum。178 Vitest parser **51/51** 覆盖多行超限、CR/CRLF/LF 后续来源坐标及 XLSX 超限位置；179 Vitest Owner **8/8** 且临时数据库清理成功，180 类型检查和 181 API build 通过。独立 Spec/Standards 窄复核无阻断，无 DDL/授权/存储变化。

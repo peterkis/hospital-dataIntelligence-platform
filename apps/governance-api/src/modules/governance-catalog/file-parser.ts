@@ -41,7 +41,7 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
   let physicalRow=1,physicalColumn=1;
   const syntax=()=>fail('CSV_SYNTAX',physicalRow,physicalColumn);
   const cell = () => { const column=row.length+1; if(exceedsCellLimit(value))fail('CELL_LIMIT',recordStart,column); if(column>100)fail('COLUMN_LIMIT',recordStart,column); row.push(value); value = ''; closed = false; };
-  const record=()=>{rows.push(row);physicalRows.push(recordStart);row=[];if(rows.length>1001)fail('ROW_LIMIT',physicalRow,physicalColumn);};
+  const record=()=>{rows.push(row);physicalRows.push(recordStart);row=[];if(rows.length>1001)fail('ROW_LIMIT',recordStart);};
   for (let i = 0; i < text.length; i++) {
     const c = text[i]!;
     let finishedRecord=false;
@@ -55,7 +55,7 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
     else { if (closed || c === '"') syntax(); value += c; }
     // A code point occupies at most two UTF-16 units; exact counting happens once per cell.
     if (value.length > 16384) fail('CELL_LIMIT',recordStart,row.length+1);
-    if(c==='\n'||c==='\r'&&!quoted){physicalRow++;physicalColumn=1;}else physicalColumn++;
+    if(c==='\n'||c==='\r'&&(!quoted||text[i+1]!=='\n')){physicalRow++;physicalColumn=1;}else physicalColumn++;
     if(finishedRecord)recordStart=physicalRow;
   }
   if (quoted) syntax();
@@ -343,9 +343,9 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
       if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
       else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
       else return fail('TEXT_CELL_REQUIRED',rowNum,col);
-      values.push(value);rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT');
+      values.push(value);rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
     }
-    rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT');
+    rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
   if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
