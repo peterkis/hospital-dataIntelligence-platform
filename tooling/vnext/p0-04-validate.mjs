@@ -2,6 +2,7 @@ import {spawnSync} from 'node:child_process';
 import {root} from './lineage.mjs';
 // Temporary validations complete and dispose before touching the current receipt.
 for(const args of [
+ ['--import','tsx','--test','tooling/vnext/file-parser.test.ts'],
  ['--import','tsx','tooling/vnext/run-file-tests.mjs'],
  ['--import','tsx','tooling/vnext/run-file-tests.mjs','--upgrade'],
  ['--import','tsx','tooling/vnext/run-protected-tests.mjs'],

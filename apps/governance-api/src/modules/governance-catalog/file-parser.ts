@@ -166,6 +166,24 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
   const types = get('[Content_Types].xml', 'Types'); only(types, ['Default','Override']);
   for(const entry of types.children)only(entry,[]);
   if (types.children.some(n => /macro|vba|ole|external/i.test(n.attrs['ContentType'] ?? ''))) fail('ACTIVE_CONTENT');
+  const spreadsheetMime='application/vnd.openxmlformats-officedocument.spreadsheetml.';
+  const partTypes:Record<string,string>={
+    '/xl/workbook.xml':spreadsheetMime+'sheet.main+xml','/xl/worksheets/sheet1.xml':spreadsheetMime+'worksheet+xml',
+    '/xl/sharedStrings.xml':spreadsheetMime+'sharedStrings+xml','/xl/styles.xml':spreadsheetMime+'styles+xml',
+    '/docProps/core.xml':'application/vnd.openxmlformats-package.core-properties+xml','/docProps/app.xml':'application/vnd.openxmlformats-officedocument.extended-properties+xml',
+  };
+  const defaults:Record<string,string>={xml:'application/xml',rels:'application/vnd.openxmlformats-package.relationships+xml'};
+  const declarations=new Map<string,string>();
+  for(const entry of types.children){
+    const isDefault=entry.name==='Default',keyName=isDefault?'Extension':'PartName',key=entry.attrs[keyName]??'',mime=entry.attrs['ContentType']??'',mapping=isDefault?defaults:partTypes;
+    const identity=entry.name+':'+key;
+    if(Object.keys(entry.attrs).some(k=>k!==keyName&&k!=='ContentType')||!Object.hasOwn(mapping,key)||mapping[key]!==mime||declarations.has(identity)||!isDefault&&!files.has(key.slice(1)))fail('CONTENT_TYPE_REJECTED');
+    declarations.set(identity,mime);
+  }
+  for(const part of ['/xl/workbook.xml','/xl/worksheets/sheet1.xml',...Object.keys(partTypes).filter(p=>files.has(p.slice(1)))]){
+    if(declarations.get('Override:'+part)!==partTypes[part])fail('CONTENT_TYPE_REJECTED');
+  }
+  if(declarations.get('Default:rels')!==defaults['rels'])fail('CONTENT_TYPE_REJECTED');
   const rels = get('_rels/.rels','Relationships'); only(rels,['Relationship']);
   const office='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
   const relationships=(node:Xml,mapping:Record<string,string>,prefix:string,required:string)=>{
@@ -245,6 +263,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
         const value = obj[f.code]; if (typeof value !== 'string') fail('TEXT_CELL_REQUIRED',rowNum,column);
         const text = value as string;
         result.cells.push({row:rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? 'TEXT' : format});
+        if(text.includes('\uFEFF'))fail('BOM_NOT_PREFIX',rowNum,column);
         if(!text.isWellFormed() || /[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(text))fail('TEXT_CONTROL',rowNum,column);
         if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
         if (f.type === 'datetime' && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/.test(text)) fail('LOCAL_TIME_REQUIRED',rowNum,column);

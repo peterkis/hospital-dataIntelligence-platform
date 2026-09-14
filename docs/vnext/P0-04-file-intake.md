@@ -49,3 +49,11 @@ XLSX 固定一个名为 Data 的 sheet，逐行连续、列坐标连续，inline
 CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行边界；语法错误跟踪物理行号及 UTF-16 字符列（EOF 指向下一字符位置），覆盖多行引号、引号后多余字符、未闭合引号和坏 CRLF。这类语法错误不会被伪造为规范单元格坐标。XLSX 根关系必须有唯一且类型正确的 officeDocument→workbook，workbook 必须引用 worksheet；所有关系 ID/target 唯一、目标存在、Type 与路径吻合。实际使用 sharedStrings 也必须经该 typed relationship，不能消费孤立 ZIP 部件。36 的相邻反例 RED 后，37 纯解析 12/12。
 
 32 fresh 专项 7/7，38–40 原库迁移、类型生成、authority 通过：仍 OID 206108/29 表/零业务实例 schema，迁移数 28。最终运行结果及当前 head 远端复审单独写 ignored pr6-progress/evidence；未把首轮 review 的 Completed 状态当作无发现通过，未把无 GitHub checks 写成 CI 全绿。旧记录中的 27 项迁移与初始测试数字是对应候选的历史结果。
+
+## PR #6 第二轮修复
+
+远端 Codex 对 `928c412` 提出内部 BOM 字符、Content Types 必需声明及总验收遗漏 parser 专项三项 P2。46 实测前两项 RED；47 证明纯解析有失败时旧总验收仍 exit 0。48 先把 parser 专项接入总验收首步，在原缺陷仍存在时确实 exit 1、停止后续 DB 步骤，然后再修复运行时代码。
+
+统一解码后的值入口拒绝任何 U+FEFF，涵盖 JSON/Excel 转义；仅文件开头允许的 UTF-8 BOM 仍记录并保留原 bytes。XLSX Content Types 对 workbook、worksheet 及实际存在的 sharedStrings/styles/docProps 要求正确且唯一的 PartName/MIME 对，未知声明、重复、缺失、错误 MIME 均拒绝；关系部件要求正确 rels 默认类型。原 typed relationship 校验继续执行。
+
+49 总验收完整通过：parser **14/14**、fresh Owner **7/7**、27→28 升级 **7/7**（含既有孤立拒绝和合法文件保留）、P0-11 **10/10**、P0-03 **8/8**、当前库迁移/生成类型/类型 verify/authority；wrapper targetExitCode=0、cleanupPassed=true。50 类型检查及 51 API build 通过。独立 Spec/Standards 增量源码复核无阻断。本轮无新 DDL，当前原库仍为 28 项迁移和 29 表，已安装 SQL 未改写。

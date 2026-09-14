@@ -7,6 +7,14 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round2: BOM is allowed only at the file prefix, never inside decoded values',()=>{
+ for(const result of [parse('code,label\n0012,a\uFEFFb'),parseBytes(Buffer.from('[{"code":"0012","label":"a\\ufeffb"}]'),'JSON',fields),parseBytes(textWorkbook([['code','label'],['0012','a\uFEFFb']]),'XLSX',fields)])assert.equal(result.structuralStatus,'REJECTED');
+ assert.equal(parse('\uFEFFcode,label\n0012,DEMO').structuralStatus,'PARSED');
+});
+test('PR6 round2: XLSX required part MIME declarations cannot be missing, wrong or duplicated',()=>{
+ const files=Object.fromEntries(unzip(workbook));files['[Content_Types].xml']='<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="unrelated" ContentType="application/xml"/></Types>';
+ for(const bytes of [zipText(files),edit('[Content_Types].xml','spreadsheetml.sheet.main+xml','spreadsheetml.styles+xml'),edit('[Content_Types].xml','/xl/worksheets/sheet1.xml','/xl/other.xml'),edit('[Content_Types].xml','</Types>','<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>')])assert.equal(parseBytes(bytes,'XLSX',fields).structuralStatus,'REJECTED');
+});
 test('PR6: CSV EOF and newline forms share the 1000-row bound',()=>{
  for(const count of [1000,1001])for(const suffix of ['', '\n']){
   const result=parse('code,label\n'+Array(count).fill('0012,DEMO').join('\n')+suffix);
@@ -33,6 +41,7 @@ test('PR6: root and workbook relationships must have unique typed targets',()=>{
 test('PR6 adjacent: shared strings must be reached through their typed workbook relationship',()=>{
  const files=Object.fromEntries(unzip(workbook));
  files['xl/sharedStrings.xml']='<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>0012</t></si></sst>';
+ files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>');
  files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('<c r="A2" t="inlineStr"><is><t xml:space="preserve">0012</t></is></c>','<c r="A2" t="s"><v>0</v></c>');
  assert.equal(parseBytes(zipText(files),'XLSX',fields).structuralStatus,'REJECTED');
  files['xl/_rels/workbook.xml.rels']=files['xl/_rels/workbook.xml.rels']!.replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
