@@ -65,7 +65,7 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
 
 // Only an array of flat objects is accepted. Tokenize keys before object construction,
 // so escaped duplicate keys cannot disappear through JSON.parse's last-write behavior.
-interface SourceObject { values:Record<string,string|number|null>; columns:string[] }
+interface SourceObject { values:Record<string,string|{lexeme:string}>; columns:string[] }
 function jsonRows(text: string): SourceObject[] {
   let i = 0; const rows: SourceObject[] = [];
   let currentRow=0,currentColumn=0;
@@ -82,16 +82,17 @@ function jsonRows(text: string): SourceObject[] {
   expect('['); ws();
   while (text[i] !== ']') {
     currentRow=rows.length+1;currentColumn=0;
-    expect('{'); const row: Record<string, string | number | null> = Object.create(null); const columns:string[]=[]; ws();
+    expect('{'); const row: Record<string,string|{lexeme:string}> = Object.create(null); const columns:string[]=[]; ws();
     while (text[i] !== '}') {
       currentColumn=Object.keys(row).length+1;
       const key = string(); assertTextSafety(key,currentRow,currentColumn); if (Object.hasOwn(row, key)) jsonFailure('DUPLICATE_FIELD'); columns.push(key); expect(':'); ws();
       if (text[i] === '"') row[key] = string();
       else {
-        const match = /^(?:null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(text.slice(i));
-        if (!match) jsonFailure('JSON_SCALAR_REQUIRED');
-        // Numeric lexemes are rejected below; do not coerce precision-sensitive input.
-        row[key] = match![0] === 'null' ? null : Number.NaN; i += match![0].length;
+        const match = /^(?:null|true|false|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(text.slice(i));
+        if (!match) return jsonFailure('JSON_SCALAR_REQUIRED');
+        // Preserve bounded rejected scalar evidence without numeric coercion.
+        if(exceedsCellLimit(match[0]))jsonFailure('CELL_LIMIT');
+        row[key] = {lexeme:match[0]}; i += match[0].length;
       }
       if (Object.keys(row).length > 100) jsonFailure('COLUMN_LIMIT'); ws();
       if (text[i] !== ',') break; i++; ws(); if (text[i] === '}') jsonFailure('JSON_SYNTAX');
@@ -333,7 +334,8 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     fail('HIDDEN_UNDECLARED');
   }
   for (const r of data.children) {
-    const rowNum = rows.length + 1; if (r.attrs['r'] !== String(rowNum)) fail('ROW_GAP', rowNum); only(r,['c']);
+    const rowNum = rows.length + 1; const declaredRow=r.attrs['r'];
+    if (declaredRow !== String(rowNum)) fail('ROW_GAP',declaredRow&&/^[1-9][0-9]*$/.test(declaredRow)&&Number(declaredRow)<=1048576?Number(declaredRow):rowNum); only(r,['c']);
     if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
     const values: string[] = [];const rowTypes:XlsxCellType[]=[];
     for (const c of r.children) {
@@ -375,9 +377,10 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',rowNum);
       for (const f of fields) {
         const column=source.columns.indexOf(f.code)+1;
-        const value = obj[f.code]; if (typeof value !== 'string') fail('TEXT_CELL_REQUIRED',rowNum,column);
-        const text = value as string;
+        const value = obj[f.code];
+        const text = typeof value==='string'?value:value?.lexeme??'';
         result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
+        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',rowNum,column);
         assertTextSafety(text,rowNum,column);
         if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
         if (f.type === 'datetime') {try{parseLocalDateTime(text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}

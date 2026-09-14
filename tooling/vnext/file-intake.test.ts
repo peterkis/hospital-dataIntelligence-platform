@@ -43,6 +43,15 @@ test('PR6 round23: RAW_FILE uniqueness survives trigger bypass',async()=>{
   peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; DO $$ BEGIN BEGIN INSERT INTO governance_catalog.protected_artifact(job_id,revision_id,request_id,campus,purpose,kind,expires_at) SELECT job_id,revision_id,uuidv7(),campus,purpose,kind,expires_at FROM governance_catalog.protected_artifact WHERE id=${quote(file.artifact.artifactId)}::uuid; RAISE EXCEPTION 'EXPECTED_DECLARATIVE_UNIQUE'; EXCEPTION WHEN unique_violation THEN NULL; END; END $$; ROLLBACK;`);
  }finally{await s.catalog.close();}
 });
+test('PR6 round24: complete metadata variants remain declaratively closed',async()=>{
+ const s=await setup();try{
+  s.grant('STORE');const file=await s.catalog.receiveFile('maker',s.input,Buffer.from(`${s.field}\n0012`));
+  for(const metadata of [{kind:'FILE'},{kind:'FILE',format:'OTHER',parserPolicy:'STRICT_V1'},{kind:'FILE',format:'CSV',parserPolicy:'OTHER'},{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1',extra:true},{kind:'METADATA_ONLY',declaredSha256:'bad'},{kind:'METADATA_ONLY',declaredSha256:'a'.repeat(64),extra:true}]){
+   const status=metadata.kind==='FILE'?'PROTECTED_REFERENCE':'DECLARED';
+   peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; DO $$ BEGIN BEGIN UPDATE governance_catalog.import_input_revision SET metadata=${quote(JSON.stringify(metadata))}::jsonb,digest_status=${quote(status)} WHERE id=${quote(file.job.revisionId)}::uuid; RAISE EXCEPTION 'EXPECTED_METADATA_SHAPE_CHECK'; EXCEPTION WHEN check_violation THEN NULL; END; END $$; ROLLBACK;`);
+  }
+ }finally{await s.catalog.close();}
+});
 test('PR6: deferred database invariant rejects an orphan FILE revision and rolls back outcome',async()=>{
  const s=await setup();const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});try{
   const before=peer(receipt.name,'SELECT count(*) FROM governance_catalog.import_input_revision;');

@@ -7,6 +7,18 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round24: row gaps identify valid declared worksheet rows',()=>{
+ assert.deepEqual(parseBytes(edit('xl/worksheets/sheet1.xml','<row r="1">','<row r="5">'),'XLSX',fields).issues[0],{code:'ROW_GAP',row:5,column:0});
+});
+test('PR6 round24: rejected JSON scalars retain source lexemes in protected reports',()=>{
+ for(const lexeme of ['12','-12.30e+2','null','true','false']){
+  const result=parseBytes(Buffer.from('[{"code":'+lexeme+',"label":"safe"}]'),'JSON',fields);
+  assert.equal(result.issues[0]?.code,'TEXT_CELL_REQUIRED');assert.deepEqual(result.rows,[]);
+  assert.equal(result.cells[0]?.value,lexeme);
+  const report=parseBytes(issueWorkbook(result),'XLSX',['issue','row','column','originalValue'].map(code=>({code,type:'text'})));
+  assert.equal(report.rows[0]?.['originalValue'],lexeme);
+ }
+});
 test('PR6 round22: CSV row limit identifies multiline record start',()=>{
  for(const suffix of ['', '\n'])assert.equal(parse('code,label\n'+'0012,safe\n'.repeat(1000)+'0012,"start\nend"'+suffix).issues[0]?.row,1002);
 });
@@ -146,7 +158,7 @@ test('PR6 round11: local datetime calendar and clock components are real',()=>{
 test('PR6 round10: rejected JSON values retain their object and property ordinal',()=>{
  for(const value of ['true','[]','{}']){
   const result=parseBytes(Buffer.from(`[{"code":"0012","label":"ok"},{"code":"0013","label":${value}}]`),'JSON',fields);
-  assert.equal(result.issues[0]?.code,'JSON_SCALAR_REQUIRED');assert.equal(result.issues[0]?.row,2);assert.equal(result.issues[0]?.column,2);
+  assert.equal(result.issues[0]?.code,value==='true'?'TEXT_CELL_REQUIRED':'JSON_SCALAR_REQUIRED');assert.equal(result.issues[0]?.row,2);assert.equal(result.issues[0]?.column,2);
  }
 });
 test('PR6 round10: present visibility values require exact enums',()=>{

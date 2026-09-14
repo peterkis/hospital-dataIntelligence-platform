@@ -12,10 +12,11 @@ if(process.argv.includes('--dispose')) {
  assert.equal(receipt.taskId,'P0-04');dropTemporary(receipt);console.log('OWNED_P0_04_DISPOSED');process.exit(0);
 }
 if(process.argv.includes('--upgrade')) {
- for(const fault of ['DIGEST_PAIR','MISSING_KIND','DUPLICATE_RAW_FILE']){
+ for(const fault of ['DIGEST_PAIR','MISSING_KIND','DUPLICATE_RAW_FILE','FILE_SHAPE']){
+  const prefix=fault==='FILE_SHAPE'?29:28;
   const invalid=createTemporary('P0-04');
   try{
-   await migrate(invalid.receipt,migrationFiles().slice(0,28));await seed(invalid.receipt);
+   await migrate(invalid.receipt,migrationFiles().slice(0,prefix));await seed(invalid.receipt);
    const catalog=await openCatalog(resolveTarget(invalid.receipt),new LocalSyntheticKeyProvider());
    try{
     const f=await fixture(catalog);
@@ -23,13 +24,13 @@ if(process.argv.includes('--upgrade')) {
     const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from('SYNTHETIC_UPGRADE_BYTES'));
     const mutation=fault==='DUPLICATE_RAW_FILE'
      ? `INSERT INTO governance_catalog.protected_artifact(job_id,revision_id,request_id,campus,purpose,kind,expires_at) SELECT job_id,revision_id,uuidv7(),campus,purpose,kind,expires_at FROM governance_catalog.protected_artifact WHERE id=${quote(file.artifact.artifactId)}::uuid;`
-     : `UPDATE governance_catalog.import_input_revision SET ${fault==='DIGEST_PAIR'?"digest_status='DECLARED'":"metadata='{}'::jsonb"} WHERE id=${quote(file.job.revisionId)}::uuid;`;
+     : `UPDATE governance_catalog.import_input_revision SET ${fault==='DIGEST_PAIR'?"digest_status='DECLARED'":fault==='FILE_SHAPE'?"metadata=jsonb_build_object('kind','FILE')":"metadata='{}'::jsonb"} WHERE id=${quote(file.job.revisionId)}::uuid;`;
     peer(invalid.receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; ${mutation} COMMIT;`);
     const snapshot=()=>peer(invalid.receipt.name,`SELECT jsonb_build_object('revision',(SELECT to_jsonb(r) FROM governance_catalog.import_input_revision r WHERE id=${quote(file.job.revisionId)}::uuid),'artifacts',(SELECT jsonb_agg(to_jsonb(a) ORDER BY id) FROM governance_catalog.protected_artifact a WHERE revision_id=${quote(file.job.revisionId)}::uuid))::text;`);
     const before=snapshot();await assert.rejects(migrate(invalid.receipt),/^Error: VNEXT_ADMIN_COMMAND_FAILED$/);
-    assert.match(readFileSync(`${root}/.runtime/vnext/last-admin-error.log`,'utf8'),fault==='DUPLICATE_RAW_FILE'?/protected_artifact_raw_file_revision_unique/:/import_input_revision_digest_status_check/);
-    assert.equal((await inspect(invalid.receipt)).ledger.length,28);assert.equal(snapshot(),before);
-    console.log(`PREFIX_28_${fault}_UPGRADE_REJECTED_AND_PRESERVED`);
+    assert.match(readFileSync(`${root}/.runtime/vnext/last-admin-error.log`,'utf8'),fault==='DUPLICATE_RAW_FILE'?/protected_artifact_raw_file_revision_unique/:fault==='FILE_SHAPE'?/import_input_revision_metadata_shape_check/:/import_input_revision_digest_status_check/);
+    assert.equal((await inspect(invalid.receipt)).ledger.length,prefix);assert.equal(snapshot(),before);
+    console.log(`PREFIX_${prefix}_${fault}_UPGRADE_REJECTED_AND_PRESERVED`);
    }finally{await catalog.close();}
   }finally{dropTemporary(invalid.receipt);}
  }

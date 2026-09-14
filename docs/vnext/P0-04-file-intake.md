@@ -177,3 +177,11 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 183 fresh **10/10** 后，升级断言因管理工具将原数据库错误包装为固定码而失败；修正为同时检查固定错误码与立即读取的本地诊断中的具体约束名，避免把任意设施失败误算作预期拒绝。184 类型检查通过；185 完整聚合通过：Vitest parser **51/51**、fresh Owner **10/10**、upgrade Owner **10/10**，prefix28 错配/缺失 kind/重复原文件三种旧状态均升级拒绝且 ledger28 和原快照保持，prefix27 原孤立修订拒绝及合法原文件跨 28→29 保留，P0-11 **10/10**、P0-03 **8/8**，当前库迁移、类型生成/核对及 authority 通过。持久库仍 OID 206108，现 **29 migrations、29 tables、0 业务实例 schema**；wrapper cleanupPassed=true，本票 55 份临时 receipt 均有 disposal 记录。
 
 独立 Spec/Standards 窄复核无阻断。没有更改应用运行时代码；API build 保留 181 的已验证结果，不称本轮重跑。仍仅为已说明的本地合成工程验证，不代表管理员不可绕过授权或 Testcontainers 环境验证通过。
+
+## PR #6 第二十四轮修复
+
+远端 Codex 对 `cd43723` 指出 XLSX 行间断坐标、被拒绝 JSON 标量证据及完整 metadata 形状三项 P2。186 parser RED、187 数据库 RED 后，ROW_GAP 在声明行号合法（1–1048576）时报告源行；JSON number/null/boolean 保存有界原 lexeme 后附原单元格证据并返回 TEXT_CELL_REQUIRED，不转换数值、不进入规范行。错误工作簿回读验证原 lexeme；数组/对象继续以 JSON_SCALAR_REQUIRED 拒绝。
+
+新增前向迁移 **0030**，不改已安装 0029：以 CASE 限定 metadata 必须为对象，FILE 必须含精确 format/parserPolicy，METADATA_ONLY 必须含合法字符串摘要，两个分支均拒绝多余键，IS TRUE 拒绝缺字段的 NULL 放行。prefix29 不完整 FILE 升级被拒绝并保持账本及原记录。188 parser **53/53**；189/190 记录正则 match 的 TypeScript 收窄失败，显式返回拒绝后 191 类型检查、192 API build 通过。
+
+193 完整聚合通过：Vitest parser **53/53**、fresh/upgrade Owner 各 **11/11**，已知不一致前缀升级拒绝及合法原文件保留，P0-11 **10/10**、P0-03 **8/8**、当前库迁移/类型生成与核对/authority。持久库仍 OID 206108，现 **30 migrations、29 tables、0 业务实例 schema**；wrapper cleanupPassed=true，全部本票临时 receipt 已清理。独立 Spec/Standards 窄复核无阻断。本地合成与未执行容器环境等边界保持。
