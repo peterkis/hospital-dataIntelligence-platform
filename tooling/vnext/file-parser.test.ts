@@ -7,6 +7,13 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round9: unsupported worksheet and workbook metadata nodes reject',()=>{
+ for(const node of ['<dimension ref="nonsense"/>','<pageMargins/>','<sheetViews/>','<sheetFormatPr/>'])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',node+'<sheetData>'),'XLSX',fields).structuralStatus,'REJECTED');
+ for(const node of ['<workbookPr/>','<bookViews/>','<calcPr/>'])assert.equal(parseBytes(edit('xl/workbook.xml','<sheets>',node+'<sheets>'),'XLSX',fields).structuralStatus,'REJECTED');
+});
+test('PR6 round9 adjacent: relationship IDs must be valid XML names',()=>{
+ assert.equal(parseBytes(edit('_rels/.rels','Id="rId1"','Id="bad id"'),'XLSX',fields).structuralStatus,'REJECTED');
+});
 test('PR6 round8: accepted XLSX member BOMs are recorded without changing source bytes',()=>{
  const files=Object.fromEntries(unzip(workbook));const part='xl/worksheets/sheet1.xml';files[part]='\uFEFF'+files[part];
  const result=parseBytes(zipText(files),'XLSX',fields);assert.equal(result.structuralStatus,'PARSED');assert.equal(result.manifest.bomDetected,true);

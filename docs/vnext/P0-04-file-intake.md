@@ -26,6 +26,8 @@ XLSX 固定一个名为 Data 的 sheet，逐行连续、列坐标连续，inline
 
 当前 XLSX 部件白名单为 Content Types、根关系、workbook、workbook 关系、sheet1，加可选 sharedStrings；后者须有完整 MIME/关系/结构校验。未实现结构校验的 styles、docProps/core、docProps/app 明确拒绝，相关声明/关系和 s/style 样式引用也拒绝。因此带这些部件的普通 Excel 另存产物不属于此固定子集；不会静默丢弃部件后当作原文件接收。
 
+当前 workbook 仅接收 sheets；worksheet 仅接收 sheetData、cols 和显式 zeroHeight 的 sheetFormatPr。dimension、视图、页边距、workbookPr、bookViews、calcPr 等未实现节点即使为空也拒绝。关系 Id 限定为本子集的 ASCII NCName，不接受空白或无效名称。
+
 接收上限 1 MiB，与 P0-11 一致；ZIP 成员 16、单成员展开 2 MiB、总展开 4 MiB、压缩比 100，先核实中央/本地目录一致与 CRC，再解析。100 列、1000 数据行、8192 字符/值；worker 限制 old heap 64 MiB、young heap 16 MiB、stack 2 MiB，2 秒终止、最多两个并行 worker，无无限队列。结果与导出各自不得超过 1 MiB；限额失败不进入领域。
 
 错误导出为真正 ZIP32 XLSX，每个值都显式 inlineStr，无公式节点；不生成 CSV。原值含 =/+/−/@ 等也只作文本写入，不修改受限原值。ERROR_REPORT 同样经 P0-11 授权保存与读取。
@@ -91,3 +93,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `9824284` 提出 XML 成员 BOM 变换未记录及列范围未验证两项 P2。85 RED 后在 XML 处理前收集 bomMembers 并设置 bomDetected，原 ZIP bytes 不修改；列 min/max 必须为正整数，且 min≤max≤16384，不按声明范围展开单元格。86 parser 26/26、87 Owner 7/7。
 
 独立复核发现 XML declaration 的宽泛空白正则会先吞掉内部 FEFF，90 RED 后改为仅去首个 BOM、立即检查其余 FEFF、再处理 declaration。XML 语法空白仅允许空格/TAB/CR/LF；非法字符及数值实体、字面 `]]>` 不接受。95 RED 进一步关闭根外字符引用冒充空白。96 最终 parser **28/28**，97 类型检查和 98 API build 通过；92 Owner **7/7** 在最后根外引用检查之前。独立 Spec/Standards 窄复核无阻断。无 DDL、授权或存储改变，验收仍限于既有固定子集。
+
+## PR #6 第九轮修复
+
+远端 Codex 对 `84c9e24` 指出 dimension/pageMargins 等已允许元数据未验证。99 RED 后明确拒绝所有未实现的视图、尺寸、页边距与 workbook 设置节点，替代早期允许空容器的策略；保留 cols 范围和显式 zeroHeight 的实际校验，隐藏 manifest 不变。相邻关系 Id 空白名称也由 ASCII NCName 校验拒绝。100 parser **30/30**，101 Owner **7/7**，102 类型检查和 103 API build 通过；独立 Spec/Standards 窄复核无阻断。无 DDL/授权/存储变化。

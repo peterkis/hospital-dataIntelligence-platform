@@ -121,12 +121,12 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
 
 interface Xml { name: string; attrs: Record<string, string>; children: Xml[]; text: string }
 // The fixed text-only package admits only attributes whose semantics it supports.
-// Empty metadata containers are harmless; unimplemented view/calculation settings reject.
+// Unimplemented view/calculation containers and settings reject.
 const xmlAttributes:Record<string,readonly string[]>={
   Types:[],Default:['Extension','ContentType'],Override:['PartName','ContentType'],
   Relationships:[],Relationship:['Id','Type','Target','TargetMode'],
-  workbook:[],workbookPr:[],bookViews:[],workbookView:[],sheets:[],sheet:['name','sheetId','state'],calcPr:[],
-  worksheet:[],dimension:['ref'],sheetViews:[],sheetView:[],pane:[],selection:[],sheetFormatPr:['zeroHeight'],
+  workbook:[],sheets:[],sheet:['name','sheetId','state'],
+  worksheet:[],sheetFormatPr:['zeroHeight'],
   cols:[],col:['min','max','hidden'],sheetData:[],row:['r','hidden'],c:['r','t'],v:[],is:[],t:[],sst:['count','uniqueCount'],si:[],
 };
 function entities(text: string): string {
@@ -243,19 +243,15 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     const ids=new Set<string>(),targets=new Set<string>();
     for(const rel of node.children){
       only(rel,[]);const id=rel.attrs['Id']??'',target=rel.attrs['Target']??'';
-      if(!id||ids.has(id)||targets.has(target)||!Object.hasOwn(mapping,target)||rel.attrs['Type']!==mapping[target]||!files.has(prefix+target)||rel.attrs['TargetMode']&&rel.attrs['TargetMode']!=='Internal')fail('RELATIONSHIP_REJECTED');
+      if(!/^[A-Za-z_][\w.-]*$/.test(id)||ids.has(id)||targets.has(target)||!Object.hasOwn(mapping,target)||rel.attrs['Type']!==mapping[target]||!files.has(prefix+target)||rel.attrs['TargetMode']&&rel.attrs['TargetMode']!=='Internal')fail('RELATIONSHIP_REJECTED');
       ids.add(id);targets.add(target);
     }
     if(!targets.has(required))fail('RELATIONSHIP_REJECTED');
     return targets;
   };
   relationships(rels,{'xl/workbook.xml':office+'officeDocument'},'','xl/workbook.xml');
-  const workbook = get('xl/workbook.xml','workbook'); only(workbook,['workbookPr','bookViews','sheets','calcPr']);
+  const workbook = get('xl/workbook.xml','workbook'); only(workbook,['sheets']);
   if(new Set(workbook.children.map(n=>n.name)).size!==workbook.children.length)fail('XLSX_STRUCTURE');
-  for(const metadata of workbook.children.filter(n=>n.name!=='sheets')) {
-    if(metadata.name==='bookViews'){only(metadata,['workbookView']);for(const view of metadata.children)only(view,[]);}
-    else only(metadata,[]);
-  }
   if(workbook.attrs['xmlns:r']!=='http://schemas.openxmlformats.org/officeDocument/2006/relationships')fail('XML_NAMESPACE');
   const sheets = one(workbook,'sheets'); only(sheets,['sheet']);
   for(const entry of sheets.children)only(entry,[]);
@@ -272,15 +268,13 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): string[][]
     if(shared.attrs['count']!==undefined)declaredCount=unsignedAttribute(shared.attrs['count']);
     if(shared.attrs['uniqueCount']!==undefined&&unsignedAttribute(shared.attrs['uniqueCount'])!==strings.length)fail('SHARED_STRING_COUNT');
   }
-  const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['dimension','sheetViews','sheetFormatPr','cols','sheetData','pageMargins']);
+  const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['sheetFormatPr','cols','sheetData']);
   if(new Set(worksheet.children.map(n=>n.name)).size!==worksheet.children.length)fail('XLSX_STRUCTURE');
-  for(const metadata of worksheet.children.filter(n=>!['cols','sheetData'].includes(n.name))) {
-    if(metadata.name==='sheetFormatPr'&&metadata.attrs['zeroHeight']!==undefined){
-      if(!['0','1','false','true'].includes(metadata.attrs['zeroHeight']))fail('XLSX_STRUCTURE');
-      manifest.defaultRowsHidden=['1','true'].includes(metadata.attrs['zeroHeight']);
-    }
-    if(metadata.name==='sheetViews'){only(metadata,['sheetView']);for(const view of metadata.children){only(view,['pane','selection']);for(const item of view.children)only(item,[]);}}
-    else only(metadata,[]);
+  for(const metadata of children(worksheet,'sheetFormatPr')) {
+    only(metadata,[]);
+    const zeroHeight=metadata.attrs['zeroHeight'];
+    if(zeroHeight===undefined||!['0','1','false','true'].includes(zeroHeight))fail('XLSX_STRUCTURE');
+    manifest.defaultRowsHidden=['1','true'].includes(zeroHeight!);
   }
   for (const cols of children(worksheet,'cols')) { only(cols,['col']); for (const col of cols.children) {
     only(col,[]);const min=unsignedAttribute(col.attrs['min'],true),max=unsignedAttribute(col.attrs['max'],true);
