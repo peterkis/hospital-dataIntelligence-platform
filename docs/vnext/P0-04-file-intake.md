@@ -77,3 +77,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `a64696e` 提出 CSV 多行后 FIELD_CONTRACT 位置、worksheet 默认 zeroHeight 隐藏、已声明外来命名空间三项 P2。66 RED 后保留记录物理起始行，并在受限 manifest 中记录 defaultRowsHidden 和受影响行；zeroHeight 为 true/1 时拒绝，即使部分行显式可见也不放行未声明的默认隐藏政策。命名空间声明仅允许支持的 SpreadsheetML/package/relationship/XML URI，带前缀属性仅支持 xml:space 和 sheet 的 relationship id，未知扩展内容不能被静默忽略。
 
 67 parser 20/20，68 文件 Owner 7/7；独立复核又复现重复 sheetFormatPr 后值覆盖隐藏标志，71 RED 后对 workbook/worksheet 单例子节点统一拒绝重复，72 最终 parser **21/21**，73 类型检查与 74 API build 通过。此前 Owner 验证与最后两行单例检查的纯函数验证分开记录。无 DDL、权限或存储修改。
+
+## PR #6 第六轮修复
+
+远端 Codex 对 `47f4304` 指出无前缀未知 XML 属性仍被忽略。75 tests-only RED 后，为固定子集内每种元素定义封闭的无前缀属性集合；row/c/t/workbook 与元数据节点均不能静默接收额外属性。命名空间声明及 r:id/xml:space 继续走既有独立校验。尚未实现的视图、计算、排版属性明确拒绝，空元数据容器不授予额外语义，不扩成通用 XSD 验证器。76 parser **22/22**、77 文件 Owner **7/7**、78 类型检查与 79 API build 通过，独立 Spec/Standards 窄范围复核无阻断。无 DDL/权限/存储变化。

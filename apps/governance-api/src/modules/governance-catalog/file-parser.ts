@@ -120,6 +120,15 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
 }
 
 interface Xml { name: string; attrs: Record<string, string>; children: Xml[]; text: string }
+// The fixed text-only package admits only attributes whose semantics it supports.
+// Empty metadata containers are harmless; unimplemented view/calculation settings reject.
+const xmlAttributes:Record<string,readonly string[]>={
+  Types:[],Default:['Extension','ContentType'],Override:['PartName','ContentType'],
+  Relationships:[],Relationship:['Id','Type','Target','TargetMode'],
+  workbook:[],workbookPr:[],bookViews:[],workbookView:[],sheets:[],sheet:['name','sheetId','state'],calcPr:[],
+  worksheet:[],dimension:['ref'],sheetViews:[],sheetView:[],pane:[],selection:[],sheetFormatPr:['zeroHeight'],
+  cols:[],col:['min','max','hidden'],sheetData:[],row:['r','hidden'],c:['r','t'],v:[],is:[],t:[],sst:['count','uniqueCount'],si:[],
+};
 function entities(text: string): string {
   return text.replace(/&([^;]*);|&/g, (whole, name: string | undefined) => {
     const predefined: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
@@ -177,7 +186,7 @@ function xml(text: string): Xml {
       if(name.includes(':')){
         const [prefix,local]=name.split(':'),uri=namespaces.get(prefix!);
         if(!(uri===xmlNamespace&&local==='space'&&['default','preserve'].includes(node.attrs[name]!))&&!(uri===relationshipNamespace&&local==='id'&&node.name==='sheet'))fail('XML_NAMESPACE');
-      }
+      }else if(!Object.hasOwn(xmlAttributes,node.name)||!xmlAttributes[node.name]!.includes(name))fail('XML_ATTRIBUTE_UNSUPPORTED');
     }
     for(const child of node.children)validateNames(child);
   };

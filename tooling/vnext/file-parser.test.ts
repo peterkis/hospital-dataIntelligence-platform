@@ -7,6 +7,16 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round6: unqualified attributes are closed for every supported XLSX element',()=>{
+ for(const [part,from,to] of [
+  ['xl/worksheets/sheet1.xml','<row r="2">','<row r="2" mystery="payload">'],
+  ['xl/worksheets/sheet1.xml','<c r="A2"','<c mystery="payload" r="A2"'],
+  ['xl/worksheets/sheet1.xml','<t xml:space','<t mystery="payload" xml:space'],
+  ['xl/workbook.xml','<workbook ','<workbook mystery="payload" '],
+  ['xl/worksheets/sheet1.xml','<sheetData>','<sheetFormatPr zeroHeight="0" mystery="payload"/><sheetData>'],
+ ])assert.equal(parseBytes(edit(part!,from!,to!),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(workbook,'XLSX',fields).structuralStatus,'PARSED');
+});
 test('PR6 round5: table-width errors after multiline CSV retain physical record start',()=>{
  const result=parse('code,label\n0012,"first\nsecond"\nBROKEN');assert.equal(result.issues[0]?.code,'FIELD_CONTRACT');assert.equal(result.issues[0]?.row,4);
 });
