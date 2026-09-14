@@ -129,3 +129,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 ## PR #6 第十五轮修复
 
 远端 Codex 对 `4b745d4` 指出 worksheet 支持的子节点未校验顺序。135 tests-only RED 后，使用严格递增位置校验要求 sheetFormatPr → cols → sheetData，前两项可省略；同一检查拒绝重复，既有 sheetData 必需性检查保留。136 parser **40/40** 覆盖元数据放在数据之后、前置元数据互换及合法顺序；137 Owner **7/7** 且临时数据库清理成功，138 类型检查和 139 API build 通过。独立 Spec/Standards 窄复核无发现，无 DDL/授权/存储变化。
+
+## PR #6 第十六轮修复
+
+远端 Codex 对 `004d9c7` 提出空 cols 未拒绝及字符限额按 UTF-16 单元误算两项 P2。140 tests-only RED 后要求已出现的 cols 至少含一个 col；8192 字符限额统一按 Unicode code points 计数，合法代理对计为一个码点，不是按字素簇计数。CSV 单元格完成时精确计数，循环内仅保留 16384 UTF-16 单元粗上限，避免每次追加都重新扫描；JSON、XLSX（含未引用共享字符串）使用同一精确计数。非法代理字符仍拒绝。
+
+141 parser **42/42** 覆盖空容器及 8192/8193 个码点、混合 BMP/非 BMP 边界；142 Owner **7/7** 且临时数据库清理成功，143 类型检查与 144 API build 通过。独立 Spec/Standards 窄复核无发现，无 DDL/授权/存储变化。

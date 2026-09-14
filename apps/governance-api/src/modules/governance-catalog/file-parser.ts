@@ -25,6 +25,10 @@ class ParseFailure extends Error {
   constructor(code: string, row = 0, column = 0) { super(code); this.code=code; this.row=row; this.column=column; }
 }
 const fail = (code: string, row = 0, column = 0): never => { throw new ParseFailure(code, row, column); };
+function exceedsCellLimit(value:string):boolean {
+  let count=0;for(const character of value){if(++count>8192)return true;}
+  return false;
+}
 function utf8(bytes: Uint8Array): string {
   try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
   catch { return fail('INVALID_UTF8'); }
@@ -36,7 +40,7 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
   const physicalRows:number[]=[];let recordStart=1;
   let physicalRow=1,physicalColumn=1;
   const syntax=()=>fail('CSV_SYNTAX',physicalRow,physicalColumn);
-  const cell = () => { row.push(value); value = ''; closed = false; if (row.length > 100) fail('COLUMN_LIMIT',physicalRow,physicalColumn); };
+  const cell = () => { if(exceedsCellLimit(value))fail('CELL_LIMIT',physicalRow,physicalColumn); row.push(value); value = ''; closed = false; if (row.length > 100) fail('COLUMN_LIMIT',physicalRow,physicalColumn); };
   const record=()=>{rows.push(row);physicalRows.push(recordStart);row=[];if(rows.length>1001)fail('ROW_LIMIT',physicalRow,physicalColumn);};
   for (let i = 0; i < text.length; i++) {
     const c = text[i]!;
@@ -49,7 +53,8 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
       if (c !== ',') { if (c === '\r') { if (text[i+1] !== '\n') syntax(); i++; } record(); finishedRecord=true; }
     } else if (c === '"' && !value && !closed) quoted = true;
     else { if (closed || c === '"') syntax(); value += c; }
-    if (value.length > 8192) fail('CELL_LIMIT',physicalRow,physicalColumn);
+    // A code point occupies at most two UTF-16 units; exact counting happens once per cell.
+    if (value.length > 16384) fail('CELL_LIMIT',physicalRow,physicalColumn);
     if(c==='\n'||c==='\r'&&!quoted){physicalRow++;physicalColumn=1;}else physicalColumn++;
     if(finishedRecord)recordStart=physicalRow;
   }
@@ -69,7 +74,7 @@ function jsonRows(text: string): Array<Record<string, string | number | null>> {
   const string = (): string => {
     ws(); const start = i; if (text[i++] !== '"') return jsonFailure('JSON_SYNTAX');
     while (i < text.length) { const c = text[i++]; if (c === '\\') i++; else if (c === '"') {
-      try { const value: string = JSON.parse(text.slice(start, i)); if (value.length > 8192) jsonFailure('CELL_LIMIT'); return value; } catch (e) { if (e instanceof ParseFailure) throw e; return jsonFailure('JSON_SYNTAX'); }
+      try { const value: string = JSON.parse(text.slice(start, i)); if (exceedsCellLimit(value)) jsonFailure('CELL_LIMIT'); return value; } catch (e) { if (e instanceof ParseFailure) throw e; return jsonFailure('JSON_SYNTAX'); }
     } }
     return jsonFailure('JSON_SYNTAX');
   };
@@ -228,7 +233,7 @@ function booleanAttribute(node:Xml,name:string):boolean|undefined {
   return value==='1'||value==='true';
 }
 function assertTextSafety(value:string,row=0,column=0):void {
-  if(value.length>8192)fail('CELL_LIMIT',row,column);
+  if(exceedsCellLimit(value))fail('CELL_LIMIT',row,column);
   if(value.includes('\uFEFF'))fail('BOM_NOT_PREFIX',row,column);
   if(!value.isWellFormed()||/[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(value))fail('TEXT_CONTROL',row,column);
 }
@@ -314,7 +319,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     if(zeroHeight===undefined)fail('XLSX_STRUCTURE');
     manifest.defaultRowsHidden=zeroHeight!;
   }
-  for (const cols of children(worksheet,'cols')) { only(cols,['col']); for (const col of cols.children) {
+  for (const cols of children(worksheet,'cols')) { only(cols,['col']); if(!cols.children.length)fail('XLSX_STRUCTURE'); for (const col of cols.children) {
     only(col,[]);const min=unsignedAttribute(col.attrs['min'],true),max=unsignedAttribute(col.attrs['max'],true);
     if(min>max||max>16384)fail('COLUMN_RANGE');
     if (booleanAttribute(col,'hidden')) manifest.hiddenColumns.push(`${min}:${max}`);

@@ -7,6 +7,16 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round16: cols requires at least one col',()=>{
+ for(const metadata of ['<cols/>','<cols></cols>'])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',metadata+'<sheetData>'),'XLSX',fields).structuralStatus,'REJECTED');
+});
+test('PR6 round16: value limits count Unicode code points across formats',()=>{
+ for(const value of ['😀'.repeat(8192),'a'.repeat(8191)+'😀','😀'.repeat(8193),'a'.repeat(8192)+'😀']){
+  const expected=[...value].length<=8192?'PARSED':'REJECTED';
+  const results=[parse('code,label\n0012,'+value),parseBytes(Buffer.from(JSON.stringify([{code:'0012',label:value}])),'JSON',fields),parseBytes(textWorkbook([['code','label'],['0012',value]]),'XLSX',fields),parseBytes(sharedFixture(value),'XLSX',fields)];
+  for(const result of results){assert.equal(result.structuralStatus,expected);if(expected==='REJECTED')assert.equal(result.issues[0]?.code,'CELL_LIMIT');}
+ }
+});
 test('PR6 round15: supported worksheet children retain their required sequence',()=>{
  const cols='<cols><col min="1" max="2" hidden="0"/></cols>',format='<sheetFormatPr zeroHeight="0"/>';
  for(const metadata of [cols,format])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','</worksheet>',metadata+'</worksheet>'),'XLSX',fields).structuralStatus,'REJECTED');
