@@ -141,3 +141,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `b81bd54` 提出 CSV 限额列位置及 XML 字面换行两项 P2。145 tests-only RED 后，CSV CELL_LIMIT/COLUMN_LIMIT 使用源字段序号，语法错误仍使用物理字符位置；XML 成员在分词前把字面 CR/CRLF 规范为 LF，随后解析字符引用，因此 `&#13;` 保留 CR，受保护原文件 bytes 不改写。146 parser **44/44**、147 Owner **7/7**；148 记录测试索引属性访问的类型失败，修正后 150 类型检查通过，149 API build 通过。
 
 独立 Spec 复核发现关联的错误工作簿直接写 CR 会在规范读取时丢失原值。151 RED 后，导出器在普通 XML 转义之后把 CR 写为 `&#13;`；152 parser **45/45** 覆盖真实错误工作簿 CR、CRLF 和字面转义文本的回读，153 类型检查、154 API build、155 最终 Owner **7/7** 通过且临时数据库清理成功。最终独立 Spec/Standards 窄复核无阻断；先前 Spec 发现已关闭。无 DDL/授权/存储变化。
+
+## PR #6 第十八轮修复
+
+远端 Codex 对 `f64e841` 指出多行 CSV 记录的限额错误仍使用结束物理行。156 tests-only RED 后，精确/粗 CELL_LIMIT 与 COLUMN_LIMIT 均使用已跟踪的 recordStart，列仍为源字段序号；语法位置保持物理字符位置。157 parser **46/46** 覆盖多行值精确/粗限额的 EOF、逗号、换行结束以及第 101 列；158 Owner **7/7** 且临时数据库清理成功，159 类型检查及 160 API build 通过。独立 Spec/Standards 窄复核无发现，无 DDL/授权/存储变化。
