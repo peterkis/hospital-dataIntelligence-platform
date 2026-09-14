@@ -15,7 +15,7 @@ export function zipText(files:Record<string,string>):Buffer {
 }
 const escape=(text:string)=>text.replace(/_x[0-9a-f]{4}_/gi,match=>'_x005F_'+match.slice(1))
   .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g,c=>`_x${c.charCodeAt(0).toString(16).padStart(4,'0')}_`)
-  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;').replace(/\r/g,'&#13;');
 export function textWorkbook(rows:string[][]):Buffer {
   const sheet=rows.map((row,r)=>`<row r="${r+1}">${row.map((value,c)=>{let n=c+1,name='';while(n){n--;name=String.fromCharCode(65+n%26)+name;n=Math.floor(n/26);}return `<c r="${name}${r+1}" t="inlineStr"><is><t xml:space="preserve">${escape(value)}</t></is></c>`;}).join('')}</row>`).join('');
   return zipText({

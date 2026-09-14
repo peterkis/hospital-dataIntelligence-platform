@@ -40,7 +40,7 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
   const physicalRows:number[]=[];let recordStart=1;
   let physicalRow=1,physicalColumn=1;
   const syntax=()=>fail('CSV_SYNTAX',physicalRow,physicalColumn);
-  const cell = () => { if(exceedsCellLimit(value))fail('CELL_LIMIT',physicalRow,physicalColumn); row.push(value); value = ''; closed = false; if (row.length > 100) fail('COLUMN_LIMIT',physicalRow,physicalColumn); };
+  const cell = () => { const column=row.length+1; if(exceedsCellLimit(value))fail('CELL_LIMIT',physicalRow,column); if(column>100)fail('COLUMN_LIMIT',physicalRow,column); row.push(value); value = ''; closed = false; };
   const record=()=>{rows.push(row);physicalRows.push(recordStart);row=[];if(rows.length>1001)fail('ROW_LIMIT',physicalRow,physicalColumn);};
   for (let i = 0; i < text.length; i++) {
     const c = text[i]!;
@@ -54,7 +54,7 @@ function csv(text: string): {rows:string[][];physicalRows:number[]} {
     } else if (c === '"' && !value && !closed) quoted = true;
     else { if (closed || c === '"') syntax(); value += c; }
     // A code point occupies at most two UTF-16 units; exact counting happens once per cell.
-    if (value.length > 16384) fail('CELL_LIMIT',physicalRow,physicalColumn);
+    if (value.length > 16384) fail('CELL_LIMIT',physicalRow,row.length+1);
     if(c==='\n'||c==='\r'&&!quoted){physicalRow++;physicalColumn=1;}else physicalColumn++;
     if(finishedRecord)recordStart=physicalRow;
   }
@@ -166,6 +166,8 @@ function entities(text: string): string {
 }
 // Deliberately restricted XML grammar, with no DTD/entity resolver, recovery, or execution.
 function xml(text: string): Xml {
+  // XML 1.0 normalizes literal CR/CRLF before parsing, not character references.
+  text=text.replace(/\r\n?/g,'\n');
   text = text.replace(/^\uFEFF/, '');
   if(text.includes('\uFEFF'))fail('BOM_NOT_PREFIX');
   if(/[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]/.test(text))fail('XML_SYNTAX');

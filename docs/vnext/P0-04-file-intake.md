@@ -135,3 +135,9 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 远端 Codex 对 `004d9c7` 提出空 cols 未拒绝及字符限额按 UTF-16 单元误算两项 P2。140 tests-only RED 后要求已出现的 cols 至少含一个 col；8192 字符限额统一按 Unicode code points 计数，合法代理对计为一个码点，不是按字素簇计数。CSV 单元格完成时精确计数，循环内仅保留 16384 UTF-16 单元粗上限，避免每次追加都重新扫描；JSON、XLSX（含未引用共享字符串）使用同一精确计数。非法代理字符仍拒绝。
 
 141 parser **42/42** 覆盖空容器及 8192/8193 个码点、混合 BMP/非 BMP 边界；142 Owner **7/7** 且临时数据库清理成功，143 类型检查与 144 API build 通过。独立 Spec/Standards 窄复核无发现，无 DDL/授权/存储变化。
+
+## PR #6 第十七轮修复
+
+远端 Codex 对 `b81bd54` 提出 CSV 限额列位置及 XML 字面换行两项 P2。145 tests-only RED 后，CSV CELL_LIMIT/COLUMN_LIMIT 使用源字段序号，语法错误仍使用物理字符位置；XML 成员在分词前把字面 CR/CRLF 规范为 LF，随后解析字符引用，因此 `&#13;` 保留 CR，受保护原文件 bytes 不改写。146 parser **44/44**、147 Owner **7/7**；148 记录测试索引属性访问的类型失败，修正后 150 类型检查通过，149 API build 通过。
+
+独立 Spec 复核发现关联的错误工作簿直接写 CR 会在规范读取时丢失原值。151 RED 后，导出器在普通 XML 转义之后把 CR 写为 `&#13;`；152 parser **45/45** 覆盖真实错误工作簿 CR、CRLF 和字面转义文本的回读，153 类型检查、154 API build、155 最终 Owner **7/7** 通过且临时数据库清理成功。最终独立 Spec/Standards 窄复核无阻断；先前 Spec 发现已关闭。无 DDL/授权/存储变化。

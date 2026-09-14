@@ -7,6 +7,26 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round17: protected issue workbook preserves CR and CRLF values',()=>{
+ for(const value of ['left\rright','left\r\nright','literal&#13;_x000d_']){
+  const result=parse('code,label\n0012,"'+value+'"');assert.equal(result.structuralStatus,'PARSED');
+  result.issues.push({code:'TEST_ISSUE',row:1,column:2});
+  const report=parseBytes(issueWorkbook(result),'XLSX',['issue','row','column','originalValue'].map(code=>({code,type:'text'})));
+  assert.equal(report.structuralStatus,'PARSED');assert.equal(report.rows[0]?.['originalValue'],value);
+ }
+});
+test('PR6 round17: CSV value and column limits identify field ordinals',()=>{
+ for(const value of ['a'.repeat(8193),'😀'.repeat(8193)])for(const suffix of ['',',next','\n'])assert.deepEqual(parse('code,label\n0012,'+value+suffix).issues[0],{code:'CELL_LIMIT',row:2,column:2});
+ assert.deepEqual(parse(Array.from({length:101},(_,i)=>'field'+i).join(',')).issues[0],{code:'COLUMN_LIMIT',row:1,column:101});
+});
+test('PR6 round17: XML literal CR normalizes before references are decoded',()=>{
+ for(const [xmlValue,expected] of [['left\rright','left\nright'],['left\r\nright','left\nright'],['left&#13;right','left\rright']]){
+  const inline=parseBytes(edit('xl/worksheets/sheet1.xml','DEMO',xmlValue!),'XLSX',fields);
+  assert.equal(inline.structuralStatus,'PARSED');assert.equal(inline.rows[0]?.['label'],expected);
+  const files=Object.fromEntries(unzip(sharedFixture('unused')));files['xl/sharedStrings.xml']=files['xl/sharedStrings.xml']!.replace('<t>0012</t>','<t>'+xmlValue+'</t>');
+  const shared=parseBytes(zipText(files),'XLSX',fields);assert.equal(shared.structuralStatus,'PARSED');assert.equal(shared.rows[0]?.['code'],expected);
+ }
+});
 test('PR6 round16: cols requires at least one col',()=>{
  for(const metadata of ['<cols/>','<cols></cols>'])assert.equal(parseBytes(edit('xl/worksheets/sheet1.xml','<sheetData>',metadata+'<sheetData>'),'XLSX',fields).structuralStatus,'REJECTED');
 });
