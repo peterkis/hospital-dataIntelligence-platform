@@ -7,6 +7,13 @@ const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
+test('PR6 round25: ZIP needed versions are supported by the compression method',()=>{
+ const versioned=(source:Buffer,version:number)=>{const bytes=Buffer.from(source);let p=bytes.readUInt32LE(bytes.length-22+16);for(let i=0;i<bytes.readUInt16LE(bytes.length-22+10);i++){bytes.writeUInt16LE(version,p+6);bytes.writeUInt16LE(version,bytes.readUInt32LE(p+42)+4);p+=46+bytes.readUInt16LE(p+28)+bytes.readUInt16LE(p+30)+bytes.readUInt16LE(p+32);}return bytes;};
+ for(const version of [0,11,45,63,99])assert.equal(parseBytes(versioned(workbook,version),'XLSX',fields).structuralStatus,'REJECTED');
+ for(const version of [10,20])assert.equal(parseBytes(versioned(workbook,version),'XLSX',fields).structuralStatus,'PARSED');
+ assert.equal(parseBytes(versioned(deflatedWorksheet(Buffer.alloc(0)),10),'XLSX',fields).structuralStatus,'REJECTED');
+ assert.equal(parseBytes(versioned(deflatedWorksheet(Buffer.alloc(0)),20),'XLSX',fields).structuralStatus,'PARSED');
+});
 test('PR6 round24: row gaps identify valid declared worksheet rows',()=>{
  assert.deepEqual(parseBytes(edit('xl/worksheets/sheet1.xml','<row r="1">','<row r="5">'),'XLSX',fields).issues[0],{code:'ROW_GAP',row:5,column:0});
 });
@@ -348,6 +355,7 @@ test('AC02: hostile ZIP declared and actual expansion are bounded before row cre
  local.writeUInt32LE(0x04034b50);local.writeUInt16LE(8,8);local.writeUInt32LE(crc32(raw),14);local.writeUInt32LE(packed.length,18);local.writeUInt32LE(raw.length,22);local.writeUInt16LE(name.length,26);
  central.writeUInt32LE(0x02014b50);central.writeUInt16LE(8,10);central.writeUInt32LE(crc32(raw),16);central.writeUInt32LE(packed.length,20);central.writeUInt32LE(raw.length,24);central.writeUInt16LE(name.length,28);
  const offset=local.length+name.length+packed.length;end.writeUInt32LE(0x06054b50);end.writeUInt16LE(1,8);end.writeUInt16LE(1,10);end.writeUInt32LE(central.length+name.length,12);end.writeUInt32LE(offset,16);
+ local.writeUInt16LE(20,4);central.writeUInt16LE(20,6);
  const bomb=Buffer.concat([local,name,packed,central,name,end]);assert.equal(parseBytes(bomb,'XLSX',fields).issues[0]?.code,'ZIP_LIMIT');
 });
 test('protected issue workbook always emits original dangerous text as inline strings without formulas',()=>{

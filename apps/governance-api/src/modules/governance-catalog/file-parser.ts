@@ -118,6 +118,8 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
     const compressed = b.readUInt32LE(p + 20), size = b.readUInt32LE(p + 24);
     const nameSize = b.readUInt16LE(p + 28), extra = b.readUInt16LE(p + 30), comment = b.readUInt16LE(p + 32), local = b.readUInt32LE(p + 42);
     if ((flags & ~0x800) || ![0, 8].includes(method) || extra || comment || b.readUInt16LE(p + 34)) fail('ZIP_UNSUPPORTED');
+    const neededVersion=b.readUInt16LE(p+6);
+    if(method===0?![10,20].includes(neededVersion):neededVersion!==20)fail('ZIP_UNSUPPORTED');
     if (p + 46 + nameSize > end) fail('ZIP_FORMAT');
     const nameBytes = b.subarray(p + 46, p + 46 + nameSize), name = utf8(nameBytes);
     if (!['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/worksheets/sheet1.xml','xl/sharedStrings.xml'].includes(name) || files.has(name)) fail('ZIP_MEMBER_REJECTED');

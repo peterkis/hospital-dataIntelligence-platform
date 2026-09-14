@@ -185,3 +185,7 @@ CSV 通过同一 record 函数完成 EOF/newline 追加并检查 1000 数据行�
 新增前向迁移 **0030**，不改已安装 0029：以 CASE 限定 metadata 必须为对象，FILE 必须含精确 format/parserPolicy，METADATA_ONLY 必须含合法字符串摘要，两个分支均拒绝多余键，IS TRUE 拒绝缺字段的 NULL 放行。prefix29 不完整 FILE 升级被拒绝并保持账本及原记录。188 parser **53/53**；189/190 记录正则 match 的 TypeScript 收窄失败，显式返回拒绝后 191 类型检查、192 API build 通过。
 
 193 完整聚合通过：Vitest parser **53/53**、fresh/upgrade Owner 各 **11/11**，已知不一致前缀升级拒绝及合法原文件保留，P0-11 **10/10**、P0-03 **8/8**、当前库迁移/类型生成与核对/authority。持久库仍 OID 206108，现 **30 migrations、29 tables、0 业务实例 schema**；wrapper cleanupPassed=true，全部本票临时 receipt 已清理。独立 Spec/Standards 窄复核无阻断。本地合成与未执行容器环境等边界保持。
+
+## PR #6 第二十五轮修复
+
+远端 Codex 对 `790e305` 指出匹配但不支持的 ZIP extraction version 仍被接受。194 RED 后，stored 仅接受 10/20，deflate 仅接受 20；原 local/central 对应字段一致性检查保留。195 新用例通过，但旧 zip-bomb fixture 未写版本（0）而提前命中 ZIP_UNSUPPORTED；给该 fixture 补齐合法版本 20，保留原 ZIP_LIMIT 断言及压缩内容。199 最终 Vitest parser **54/54**；196 Vitest Owner **11/11** 且临时数据库清理成功，197 类型检查和 198 API build 通过。独立 Spec/Standards 窄复核无阻断，无 DDL/授权/存储变化。
