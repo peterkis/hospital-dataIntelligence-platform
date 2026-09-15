@@ -21,7 +21,7 @@ try {
   await migrate(owned.receipt,migrationFiles().slice(0,25));await seed(owned.receipt);before=baseline();
   const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
   try {
-   const f=await fixture(catalog);const job=await catalog.importJobCommand('maker',f.create);jobId=job.id;originalJob=await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId});
+   const f=await fixture(catalog,{businessKey:false});const job=await catalog.importJobCommand('maker',f.create);jobId=job.id;originalJob=await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId});
    originalEvidence=protectedEvidence();
   }finally{await catalog.close();}
  }

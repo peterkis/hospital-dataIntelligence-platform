@@ -95,7 +95,7 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
    return db.transaction().execute(async trx=>{
     const left=await explainIn(trx,actor,{...ReadDimensionsInput(input),runId:input.leftRunId});
     const right=await explainIn(trx,actor,{...ReadDimensionsInput(input),runId:input.rightRunId});
-    return {leftRunId:left.runId,rightRunId:right.runId,sameConclusion:JSON.stringify(left.evaluation)===JSON.stringify(right.evaluation),sameContractVersion:left.contractVersionId===right.contractVersionId,sameRuleVersion:left.ruleVersion===right.ruleVersion,sameParserPolicy:left.parserPolicy===right.parserPolicy,sameInterpretationPolicy:left.interpretationPolicy===right.interpretationPolicy,historical:true as const};
+    return {leftRunId:left.runId,rightRunId:right.runId,sameConclusion:left.evaluation.decision===right.evaluation.decision,sameEvaluation:JSON.stringify(left.evaluation)===JSON.stringify(right.evaluation),sameContractVersion:left.contractVersionId===right.contractVersionId,sameRuleVersion:left.ruleVersion===right.ruleVersion,sameParserPolicy:left.parserPolicy===right.parserPolicy,sameInterpretationPolicy:left.interpretationPolicy===right.interpretationPolicy,historical:true as const};
    });
   },
  };

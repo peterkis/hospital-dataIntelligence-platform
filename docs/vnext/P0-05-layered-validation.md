@@ -68,3 +68,9 @@ issueWorkbook 接受明确的 STRICT_V1/STRICT_V2，真实受保护 File Owner �
 0035 为 exact 契约增加显式 businessKey（1–8 个已选择字段，唯一字段名），并把配置冻结在 sourceRowSchema 的 x-businessKey。不再从已选择 ID 推断键。旧契约未声明键时保持原快照，L3 明确 NOT_EVALUATED/BUSINESS_KEY_NOT_CONFIGURED；新声明经原契约修订、审批和发布流程生效。复合键按完整文本元组比较，缺少键值为 UNKNOWN；新结果标记 DECLARED_KEY_V2。未配置键不阻止读取旧契约或关闭操作，也不被解释为已完成判重。
 
 运行解释暴露已验签的 parserPolicy 和 interpretationPolicy；比较同时返回两者的 equality 标志，避免不同 parser policy 被相同 contract/rule 标志掩盖。旧 run 的 policy 与结果不回填。新增 pure/真实 Owner 反例以及 34-prefix 升级保留验证。
+
+## PR7 第三轮修复
+
+0036 区分历史快照与新编写版本：CREATE/REVISE 命令和写 API schema 必须带业务键，新的批准/发布操作也阻断缺键候选。source draft 的导入仍保留原定义；历史读取、原请求重放和 RETIRE 不改写也不被新键门禁阻断。现有契约创建/修订表单增加显式键输入，测试 fixture 的旧前缀分支明确使用历史格式。表单完成类型/构建检查，P0-02 浏览器待验仍未关闭。
+
+sameConclusion 只比较最终 decision，sameEvaluation 另行比较完整已验签结果。人工证据要求在计算时冻结责任 Owner、材料/判断诉求、原条件 dataset/field/text/version、输入和 true/false/unknown 处置，经同一受限结果返回；不再只给不透明 requirement ID。旧运行没有这些详情时保持原内容，不按新版映射回填。

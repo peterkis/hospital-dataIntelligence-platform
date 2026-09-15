@@ -7,7 +7,8 @@ export type RuleStatus='PASS'|'FAIL'|'UNKNOWN'|'NOT_EVALUATED';
 export interface RuleResult {rule:string;layer:number;row:number;field:string;status:RuleStatus;code:string}
 export interface Period {from:string;to:string|null}
 export interface DependencyObservation {target:string;status:'NOT_READY'|'OBSERVED';scope:string;identity:string;version:string|null;periods:Period[]}
-export interface ValidationEvaluation {decision:'PASS'|'FAIL'|'BLOCKED';issues:RuleResult[];layers:Array<{layer:number;status:RuleStatus|'NOT_RUN'}>;evidenceRequirements:Array<{rule:string;requirementId:string;row:number;field:string;status:'BLOCKED_DEPENDENCY'}>;dependencies:DependencyObservation[];interpretationPolicy:typeof INTERPRETATION_POLICY;deduplicationPolicy?:'EXACT_ROW_V1'|'DECLARED_KEY_V2';duplicates?:Array<{row:number;duplicateOf:number}>}
+export interface EvidenceRequirement {rule:string;requirementId:string;row:number;field:string;status:'BLOCKED_DEPENDENCY';details?:{evidenceOwner:string;requiredEvidence:string;sourceDataset:string;sourceField:string;sourceText:string;sourceVersion:string;inputs:string[];dispositionReason:string;whenTrue:string;whenFalse:string;whenUnknown:string}}
+export interface ValidationEvaluation {decision:'PASS'|'FAIL'|'BLOCKED';issues:RuleResult[];layers:Array<{layer:number;status:RuleStatus|'NOT_RUN'}>;evidenceRequirements:EvidenceRequirement[];dependencies:DependencyObservation[];interpretationPolicy:typeof INTERPRETATION_POLICY;deduplicationPolicy?:'EXACT_ROW_V1'|'DECLARED_KEY_V2';duplicates?:Array<{row:number;duplicateOf:number}>}
 export function interpretText(type:string,value:unknown):string {
  if(typeof value!=='string'||value===''||value!==value.trim())throw new Error('TEXT_VALUE_REQUIRED');
  if(type==='integer'&&!/^-?(0|[1-9][0-9]*)$/.test(value))throw new Error('INTEGER_REQUIRED');
@@ -78,7 +79,9 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
     const rule=rules.find(r=>r.id===mapping?.id);
     if(!mapping||!rule||rule.status==='UNRESOLVED'){required='UNKNOWN';add(rule?.id??'CONDITION',2,n,f.code,'UNKNOWN','UNRESOLVED');}
     else if(mapping.handler==='MANUAL_EVIDENCE_V1'){
-     required='UNKNOWN';evidenceRequirements.push({rule:mapping.id,requirementId:mapping.requirementId,row:n,field:f.code,status:'BLOCKED_DEPENDENCY'});add(mapping.id,2,n,f.code,'NOT_EVALUATED','BLOCKED_DEPENDENCY');
+     required='UNKNOWN';
+     evidenceRequirements.push({rule:mapping.id,requirementId:mapping.requirementId,row:n,field:f.code,status:'BLOCKED_DEPENDENCY',details:{evidenceOwner:mapping.evidenceOwner,requiredEvidence:mapping.evidenceClaim,sourceDataset:mapping.dataset,sourceField:mapping.field,sourceText:mapping.text,sourceVersion:mapping.version,inputs:[...mapping.inputs],dispositionReason:mapping.dispositionReason,whenTrue:mapping.whenTrue,whenFalse:mapping.whenFalse,whenUnknown:mapping.whenUnknown}});
+     add(mapping.id,2,n,f.code,'NOT_EVALUATED','BLOCKED_DEPENDENCY');
     }else{
      const adoption=definition.codeSets.find(c=>c.field==='account_kind'&&c.status==='SYNTHETIC_ADOPTED');
      required=evaluateCondition(mapping.id,row,adoption?.codes??[]);

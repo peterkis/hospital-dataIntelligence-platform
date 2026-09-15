@@ -5569,6 +5569,7 @@
                           "templateVersion",
                           "sourceVersionId",
                           "fields",
+                          "businessKey",
                           "codeSets",
                           "rules",
                           "references"
@@ -5920,6 +5921,7 @@
                           "templateVersion",
                           "sourceVersionId",
                           "fields",
+                          "businessKey",
                           "codeSets",
                           "rules",
                           "references"

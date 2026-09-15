@@ -34,7 +34,7 @@ test('P0-05-AC-03/05: immutable runs, authorized ACK replay and deterministic bu
   const second=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID()});
   assert.notEqual(first.runId,second.runId);
   const compare=await s.catalog.compareValidationRuns('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',leftRunId:first.runId,rightRunId:second.runId});
-  assert.equal(compare.sameConclusion,true);assert.equal(first.adapterReadiness,'NOT_READY');
+  assert.equal(compare.sameConclusion,true);assert.equal(compare.sameEvaluation,true);assert.equal(first.adapterReadiness,'NOT_READY');
   assert.ok(!JSON.stringify(first).includes('0012'));
  }finally{await s.catalog.close();}
 });
@@ -49,14 +49,8 @@ test('PR7 R2: comparison exposes parser and interpretation policy equality',asyn
   assert.equal(comparison.sameParserPolicy,false);assert.equal(comparison.sameInterpretationPolicy,true);
  }finally{await s.catalog.close();}
 });
-test('PR7 R2: CORE without an ID or business-key declaration explicitly blocks L3',async()=>{
- const s=await setup(false,true);try{
-  assert.ok(s.contract.definition.fields.every(f=>f.type!=='id'));
-  const run=await s.catalog.validateRevision('maker',s.validate);
-  const details=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
-  assert.equal(details.evaluation.layers.find(l=>l.layer===3)!.status,'NOT_EVALUATED');
-  assert.ok(details.evaluation.issues.some(i=>i.code==='BUSINESS_KEY_NOT_CONFIGURED'));
- }finally{await s.catalog.close();}
+test('PR7 R3: newly authored keyless CORE definitions are rejected',async()=>{
+ await assert.rejects(setup(false,true),/BUSINESS_KEY_REQUIRED/);
 });
 test('PR7 R2: explicit non-ID key is frozen in contract schema and invalid declarations fail closed',async()=>{
  const s=await setup(true,true);try{
@@ -69,6 +63,8 @@ test('PR7 R2: explicit non-ID key is frozen in contract schema and invalid decla
   for(const businessKey of [[],['UNSELECTED'],[s.contract.definition.fields[0]!.code,s.contract.definition.fields[0]!.code],null]){
    await assert.rejects(s.catalog.contractCommand('maker',s.f.cmd('REVISE',{target:s.contract.id,expectedHead:s.f.contract.head,validFrom:s.contract.validFrom,validTo:null,definition:{...s.contract.definition,ruleVersion:'BAD_KEY',businessKey}})),/BUSINESS_KEY_INVALID/);
   }
+  const {businessKey:omitted,...legacyDefinition}=s.contract.definition;
+  await assert.rejects(s.catalog.contractCommand('maker',s.f.cmd('REVISE',{target:s.contract.id,expectedHead:s.f.contract.head,validFrom:s.contract.validFrom,validTo:null,definition:{...legacyDefinition,ruleVersion:'NO_KEY'}})),/BUSINESS_KEY_REQUIRED/);
  }finally{await s.catalog.close();}
 });
 test('PR7: fresh validation request cannot reuse an already consumed output request',async()=>{
@@ -85,12 +81,15 @@ test('PR7: fresh validation request cannot reuse an already consumed output requ
 });
 test('PR7: identical canonical rows are recorded as ignored duplicates by the validation Owner',async()=>{
  const s=await setup();try{
+  const first=await s.catalog.validateRevision('maker',s.validate);
   const file=await s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID()}},Buffer.from(s.contract.definition.fields[0]!.code+'\n0012\n0012'));
   const parsed=await s.catalog.parseFile('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
-  const run=await s.catalog.validateRevision('maker',{...s.validate,jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId});
+  const run=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId});
   assert.equal(run.decision,'BLOCKED');assert.equal(run.issueCount,0);
   const details=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
   assert.deepEqual(details.evaluation.duplicates,[{row:2,duplicateOf:1}]);
+  const comparison=await s.catalog.compareValidationRuns('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',leftRunId:first.runId,rightRunId:run.runId});
+  assert.equal(comparison.sameConclusion,true);assert.equal(comparison.sameEvaluation,false);
  }finally{await s.catalog.close();}
 });
 test('PR7: V2 rejected input exports through the real protected File Owner',async()=>{
@@ -193,7 +192,7 @@ test('finite source rule is accepted by actual contract Owner but unresolved bus
   const item=(await s.catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.id===dataset.id)!;
   const fields=item.payload.fields!.filter(f=>['account_kind','person_id'].includes(f.original.code)).map(f=>({code:f.original.code,type:f.original.type,required:f.original.required,privacy:f.original.privacy,condition:f.original.required==='C'?'EVALUATED':'ALWAYS',enumValues:f.original.code==='account_kind'?['HUMAN','SERVICE']:[]}));
   const m=conditionMappings.find(m=>m.id==='SRC-COND-061')!;
-  const definition={ruleVersion:'CONDITION_V1',templateVersion:'CONDITION_V1',sourceVersionId:s.contract.definition.sourceVersionId,fields,rules:[{id:m.id,field:m.field,text:m.text,status:'MACHINE',version:m.version}],references:item.payload.fields!.filter(f=>['account_kind','person_id'].includes(f.original.code)&&f.original.ref).map(f=>({field:f.original.code,target:f.original.ref,status:'BLOCKED_DEPENDENCY'})),codeSets:[{field:'account_kind',codeSystem:'SYNTHETIC_ACCOUNT',version:'V1',status:'SYNTHETIC_ADOPTED',codes:['HUMAN','SERVICE'],validFrom:'2026-01-01T00:00:00',validTo:null,sourceVersionId:s.contract.definition.sourceVersionId}]};
+  const definition={businessKey:['account_kind','person_id'],ruleVersion:'CONDITION_V1',templateVersion:'CONDITION_V1',sourceVersionId:s.contract.definition.sourceVersionId,fields,rules:[{id:m.id,field:m.field,text:m.text,status:'MACHINE',version:m.version}],references:item.payload.fields!.filter(f=>['account_kind','person_id'].includes(f.original.code)&&f.original.ref).map(f=>({field:f.original.code,target:f.original.ref,status:'BLOCKED_DEPENDENCY'})),codeSets:[{field:'account_kind',codeSystem:'SYNTHETIC_ACCOUNT',version:'V1',status:'SYNTHETIC_ADOPTED',codes:['HUMAN','SERVICE'],validFrom:'2026-01-01T00:00:00',validTo:null,sourceVersionId:s.contract.definition.sourceVersionId}]};
   const contract=await s.catalog.contractCommand('maker',s.f.cmd('CREATE',{datasetVersionId:dataset.versionId,profile:'CORE',validFrom:'2026-01-01T00:00:00',validTo:null,definition}));
   const validation=await s.catalog.contractCommand('maker',s.f.cmd('VALIDATE',{target:contract.id,expectedHead:contract.head}));
   assert.ok(validation.blockers.includes('REFERENCE_NOT_READY'));assert.ok(!validation.blockers.includes('UNRESOLVED_RULE'));assert.ok(!validation.blockers.includes('UNRESOLVED_REQUIRED_CONDITION'));

@@ -59,6 +59,17 @@ test('PR7 R2: a CORE contract without configured business keys cannot report L3 
  assert.equal(result.layers.find(l=>l.layer===3)!.status,'NOT_EVALUATED');
  assert.ok(result.issues.some(i=>i.code==='BUSINESS_KEY_NOT_CONFIGURED'));
 });
+test('PR7 R3: a manual-evidence result includes immutable actionable source details',()=>{
+ const m=conditionMappings.find(m=>m.id==='SRC-COND-001')!;const d=definition(m.field);
+ d.rules=[{id:m.id,field:m.field,text:m.text,status:'MANUAL_EVIDENCE',version:m.version}];
+ const result=evaluateRuleSet('ORG01',d,[{unified_credit_code:''}]);
+ const details=result.evidenceRequirements[0]?.details;
+ assert.equal(details?.evidenceOwner,'院办');
+ assert.equal(details?.sourceText,'主体持有统一社会信用代码时必填；无法确认主体性质时不得以院区代码代替。');
+ assert.equal(details?.sourceVersion,'P0_05_SOURCE_V1');
+ assert.equal(details?.whenUnknown,'BLOCK');
+ assert.ok(details?.requiredEvidence);
+});
 test('PR7 R2: composite declared keys preserve tuple boundaries and require every key value',()=>{
  const d=definition('legal_name');d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';
  d.fields.push({...d.fields[0]!,code:'institution_code'});d.businessKey=['legal_name','institution_code'];

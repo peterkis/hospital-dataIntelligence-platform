@@ -15,7 +15,7 @@ export async function validateLegacyUpgradeFence() {
   const keys=new LocalSyntheticKeyProvider();const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
   const pool=new Pool({connectionString:resolveTarget(owned.receipt)});
   try {
-   const f=await fixture(catalog);
+   const f=await fixture(catalog,{businessKey:false});
    peer(owned.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','STORE'),('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);
    for(const beforeStore of [true,false]) {
     const bytes=Buffer.from('SYNTHETIC_LEGACY_CONFLICT');const plainHash=createHash('sha256').update(bytes).digest('hex');

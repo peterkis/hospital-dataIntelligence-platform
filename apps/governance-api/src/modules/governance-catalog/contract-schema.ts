@@ -20,7 +20,8 @@ export const ContractDefinitionSchema=Type.Object({
 },{additionalProperties:false});
 const Base={scope:ContractScopeSchema,requestId:Id,reason:Type.String({pattern:'^[A-Z0-9_]{1,64}$'})};
 const Target={target:Id,expectedHead:Type.String({pattern:'^[0-9]+$'})};
-const Revision={definition:ContractDefinitionSchema,validFrom:Time,validTo:End};
+const ContractWriteDefinitionSchema=Type.Object({...ContractDefinitionSchema.properties,businessKey:Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,maxItems:8,uniqueItems:true})},{additionalProperties:false});
+const Revision={definition:ContractWriteDefinitionSchema,validFrom:Time,validTo:End};
 export const ContractCommandSchema=Type.Union([
   Type.Object({...Base,...Revision,action:Type.Literal('CREATE'),datasetVersionId:Id,profile:values('CORE','FULL')},{additionalProperties:false}),
   Type.Object({...Base,...Target,...Revision,action:Type.Literal('REVISE'),datasetVersionId:Type.Optional(Id)},{additionalProperties:false}),

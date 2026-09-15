@@ -13,7 +13,7 @@ if(process.argv.includes('--dispose')){
  dropTemporary(receipt);console.log('OWNED_P0_05_DISPOSED');process.exit(0);
 }
 const owned=createTemporary('P0-05');
-const prefix=process.argv.includes('--prefix34')?34:process.argv.includes('--prefix33')?33:30;
+const prefix=process.argv.includes('--prefix35')?35:process.argv.includes('--prefix34')?34:process.argv.includes('--prefix33')?33:30;
 try{
  let historical;
  const keys=new LocalSyntheticKeyProvider();
@@ -21,7 +21,7 @@ try{
   await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
   const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
   try{
-   const f=await fixture(catalog),field=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0].definition.fields[0].code;
+   const f=await fixture(catalog,{businessKey:false}),field=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0].definition.fields[0].code;
    for(const permission of ['STORE','READ'])peer(owned.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
    const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from(field+'\n0012'));
    historical={file,job:await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:file.job.id}),bytes:field+'\n0012'};
@@ -46,6 +46,16 @@ try{
     assert.deepEqual(await catalog.validateRevision('maker',historical.input),historical.run);
     assert.deepEqual(await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:historical.run.runId}),historical.explain);
     await assert.rejects(catalog.validateRevision('maker',{...historical.input,requestId:randomUUID()}),error=>error instanceof Error && error.message==='REQUEST_CONFLICT');
+    if(prefix===35){
+     const original=historical.job.contract;
+     const validation=await catalog.contractCommand('maker',{action:'VALIDATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'LEGACY_KEY_CHECK',target:original.id,expectedHead:original.head});
+     assert.ok(validation.blockers.includes('BUSINESS_KEY_REQUIRED'));
+     await assert.rejects(catalog.contractCommand('reviewer',{action:'APPROVE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'LEGACY_KEY_CHECK',target:original.id,expectedHead:validation.head,reviewDigest:validation.reviewDigest}),/CONTRACT_VALIDATION_BLOCKED/);
+     const impact=await catalog.contractImpact('reviewer','SYNTHETIC',original.id,'RETIRE');
+     await catalog.contractCommand('reviewer',{action:'RETIRE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'LEGACY_CLOSE',target:original.id,expectedHead:validation.head,reviewDigest:validation.reviewDigest,impactDigest:impact.impactDigest});
+     assert.deepEqual(await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:historical.run.runId}),historical.explain);
+     console.log('LEGACY_KEYLESS_PUBLICATION_BLOCKED_RETIRE_AND_HISTORY_ALLOWED');
+    }
    }
    console.log(`PREFIX_${prefix}_JOB_FILE_AND_EXISTING_RUN_PRESERVED`);
   }finally{await catalog.close();}
