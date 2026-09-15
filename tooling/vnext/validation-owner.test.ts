@@ -7,10 +7,10 @@ import {fixture} from './protected-fixture.js';
 import {conditionMappings} from '../../apps/governance-api/src/modules/governance-catalog/validation-sources.generated.js';
 const {peer,quote}=await import('./lineage.mjs');
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));assert.equal(receipt.purpose,'TEMPORARY_VALIDATION');
-async function setup(){
+async function setup(businessKey=true,textField=false){
  const provider=new LocalSyntheticKeyProvider(),catalog=await openCatalog(undefined,provider);
  try{
-  const f=await fixture(catalog),contract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0]!;
+  const f=await fixture(catalog,{businessKey,textField}),contract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0]!;
   for(const permission of ['STORE','READ'])peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
   const input:ReceiveFileInput={campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'VALIDATION_TEST',contractId:contract.id,contractVersionId:contract.versionId,profile:'CORE',input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V2'}}};
   const file=await catalog.receiveFile('maker',input,Buffer.from(contract.definition.fields[0]!.code+'\n0012'));
@@ -36,6 +36,39 @@ test('P0-05-AC-03/05: immutable runs, authorized ACK replay and deterministic bu
   const compare=await s.catalog.compareValidationRuns('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',leftRunId:first.runId,rightRunId:second.runId});
   assert.equal(compare.sameConclusion,true);assert.equal(first.adapterReadiness,'NOT_READY');
   assert.ok(!JSON.stringify(first).includes('0012'));
+ }finally{await s.catalog.close();}
+});
+test('PR7 R2: comparison exposes parser and interpretation policy equality',async()=>{
+ const s=await setup();try{
+  const first=await s.catalog.validateRevision('maker',s.validate);
+  const file=await s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID(),input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from(s.contract.definition.fields[0]!.code+'\n0012'));
+  const parsed=await s.catalog.parseFile('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
+  const second=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId});
+  const comparison=await s.catalog.compareValidationRuns('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',leftRunId:first.runId,rightRunId:second.runId});
+  assert.equal(comparison.sameContractVersion,true);assert.equal(comparison.sameRuleVersion,true);
+  assert.equal(comparison.sameParserPolicy,false);assert.equal(comparison.sameInterpretationPolicy,true);
+ }finally{await s.catalog.close();}
+});
+test('PR7 R2: CORE without an ID or business-key declaration explicitly blocks L3',async()=>{
+ const s=await setup(false,true);try{
+  assert.ok(s.contract.definition.fields.every(f=>f.type!=='id'));
+  const run=await s.catalog.validateRevision('maker',s.validate);
+  const details=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
+  assert.equal(details.evaluation.layers.find(l=>l.layer===3)!.status,'NOT_EVALUATED');
+  assert.ok(details.evaluation.issues.some(i=>i.code==='BUSINESS_KEY_NOT_CONFIGURED'));
+ }finally{await s.catalog.close();}
+});
+test('PR7 R2: explicit non-ID key is frozen in contract schema and invalid declarations fail closed',async()=>{
+ const s=await setup(true,true);try{
+  const schema=s.contract.schemas['sourceRowSchema'];
+  assert.ok(schema&&typeof schema==='object'&&'x-businessKey' in schema);
+  assert.deepEqual(schema['x-businessKey'],s.contract.definition.businessKey);
+  const run=await s.catalog.validateRevision('maker',s.validate);
+  const details=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
+  assert.equal(details.evaluation.layers.find(l=>l.layer===3)!.status,'PASS');
+  for(const businessKey of [[],['UNSELECTED'],[s.contract.definition.fields[0]!.code,s.contract.definition.fields[0]!.code],null]){
+   await assert.rejects(s.catalog.contractCommand('maker',s.f.cmd('REVISE',{target:s.contract.id,expectedHead:s.f.contract.head,validFrom:s.contract.validFrom,validTo:null,definition:{...s.contract.definition,ruleVersion:'BAD_KEY',businessKey}})),/BUSINESS_KEY_INVALID/);
+  }
  }finally{await s.catalog.close();}
 });
 test('PR7: fresh validation request cannot reuse an already consumed output request',async()=>{

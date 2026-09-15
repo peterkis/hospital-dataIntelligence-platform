@@ -10,6 +10,7 @@ export const ContractScopeSchema=values('BASELINE','SYNTHETIC');
 export const ContractFieldSchema=Type.Object({code:Type.String(),type:values('id','text','date','datetime','integer','decimal','code'),required:values('R','C','O'),privacy:values('INTERNAL','RESTRICTED','HIGH_RESTRICTED'),condition:values('ALWAYS','OPTIONAL','UNRESOLVED','MANUAL_EVIDENCE','EVALUATED'),enumValues:Type.Array(Type.String({minLength:1,maxLength:256}),{uniqueItems:true})},{additionalProperties:false});
 export const ContractDefinitionSchema=Type.Object({
   ruleVersion:Token,templateVersion:Token,sourceVersionId:Type.Union([Id,Type.Null()]),fields:Type.Array(ContractFieldSchema,{minItems:1,maxItems:100}),
+  businessKey:Type.Optional(Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,maxItems:8,uniqueItems:true})),
   codeSets:Type.Array(Type.Object({field:Type.String(),codeSystem:Token,version:Token,status:values('CANDIDATE','SYNTHETIC_ADOPTED'),codes:Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,uniqueItems:true}),validFrom:Time,validTo:End,sourceVersionId:Id},{additionalProperties:false})),
   rules:Type.Array(Type.Object({id:Token,field:Type.String(),text:Type.String({minLength:1,maxLength:2000}),status:values('UNRESOLVED','MACHINE','MANUAL_EVIDENCE'),version:Token},{additionalProperties:false}),{maxItems:100}),
   references:Type.Array(Type.Union([

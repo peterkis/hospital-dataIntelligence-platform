@@ -41,6 +41,7 @@ test('P0-05-AC-05: deterministic evaluations do not mutate canonical strings',()
 });
 test('PR7: identical rows are ignored as duplicates while changed same-key content conflicts',()=>{
  const d=definition('legal_entity_id');d.fields[0]!.type='id';d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';
+ d.businessKey=['legal_entity_id'];
  d.fields.push({...d.fields[0]!,code:'legal_name',type:'text'});
  const row={legal_entity_id:'0012',legal_name:'SYNTHETIC_NAME'};
  const identical=evaluateRuleSet('ORG01',d,[row,{legal_name:row.legal_name,legal_entity_id:row.legal_entity_id}]);
@@ -51,6 +52,20 @@ test('PR7: identical rows are ignored as duplicates while changed same-key conte
  // The first invalid occurrence still fails; its duplicate cannot erase that failure.
  const invalid=evaluateRuleSet('ORG01',d,[{...row,legal_name:''},{...row,legal_name:''}]);
  assert.ok(invalid.issues.some(i=>i.row===1&&i.code==='VALUE_REQUIRED'));
+});
+test('PR7 R2: a CORE contract without configured business keys cannot report L3 PASS',()=>{
+ const d=definition('legal_name');d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';
+ const result=evaluateRuleSet('ORG01',d,[{legal_name:'SAME'},{legal_name:'SAME'}]);
+ assert.equal(result.layers.find(l=>l.layer===3)!.status,'NOT_EVALUATED');
+ assert.ok(result.issues.some(i=>i.code==='BUSINESS_KEY_NOT_CONFIGURED'));
+});
+test('PR7 R2: composite declared keys preserve tuple boundaries and require every key value',()=>{
+ const d=definition('legal_name');d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';
+ d.fields.push({...d.fields[0]!,code:'institution_code'});d.businessKey=['legal_name','institution_code'];
+ const result=evaluateRuleSet('ORG01',d,[{legal_name:'A|B',institution_code:'C'},{legal_name:'A',institution_code:'B|C'},{legal_name:'A|B',institution_code:'C'}]);
+ assert.deepEqual(result.duplicates,[{row:3,duplicateOf:1}]);assert.equal(result.layers.find(l=>l.layer===3)!.status,'PASS');
+ const missing=evaluateRuleSet('ORG01',d,[{legal_name:'A',institution_code:''}]);
+ assert.ok(missing.issues.some(i=>i.layer===3&&i.status==='UNKNOWN'&&i.code==='BUSINESS_KEY_VALUE_REQUIRED'));
 });
 test('parsed payload schema rejects wrong source, incomplete rows, duplicate evidence and false empty success',()=>{
  const fields=[{code:'code',type:'code'}],result=parseBytes(Buffer.from('code\n0012'),'CSV',fields);

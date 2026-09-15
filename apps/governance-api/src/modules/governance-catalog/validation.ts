@@ -39,7 +39,7 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
    if(!run)throw new Error('NOT_FOUND');
    const job=(await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:input.scope,jobId:run.jobId})}::jsonb) as result`.execute(trx)).rows[0]!.result;
    const evaluation=await readEvaluation(trx,actor,input,run);
-   return {runId:run.runId,revisionId:run.revisionId,contractVersionId:run.contractVersionId,ruleVersion:run.ruleVersion,historical:true as const,isCurrentRevision:job.currentRevisionId===run.revisionId,evaluation};
+   return {runId:run.runId,revisionId:run.revisionId,contractVersionId:run.contractVersionId,ruleVersion:run.ruleVersion,parserPolicy:run.parserPolicy,interpretationPolicy:run.interpretationPolicy,historical:true as const,isCurrentRevision:job.currentRevisionId===run.revisionId,evaluation};
  };
  const explain=(actor:string,input:Static<typeof ExplainValidationSchema>)=>db.transaction().execute(trx=>explainIn(trx,actor,input));
  return {
@@ -95,7 +95,7 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
    return db.transaction().execute(async trx=>{
     const left=await explainIn(trx,actor,{...ReadDimensionsInput(input),runId:input.leftRunId});
     const right=await explainIn(trx,actor,{...ReadDimensionsInput(input),runId:input.rightRunId});
-    return {leftRunId:left.runId,rightRunId:right.runId,sameConclusion:JSON.stringify(left.evaluation)===JSON.stringify(right.evaluation),sameContractVersion:left.contractVersionId===right.contractVersionId,sameRuleVersion:left.ruleVersion===right.ruleVersion,historical:true as const};
+    return {leftRunId:left.runId,rightRunId:right.runId,sameConclusion:JSON.stringify(left.evaluation)===JSON.stringify(right.evaluation),sameContractVersion:left.contractVersionId===right.contractVersionId,sameRuleVersion:left.ruleVersion===right.ruleVersion,sameParserPolicy:left.parserPolicy===right.parserPolicy,sameInterpretationPolicy:left.interpretationPolicy===right.interpretationPolicy,historical:true as const};
    });
   },
  };

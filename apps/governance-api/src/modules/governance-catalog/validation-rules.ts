@@ -7,7 +7,7 @@ export type RuleStatus='PASS'|'FAIL'|'UNKNOWN'|'NOT_EVALUATED';
 export interface RuleResult {rule:string;layer:number;row:number;field:string;status:RuleStatus;code:string}
 export interface Period {from:string;to:string|null}
 export interface DependencyObservation {target:string;status:'NOT_READY'|'OBSERVED';scope:string;identity:string;version:string|null;periods:Period[]}
-export interface ValidationEvaluation {decision:'PASS'|'FAIL'|'BLOCKED';issues:RuleResult[];layers:Array<{layer:number;status:RuleStatus|'NOT_RUN'}>;evidenceRequirements:Array<{rule:string;requirementId:string;row:number;field:string;status:'BLOCKED_DEPENDENCY'}>;dependencies:DependencyObservation[];interpretationPolicy:typeof INTERPRETATION_POLICY;deduplicationPolicy?:'EXACT_ROW_V1';duplicates?:Array<{row:number;duplicateOf:number}>}
+export interface ValidationEvaluation {decision:'PASS'|'FAIL'|'BLOCKED';issues:RuleResult[];layers:Array<{layer:number;status:RuleStatus|'NOT_RUN'}>;evidenceRequirements:Array<{rule:string;requirementId:string;row:number;field:string;status:'BLOCKED_DEPENDENCY'}>;dependencies:DependencyObservation[];interpretationPolicy:typeof INTERPRETATION_POLICY;deduplicationPolicy?:'EXACT_ROW_V1'|'DECLARED_KEY_V2';duplicates?:Array<{row:number;duplicateOf:number}>}
 export function interpretText(type:string,value:unknown):string {
  if(typeof value!=='string'||value===''||value!==value.trim())throw new Error('TEXT_VALUE_REQUIRED');
  if(type==='integer'&&!/^-?(0|[1-9][0-9]*)$/.test(value))throw new Error('INTEGER_REQUIRED');
@@ -53,19 +53,21 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
  const add=(rule:string,layer:number,row:number,field:string,status:RuleStatus,code:string)=>{
   if(issues.length>=10000)throw new Error('VALIDATION_RESULT_LIMIT');issues.push({rule,layer,row,field,status,code});
  };
- const primary=definition.fields.find(f=>f.type==='id'&&!sourceFieldLimits[dataset]?.[f.code]?.reference);
+ const businessKey=definition.businessKey;
+ const configured=Array.isArray(businessKey)&&businessKey.length>0&&businessKey.length<=8&&new Set(businessKey).size===businessKey.length&&businessKey.every(key=>definition.fields.some(f=>f.code===key));
+ if(!configured)add('BUSINESS_KEY',3,0,'','NOT_EVALUATED','BUSINESS_KEY_NOT_CONFIGURED');
  const keys=new Map<string,{row:number;content:string}>();
  const duplicates:Array<{row:number;duplicateOf:number}>=[];
  for(const [index,row] of rows.entries()){
   const n=index+1;
   if(Object.keys(row).length!==definition.fields.length||Object.keys(row).some(k=>!definition.fields.some(f=>f.code===k)))add('SCHEMA',1,n,'','FAIL','FIELD_SET_MISMATCH');
-  if(primary&&row[primary.code]){
-   const key=row[primary.code]!,content=JSON.stringify(Object.keys(row).sort().map(field=>[field,row[field]]));
+  if(configured&&businessKey.every(field=>typeof row[field]==='string'&&row[field]!=='')){
+   const key=JSON.stringify(businessKey.map(field=>row[field])),content=JSON.stringify(Object.keys(row).sort().map(field=>[field,row[field]]));
    const previous=keys.get(key);
    if(previous?.content===content){duplicates.push({row:n,duplicateOf:previous.row});continue;}
-   if(previous)add('UNIQUE_SOURCE_ID',3,n,primary.code,'FAIL','CONFLICTING_SOURCE_ID');
+   if(previous)add('BUSINESS_KEY',3,n,businessKey[0]!,'FAIL','CONFLICTING_SOURCE_ID');
    else keys.set(key,{row:n,content});
-  }
+  }else if(configured)add('BUSINESS_KEY',3,n,businessKey.find(field=>!row[field])??'','UNKNOWN','BUSINESS_KEY_VALUE_REQUIRED');
   for(const f of definition.fields){
    const value=row[f.code];
    if(typeof value!=='string'){add('TYPE',2,n,f.code,'FAIL','TEXT_VALUE_REQUIRED');continue;}
@@ -120,5 +122,5 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
   return {layer,status};
  });
  // Field checks cannot make the missing domain Owner ready.
- return {decision:issues.some(i=>i.status==='FAIL')?'FAIL':'BLOCKED',issues,layers,evidenceRequirements,dependencies,interpretationPolicy:INTERPRETATION_POLICY,deduplicationPolicy:'EXACT_ROW_V1',duplicates};
+ return {decision:issues.some(i=>i.status==='FAIL')?'FAIL':'BLOCKED',issues,layers,evidenceRequirements,dependencies,interpretationPolicy:INTERPRETATION_POLICY,deduplicationPolicy:'DECLARED_KEY_V2',duplicates};
 }

@@ -1490,6 +1490,7 @@ export interface operations {
                                     condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                                     enumValues: string[];
                                 }[];
+                                businessKey?: string[];
                                 codeSets: {
                                     field: string;
                                     codeSystem: string;
@@ -1671,6 +1672,7 @@ export interface operations {
                                     condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                                     enumValues: string[];
                                 }[];
+                                businessKey?: string[];
                                 codeSets: {
                                     field: string;
                                     codeSystem: string;
@@ -1853,6 +1855,7 @@ export interface operations {
                                     condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                                     enumValues: string[];
                                 }[];
+                                businessKey?: string[];
                                 codeSets: {
                                     field: string;
                                     codeSystem: string;
@@ -2010,6 +2013,7 @@ export interface operations {
                             condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                             enumValues: string[];
                         }[];
+                        businessKey?: string[];
                         codeSets: {
                             field: string;
                             codeSystem: string;
@@ -2079,6 +2083,7 @@ export interface operations {
                             condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                             enumValues: string[];
                         }[];
+                        businessKey?: string[];
                         codeSets: {
                             field: string;
                             codeSystem: string;

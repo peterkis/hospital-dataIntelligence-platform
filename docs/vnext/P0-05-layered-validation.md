@@ -62,3 +62,9 @@ typed 引用核对目标类型、scope、stable identity、版本及完整期间
 新 validation request 需要未使用的 outputRequestId；0034 在原授权锁内、计算和存储前检查同一 underlying identity 的请求占用，返回 REQUEST_CONFLICT。相同 validation request 的 ACK replay 仍返回原运行。0031–0033 已安装文件未改写；33-prefix 升级测试保留旧 run、解释和重放。
 
 issueWorkbook 接受明确的 STRICT_V1/STRICT_V2，真实受保护 File Owner 验证 V2 结构拒绝后仍可导出问题工作簿；其他格式政策仍拒绝。
+
+## PR7 第二轮修复
+
+0035 为 exact 契约增加显式 businessKey（1–8 个已选择字段，唯一字段名），并把配置冻结在 sourceRowSchema 的 x-businessKey。不再从已选择 ID 推断键。旧契约未声明键时保持原快照，L3 明确 NOT_EVALUATED/BUSINESS_KEY_NOT_CONFIGURED；新声明经原契约修订、审批和发布流程生效。复合键按完整文本元组比较，缺少键值为 UNKNOWN；新结果标记 DECLARED_KEY_V2。未配置键不阻止读取旧契约或关闭操作，也不被解释为已完成判重。
+
+运行解释暴露已验签的 parserPolicy 和 interpretationPolicy；比较同时返回两者的 equality 标志，避免不同 parser policy 被相同 contract/rule 标志掩盖。旧 run 的 policy 与结果不回填。新增 pure/真实 Owner 反例以及 34-prefix 升级保留验证。

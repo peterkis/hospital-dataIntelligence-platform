@@ -3932,6 +3932,17 @@
                                 "minItems": 1,
                                 "maxItems": 100
                               },
+                              "businessKey": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "minItems": 1,
+                                "maxItems": 8,
+                                "uniqueItems": true
+                              },
                               "codeSets": {
                                 "type": "array",
                                 "items": {
@@ -4523,6 +4534,17 @@
                                 },
                                 "minItems": 1,
                                 "maxItems": 100
+                              },
+                              "businessKey": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "minItems": 1,
+                                "maxItems": 8,
+                                "uniqueItems": true
                               },
                               "codeSets": {
                                 "type": "array",
@@ -5125,6 +5147,17 @@
                                 "minItems": 1,
                                 "maxItems": 100
                               },
+                              "businessKey": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "minItems": 1,
+                                "maxItems": 8,
+                                "uniqueItems": true
+                              },
                               "codeSets": {
                                 "type": "array",
                                 "items": {
@@ -5625,6 +5658,17 @@
                             "minItems": 1,
                             "maxItems": 100
                           },
+                          "businessKey": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true
+                          },
                           "codeSets": {
                             "type": "array",
                             "items": {
@@ -5964,6 +6008,17 @@
                             },
                             "minItems": 1,
                             "maxItems": 100
+                          },
+                          "businessKey": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true
                           },
                           "codeSets": {
                             "type": "array",
