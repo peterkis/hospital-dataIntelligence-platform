@@ -52,3 +52,13 @@ typed 引用核对目标类型、scope、stable identity、版本及完整期间
 `vnext:p0-05:validate` 顺序运行来源、parser、规则、真实 fresh/30-prefix upgrade、P0-04/11/03/02 回归、类型及 API build；任一步非零整体失败。它不迁移当前持久库。最终安装单独经 wrapper 前向迁移、types verify、authority，并保存回执。
 
 历史失败如实保留：01 为日期语义实测 RED；04 为新模块尚不存在的入口 RED；06/08 为临时库任务白名单设施失败（08 的 receipt-owned 空库由 10 精确清理）；11 为内部 SQL 授权调用缺陷；13 为 fixture stale head/非法过期时间；15 为 decimal 源精度 RED；16 为无效 weight 样本；19 为 fixture 漏声明 account_kind 源引用。它们不冒充同一种领域 RED。最终门禁结论以 handoff 索引为准，不根据日志文件名推断 PASS。
+
+## PR7 第一轮修复
+
+远端 Codex 对初始 head `5b5d7b3` 提出三项 P2，分别为重复行、复用结果 request 和 V2 报表接线。`pr7-r1-*-red.log` 保存纯规则/导出及真实 Owner 反例。
+
+按照 ADR0011，同键完整内容相同的行记录为 duplicates 并忽略后续处理；不同内容仍为 CONFLICTING_SOURCE_ID，首行已有错误不会被其重复行抵消。新的受限结果显式标记 EXACT_ROW_V1；历史结果不补写 duplicates 或政策版本，原 HMAC/解释保留。
+
+新 validation request 需要未使用的 outputRequestId；0034 在原授权锁内、计算和存储前检查同一 underlying identity 的请求占用，返回 REQUEST_CONFLICT。相同 validation request 的 ACK replay 仍返回原运行。0031–0033 已安装文件未改写；33-prefix 升级测试保留旧 run、解释和重放。
+
+issueWorkbook 接受明确的 STRICT_V1/STRICT_V2，真实受保护 File Owner 验证 V2 结构拒绝后仍可导出问题工作簿；其他格式政策仍拒绝。

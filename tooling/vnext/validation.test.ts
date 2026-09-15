@@ -39,6 +39,19 @@ test('P0-05-AC-05: deterministic evaluations do not mutate canonical strings',()
  const rows=[{legal_name:'0012'}],before=JSON.stringify(rows);
  assert.deepEqual(evaluateRuleSet('ORG01',d,rows),evaluateRuleSet('ORG01',d,rows));assert.equal(JSON.stringify(rows),before);
 });
+test('PR7: identical rows are ignored as duplicates while changed same-key content conflicts',()=>{
+ const d=definition('legal_entity_id');d.fields[0]!.type='id';d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';
+ d.fields.push({...d.fields[0]!,code:'legal_name',type:'text'});
+ const row={legal_entity_id:'0012',legal_name:'SYNTHETIC_NAME'};
+ const identical=evaluateRuleSet('ORG01',d,[row,{legal_name:row.legal_name,legal_entity_id:row.legal_entity_id}]);
+ assert.ok(!identical.issues.some(i=>i.status==='FAIL'));
+ assert.deepEqual(identical.duplicates,[{row:2,duplicateOf:1}]);
+ const conflict=evaluateRuleSet('ORG01',d,[row,{...row,legal_name:'DIFFERENT'}]);
+ assert.ok(conflict.issues.some(i=>i.row===2&&i.code==='CONFLICTING_SOURCE_ID'&&i.status==='FAIL'));
+ // The first invalid occurrence still fails; its duplicate cannot erase that failure.
+ const invalid=evaluateRuleSet('ORG01',d,[{...row,legal_name:''},{...row,legal_name:''}]);
+ assert.ok(invalid.issues.some(i=>i.row===1&&i.code==='VALUE_REQUIRED'));
+});
 test('parsed payload schema rejects wrong source, incomplete rows, duplicate evidence and false empty success',()=>{
  const fields=[{code:'code',type:'code'}],result=parseBytes(Buffer.from('code\n0012'),'CSV',fields);
  const expected={sourceArtifactId:'source',policy:'STRICT_V1' as const,format:'CSV',status:'PARSED'};

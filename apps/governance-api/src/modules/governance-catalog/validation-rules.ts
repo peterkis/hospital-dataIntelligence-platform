@@ -7,7 +7,7 @@ export type RuleStatus='PASS'|'FAIL'|'UNKNOWN'|'NOT_EVALUATED';
 export interface RuleResult {rule:string;layer:number;row:number;field:string;status:RuleStatus;code:string}
 export interface Period {from:string;to:string|null}
 export interface DependencyObservation {target:string;status:'NOT_READY'|'OBSERVED';scope:string;identity:string;version:string|null;periods:Period[]}
-export interface ValidationEvaluation {decision:'PASS'|'FAIL'|'BLOCKED';issues:RuleResult[];layers:Array<{layer:number;status:RuleStatus|'NOT_RUN'}>;evidenceRequirements:Array<{rule:string;requirementId:string;row:number;field:string;status:'BLOCKED_DEPENDENCY'}>;dependencies:DependencyObservation[];interpretationPolicy:typeof INTERPRETATION_POLICY}
+export interface ValidationEvaluation {decision:'PASS'|'FAIL'|'BLOCKED';issues:RuleResult[];layers:Array<{layer:number;status:RuleStatus|'NOT_RUN'}>;evidenceRequirements:Array<{rule:string;requirementId:string;row:number;field:string;status:'BLOCKED_DEPENDENCY'}>;dependencies:DependencyObservation[];interpretationPolicy:typeof INTERPRETATION_POLICY;deduplicationPolicy?:'EXACT_ROW_V1';duplicates?:Array<{row:number;duplicateOf:number}>}
 export function interpretText(type:string,value:unknown):string {
  if(typeof value!=='string'||value===''||value!==value.trim())throw new Error('TEXT_VALUE_REQUIRED');
  if(type==='integer'&&!/^-?(0|[1-9][0-9]*)$/.test(value))throw new Error('INTEGER_REQUIRED');
@@ -54,10 +54,18 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
   if(issues.length>=10000)throw new Error('VALIDATION_RESULT_LIMIT');issues.push({rule,layer,row,field,status,code});
  };
  const primary=definition.fields.find(f=>f.type==='id'&&!sourceFieldLimits[dataset]?.[f.code]?.reference);
- const keys=new Map<string,number>();
+ const keys=new Map<string,{row:number;content:string}>();
+ const duplicates:Array<{row:number;duplicateOf:number}>=[];
  for(const [index,row] of rows.entries()){
   const n=index+1;
   if(Object.keys(row).length!==definition.fields.length||Object.keys(row).some(k=>!definition.fields.some(f=>f.code===k)))add('SCHEMA',1,n,'','FAIL','FIELD_SET_MISMATCH');
+  if(primary&&row[primary.code]){
+   const key=row[primary.code]!,content=JSON.stringify(Object.keys(row).sort().map(field=>[field,row[field]]));
+   const previous=keys.get(key);
+   if(previous?.content===content){duplicates.push({row:n,duplicateOf:previous.row});continue;}
+   if(previous)add('UNIQUE_SOURCE_ID',3,n,primary.code,'FAIL','CONFLICTING_SOURCE_ID');
+   else keys.set(key,{row:n,content});
+  }
   for(const f of definition.fields){
    const value=row[f.code];
    if(typeof value!=='string'){add('TYPE',2,n,f.code,'FAIL','TEXT_VALUE_REQUIRED');continue;}
@@ -88,9 +96,6 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
    if(dataset==='ORG20'&&f.code==='weight'&&(value.startsWith('-')||!/^(0(?:\.[0-9]+)?|1(?:\.0+)?)$/.test(value)))add('WEIGHT_RANGE',2,n,f.code,'FAIL','WEIGHT_OUT_OF_RANGE');
    if(f.enumValues.length&&!f.enumValues.includes(value))add('ENUM',2,n,f.code,'FAIL','ENUM_VALUE_INVALID');
   }
-  if(primary&&row[primary.code]){
-   const key=row[primary.code]!;if(keys.has(key))add('UNIQUE_SOURCE_ID',3,n,primary.code,'FAIL','DUPLICATE_SOURCE_ID');else keys.set(key,n);
-  }
   if(definition.fields.some(f=>f.code==='valid_from')&&definition.fields.some(f=>f.code==='valid_to')){
    try{segmentCoverage({from:row['valid_from']!,to:row['valid_to']===''?null:row['valid_to']!},[]);}catch{add('PERIOD',5,n,'valid_to','FAIL','INVALID_PERIOD');}
   }
@@ -115,5 +120,5 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
   return {layer,status};
  });
  // Field checks cannot make the missing domain Owner ready.
- return {decision:issues.some(i=>i.status==='FAIL')?'FAIL':'BLOCKED',issues,layers,evidenceRequirements,dependencies,interpretationPolicy:INTERPRETATION_POLICY};
+ return {decision:issues.some(i=>i.status==='FAIL')?'FAIL':'BLOCKED',issues,layers,evidenceRequirements,dependencies,interpretationPolicy:INTERPRETATION_POLICY,deduplicationPolicy:'EXACT_ROW_V1',duplicates};
 }

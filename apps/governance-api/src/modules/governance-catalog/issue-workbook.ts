@@ -27,6 +27,6 @@ export function textWorkbook(rows:string[][]):Buffer {
   });
 }
 export function issueWorkbook(result:ParserResult):Buffer {
-  if(result.policy!=='STRICT_V1'||!Array.isArray(result.issues)||!Array.isArray(result.cells)||result.issues.length>1000||result.cells.length>100000)throw new Error('PARSER_RESULT_REQUIRED');
+  if(!['STRICT_V1','STRICT_V2'].includes(result.policy)||!Array.isArray(result.issues)||!Array.isArray(result.cells)||result.issues.length>1000||result.cells.length>100000)throw new Error('PARSER_RESULT_REQUIRED');
   return textWorkbook([['issue','row','column','originalValue'],...result.issues.map(issue=>[issue.code,String(issue.row),String(issue.column),result.cells.find(c=>c.row===issue.row&&c.column===issue.column)?.value??''])]);
 }

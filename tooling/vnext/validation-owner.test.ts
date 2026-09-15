@@ -38,6 +38,39 @@ test('P0-05-AC-03/05: immutable runs, authorized ACK replay and deterministic bu
   assert.ok(!JSON.stringify(first).includes('0012'));
  }finally{await s.catalog.close();}
 });
+test('PR7: fresh validation request cannot reuse an already consumed output request',async()=>{
+ const s=await setup();try{
+  const original=await s.catalog.validateRevision('maker',s.validate);
+  const counts=()=>peer(receipt.name,'SELECT jsonb_build_array((SELECT count(*) FROM governance_catalog.validation_run),(SELECT count(*) FROM governance_catalog.protected_artifact))::text;');
+  const before=counts();
+  await assert.rejects(s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID()}),error=>error instanceof Error && error.message==='REQUEST_CONFLICT');
+  assert.equal(counts(),before);
+  assert.deepEqual(await s.catalog.validateRevision('maker',s.validate),original);
+  const next=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID()});
+  assert.notEqual(next.resultArtifactId,original.resultArtifactId);
+ }finally{await s.catalog.close();}
+});
+test('PR7: identical canonical rows are recorded as ignored duplicates by the validation Owner',async()=>{
+ const s=await setup();try{
+  const file=await s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID()}},Buffer.from(s.contract.definition.fields[0]!.code+'\n0012\n0012'));
+  const parsed=await s.catalog.parseFile('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
+  const run=await s.catalog.validateRevision('maker',{...s.validate,jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId});
+  assert.equal(run.decision,'BLOCKED');assert.equal(run.issueCount,0);
+  const details=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
+  assert.deepEqual(details.evaluation.duplicates,[{row:2,duplicateOf:1}]);
+ }finally{await s.catalog.close();}
+});
+test('PR7: V2 rejected input exports through the real protected File Owner',async()=>{
+ const s=await setup();try{
+  const file=await s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID()}},Buffer.from(s.contract.definition.fields[0]!.code+'\n INVALID'));
+  const parsed=await s.catalog.parseFile('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
+  assert.equal(parsed.structuralStatus,'REJECTED');
+  const report=await s.catalog.exportIssueWorkbook('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId});
+  assert.equal(report.status,'QUARANTINED');
+  const bytes=await s.catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:report.artifactId});
+  assert.equal(Buffer.from(bytes).readUInt32LE(0),0x04034b50);
+ }finally{await s.catalog.close();}
+});
 test('P0-05-AC-03: publishing a new rule version preserves old run and requires a new frozen job',async()=>{
  const s=await setup();try{
   const run=await s.catalog.validateRevision('maker',s.validate);

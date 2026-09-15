@@ -13,17 +13,25 @@ if(process.argv.includes('--dispose')){
  dropTemporary(receipt);console.log('OWNED_P0_05_DISPOSED');process.exit(0);
 }
 const owned=createTemporary('P0-05');
+const prefix=process.argv.includes('--prefix33')?33:30;
 try{
  let historical;
  const keys=new LocalSyntheticKeyProvider();
  if(process.argv.includes('--upgrade')){
-  await migrate(owned.receipt,migrationFiles().slice(0,30));await seed(owned.receipt);
+  await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
   const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
   try{
    const f=await fixture(catalog),field=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0].definition.fields[0].code;
    for(const permission of ['STORE','READ'])peer(owned.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
    const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from(field+'\n0012'));
    historical={file,job:await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:file.job.id}),bytes:field+'\n0012'};
+   if(prefix===33){
+    const parse={scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId};
+    const parsed=await catalog.parseFile('maker',parse);
+    historical.input={...parse,requestId:randomUUID(),outputRequestId:randomUUID(),artifactId:parsed.artifact.artifactId};
+    historical.run=await catalog.validateRevision('maker',historical.input);
+    historical.explain=await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:historical.run.runId});
+   }
   }finally{await catalog.close();}
  }
  await migrate(owned.receipt);await seed(owned.receipt);
@@ -33,8 +41,13 @@ try{
    assert.deepEqual(await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:historical.file.job.id}),historical.job);
    const bytes=await catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:historical.file.artifact.artifactId});
    assert.equal(Buffer.from(bytes).toString(),historical.bytes);
-   assert.equal(peer(owned.receipt.name,'SELECT count(*) FROM governance_catalog.parse_provenance;'),'0');
-   console.log('PREFIX_30_JOB_FILE_PRESERVED_NO_RETROACTIVE_PROVENANCE');
+   if(prefix===30)assert.equal(peer(owned.receipt.name,'SELECT count(*) FROM governance_catalog.parse_provenance;'),'0');
+   if(historical.run){
+    assert.deepEqual(await catalog.validateRevision('maker',historical.input),historical.run);
+    assert.deepEqual(await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:historical.run.runId}),historical.explain);
+    await assert.rejects(catalog.validateRevision('maker',{...historical.input,requestId:randomUUID()}),error=>error instanceof Error && error.message==='REQUEST_CONFLICT');
+   }
+   console.log(`PREFIX_${prefix}_JOB_FILE_AND_EXISTING_RUN_PRESERVED`);
   }finally{await catalog.close();}
  }
  const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.validation.config.ts','tooling/vnext/validation-owner.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-05'},stdio:'inherit',windowsHide:true});
@@ -46,5 +59,5 @@ try{
   }
  }
  const observation=await inspect(owned.receipt);
- console.log(JSON.stringify({gate:'P0-05',mode:historical?'PREFIX_30':'FRESH',exit:run.status,migrations:observation.ledger.length,tables:observation.tables.length,receipt:owned.receiptPath}));
+ console.log(JSON.stringify({gate:'P0-05',mode:historical?`PREFIX_${prefix}`:'FRESH',exit:run.status,migrations:observation.ledger.length,tables:observation.tables.length,receipt:owned.receiptPath}));
 }finally{dropTemporary(owned.receipt);}

@@ -6,6 +6,16 @@ import { textWorkbook, zipText, issueWorkbook } from '../../apps/governance-api/
 const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
+test('PR7: issue workbooks accept both explicit parser policies including V2 rejected input',()=>{
+ for(const policy of ['STRICT_V1','STRICT_V2'] as const){
+  const result=parseBytes(Buffer.from('code,label\n0012, INVALID'),'CSV',fields,policy);
+  assert.equal(result.structuralStatus,'REJECTED');
+  const report=issueWorkbook(result);
+  assert.equal(report.readUInt32LE(0),0x04034b50);
+  assert.ok(unzip(report).get('xl/worksheets/sheet1.xml')!.includes(result.issues[0]!.code));
+  assert.equal(issueWorkbook(parseBytes(Buffer.from('code,label\n0012,VALID'),'CSV',fields,policy)).readUInt32LE(0),0x04034b50);
+ }
+});
 test('P0-05: explicit V2 defers empty datetime requiredness, V1 remains immutable',()=>{
  const fs=[{code:'code',type:'code'},{code:'end',type:'datetime'}];
  const inputs=[['CSV',Buffer.from('code,end\n0012,')],['JSON',Buffer.from('[{"code":"0012","end":""}]')],['XLSX',textWorkbook([['code','end'],['0012','']])]] as const;
