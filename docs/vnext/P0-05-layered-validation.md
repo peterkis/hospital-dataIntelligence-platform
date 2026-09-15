@@ -78,3 +78,7 @@ sameConclusion 只比较最终 decision，sameEvaluation 另行比较完整已�
 ## PR7 第四轮边界复核
 
 审阅提出“8193 字符被 parser 接受却被 provenance 拒绝”。在被审阅的 38f8b5d 上未复现该前提：parser 使用 8192 Unicode 码点上限，当前 TypeBox maxLength 使用字素簇计数；parser 接受的码点数不超过此簇数上限。新增三格式边界矩阵覆盖 8192/8193 ASCII、8192/8193 补充平面字符、8191 ASCII 加一个补充平面字符及组合字符。8193 码点均为 CELL_LIMIT，允许的长值能通过 provenance 并在 L2 报 VALUE_TOO_LONG；真实 Owner 亦产生不可变 FAIL run。保留该回归证据，不放宽固定解析政策。名称含 red 的本轮首测日志实际通过，不能记为 RED。
+
+## PR7 第五轮修复
+
+0037 在 validation_prior 的原授权锁内重查当前调用者、精确 dataset/campus/purpose 的独立 STORE 授权，覆盖新请求及 ACK replay；历史解释/比较仍只要求其原本的读取权限。引用校验接收明确的 expected version，GOV09 接线使用契约固定 parameterVersionId；非空错误版本同样拒绝，无固定版本不能解释为最新版本通过。

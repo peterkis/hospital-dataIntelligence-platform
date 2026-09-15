@@ -26,14 +26,26 @@ test('P0-05-AC-06: every scoped source is accounted for and all 119 outside sour
 });
 test('P0-05-AC-04: matching UUID cannot bypass typed target, scope, version or full period',()=>{
  const window={from:'2026-01-01T00:00:00',to:'2026-02-01T00:00:00'};
- const expected={target:'PER01.person_id',scope:'SYNTHETIC',identity:'00000000-0000-0000-0000-000000000001',window};
+ const expected={target:'PER01.person_id',scope:'SYNTHETIC',identity:'00000000-0000-0000-0000-000000000001',version:'1',window};
  const observation={...expected,status:'OBSERVED' as const,version:'1',periods:[window]};
  assert.equal(checkTypedReference(expected,observation),'PASS');
  assert.equal(checkTypedReference(expected,{...observation,target:'ORG01.legal_entity_id'}),'FAIL');
  assert.equal(checkTypedReference(expected,{...observation,scope:'BASELINE'}),'FAIL');
  assert.equal(checkTypedReference(expected,{...observation,version:null}),'FAIL');
+ assert.equal(checkTypedReference(expected,{...observation,version:'2'}),'FAIL');
+ assert.equal(checkTypedReference({...expected,version:null},observation),'NOT_EVALUATED');
  assert.equal(checkTypedReference(expected,{...observation,periods:[{...window,to:'2026-01-31T23:59:59.999999'}]}),'FAIL');
  assert.equal(checkTypedReference(expected,{...observation,status:'NOT_READY'}),'NOT_EVALUATED');
+});
+test('PR7 R5: non-null observed versions must match the pinned reference version',()=>{
+ const window={from:'2026-01-01T00:00:00',to:null};
+ const expected={target:'GOV09.config_id',scope:'SYNTHETIC',identity:'PARAMETER_ID',version:'PINNED_VERSION',window};
+ const observation={target:expected.target,scope:expected.scope,identity:expected.identity,status:'OBSERVED' as const,version:'OTHER_VERSION',periods:[window]};
+ assert.equal(checkTypedReference(expected,observation),'FAIL');
+ const d=definition('rule_ref');d.fields[0]!.type='id';d.fields[0]!.required='O';d.fields[0]!.condition='OPTIONAL';d.businessKey=['rule_ref'];
+ d.references=[{field:'rule_ref',target:'GOV09.config_id',status:'DECLARED_PARAMETER',parameterVersionId:'PINNED_VERSION',parameterDigest:'a'.repeat(64)}];
+ assert.ok(evaluateRuleSet('ORG20',d,[{rule_ref:'PARAMETER_ID'}],[observation],window).issues.some(i=>i.layer===4&&i.status==='FAIL'));
+ assert.equal(checkTypedReference(expected,{...observation,version:'PINNED_VERSION'}),'PASS');
 });
 test('P0-05-AC-05: deterministic evaluations do not mutate canonical strings',()=>{
  const d=definition('legal_name');d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';

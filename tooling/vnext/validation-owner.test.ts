@@ -156,6 +156,18 @@ test('current authorization denies replay, explanations and cross-campus reads',
   await assert.rejects(s.catalog.validateRevision('maker',s.validate),/ACCESS_DENIED/);
  }finally{await s.catalog.close();}
 });
+test('PR7 R5: revoked STORE denies validation replay but preserves authorized historical reads',async()=>{
+ const s=await setup();try{
+  const run=await s.catalog.validateRevision('maker',s.validate);
+  const query={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,runId:run.runId};
+  const before=await s.catalog.explainIssue('maker',query);
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(s.f.dataset.id)}::uuid AND permission='STORE';`);
+  await assert.rejects(s.catalog.validateRevision('maker',s.validate),/ACCESS_DENIED/);
+  await assert.rejects(s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID()}),/ACCESS_DENIED/);
+  assert.deepEqual(await s.catalog.explainIssue('maker',query),before);
+  assert.equal((await s.catalog.compareValidationRuns('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',leftRunId:run.runId,rightRunId:run.runId})).sameConclusion,true);
+ }finally{await s.catalog.close();}
+});
 test('audit failure rolls back run, result artifact and replay outcome in one root',async()=>{
  const s=await setup();try{
   const counts=()=>peer(receipt.name,'SELECT jsonb_build_array((SELECT count(*) FROM governance_catalog.validation_run),(SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM vnext_control.outcome))::text;');

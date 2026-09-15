@@ -41,9 +41,11 @@ export function segmentCoverage(window:Period,spans:readonly Period[]):Array<Per
  }
  return result;
 }
-export function checkTypedReference(expected:{target:string;scope:string;identity:string;window:Period},observation:DependencyObservation):RuleStatus {
+export function checkTypedReference(expected:{target:string;scope:string;identity:string;version:string|null;window:Period},observation:DependencyObservation):RuleStatus {
  if(observation.status==='NOT_READY')return 'NOT_EVALUATED';
  if(observation.target!==expected.target||observation.scope!==expected.scope||observation.identity!==expected.identity||!observation.version)return 'FAIL';
+ if(!expected.version)return 'NOT_EVALUATED';
+ if(observation.version!==expected.version)return 'FAIL';
  return segmentCoverage(expected.window,observation.periods).every(p=>p.covered)?'PASS':'FAIL';
 }
 /** Internal deterministic seam. Production dependency observations are assembled by the Owner. */
@@ -112,8 +114,8 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
    else if(!window)add('REFERENCE',4,n,ref.field,'UNKNOWN','REFERENCE_WINDOW_REQUIRED');
    else {
     let status:RuleStatus;
-    try{status=checkTypedReference({target:ref.target,scope:'SYNTHETIC',identity:row[ref.field]!,window},observation);}catch{status='FAIL';}
-    add('REFERENCE',4,n,ref.field,status,status==='PASS'?'REFERENCE_VALID':'TYPED_REFERENCE_INVALID');
+    try{status=checkTypedReference({target:ref.target,scope:'SYNTHETIC',identity:row[ref.field]!,version:ref.status==='DECLARED_PARAMETER'?ref.parameterVersionId:null,window},observation);}catch{status='FAIL';}
+    add('REFERENCE',4,n,ref.field,status,status==='PASS'?'REFERENCE_VALID':status==='NOT_EVALUATED'?'BLOCKED_DEPENDENCY':'TYPED_REFERENCE_INVALID');
    }
   }
  }
