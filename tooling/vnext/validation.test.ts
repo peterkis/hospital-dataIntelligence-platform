@@ -5,6 +5,7 @@ import {conditionMappings} from '../../apps/governance-api/src/modules/governanc
 import type {ImportContractDefinition} from '../../apps/governance-api/src/modules/governance-catalog/contract-schema.js';
 import {verifyParsedPayload} from '../../apps/governance-api/src/modules/governance-catalog/parse-provenance.js';
 import {parseBytes} from '../../apps/governance-api/src/modules/governance-catalog/file-parser.js';
+import {textWorkbook} from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.js';
 import {readFileSync} from 'node:fs';
 const definition=(field:string):ImportContractDefinition=>({ruleVersion:'TEST_V1',templateVersion:'TEST_V1',sourceVersionId:null,fields:[{code:field,type:'text',required:'C',privacy:'RESTRICTED',condition:'MANUAL_EVIDENCE',enumValues:[]}],rules:[],references:[],codeSets:[]});
 for(const mapping of conditionMappings)test(`${mapping.id}: exact source mapping and missing evidence cannot release ${mapping.dataset}.${mapping.field}`,()=>{
@@ -85,6 +86,19 @@ test('parsed payload schema rejects wrong source, incomplete rows, duplicate evi
  assert.equal(check(result).rows[0]!['code'],'0012');
  for(const r of [{...result,rows:[]},{...result,cells:[]},{...result,rows:[{}]},{...result,extra:true}])assert.throws(()=>check(r),/PARSER_RESULT_REQUIRED/);
  assert.throws(()=>check(result,'wrong'),/PARSER_RESULT_REQUIRED/);
+});
+test('PR7 R4: parser-accepted Unicode text crosses provenance and reaches field length validation',()=>{
+ const fields=[{code:'legal_name',type:'text'}];
+ for(const [text,status] of [['a'.repeat(8192),'PARSED'],['a'.repeat(8193),'REJECTED'],['😀'.repeat(8192),'PARSED'],['a'.repeat(8191)+'😀','PARSED'],['e\u0301'.repeat(4096),'PARSED'],['😀'.repeat(8193),'REJECTED']] as const){
+ for(const [format,bytes] of [['CSV',Buffer.from('legal_name\n'+text)],['JSON',Buffer.from(JSON.stringify([{legal_name:text}]))],['XLSX',textWorkbook([['legal_name'],[text]])]] as const){
+  const result=parseBytes(bytes,format,fields,'STRICT_V2');assert.equal(result.structuralStatus,status);
+  const payload=Buffer.from(JSON.stringify({sourceArtifactId:'source',result}));assert.ok(payload.length<1048576);
+  const verified=verifyParsedPayload(payload,{sourceArtifactId:'source',policy:'STRICT_V2',format,status},fields);
+  if(status==='REJECTED'){assert.equal(verified.issues[0]?.code,'CELL_LIMIT');assert.deepEqual(verified.rows,[]);continue;}
+  const d=definition('legal_name');d.businessKey=['legal_name'];d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';
+  assert.ok(evaluateRuleSet('ORG01',d,verified.rows).issues.some(i=>i.layer===2&&i.code==='VALUE_TOO_LONG'));
+ }
+ }
 });
 test('P0-05-AC-02: unknown account kind never becomes a false condition',()=>{
  assert.equal(evaluateCondition('SRC-COND-061',{account_kind:''},['HUMAN','SERVICE']),'UNKNOWN');

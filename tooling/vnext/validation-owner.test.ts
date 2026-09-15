@@ -27,6 +27,18 @@ test('generic RAW_CELL cannot impersonate parser output; exact source required',
   await assert.rejects(s.catalog.validateRevision('maker',{...s.validate,artifactId:fake.artifactId}),/PARSE_PROVENANCE_REQUIRED/);
  }finally{await s.catalog.close();}
 });
+test('PR7 R4: long parser-accepted text produces an immutable L2 failure run',async()=>{
+ const s=await setup(true,true);try{
+  const field=s.contract.definition.fields[0]!.code;
+  const file=await s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID()}},Buffer.from(field+'\n'+'😀'.repeat(8192)));
+  const parsed=await s.catalog.parseFile('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
+  assert.equal(parsed.structuralStatus,'PARSED');
+  const run=await s.catalog.validateRevision('maker',{...s.validate,jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId});
+  assert.equal(run.decision,'FAIL');
+  const details=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
+  assert.ok(details.evaluation.issues.some(i=>i.layer===2&&i.field===field&&i.code==='VALUE_TOO_LONG'));
+ }finally{await s.catalog.close();}
+});
 test('P0-05-AC-03/05: immutable runs, authorized ACK replay and deterministic business results',async()=>{
  const s=await setup();try{
   const first=await s.catalog.validateRevision('maker',s.validate);

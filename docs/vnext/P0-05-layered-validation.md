@@ -74,3 +74,7 @@ issueWorkbook 接受明确的 STRICT_V1/STRICT_V2，真实受保护 File Owner �
 0036 区分历史快照与新编写版本：CREATE/REVISE 命令和写 API schema 必须带业务键，新的批准/发布操作也阻断缺键候选。source draft 的导入仍保留原定义；历史读取、原请求重放和 RETIRE 不改写也不被新键门禁阻断。现有契约创建/修订表单增加显式键输入，测试 fixture 的旧前缀分支明确使用历史格式。表单完成类型/构建检查，P0-02 浏览器待验仍未关闭。
 
 sameConclusion 只比较最终 decision，sameEvaluation 另行比较完整已验签结果。人工证据要求在计算时冻结责任 Owner、材料/判断诉求、原条件 dataset/field/text/version、输入和 true/false/unknown 处置，经同一受限结果返回；不再只给不透明 requirement ID。旧运行没有这些详情时保持原内容，不按新版映射回填。
+
+## PR7 第四轮边界复核
+
+审阅提出“8193 字符被 parser 接受却被 provenance 拒绝”。在被审阅的 38f8b5d 上未复现该前提：parser 使用 8192 Unicode 码点上限，当前 TypeBox maxLength 使用字素簇计数；parser 接受的码点数不超过此簇数上限。新增三格式边界矩阵覆盖 8192/8193 ASCII、8192/8193 补充平面字符、8191 ASCII 加一个补充平面字符及组合字符。8193 码点均为 CELL_LIMIT，允许的长值能通过 provenance 并在 L2 报 VALUE_TOO_LONG；真实 Owner 亦产生不可变 FAIL run。保留该回归证据，不放宽固定解析政策。名称含 red 的本轮首测日志实际通过，不能记为 RED。
