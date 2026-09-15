@@ -19,7 +19,7 @@ if(process.argv.includes('--upgrade')) {
    await migrate(invalid.receipt,migrationFiles().slice(0,prefix));await seed(invalid.receipt);
    const catalog=await openCatalog(resolveTarget(invalid.receipt),new LocalSyntheticKeyProvider());
    try{
-    const f=await fixture(catalog);
+    const f=await fixture(catalog,{businessKey:false});
     peer(invalid.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','STORE');`);
     const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from('SYNTHETIC_UPGRADE_BYTES'));
     const mutation=fault==='DUPLICATE_RAW_FILE'
@@ -39,7 +39,7 @@ if(process.argv.includes('--upgrade')) {
   await migrate(orphan.receipt,migrationFiles().slice(0,27));await seed(orphan.receipt);
   const catalog=await openCatalog(resolveTarget(orphan.receipt));
   try {
-   const f=await fixture(catalog),input={...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}};
+   const f=await fixture(catalog,{businessKey:false}),input={...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}};
    const outcome=JSON.parse(peer(orphan.receipt.name,`SELECT governance_catalog.import_job_command('maker',${quote(JSON.stringify(input))}::jsonb)::text;`));
    const before=await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:outcome.id});
    await assert.rejects(migrate(orphan.receipt),/FILE_ORIGINAL_REQUIRED/);
@@ -56,7 +56,7 @@ try {
  if(process.argv.includes('--upgrade')){
   await migrate(owned.receipt,migrationFiles().slice(0,27));await seed(owned.receipt);
   const catalog=await openCatalog(resolveTarget(owned.receipt),keys);try{
-   const f=await fixture(catalog);
+   const f=await fixture(catalog,{businessKey:false});
    for(const permission of ['STORE','READ'])peer(owned.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
    originalFile=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from('SYNTHETIC_UPGRADE_BYTES'));
    jobId=originalFile.job.id;previous=await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId});

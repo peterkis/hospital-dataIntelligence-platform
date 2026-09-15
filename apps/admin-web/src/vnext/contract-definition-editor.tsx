@@ -10,6 +10,7 @@ export function ContractDefinitionEditor({definition,onChange,parameters,disable
  return <fieldset disabled={disabled}><legend>修订完整定义</legend>
   <p>以当前固定定义为起点另存版本。保留未修改的字段、条件、代码集和引用；原版本不会被覆盖。字段类型与 R/C/O 必须符合固定目录版本。</p>
   <label>固定来源版本 UUID<input value={definition.sourceVersionId??''} onChange={event=>onChange({...definition,sourceVersionId:event.target.value||null})}/></label>
+  <label>业务唯一键（字段代码，逗号分隔）<input value={(definition.businessKey??[]).join(',')} onChange={event=>onChange({...definition,businessKey:event.target.value===''?[]:event.target.value.split(',')})}/></label>
   <h4>字段与条件</h4>{definition.fields.map((value,index)=><div className="editor" key={index}>
    <div className="toolbar"><label>字段代码<input value={value.code} onChange={event=>field(index,{code:event.target.value})}/></label>
    <label>字段类型<select value={value.type} onChange={event=>{const type=(['id','text','date','datetime','integer','decimal','code'] as const).find(type=>type===event.target.value);if(type)field(index,{type});}}>{['id','text','date','datetime','integer','decimal','code'].map(type=><option key={type}>{type}</option>)}</select></label>

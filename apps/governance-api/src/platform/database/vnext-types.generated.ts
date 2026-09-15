@@ -165,6 +165,18 @@ export interface GovernanceCatalogParameterVersion {
   valid_to: string | null;
 }
 
+export interface GovernanceCatalogParseProvenance {
+  artifact_id: string;
+  contract_version_id: string;
+  job_id: string;
+  policy: string;
+  recorded_at: Generated<string>;
+  revision_id: string;
+  signature: string;
+  source_artifact_id: string;
+  structural_status: string;
+}
+
 export interface GovernanceCatalogProtectedArtifact {
   campus: string;
   expires_at: string;
@@ -205,6 +217,23 @@ export interface GovernanceCatalogSourceSnapshot {
   recorded_at: Generated<string>;
   sha256: string;
   source_key: string;
+}
+
+export interface GovernanceCatalogValidationRun {
+  contract_version_id: string;
+  decision: string;
+  id: Generated<string>;
+  interpretation_policy: string;
+  issue_count: number;
+  job_id: string;
+  parse_artifact_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  request_identity: string;
+  result_artifact_id: string;
+  revision_id: string;
+  rule_version: string;
+  signature: string;
 }
 
 export interface GovernanceCatalogVersion {
@@ -321,10 +350,12 @@ export interface DB {
   "governance_catalog.parameter_approval": GovernanceCatalogParameterApproval;
   "governance_catalog.parameter_grant": GovernanceCatalogParameterGrant;
   "governance_catalog.parameter_version": GovernanceCatalogParameterVersion;
+  "governance_catalog.parse_provenance": GovernanceCatalogParseProvenance;
   "governance_catalog.protected_artifact": GovernanceCatalogProtectedArtifact;
   "governance_catalog.protected_payload": GovernanceCatalogProtectedPayload;
   "governance_catalog.source_assessment": GovernanceCatalogSourceAssessment;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
+  "governance_catalog.validation_run": GovernanceCatalogValidationRun;
   "governance_catalog.version": GovernanceCatalogVersion;
   "vnext_control.actor": VnextControlActor;
   "vnext_control.actor_grant": VnextControlActorGrant;

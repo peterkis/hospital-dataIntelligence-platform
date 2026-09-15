@@ -1465,12 +1465,14 @@ export interface operations {
                             /** Format: uuid */
                             datasetVersionId: string;
                             head: string;
+                            /** @enum {unknown} */
                             status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
                             recordedAt: string;
                             reviewDigest: string;
                             /** @enum {string} */
                             adapterReadiness: "NOT_READY";
                             dataset: string;
+                            /** @enum {unknown} */
                             profile: "CORE" | "FULL";
                             definition: {
                                 ruleVersion: string;
@@ -1478,16 +1480,22 @@ export interface operations {
                                 sourceVersionId: string | null;
                                 fields: {
                                     code: string;
+                                    /** @enum {unknown} */
                                     type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    /** @enum {unknown} */
                                     required: "R" | "C" | "O";
+                                    /** @enum {unknown} */
                                     privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
-                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    /** @enum {unknown} */
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                                     enumValues: string[];
                                 }[];
+                                businessKey?: string[];
                                 codeSets: {
                                     field: string;
                                     codeSystem: string;
                                     version: string;
+                                    /** @enum {unknown} */
                                     status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
                                     codes: string[];
                                     validFrom: string;
@@ -1499,8 +1507,8 @@ export interface operations {
                                     id: string;
                                     field: string;
                                     text: string;
-                                    /** @enum {string} */
-                                    status: "UNRESOLVED";
+                                    /** @enum {unknown} */
+                                    status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
                                     version: string;
                                 }[];
                                 references: ({
@@ -1639,12 +1647,14 @@ export interface operations {
                             /** Format: uuid */
                             datasetVersionId: string;
                             head: string;
+                            /** @enum {unknown} */
                             status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
                             recordedAt: string;
                             reviewDigest: string;
                             /** @enum {string} */
                             adapterReadiness: "NOT_READY";
                             dataset: string;
+                            /** @enum {unknown} */
                             profile: "CORE" | "FULL";
                             definition: {
                                 ruleVersion: string;
@@ -1652,16 +1662,22 @@ export interface operations {
                                 sourceVersionId: string | null;
                                 fields: {
                                     code: string;
+                                    /** @enum {unknown} */
                                     type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    /** @enum {unknown} */
                                     required: "R" | "C" | "O";
+                                    /** @enum {unknown} */
                                     privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
-                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    /** @enum {unknown} */
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                                     enumValues: string[];
                                 }[];
+                                businessKey?: string[];
                                 codeSets: {
                                     field: string;
                                     codeSystem: string;
                                     version: string;
+                                    /** @enum {unknown} */
                                     status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
                                     codes: string[];
                                     validFrom: string;
@@ -1673,8 +1689,8 @@ export interface operations {
                                     id: string;
                                     field: string;
                                     text: string;
-                                    /** @enum {string} */
-                                    status: "UNRESOLVED";
+                                    /** @enum {unknown} */
+                                    status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
                                     version: string;
                                 }[];
                                 references: ({
@@ -1814,12 +1830,14 @@ export interface operations {
                             /** Format: uuid */
                             datasetVersionId: string;
                             head: string;
+                            /** @enum {unknown} */
                             status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
                             recordedAt: string;
                             reviewDigest: string;
                             /** @enum {string} */
                             adapterReadiness: "NOT_READY";
                             dataset: string;
+                            /** @enum {unknown} */
                             profile: "CORE" | "FULL";
                             definition: {
                                 ruleVersion: string;
@@ -1827,16 +1845,22 @@ export interface operations {
                                 sourceVersionId: string | null;
                                 fields: {
                                     code: string;
+                                    /** @enum {unknown} */
                                     type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                    /** @enum {unknown} */
                                     required: "R" | "C" | "O";
+                                    /** @enum {unknown} */
                                     privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
-                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                                    /** @enum {unknown} */
+                                    condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                                     enumValues: string[];
                                 }[];
+                                businessKey?: string[];
                                 codeSets: {
                                     field: string;
                                     codeSystem: string;
                                     version: string;
+                                    /** @enum {unknown} */
                                     status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
                                     codes: string[];
                                     validFrom: string;
@@ -1848,8 +1872,8 @@ export interface operations {
                                     id: string;
                                     field: string;
                                     text: string;
-                                    /** @enum {string} */
-                                    status: "UNRESOLVED";
+                                    /** @enum {unknown} */
+                                    status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
                                     version: string;
                                 }[];
                                 references: ({
@@ -1968,6 +1992,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @enum {unknown} */
                     scope: "BASELINE" | "SYNTHETIC";
                     /** Format: uuid */
                     requestId: string;
@@ -1978,16 +2003,22 @@ export interface operations {
                         sourceVersionId: string | null;
                         fields: {
                             code: string;
+                            /** @enum {unknown} */
                             type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                            /** @enum {unknown} */
                             required: "R" | "C" | "O";
+                            /** @enum {unknown} */
                             privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
-                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                            /** @enum {unknown} */
+                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                             enumValues: string[];
                         }[];
+                        businessKey: string[];
                         codeSets: {
                             field: string;
                             codeSystem: string;
                             version: string;
+                            /** @enum {unknown} */
                             status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
                             codes: string[];
                             validFrom: string;
@@ -1999,8 +2030,8 @@ export interface operations {
                             id: string;
                             field: string;
                             text: string;
-                            /** @enum {string} */
-                            status: "UNRESOLVED";
+                            /** @enum {unknown} */
+                            status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
                             version: string;
                         }[];
                         references: ({
@@ -2025,8 +2056,10 @@ export interface operations {
                     action: "CREATE";
                     /** Format: uuid */
                     datasetVersionId: string;
+                    /** @enum {unknown} */
                     profile: "CORE" | "FULL";
                 } | {
+                    /** @enum {unknown} */
                     scope: "BASELINE" | "SYNTHETIC";
                     /** Format: uuid */
                     requestId: string;
@@ -2040,16 +2073,22 @@ export interface operations {
                         sourceVersionId: string | null;
                         fields: {
                             code: string;
+                            /** @enum {unknown} */
                             type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                            /** @enum {unknown} */
                             required: "R" | "C" | "O";
+                            /** @enum {unknown} */
                             privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
-                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE";
+                            /** @enum {unknown} */
+                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
                             enumValues: string[];
                         }[];
+                        businessKey: string[];
                         codeSets: {
                             field: string;
                             codeSystem: string;
                             version: string;
+                            /** @enum {unknown} */
                             status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
                             codes: string[];
                             validFrom: string;
@@ -2061,8 +2100,8 @@ export interface operations {
                             id: string;
                             field: string;
                             text: string;
-                            /** @enum {string} */
-                            status: "UNRESOLVED";
+                            /** @enum {unknown} */
+                            status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
                             version: string;
                         }[];
                         references: ({
@@ -2088,6 +2127,7 @@ export interface operations {
                     /** Format: uuid */
                     datasetVersionId?: string;
                 } | {
+                    /** @enum {unknown} */
                     scope: "BASELINE" | "SYNTHETIC";
                     /** Format: uuid */
                     requestId: string;
@@ -2099,6 +2139,7 @@ export interface operations {
                     action: "VALIDATE";
                     reviewDigest?: string;
                 } | {
+                    /** @enum {unknown} */
                     scope: "BASELINE" | "SYNTHETIC";
                     /** Format: uuid */
                     requestId: string;
@@ -2106,6 +2147,7 @@ export interface operations {
                     /** Format: uuid */
                     target: string;
                     expectedHead: string;
+                    /** @enum {unknown} */
                     action: "APPROVE" | "PUBLISH" | "RETIRE";
                     reviewDigest: string;
                     impactDigest?: string;
@@ -2128,11 +2170,13 @@ export interface operations {
                         /** Format: uuid */
                         datasetVersionId: string;
                         head: string;
+                        /** @enum {unknown} */
                         status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
                         recordedAt: string;
                         reviewDigest: string;
                         /** @enum {string} */
                         adapterReadiness: "NOT_READY";
+                        /** @enum {unknown} */
                         decision: "ACCEPT" | "REVIEW";
                         blockers: string[];
                     };

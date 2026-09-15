@@ -3713,19 +3713,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",
@@ -3817,31 +3807,11 @@
                             "type": "string"
                           },
                           "status": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "DRAFT"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "APPROVED"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "PUBLISHED"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "RETIRED"
-                                ]
-                              }
+                            "enum": [
+                              "DRAFT",
+                              "APPROVED",
+                              "PUBLISHED",
+                              "RETIRED"
                             ]
                           },
                           "recordedAt": {
@@ -3861,19 +3831,9 @@
                             "type": "string"
                           },
                           "profile": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "CORE"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "FULL"
-                                ]
-                              }
+                            "enum": [
+                              "CORE",
+                              "FULL"
                             ]
                           },
                           "definition": {
@@ -3924,121 +3884,37 @@
                                       "type": "string"
                                     },
                                     "type": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "id"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "text"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "date"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "datetime"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "integer"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "decimal"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "code"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "id",
+                                        "text",
+                                        "date",
+                                        "datetime",
+                                        "integer",
+                                        "decimal",
+                                        "code"
                                       ]
                                     },
                                     "required": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "R"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "C"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "O"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "R",
+                                        "C",
+                                        "O"
                                       ]
                                     },
                                     "privacy": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "INTERNAL"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "RESTRICTED"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "HIGH_RESTRICTED"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "INTERNAL",
+                                        "RESTRICTED",
+                                        "HIGH_RESTRICTED"
                                       ]
                                     },
                                     "condition": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "ALWAYS"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "OPTIONAL"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "UNRESOLVED"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "MANUAL_EVIDENCE"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "ALWAYS",
+                                        "OPTIONAL",
+                                        "UNRESOLVED",
+                                        "MANUAL_EVIDENCE",
+                                        "EVALUATED"
                                       ]
                                     },
                                     "enumValues": {
@@ -4055,6 +3931,17 @@
                                 },
                                 "minItems": 1,
                                 "maxItems": 100
+                              },
+                              "businessKey": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "minItems": 1,
+                                "maxItems": 8,
+                                "uniqueItems": true
                               },
                               "codeSets": {
                                 "type": "array",
@@ -4083,19 +3970,9 @@
                                       "pattern": "^[A-Z0-9_.-]{1,64}$"
                                     },
                                     "status": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "CANDIDATE"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "SYNTHETIC_ADOPTED"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "CANDIDATE",
+                                        "SYNTHETIC_ADOPTED"
                                       ]
                                     },
                                     "codes": {
@@ -4156,9 +4033,10 @@
                                       "maxLength": 2000
                                     },
                                     "status": {
-                                      "type": "string",
                                       "enum": [
-                                        "UNRESOLVED"
+                                        "UNRESOLVED",
+                                        "MACHINE",
+                                        "MANUAL_EVIDENCE"
                                       ]
                                     },
                                     "version": {
@@ -4167,7 +4045,8 @@
                                     }
                                   },
                                   "additionalProperties": false
-                                }
+                                },
+                                "maxItems": 100
                               },
                               "references": {
                                 "type": "array",
@@ -4437,19 +4316,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",
@@ -4541,31 +4410,11 @@
                             "type": "string"
                           },
                           "status": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "DRAFT"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "APPROVED"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "PUBLISHED"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "RETIRED"
-                                ]
-                              }
+                            "enum": [
+                              "DRAFT",
+                              "APPROVED",
+                              "PUBLISHED",
+                              "RETIRED"
                             ]
                           },
                           "recordedAt": {
@@ -4585,19 +4434,9 @@
                             "type": "string"
                           },
                           "profile": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "CORE"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "FULL"
-                                ]
-                              }
+                            "enum": [
+                              "CORE",
+                              "FULL"
                             ]
                           },
                           "definition": {
@@ -4648,121 +4487,37 @@
                                       "type": "string"
                                     },
                                     "type": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "id"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "text"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "date"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "datetime"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "integer"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "decimal"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "code"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "id",
+                                        "text",
+                                        "date",
+                                        "datetime",
+                                        "integer",
+                                        "decimal",
+                                        "code"
                                       ]
                                     },
                                     "required": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "R"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "C"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "O"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "R",
+                                        "C",
+                                        "O"
                                       ]
                                     },
                                     "privacy": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "INTERNAL"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "RESTRICTED"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "HIGH_RESTRICTED"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "INTERNAL",
+                                        "RESTRICTED",
+                                        "HIGH_RESTRICTED"
                                       ]
                                     },
                                     "condition": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "ALWAYS"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "OPTIONAL"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "UNRESOLVED"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "MANUAL_EVIDENCE"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "ALWAYS",
+                                        "OPTIONAL",
+                                        "UNRESOLVED",
+                                        "MANUAL_EVIDENCE",
+                                        "EVALUATED"
                                       ]
                                     },
                                     "enumValues": {
@@ -4779,6 +4534,17 @@
                                 },
                                 "minItems": 1,
                                 "maxItems": 100
+                              },
+                              "businessKey": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "minItems": 1,
+                                "maxItems": 8,
+                                "uniqueItems": true
                               },
                               "codeSets": {
                                 "type": "array",
@@ -4807,19 +4573,9 @@
                                       "pattern": "^[A-Z0-9_.-]{1,64}$"
                                     },
                                     "status": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "CANDIDATE"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "SYNTHETIC_ADOPTED"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "CANDIDATE",
+                                        "SYNTHETIC_ADOPTED"
                                       ]
                                     },
                                     "codes": {
@@ -4880,9 +4636,10 @@
                                       "maxLength": 2000
                                     },
                                     "status": {
-                                      "type": "string",
                                       "enum": [
-                                        "UNRESOLVED"
+                                        "UNRESOLVED",
+                                        "MACHINE",
+                                        "MANUAL_EVIDENCE"
                                       ]
                                     },
                                     "version": {
@@ -4891,7 +4648,8 @@
                                     }
                                   },
                                   "additionalProperties": false
-                                }
+                                },
+                                "maxItems": 100
                               },
                               "references": {
                                 "type": "array",
@@ -5161,19 +4919,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",
@@ -5274,31 +5022,11 @@
                             "type": "string"
                           },
                           "status": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "DRAFT"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "APPROVED"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "PUBLISHED"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "RETIRED"
-                                ]
-                              }
+                            "enum": [
+                              "DRAFT",
+                              "APPROVED",
+                              "PUBLISHED",
+                              "RETIRED"
                             ]
                           },
                           "recordedAt": {
@@ -5318,19 +5046,9 @@
                             "type": "string"
                           },
                           "profile": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "CORE"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "FULL"
-                                ]
-                              }
+                            "enum": [
+                              "CORE",
+                              "FULL"
                             ]
                           },
                           "definition": {
@@ -5381,121 +5099,37 @@
                                       "type": "string"
                                     },
                                     "type": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "id"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "text"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "date"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "datetime"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "integer"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "decimal"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "code"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "id",
+                                        "text",
+                                        "date",
+                                        "datetime",
+                                        "integer",
+                                        "decimal",
+                                        "code"
                                       ]
                                     },
                                     "required": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "R"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "C"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "O"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "R",
+                                        "C",
+                                        "O"
                                       ]
                                     },
                                     "privacy": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "INTERNAL"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "RESTRICTED"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "HIGH_RESTRICTED"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "INTERNAL",
+                                        "RESTRICTED",
+                                        "HIGH_RESTRICTED"
                                       ]
                                     },
                                     "condition": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "ALWAYS"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "OPTIONAL"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "UNRESOLVED"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "MANUAL_EVIDENCE"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "ALWAYS",
+                                        "OPTIONAL",
+                                        "UNRESOLVED",
+                                        "MANUAL_EVIDENCE",
+                                        "EVALUATED"
                                       ]
                                     },
                                     "enumValues": {
@@ -5512,6 +5146,17 @@
                                 },
                                 "minItems": 1,
                                 "maxItems": 100
+                              },
+                              "businessKey": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "minItems": 1,
+                                "maxItems": 8,
+                                "uniqueItems": true
                               },
                               "codeSets": {
                                 "type": "array",
@@ -5540,19 +5185,9 @@
                                       "pattern": "^[A-Z0-9_.-]{1,64}$"
                                     },
                                     "status": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "CANDIDATE"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "SYNTHETIC_ADOPTED"
-                                          ]
-                                        }
+                                      "enum": [
+                                        "CANDIDATE",
+                                        "SYNTHETIC_ADOPTED"
                                       ]
                                     },
                                     "codes": {
@@ -5613,9 +5248,10 @@
                                       "maxLength": 2000
                                     },
                                     "status": {
-                                      "type": "string",
                                       "enum": [
-                                        "UNRESOLVED"
+                                        "UNRESOLVED",
+                                        "MACHINE",
+                                        "MANUAL_EVIDENCE"
                                       ]
                                     },
                                     "version": {
@@ -5624,7 +5260,8 @@
                                     }
                                   },
                                   "additionalProperties": false
-                                }
+                                },
+                                "maxItems": 100
                               },
                               "references": {
                                 "type": "array",
@@ -5912,19 +5549,9 @@
                     ],
                     "properties": {
                       "scope": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "BASELINE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "SYNTHETIC"
-                            ]
-                          }
+                        "enum": [
+                          "BASELINE",
+                          "SYNTHETIC"
                         ]
                       },
                       "requestId": {
@@ -5942,6 +5569,7 @@
                           "templateVersion",
                           "sourceVersionId",
                           "fields",
+                          "businessKey",
                           "codeSets",
                           "rules",
                           "references"
@@ -5983,121 +5611,37 @@
                                   "type": "string"
                                 },
                                 "type": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "id"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "text"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "date"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "datetime"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "integer"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "decimal"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "code"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "id",
+                                    "text",
+                                    "date",
+                                    "datetime",
+                                    "integer",
+                                    "decimal",
+                                    "code"
                                   ]
                                 },
                                 "required": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "R"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "C"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "O"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "R",
+                                    "C",
+                                    "O"
                                   ]
                                 },
                                 "privacy": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "INTERNAL"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "RESTRICTED"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "HIGH_RESTRICTED"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "INTERNAL",
+                                    "RESTRICTED",
+                                    "HIGH_RESTRICTED"
                                   ]
                                 },
                                 "condition": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "ALWAYS"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "OPTIONAL"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "UNRESOLVED"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "MANUAL_EVIDENCE"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "ALWAYS",
+                                    "OPTIONAL",
+                                    "UNRESOLVED",
+                                    "MANUAL_EVIDENCE",
+                                    "EVALUATED"
                                   ]
                                 },
                                 "enumValues": {
@@ -6114,6 +5658,17 @@
                             },
                             "minItems": 1,
                             "maxItems": 100
+                          },
+                          "businessKey": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true
                           },
                           "codeSets": {
                             "type": "array",
@@ -6142,19 +5697,9 @@
                                   "pattern": "^[A-Z0-9_.-]{1,64}$"
                                 },
                                 "status": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "CANDIDATE"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "SYNTHETIC_ADOPTED"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "CANDIDATE",
+                                    "SYNTHETIC_ADOPTED"
                                   ]
                                 },
                                 "codes": {
@@ -6215,9 +5760,10 @@
                                   "maxLength": 2000
                                 },
                                 "status": {
-                                  "type": "string",
                                   "enum": [
-                                    "UNRESOLVED"
+                                    "UNRESOLVED",
+                                    "MACHINE",
+                                    "MANUAL_EVIDENCE"
                                   ]
                                 },
                                 "version": {
@@ -6226,7 +5772,8 @@
                                 }
                               },
                               "additionalProperties": false
-                            }
+                            },
+                            "maxItems": 100
                           },
                           "references": {
                             "type": "array",
@@ -6323,19 +5870,9 @@
                         "format": "uuid"
                       },
                       "profile": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "CORE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "FULL"
-                            ]
-                          }
+                        "enum": [
+                          "CORE",
+                          "FULL"
                         ]
                       }
                     },
@@ -6356,19 +5893,9 @@
                     ],
                     "properties": {
                       "scope": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "BASELINE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "SYNTHETIC"
-                            ]
-                          }
+                        "enum": [
+                          "BASELINE",
+                          "SYNTHETIC"
                         ]
                       },
                       "requestId": {
@@ -6394,6 +5921,7 @@
                           "templateVersion",
                           "sourceVersionId",
                           "fields",
+                          "businessKey",
                           "codeSets",
                           "rules",
                           "references"
@@ -6435,121 +5963,37 @@
                                   "type": "string"
                                 },
                                 "type": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "id"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "text"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "date"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "datetime"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "integer"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "decimal"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "code"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "id",
+                                    "text",
+                                    "date",
+                                    "datetime",
+                                    "integer",
+                                    "decimal",
+                                    "code"
                                   ]
                                 },
                                 "required": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "R"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "C"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "O"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "R",
+                                    "C",
+                                    "O"
                                   ]
                                 },
                                 "privacy": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "INTERNAL"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "RESTRICTED"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "HIGH_RESTRICTED"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "INTERNAL",
+                                    "RESTRICTED",
+                                    "HIGH_RESTRICTED"
                                   ]
                                 },
                                 "condition": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "ALWAYS"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "OPTIONAL"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "UNRESOLVED"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "MANUAL_EVIDENCE"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "ALWAYS",
+                                    "OPTIONAL",
+                                    "UNRESOLVED",
+                                    "MANUAL_EVIDENCE",
+                                    "EVALUATED"
                                   ]
                                 },
                                 "enumValues": {
@@ -6566,6 +6010,17 @@
                             },
                             "minItems": 1,
                             "maxItems": 100
+                          },
+                          "businessKey": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true
                           },
                           "codeSets": {
                             "type": "array",
@@ -6594,19 +6049,9 @@
                                   "pattern": "^[A-Z0-9_.-]{1,64}$"
                                 },
                                 "status": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "CANDIDATE"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "SYNTHETIC_ADOPTED"
-                                      ]
-                                    }
+                                  "enum": [
+                                    "CANDIDATE",
+                                    "SYNTHETIC_ADOPTED"
                                   ]
                                 },
                                 "codes": {
@@ -6667,9 +6112,10 @@
                                   "maxLength": 2000
                                 },
                                 "status": {
-                                  "type": "string",
                                   "enum": [
-                                    "UNRESOLVED"
+                                    "UNRESOLVED",
+                                    "MACHINE",
+                                    "MANUAL_EVIDENCE"
                                   ]
                                 },
                                 "version": {
@@ -6678,7 +6124,8 @@
                                 }
                               },
                               "additionalProperties": false
-                            }
+                            },
+                            "maxItems": 100
                           },
                           "references": {
                             "type": "array",
@@ -6789,19 +6236,9 @@
                     ],
                     "properties": {
                       "scope": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "BASELINE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "SYNTHETIC"
-                            ]
-                          }
+                        "enum": [
+                          "BASELINE",
+                          "SYNTHETIC"
                         ]
                       },
                       "requestId": {
@@ -6845,19 +6282,9 @@
                     ],
                     "properties": {
                       "scope": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "BASELINE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "SYNTHETIC"
-                            ]
-                          }
+                        "enum": [
+                          "BASELINE",
+                          "SYNTHETIC"
                         ]
                       },
                       "requestId": {
@@ -6877,25 +6304,10 @@
                         "pattern": "^[0-9]+$"
                       },
                       "action": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "APPROVE"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "PUBLISH"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "enum": [
-                              "RETIRE"
-                            ]
-                          }
+                        "enum": [
+                          "APPROVE",
+                          "PUBLISH",
+                          "RETIRE"
                         ]
                       },
                       "reviewDigest": {
@@ -6954,31 +6366,11 @@
                       "type": "string"
                     },
                     "status": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "DRAFT"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "APPROVED"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "PUBLISHED"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "RETIRED"
-                          ]
-                        }
+                      "enum": [
+                        "DRAFT",
+                        "APPROVED",
+                        "PUBLISHED",
+                        "RETIRED"
                       ]
                     },
                     "recordedAt": {
@@ -6995,19 +6387,9 @@
                       ]
                     },
                     "decision": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "ACCEPT"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "REVIEW"
-                          ]
-                        }
+                      "enum": [
+                        "ACCEPT",
+                        "REVIEW"
                       ]
                     },
                     "blockers": {
@@ -7156,19 +6538,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",
@@ -8106,19 +7478,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",
@@ -8333,19 +7695,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",
@@ -8511,19 +7863,9 @@
         "parameters": [
           {
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "BASELINE"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "SYNTHETIC"
-                  ]
-                }
+              "enum": [
+                "BASELINE",
+                "SYNTHETIC"
               ]
             },
             "in": "query",

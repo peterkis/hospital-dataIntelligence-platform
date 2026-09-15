@@ -1,17 +1,18 @@
 import { Type, type Static } from 'typebox';
 
-const values = <T extends string>(...items:T[]) => Type.Union(items.map(item=>Type.Literal(item)));
+const values = <T extends string>(...items:T[]) => Type.Enum(items);
 const Id=Type.String({format:'uuid'});
 const Token=Type.String({pattern:'^[A-Z0-9_.-]{1,64}$'});
 const Time=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'});
 export const ContractTimeSchema=Time;
 const End=Type.Union([Time,Type.Null()]);
 export const ContractScopeSchema=values('BASELINE','SYNTHETIC');
-export const ContractFieldSchema=Type.Object({code:Type.String(),type:values('id','text','date','datetime','integer','decimal','code'),required:values('R','C','O'),privacy:values('INTERNAL','RESTRICTED','HIGH_RESTRICTED'),condition:values('ALWAYS','OPTIONAL','UNRESOLVED','MANUAL_EVIDENCE'),enumValues:Type.Array(Type.String({minLength:1,maxLength:256}),{uniqueItems:true})},{additionalProperties:false});
+export const ContractFieldSchema=Type.Object({code:Type.String(),type:values('id','text','date','datetime','integer','decimal','code'),required:values('R','C','O'),privacy:values('INTERNAL','RESTRICTED','HIGH_RESTRICTED'),condition:values('ALWAYS','OPTIONAL','UNRESOLVED','MANUAL_EVIDENCE','EVALUATED'),enumValues:Type.Array(Type.String({minLength:1,maxLength:256}),{uniqueItems:true})},{additionalProperties:false});
 export const ContractDefinitionSchema=Type.Object({
   ruleVersion:Token,templateVersion:Token,sourceVersionId:Type.Union([Id,Type.Null()]),fields:Type.Array(ContractFieldSchema,{minItems:1,maxItems:100}),
+  businessKey:Type.Optional(Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,maxItems:8,uniqueItems:true})),
   codeSets:Type.Array(Type.Object({field:Type.String(),codeSystem:Token,version:Token,status:values('CANDIDATE','SYNTHETIC_ADOPTED'),codes:Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,uniqueItems:true}),validFrom:Time,validTo:End,sourceVersionId:Id},{additionalProperties:false})),
-  rules:Type.Array(Type.Object({id:Token,field:Type.String(),text:Type.String({minLength:1,maxLength:2000}),status:Type.Literal('UNRESOLVED'),version:Token},{additionalProperties:false})),
+  rules:Type.Array(Type.Object({id:Token,field:Type.String(),text:Type.String({minLength:1,maxLength:2000}),status:values('UNRESOLVED','MACHINE','MANUAL_EVIDENCE'),version:Token},{additionalProperties:false}),{maxItems:100}),
   references:Type.Array(Type.Union([
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('BLOCKED_DEPENDENCY')},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.Literal('GOV09.config_id'),status:Type.Literal('DECLARED_PARAMETER'),parameterVersionId:Id,parameterDigest:Type.String({pattern:'^[a-f0-9]{64}$'})},{additionalProperties:false}),
@@ -19,7 +20,8 @@ export const ContractDefinitionSchema=Type.Object({
 },{additionalProperties:false});
 const Base={scope:ContractScopeSchema,requestId:Id,reason:Type.String({pattern:'^[A-Z0-9_]{1,64}$'})};
 const Target={target:Id,expectedHead:Type.String({pattern:'^[0-9]+$'})};
-const Revision={definition:ContractDefinitionSchema,validFrom:Time,validTo:End};
+const ContractWriteDefinitionSchema=Type.Object({...ContractDefinitionSchema.properties,businessKey:Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,maxItems:8,uniqueItems:true})},{additionalProperties:false});
+const Revision={definition:ContractWriteDefinitionSchema,validFrom:Time,validTo:End};
 export const ContractCommandSchema=Type.Union([
   Type.Object({...Base,...Revision,action:Type.Literal('CREATE'),datasetVersionId:Id,profile:values('CORE','FULL')},{additionalProperties:false}),
   Type.Object({...Base,...Target,...Revision,action:Type.Literal('REVISE'),datasetVersionId:Type.Optional(Id)},{additionalProperties:false}),
