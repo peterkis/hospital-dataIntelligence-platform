@@ -4,7 +4,7 @@ const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-
 const Scope=Type.Union([Type.Literal('BASELINE'),Type.Literal('SYNTHETIC')]);
 export const ImportMetadataSchema=Type.Union([
  Type.Object({kind:Type.Literal('METADATA_ONLY'),declaredSha256:Type.String({pattern:'^[a-f0-9]{64}$'})},{additionalProperties:false}),
- Type.Object({kind:Type.Literal('FILE'),format:Type.Union([Type.Literal('CSV'),Type.Literal('JSON'),Type.Literal('XLSX')]),parserPolicy:Type.Literal('STRICT_V1')},{additionalProperties:false}),
+ Type.Object({kind:Type.Literal('FILE'),format:Type.Union([Type.Literal('CSV'),Type.Literal('JSON'),Type.Literal('XLSX')]),parserPolicy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2')])},{additionalProperties:false}),
 ]);
 const Base={scope:Scope,requestId:Id,reason:Type.String({pattern:'^[A-Z_]{1,64}$'}),input:ImportMetadataSchema};
 export const ImportJobCommandSchema=Type.Union([

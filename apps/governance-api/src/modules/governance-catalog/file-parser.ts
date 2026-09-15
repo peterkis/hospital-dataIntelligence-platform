@@ -12,7 +12,7 @@ export interface ParserIssue { code: string; row: number; column: number }
 export type CanonicalRow = Record<string,string>;
 export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:'CSV'|'JSON'|XlsxCellType}
 export interface ParserResult {
-  policy: 'STRICT_V1'; structuralStatus: 'PARSED' | 'REJECTED';
+  policy: 'STRICT_V1' | 'STRICT_V2'; structuralStatus: 'PARSED' | 'REJECTED';
   manifest: { bomDetected: boolean; bomMembers:string[]; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
   rows: CanonicalRow[];
   cells: RawCellProvenance[];
@@ -356,8 +356,9 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
   return {rows,sourceTypes};
 }
 
-export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[]): ParserResult {
-  const result: ParserResult = { policy:'STRICT_V1', structuralStatus:'REJECTED', manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
+export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[], policy: ParserResult['policy']='STRICT_V1'): ParserResult {
+  if(policy!=='STRICT_V1' && policy!=='STRICT_V2')throw new Error('PARSER_POLICY_REQUIRED');
+  const result: ParserResult = { policy, structuralStatus:'REJECTED', manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
   try {
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
     if (!fields.length || fields.length > 100 || new Set(fields.map(f=>f.code)).size !== fields.length) fail('FIELD_CONTRACT');
@@ -385,7 +386,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
         if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',rowNum,column);
         assertTextSafety(text,rowNum,column);
         if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
-        if (f.type === 'datetime') {try{parseLocalDateTime(text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}
+        if (f.type === 'datetime' && !(policy==='STRICT_V2' && text==='')) {try{parseLocalDateTime(text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}
         row[f.code] = text;
       }
       if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',rowNum); result.rows.push(row);
@@ -404,6 +405,6 @@ function tableObjects(table: string[][], fields: ParserField[], physicalRows?:nu
 }
 
 if (!isMainThread && parentPort) {
-  try { parentPort.postMessage(parseBytes(workerData.bytes,workerData.format,workerData.fields)); }
+  try { parentPort.postMessage(parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy)); }
   catch { parentPort.postMessage(null); }
 }

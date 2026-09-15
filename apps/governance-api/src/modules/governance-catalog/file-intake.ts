@@ -7,6 +7,7 @@ import { ImportJobCommandSchema, type ImportJob, type ImportJobOutcome } from '.
 import { protectedArtifacts, ProtectedReadSchema, type KeyProviderPort } from './protected-artifact.js';
 import type { ParserField, ParserResult, FileFormat } from './file-parser.js';
 import { issueWorkbook } from './issue-workbook.js';
+import {parseSignature} from './parse-provenance.js';
 
 const Id = Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
 const Protection = {campus:Type.Union([Type.Literal('NORTH'),Type.Literal('SOUTH')]),purpose:Type.Union([Type.Literal('IDENTITY_VERIFY'),Type.Literal('CONTACT_VERIFY'),Type.Literal('HR_RESTRICTED')]),retentionSeconds:Type.Integer({minimum:1,maximum:2592000})};
@@ -15,13 +16,13 @@ export const ParseFileSchema = Type.Object({...ProtectedReadSchema.properties,jo
 export type ReceiveFileInput = Static<typeof ReceiveFileSchema>;
 export type ParseFileInput = Static<typeof ParseFileSchema>;
 let activeWorkers = 0;
-async function boundedParse(bytes: Uint8Array, format: FileFormat, fields: ParserField[]): Promise<ParserResult> {
+async function boundedParse(bytes: Uint8Array, format: FileFormat, fields: ParserField[],policy:ParserResult['policy']): Promise<ParserResult> {
   if (activeWorkers >= 2) throw new Error('PARSER_BUSY');
   activeWorkers++;
   try {
     return await new Promise<ParserResult>((resolve,reject)=> {
       const worker = new Worker(new URL(import.meta.url.endsWith('.ts') ? './file-parser.ts' : './file-parser.js',import.meta.url),{
-        workerData:{bytes,format,fields},execArgv:[],resourceLimits:{maxOldGenerationSizeMb:64,maxYoungGenerationSizeMb:16,stackSizeMb:2},
+        workerData:{bytes,format,fields,policy},execArgv:[],resourceLimits:{maxOldGenerationSizeMb:64,maxYoungGenerationSizeMb:16,stackSizeMb:2},
       });
       let settled = false;
       const finish = (value?:ParserResult) => {
@@ -51,12 +52,20 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
       if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
       const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
       try {
-        const result=await boundedParse(raw,metadata.format,job.contract.definition.fields);
+        const result=await boundedParse(raw,metadata.format,job.contract.definition.fields,metadata.parserPolicy);
         // All values, hidden names and detailed issues remain in P0-11; only status/ref escape.
         const payload=Buffer.from(JSON.stringify({sourceArtifactId:input.artifactId,result}));
         if(payload.length>1048576)throw new Error('RESULT_LIMIT');
         try {
-          const artifact=await protectedStore.storeProtectedArtifact(actor,storeInput(input,'RAW_CELL'),payload);
+          const artifact=await db.transaction().execute(async trx=>{
+            const store=protectedArtifacts(trx,provider);
+            const source=await store.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
+            source.fill(0);
+            const saved=await store.storeProtectedArtifact(actor,storeInput(input,'RAW_CELL'),payload);
+            const signature=parseSignature(provider,saved.artifactId,input.jobId,input.revisionId,job.contract.versionId,payload);
+            await sql`select governance_catalog.register_parse(${actor},${saved.artifactId}::uuid,${input.artifactId}::uuid,${signature},${result.structuralStatus})`.execute(trx);
+            return saved;
+          });
           return {artifact,structuralStatus:result.structuralStatus,fieldValidation:'NOT_RUN' as const,securityScan:'NOT_RUN' as const,adapterReadiness:'NOT_READY' as const};
         } finally {payload.fill(0);}
       } finally {raw.fill(0);}

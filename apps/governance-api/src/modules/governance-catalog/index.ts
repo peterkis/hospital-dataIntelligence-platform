@@ -2,6 +2,9 @@ import { Kysely, PostgresDialect, sql } from 'kysely';
 import { Pool } from 'pg';
 import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.js';
 import { fileIntake } from './file-intake.js';
+import {validation} from './validation.js';
+export {ValidateRevisionSchema,ExplainValidationSchema,CompareValidationSchema} from './validation.js';
+export type {ValidationRun} from './validation.js';
 export { ReceiveFileSchema, ParseFileSchema } from './file-intake.js';
 export type { ReceiveFileInput, ParseFileInput } from './file-intake.js';
 export type { CanonicalRow, RawCellProvenance, ParserResult } from './file-parser.js';
@@ -51,6 +54,7 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
   };
   return {
     ...fileIntake(db,keyProvider),
+    ...validation(db,keyProvider),
     ...protectedArtifacts(db,keyProvider),
     async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');

@@ -6,6 +6,15 @@ import { textWorkbook, zipText, issueWorkbook } from '../../apps/governance-api/
 const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
+test('P0-05: explicit V2 defers empty datetime requiredness, V1 remains immutable',()=>{
+ const fs=[{code:'code',type:'code'},{code:'end',type:'datetime'}];
+ const inputs=[['CSV',Buffer.from('code,end\n0012,')],['JSON',Buffer.from('[{"code":"0012","end":""}]')],['XLSX',textWorkbook([['code','end'],['0012','']])]] as const;
+ for(const [format,bytes] of inputs){
+  assert.equal(parseBytes(bytes,format,fs).structuralStatus,'REJECTED');
+  assert.equal(parseBytes(bytes,format,fs,'STRICT_V2').structuralStatus,'PARSED');
+ }
+ assert.equal(parseBytes(Buffer.from('code,end\n0012,2026-02-30T00:00:00'),'CSV',fs,'STRICT_V2').structuralStatus,'REJECTED');
+});
 const edit=(part:string,from:string,to:string)=>{const files=Object.fromEntries(unzip(workbook));files[part]=files[part]!.replace(from,to);return zipText(files);};
 test('PR6 round25: ZIP needed versions are supported by the compression method',()=>{
  const versioned=(source:Buffer,version:number)=>{const bytes=Buffer.from(source);let p=bytes.readUInt32LE(bytes.length-22+16);for(let i=0;i<bytes.readUInt16LE(bytes.length-22+10);i++){bytes.writeUInt16LE(version,p+6);bytes.writeUInt16LE(version,bytes.readUInt32LE(p+42)+4);p+=46+bytes.readUInt16LE(p+28)+bytes.readUInt16LE(p+30)+bytes.readUInt16LE(p+32);}return bytes;};

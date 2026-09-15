@@ -1,0 +1,50 @@
+import {spawnSync} from 'node:child_process';
+import {randomUUID} from 'node:crypto';
+import {root,resolveTarget,migrate,migrationFiles,peer,quote,inspect} from './lineage.mjs';
+import {createTemporary,dropTemporary} from './fresh.mjs';
+import {seed} from './catalog-seed.mjs';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+import {fixture} from './protected-fixture.ts';
+if(process.argv.includes('--dispose')){
+ const receipt=JSON.parse(readFileSync(process.argv[process.argv.indexOf('--dispose')+1],'utf8'));
+ if(receipt.taskId!=='P0-05')throw new Error('DISPOSAL_NOT_AUTHORIZED');
+ dropTemporary(receipt);console.log('OWNED_P0_05_DISPOSED');process.exit(0);
+}
+const owned=createTemporary('P0-05');
+try{
+ let historical;
+ const keys=new LocalSyntheticKeyProvider();
+ if(process.argv.includes('--upgrade')){
+  await migrate(owned.receipt,migrationFiles().slice(0,30));await seed(owned.receipt);
+  const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
+  try{
+   const f=await fixture(catalog),field=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0].definition.fields[0].code;
+   for(const permission of ['STORE','READ'])peer(owned.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
+   const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{...f.create,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V1'}}},Buffer.from(field+'\n0012'));
+   historical={file,job:await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:file.job.id}),bytes:field+'\n0012'};
+  }finally{await catalog.close();}
+ }
+ await migrate(owned.receipt);await seed(owned.receipt);
+ if(historical){
+  const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
+  try{
+   assert.deepEqual(await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:historical.file.job.id}),historical.job);
+   const bytes=await catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:historical.file.artifact.artifactId});
+   assert.equal(Buffer.from(bytes).toString(),historical.bytes);
+   assert.equal(peer(owned.receipt.name,'SELECT count(*) FROM governance_catalog.parse_provenance;'),'0');
+   console.log('PREFIX_30_JOB_FILE_PRESERVED_NO_RETROACTIVE_PROVENANCE');
+  }finally{await catalog.close();}
+ }
+ const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.validation.config.ts','tooling/vnext/validation-owner.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-05'},stdio:'inherit',windowsHide:true});
+ process.exitCode=run.status??1;
+ if(run.status===0&&process.argv.includes('--types')){
+  for(const command of ['types-generate','types-verify']){
+   const generated=spawnSync(process.execPath,['tooling/vnext/managed.mjs',command,owned.receiptPath],{cwd:root,env:process.env,stdio:'inherit',windowsHide:true});
+   if(generated.status!==0)throw new Error('VALIDATION_CODEGEN_FAILED');
+  }
+ }
+ const observation=await inspect(owned.receipt);
+ console.log(JSON.stringify({gate:'P0-05',mode:historical?'PREFIX_30':'FRESH',exit:run.status,migrations:observation.ledger.length,tables:observation.tables.length,receipt:owned.receiptPath}));
+}finally{dropTemporary(owned.receipt);}
