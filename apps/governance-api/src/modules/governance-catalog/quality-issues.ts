@@ -68,8 +68,10 @@ function requireMatchedRow(oldEvidence:VerifiedValidationEvidence,newEvidence:Ve
  if(!businessKey||businessKey.length<1)throw new Error('UNMATCHED');
  const oldRows=oldEvidence.parsed?.rows??[];const targetOld=oldRows[issue.row-1];if(!targetOld)throw new Error('UNMATCHED');
  const oldKey=exactKey(targetOld,businessKey);if(!oldKey)throw new Error('UNMATCHED');
- const oldMatches=oldRows.map((row,index)=>({row,index:index+1,key:exactKey(row,businessKey)})).filter(entry=>entry.key===oldKey);if(oldMatches.length!==1)throw new Error('UNMATCHED');
- const newRows=newEvidence.parsed?.rows??[];const newMatches=newRows.map((row,index)=>({row,index:index+1,key:exactKey(row,businessKey)})).filter(entry=>entry.key===oldKey);if(newMatches.length!==1)throw new Error('UNMATCHED');
+ const oldIgnored=new Set((oldEvidence.evaluation.duplicates??[]).map(entry=>entry.row));
+ const newIgnored=new Set((newEvidence.evaluation.duplicates??[]).map(entry=>entry.row));
+ const oldMatches=oldRows.map((row,index)=>({row,index:index+1,key:exactKey(row,businessKey)})).filter(entry=>entry.key===oldKey&&!oldIgnored.has(entry.index));if(oldMatches.length!==1)throw new Error('UNMATCHED');
+ const newRows=newEvidence.parsed?.rows??[];const newMatches=newRows.map((row,index)=>({row,index:index+1,key:exactKey(row,businessKey)})).filter(entry=>entry.key===oldKey&&!newIgnored.has(entry.index));if(newMatches.length!==1)throw new Error('UNMATCHED');
  const targetRow=newMatches[0]!.index+0;const targetField=issue.field??'';
  if(!targetField||!newEvidence.job.contract.definition.fields.some(field=>field.code===targetField))throw new Error('TARGET_FIELD_UNAVAILABLE');
  if(input.candidate&& (input.candidate.row!==targetRow||input.candidate.field!==targetField))throw new Error('UNMATCHED');
@@ -87,6 +89,8 @@ export function qualityIssues(db:Kysely<DB>,provider?:KeyProviderPort){
    if(!Check(OpenIssueSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');input=structuredClone(input);
     return qualitySafe(()=>db.transaction().execute(async trx=>{
      const scope=CatalogTransactionScope.from(trx);
+     const prior=(await sql<{result:QualityIssueOpenResult|null}>`select governance_catalog.quality_issue_open_prior(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(scope)).rows[0]!.result;
+     if(prior)return prior;
      const evidence=await evidenceReader.readInTransaction(scope,actor,input,input.runId,false);
     const candidates=buildQualityIssueCandidates(evidence.evaluation);
      return (await sql<{result:QualityIssueOpenResult}>`select governance_catalog.quality_issue_ingest(${actor},${JSON.stringify(input)}::jsonb,${JSON.stringify(candidates)}::jsonb) as result`.execute(scope)).rows[0]!.result;
@@ -119,6 +123,7 @@ export function qualityIssues(db:Kysely<DB>,provider?:KeyProviderPort){
     const issue=detail.issue;
      const oldEvidence=await evidenceReader.readInTransaction(scope,actor,expectedDimensions(input,issue.runId),issue.runId,true);
      const newEvidence=await evidenceReader.readInTransaction(scope,actor,expectedDimensions(input,input.newRunId),input.newRunId,true);
+    if(input.newRevisionId!==newEvidence.run.revisionId)throw new Error('REVISION_REFERENCE_INVALID');
     if(!oldEvidence.run.qualityCandidateDigest||!newEvidence.run.qualityCandidateDigest)throw new Error('VALIDATION_PROVENANCE_REQUIRED');
     if(oldEvidence.job.id!==newEvidence.job.id||oldEvidence.run.contractVersionId!==newEvidence.run.contractVersionId||oldEvidence.run.ruleVersion!==newEvidence.run.ruleVersion||oldEvidence.run.parserPolicy!==newEvidence.run.parserPolicy||oldEvidence.run.interpretationPolicy!==newEvidence.run.interpretationPolicy)throw new Error('POLICY_INCOMPATIBLE');
     const current=newEvidence.job.revisions.find(revision=>revision.id===newEvidence.run.revisionId);if(!current||newEvidence.job.currentRevisionId!==newEvidence.run.revisionId||current.input.kind!=='FILE')throw new Error('STALE_REVISION');

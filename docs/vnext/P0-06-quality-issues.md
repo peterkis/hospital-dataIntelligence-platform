@@ -61,3 +61,11 @@ P0-05/P0-06 测试 runner 使用仅限 TEMPORARY_VALIDATION 的 validation-owner
 SRC-COND-061 对已知 HUMAN/SERVICE 结果记录条件规则自身的PASS覆盖，条件为真时缺值仍有独立REQUIRED错误；不会将整体run改成PASS。责任分派用现有definition_spans在同一R下选择当前B有效的已发布版本，不被后续DRAFT/SUBMIT遮蔽，未生效或退休仍不可分派。
 
 第二轮证据索引为ignored `pr8-r2-*.log`及PR handoff；首次权限反例遇到原制品唯一约束，后续改用独立错误制品明确验证应用角色权限拒绝。历史失败保留，不改写为通过。
+
+## PR #8 第三轮修复
+
+0041 允许校验已确认的exact duplicates参与跨修订纠正：TypeScript按已验签duplicates排除后续副本；SQL复用原proof中BUSINESS_KEY的PASS覆盖，要求同键组每行都通过判重并限定首行为代表。任一冲突同键行仍使整组UNMATCHED，不修改旧proof、digest或签名。
+
+resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision，不静默覆盖错误引用。openIssue先调用有限的quality_issue_open_prior：重查当前主体、job与精确目的/范围READ，从不可变事项按issue_sequence重建原candidates并比对原request digest。已提交请求在payload过期、purge或provider不可用后可返回原技术结果；新请求仍需有效证据，不恢复原值。原SQL ingest replay也进入相同权限检查。
+
+第三轮四条反例实际失败后，fresh 13/13、40→41升级13/13通过；升级含新增SQL直接调用的冲突/非代表行拒绝，以及purge后无provider重放。首次fresh因迁移换行文本匹配失败退出，单独保留；后续未改写历史迁移。两轴只读复审无新增actionable finding，命令索引见ignored pr8-r3日志与handoff。

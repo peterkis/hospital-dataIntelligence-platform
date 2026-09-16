@@ -28,7 +28,7 @@ async function setup(){
  }catch(error){await catalog.close();throw error;}
 }
 
-async function setupTwoFields(){
+async function setupTwoFields(extraRow:'NONE'|'EXACT'|'CONFLICT'='NONE'){
  const provider=new LocalSyntheticKeyProvider();
  const catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
  try{
@@ -45,7 +45,7 @@ async function setupTwoFields(){
   const contract=await catalog.contractCommand('reviewer',{action:'PUBLISH',scope:'SYNTHETIC',requestId:randomUUID(),reason:'QUALITY_CONTRACT',target:draft.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest});
   for(const permission of ['STORE','READ','PURGE'])peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(base.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
   const key=first.code,errorField=secondSource.code;
-  const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'QUALITY_FILE',contractId:contract.id,contractVersionId:contract.versionId,profile:'CORE',input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V2'}}},Buffer.from(`${key},${errorField}\nKEY_001,${'X'.repeat(8000)}`));
+  const file=await catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'QUALITY_FILE',contractId:contract.id,contractVersionId:contract.versionId,profile:'CORE',input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V2'}}},Buffer.from(`${key},${errorField}\nKEY_001,${'X'.repeat(8000)}${extraRow==='NONE'?'':extraRow==='EXACT'?'\nKEY_001,'+'X'.repeat(8000):'\nKEY_001,OTHER'}`));
   const parse=await catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
   const validate={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parse.artifact.artifactId,retentionSeconds:3600};
   const run=await catalog.validateRevision('maker',validate);
@@ -161,6 +161,7 @@ test('P0-06 complete correction preserves old evidence and resolves only an exac
    peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
    try{await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify(direct)]),/ACCESS_DENIED/);}finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.base.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);}
   }finally{await pool.end();}
+  await assert.rejects(s.catalog.resolveWithEvidence('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'WRONG_REVISION',issueId:lengthIssue.id,expectedHead:correction.head,newRunId:nextRun.runId,newRevisionId:randomUUID()}),/REVISION_REFERENCE_INVALID/);
   const resolved=await s.catalog.resolveWithEvidence('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'RESOLVE_CORRECTED',issueId:lengthIssue.id,expectedHead:correction.head!,newRunId:nextRun.runId,newRevisionId:correction.revisionId!});
   assert.equal(resolved.kind,'RESOLVED');
   const replayPool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
@@ -235,5 +236,49 @@ test('P0-06 concurrent assignments at one head serialize to one disposition',asy
   assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
   assert.equal(results.filter(result=>result.status==='rejected').length,1);
   const rejection=results.find(result=>result.status==='rejected');assert.ok(rejection?.status==='rejected');assert.match(String(rejection.reason),/STALE_HEAD/);
+ }finally{await s.catalog.close();}
+});
+
+
+for(const [oldRows,newRows,expected] of [['EXACT','NONE','RESOLVED'],['EXACT','EXACT','RESOLVED'],['CONFLICT','NONE','UNMATCHED'],['NONE','CONFLICT','UNMATCHED']] as const)test(`PR8 exact duplicate matching ${oldRows} -> ${newRows}`,async()=>{
+ const s=await setupTwoFields(oldRows);try{
+  await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'OPEN_DUPLICATES',runId:s.run.runId});
+  const listed=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id});
+  const issue=listed.items.find(i=>i.rule==='LENGTH')!;
+  const correction=await s.catalog.proposeCorrection('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),receiveRequestId:randomUUID(),reason:'CORRECT_DUPLICATES',issueId:issue.id,jobId:s.file.job.id,sourceRunId:s.run.runId,expectedCurrentRevision:s.file.job.revisionId,format:'CSV',parserPolicy:'STRICT_V2',retentionSeconds:3600},Buffer.from(`${s.key},${s.errorField}\nKEY_001,GOOD${newRows==='NONE'?'':newRows==='EXACT'?'\nKEY_001,GOOD':'\nKEY_001,OTHER'}`));
+  const parse=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:correction.revisionId,artifactId:correction.artifactId!});
+  const run=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:correction.revisionId,artifactId:parse.artifact.artifactId});
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'RESOLVE_DUPLICATES',issueId:issue.id,expectedHead:correction.head,newRunId:run.runId,newRevisionId:correction.revisionId};
+  const job=await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:s.file.job.id});
+  const proof=async(v:typeof run)=>{
+   const bytes=await s.catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:v.parseArtifactId});
+   const parsed=JSON.parse(Buffer.from(bytes).toString('utf8')).result;bytes.fill(0);
+   const {evaluation}=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:v.runId});
+   return qualityResolutionProof(s.provider,job,parsed,evaluation,input);
+  };
+  const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+  try{
+   const direct={...input,targetRow:expected==='UNMATCHED'?1:2,targetField:s.errorField,matchStatus:'MATCHED',oldProof:await proof(s.run),newProof:await proof(run)};
+   await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify(direct)]),/UNMATCHED/);
+  }finally{await pool.end();}
+  if(expected==='UNMATCHED')await assert.rejects(s.catalog.resolveWithEvidence('maker',input),/UNMATCHED/);
+  else assert.equal((await s.catalog.resolveWithEvidence('maker',input)).kind,'RESOLVED');
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 ingestion replay survives expired payload but still enforces permissions and intent',async()=>{
+ const s=await setup();try{
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'OPEN_THEN_EXPIRE',runId:s.run.runId};
+  const opened=await s.catalog.openIssue('maker',input);
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_artifact SET recorded_at='2019-01-01',expires_at='2020-01-01' WHERE id=${quote(s.run.resultArtifactId)}::uuid; COMMIT;`);
+  assert.deepEqual(await s.catalog.openIssue('maker',input),opened);
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','PURGE') ON CONFLICT DO NOTHING;`);
+  await s.catalog.purgeOwnedExpiredArtifact('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:s.run.resultArtifactId});
+  const noKeys=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL']);
+  try{assert.deepEqual(await noKeys.openIssue('maker',input),opened);}finally{await noKeys.close();}
+  await assert.rejects(s.catalog.openIssue('maker',{...input,reason:'CHANGED_INTENT'}),/REQUEST_CONFLICT/);
+  await assert.rejects(s.catalog.openIssue('maker',{...input,requestId:randomUUID()}),/PAYLOAD_UNAVAILABLE/);
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
+  await assert.rejects(s.catalog.openIssue('maker',input),/ACCESS_DENIED/);
  }finally{await s.catalog.close();}
 });
