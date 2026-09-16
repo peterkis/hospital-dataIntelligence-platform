@@ -116,3 +116,15 @@ test('malformed input preserves original bytes and protected issue export withou
   s.keys.rotate();assert.ok((await s.catalog.authorizeSensitiveRead('maker',readRef)).length>0);
  }finally{await s.catalog.close();}
 });
+
+test('PR8 public receive snapshots submitted bytes before transaction acquisition',async()=>{
+ const s=await setup();try{
+  s.grant('STORE');s.grant('READ');
+  const bytes=Buffer.from(`${s.field}\nORIGINAL_FILE`),expected=Buffer.from(bytes);
+  const pending=s.catalog.receiveFile('maker',s.input,bytes);
+  bytes.fill(0);
+  const received=await pending;
+  assert.deepEqual(Buffer.from(await s.read(received.artifact.artifactId)),expected);
+  assert.deepEqual(await s.catalog.receiveFile('maker',s.input,expected),received);
+ }finally{await s.catalog.close();}
+});

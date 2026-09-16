@@ -88,16 +88,16 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
   return {
     async receiveFile(actor:string,input:ReceiveFileInput,bytes:Uint8Array) {
       assertReceiveFileInput(input,bytes);
-      input=structuredClone(input);
+      input=structuredClone(input);const raw=Buffer.from(bytes);
       try {
-       return await db.transaction().execute(trx=>receiveFileInTransaction(CatalogTransactionScope.from(trx),provider,actor,input,bytes));
+       return await db.transaction().execute(trx=>receiveFileInTransaction(CatalogTransactionScope.from(trx),provider,actor,input,raw));
       } catch(error) {
         const denial={scope:'SYNTHETIC',campus:input.campus,purpose:input.purpose,requestId:input.fileRequestId,targetId:input.job.action==='CREATE'?input.job.requestId:input.job.jobId};
         try { await sql`select governance_catalog.file_receive_denial(${actor},${JSON.stringify(denial)}::jsonb)`.execute(db); }
         catch {throw new Error('FILE_RECEIVE_FAILED');}
         const code=error instanceof Error?error.message:'';
         throw new Error(['ACCESS_DENIED','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','BATCH_REJECTED','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT'].includes(code)?code:'FILE_RECEIVE_FAILED');
-      }
+      } finally {raw.fill(0);}
     },
     // Both commands close over the same authorized parser, independent of the receiver.
     inspectEnvelope:parseFile,

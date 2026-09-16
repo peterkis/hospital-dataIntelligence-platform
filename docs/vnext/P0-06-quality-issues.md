@@ -111,3 +111,7 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 反例先复现直接 SQL 越权及旧问题漏计；验证和清理结果见 ignored pr8-r9 日志及 handoff。持久研发库仍未安装迁移。
 
 同轮独立审查补充：直接 SQL 资格查询还必须确认结果 artifact 的维度、有效期限及 payload 存在。到期或清理后返回 VALIDATION_EVIDENCE_UNAVAILABLE，不再固定宣称证据可用；测试覆盖两种情况，未伪造可恢复证据。
+
+## PR #8 第十轮修复
+
+公开 receiveFile 在获取数据库事务之前同步复制输入字节，传入内部同事务接收接口；无论成功或失败均清零公开入口持有的副本。调用方在返回 promise 后修改或清空原缓冲区，不会改变被认证、存储的原文件。回归读取实际受限文件并检查重放一致性；首次反例实际失败，日志见 ignored pr8-r10。无DDL变化。
