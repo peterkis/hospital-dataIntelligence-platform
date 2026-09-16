@@ -12,7 +12,7 @@ const {peer,quote}=await import('./lineage.mjs');
 
 async function setup(){
  const provider=new LocalSyntheticKeyProvider();
- const catalog=await openCatalog(undefined,provider);
+ const catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
  try{
   const f=await fixture(catalog,{businessKey:true,textField:true});
   const contract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0]!;
@@ -30,7 +30,7 @@ async function setup(){
 
 async function setupTwoFields(){
  const provider=new LocalSyntheticKeyProvider();
- const catalog=await openCatalog(undefined,provider);
+ const catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
  try{
  const base=await fixture(catalog,{businessKey:true,textField:true});
   const baseContract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:base.contract.id,versionId:base.contract.versionId}))[0]!;
@@ -71,6 +71,18 @@ test('P0-06 ingestion is signed, idempotent per run, and never stores raw values
    await assert.rejects(appPool.query('UPDATE governance_catalog.quality_issue SET classification=$1 WHERE id=$2',['REVIEW',first.issueIds[0]]),/permission denied/);
    await assert.rejects(appPool.query('SELECT governance_catalog.quality_issue_ingest($1,$2::jsonb,$3::jsonb)',[ 'maker',JSON.stringify({...input,requestId:randomUUID()}),JSON.stringify([{sourceKind:'RULE',sourceStatus:'FAIL',classification:'ERROR',layer:1,rule:'FORGED',requirementId:'',row:1,field:s.field,ownerRef:'',relatedRefs:[],boundedCode:'FORGED'}]) ]),/VALIDATION_PROVENANCE_REQUIRED/);
   }finally{await appPool.end();}
+  const fakeReport=await s.catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),retentionSeconds:3600,jobId:s.file.job.id,revisionId:s.file.job.revisionId,kind:'ERROR_REPORT'},Buffer.from('{}'));
+  const appCatalog=await openCatalog(process.env['VNEXT_DATABASE_URL'],s.provider);
+  try{
+   await assert.rejects(appCatalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID()}),/VALIDATION_OWNER_REQUIRED/);
+   assert.deepEqual(await appCatalog.validateRevision('maker',s.validate),s.run);
+  }finally{await appCatalog.close();}
+  const untrusted=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+  try{
+   await assert.rejects(untrusted.query('SELECT governance_catalog.accept_validation($1,$2::jsonb,$3::uuid,$4,$5,$6::uuid,$7,$8,$9,$10,$11)', ['maker',JSON.stringify({...s.validate,requestId:randomUUID()}),fakeReport.artifactId,'BLOCKED',0,randomUUID(),s.run.recordedAt,'0'.repeat(64),'1'.repeat(64),'2'.repeat(64),'3'.repeat(64)]),/permission denied/);
+   const trustedRole=new URL(process.env['VNEXT_VALIDATION_OWNER_URL']!).username;
+   await assert.rejects(untrusted.query(`SET ROLE ${trustedRole}`),/permission denied/);
+  }finally{await untrusted.end();}
   const replay=await s.catalog.openIssue('maker',{...input,requestId:randomUUID()});
   assert.equal(replay.inserted,0);assert.equal(replay.replayed,2);
   const sameRequest=await s.catalog.openIssue('maker',input);assert.deepEqual(sameRequest,first);
@@ -98,6 +110,12 @@ test('P0-06 responsibility assignment does not grant a cross-identity read',asyn
   const issueId=opened.issueIds[0];assert.ok(issueId);
   const assigned=await s.catalog.assignIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'ASSIGN_OWNER',issueId,expectedHead:'0',responsibilityId:responsibility.id});
   assert.equal(assigned.ownerRef,'SYNTHETIC_OWNER_A');
+  const revised=await s.catalog.command('maker',{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'RESPONSIBILITY_EDIT',target:responsibility.id,expectedHead:responsibility.head,values:{dataset:s.contract.dataset,authorityScope:'ALL',fieldGroup:'ALL',role:'OWNER',assigneeRole:'SYNTHETIC_OWNER_B'},validFrom:'2026-01-01T00:00:00'});
+  const pending=await s.catalog.command('maker',{action:'SUBMIT',scope:'SYNTHETIC',requestId:randomUUID(),reason:'RESPONSIBILITY_REVIEW',target:revised.id,expectedHead:revised.head});
+  assert.ok(pending.head);
+  const duringEdit=await s.catalog.assignIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'ASSIGN_DURING_EDIT',issueId,expectedHead:assigned.head,responsibilityId:responsibility.id});
+  assert.equal(duringEdit.ownerRef,'SYNTHETIC_OWNER_A');
+
   peer(receipt.name,"INSERT INTO vnext_control.actor(code,identity_code,active) VALUES('outsider','OUTSIDER_ID',true) ON CONFLICT DO NOTHING; INSERT INTO vnext_control.actor_grant(actor_code,scope,permission) VALUES('outsider','SYNTHETIC','READ') ON CONFLICT DO NOTHING;");
   await assert.rejects(s.catalog.qualityIssueDetail('outsider',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',issueId}),/ACCESS_DENIED/);
  }finally{await s.catalog.close();}

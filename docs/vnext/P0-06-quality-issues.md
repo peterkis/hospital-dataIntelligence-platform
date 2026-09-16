@@ -49,3 +49,15 @@ P0-02 `BROWSER_BLOCKED`、P0 `IN_PROGRESS`、生产 Apply、实际重启/UI/生�
 拒绝批次的 file guard 移至既有授权和请求重放之后；解析复用原受限 STORE 幂等，在拒绝后允许已提交输出重放、禁止新输出和新 parse provenance。真实反例包括app-role直接伪造解决、篡改证明、错误目标行/字段、撤READ后的首次调用与成功请求重放，以及拒绝后文件/解析重放。最初3项反例实测失败；首版修复的SQL同名变量错误单独保留，未计为通过。
 
 本轮聚合回归通过；最终权限修复后补跑fresh和38前缀升级。证据见ignored `pr8-r1-*.log`及PR handoff。独立Spec/Standards只读复审与远端Codex review分别记录，不互相替代。
+
+## PR #8 第二轮修复与校验连接边界
+
+0040 撤销 PUBLIC/hdi_prototype 对全部 accept_validation 重载的执行权。仅持有 provider 的受信校验 Owner 进程使用独立、最小权限的数据库连接调用该入口；整个文件/校验/质量事务继续使用同一个 pool 和根事务，不在事务中切换连接。普通应用连接的新校验返回 VALIDATION_OWNER_REQUIRED，既有已提交运行仍按当前授权和 HMAC 安全重放。
+
+当前 typed 接入方式仍为 `openCatalog(trustedOwnerConnection, provider)`。受信登录主体不得是管理员、数据库/schema/table Owner，不得给普通应用角色授予该主体的成员资格；它只需要既有受限函数和必要元数据 SELECT，以及 accept_validation 的执行权。持久库安装时必须由整合会话明确配置这一连接和凭据，不能回退到管理员或把权限重新授给普通应用角色。本轮没有创建持久角色、没有安装持久库迁移。
+
+P0-05/P0-06 测试 runner 使用仅限 TEMPORARY_VALIDATION 的 validation-owner-session：随机角色、独立密码、无继承/成员关系/高权限，核验同库OID/端口。密码仅经stdin配置并在进程环境传递，不写receipt或日志；provider密钥仍不入库。先落独占intent，事务创建NOLOGIN角色并取OID，落ownership后才启用登录。失败携带无敏感内容的精确恢复身份；数据库清理后核对role OID、属性、会话及成员关系再删除，不做跨库DROP OWNED。`--owner-failure-probe` 已实测创建后receipt写入前失败的清理路径。
+
+SRC-COND-061 对已知 HUMAN/SERVICE 结果记录条件规则自身的PASS覆盖，条件为真时缺值仍有独立REQUIRED错误；不会将整体run改成PASS。责任分派用现有definition_spans在同一R下选择当前B有效的已发布版本，不被后续DRAFT/SUBMIT遮蔽，未生效或退休仍不可分派。
+
+第二轮证据索引为ignored `pr8-r2-*.log`及PR handoff；首次权限反例遇到原制品唯一约束，后续改用独立错误制品明确验证应用角色权限拒绝。历史失败保留，不改写为通过。

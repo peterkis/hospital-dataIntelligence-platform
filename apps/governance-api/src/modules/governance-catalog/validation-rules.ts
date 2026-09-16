@@ -114,6 +114,7 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
      const adoption=definition.codeSets.find(c=>c.field==='account_kind'&&c.status==='SYNTHETIC_ADOPTED');
      required=evaluateCondition(mapping.id,row,adoption?.codes??[]);
       if(required==='UNKNOWN')add(mapping.id,2,n,f.code,'UNKNOWN','CONDITION_INPUT_UNKNOWN');
+      else cover(mapping.id,2,n,f.code,'PASS',required?'CONDITION_TRUE':'CONDITION_FALSE');
      }
     }
     if(value===''){

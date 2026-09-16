@@ -86,6 +86,8 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
        await evidenceReader.readEvaluation(CatalogTransactionScope.from(trx),actor,{...ReadDimensionsInput(input),runId:prior.runId},prior);
       const {signature,...run}=prior;return run;
      }
+    const acceptance=(await sql<{allowed:boolean}>`select bool_or(has_function_privilege(current_user,p.oid,'EXECUTE')) as allowed from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='governance_catalog' and p.proname='accept_validation'`.execute(trx)).rows[0]?.allowed;
+    if(!acceptance)throw new Error('VALIDATION_OWNER_REQUIRED');
      if(job.status==='REJECTED')throw new Error('BATCH_REJECTED');
     if(job.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');
     const metadata=job.revisions.at(-1)!.input;

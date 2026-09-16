@@ -158,3 +158,17 @@ test('P0-06 coverage: a successful check has signed, row-scoped positive executi
  assert.ok(checks.some(check=>check.rule==='LENGTH'&&check.status==='PASS'));
  assert.ok(coverage.checks.some(check=>check.rule==='BUSINESS_KEY'&&check.rows.includes(1)&&check.status==='PASS'));
 });
+
+
+test('PR8 known finite conditions record positive coverage without clearing remaining blockers',()=>{
+ const m=conditionMappings.find(mapping=>mapping.id==='SRC-COND-061')!;
+ const d=definition(m.field);d.fields.push({code:'account_kind',type:'code',required:'R',privacy:'INTERNAL',condition:'ALWAYS',enumValues:['HUMAN','SERVICE']});
+ d.rules=[{id:m.id,field:m.field,text:m.text,status:'MACHINE',version:m.version}];
+ d.codeSets=[{field:'account_kind',codeSystem:'TEST',version:'V1',status:'SYNTHETIC_ADOPTED',codes:['HUMAN','SERVICE'],validFrom:'2026-01-01T00:00:00',validTo:null,sourceVersionId:'00000000-0000-0000-0000-000000000001'}];
+ for(const kind of ['HUMAN','SERVICE']){
+  const result=evaluateRuleSet('PER17',d,[{account_kind:kind,[m.field]:''}]);
+  assert.ok(result.executionCoverage?.checks.some(c=>c.rule===m.id&&c.field===m.field&&c.status==='PASS'&&c.rows.includes(1)));
+  assert.notEqual(result.decision,'PASS');
+  if(kind==='HUMAN')assert.ok(result.issues.some(i=>i.rule==='REQUIRED'&&i.status==='FAIL'));
+ }
+});
