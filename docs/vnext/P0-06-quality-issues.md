@@ -39,3 +39,13 @@ npm.cmd run prototype:db:with -- vnext:p0-06:validate
 以 `3318a2e3aa54e47c70a1a9009e5f9635e3caf566` 为固定基线的 Standards/Spec 双轴复审均无当前 actionable findings；复审代理未执行数据库或网络操作。详细记录见 ignored evidence `03-review.md`。
 
 P0-02 `BROWSER_BLOCKED`、P0 `IN_PROGRESS`、生产 Apply、实际重启/UI/生产扫描仍是本票外或明确 NOT_RUN 项。
+
+## PR #8 第一轮修复
+
+0039 前向修复两项远端 P1，0038 保持原 checksum。运行新增 quality_resolution_digest，HMAC 同时覆盖该摘要；内部证明只包含 job/contract 域分离的 keyed 行键和真实执行 PASS 定位，不向公共读取返回。SQL resolve 对指定运行的证明摘要、唯一键对应、后继修订、相同规则/解析/解释策略和目标 PASS 独立检查，并在请求重放之前重查当前作业、契约及受限 READ 权限。
+
+该机制沿用 P0-05 已声明的同 provider 可信 Owner 边界：SQL 参数和签名本身不是独立认证，应用角色任意伪造的无效签名运行仍不能通过 Owner 验签。未引入数据库密钥托管。0038-only 历史运行缺少新证明时，继续解释/安全重放，但不能作为自动解决所需的完整证据；不补写历史签名。当前持久库仍为37，无0038质量事项需要迁移认证。
+
+拒绝批次的 file guard 移至既有授权和请求重放之后；解析复用原受限 STORE 幂等，在拒绝后允许已提交输出重放、禁止新输出和新 parse provenance。真实反例包括app-role直接伪造解决、篡改证明、错误目标行/字段、撤READ后的首次调用与成功请求重放，以及拒绝后文件/解析重放。最初3项反例实测失败；首版修复的SQL同名变量错误单独保留，未计为通过。
+
+本轮聚合回归通过；最终权限修复后补跑fresh和38前缀升级。证据见ignored `pr8-r1-*.log`及PR handoff。独立Spec/Standards只读复审与远端Codex review分别记录，不互相替代。

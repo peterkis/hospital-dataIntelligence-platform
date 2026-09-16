@@ -1,3 +1,4 @@
+import {qualityResolutionProof} from '../../apps/governance-api/src/modules/governance-catalog/quality-resolution-proof.js';
 import {test} from 'vitest';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
@@ -76,6 +77,10 @@ test('P0-06 ingestion is signed, idempotent per run, and never stores raw values
   const listed=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id,pageSize:10,offset:0});
   assert.equal(listed.total,2);
   const lengthIssue=listed.items.find((item:{rule:string})=>item.rule==='LENGTH')!;
+  const bypassPool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+  try {
+   await assert.rejects(bypassPool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)', ['maker',JSON.stringify({scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'FORGED_RESOLVE',issueId:lengthIssue.id,expectedHead:'0',newRunId:s.run.runId,newRevisionId:s.run.revisionId,targetRow:1,targetField:s.field,matchStatus:'MATCHED'})]),/REVISION_LINEAGE_INVALID|VALIDATION_PROVENANCE_REQUIRED/);
+  } finally {await bypassPool.end();}
   const detail=await s.catalog.qualityIssueDetail('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',issueId:lengthIssue.id});
   assert.equal(JSON.stringify(detail).includes('SENTINEL_PII'),false);
   const secondRun=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID()});
@@ -122,8 +127,34 @@ test('P0-06 complete correction preserves old evidence and resolves only an exac
   assert.equal(createHash('sha256').update(oldBytesAfter).digest('hex'),createHash('sha256').update(oldBytes).digest('hex'));
   const nextParse=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:correction.revisionId!,artifactId:correction.received.artifact.artifactId});
   const nextRun=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:correction.revisionId!,artifactId:nextParse.artifact.artifactId});
+  const job=await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:s.file.job.id});
+  const proof=async(run:typeof nextRun)=>{
+   const bytes=await s.catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:run.parseArtifactId});
+   const parsed=JSON.parse(Buffer.from(bytes).toString('utf8')).result;bytes.fill(0);
+   const {evaluation}=await s.catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.runId});
+   return qualityResolutionProof(s.provider,job,parsed,evaluation,{campus:'NORTH',purpose:'IDENTITY_VERIFY'});
+  };
+  const direct={scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'DIRECT_PROOF',issueId:lengthIssue.id,expectedHead:correction.head,newRunId:nextRun.runId,newRevisionId:correction.revisionId,targetRow:1,targetField:s.errorField,matchStatus:'MATCHED',oldProof:await proof(s.run),newProof:await proof(nextRun)};
+  const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+  try{
+   for(const change of [{newProof:direct.newProof.replace('QUALITY_RESOLUTION_V1','FORGED')},{oldProof:direct.newProof},{newProof:null}])await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify({...direct,...change})]),/VALIDATION_PROVENANCE_REQUIRED/);
+   await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify({...direct,targetRow:2})]),/UNMATCHED/);
+   await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify({...direct,targetField:s.key})]),/VALIDATION_NOT_PASSED/);
+   peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
+   try{await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify(direct)]),/ACCESS_DENIED/);}finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.base.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);}
+  }finally{await pool.end();}
   const resolved=await s.catalog.resolveWithEvidence('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'RESOLVE_CORRECTED',issueId:lengthIssue.id,expectedHead:correction.head!,newRunId:nextRun.runId,newRevisionId:correction.revisionId!});
   assert.equal(resolved.kind,'RESOLVED');
+  const replayPool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+  try{
+   // Reconstruct the committed public command without reading any sensitive values.
+   const request=peer(receipt.name,`SELECT request_id::text FROM governance_catalog.issue_disposition WHERE id=${quote(resolved.eventId)}::uuid;`);
+   const replayInput={...direct,requestId:request,reason:'RESOLVE_CORRECTED'};
+   assert.deepEqual((await replayPool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb) AS result',['maker',JSON.stringify(replayInput)])).rows[0].result,resolved);
+   peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
+   try{await assert.rejects(replayPool.query('SELECT governance_catalog.quality_issue_resolve($1,$2::jsonb)',['maker',JSON.stringify(replayInput)]),/ACCESS_DENIED/);}finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.base.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);}
+  }finally{await replayPool.end();}
+
   const detail=await s.catalog.qualityIssueDetail('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',issueId:lengthIssue.id});
   assert.equal(detail.issue.status,'RESOLVED');
   const current=await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'OPEN_CURRENT',runId:nextRun.runId});
@@ -144,9 +175,21 @@ test('P0-06 batch rejection blocks new processing but preserves safe historical 
   assert.equal(rejected.status,'REJECTED');
   assert.deepEqual(await s.catalog.rejectBatch('maker',stopInput),rejected);
   assert.equal((await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:s.file.job.id})).status,'REJECTED');
-  await assert.rejects(s.catalog.parseFile('maker',s.parseInput),/BATCH_REJECTED/);
+  assert.deepEqual(await s.catalog.parseFile('maker',s.parseInput),s.parse);
+  await assert.rejects(s.catalog.parseFile('maker',{...s.parseInput,requestId:randomUUID(),outputRequestId:randomUUID()}),/BATCH_REJECTED/);
   await assert.rejects(s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID()}),/BATCH_REJECTED/);
   assert.deepEqual(await s.catalog.validateRevision('maker',s.validate),s.run);
+ }finally{await s.catalog.close();}
+});
+
+test('P0-06 rejected batches replay committed file revisions but reject new requests',async()=>{
+ const s=await setup();try{
+  const input={campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv' as const,job:{action:'REVISE' as const,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'REPLAY_REVISION',jobId:s.file.job.id,expectedCurrentRevision:s.file.job.revisionId,input:{kind:'FILE' as const,format:'CSV' as const,parserPolicy:'STRICT_V2' as const}}};
+  const bytes=Buffer.from(`${s.field}\nREPLAY_VALUE`);
+  const received=await s.catalog.receiveFile('maker',input,bytes);
+  await s.catalog.rejectBatch('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'STOP_BATCH',jobId:s.file.job.id,expectedHead:'0'});
+  assert.deepEqual(await s.catalog.receiveFile('maker',input,bytes),received);
+  await assert.rejects(s.catalog.receiveFile('maker',{...input,fileRequestId:randomUUID(),job:{...input.job,requestId:randomUUID(),expectedCurrentRevision:received.job.revisionId}},bytes),/BATCH_REJECTED/);
  }finally{await s.catalog.close();}
 });
 

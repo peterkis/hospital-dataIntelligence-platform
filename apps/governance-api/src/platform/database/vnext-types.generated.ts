@@ -273,6 +273,7 @@ export interface GovernanceCatalogValidationRun {
   parse_artifact_id: string;
   quality_candidate_digest: string | null;
   quality_eligibility_digest: string | null;
+  quality_resolution_digest: string | null;
   recorded_at: Generated<string>;
   request_id: string;
   request_identity: string;

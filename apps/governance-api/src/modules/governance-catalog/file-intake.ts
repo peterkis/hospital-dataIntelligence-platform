@@ -65,7 +65,6 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
       if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED'); input={...input};
       const job=await jobRead(actor,input);const metadata=job.revisions.at(-1)!.input;
       if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
-      if(job.status==='REJECTED')throw new Error('BATCH_REJECTED');
       const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
       try {
         const result=await boundedParse(raw,metadata.format,job.contract.definition.fields,metadata.parserPolicy);

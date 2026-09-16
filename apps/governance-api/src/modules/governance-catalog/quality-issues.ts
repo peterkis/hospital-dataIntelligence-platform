@@ -7,6 +7,7 @@ import {receiveFileInTransaction,type ReceiveFileInput} from './file-intake.js';
 import {createValidationEvidenceReader,type VerifiedValidationEvidence} from './validation.js';
 import {buildQualityIssueCandidates} from './quality-candidates.js';
 import type {KeyProviderPort} from './protected-artifact.js';
+import {qualityResolutionProof} from './quality-resolution-proof.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
 
 const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
@@ -124,7 +125,7 @@ export function qualityIssues(db:Kysely<DB>,provider?:KeyProviderPort){
     let cursor=current;let linked=false;const seen=new Set<string>();while(cursor.previousRevisionId&&!seen.has(cursor.id)){seen.add(cursor.id);if(cursor.previousRevisionId===oldEvidence.run.revisionId){linked=true;break;}const previous=newEvidence.job.revisions.find(revision=>revision.id===cursor.previousRevisionId);if(!previous)break;cursor=previous;}
     if(!linked)throw new Error('REVISION_LINEAGE_INVALID');
     const {targetRow,targetField}=requireMatchedRow(oldEvidence,newEvidence,issue,input);
-    const normalized={...input,newRevisionId:newEvidence.run.revisionId,targetRow,targetField,matchStatus:'MATCHED'};
+    const normalized={...input,newRevisionId:newEvidence.run.revisionId,targetRow,targetField,matchStatus:'MATCHED',oldProof:qualityResolutionProof(provider,oldEvidence.job,oldEvidence.parsed!,oldEvidence.evaluation,input),newProof:qualityResolutionProof(provider,newEvidence.job,newEvidence.parsed!,newEvidence.evaluation,input)};
      return (await sql<{result:QualityIssueDispositionResult}>`select governance_catalog.quality_issue_resolve(${actor},${JSON.stringify(normalized)}::jsonb) as result`.execute(scope)).rows[0]!.result;
    }));
   },

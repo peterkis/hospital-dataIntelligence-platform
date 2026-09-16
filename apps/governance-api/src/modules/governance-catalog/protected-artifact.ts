@@ -39,7 +39,7 @@ export interface ProtectedReference { artifactId: string; status: 'QUARANTINED';
 type Envelope = { keyId: string; nonce: string; tag: string; ciphertext: string };
 type Result = ProtectedReference & { error?: string; envelope?: Envelope; binding?: string };
 const publicDigestConflict = Symbol('verified-public-digest-conflict');
-const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
+const safeCodes = new Set(['BATCH_REJECTED','ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
 function safeError(error: unknown): Error { return new Error(error instanceof Error && safeCodes.has(error.message) ? error.message : 'PROTECTED_OPERATION_FAILED'); }
 
 export function protectedArtifacts(db: Kysely<DB>|CatalogTransactionScope, provider?: KeyProviderPort) {

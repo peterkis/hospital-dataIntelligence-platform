@@ -11,13 +11,14 @@ import type {ParserResult} from './file-parser.js';
 import {parseSignature,signaturesEqual,verifyParsedPayload} from './parse-provenance.js';
 import {evaluateRuleSet,type ValidationEvaluation} from './validation-rules.js';
 import {buildQualityIssueCandidates,qualityCandidateDigest,qualityEligibilityDigest} from './quality-candidates.js';
+import {qualityResolutionProof,qualityResolutionDigest} from './quality-resolution-proof.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
 export const ValidateRevisionSchema=ParseFileSchema;
 const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
 const ReadDimensions={scope:ProtectedReadSchema.properties.scope,campus:ProtectedReadSchema.properties.campus,purpose:ProtectedReadSchema.properties.purpose};
 export const ExplainValidationSchema=Type.Object({...ReadDimensions,runId:Id},{additionalProperties:false});
 export const CompareValidationSchema=Type.Object({...ReadDimensions,leftRunId:Id,rightRunId:Id},{additionalProperties:false});
-export interface ValidationRun {runId:string;jobId:string;revisionId:string;parseArtifactId:string;sourceArtifactId:string;parserPolicy:string;contractVersionId:string;ruleVersion:string;interpretationPolicy:string;decision:'FAIL'|'BLOCKED';issueCount:number;resultArtifactId:string;recordedAt:string;adapterReadiness:'NOT_READY';securityScan:'NOT_RUN';qualityCandidateDigest?:string|null;qualityEligibilityDigest?:string|null}
+export interface ValidationRun {runId:string;jobId:string;revisionId:string;parseArtifactId:string;sourceArtifactId:string;parserPolicy:string;contractVersionId:string;ruleVersion:string;interpretationPolicy:string;decision:'FAIL'|'BLOCKED';issueCount:number;resultArtifactId:string;recordedAt:string;adapterReadiness:'NOT_READY';securityScan:'NOT_RUN';qualityCandidateDigest?:string|null;qualityEligibilityDigest?:string|null;qualityResolutionDigest?:string|null}
 type SignedRun=ValidationRun&{signature:string};
 interface Provenance {artifact_id:string;source_artifact_id:string;job_id:string;revision_id:string;contract_version_id:string;policy:'STRICT_V1'|'STRICT_V2';structural_status:string;signature:string}
 
@@ -26,7 +27,7 @@ function validationSignature(provider:KeyProviderPort|undefined,run:ValidationRu
  if(!provider)throw new Error('KEY_UNAVAILABLE');
  const binding=[run.runId,run.jobId,run.revisionId,run.parseArtifactId,run.sourceArtifactId,run.parserPolicy,run.contractVersionId,run.ruleVersion,run.interpretationPolicy,run.decision,run.issueCount,run.resultArtifactId,run.recordedAt,run.adapterReadiness,run.securityScan];
   const signedBinding=run.qualityCandidateDigest&&run.qualityEligibilityDigest?[...binding,run.qualityCandidateDigest,run.qualityEligibilityDigest]:binding;
-  return createHmac('sha256',provider.lookup()).update(JSON.stringify(['P0_05_VALIDATION_V1',...signedBinding])).update(bytes).digest('hex');
+  return createHmac('sha256',provider.lookup()).update(JSON.stringify(['P0_05_VALIDATION_V1',...signedBinding,...(run.qualityResolutionDigest?[run.qualityResolutionDigest]:[])])).update(bytes).digest('hex');
 }
 
 /** Internal verified-read seam for sibling governance-catalog capabilities. */
@@ -93,7 +94,7 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
     if(!p||p.job_id!==job.id||p.revision_id!==input.revisionId||p.contract_version_id!==job.contract.versionId||p.policy!==metadata.parserPolicy)throw new Error('PARSE_PROVENANCE_REQUIRED');
     const source=await store.authorizeSensitiveRead(actor,{...ReadDimensionsInput(input),requestId:randomUUID(),artifactId:p.source_artifact_id},{jobId:job.id,revisionId:input.revisionId,kind:'RAW_FILE'});source.fill(0);
     const bytes=await store.authorizeSensitiveRead(actor,{...ReadDimensionsInput(input),requestId:randomUUID(),artifactId:p.artifact_id},{jobId:job.id,revisionId:input.revisionId,kind:'RAW_CELL'});
-    let evaluation:ValidationEvaluation;
+    let evaluation:ValidationEvaluation;let resolutionProof:string;
     try{
      if(!signaturesEqual(parseSignature(provider,p.artifact_id,job.id,input.revisionId,job.contract.versionId,bytes),p.signature))throw new Error('PARSE_PROVENANCE_REQUIRED');
      const parsed=verifyParsedPayload(bytes,{sourceArtifactId:p.source_artifact_id,policy:p.policy,format:metadata.format,status:p.structural_status},job.contract.definition.fields);
@@ -106,6 +107,7 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
       }else dependencies.push({target:ref.target,status:'NOT_READY',scope:input.scope,identity:'',version:null,periods:[]});
      }
      evaluation=evaluateRuleSet(job.contract.dataset,job.contract.definition,parsed.rows,dependencies,{from:job.contract.validFrom,to:job.contract.validTo});
+     resolutionProof=qualityResolutionProof(provider,job,parsed,evaluation,input);
     }finally{bytes.fill(0);}
     const payload=Buffer.from(JSON.stringify(evaluation));
     try{
@@ -117,11 +119,15 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
        const dimensions={campus:input.campus,purpose:input.purpose};
        const candidateDigest=qualityCandidateDigest(candidates,dimensions);
        const eligibilityDigest=qualityEligibilityDigest(candidates,notRunLayers,dimensions);
-       const run:ValidationRun={runId:stamp.id,jobId:job.id,revisionId:input.revisionId,parseArtifactId:p.artifact_id,sourceArtifactId:p.source_artifact_id,parserPolicy:p.policy,contractVersionId:job.contract.versionId,ruleVersion:job.contract.definition.ruleVersion,interpretationPolicy:evaluation.interpretationPolicy,decision:evaluation.decision==='FAIL'?'FAIL':'BLOCKED',issueCount:evaluation.issues.length,resultArtifactId:artifact.artifactId,recordedAt:stamp.time,adapterReadiness:'NOT_READY',securityScan:'NOT_RUN',qualityCandidateDigest:candidateDigest,qualityEligibilityDigest:eligibilityDigest};
+       const run:ValidationRun={runId:stamp.id,jobId:job.id,revisionId:input.revisionId,parseArtifactId:p.artifact_id,sourceArtifactId:p.source_artifact_id,parserPolicy:p.policy,contractVersionId:job.contract.versionId,ruleVersion:job.contract.definition.ruleVersion,interpretationPolicy:evaluation.interpretationPolicy,decision:evaluation.decision==='FAIL'?'FAIL':'BLOCKED',issueCount:evaluation.issues.length,resultArtifactId:artifact.artifactId,recordedAt:stamp.time,adapterReadiness:'NOT_READY',securityScan:'NOT_RUN',qualityCandidateDigest:candidateDigest,qualityEligibilityDigest:eligibilityDigest,qualityResolutionDigest:qualityResolutionDigest(resolutionProof)};
+       const resolutionFunction=(await sql<{name:string|null}>`select to_regprocedure('governance_catalog.accept_validation(text,jsonb,uuid,text,integer,uuid,text,text,text,text,text)')::text as name`.execute(trx)).rows[0]!.name;
+       if(!resolutionFunction)delete run.qualityResolutionDigest;
        const signature=validationSignature(provider,run,payload);
        const acceptFunction=(await sql<{name:string|null}>`select to_regprocedure('governance_catalog.accept_validation(text,jsonb,uuid,text,integer,uuid,text,text,text,text)')::text as name`.execute(trx)).rows[0]!.name;
       let saved:SignedRun;
-      if(acceptFunction){
+      if(resolutionFunction){
+       saved=(await sql<{result:SignedRun}>`select governance_catalog.accept_validation(${actor},${JSON.stringify(input)}::jsonb,${artifact.artifactId}::uuid,${run.decision},${run.issueCount},${run.runId}::uuid,${run.recordedAt},${signature},${candidateDigest},${eligibilityDigest},${run.qualityResolutionDigest!}) as result`.execute(trx)).rows[0]!.result;
+      }else if(acceptFunction){
        saved=(await sql<{result:SignedRun}>`select governance_catalog.accept_validation(${actor},${JSON.stringify(input)}::jsonb,${artifact.artifactId}::uuid,${run.decision},${run.issueCount},${run.runId}::uuid,${run.recordedAt},${signature},${candidateDigest},${eligibilityDigest}) as result`.execute(trx)).rows[0]!.result;
        }else{
         const {qualityCandidateDigest:_legacyCandidateDigest,qualityEligibilityDigest:_legacyEligibilityDigest,...legacyRun}=run;

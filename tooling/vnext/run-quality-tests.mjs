@@ -14,7 +14,7 @@ if(process.argv.includes('--dispose')){
 
 const owned=createTemporary('P0-06');
 try{
- let prefix=37;
+ let prefix=process.argv.includes('--prefix38')?38:37;
  let historical; let historicalKeys;
  if(process.argv.includes('--upgrade')){
   await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
@@ -50,7 +50,7 @@ try{
    assert.deepEqual(Buffer.from(bytes),historical.bytes);
    assert.deepEqual(await catalog.validateRevision('maker',historical.validateInput),historical.run);
    assert.deepEqual(await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:historical.run.runId}),historical.explain);
-   console.log('PREFIX_37_HISTORY_AND_RAW_FILE_PRESERVED');
+   console.log(`PREFIX_${prefix}_HISTORY_AND_RAW_FILE_PRESERVED`);
   }finally{await catalog.close();}
  }
  const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.quality.config.ts','tooling/vnext/quality-owner.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-06-QUALITY'},stdio:'inherit',windowsHide:true});
