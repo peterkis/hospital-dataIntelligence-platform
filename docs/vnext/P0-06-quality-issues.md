@@ -119,3 +119,7 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 ## PR #8 第十一轮修复
 
 0047 修正事项详情的证据可用性：同时检查当前运行的 ERROR_REPORT 和 RAW_CELL artifact 维度、有效期限及 payload 存在性。解析材料独立到期或清理后，即使校验报告尚可读取，也返回 evidenceAvailable=false / NOT_RECOVERABLE。该状态不延长保留期、不复制明文、不恢复旧材料。实际反例及 fresh/46前缀升级证据见 ignored pr8-r11。
+
+## PR #8 第十二轮修复
+
+0048 在分派的既有契约 WRITE 检查后、任何首次写入或重放返回前，核对当前 actor 对事项精确 dataset/campus/purpose 的 protected READ。保留原授权锁、责任权限与版本检查；撤销受限 READ 后不能通过分派获得 ownerRef 或追加处置。真实回归覆盖拒绝、重新授权成功及再次撤权后重放拒绝。证据见 ignored pr8-r12。

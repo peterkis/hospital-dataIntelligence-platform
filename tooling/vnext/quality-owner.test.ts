@@ -514,3 +514,18 @@ test('PR8 issue evidence requires retained parse payload as well as validation r
   assert.ok(report.length>0);report.fill(0);
  }finally{await s.catalog.close();}
 });
+
+test('PR8 assignment and replay require current protected READ',async()=>{
+ const s=await setup();try{
+  const responsibility=await publishResponsibility(s.catalog,s.contract.dataset);
+  const opened=await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'ASSIGN_READ',runId:s.run.runId});
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'ASSIGN_READ',issueId:opened.issueIds[0]!,expectedHead:'0',responsibilityId:responsibility.id};
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(s.f.dataset.id)}::uuid AND permission='READ';`);
+  await assert.rejects(s.catalog.assignIssue('maker',input),/ACCESS_DENIED/);
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);
+  const assigned=await s.catalog.assignIssue('maker',input);
+  assert.deepEqual(await s.catalog.assignIssue('maker',input),assigned);
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(s.f.dataset.id)}::uuid AND permission='READ';`);
+  await assert.rejects(s.catalog.assignIssue('maker',input),/ACCESS_DENIED/);
+ }finally{await s.catalog.close();}
+});
