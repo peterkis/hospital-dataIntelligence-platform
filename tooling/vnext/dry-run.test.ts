@@ -1,6 +1,12 @@
 import {test} from 'vitest';
 import assert from 'node:assert/strict';
-import {planApplyUnits,explainTargetImpact,type PlanNode} from '../../apps/governance-api/src/modules/governance-catalog/dry-run-rules.js';
+import {planApplyUnits,explainTargetImpact,aliasReferenceBlockers,type PlanNode} from '../../apps/governance-api/src/modules/governance-catalog/dry-run-rules.js';
+
+test('PR9 P2: matching field names cannot make parameter or foreign-dataset references into local aliases',()=>{
+ assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'GOV09.config_id',status:'DECLARED_PARAMETER',parameterVersionId:'fixture',parameterDigest:'a'.repeat(64)}],['parent']),['INCOMPATIBLE_ALIAS_TARGET']);
+ assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'ORG01.org_id',status:'BLOCKED_DEPENDENCY'}],['parent']),['INCOMPATIBLE_ALIAS_TARGET']);
+ assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'PER01.person_id',status:'BLOCKED_DEPENDENCY'}],['parent']),[]);
+});
 
 test('P0-07-AC-01 and AC-02: local aliases topologically preview without permanent IDs',()=>{
  const nodes:PlanNode[]=[{row:3,intent:'CREATE',dependencies:[2]},{row:1,intent:'CREATE',dependencies:[]},{row:2,intent:'CREATE',dependencies:[1]}];

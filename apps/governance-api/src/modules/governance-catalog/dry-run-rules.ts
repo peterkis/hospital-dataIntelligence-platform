@@ -1,4 +1,17 @@
 /** Finite plan rules. Inputs here are internal observations, never permission evidence. */
+import type {ImportContractDefinition} from './contract-schema.js';
+
+export function aliasReferenceBlockers(dataset:string,references:ImportContractDefinition['references'],fields:readonly string[]):string[]{
+ const blockers=new Set<string>();
+ for(const field of fields){
+  const matches=references.filter(reference=>reference.field===field);
+  if(matches.length!==1){blockers.add('UNDECLARED_RELATION');continue;}
+  const reference=matches[0]!;
+  const [targetDataset,targetField,...extra]=reference.target.split('.');
+  if(reference.status!=='BLOCKED_DEPENDENCY'||targetDataset!==dataset||!targetField||extra.length)blockers.add('INCOMPATIBLE_ALIAS_TARGET');
+ }
+ return [...blockers].sort();
+}
 export type ChangeIntent='CREATE'|'REVISE'|'CORRECT'|'CLOSE'|'SPLIT'|'MERGE'|'TRANSFER';
 export interface PlanNode {
  row:number;

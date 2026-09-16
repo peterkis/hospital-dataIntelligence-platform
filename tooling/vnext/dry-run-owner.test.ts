@@ -9,6 +9,10 @@ assert.equal(receipt.purpose,'TEMPORARY_VALIDATION');assert.equal(receipt.taskId
 const {peer,quote}=await import('./lineage.mjs');
 const dimensions={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const};
 
+function readAuditCount(artifactId:string,reason:string){
+ return Number(peer(receipt.name,`SELECT count(*) FROM vnext_control.audit WHERE object_id=${quote(artifactId)}::uuid AND action='PROTECTED_READ_IDENTITY_VERIFY_NORTH' AND reason=${quote(reason)};`));
+}
+
 async function setup(){
  const provider=new LocalSyntheticKeyProvider();
  const catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
@@ -64,7 +68,7 @@ test('P0-07-AC-02: same-job relationship graph can be inspected; undeclared fiel
  const s=await setup();try{
   const input:BuildDryRunInput={...s.input,commands:[{row:1,intent:'CREATE',dependencies:[]},{row:2,intent:'CREATE',dependencies:[{field:s.field,alias:{kind:'JOB_ALIAS',row:1}}]}]};
   const preview=await s.catalog.buildDryRun('maker',input);
-  assert.deepEqual(preview.graph.order,[1,2]);assert.deepEqual(preview.graph.units[1]!.dependsOn,[1]);
+  assert.equal(preview.graph.status,'BLOCKED');assert.deepEqual(preview.graph.units,[]);
   assert.ok(preview.blockers.includes('UNDECLARED_RELATION'));assert.equal(preview.candidateFreezable,false);
   input.commands[0]!.dependencies=[{field:s.field,alias:{kind:'JOB_ALIAS',row:2}}];
   const cycle=await s.catalog.buildDryRun('maker',input);assert.deepEqual(cycle.graph.units,[]);
@@ -101,5 +105,39 @@ test('PARSED evidence expiry or revoked READ cannot freeze or preview',async()=>
   const frozen=await s.catalog.freezeApprovalCandidate('maker',{planToken:preview.planToken});
   assert.equal(frozen.status,'BLOCKED');assert.equal(frozen.candidate,null);
   await assert.rejects(s.catalog.buildDryRun('maker',s.input),/PAYLOAD_UNAVAILABLE/);
+ }finally{await s.catalog.close();}
+});
+
+test('PR9 P1: failed preview and freeze retain denied and authorized protected-read audits',async()=>{
+ const s=await setup();try{
+  const preview=await s.catalog.buildDryRun('maker',s.input);
+  const report=s.run.resultArtifactId;
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(s.f.dataset.id)}::uuid AND permission='READ';`);
+  const deniedBefore=readAuditCount(report,'ACCESS_DENIED');
+  await assert.rejects(s.catalog.buildDryRun('maker',s.input),/ACCESS_DENIED/);
+  assert.equal(readAuditCount(report,'ACCESS_DENIED'),deniedBefore+1,'preview denial audit must commit');
+  await assert.rejects(s.catalog.freezeApprovalCandidate('maker',{planToken:preview.planToken}),/ACCESS_DENIED/);
+  assert.equal(readAuditCount(report,'ACCESS_DENIED'),deniedBefore+2,'freeze denial audit must commit');
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);
+  const before=readAuditCount(report,'REQUEST_AUTHORIZED');
+  const noKey=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL']);
+  try{await assert.rejects(noKey.buildDryRun('maker',s.input),/PROTECTED_OPERATION_FAILED/);}finally{await noKey.close();}
+  assert.equal(readAuditCount(report,'REQUEST_AUTHORIZED'),before+1,'crypto failure must retain the access audit');
+  const originalTag=peer(receipt.name,`SELECT encode(tag,'hex') FROM governance_catalog.protected_payload WHERE artifact_id=${quote(report)}::uuid;`);
+  const beforeCorrupt=readAuditCount(report,'REQUEST_AUTHORIZED');
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_payload SET tag=decode(repeat('00',16),'hex') WHERE artifact_id=${quote(report)}::uuid; COMMIT;`);
+  try{await assert.rejects(s.catalog.freezeApprovalCandidate('maker',{planToken:preview.planToken}),/PROTECTED_OPERATION_FAILED/);}
+  finally{peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_payload SET tag=decode(${quote(originalTag)},'hex') WHERE artifact_id=${quote(report)}::uuid; COMMIT;`);}
+  assert.equal(readAuditCount(report,'REQUEST_AUTHORIZED'),beforeCorrupt+1,'corrupt envelope must retain the original access audit');
+  const beforeSql=readAuditCount(report,'REQUEST_AUTHORIZED');
+  // Fault injection in this owned temporary database only. Restore the same function/OID.
+  peer(receipt.name,'ALTER FUNCTION governance_catalog.quality_eligibility(text,jsonb,jsonb,jsonb) RENAME TO quality_eligibility_pr9_hidden;');
+  try{await assert.rejects(s.catalog.buildDryRun('maker',s.input),/DRY_RUN_FAILED/);}
+  finally{peer(receipt.name,'ALTER FUNCTION governance_catalog.quality_eligibility_pr9_hidden(text,jsonb,jsonb,jsonb) RENAME TO quality_eligibility;');}
+  assert.equal(readAuditCount(report,'REQUEST_AUTHORIZED'),beforeSql+1,'later SQL abort must not erase preceding protected-read audits');
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_artifact SET recorded_at='2019-01-01',expires_at='2020-01-01' WHERE id=${quote(s.parse.artifact.artifactId)}::uuid; COMMIT;`);
+  const expiredBefore=readAuditCount(s.parse.artifact.artifactId,'PAYLOAD_UNAVAILABLE');
+  assert.equal((await s.catalog.freezeApprovalCandidate('maker',{planToken:preview.planToken})).status,'BLOCKED');
+  assert.equal(readAuditCount(s.parse.artifact.artifactId,'PAYLOAD_UNAVAILABLE'),expiredBefore+1,'mapped BLOCKED result must retain the denial audit');
  }finally{await s.catalog.close();}
 });

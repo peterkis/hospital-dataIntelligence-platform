@@ -10,7 +10,7 @@ import {protectedArtifacts,type KeyProviderPort} from './protected-artifact.js';
 import {signaturesEqual} from './parse-provenance.js';
 import {selectImportAdapter} from './import-adapter.js';
 import type {ImportContractItem} from './contract-schema.js';
-import {planApplyUnits,explainTargetImpact} from './dry-run-rules.js';
+import {planApplyUnits,explainTargetImpact,aliasReferenceBlockers} from './dry-run-rules.js';
 
 const Id=QualityEligibilitySchema.properties.jobId;
 const Row=Type.Integer({minimum:1,maximum:1000});
@@ -28,6 +28,22 @@ async function safe<T>(work:()=>Promise<T>):Promise<T>{try{return await work();}
 
 export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
  const reader=createValidationEvidenceReader(provider);
+ // This root has no business writes. Preserve already-recorded access audits even if
+ // crypto or a later SQL statement fails, without opening another pool/snapshot.
+ const readTransaction=async<T>(work:(scope:CatalogTransactionScope)=>Promise<T>):Promise<T>=>{
+  const outcome=await db.transaction().execute(async trx=>{
+   const checkpoint=async()=>{await sql`savepoint p0_07_read_audit`.execute(trx);};
+   await checkpoint();
+   const scope=CatalogTransactionScope.from(trx,checkpoint);
+   try{return {ok:true as const,value:await work(scope)};}
+   catch(error){
+    await sql`rollback to savepoint p0_07_read_audit`.execute(trx);
+    return {ok:false as const,error};
+   }
+  });
+  if(!outcome.ok)throw outcome.error;
+  return outcome.value;
+ };
  const mac=(domain:string,value:string|Uint8Array)=>{
   if(!provider)throw new Error('KEY_UNAVAILABLE');
   return createHmac('sha256',provider.lookup()).update(domain+'\0').update(value).digest('hex');
@@ -65,7 +81,9 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
   }
   const contracts=(await sql<{result:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:input.scope,mode:'CURRENT',target:job.contract.id})}::jsonb) as result`.execute(scope)).rows[0]!.result;
   const adapter=selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version});
-  const graph=planApplyUnits(input.commands.map(command=>({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)})));
+  let graph=planApplyUnits(input.commands.map(command=>({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)})));
+  const aliasBlockers=aliasReferenceBlockers(job.contract.dataset,job.contract.definition.references,input.commands.flatMap(command=>command.dependencies.map(dependency=>dependency.field)));
+  if(aliasBlockers.length)graph={status:'BLOCKED',order:[],units:[],blockers:[...new Set([...graph.blockers,...aliasBlockers])].sort()};
   const blockers=new Set(graph.blockers);
   // Adapter declarations do not provide a domain reader, field transformation or atomic business bundle.
   blockers.add('BLOCKED_DEPENDENCY');blockers.add('INTENT_MAPPING_UNAVAILABLE');
@@ -75,9 +93,6 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
   for(const command of input.commands){
    if(!evidence.parsed?.rows[command.row-1])blockers.add('ROW_REFERENCE_INVALID');
    if(command.target&&command.target.dataset!==job.contract.dataset)blockers.add('TARGET_DATASET_MISMATCH');
-   for(const dependency of command.dependencies){
-    if(!job.contract.definition.references.some(reference=>reference.field===dependency.field))blockers.add('UNDECLARED_RELATION');
-   }
   }
   const diff=input.commands.map(command=>({row:command.row,intent:command.intent,alias:{kind:'JOB_ALIAS' as const,jobId:job.id,revisionId:run.revisionId,row:command.row},target:command.target??null,...explainTargetImpact({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)},[]),effect:'NOT_EVALUABLE' as const,dependencies:command.dependencies}));
   const basis={jobId:job.id,revisionId:run.revisionId,runId:run.runId,sourceArtifactId:run.sourceArtifactId,parseArtifactId:run.parseArtifactId,resultArtifactId:run.resultArtifactId,contractVersionId:run.contractVersionId,ruleVersion:run.ruleVersion,parserPolicy:run.parserPolicy,interpretationPolicy:run.interpretationPolicy,transformation,profile:job.profile,validationRecordedAt:run.recordedAt};
@@ -91,8 +106,8 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
  };
  const buildDryRun=async(actor:string,input:BuildDryRunInput)=>{
   if(!Check(BuildDryRunSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');input=structuredClone(input);
-  return safe(()=>db.transaction().execute(async trx=>{
-   const preview=await observe(CatalogTransactionScope.from(trx),actor,input);
+  return safe(()=>readTransaction(async scope=>{
+   const preview=await observe(scope,actor,input);
    const planId=randomUUID();
    return {...preview,planRef:{kind:'CHANGE_PLAN' as const,id:planId},planToken:token({version:'P0_07_OBSERVATION_V1',actor,planId,observedAt:preview.observedAt,input,binding:preview.binding})};
   }));
@@ -100,12 +115,12 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
  const freezeApprovalCandidate=async(actor:string,input:ApprovalCandidateInput)=>safe(async()=>{
   const original=readToken(actor,input);
   try{
-   return await db.transaction().execute(async trx=>{
-    const current=await observe(CatalogTransactionScope.from(trx),actor,original.input);
+   return await readTransaction(async scope=>{
+    const current=await observe(scope,actor,original.input);
     return {planRef:{kind:'CHANGE_PLAN' as const,id:original.planId},originalObservedAt:original.observedAt,recheckedAt:current.observedAt,status:original.binding!==current.binding?'STALE' as const:'BLOCKED' as const,candidate:null,approvalGranted:false as const,applyImplemented:false as const,blockers:current.blockers};
    });
   }catch(error){
-   // Map only known re-evaluation failures after rollback; authorization failures stay failures.
+   // Map only known re-evaluation failures after audit commit; authorization failures stay failures.
    const code=error instanceof Error?error.message:'';
    if(!['STALE_REVISION','EXACT_CONTRACT_UNAVAILABLE','PAYLOAD_UNAVAILABLE','VALIDATION_EVIDENCE_UNAVAILABLE','PARSE_PROVENANCE_REQUIRED'].includes(code))throw error;
    return {planRef:{kind:'CHANGE_PLAN' as const,id:original.planId},originalObservedAt:original.observedAt,recheckedAt:null,status:code==='STALE_REVISION'||code==='EXACT_CONTRACT_UNAVAILABLE'?'STALE' as const:'BLOCKED' as const,candidate:null,approvalGranted:false as const,applyImplemented:false as const,blockers:[code]};

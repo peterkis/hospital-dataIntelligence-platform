@@ -43,3 +43,9 @@ G0 实查唯一持久库 receipt 身份匹配，37 项已安装 checksum 通过�
 Q02/Q04 与 IMP007/011/012/013/017、A006 在本票仅覆盖可信输入、显式意图/引用、完整绑定与零领域写计划边界；真实领域准入/Apply、扫描、跨进程密钥恢复、阶段浏览器与正式验收不标 PASS。原 P0-02 **BROWSER_BLOCKED** 保留。
 
 实际命令、首次失败、重跑、最终同候选 Spec/Standards 串行自审及 commit/tree 记录在 ignored `.runtime/vnext/p0-07/`。首次失败为测试统计表名错误；后续类型检查曾发现拓扑测试的字面量类型扩大，均保留原日志。最终结果以 handoff 为准，不用原包全 NOT_STARTED 模板覆盖当前状态。
+
+## PR #9 审阅修复
+
+受限 READ 会在拒绝或解密之前写入审计。预览根事务现在通过内部 scope 的只读审计回调，在每次 protected READ 返回后保留 savepoint；后续应用错误或 SQL 中止只回到最近的审计检查点，提交原审计后再传播错误或映射 BLOCKED。仍然只有一个 pool 和根事务，不重新执行读取来伪造原时点审计，也不改变文件、校验或质量写事务的回滚策略。测试覆盖预览/冻结撤权、缺 key、密文认证失败、解析证据到期及后续 SQL 故障；故障注入仅发生在 receipt-owned 临时库。
+
+局部 alias 边还核对唯一声明的 reference 类型和精确目标数据集。GOV09 DECLARED_PARAMETER、其他 dataset、缺失或歧义声明不能指向当前 job 行；不兼容边使整张图 BLOCKED 且没有 apply units。纯规则 fixture 保留同 dataset 关系图的正向证明；真实领域 Owner 的 NOT_READY 边界不变。两项远端反例首先实测失败，原日志与后续回归分别保存在 `pr9-r1-*`。
