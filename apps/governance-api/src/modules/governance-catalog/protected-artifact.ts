@@ -106,6 +106,7 @@ export function protectedArtifacts(db: Kysely<DB>|CatalogTransactionScope, provi
       try {
         return await transaction(async trx => {
           const result = (await sql<{result: Result}>`select governance_catalog.protected_command(${actor},'READ',${JSON.stringify(input)}::jsonb,'null'::jsonb,null) as result`.execute(trx)).rows[0]!.result;
+          if(trx instanceof CatalogTransactionScope)await trx.protectedReadCompleted();
           // Commit the non-sensitive denial/request ledger even if crypto cannot release bytes.
           if (result.error) return new Error(result.error);
           try {

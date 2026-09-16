@@ -242,7 +242,10 @@
     "vnext:quality:fresh": "node --import tsx tooling/vnext/run-quality-tests.mjs",
     "vnext:quality:upgrade": "node --import tsx tooling/vnext/run-quality-tests.mjs --upgrade",
     "vnext:p0-05:validate": "node tooling/vnext/p0-05-validate.mjs",
-    "vnext:p0-06:validate": "node tooling/vnext/p0-06-validate.mjs"
+    "vnext:p0-06:validate": "node tooling/vnext/p0-06-validate.mjs",
+    "vnext:dry-run:unit": "vitest run --config tooling/vnext/vitest.dry-run.config.ts tooling/vnext/dry-run.test.ts",
+    "vnext:dry-run:typecheck": "tsc -p tooling/vnext/tsconfig.dry-run.json",
+    "vnext:dry-run:validate": "node --import tsx tooling/vnext/run-dry-run-tests.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

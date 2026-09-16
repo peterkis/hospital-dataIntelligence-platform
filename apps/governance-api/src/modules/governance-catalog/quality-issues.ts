@@ -50,6 +50,14 @@ export interface QualityIssueListResult {jobId:string;jobStatus:'WAITING_INPUT'|
 export interface QualityCorrectionResult extends QualityIssueDispositionResult {revisionId:string;artifactId:string}
 export interface QualityEligibilityResult {jobId:string;currentRevisionId:string;currentRunId:string;jobStatus:'WAITING_INPUT'|'REJECTED';expectedIssueCount:number;ingestedIssueCount:number;missingIssueCount:number;unresolvedIssueCount:number;manualEvidenceBlocked:number;domainDependencyBlocked:number;notRunLayers:number[];currentEvidenceAvailable:boolean;isolationBlocked:true;applyImplemented:false;eligible:boolean}
 
+/** Internal composition seam; caller retains the root transaction and verified evidence. */
+export async function qualityEligibilityInTransaction(scope:CatalogTransactionScope,actor:string,input:QualityEligibilityInput,evidence:VerifiedValidationEvidence):Promise<QualityEligibilityResult>{
+ if(evidence.job.id!==input.jobId||evidence.run.revisionId!==input.revisionId||evidence.job.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');
+ const candidates=buildQualityIssueCandidates(evidence.evaluation);
+ const notRun=evidence.evaluation.layers.filter(layer=>layer.status==='NOT_RUN').map(layer=>layer.layer);
+ return (await sql<{result:QualityEligibilityResult}>`select governance_catalog.quality_eligibility(${actor},${JSON.stringify(input)}::jsonb,${JSON.stringify(candidates)}::jsonb,${JSON.stringify(notRun)}::jsonb) as result`.execute(scope)).rows[0]!.result;
+}
+
 function detailInput(input:ResolveWithEvidenceInput):QualityIssueDetailInput{return {scope:input.scope,campus:input.campus,purpose:input.purpose,issueId:input.issueId};}
 function expectedDimensions(input:{scope:'SYNTHETIC';campus:'NORTH'|'SOUTH';purpose:'IDENTITY_VERIFY'|'CONTACT_VERIFY'|'HR_RESTRICTED'},runId:string){return {scope:input.scope,campus:input.campus,purpose:input.purpose,runId};}
 
@@ -155,10 +163,7 @@ export function qualityIssues(db:Kysely<DB>,provider?:KeyProviderPort){
     return qualitySafe(()=>db.transaction().execute(async trx=>{
      const scope=CatalogTransactionScope.from(trx);
      const evidence=await evidenceReader.readInTransaction(scope,actor,expectedDimensions(input,input.runId),input.runId,false);
-    if(evidence.job.id!==input.jobId||evidence.run.revisionId!==input.revisionId||evidence.job.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');
-    const candidates=buildQualityIssueCandidates(evidence.evaluation);
-    const notRun=evidence.evaluation.layers.filter(layer=>layer.status==='NOT_RUN').map(layer=>layer.layer);
-     return (await sql<{result:QualityEligibilityResult}>`select governance_catalog.quality_eligibility(${actor},${JSON.stringify(input)}::jsonb,${JSON.stringify(candidates)}::jsonb,${JSON.stringify(notRun)}::jsonb) as result`.execute(scope)).rows[0]!.result;
+     return qualityEligibilityInTransaction(scope,actor,input,evidence);
    }));
   },
  };
