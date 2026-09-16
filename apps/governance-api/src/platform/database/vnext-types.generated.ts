@@ -23,6 +23,31 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export interface GovernanceCatalogApplyApproval {
+  actor_code: string;
+  candidate_id: string;
+  digest: string;
+  identity_code: string;
+  recorded_at: Generated<string>;
+}
+
+export interface GovernanceCatalogApplyCandidate {
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  input: Json;
+  maker: string;
+  maker_identity: string;
+  recorded_at: Generated<string>;
+}
+
+export interface GovernanceCatalogApplyCommit {
+  actor_code: string;
+  candidate_id: string;
+  identity_code: string;
+  request_id: string;
+}
+
 export interface GovernanceCatalogContractImpactEvent {
   assessment_head: Int8;
   case_id: Generated<string>;
@@ -384,6 +409,9 @@ export interface VnextControlRequestIdentity {
 }
 
 export interface DB {
+  "governance_catalog.apply_approval": GovernanceCatalogApplyApproval;
+  "governance_catalog.apply_candidate": GovernanceCatalogApplyCandidate;
+  "governance_catalog.apply_commit": GovernanceCatalogApplyCommit;
   "governance_catalog.contract_impact_event": GovernanceCatalogContractImpactEvent;
   "governance_catalog.event": GovernanceCatalogEvent;
   "governance_catalog.impact_event": GovernanceCatalogImpactEvent;

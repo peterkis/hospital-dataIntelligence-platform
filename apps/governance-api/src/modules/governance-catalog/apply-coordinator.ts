@@ -1,0 +1,177 @@
+import {createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
+import {sql,type Kysely} from 'kysely';
+import {Type,type Static} from 'typebox';
+import {Check} from 'typebox/value';
+import type {DB} from '../../platform/database/vnext-types.generated.js';
+import type {KeyProviderPort} from './protected-artifact.js';
+import {CatalogTransactionScope} from './transaction-scope.js';
+import {canonicalPlan,planBinding,equalBinding} from './plan-binding.js';
+
+const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
+export const PlanOwnerUnitSchema=Type.Object({requestId:Id,jobId:Id,revisionId:Id,scope:Type.Literal('SYNTHETIC'),campus:Type.Union([Type.Literal('NORTH'),Type.Literal('SOUTH')]),purpose:Type.Union([Type.Literal('IDENTITY_VERIFY'),Type.Literal('CONTACT_VERIFY'),Type.Literal('HR_RESTRICTED')])},{additionalProperties:false});
+export const ApproveApplyUnitSchema=Type.Object({candidateId:Id,digest:Type.String({pattern:'^[a-f0-9]{64}$'})},{additionalProperties:false});
+export const ApplyUnitSchema=Type.Object({candidateId:Id,requestId:Id},{additionalProperties:false});
+export type PlanOwnerUnitInput=Static<typeof PlanOwnerUnitSchema>;
+export type ApplyUnitInput=Static<typeof ApplyUnitSchema>;
+export interface OwnerFact {owner:string;id:string;version:string}
+export interface OwnerCommand {owner:string;row:number;intent:'CREATE'|'REVISE';target:OwnerFact|null;aliases:number[];value:Record<string,string>}
+export interface ObservedOwnerUnit {
+ input:PlanOwnerUnitInput;
+ // The registered Owner reads these from its trusted source, never from caller-supplied rows.
+ basis:Record<string,unknown>;
+ atomicRule:string;
+ commands:OwnerCommand[];
+ diff:unknown[];
+}
+/** Internal composition port. No SQL, transaction root, test flag or registry in public commands. */
+export interface ApplyOwnerPort {
+ observe(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<ObservedOwnerUnit>;
+ authorize(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,action:'READ'|'WRITE'|'REVIEW'):Promise<void>;
+ validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit):Promise<void>;
+ apply(scope:CatalogTransactionScope,actor:string,command:OwnerCommand,resolved:ReadonlyMap<number,OwnerFact>):Promise<{ok:true;fact:OwnerFact}|{ok:false}>;
+ exactRead(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,fact:OwnerFact):Promise<OwnerFact|null>;
+}
+interface Candidate {id:string;maker:string;makerIdentity:string;input:PlanOwnerUnitInput;digest:string;envelope:Envelope;approvedBy:string|null}
+interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
+export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
+const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE']);
+function failure(error:unknown):Error {
+ const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
+ if(typeof code==='string'&&['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','08006','08003','57P01'].includes(code))return new Error('TRANSPORT_FAILED');
+ const message=error instanceof Error?error.message:'';
+ return new Error(codes.has(message)?message:'APPLY_FAILED');
+}
+function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
+function bound(unit:ObservedOwnerUnit):void {
+ if(!unit.atomicRule||unit.commands.length<1||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
+ const seen=new Set<number>();
+ for(const c of unit.commands){
+  // Owner declares the whole unit and an execution order; the Coordinator never splits or infers bundles.
+  if(!Number.isInteger(c.row)||c.row<1||seen.has(c.row)||c.aliases.some(row=>!seen.has(row)))throw new Error('BLOCKED_DEPENDENCY');
+  seen.add(c.row);
+ }
+}
+
+export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:ApplyOwnerPort){
+ const port=()=>{if(!owner)throw new Error('BLOCKED_DEPENDENCY');return owner;};
+ const root=async<T>(work:(scope:CatalogTransactionScope)=>Promise<T>):Promise<T>=>db.transaction().execute(async trx=>{
+  // Same serialization lock as current authorization/catalog/source changes. No movable read savepoint.
+  await sql`select pg_advisory_xact_lock(901002)`.execute(trx);
+  return work(CatalogTransactionScope.from(trx));
+ });
+ const record=async<T>(scope:CatalogTransactionScope,actor:string,action:string,input:unknown):Promise<T>=>
+  (await sql<{result:T}>`select governance_catalog.apply_record(${actor},${action},${JSON.stringify(input)}::jsonb) as result`.execute(scope)).rows[0]!.result;
+ const seal=(unit:ObservedOwnerUnit,digest:string):Envelope=>{
+  if(!provider)throw new Error('KEY_UNAVAILABLE');
+  const {id,key}=provider.current();const nonce=randomBytes(12);const cipher=createCipheriv('aes-256-gcm',key,nonce);
+  cipher.setAAD(Buffer.from(digest));
+  const bytes=Buffer.from(canonicalPlan(unit));
+  try{return {keyId:id,nonce:nonce.toString('base64'),...(()=>{
+   const ciphertext=Buffer.concat([cipher.update(bytes),cipher.final()]);
+   return {tag:cipher.getAuthTag().toString('base64'),ciphertext:ciphertext.toString('base64')};
+  })()};}finally{bytes.fill(0);}
+ };
+ const unseal=(candidate:Candidate):ObservedOwnerUnit=>{
+  if(!provider)throw new Error('KEY_UNAVAILABLE');
+  const e=candidate.envelope;const decipher=createDecipheriv('aes-256-gcm',provider.payload(e.keyId),Buffer.from(e.nonce,'base64'));
+  decipher.setAAD(Buffer.from(candidate.digest));decipher.setAuthTag(Buffer.from(e.tag,'base64'));
+  const bytes=Buffer.concat([decipher.update(Buffer.from(e.ciphertext,'base64')),decipher.final()]);
+  try{const unit=JSON.parse(bytes.toString()) as ObservedOwnerUnit;bound(unit);
+   if(!equalBinding(planBinding(provider,'APPROVED_OWNER_UNIT_V1',unit),candidate.digest))throw new Error('INVALID_PLAN_TOKEN');
+   return unit;
+  }finally{bytes.fill(0);}
+ };
+ const candidate=async(scope:CatalogTransactionScope,actor:string,id:string,permission:'READ'|'WRITE'|'REVIEW')=>{
+  const c=await record<Candidate>(scope,actor,'READ_CANDIDATE',{candidateId:id});
+  await port().authorize(scope,actor,c.input,'READ');
+  if(permission!=='READ')await port().authorize(scope,actor,c.input,permission);
+  return c;
+ };
+ const recheck=async(scope:CatalogTransactionScope,actor:string,c:Candidate)=>{
+  const current=await port().observe(scope,actor,c.input);bound(current);
+  if(!equalBinding(c.digest,planBinding(provider,'APPROVED_OWNER_UNIT_V1',current)))throw new Error('STALE_VALIDATION');
+  await port().validate(scope,actor,current);
+  return current;
+ };
+ return {
+  async planOwnerUnit(actor:string,input:PlanOwnerUnitInput){
+   check(PlanOwnerUnitSchema,input);input=structuredClone(input);
+   try{return await root(async scope=>{
+    await port().authorize(scope,actor,input,'WRITE');
+    const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit);
+    const digest=planBinding(provider,'APPROVED_OWNER_UNIT_V1',unit);
+    return record<{candidateId:string;digest:string}>(scope,actor,'FREEZE',{input,digest,envelope:seal(unit,digest)});
+   });}catch(error){throw failure(error);}
+  },
+  async readApplyCandidate(actor:string,input:{candidateId:string}){
+   check(Type.Object({candidateId:Id},{additionalProperties:false}),input);input=structuredClone(input);
+   try{
+    // This root only authorizes and audits a candidate read. Commit that audit before
+    // releasing sensitive content; it is never used by the Apply write transaction.
+    const c=await root(async scope=>{
+     const c=await candidate(scope,actor,input.candidateId,'REVIEW');
+     await record(scope,actor,'READ_SENSITIVE',{candidateId:c.id});
+     return c;
+    });
+    return {candidateId:c.id,digest:c.digest,unit:unseal(c),approvedBy:c.approvedBy};
+   }catch(error){throw failure(error);}
+  },
+  async approveApplyUnit(actor:string,input:Static<typeof ApproveApplyUnitSchema>){
+   check(ApproveApplyUnitSchema,input);input=structuredClone(input);
+   try{return await root(async scope=>{
+    const c=await candidate(scope,actor,input.candidateId,'REVIEW');
+    if(!equalBinding(c.digest,input.digest))throw new Error('STALE_VALIDATION');
+    unseal(c);await recheck(scope,actor,c);
+    return record<{candidateId:string;approvedBy:string}>(scope,actor,'APPROVE',input);
+   });}catch(error){throw failure(error);}
+  },
+  async applyUnit(actor:string,input:ApplyUnitInput,afterCommit?:(outcome:UnitOutcome)=>Promise<void>){
+   check(ApplyUnitSchema,input);input=structuredClone(input);
+   let outcome:UnitOutcome;let attemptedCommit=false;
+   try{outcome=await root(async scope=>{
+    const c=await candidate(scope,actor,input.candidateId,'WRITE');
+    if(input.requestId!==c.input.requestId)throw new Error('REQUEST_CONFLICT');
+    const prior=await record<UnitOutcome|null>(scope,actor,'RESUME',input);
+    if(prior){attemptedCommit=true;return prior;}
+    if(!c.approvedBy)throw new Error('APPROVAL_REQUIRED');
+    // Both executor and original approver must retain current permissions until this commit.
+    await port().authorize(scope,c.approvedBy,c.input,'REVIEW');
+    await record(scope,c.approvedBy,'CHECK_APPROVAL',{candidateId:c.id});
+    const unit=unseal(c);await recheck(scope,actor,c);
+    const resolved=new Map<number,OwnerFact>();
+    for(const command of unit.commands){
+     const result=await port().apply(scope,actor,command,resolved);
+     if(!result.ok)throw new Error('OWNER_REJECTED');
+     resolved.set(command.row,result.fact);
+    }
+    const result=await record<UnitOutcome>(scope,actor,'COMMIT',{...input,facts:[...resolved.values()]});
+    attemptedCommit=true;
+    return result;
+   });}catch(error){
+    // SQL/domain errors before COMMIT are definite rollback. An ACK failure is not proof of rollback.
+    if(attemptedCommit)return {status:'COMMIT_UNKNOWN' as const,candidateId:input.candidateId,requestId:input.requestId};
+    throw failure(error);
+   }
+   if(afterCommit){try{await afterCommit(outcome);}catch{return {...outcome,responseStatus:'POST_COMMIT_FAILED' as const};}}
+   return {...outcome,responseStatus:'DELIVERED' as const};
+  },
+  async resumeOutcome(actor:string,input:ApplyUnitInput){
+   check(ApplyUnitSchema,input);input=structuredClone(input);
+   try{return await root(async scope=>{
+    await candidate(scope,actor,input.candidateId,'READ');
+    return record<UnitOutcome|null>(scope,actor,'RESUME',input);
+   });}catch(error){throw failure(error);}
+  },
+  async reconcileCommittedUnit(actor:string,input:ApplyUnitInput){
+   check(ApplyUnitSchema,input);input=structuredClone(input);
+   try{return await root(async scope=>{
+    const c=await candidate(scope,actor,input.candidateId,'READ');
+    const outcome=await record<UnitOutcome|null>(scope,actor,'RESUME',input);
+    if(!outcome)throw new Error('NOT_FOUND');
+    const observed=await Promise.all(outcome.facts.map(fact=>port().exactRead(scope,actor,c.input,fact)));
+    const matched=canonicalPlan(observed)===canonicalPlan(outcome.facts);
+    return record<{status:'MATCHED'|'MISMATCH';receiptId:string}>(scope,actor,'RECONCILE',{...input,matched});
+   });}catch(error){throw failure(error);}
+  }
+ };
+}

@@ -4,6 +4,9 @@ import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.j
 import { fileIntake } from './file-intake.js';
 import {validation} from './validation.js';
 import {qualityIssues} from './quality-issues.js';
+import {applyCoordinator} from './apply-coordinator.js';
+export {PlanOwnerUnitSchema,ApproveApplyUnitSchema,ApplyUnitSchema} from './apply-coordinator.js';
+export type {PlanOwnerUnitInput,ApplyUnitInput,UnitOutcome} from './apply-coordinator.js';
 import {dryRun} from './dry-run.js';
 export {BuildDryRunSchema,ApprovalCandidateSchema} from './dry-run.js';
 export type {BuildDryRunInput,ApprovalCandidateInput} from './dry-run.js';
@@ -67,6 +70,7 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     ...validation(db,keyProvider),
     ...qualityIssues(db,keyProvider),
     ...dryRun(db,keyProvider),
+    ...applyCoordinator(db,keyProvider),
     ...protectedArtifacts(db,keyProvider),
     async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');
