@@ -294,3 +294,26 @@ test('PR10 R2: approval requires this reviewer to successfully read the exact fr
   assert.equal(outcome.status,'COMMITTED');
  }finally{await s.close();}
 });
+
+test('PR10 R3: committed Apply retries require READ only; uncommitted work still requires WRITE',async()=>{
+ const s=await setup();try{
+  const request=await approved(s);
+  const pending=await s.coordinator.planOwnerUnit('maker',{...s.input,requestId:randomUUID()});
+  await s.coordinator.readApplyCandidate('reviewer',{candidateId:pending.candidateId});
+  await s.coordinator.approveApplyUnit('reviewer',pending);
+  const original=await s.coordinator.applyUnit('maker',request);const before=counts();
+  execute(`DELETE FROM p0_08_owner.grant_access WHERE actor='maker' AND job=${quote(s.input.jobId)} AND permission='WRITE';DELETE FROM vnext_control.actor_grant WHERE actor_code='maker' AND scope='SYNTHETIC' AND permission='WRITE';`);
+  const recovery=finiteCoordinator(process.env['VNEXT_VALIDATION_OWNER_URL']!);
+  try{
+   assert.deepEqual(await recovery.coordinator.applyUnit('maker',request),original);
+   const input=(await s.coordinator.readApplyCandidate('reviewer',{candidateId:pending.candidateId})).unit.input;
+   await assert.rejects(recovery.coordinator.applyUnit('maker',{candidateId:pending.candidateId,requestId:input.requestId}),/ACCESS_DENIED/);
+   assert.equal(counts(),before);
+   execute(`DELETE FROM p0_08_owner.grant_access WHERE actor='maker' AND job=${quote(s.input.jobId)} AND permission='READ';`);
+   await assert.rejects(recovery.coordinator.applyUnit('maker',request),/ACCESS_DENIED/);
+  }finally{await recovery.close();}
+ }finally{
+  execute("INSERT INTO vnext_control.actor_grant(actor_code,scope,permission) VALUES('maker','SYNTHETIC','WRITE') ON CONFLICT DO NOTHING;");
+  await s.close();
+ }
+});

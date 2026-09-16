@@ -145,10 +145,11 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
    check(ApplyUnitSchema,input);input=structuredClone(input);
    let outcome:UnitOutcome;let attemptedCommit=false;
    try{outcome=await root(async scope=>{
-    const c=await candidate(scope,actor,input.candidateId,'WRITE');
+    const c=await candidate(scope,actor,input.candidateId,'READ');
     if(input.requestId!==c.input.requestId)throw new Error('REQUEST_CONFLICT');
     const prior=await record<UnitOutcome|null>(scope,actor,'RESUME',input);
     if(prior){attemptedCommit=true;return prior;}
+    await port().authorize(scope,actor,c.input,'WRITE');
     if(!c.approvedBy)throw new Error('APPROVAL_REQUIRED');
     // Both executor and original approver must retain current permissions until this commit.
     await port().authorize(scope,c.approvedBy,c.input,'REVIEW');
