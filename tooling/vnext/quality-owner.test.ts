@@ -32,11 +32,11 @@ async function setupTwoFields(extraRow:'NONE'|'EXACT'|'CONFLICT'='NONE'){
  const provider=new LocalSyntheticKeyProvider();
  const catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
  try{
- const base=await fixture(catalog,{businessKey:true,textField:true});
+ const base=await fixture(catalog,{businessKey:true,textField:true,twoTextFields:true});
   const baseContract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:base.contract.id,versionId:base.contract.versionId}))[0]!;
   const dataset=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(item=>item.id===base.dataset.id)!;
   const first=baseContract.definition.fields[0]!;
-  const secondSource=(dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required==='R'&&field.original.code!==first.code&&!field.original.ref)??dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.code!==first.code&&!field.original.ref)!).original;
+  const secondSource=(dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required==='R'&&field.original.code!==first.code&&!field.original.ref)??dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required==='O'&&field.original.code!==first.code&&!field.original.ref)!).original;
   const secondRequired=secondSource.required as 'R'|'C'|'O';
   const secondCondition=secondRequired==='R'?'ALWAYS':secondRequired==='O'?'OPTIONAL':'UNRESOLVED';
   const definition={...baseContract.definition,ruleVersion:'QUALITY_TWO_FIELD_V1',fields:[first,{code:secondSource.code,type:'text' as const,required:secondRequired,privacy:secondSource.privacy as 'INTERNAL'|'RESTRICTED'|'HIGH_RESTRICTED',condition:secondCondition,enumValues:[]}]};
@@ -139,11 +139,11 @@ test('P0-06 complete correction preserves old evidence and resolves only an exac
   const oldBytes=Buffer.from(await s.catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:s.file.artifact.artifactId}));
   const correctionInput={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),receiveRequestId:randomUUID(),reason:'PROPOSE_CORRECTION',issueId:lengthIssue.id,jobId:s.file.job.id,sourceRunId:s.run.runId,expectedCurrentRevision:s.file.job.revisionId,format:'CSV' as const,parserPolicy:'STRICT_V2' as const,retentionSeconds:3600};
   const correction=await s.catalog.proposeCorrection('maker',correctionInput,Buffer.from(`${s.key},${s.errorField}\nKEY_001,GOOD`));
-  assert.ok(correction.received);assert.equal(correction.revisionId,correction.received.job.revisionId);
+  assert.ok(correction.artifactId);assert.ok(correction.revisionId);
   const oldBytesAfter=Buffer.from(await s.catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:s.file.artifact.artifactId}));
   assert.deepEqual(oldBytesAfter,oldBytes);
   assert.equal(createHash('sha256').update(oldBytesAfter).digest('hex'),createHash('sha256').update(oldBytes).digest('hex'));
-  const nextParse=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:correction.revisionId!,artifactId:correction.received.artifact.artifactId});
+  const nextParse=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:correction.revisionId!,artifactId:correction.artifactId});
   const nextRun=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:correction.revisionId!,artifactId:nextParse.artifact.artifactId});
   const job=await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:s.file.job.id});
   const proof=async(run:typeof nextRun)=>{
@@ -281,4 +281,92 @@ test('PR8 ingestion replay survives expired payload but still enforces permissio
   peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
   await assert.rejects(s.catalog.openIssue('maker',input),/ACCESS_DENIED/);
  }finally{await s.catalog.close();}
+});
+
+
+async function prepareCorrection(mutateInput=false){
+ const s=await setupTwoFields();
+ try{
+  await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'OPEN_RECOVERY',runId:s.run.runId});
+  const list=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id});
+  const issue=list.items.find(i=>i.rule==='LENGTH')!;
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),receiveRequestId:randomUUID(),reason:'CORRECT_RECOVERY',issueId:issue.id,jobId:s.file.job.id,sourceRunId:s.run.runId,expectedCurrentRevision:s.file.job.revisionId,format:'CSV' as const,parserPolicy:'STRICT_V2' as const,retentionSeconds:3600};
+  const bytes=Buffer.from(`${s.key},${s.errorField}\nKEY_001,GOOD`);
+  const expected=Buffer.from(bytes);
+  const pending=s.catalog.proposeCorrection('maker',input,bytes);
+  if(mutateInput)bytes.fill(90);
+  const correction=await pending;
+  return {...s,input,bytes,expected,correction,issue};
+ }catch(e){await s.catalog.close();throw e;}
+}
+
+test('PR8 correction association is not an ordinary app-role seam',async()=>{
+ const s=await prepareCorrection();const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});try{
+  const fake={...s.input,requestId:randomUUID(),receiveRequestId:randomUUID(),fileDigest:'a'.repeat(64)};
+  await assert.rejects(pool.query('SELECT governance_catalog.quality_issue_record_correction($1,$2::jsonb,$3::uuid,$4::uuid)',['maker',JSON.stringify(fake),s.correction.revisionId,s.correction.artifactId]),/permission denied/);
+  const ownerPool=new Pool({connectionString:process.env['VNEXT_VALIDATION_OWNER_URL']});
+  try{
+   for(const change of [{receiveRequestId:randomUUID()},{format:'JSON'},{parserPolicy:'STRICT_V1'}])await assert.rejects(ownerPool.query('SELECT governance_catalog.quality_issue_record_correction($1,$2::jsonb,$3::uuid,$4::uuid)',['maker',JSON.stringify({...s.input,requestId:randomUUID(),fileDigest:'a'.repeat(64),...change}),s.correction.revisionId,s.correction.artifactId]),/CORRECTION_RECEIPT_MISMATCH/);
+  }finally{await ownerPool.end();}
+ }finally{await pool.end();await s.catalog.close();}
+});
+
+test('PR8 correction replay requires current precise STORE permission',async()=>{
+ const s=await prepareCorrection();try{
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='STORE';`);
+  await assert.rejects(s.catalog.proposeCorrection('maker',s.input,s.bytes),/ACCESS_DENIED/);
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 committed resolution replays after revision changes and evidence expiry',async()=>{
+ const s=await prepareCorrection();try{
+  const parsed=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:s.correction.revisionId,artifactId:s.correction.artifactId!,retentionSeconds:3600});
+  const run=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:s.correction.revisionId,artifactId:parsed.artifact.artifactId});
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'RESOLVE_RECOVERY',issueId:s.issue.id,expectedHead:s.correction.head,newRunId:run.runId,newRevisionId:run.revisionId};
+  const resolved=await s.catalog.resolveWithEvidence('maker',input);
+  await s.catalog.receiveFile('maker',{campus:'NORTH',purpose:'IDENTITY_VERIFY',retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'LATER_REVISION',jobId:s.file.job.id,expectedCurrentRevision:run.revisionId,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V2'}}},s.bytes);
+  assert.deepEqual(await s.catalog.resolveWithEvidence('maker',input),resolved);
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_artifact SET recorded_at='2019-01-01',expires_at='2020-01-01' WHERE id IN (${quote(s.run.resultArtifactId)}::uuid,${quote(run.resultArtifactId)}::uuid); COMMIT;`);
+  await s.catalog.purgeOwnedExpiredArtifact('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:run.resultArtifactId});
+  const noKeys=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL']);
+  try{assert.deepEqual(await noKeys.resolveWithEvidence('maker',input),resolved);}finally{await noKeys.close();}
+  await assert.rejects(s.catalog.resolveWithEvidence('maker',{...input,candidate:{row:1,field:s.errorField}}),/REQUEST_CONFLICT/);
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
+  await assert.rejects(s.catalog.resolveWithEvidence('maker',input),/ACCESS_DENIED/);
+ }finally{await s.catalog.close();}
+});
+
+
+test('PR8 correction snapshots caller bytes and returns one durable receipt',async()=>{
+ const s=await prepareCorrection(true);try{
+  const raw=await s.catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:s.correction.artifactId!});
+  assert.deepEqual(Buffer.from(raw),s.expected);
+  assert.deepEqual(await s.catalog.proposeCorrection('maker',s.input,s.expected),s.correction);
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 quality expansion and replay require exact dataset WRITE',async()=>{
+ const s=await setup();try{
+  const responsibility=await publishResponsibility(s.catalog,s.contract.dataset);
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'OPEN_WRITE_TEST',runId:s.run.runId};
+  const opened=await s.catalog.openIssue('maker',input);
+  const assignment={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'ASSIGN_WRITE_TEST',issueId:opened.issueIds[0]!,expectedHead:'0',responsibilityId:responsibility.id};
+  await s.catalog.assignIssue('maker',assignment);
+  peer(receipt.name,`DELETE FROM vnext_control.object_grant WHERE actor_code='maker' AND object_id=${quote(s.f.dataset.id)}::uuid AND permission='WRITE';`);
+  for(const requestId of [input.requestId,randomUUID()])await assert.rejects(s.catalog.openIssue('maker',{...input,requestId}),/ACCESS_DENIED/);
+  await assert.rejects(s.catalog.assignIssue('maker',assignment),/ACCESS_DENIED/);
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 stopping an owned batch does not require upstream source access',async()=>{
+ const s=await setup();const grants=peer(receipt.name,"SELECT coalesce(jsonb_agg(g),'[]'::jsonb)::text FROM vnext_control.object_grant g WHERE actor_code='maker' AND object_kind='SOURCE' AND permission='READ';");
+ try{
+  peer(receipt.name,"DELETE FROM vnext_control.object_grant WHERE actor_code='maker' AND object_kind='SOURCE' AND permission='READ';");
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),reason:'STOP_WITHOUT_UPSTREAM',jobId:s.file.job.id,expectedHead:'0'};
+  const stopped=await s.catalog.rejectBatch('maker',input);assert.equal(stopped.status,'REJECTED');
+  assert.deepEqual(await s.catalog.rejectBatch('maker',input),stopped);
+ }finally{
+  peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb) ON CONFLICT DO NOTHING;`);
+  await s.catalog.close();
+ }
 });

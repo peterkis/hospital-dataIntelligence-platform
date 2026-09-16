@@ -30,7 +30,7 @@ export async function createValidationOwnerSession(receipt,{failAfterRoleCreatio
   if(provision.status!==0)throw new Error('OWNER_CREDENTIAL_PROVISION_FAILED');
   peer(receipt.name,`GRANT CONNECT ON DATABASE ${receipt.name} TO ${role}; GRANT USAGE ON SCHEMA governance_catalog,vnext_control TO ${role};
  DO $$ DECLARE f record; t record; BEGIN
- FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('governance_catalog','vnext_control') AND (has_function_privilege('hdi_prototype',p.oid,'EXECUTE') OR p.proname='accept_validation') LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO ${role}',f.signature); END LOOP;
+ FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('governance_catalog','vnext_control') AND (has_function_privilege('hdi_prototype',p.oid,'EXECUTE') OR p.proname IN ('accept_validation','quality_issue_record_correction')) LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO ${role}',f.signature); END LOOP;
  FOR t IN SELECT n.nspname,c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('governance_catalog','vnext_control') AND c.relkind='r' AND has_table_privilege('hdi_prototype',c.oid,'SELECT') LOOP EXECUTE format('GRANT SELECT ON TABLE %I.%I TO ${role}',t.nspname,t.relname); END LOOP;
  END $$;`);
   const pool=new pg.Pool({connectionString:url.href,max:1});

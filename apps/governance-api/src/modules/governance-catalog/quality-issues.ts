@@ -18,7 +18,7 @@ const Reason=Type.String({pattern:'^[A-Z0-9_]{1,64}$'});
 const Token=Type.String({pattern:'^[A-Za-z0-9_.-]{1,128}$'});
 const Dimensions={scope:Scope,campus:Campus,purpose:Purpose};
 const qualitySafeCodes=new Set([
- 'ACCESS_DENIED','BATCH_ALREADY_REJECTED','BATCH_REJECTED','BLOCKED_DEPENDENCY','CLOSED_FILE_REQUIRED','CLOSED_INPUT_REQUIRED','EXACT_CONTRACT_UNAVAILABLE','FILE_RECEIVE_FAILED','FILE_REVISION_REQUIRED','ISSUE_ALREADY_RESOLVED','ISSUE_REFERENCE_INVALID','KEY_UNAVAILABLE','NOT_FOUND','PARSE_PROVENANCE_REQUIRED','PAYLOAD_UNAVAILABLE','POLICY_INCOMPATIBLE','PROTECTED_ARTIFACT_REQUIRED','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT','REQUEST_CONFLICT','RESPONSIBILITY_NOT_READY','REVISION_LINEAGE_INVALID','REVISION_REFERENCE_INVALID','RUN_REFERENCE_INVALID','STALE_HEAD','STALE_REVISION','STRUCTURAL_REJECTED','TARGET_FIELD_UNAVAILABLE','UNMATCHED','VALIDATION_EVIDENCE_UNAVAILABLE','VALIDATION_NOT_PASSED','VALIDATION_PROVENANCE_REQUIRED','QUALITY_CANDIDATE_INVALID','QUALITY_OPERATION_FAILED'
+ 'ACCESS_DENIED','BATCH_ALREADY_REJECTED','BATCH_REJECTED','BLOCKED_DEPENDENCY','CLOSED_FILE_REQUIRED','CLOSED_INPUT_REQUIRED','EXACT_CONTRACT_UNAVAILABLE','FILE_RECEIVE_FAILED','FILE_REVISION_REQUIRED','ISSUE_ALREADY_RESOLVED','ISSUE_REFERENCE_INVALID','KEY_UNAVAILABLE','NOT_FOUND','PARSE_PROVENANCE_REQUIRED','PAYLOAD_UNAVAILABLE','POLICY_INCOMPATIBLE','PROTECTED_ARTIFACT_REQUIRED','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT','REQUEST_CONFLICT','RESPONSIBILITY_NOT_READY','REVISION_LINEAGE_INVALID','REVISION_REFERENCE_INVALID','RUN_REFERENCE_INVALID','STALE_HEAD','STALE_REVISION','STRUCTURAL_REJECTED','TARGET_FIELD_UNAVAILABLE','UNMATCHED','VALIDATION_EVIDENCE_UNAVAILABLE','VALIDATION_NOT_PASSED','VALIDATION_PROVENANCE_REQUIRED','CORRECTION_RECEIPT_MISMATCH','QUALITY_CANDIDATE_INVALID','QUALITY_OPERATION_FAILED'
 ]);
 function safeQualityError(error:unknown){return new Error(error instanceof Error&&qualitySafeCodes.has(error.message)?error.message:'QUALITY_OPERATION_FAILED');}
 async function qualitySafe<T>(work:()=>Promise<T>):Promise<T>{try{return await work();}catch(error){throw safeQualityError(error);}}
@@ -47,8 +47,7 @@ export interface QualityIssueDetail {issue:QualityIssueRecord;jobStatus:'WAITING
 export interface QualityIssueOpenResult {jobId:string;runId:string;issueIds:string[];inserted:number;replayed:number;total:number}
 export interface QualityIssueDispositionResult {jobId:string;issueId?:string;head:string;eventId:string;kind:string;revisionId?:string;newRunId?:string;newRevisionId?:string;targetRow?:number;targetField?:string;ownerRef?:string;status?:string;artifactId?:string;storageStatus?:string}
 export interface QualityIssueListResult {jobId:string;jobStatus:'WAITING_INPUT'|'REJECTED';items:QualityIssueRecord[];total:number;pageSize:number;offset:number}
-type ReceivedFile=Awaited<ReturnType<typeof receiveFileInTransaction>>;
-export interface QualityCorrectionResult extends QualityIssueDispositionResult {revisionId:string;artifactId?:string;received?:ReceivedFile}
+export interface QualityCorrectionResult extends QualityIssueDispositionResult {revisionId:string;artifactId:string}
 export interface QualityEligibilityResult {jobId:string;currentRevisionId:string;currentRunId:string;jobStatus:'WAITING_INPUT'|'REJECTED';expectedIssueCount:number;ingestedIssueCount:number;missingIssueCount:number;unresolvedIssueCount:number;manualEvidenceBlocked:number;domainDependencyBlocked:number;notRunLayers:number[];currentEvidenceAvailable:boolean;isolationBlocked:true;applyImplemented:false;eligible:boolean}
 
 function detailInput(input:ResolveWithEvidenceInput):QualityIssueDetailInput{return {scope:input.scope,campus:input.campus,purpose:input.purpose,issueId:input.issueId};}
@@ -103,22 +102,27 @@ export function qualityIssues(db:Kysely<DB>,provider?:KeyProviderPort){
   async proposeCorrection(actor:string,input:ProposeCorrectionInput,bytes:Uint8Array):Promise<QualityCorrectionResult>{
    if(!Check(ProposeCorrectionSchema,input)||!(bytes instanceof Uint8Array)||bytes.length<1||bytes.length>1048576)throw new Error('CLOSED_FILE_REQUIRED');
    if(!provider)throw new Error('KEY_UNAVAILABLE');input=structuredClone(input);
-   const fileDigest=createHmac('sha256',provider.lookup()).update('P0_06_FILE_REQUEST_V1\0').update(bytes).digest('hex');
+   const raw=Buffer.from(bytes);
+   try{
+   const fileDigest=createHmac('sha256',provider.lookup()).update('P0_06_FILE_REQUEST_V1\0').update(raw).digest('hex');
    const internal={...input,fileDigest};
-    return qualitySafe(()=>db.transaction().execute(async trx=>{
+    return await qualitySafe(()=>db.transaction().execute(async trx=>{
      const scope=CatalogTransactionScope.from(trx);
      const prior=(await sql<{result:QualityCorrectionResult|null}>`select governance_catalog.quality_correction_prior(${actor},${JSON.stringify(internal)}::jsonb) as result`.execute(scope)).rows[0]!.result;
     if(prior)return prior;
     const receiveInput:ReceiveFileInput={campus:input.campus,purpose:input.purpose,retentionSeconds:input.retentionSeconds,fileRequestId:input.receiveRequestId,extension:`.${input.format.toLowerCase()}` as '.csv'|'.json'|'.xlsx',job:{action:'REVISE',scope:'SYNTHETIC',requestId:derivedReceiveJobRequestId(provider,input.receiveRequestId),reason:input.reason,jobId:input.jobId,expectedCurrentRevision:input.expectedCurrentRevision,input:{kind:'FILE',format:input.format,parserPolicy:input.parserPolicy}}};
-     const received=await receiveFileInTransaction(scope,provider,actor,receiveInput,bytes);
+     const received=await receiveFileInTransaction(scope,provider,actor,receiveInput,raw);
      const correction=(await sql<{result:QualityCorrectionResult}>`select governance_catalog.quality_issue_record_correction(${actor},${JSON.stringify(internal)}::jsonb,${received.job.revisionId}::uuid,${received.artifact.artifactId}::uuid) as result`.execute(scope)).rows[0]!.result;
-    return {...correction,received};
+    return correction;
    }));
+   }finally{raw.fill(0);}
   },
   async resolveWithEvidence(actor:string,input:ResolveWithEvidenceInput){
    if(!Check(ResolveWithEvidenceSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');input=structuredClone(input);
     return qualitySafe(()=>db.transaction().execute(async trx=>{
      const scope=CatalogTransactionScope.from(trx);
+     const prior=(await sql<{result:QualityIssueDispositionResult|'LEGACY_EVIDENCE_REQUIRED'|null}>`select governance_catalog.quality_resolution_prior(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(scope)).rows[0]!.result;
+     if(prior&&prior!=='LEGACY_EVIDENCE_REQUIRED')return prior;
      const detail=(await sql<{result:QualityIssueDetail}>`select governance_catalog.quality_issue_detail(${actor},${JSON.stringify(detailInput(input))}::jsonb) as result`.execute(scope)).rows[0]!.result;
     const issue=detail.issue;
      const oldEvidence=await evidenceReader.readInTransaction(scope,actor,expectedDimensions(input,issue.runId),issue.runId,true);
@@ -126,7 +130,7 @@ export function qualityIssues(db:Kysely<DB>,provider?:KeyProviderPort){
     if(input.newRevisionId!==newEvidence.run.revisionId)throw new Error('REVISION_REFERENCE_INVALID');
     if(!oldEvidence.run.qualityCandidateDigest||!newEvidence.run.qualityCandidateDigest)throw new Error('VALIDATION_PROVENANCE_REQUIRED');
     if(oldEvidence.job.id!==newEvidence.job.id||oldEvidence.run.contractVersionId!==newEvidence.run.contractVersionId||oldEvidence.run.ruleVersion!==newEvidence.run.ruleVersion||oldEvidence.run.parserPolicy!==newEvidence.run.parserPolicy||oldEvidence.run.interpretationPolicy!==newEvidence.run.interpretationPolicy)throw new Error('POLICY_INCOMPATIBLE');
-    const current=newEvidence.job.revisions.find(revision=>revision.id===newEvidence.run.revisionId);if(!current||newEvidence.job.currentRevisionId!==newEvidence.run.revisionId||current.input.kind!=='FILE')throw new Error('STALE_REVISION');
+    const current=newEvidence.job.revisions.find(revision=>revision.id===newEvidence.run.revisionId);if(!current||(prior!=='LEGACY_EVIDENCE_REQUIRED'&&newEvidence.job.currentRevisionId!==newEvidence.run.revisionId)||current.input.kind!=='FILE')throw new Error('STALE_REVISION');
     let cursor=current;let linked=false;const seen=new Set<string>();while(cursor.previousRevisionId&&!seen.has(cursor.id)){seen.add(cursor.id);if(cursor.previousRevisionId===oldEvidence.run.revisionId){linked=true;break;}const previous=newEvidence.job.revisions.find(revision=>revision.id===cursor.previousRevisionId);if(!previous)break;cursor=previous;}
     if(!linked)throw new Error('REVISION_LINEAGE_INVALID');
     const {targetRow,targetField}=requireMatchedRow(oldEvidence,newEvidence,issue,input);

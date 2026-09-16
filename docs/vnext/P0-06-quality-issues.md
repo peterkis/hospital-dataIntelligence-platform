@@ -69,3 +69,15 @@ SRC-COND-061 对已知 HUMAN/SERVICE 结果记录条件规则自身的PASS覆盖
 resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision，不静默覆盖错误引用。openIssue先调用有限的quality_issue_open_prior：重查当前主体、job与精确目的/范围READ，从不可变事项按issue_sequence重建原candidates并比对原request digest。已提交请求在payload过期、purge或provider不可用后可返回原技术结果；新请求仍需有效证据，不恢复原值。原SQL ingest replay也进入相同权限检查。
 
 第三轮四条反例实际失败后，fresh 13/13、40→41升级13/13通过；升级含新增SQL直接调用的冲突/非代表行拒绝，以及purge后无provider重放。首次fresh因迁移换行文本匹配失败退出，单独保留；后续未改写历史迁移。两轴只读复审无新增actionable finding，命令索引见ignored pr8-r3日志与handoff。
+
+## PR #8 第四轮修复
+
+0042 将接收后关联的 quality_issue_record_correction 限制到受信 Owner，并核对 RAW_FILE 的 receiveRequestId、format、parserPolicy。现有 Owner 的授权由迁移依据 accept_validation ACL补齐，包括后续新增的有限 prior 接口；runner 中的手工升级 grant 已删除。临时设施创建新 Owner 时只补齐同一有限能力，不将内部入口重新授给普通应用角色。
+
+纠正入口在任何异步等待前复制字节，摘要与接收使用同一副本，结束后清零。首次和重放统一返回持久化 receipt（jobId/issueId/head/eventId/kind/revisionId/artifactId/storageStatus），移除仅首次存在的 received 嵌套值；当前调用方已更新。纠正新请求及重放检查精确契约 WRITE、目的/院区 STORE。
+
+新增 resolution prior 使用新处置中冻结的公共技术请求摘要，先重查当前权限再恢复已提交结果，不要求当前修订仍等于目标修订，也不读取过期材料。旧处置没有该摘要时不回填；仍需可用的原证据和原 outcome 摘要核验，材料丢失不伪造恢复。
+
+摄取与分派补齐精确对象 WRITE，分派重放还检查当前 job/责任读取权限。停止批次只依赖当前主体、本 job 提交身份和本地 dataset WRITE，不因上游 source/parameter 读取权限失效而无法停止。
+
+19项Owner测试覆盖本轮权限、重放、缓冲区变更、响应一致性及停止边界。新增twoTextFields fixture仅选择R/O的真实源文本字段，避免把未实现人工条件作为安全测试前提；没有放宽契约门禁。证据见ignored pr8-r4日志与handoff，历史失败原样保留。

@@ -15,7 +15,7 @@ if(process.argv.includes('--dispose')){
 
 const owned=createTemporary('P0-06');let validationOwner;
 try{
- let prefix=process.argv.includes('--prefix40')?40:process.argv.includes('--prefix39')?39:process.argv.includes('--prefix38')?38:37;
+ let prefix=process.argv.includes('--prefix41')?41:process.argv.includes('--prefix40')?40:process.argv.includes('--prefix39')?39:process.argv.includes('--prefix38')?38:37;
  let historical; let historicalKeys;
  if(process.argv.includes('--upgrade')){
   await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
@@ -39,8 +39,7 @@ try{
   }finally{await catalog.close();}
  }
  await migrate(owned.receipt);await seed(owned.receipt);
- if(validationOwner)peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION governance_catalog.quality_issue_open_prior(text,jsonb) TO ${validationOwner.receipt.role};`);
- else validationOwner=await createValidationOwnerSession(owned.receipt,{failAfterRoleCreation:process.argv.includes('--owner-failure-probe')});
+ if(!validationOwner)validationOwner=await createValidationOwnerSession(owned.receipt,{failAfterRoleCreation:process.argv.includes('--owner-failure-probe')});
  for(const command of ['types-generate','types-verify']){
   const generated=spawnSync(process.execPath,['tooling/vnext/managed.mjs',command,owned.receiptPath],{cwd:root,env:process.env,stdio:'inherit',windowsHide:true});
   if(generated.status!==0)throw new Error('P0_06_CODEGEN_FAILED');
