@@ -5,6 +5,10 @@ import { fileIntake } from './file-intake.js';
 import {validation} from './validation.js';
 import {qualityIssues} from './quality-issues.js';
 import {applyCoordinator} from './apply-coordinator.js';
+import type {ApplyOwnerPort} from './apply-coordinator.js';
+import {workbench} from './workbench.js';
+export {WorkbenchSummarySchema,WorkbenchAccessSchema,WorkbenchAccessInputSchema} from './workbench.js';
+export {textWorkbook} from './issue-workbook.js';
 export {PlanOwnerUnitSchema,ApproveApplyUnitSchema,ApplyUnitSchema} from './apply-coordinator.js';
 export type {PlanOwnerUnitInput,ApplyUnitInput,UnitOutcome} from './apply-coordinator.js';
 import {dryRun} from './dry-run.js';
@@ -58,7 +62,7 @@ export interface SourceImpact {impactDigest:string;effectiveMode:'ON_COMMIT';tar
 
 export interface SourceImpact {contractCurrent:Array<Record<string,unknown>>;contractHistory:Array<Record<string,unknown>>;contractOpening:Array<Record<string,unknown>>;contractClosing:Array<Record<string,unknown>>;contractHead:string}
 
-export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL'], keyProvider?: KeyProviderPort) {
+export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL'], keyProvider?: KeyProviderPort, applyOwner?:ApplyOwnerPort) {
   if (!connectionString) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
   const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,application_name:'hdi-vnext-catalog',options:'-c timezone=Asia/Shanghai'})})});
   const readImportJob=async(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';jobId:string}):Promise<ImportJob>=>{
@@ -70,7 +74,8 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     ...validation(db,keyProvider),
     ...qualityIssues(db,keyProvider),
     ...dryRun(db,keyProvider),
-    ...applyCoordinator(db,keyProvider),
+    ...applyCoordinator(db,keyProvider,applyOwner),
+    ...workbench(db),
     ...protectedArtifacts(db,keyProvider),
     async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');
