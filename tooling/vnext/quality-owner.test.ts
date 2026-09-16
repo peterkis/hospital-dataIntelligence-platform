@@ -381,3 +381,33 @@ test('PR8 correction accepts numbered public reasons without changing receive gr
   await assert.rejects(s.catalog.proposeCorrection('maker',{...s.input,reason:'FIX_2'},s.bytes),/REQUEST_CONFLICT/);
  }finally{await s.catalog.close();}
 });
+
+
+test('PR8 issue lists count and paginate only the requested campus and purpose',async()=>{
+ const s=await setup();try{
+  const expected=[];
+  const first=await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'OPEN_DIMENSIONS',runId:s.run.runId});
+  expected.push({campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,runId:s.run.runId,ids:first.issueIds});
+  let current=s.file.job.revisionId;
+  for(const [campus,purpose] of [['SOUTH','IDENTITY_VERIFY'],['NORTH','CONTACT_VERIFY']] as const){
+   for(const permission of ['STORE','READ'])peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,${quote(campus)},${quote(purpose)},${quote(permission)}) ON CONFLICT DO NOTHING;`);
+   const received=await s.catalog.receiveFile('maker',{campus,purpose,retentionSeconds:3600,fileRequestId:randomUUID(),extension:'.csv',job:{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'DIMENSION_REVISION',jobId:s.file.job.id,expectedCurrentRevision:current,input:{kind:'FILE',format:'CSV',parserPolicy:'STRICT_V2'}}},Buffer.from(`${s.field}\n${'Y'.repeat(8000)}`));
+   current=received.job.revisionId;
+   const parse=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus,purpose,retentionSeconds:3600,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:current,artifactId:received.artifact.artifactId});
+   const run=await s.catalog.validateRevision('maker',{...s.validate,campus,purpose,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:current,artifactId:parse.artifact.artifactId});
+   const opened=await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus,purpose,requestId:randomUUID(),reason:'OPEN_DIMENSIONS',runId:run.runId});
+   expected.push({campus,purpose,runId:run.runId,ids:opened.issueIds});
+  }
+  for(const dimension of expected){
+   const ids=[];
+   for(let offset=0;offset<=dimension.ids.length;offset++){
+    const page=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:dimension.campus,purpose:dimension.purpose,jobId:s.file.job.id,pageSize:1,offset});
+    assert.equal(page.total,dimension.ids.length);
+    for(const item of page.items){assert.equal(item.campus,dimension.campus);assert.equal(item.purpose,dimension.purpose);assert.equal(item.runId,dimension.runId);ids.push(item.id);}
+   }
+   assert.deepEqual(ids,dimension.ids);
+  }
+  const empty=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'SOUTH',purpose:'CONTACT_VERIFY',jobId:s.file.job.id});
+  assert.equal(empty.total,0);assert.deepEqual(empty.items,[]);
+ }finally{await s.catalog.close();}
+});

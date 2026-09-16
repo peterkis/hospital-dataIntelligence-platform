@@ -85,3 +85,7 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 ## PR #8 第五轮修复
 
 纠正命令的内部文件接收 reason 固定为 QUALITY_CORRECTION，符合既有 ImportJob 的 A–Z/下划线语法。公共 reason 仍保存在质量请求摘要和处置事件中；FIX_1 等带数字原因可正常纠正，相同请求重放保持一致，改成 FIX_2 仍冲突。旧已提交请求在进入文件接收前重放，不改历史记录。本轮无DDL变化。
+
+## PR #8 第六轮修复
+
+0043 对问题列表的总数与分页使用相同的campus/purpose精确过滤，保留原身份、job READ及稳定顺序。混合维度不再使整个job无法列出问题；其他维度的行和计数不会进入当前页。回归覆盖三个合法维度、每页一项、尾页、空交叉维度和runId一致性。
