@@ -1,10 +1,24 @@
 import {spawnSync} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 import {createTemporary,dropTemporary} from './fresh.mjs';
 import {createValidationOwnerSession,dropValidationOwnerSession} from './validation-owner-session.mjs';
-import {migrate,inspect,root,resolveTarget} from './lineage.mjs';
+import {migrate,inspect,root,resolveTarget,readReceipt,peer,quote} from './lineage.mjs';
 import {seed} from './catalog-seed.mjs';
 
+const args=process.argv.slice(2);
+if(args.length){
+ if(args.length!==3||args[0]!=='--dispose')throw new Error('CLOSED_COMMAND_REQUIRED');
+ const receipt=readReceipt(args[1]);
+ const owner={receipt:JSON.parse(readFileSync(args[2],'utf8')),receiptPath:args[2]};
+ if(receipt.taskId!=='P0-07'||receipt.purpose!=='TEMPORARY_VALIDATION'||owner.receipt.databaseOid!==receipt.oid||owner.receipt.databaseRequestId!==receipt.requestId||owner.receipt.taskId!=='P0-07')throw new Error('DISPOSAL_NOT_AUTHORIZED');
+ const actual=await inspect(receipt);
+ const sessions=peer('postgres',`SELECT count(*) FROM pg_stat_activity WHERE datname=${quote(receipt.name)};`);
+ console.log(JSON.stringify({recovery:'P0-07',identity:actual.identity,sessions}));
+ dropTemporary(receipt);dropValidationOwnerSession(owner);
+ console.log('OWNED_P0_07_DATABASE_AND_OWNER_DISPOSED');
+ process.exit(0);
+}
 const owned=createTemporary('P0-07');let owner;
 try{
  await migrate(owned.receipt);await seed(owned.receipt);

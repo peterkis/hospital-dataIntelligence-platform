@@ -1,11 +1,28 @@
 import {test} from 'vitest';
 import assert from 'node:assert/strict';
-import {planApplyUnits,explainTargetImpact,aliasReferenceBlockers,type PlanNode} from '../../apps/governance-api/src/modules/governance-catalog/dry-run-rules.js';
+import {performance} from 'node:perf_hooks';
+import {planApplyUnits,planDeclaredGraph,explainTargetImpact,aliasReferenceBlockers,type PlanNode} from '../../apps/governance-api/src/modules/governance-catalog/dry-run-rules.js';
 
 test('PR9 P2: matching field names cannot make parameter or foreign-dataset references into local aliases',()=>{
  assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'GOV09.config_id',status:'DECLARED_PARAMETER',parameterVersionId:'fixture',parameterDigest:'a'.repeat(64)}],['parent']),['INCOMPATIBLE_ALIAS_TARGET']);
  assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'ORG01.org_id',status:'BLOCKED_DEPENDENCY'}],['parent']),['INCOMPATIBLE_ALIAS_TARGET']);
  assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'PER01.person_id',status:'BLOCKED_DEPENDENCY'}],['parent']),[]);
+});
+
+test('PR9 R2: a scalar reference field can occur only once per command',()=>{
+ assert.deepEqual(aliasReferenceBlockers('PER01',[{field:'parent',target:'PER01.person_id',status:'BLOCKED_DEPENDENCY'}],['parent','parent']),['AMBIGUOUS_ALIAS_FIELD']);
+ const ambiguous=planDeclaredGraph('PER01',[{field:'parent',target:'PER01.person_id',status:'BLOCKED_DEPENDENCY'}],[{row:1,intent:'CREATE',dependencies:[]},{row:2,intent:'CREATE',dependencies:[]},{row:3,intent:'CREATE',dependencies:[{field:'parent',alias:{kind:'JOB_ALIAS',row:1}},{field:'parent',alias:{kind:'JOB_ALIAS',row:2}}]}],3);
+ assert.equal(ambiguous.status,'BLOCKED');assert.deepEqual(ambiguous.units,[]);
+ const separateCommands=planDeclaredGraph('PER01',[{field:'parent',target:'PER01.person_id',status:'BLOCKED_DEPENDENCY'}],[{row:1,intent:'CREATE',dependencies:[]},{row:2,intent:'CREATE',dependencies:[{field:'parent',alias:{kind:'JOB_ALIAS',row:1}}]},{row:3,intent:'CREATE',dependencies:[{field:'parent',alias:{kind:'JOB_ALIAS',row:2}}]}],3);
+ assert.equal(separateCommands.status,'PLANNED');assert.deepEqual(separateCommands.order,[1,2,3]);
+});
+
+test('PR9 R2: bounded adversarial graph does not block the event loop for seconds',()=>{
+ const nodes=Array.from({length:1000},(_,index):PlanNode=>({row:index+1,intent:'CREATE',dependencies:index<100?Array.from({length:index},(_,n)=>n+1):[...Array.from({length:99},(_,n)=>n+1),index]}));
+ const started=performance.now();const result=planApplyUnits(nodes);const duration=performance.now()-started;
+ console.info(JSON.stringify({gate:'P0_07_GRAPH_LIMIT',nodes:nodes.length,milliseconds:Math.round(duration)}));
+ assert.equal(result.status,'PLANNED');assert.equal(result.order.length,1000);
+ assert.ok(duration<1000,`planning took ${Math.round(duration)}ms for the bounded graph`);
 });
 
 test('P0-07-AC-01 and AC-02: local aliases topologically preview without permanent IDs',()=>{

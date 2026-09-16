@@ -49,3 +49,7 @@ Q02/Q04 与 IMP007/011/012/013/017、A006 在本票仅覆盖可信输入、显�
 受限 READ 会在拒绝或解密之前写入审计。预览根事务现在通过内部 scope 的只读审计回调，在每次 protected READ 返回后保留 savepoint；后续应用错误或 SQL 中止只回到最近的审计检查点，提交原审计后再传播错误或映射 BLOCKED。仍然只有一个 pool 和根事务，不重新执行读取来伪造原时点审计，也不改变文件、校验或质量写事务的回滚策略。测试覆盖预览/冻结撤权、缺 key、密文认证失败、解析证据到期及后续 SQL 故障；故障注入仅发生在 receipt-owned 临时库。
 
 局部 alias 边还核对唯一声明的 reference 类型和精确目标数据集。GOV09 DECLARED_PARAMETER、其他 dataset、缺失或歧义声明不能指向当前 job 行；不兼容边使整张图 BLOCKED 且没有 apply units。纯规则 fixture 保留同 dataset 关系图的正向证明；真实领域 Owner 的 NOT_READY 边界不变。两项远端反例首先实测失败，原日志与后续回归分别保存在 `pr9-r1-*`。
+
+第二轮将已验签解析行可用性、目标 dataset 和每条命令内的引用字段唯一性统一放入图检查；任何缺失行或歧义标量关系都清空 order/units，并使 graph 前置条件为 false。不同命令可以各自使用同一个引用字段。拓扑规划改为一次排序确定并列顺序，再通过入度/邻接队列逐节点、逐边处理；1000 行/每行最多 100 依赖的对抗图有独立性能反例。变换版本升为 DECLARED_INTENTS_V2，旧观察不能静默复用旧摘要。三项反例先失败再修复，见 `pr9-r2-*`。
+
+第二轮失败运行的临时库曾拒绝清理（UNRELATED_SESSIONS_PRESENT），保留原失败记录；仅对该 P0-07 receipt 与其匹配 Owner receipt 通过 runner 的 `--dispose` 恢复入口核对身份和零会话后清理，不使用 FORCE，不改持久库或其他角色。

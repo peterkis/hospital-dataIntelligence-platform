@@ -83,6 +83,15 @@ test('P0-07-AC-04: changing one file character makes prior observation STALE and
   assert.equal(JSON.stringify(old),copy);
  }finally{await s.catalog.close();}
 });
+
+test('PR9 R2: absent parsed rows cannot produce a planned graph or apply units',async()=>{
+ const s=await setup();try{
+  const preview=await s.catalog.buildDryRun('maker',{...s.input,commands:[{row:999,intent:'CREATE',dependencies:[]}]});
+  assert.ok(preview.blockers.includes('ROW_REFERENCE_INVALID'));
+  assert.equal(preview.graph.status,'BLOCKED');assert.equal(preview.prerequisites.graph,false);
+  assert.deepEqual(preview.graph.order,[]);assert.deepEqual(preview.graph.units,[]);
+ }finally{await s.catalog.close();}
+});
 test('current run does not hide historical unresolved issues; ledger change stales observation',async()=>{
  const s=await setup();try{
   const old=await s.catalog.buildDryRun('maker',s.input);

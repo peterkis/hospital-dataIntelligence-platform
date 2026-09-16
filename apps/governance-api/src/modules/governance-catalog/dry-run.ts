@@ -10,7 +10,7 @@ import {protectedArtifacts,type KeyProviderPort} from './protected-artifact.js';
 import {signaturesEqual} from './parse-provenance.js';
 import {selectImportAdapter} from './import-adapter.js';
 import type {ImportContractItem} from './contract-schema.js';
-import {planApplyUnits,explainTargetImpact,aliasReferenceBlockers} from './dry-run-rules.js';
+import {planDeclaredGraph,explainTargetImpact} from './dry-run-rules.js';
 
 const Id=QualityEligibilitySchema.properties.jobId;
 const Row=Type.Integer({minimum:1,maximum:1000});
@@ -21,7 +21,7 @@ export const BuildDryRunSchema=Type.Object({...QualityEligibilitySchema.properti
 export const ApprovalCandidateSchema=Type.Object({planToken:Type.String({minLength:1,maxLength:1048576})},{additionalProperties:false});
 export type BuildDryRunInput=Static<typeof BuildDryRunSchema>;
 export type ApprovalCandidateInput=Static<typeof ApprovalCandidateSchema>;
-const transformation='DECLARED_INTENTS_V1';
+const transformation='DECLARED_INTENTS_V2';
 interface ObservationToken {version:'P0_07_OBSERVATION_V1';actor:string;planId:string;observedAt:string;input:BuildDryRunInput;binding:string}
 const safeCodes=new Set(['ACCESS_DENIED','NOT_FOUND','STALE_REVISION','EXACT_CONTRACT_UNAVAILABLE','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE','PROTECTED_OPERATION_FAILED','PARSE_PROVENANCE_REQUIRED','VALIDATION_PROVENANCE_REQUIRED','VALIDATION_EVIDENCE_UNAVAILABLE','CLOSED_INPUT_REQUIRED','INVALID_PLAN_TOKEN','PLAN_EVIDENCE_LIMIT']);
 async function safe<T>(work:()=>Promise<T>):Promise<T>{try{return await work();}catch(error){throw new Error(error instanceof Error&&safeCodes.has(error.message)?error.message:'DRY_RUN_FAILED');}}
@@ -81,19 +81,13 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
   }
   const contracts=(await sql<{result:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:input.scope,mode:'CURRENT',target:job.contract.id})}::jsonb) as result`.execute(scope)).rows[0]!.result;
   const adapter=selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version});
-  let graph=planApplyUnits(input.commands.map(command=>({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)})));
-  const aliasBlockers=aliasReferenceBlockers(job.contract.dataset,job.contract.definition.references,input.commands.flatMap(command=>command.dependencies.map(dependency=>dependency.field)));
-  if(aliasBlockers.length)graph={status:'BLOCKED',order:[],units:[],blockers:[...new Set([...graph.blockers,...aliasBlockers])].sort()};
+  const graph=planDeclaredGraph(job.contract.dataset,job.contract.definition.references,input.commands,evidence.parsed?.rows.length??0);
   const blockers=new Set(graph.blockers);
   // Adapter declarations do not provide a domain reader, field transformation or atomic business bundle.
   blockers.add('BLOCKED_DEPENDENCY');blockers.add('INTENT_MAPPING_UNAVAILABLE');
   if(quality.missingIssueCount||quality.unresolvedIssueCount||quality.manualEvidenceBlocked)blockers.add('QUALITY_BLOCKED');
   if(job.status==='REJECTED')blockers.add('BATCH_REJECTED');
   if(evidence.evaluation.layers.some(layer=>layer.layer<8&&layer.status!=='PASS'))blockers.add('PREREQUISITE_VALIDATION_BLOCKED');
-  for(const command of input.commands){
-   if(!evidence.parsed?.rows[command.row-1])blockers.add('ROW_REFERENCE_INVALID');
-   if(command.target&&command.target.dataset!==job.contract.dataset)blockers.add('TARGET_DATASET_MISMATCH');
-  }
   const diff=input.commands.map(command=>({row:command.row,intent:command.intent,alias:{kind:'JOB_ALIAS' as const,jobId:job.id,revisionId:run.revisionId,row:command.row},target:command.target??null,...explainTargetImpact({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)},[]),effect:'NOT_EVALUABLE' as const,dependencies:command.dependencies}));
   const basis={jobId:job.id,revisionId:run.revisionId,runId:run.runId,sourceArtifactId:run.sourceArtifactId,parseArtifactId:run.parseArtifactId,resultArtifactId:run.resultArtifactId,contractVersionId:run.contractVersionId,ruleVersion:run.ruleVersion,parserPolicy:run.parserPolicy,interpretationPolicy:run.interpretationPolicy,transformation,profile:job.profile,validationRecordedAt:run.recordedAt};
   const orderedBlockers=[...blockers].sort();
