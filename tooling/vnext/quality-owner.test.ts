@@ -284,13 +284,13 @@ test('PR8 ingestion replay survives expired payload but still enforces permissio
 });
 
 
-async function prepareCorrection(mutateInput=false){
+async function prepareCorrection(mutateInput=false,reason='CORRECT_RECOVERY'){
  const s=await setupTwoFields();
  try{
   await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'OPEN_RECOVERY',runId:s.run.runId});
   const list=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id});
   const issue=list.items.find(i=>i.rule==='LENGTH')!;
-  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),receiveRequestId:randomUUID(),reason:'CORRECT_RECOVERY',issueId:issue.id,jobId:s.file.job.id,sourceRunId:s.run.runId,expectedCurrentRevision:s.file.job.revisionId,format:'CSV' as const,parserPolicy:'STRICT_V2' as const,retentionSeconds:3600};
+  const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),receiveRequestId:randomUUID(),reason,issueId:issue.id,jobId:s.file.job.id,sourceRunId:s.run.runId,expectedCurrentRevision:s.file.job.revisionId,format:'CSV' as const,parserPolicy:'STRICT_V2' as const,retentionSeconds:3600};
   const bytes=Buffer.from(`${s.key},${s.errorField}\nKEY_001,GOOD`);
   const expected=Buffer.from(bytes);
   const pending=s.catalog.proposeCorrection('maker',input,bytes);
@@ -369,4 +369,15 @@ test('PR8 stopping an owned batch does not require upstream source access',async
   peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb) ON CONFLICT DO NOTHING;`);
   await s.catalog.close();
  }
+});
+
+
+test('PR8 correction accepts numbered public reasons without changing receive grammar',async()=>{
+ const s=await prepareCorrection(false,'FIX_1');try{
+  assert.equal(s.correction.kind,'CORRECTION_PROPOSED');
+  assert.deepEqual(await s.catalog.proposeCorrection('maker',s.input,s.bytes),s.correction);
+  const reason=peer(receipt.name,`SELECT reason FROM governance_catalog.issue_disposition WHERE id=${quote(s.correction.eventId)}::uuid;`);
+  assert.equal(reason,'FIX_1');
+  await assert.rejects(s.catalog.proposeCorrection('maker',{...s.input,reason:'FIX_2'},s.bytes),/REQUEST_CONFLICT/);
+ }finally{await s.catalog.close();}
 });

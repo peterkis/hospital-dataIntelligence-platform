@@ -81,3 +81,7 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 摄取与分派补齐精确对象 WRITE，分派重放还检查当前 job/责任读取权限。停止批次只依赖当前主体、本 job 提交身份和本地 dataset WRITE，不因上游 source/parameter 读取权限失效而无法停止。
 
 19项Owner测试覆盖本轮权限、重放、缓冲区变更、响应一致性及停止边界。新增twoTextFields fixture仅选择R/O的真实源文本字段，避免把未实现人工条件作为安全测试前提；没有放宽契约门禁。证据见ignored pr8-r4日志与handoff，历史失败原样保留。
+
+## PR #8 第五轮修复
+
+纠正命令的内部文件接收 reason 固定为 QUALITY_CORRECTION，符合既有 ImportJob 的 A–Z/下划线语法。公共 reason 仍保存在质量请求摘要和处置事件中；FIX_1 等带数字原因可正常纠正，相同请求重放保持一致，改成 FIX_2 仍冲突。旧已提交请求在进入文件接收前重放，不改历史记录。本轮无DDL变化。
