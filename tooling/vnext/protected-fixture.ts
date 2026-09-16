@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {openCatalog} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
-export async function fixture(catalog:Awaited<ReturnType<typeof openCatalog>>,options:{businessKey?:boolean;textField?:boolean;twoTextFields?:boolean}={}) {
+export async function fixture(catalog:Awaited<ReturnType<typeof openCatalog>>,options:{businessKey?:boolean;textField?:boolean;twoTextFields?:boolean;optionalTextField?:boolean}={}) {
   const cmd=<A extends string>(action:A,extra:Record<string,unknown>={})=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'SYNTHETIC_JOB',...extra});
   const publish=async(draft:Awaited<ReturnType<typeof catalog.command>>)=>{
     const review=await catalog.command('maker',cmd('SUBMIT',{target:draft.id,expectedHead:draft.head}));
     return catalog.command('reviewer',cmd('PUBLISH',{target:draft.id,expectedHead:review.head,reviewDigest:review.reviewDigest}));
   };
   const used=(await catalog.read('reviewer',{scope:'SYNTHETIC'})).items.filter(item=>item.kind==='DATASET').map(item=>item.code);
-  const code=(await catalog.read('maker',{scope:'BASELINE'})).items.find(item=>item.kind==='DATASET'&&!used.includes(item.code)&&(!options.twoTextFields||((item.payload.fields??[]).filter(f=>f.original.type==='text'&&f.original.required!=='C'&&!f.original.ref).length>=2&&(item.payload.fields??[]).some(f=>f.original.type==='text'&&f.original.required==='R'&&!f.original.ref))))?.code;
+  const code=(await catalog.read('maker',{scope:'BASELINE'})).items.find(item=>item.kind==='DATASET'&&!used.includes(item.code)&&(!options.optionalTextField||(item.payload.fields??[]).some(f=>f.original.type==='text'&&f.original.required==='O'&&!f.original.ref))&&(!options.twoTextFields||((item.payload.fields??[]).filter(f=>f.original.type==='text'&&f.original.required!=='C'&&!f.original.ref).length>=2&&(item.payload.fields??[]).some(f=>f.original.type==='text'&&f.original.required==='R'&&!f.original.ref))))?.code;
   assert.ok(code,'a synthetic dataset fixture is available');
   const dataset=await publish(await catalog.command('maker',cmd('CREATE',{kind:'DATASET',code,values:{name:'合成作业目录'},validFrom:'2026-01-01T00:00:00'})));
   const datasetItem=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(item=>item.id===dataset.id)!;

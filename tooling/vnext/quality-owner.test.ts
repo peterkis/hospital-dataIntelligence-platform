@@ -28,15 +28,15 @@ async function setup(){
  }catch(error){await catalog.close();throw error;}
 }
 
-async function setupTwoFields(extraRow:'NONE'|'EXACT'|'CONFLICT'='NONE'){
+async function setupTwoFields(extraRow:'NONE'|'EXACT'|'CONFLICT'='NONE',optionalTextField=false){
  const provider=new LocalSyntheticKeyProvider();
  const catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
  try{
- const base=await fixture(catalog,{businessKey:true,textField:true,twoTextFields:true});
+ const base=await fixture(catalog,{businessKey:true,textField:true,twoTextFields:true,optionalTextField});
   const baseContract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:base.contract.id,versionId:base.contract.versionId}))[0]!;
   const dataset=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(item=>item.id===base.dataset.id)!;
   const first=baseContract.definition.fields[0]!;
-  const secondSource=(dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required==='R'&&field.original.code!==first.code&&!field.original.ref)??dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required==='O'&&field.original.code!==first.code&&!field.original.ref)!).original;
+  const secondSource=(dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required===(optionalTextField?'O':'R')&&field.original.code!==first.code&&!field.original.ref)??dataset.payload.fields!.find(field=>field.original.type==='text'&&field.original.required==='O'&&field.original.code!==first.code&&!field.original.ref)!).original;
   const secondRequired=secondSource.required as 'R'|'C'|'O';
   const secondCondition=secondRequired==='R'?'ALWAYS':secondRequired==='O'?'OPTIONAL':'UNRESOLVED';
   const definition={...baseContract.definition,ruleVersion:'QUALITY_TWO_FIELD_V1',fields:[first,{code:secondSource.code,type:'text' as const,required:secondRequired,privacy:secondSource.privacy as 'INTERNAL'|'RESTRICTED'|'HIGH_RESTRICTED',condition:secondCondition,enumValues:[]}]};
@@ -284,14 +284,14 @@ test('PR8 ingestion replay survives expired payload but still enforces permissio
 });
 
 
-async function prepareCorrection(mutateInput=false,reason='CORRECT_RECOVERY'){
- const s=await setupTwoFields();
+async function prepareCorrection(mutateInput=false,reason='CORRECT_RECOVERY',optionalEmpty=false){
+ const s=await setupTwoFields('NONE',optionalEmpty);
  try{
   await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'OPEN_RECOVERY',runId:s.run.runId});
   const list=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id});
   const issue=list.items.find(i=>i.rule==='LENGTH')!;
   const input={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,requestId:randomUUID(),receiveRequestId:randomUUID(),reason,issueId:issue.id,jobId:s.file.job.id,sourceRunId:s.run.runId,expectedCurrentRevision:s.file.job.revisionId,format:'CSV' as const,parserPolicy:'STRICT_V2' as const,retentionSeconds:3600};
-  const bytes=Buffer.from(`${s.key},${s.errorField}\nKEY_001,GOOD`);
+  const bytes=Buffer.from(`${s.key},${s.errorField}\nKEY_001,${optionalEmpty?'':'GOOD'}`);
   const expected=Buffer.from(bytes);
   const pending=s.catalog.proposeCorrection('maker',input,bytes);
   if(mutateInput)bytes.fill(90);
@@ -407,6 +407,8 @@ test('PR8 issue lists count and paginate only the requested campus and purpose',
    }
    assert.deepEqual(ids,dimension.ids);
   }
+  await assert.rejects(s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'SOUTH',purpose:'CONTACT_VERIFY',jobId:s.file.job.id}),/ACCESS_DENIED/);
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'SOUTH','CONTACT_VERIFY','READ');`);
   const empty=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'SOUTH',purpose:'CONTACT_VERIFY',jobId:s.file.job.id});
   assert.equal(empty.total,0);assert.deepEqual(empty.items,[]);
  }finally{await s.catalog.close();}
@@ -426,5 +428,31 @@ test('PR8 ledger positions remain lossless above the JavaScript safe integer lim
   assert.equal(assigned.head,'9007199254740993');
   assert.deepEqual(list.items.map(i=>i.sequence),['9007199254740993','9007199254740994']);
   assert.equal(detail.issue.sequence,'9007199254740993');
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 issue metadata requires precise current protected READ even for a submitter alias',async()=>{
+ const s=await setup();try{
+  const opened=await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'READ_GRANTS',runId:s.run.runId});
+  const list={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const,jobId:s.file.job.id};
+  const detail={scope:list.scope,campus:list.campus,purpose:list.purpose,issueId:opened.issueIds[0]!};
+  assert.ok(await s.catalog.importJobRead('maker-alias',{scope:'SYNTHETIC',jobId:s.file.job.id}));
+  for(const granted of [false,true,false]){
+   if(granted)peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker-alias',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);
+   else peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker-alias' AND dataset_id=${quote(s.f.dataset.id)}::uuid;`);
+   if(granted){assert.equal((await s.catalog.qualityIssueRead('maker-alias',list)).total,opened.total);assert.equal((await s.catalog.qualityIssueDetail('maker-alias',detail)).issue.id,detail.issueId);}
+   else{await assert.rejects(s.catalog.qualityIssueRead('maker-alias',list),/ACCESS_DENIED/);await assert.rejects(s.catalog.qualityIssueDetail('maker-alias',detail),/ACCESS_DENIED/);}
+  }
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 optional empty correction resolves its field error while Owner blockers remain',async()=>{
+ const s=await prepareCorrection(false,'CLEAR_OPTIONAL',true);try{
+  const parsed=await s.catalog.parseFile('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:s.correction.revisionId,artifactId:s.correction.artifactId,retentionSeconds:3600});
+  const run=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:s.correction.revisionId,artifactId:parsed.artifact.artifactId});
+  const resolved=await s.catalog.resolveWithEvidence('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'RESOLVE_ABSENCE',issueId:s.issue.id,expectedHead:s.correction.head,newRunId:run.runId,newRevisionId:run.revisionId});
+  assert.equal(resolved.kind,'RESOLVED');
+  const eligibility=await s.catalog.qualityEligibilityRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id,revisionId:run.revisionId,runId:run.runId});
+  assert.equal(eligibility.eligible,false);assert.equal(eligibility.isolationBlocked,true);assert.equal(eligibility.applyImplemented,false);
  }finally{await s.catalog.close();}
 });

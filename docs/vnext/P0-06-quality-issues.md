@@ -93,3 +93,11 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 ## PR #8 第七轮修复
 
 0044 将列表/详情的 issue sequence 及处置历史 head 以十进制字符串输出，遵循 ADR-0073 的无损 int8 边界；SQL 排序仍使用 bigint。typed API 同步为字符串。受控测试将新作业流水位设在 JavaScript 安全整数上限之外，验证连续序号、详情、历史和命令 head 均不舍入；不改写既有事项或处置。
+
+## PR #8 第八轮修复
+
+0045 对问题列表和详情增加当前 actor、dataset、campus、purpose 的精确 protected READ 检查，复用既有授权事务锁。共享提交身份的别名仍需自己的当前授权；空列表也遵循相同检查。授权撤销后不能继续读取事项和处置详情。
+
+字段实际存在且空字符串被 O 或已确定为 false 的条件允许时，校验记录 VALID_ABSENCE 正向覆盖，支持新修订解决原字段值错误。必填、条件未知、缺字段仍不通过；缺少来源时 SOURCE/LENGTH 不生成 PASS。可选引用的合法空值仅证明本字段无需目标引用，不代表领域 Owner 就绪，整体批次继续阻断。
+
+真实反例先复现，日志保持原样。fresh 与 44-to-45 升级、受限 READ 新增/撤销及合法空值局部解决的证据见 ignored pr8-r8 日志和 handoff；持久研发库未升级。

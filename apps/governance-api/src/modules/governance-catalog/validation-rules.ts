@@ -86,7 +86,8 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
  const keys=new Map<string,{row:number;content:string}>();
  const duplicates:Array<{row:number;duplicateOf:number}>=[];
  for(const [index,row] of rows.entries()){
-  const n=index+1;
+   const n=index+1;
+   const validAbsence=new Set<string>();
    const schemaValid=Object.keys(row).length===definition.fields.length&&Object.keys(row).every(k=>definition.fields.some(f=>f.code===k));
    if(schemaValid)cover('SCHEMA',1,n,'','PASS','FIELD_SET_MATCH');else add('SCHEMA',1,n,'','FAIL','FIELD_SET_MISMATCH');
    if(configured&&businessKey.every(field=>typeof row[field]==='string'&&row[field]!=='')){
@@ -119,8 +120,16 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
     }
     if(value===''){
      if(required===true){add('REQUIRED',2,n,f.code,'FAIL','VALUE_REQUIRED');skipFieldChecks(n,f,limit,'REQUIRED_VALUE_MISSING',true);continue;}
-     if(required==='UNKNOWN')cover('REQUIRED',2,n,f.code,'NOT_EVALUATED','CONDITION_UNRESOLVED');else cover('REQUIRED',2,n,f.code,'PASS','OPTIONAL_OR_CONDITION_FALSE');
-     skipFieldChecks(n,f,limit,'EMPTY_VALUE_NOT_EVALUATED',true);continue;
+     if(required==='UNKNOWN'){cover('REQUIRED',2,n,f.code,'NOT_EVALUATED','CONDITION_UNRESOLVED');skipFieldChecks(n,f,limit,'EMPTY_VALUE_NOT_EVALUATED',true);continue;}
+     validAbsence.add(f.code);
+     cover('REQUIRED',2,n,f.code,'PASS','OPTIONAL_OR_CONDITION_FALSE');
+     cover('TYPE',2,n,f.code,'PASS','VALID_ABSENCE');
+     for(const rule of fieldChecks(f,limit)){
+      if(!limit&&rule==='SOURCE')add(rule,2,n,f.code,'UNKNOWN','FIELD_SOURCE_UNRESOLVED');
+      else if(!limit&&rule==='LENGTH')cover(rule,2,n,f.code,'NOT_EVALUATED','SOURCE_LIMIT_UNRESOLVED');
+      else cover(rule,2,n,f.code,'PASS','VALID_ABSENCE');
+     }
+     continue;
     }
     if(required==='UNKNOWN')cover('REQUIRED',2,n,f.code,'NOT_EVALUATED','CONDITION_UNRESOLVED');else cover('REQUIRED',2,n,f.code,'PASS','VALUE_PRESENT');
     try{interpretText(f.type,value);}catch{add('TYPE',2,n,f.code,'FAIL','INVALID_TYPED_TEXT');skipFieldChecks(n,f,limit,'TYPE_CHECK_FAILED',false);continue;}
@@ -139,7 +148,7 @@ export function evaluateRuleSet(dataset:string,definition:ImportContractDefiniti
     try{segmentCoverage({from:row['valid_from']!,to:row['valid_to']===''?null:row['valid_to']!},[]);cover('PERIOD',5,n,'valid_to','PASS','PERIOD_VALID');}catch{add('PERIOD',5,n,'valid_to','FAIL','INVALID_PERIOD');}
    }
    for(const [refIndex,ref] of definition.references.entries()){
-    if(!row[ref.field]){cover('REFERENCE',4,n,ref.field,'NOT_EVALUATED','REFERENCE_VALUE_MISSING');continue;}
+    if(!row[ref.field]){const absent=validAbsence.has(ref.field);cover('REFERENCE',4,n,ref.field,absent?'PASS':'NOT_EVALUATED',absent?'VALID_ABSENCE':'REFERENCE_VALUE_MISSING');continue;}
    const observation=dependencies[refIndex]??{target:ref.target,status:'NOT_READY' as const,scope:'SYNTHETIC',identity:'',version:null,periods:[]};
    const window=row['valid_from']?{from:row['valid_from'],to:row['valid_to']===''?null:row['valid_to']??null}:contractWindow;
    if(observation.status==='NOT_READY')add('REFERENCE',4,n,ref.field,'NOT_EVALUATED','BLOCKED_DEPENDENCY');
