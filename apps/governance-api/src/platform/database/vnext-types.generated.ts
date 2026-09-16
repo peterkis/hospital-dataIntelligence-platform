@@ -29,6 +29,7 @@ export interface GovernanceCatalogApplyApproval {
   digest: string;
   identity_code: string;
   recorded_at: Generated<string>;
+  review_audit_id: string | null;
 }
 
 export interface GovernanceCatalogApplyCandidate {

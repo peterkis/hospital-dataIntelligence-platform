@@ -233,6 +233,7 @@ test('PR10: concurrent and alias freeze retries preserve one candidate and origi
  const s=await setup();try{
   const [first,retry]=await Promise.all([s.coordinator.planOwnerUnit('maker',s.input),s.coordinator.planOwnerUnit('maker-alias',s.input)]);
   assert.deepEqual(retry,first);
+  await s.coordinator.readApplyCandidate('reviewer',{candidateId:first.candidateId});
   await s.coordinator.approveApplyUnit('reviewer',first);
   const request={candidateId:first.candidateId,requestId:s.input.requestId};
   const committed=await s.coordinator.applyUnit('maker',request);
@@ -268,5 +269,28 @@ test('PR10: code-less pg termination and class-08 exceptions classify as precomm
    await assert.rejects(s.coordinator.applyUnit('maker',request),/TRANSPORT_FAILED/);
    assert.equal(counts(),before);
   }
+ }finally{await s.close();}
+});
+
+test('PR10 R2: approval requires this reviewer to successfully read the exact frozen candidate',async()=>{
+ const s=await setup();try{
+  const first=await s.coordinator.planOwnerUnit('maker',s.input);
+  await assert.rejects(s.coordinator.approveApplyUnit('reviewer',first),/CANDIDATE_REVIEW_REQUIRED/);
+  await s.coordinator.readApplyCandidate('maker',{candidateId:first.candidateId});
+  await assert.rejects(s.coordinator.approveApplyUnit('reviewer',first),/CANDIDATE_REVIEW_REQUIRED/);
+  const noKey=finiteCoordinator(process.env['VNEXT_VALIDATION_OWNER_URL']!);
+  try{await assert.rejects(noKey.coordinator.readApplyCandidate('reviewer',{candidateId:first.candidateId}),/KEY_UNAVAILABLE/);}finally{await noKey.close();}
+  await assert.rejects(s.coordinator.approveApplyUnit('reviewer',first),/CANDIDATE_REVIEW_REQUIRED/);
+  const second=await s.coordinator.planOwnerUnit('maker',{...s.input,requestId:randomUUID()});
+  await s.coordinator.readApplyCandidate('reviewer',{candidateId:second.candidateId});
+  await assert.rejects(s.coordinator.approveApplyUnit('reviewer',first),/CANDIDATE_REVIEW_REQUIRED/);
+  await s.coordinator.readApplyCandidate('reviewer',{candidateId:first.candidateId});
+  execute("UPDATE vnext_control.actor SET identity_code='SYNTHETIC_REVIEWER_CHANGED' WHERE code='reviewer';");
+  try{await assert.rejects(s.coordinator.approveApplyUnit('reviewer',first),/CANDIDATE_REVIEW_REQUIRED/);}
+  finally{execute("UPDATE vnext_control.actor SET identity_code='SYNTHETIC_REVIEWER' WHERE code='reviewer';");}
+  await s.coordinator.approveApplyUnit('reviewer',first);
+  assert.equal(execute(`SELECT count(*) FROM governance_catalog.apply_approval a JOIN vnext_control.audit r ON r.id=a.review_audit_id WHERE a.candidate_id=${quote(first.candidateId)} AND r.object_id=a.candidate_id AND r.actor_code=a.actor_code AND r.action='OWNER_APPLY_READ_READY';`),'1');
+  const outcome=await s.coordinator.applyUnit('maker',{candidateId:first.candidateId,requestId:s.input.requestId});
+  assert.equal(outcome.status,'COMMITTED');
  }finally{await s.close();}
 });

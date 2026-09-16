@@ -73,7 +73,7 @@ P0-11 保护边界回归、模块边界和 API build；任一子命令失败使�
 实际命令、失败/后续 GREEN、receipt、最终同候选 Spec/Standards 审阅和
 commit/tree 记录在 ignored `.runtime/vnext/p0-08/`。
 
-源码前缀为 0050；开工实查唯一持久库仍为 0037，`CURRENT_DB_INTEGRATION_PENDING`。
+源码前缀为 0051；开工实查唯一持久库仍为 0037，`CURRENT_DB_INTEGRATION_PENDING`。
 本轮只在 receipt-owned 临时库安装迁移和受信 Owner 角色，并按 receipt 销毁。
 持久库升级/角色部署、数据库实际重启、P0-02 浏览器验收均未执行；
 `BROWSER_BLOCKED` 保留。完成后仅一个本地提交，不 push，不开始 P0-09。
@@ -95,3 +95,12 @@ commit/tree 记录在 ignored `.runtime/vnext/p0-08/`。
 0037 或普通应用角色下均返回 BLOCKED_DEPENDENCY。提交前 transport 分类覆盖
 本地 pg/pg-pool 的已知无 code 连接终止及 SQLSTATE 08 类；COMMIT 附近的异常
 仍单独返回 COMMIT_UNKNOWN，不据此推断回滚。
+
+第二轮补充 0051：批准前必须存在该批准人成功读取当前冻结候选的回执。先提交的
+READ_SENSITIVE 是访问尝试；只有解密/验签成功、再次检查当前 READ/REVIEW 后才
+记录 READ_READY。回执绑定精确 candidate/digest、actor 与 underlying identity，
+批准行通过外键保存所用 audit ID，Apply 再次核对这条原回执。maker 或其他候选
+的读取、缺 key 的失败读取、单纯知道 ID/digest 都不能代替批准人自己的审阅。
+旧批准的新增外键保持 NULL，不能追加一次事后读取来追认；未提交旧候选需新请求
+和适用批准，已提交技术 outcome 仍可按原路径恢复。0050→0051 升级保留原候选
+与批准字段，并实测缺回执旧批准继续阻断。

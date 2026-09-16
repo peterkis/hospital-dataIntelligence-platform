@@ -34,7 +34,7 @@ export interface ApplyOwnerPort {
 interface Candidate {id:string;maker:string;makerIdentity:string;input:PlanOwnerUnitInput;digest:string;envelope:Envelope;approvedBy:string|null}
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
-const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE']);
+const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE']);
 function failure(error:unknown):Error {
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';
@@ -122,7 +122,14 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
      await record(scope,actor,'READ_SENSITIVE',{candidateId:c.id});
      return c;
     });
-    return {candidateId:c.id,digest:c.digest,unit:unseal(c),approvedBy:c.approvedBy};
+    const unit=unseal(c);
+    // A committed access attempt alone is not proof that decryption succeeded.
+    // Record readiness under fresh authorization before returning the reviewed contents.
+    await root(async scope=>{
+     await candidate(scope,actor,c.id,'REVIEW');
+     await record(scope,actor,'READ_READY',{candidateId:c.id});
+    });
+    return {candidateId:c.id,digest:c.digest,unit,approvedBy:c.approvedBy};
    }catch(error){throw failure(error);}
   },
   async approveApplyUnit(actor:string,input:Static<typeof ApproveApplyUnitSchema>){
