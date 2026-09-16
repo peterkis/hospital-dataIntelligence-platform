@@ -1,3 +1,4 @@
+import {planBinding} from './plan-binding.js';
 import {createHmac,randomUUID} from 'node:crypto';
 import {sql,type Kysely} from 'kysely';
 import {Type,type Static} from 'typebox';
@@ -92,7 +93,7 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
   const diff=input.commands.map(command=>({row:command.row,intent:command.intent,alias:{kind:'JOB_ALIAS' as const,jobId:job.id,revisionId:run.revisionId,row:command.row},target:command.target??null,...explainTargetImpact({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)},[]),effect:'NOT_EVALUABLE' as const,dependencies:command.dependencies}));
   const basis={jobId:job.id,revisionId:run.revisionId,runId:run.runId,sourceArtifactId:run.sourceArtifactId,parseArtifactId:run.parseArtifactId,resultArtifactId:run.resultArtifactId,contractVersionId:run.contractVersionId,ruleVersion:run.ruleVersion,parserPolicy:run.parserPolicy,interpretationPolicy:run.interpretationPolicy,transformation,profile:job.profile,validationRecordedAt:run.recordedAt};
   const orderedBlockers=[...blockers].sort();
-  const binding=mac('P0_07_COMPLETE_BASIS_V1',JSON.stringify({actor,input,sourceBinding,basis,job,contracts,run,parsed:evidence.parsed,evaluation:evidence.evaluation,issues,quality,adapter,graph,diff,blockers:orderedBlockers}));
+  const binding=planBinding(provider,'P0_07_COMPLETE_BASIS_V1',{actor,input,sourceBinding,basis,job,contracts,run,parsed:evidence.parsed??null,evaluation:evidence.evaluation,issues,quality,adapter,graph,diff,blockers:orderedBlockers});
   const observedAt=(await sql<{time:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') as time`.execute(scope)).rows[0]!.time;
   const qualityReferences=issues.map(detail=>({issueId:detail.issue.id,sequence:detail.issue.sequence,dispositionHeads:detail.history.map(event=>event.head)}));
   const currentContractReferences=contracts.map(contract=>({id:contract.id,versionId:contract.versionId,head:contract.head,status:contract.status}));
