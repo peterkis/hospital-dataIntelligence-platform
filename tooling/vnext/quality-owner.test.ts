@@ -497,3 +497,20 @@ test('PR8 eligibility retains older unresolved issues until explicit resolution'
   assert.equal(after.unresolvedIssueCount,2);assert.equal(after.domainDependencyBlocked,2);assert.equal(after.eligible,false);
  }finally{await s.catalog.close();}
 });
+
+test('PR8 issue evidence requires retained parse payload as well as validation report',async()=>{
+ const s=await setup();try{
+  const dimensions={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const};
+  const opened=await s.catalog.openIssue('maker',{...dimensions,requestId:randomUUID(),reason:'PARSE_RETENTION',runId:s.run.runId});
+  const input={...dimensions,issueId:opened.issueIds[0]!};
+  assert.equal((await s.catalog.qualityIssueDetail('maker',input)).evidenceAvailable,true);
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_artifact SET recorded_at='2019-01-01',expires_at='2020-01-01' WHERE id=${quote(s.parse.artifact.artifactId)}::uuid; COMMIT;`);
+  const expired=await s.catalog.qualityIssueDetail('maker',input);
+  assert.equal(expired.evidenceAvailable,false);assert.equal(expired.evidenceStatus,'NOT_RECOVERABLE');
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','PURGE');`);
+  await s.catalog.purgeOwnedExpiredArtifact('maker',{...dimensions,requestId:randomUUID(),artifactId:s.parse.artifact.artifactId});
+  assert.equal((await s.catalog.qualityIssueDetail('maker',input)).evidenceAvailable,false);
+  const report=await s.catalog.authorizeSensitiveRead('maker',{...dimensions,requestId:randomUUID(),artifactId:s.run.resultArtifactId});
+  assert.ok(report.length>0);report.fill(0);
+ }finally{await s.catalog.close();}
+});

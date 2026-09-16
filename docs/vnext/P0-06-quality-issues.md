@@ -115,3 +115,7 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 ## PR #8 第十轮修复
 
 公开 receiveFile 在获取数据库事务之前同步复制输入字节，传入内部同事务接收接口；无论成功或失败均清零公开入口持有的副本。调用方在返回 promise 后修改或清空原缓冲区，不会改变被认证、存储的原文件。回归读取实际受限文件并检查重放一致性；首次反例实际失败，日志见 ignored pr8-r10。无DDL变化。
+
+## PR #8 第十一轮修复
+
+0047 修正事项详情的证据可用性：同时检查当前运行的 ERROR_REPORT 和 RAW_CELL artifact 维度、有效期限及 payload 存在性。解析材料独立到期或清理后，即使校验报告尚可读取，也返回 evidenceAvailable=false / NOT_RECOVERABLE。该状态不延长保留期、不复制明文、不恢复旧材料。实际反例及 fresh/46前缀升级证据见 ignored pr8-r11。
