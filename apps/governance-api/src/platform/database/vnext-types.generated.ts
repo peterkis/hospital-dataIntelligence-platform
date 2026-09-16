@@ -115,9 +115,28 @@ export interface GovernanceCatalogImportJob {
   current_revision_id: string;
   id: Generated<string>;
   profile: string;
+  quality_disposition_sequence: Generated<Int8>;
+  quality_issue_sequence: Generated<Int8>;
   scope: string;
   status: Generated<string>;
   submitter_identity: string;
+}
+
+export interface GovernanceCatalogIssueDisposition {
+  actor_identity: string;
+  disposition_no: Int8;
+  id: Generated<string>;
+  issue_id: string | null;
+  job_id: string;
+  kind: string;
+  owner_ref: Generated<string>;
+  payload: Generated<Json>;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  target_revision_id: string | null;
+  target_row: number | null;
+  target_run_id: string | null;
 }
 
 export interface GovernanceCatalogObject {
@@ -198,6 +217,31 @@ export interface GovernanceCatalogProtectedPayload {
   tag: Buffer;
 }
 
+export interface GovernanceCatalogQualityIssue {
+  bounded_code: string;
+  campus: string;
+  classification: string;
+  dataset_code: string;
+  field_code: Generated<string>;
+  id: Generated<string>;
+  issue_sequence: Int8;
+  job_id: string;
+  layer: number;
+  owner_ref: Generated<string>;
+  purpose: string;
+  recorded_at: Generated<string>;
+  related_refs: Generated<Json>;
+  requirement_id: Generated<string>;
+  revision_id: string;
+  row_number: number;
+  rule_code: string;
+  run_id: string;
+  sheet_name: string | null;
+  source_format: string;
+  source_kind: string;
+  source_status: string;
+}
+
 export interface GovernanceCatalogSourceAssessment {
   action: string;
   content: Json;
@@ -227,6 +271,8 @@ export interface GovernanceCatalogValidationRun {
   issue_count: number;
   job_id: string;
   parse_artifact_id: string;
+  quality_candidate_digest: string | null;
+  quality_eligibility_digest: string | null;
   recorded_at: Generated<string>;
   request_id: string;
   request_identity: string;
@@ -345,6 +391,7 @@ export interface DB {
   "governance_catalog.import_contract_version": GovernanceCatalogImportContractVersion;
   "governance_catalog.import_input_revision": GovernanceCatalogImportInputRevision;
   "governance_catalog.import_job": GovernanceCatalogImportJob;
+  "governance_catalog.issue_disposition": GovernanceCatalogIssueDisposition;
   "governance_catalog.object": GovernanceCatalogObject;
   "governance_catalog.parameter": GovernanceCatalogParameter;
   "governance_catalog.parameter_approval": GovernanceCatalogParameterApproval;
@@ -353,6 +400,7 @@ export interface DB {
   "governance_catalog.parse_provenance": GovernanceCatalogParseProvenance;
   "governance_catalog.protected_artifact": GovernanceCatalogProtectedArtifact;
   "governance_catalog.protected_payload": GovernanceCatalogProtectedPayload;
+  "governance_catalog.quality_issue": GovernanceCatalogQualityIssue;
   "governance_catalog.source_assessment": GovernanceCatalogSourceAssessment;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.validation_run": GovernanceCatalogValidationRun;

@@ -8,6 +8,7 @@ import { protectedArtifacts, ProtectedReadSchema, type KeyProviderPort } from '.
 import type { ParserField, ParserResult, FileFormat } from './file-parser.js';
 import { issueWorkbook } from './issue-workbook.js';
 import {parseSignature} from './parse-provenance.js';
+import {CatalogTransactionScope} from './transaction-scope.js';
 
 const Id = Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
 const Protection = {campus:Type.Union([Type.Literal('NORTH'),Type.Literal('SOUTH')]),purpose:Type.Union([Type.Literal('IDENTITY_VERIFY'),Type.Literal('CONTACT_VERIFY'),Type.Literal('HR_RESTRICTED')]),retentionSeconds:Type.Integer({minimum:1,maximum:2592000})};
@@ -36,6 +37,20 @@ async function boundedParse(bytes: Uint8Array, format: FileFormat, fields: Parse
   } finally { activeWorkers--; }
 }
 
+/** Internal root-transaction seam used when a file receive must be linked to another Owner write. */
+function assertReceiveFileInput(input:ReceiveFileInput,bytes:Uint8Array){
+ if(!Check(ReceiveFileSchema,input)||input.job.scope!=='SYNTHETIC'||input.job.input.kind!=='FILE'||input.extension!==`.${input.job.input.format.toLowerCase()}`||!(bytes instanceof Uint8Array)||bytes.length<1||bytes.length>1048576)throw new Error('CLOSED_FILE_REQUIRED');
+}
+export async function receiveFileInTransaction(db:CatalogTransactionScope,provider:KeyProviderPort|undefined,actor:string,input:ReceiveFileInput,bytes:Uint8Array) {
+ assertReceiveFileInput(input,bytes);
+ input=structuredClone(input);const raw=Buffer.from(bytes);
+ try {
+  const job=(await sql<{result:ImportJobOutcome}>`select governance_catalog.import_job_command(${actor},${JSON.stringify(input.job)}::jsonb) as result`.execute(db)).rows[0]!.result;
+  const artifact=await protectedArtifacts(db,provider).storeProtectedArtifact(actor,{scope:'SYNTHETIC',campus:input.campus,purpose:input.purpose,requestId:input.fileRequestId,jobId:job.id,revisionId:job.revisionId,kind:'RAW_FILE',retentionSeconds:input.retentionSeconds},raw);
+  return {job,artifact,storageStatus:'QUARANTINED' as const,structuralStatus:'NOT_INSPECTED' as const,fieldValidation:'NOT_RUN' as const,securityScan:'NOT_RUN' as const};
+ } finally {raw.fill(0);}
+}
+
 export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
   const protectedStore = protectedArtifacts(db,provider);
   const jobRead = async(actor:string,input:ParseFileInput):Promise<ImportJob> => {
@@ -50,6 +65,7 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
       if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED'); input={...input};
       const job=await jobRead(actor,input);const metadata=job.revisions.at(-1)!.input;
       if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
+      if(job.status==='REJECTED')throw new Error('BATCH_REJECTED');
       const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
       try {
         const result=await boundedParse(raw,metadata.format,job.contract.definition.fields,metadata.parserPolicy);
@@ -72,21 +88,17 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
   };
   return {
     async receiveFile(actor:string,input:ReceiveFileInput,bytes:Uint8Array) {
-      if(!Check(ReceiveFileSchema,input)||input.job.scope!=='SYNTHETIC'||input.job.input.kind!=='FILE'||input.extension!==`.${input.job.input.format.toLowerCase()}`||!(bytes instanceof Uint8Array)||bytes.length<1||bytes.length>1048576)throw new Error('CLOSED_FILE_REQUIRED');
-      input=structuredClone(input);const raw=Buffer.from(bytes);
+      assertReceiveFileInput(input,bytes);
+      input=structuredClone(input);
       try {
-        return await db.transaction().execute(async trx=> {
-          const job=(await sql<{result:ImportJobOutcome}>`select governance_catalog.import_job_command(${actor},${JSON.stringify(input.job)}::jsonb) as result`.execute(trx)).rows[0]!.result;
-          const artifact=await protectedArtifacts(trx,provider).storeProtectedArtifact(actor,{scope:'SYNTHETIC',campus:input.campus,purpose:input.purpose,requestId:input.fileRequestId,jobId:job.id,revisionId:job.revisionId,kind:'RAW_FILE',retentionSeconds:input.retentionSeconds},raw);
-          return {job,artifact,storageStatus:'QUARANTINED' as const,structuralStatus:'NOT_INSPECTED' as const,fieldValidation:'NOT_RUN' as const,securityScan:'NOT_RUN' as const};
-        });
+       return await db.transaction().execute(trx=>receiveFileInTransaction(CatalogTransactionScope.from(trx),provider,actor,input,bytes));
       } catch(error) {
         const denial={scope:'SYNTHETIC',campus:input.campus,purpose:input.purpose,requestId:input.fileRequestId,targetId:input.job.action==='CREATE'?input.job.requestId:input.job.jobId};
         try { await sql`select governance_catalog.file_receive_denial(${actor},${JSON.stringify(denial)}::jsonb)`.execute(db); }
         catch {throw new Error('FILE_RECEIVE_FAILED');}
         const code=error instanceof Error?error.message:'';
-        throw new Error(['ACCESS_DENIED','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT'].includes(code)?code:'FILE_RECEIVE_FAILED');
-      } finally {raw.fill(0);}
+        throw new Error(['ACCESS_DENIED','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','BATCH_REJECTED','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT'].includes(code)?code:'FILE_RECEIVE_FAILED');
+      }
     },
     // Both commands close over the same authorized parser, independent of the receiver.
     inspectEnvelope:parseFile,

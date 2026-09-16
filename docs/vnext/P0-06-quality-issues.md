@@ -1,0 +1,41 @@
+# P0-06 质量事项账本
+
+本票在 `governance-catalog` 内追加质量事项 Owner，串联已验签校验运行、问题摄取、责任分派、完整文件纠正、后继修订重验和有证据的局部解决。范围不包含业务 Apply、工单平台、完整页面、ORG/PER 业务实例或 P0-07。
+
+## 设计摘要
+
+- `0038_quality_issue_ledger.sql` 只追加 `quality_issue` 与 `issue_disposition` 两张表，并在 `import_job` 上追加处置流水位。问题来源不可变；处置只追加。job/revision/run 使用复合外键绑定，应用角色只有有限 Owner 函数权限，表启用 RLS。
+- `quality_issue` 只保存 dataset、CSV/JSON/XLSX 定位、row/field/rule、稳定 bounded code、来源状态、分类、责任引用和受限 related refs；不保存原值、业务键文本或 quarantine payload。
+- 问题来源同时冻结 `campus/purpose`，分派要求已发布责任目录的 dataset、院区 authorityScope 和 purpose 对应 fieldGroup 均匹配；摄取候选集合由 `quality_candidate_digest` 绑定到新校验运行签名，旧运行没有该摘要时不能作为新的问题摄取或解决证据。资格读取另使用覆盖候选、NOT_RUN 层和权限维度的 `quality_eligibility_digest`。
+- `issue_disposition` 记录 `ASSIGN`、`CORRECTION_PROPOSED`、`RESOLVED`、`BATCH_REJECTED`。DB 生成 identity，job 内 `quality_disposition_sequence` 作为并发 head；`quality_issue.issue_sequence` 作为 job 内问题来源流顺序；状态由历史事件计算。
+- `openIssue` 通过 `createValidationEvidenceReader` 在同一根事务内读取并验证 run HMAC、ERROR_REPORT 和 parse provenance，只摄取 `FAIL`、`UNKNOWN`、`NOT_EVALUATED` 的真实阻断项；PASS、exact duplicates 和 L8–L10 `NOT_RUN` 不展开为逐行问题，L6 缺 Owner 生成一项 job-level dependency blocker。人工 evidence requirement 与对应 rule result 合并；数据库 Owner 还校验候选摘要，拒绝客户端伪造候选。
+- `proposeCorrection` 接受完整文件，使用内部事务 seam 将 `receiveFile(REVISE)`、受限 RAW_FILE 和纠正关联同根提交；后续 parse/validate 独立执行。文件意图由 provider HMAC 绑定，不记录原值或普通摘要。
+- `resolveWithEvidence` 只按冻结业务键完整文本元组精确匹配，拒绝 trim、姓名匹配、缺键、重复键、改键和候选行冒充身份；新 run 必须是同 job 当前后继 FILE revision、契约/rule/parser policy 兼容，并在 `RULE_EXECUTION_V1` 中对目标 rule/field/row 具有 PASS。
+- `rejectBatch` 将 job 置为 `REJECTED`，禁止新 revision、parse 和 validate；历史读取、已提交请求的安全 replay 与 P0-11 清理边界保留。
+- 跨 Owner 的根事务只通过内部 `CatalogTransactionScope` 传递；组合根持有具体 Kysely transaction，质量/文件/验签 seam 不暴露 raw Kysely。
+
+## 公共 typed API
+
+`openCatalog()` 暴露：`openIssue`、`assignIssue`、`proposeCorrection`、`resolveWithEvidence`、`rejectBatch`、`qualityIssueRead`、`qualityIssueDetail`、`qualityEligibilityRead`。所有输入为 TypeBox closed schema；不接受 client decision、severity override、自由 JSON 或原值。
+
+`proposeCorrection` 的 `requestId` 是质量关联请求，`receiveRequestId` 是其内部文件接收幂等身份；两者均受 closed schema 约束。完整文件通过 bytes 参数接收，格式、parser policy、retention 和 scope/campus/purpose 显式冻结。
+
+## IMP016 覆盖
+
+IMP016 要求错误报告能够以 `dataset/row/field/rule/code` 定位，而不是只给自由文本。本票的 `quality_issue` 保留 `dataset_code`、`row_number`、`field_code`、`rule_code`、`bounded_code`，并保留来源状态与 layer；普通台账不保存 sourceText 或原始行。`quality.test.ts` 验证 PASS 不摄取、人工要求合并、L6 分类和 L8–L10 不展开；Owner 测试验证 ERROR、REVIEW、dependency、跨 run 独立和敏感值不泄露。
+
+## 验证索引
+
+完整证据保存在 ignored `.runtime/vnext/p0-06/`。本票聚合命令：
+
+```text
+npm.cmd run prototype:db:with -- vnext:p0-06:validate
+```
+
+该命令实际包含 P0-06 fresh/upgrade（含 types generate/verify）、P0-03 job fresh、P0-04 file、P0-05 validation、P0-11 protected regression、unit/typecheck、module-boundary 和 governance-api build。最终运行 fresh/upgrade 均为 7/7；所有变更数据库均为 P0-06/P0-03/P0-04/P0-05/P0-11 receipt-owned 临时库；当前持久 vNext 库本轮只执行 `vnext:db:inspect`，保持 37 项迁移，未安装 0038。
+
+## 最终只读复审
+
+以 `3318a2e3aa54e47c70a1a9009e5f9635e3caf566` 为固定基线的 Standards/Spec 双轴复审均无当前 actionable findings；复审代理未执行数据库或网络操作。详细记录见 ignored evidence `03-review.md`。
+
+P0-02 `BROWSER_BLOCKED`、P0 `IN_PROGRESS`、生产 Apply、实际重启/UI/生产扫描仍是本票外或明确 NOT_RUN 项。

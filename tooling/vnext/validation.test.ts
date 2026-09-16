@@ -146,3 +146,15 @@ test('P0-05-AC-01: independent discrete microsecond oracle checks complete cover
  }
  assert.deepEqual(segmentCoverage({from:t(0),to:null},[{from:t(0),to:t(2)}]).map(s=>s.covered),[true,false]);
 });
+test('P0-06 coverage: a successful check has signed, row-scoped positive execution evidence',()=>{
+ const d=definition('legal_name');d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';d.businessKey=['legal_name'];
+ const result=evaluateRuleSet('ORG01',d,[{legal_name:'SYNTHETIC_NAME'}]);
+ const coverage=result.executionCoverage;assert.ok(coverage);
+ assert.equal(coverage.version,'RULE_EXECUTION_V1');
+ const checks=coverage.checks.filter(check=>check.rows.includes(1)&&check.field==='legal_name');
+ assert.ok(checks.some(check=>check.rule==='REQUIRED'&&check.status==='PASS'));
+ assert.ok(checks.some(check=>check.rule==='TYPE'&&check.status==='PASS'));
+ assert.ok(checks.some(check=>check.rule==='SOURCE'&&check.status==='PASS'));
+ assert.ok(checks.some(check=>check.rule==='LENGTH'&&check.status==='PASS'));
+ assert.ok(coverage.checks.some(check=>check.rule==='BUSINESS_KEY'&&check.rows.includes(1)&&check.status==='PASS'));
+});
