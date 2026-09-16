@@ -19,8 +19,8 @@ export interface ImportJobOutcome {
   adapterReadiness:'NOT_READY'; digestStatus:'DECLARED'|'PROTECTED_REFERENCE';
 }
 export interface ImportJob {
-  id:string; scope:'BASELINE'|'SYNTHETIC'; submitterIdentity:string;
-  contract:ImportContractItem; profile:'CORE'|'FULL'; status:'WAITING_INPUT';
+ id:string; scope:'BASELINE'|'SYNTHETIC'; submitterIdentity:string;
+ contract:ImportContractItem; profile:'CORE'|'FULL'; status:'WAITING_INPUT'|'REJECTED';
   adapterReadiness:'NOT_READY'; currentRevisionId:string;
   revisions:Array<{id:string;number:string;previousRevisionId:string|null;recordedAt:string;
     input:Static<typeof ImportMetadataSchema>;metadataDigest:string;digestStatus:'DECLARED'|'PROTECTED_REFERENCE';requestIdentity:string;requestId:string}>;

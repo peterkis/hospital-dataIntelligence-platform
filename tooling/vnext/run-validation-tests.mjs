@@ -1,3 +1,4 @@
+import {createValidationOwnerSession,dropValidationOwnerSession} from './validation-owner-session.mjs';
 import {spawnSync} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import {root,resolveTarget,migrate,migrationFiles,peer,quote,inspect} from './lineage.mjs';
@@ -12,14 +13,14 @@ if(process.argv.includes('--dispose')){
  if(receipt.taskId!=='P0-05')throw new Error('DISPOSAL_NOT_AUTHORIZED');
  dropTemporary(receipt);console.log('OWNED_P0_05_DISPOSED');process.exit(0);
 }
-const owned=createTemporary('P0-05');
+const owned=createTemporary('P0-05');let validationOwner;
 const prefix=process.argv.includes('--prefix36')?36:process.argv.includes('--prefix35')?35:process.argv.includes('--prefix34')?34:process.argv.includes('--prefix33')?33:30;
 try{
  let historical;
  const keys=new LocalSyntheticKeyProvider();
  if(process.argv.includes('--upgrade')){
   await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
-  const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
+  const catalog=await openCatalog(validationOwner?.connectionString??resolveTarget(owned.receipt),keys);
   try{
    const f=await fixture(catalog,{businessKey:prefix>=36}),field=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0].definition.fields[0].code;
    for(const permission of ['STORE','READ'])peer(owned.receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
@@ -35,8 +36,9 @@ try{
   }finally{await catalog.close();}
  }
  await migrate(owned.receipt);await seed(owned.receipt);
+ validationOwner=await createValidationOwnerSession(owned.receipt);
  if(historical){
-  const catalog=await openCatalog(resolveTarget(owned.receipt),keys);
+  const catalog=await openCatalog(validationOwner?.connectionString??resolveTarget(owned.receipt),keys);
   try{
    assert.deepEqual(await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:historical.file.job.id}),historical.job);
    const bytes=await catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:historical.file.artifact.artifactId});
@@ -60,7 +62,7 @@ try{
    console.log(`PREFIX_${prefix}_JOB_FILE_AND_EXISTING_RUN_PRESERVED`);
   }finally{await catalog.close();}
  }
- const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.validation.config.ts','tooling/vnext/validation-owner.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-05'},stdio:'inherit',windowsHide:true});
+ const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.validation.config.ts','tooling/vnext/validation-owner.test.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_VALIDATION_OWNER_URL:validationOwner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_RUN_ID:randomUUID(),VNEXT_CONNECTION_STEP:'P0-05'},stdio:'inherit',windowsHide:true});
  process.exitCode=run.status??1;
  if(run.status===0&&process.argv.includes('--types')){
   for(const command of ['types-generate','types-verify']){
@@ -70,4 +72,4 @@ try{
  }
  const observation=await inspect(owned.receipt);
  console.log(JSON.stringify({gate:'P0-05',mode:historical?`PREFIX_${prefix}`:'FRESH',exit:run.status,migrations:observation.ledger.length,tables:observation.tables.length,receipt:owned.receiptPath}));
-}finally{dropTemporary(owned.receipt);}
+}catch(error){validationOwner??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(validationOwner)dropValidationOwnerSession(validationOwner);}

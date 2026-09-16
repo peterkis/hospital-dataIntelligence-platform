@@ -3,10 +3,16 @@ import { Pool } from 'pg';
 import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.js';
 import { fileIntake } from './file-intake.js';
 import {validation} from './validation.js';
+import {qualityIssues} from './quality-issues.js';
 export {ValidateRevisionSchema,ExplainValidationSchema,CompareValidationSchema} from './validation.js';
 export type {ValidationRun} from './validation.js';
+export {EXECUTION_COVERAGE_VERSION} from './validation-rules.js';
+export type {ExecutionCoverage,ExecutionCoverageCheck,ExecutionCoverageStatus,ValidationEvaluation} from './validation-rules.js';
 export { ReceiveFileSchema, ParseFileSchema } from './file-intake.js';
 export type { ReceiveFileInput, ParseFileInput } from './file-intake.js';
+export {OpenIssueSchema,AssignIssueSchema,ProposeCorrectionSchema,ResolveWithEvidenceSchema,RejectBatchSchema,QualityIssueReadSchema,QualityIssueDetailSchema,QualityEligibilitySchema} from './quality-issues.js';
+export type {OpenIssueInput,AssignIssueInput,ProposeCorrectionInput,ResolveWithEvidenceInput,RejectBatchInput,QualityIssueReadInput,QualityIssueDetailInput,QualityEligibilityInput,QualityIssueRecord,QualityIssueDetail,QualityIssueOpenResult,QualityIssueDispositionResult,QualityIssueListResult,QualityCorrectionResult,QualityEligibilityResult} from './quality-issues.js';
+export type {QualityIssueCandidate} from './quality-candidates.js';
 export type { CanonicalRow, RawCellProvenance, ParserResult } from './file-parser.js';
 export { LocalSyntheticKeyProvider, ProtectedStoreSchema, ProtectedReadSchema } from './protected-artifact.js';
 export type { KeyProviderPort, ProtectedStoreInput, ProtectedReadInput, ProtectedReference } from './protected-artifact.js';
@@ -55,6 +61,7 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
   return {
     ...fileIntake(db,keyProvider),
     ...validation(db,keyProvider),
+    ...qualityIssues(db,keyProvider),
     ...protectedArtifacts(db,keyProvider),
     async importJobCommand(actor:string,input:unknown):Promise<ImportJobOutcome> {
       if(input===null||typeof input!=='object'||Array.isArray(input)||!('input' in input))throw new Error('CLOSED_INPUT_REQUIRED');

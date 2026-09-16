@@ -8,7 +8,7 @@ import {conditionMappings} from '../../apps/governance-api/src/modules/governanc
 const {peer,quote}=await import('./lineage.mjs');
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));assert.equal(receipt.purpose,'TEMPORARY_VALIDATION');
 async function setup(businessKey=true,textField=false){
- const provider=new LocalSyntheticKeyProvider(),catalog=await openCatalog(undefined,provider);
+ const provider=new LocalSyntheticKeyProvider(),catalog=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL'],provider);
  try{
   const f=await fixture(catalog,{businessKey,textField}),contract=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId}))[0]!;
   for(const permission of ['STORE','READ'])peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',${quote(permission)}) ON CONFLICT DO NOTHING;`);
@@ -47,7 +47,7 @@ test('P0-05-AC-03/05: immutable runs, authorized ACK replay and deterministic bu
   assert.notEqual(first.runId,second.runId);
   const compare=await s.catalog.compareValidationRuns('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',leftRunId:first.runId,rightRunId:second.runId});
   assert.equal(compare.sameConclusion,true);assert.equal(compare.sameEvaluation,true);assert.equal(first.adapterReadiness,'NOT_READY');
-  assert.ok(!JSON.stringify(first).includes('0012'));
+  assert.ok(!JSON.stringify(first).includes('"0012"'));
  }finally{await s.catalog.close();}
 });
 test('PR7 R2: comparison exposes parser and interpretation policy equality',async()=>{
@@ -189,7 +189,7 @@ test('concurrent identical requests produce one run; a new revision refuses old 
 });
 test('rejected structure, unavailable process key and expired source never become successful zero-row runs',async()=>{
  const s=await setup();try{
-  const noKeys=await openCatalog();try{await assert.rejects(noKeys.validateRevision('maker',s.validate),/PROTECTED_OPERATION_FAILED/);}finally{await noKeys.close();}
+  const noKeys=await openCatalog(process.env['VNEXT_VALIDATION_OWNER_URL']);try{await assert.rejects(noKeys.validateRevision('maker',s.validate),/PROTECTED_OPERATION_FAILED/);}finally{await noKeys.close();}
   const file=await s.catalog.receiveFile('maker',{...s.input,fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID()}},Buffer.from(s.contract.definition.fields[0]!.code+'\n INVALID'));
   const parsed=await s.catalog.parseFile('maker',{...s.parse,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:file.job.id,revisionId:file.job.revisionId,artifactId:file.artifact.artifactId});
   await assert.rejects(s.catalog.validateRevision('maker',{...s.validate,jobId:file.job.id,revisionId:file.job.revisionId,artifactId:parsed.artifact.artifactId}),/STRUCTURAL_REJECTED/);

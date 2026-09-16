@@ -146,3 +146,58 @@ test('P0-05-AC-01: independent discrete microsecond oracle checks complete cover
  }
  assert.deepEqual(segmentCoverage({from:t(0),to:null},[{from:t(0),to:t(2)}]).map(s=>s.covered),[true,false]);
 });
+test('P0-06 coverage: a successful check has signed, row-scoped positive execution evidence',()=>{
+ const d=definition('legal_name');d.fields[0]!.required='R';d.fields[0]!.condition='ALWAYS';d.businessKey=['legal_name'];
+ const result=evaluateRuleSet('ORG01',d,[{legal_name:'SYNTHETIC_NAME'}]);
+ const coverage=result.executionCoverage;assert.ok(coverage);
+ assert.equal(coverage.version,'RULE_EXECUTION_V1');
+ const checks=coverage.checks.filter(check=>check.rows.includes(1)&&check.field==='legal_name');
+ assert.ok(checks.some(check=>check.rule==='REQUIRED'&&check.status==='PASS'));
+ assert.ok(checks.some(check=>check.rule==='TYPE'&&check.status==='PASS'));
+ assert.ok(checks.some(check=>check.rule==='SOURCE'&&check.status==='PASS'));
+ assert.ok(checks.some(check=>check.rule==='LENGTH'&&check.status==='PASS'));
+ assert.ok(coverage.checks.some(check=>check.rule==='BUSINESS_KEY'&&check.rows.includes(1)&&check.status==='PASS'));
+});
+
+
+test('PR8 known finite conditions record positive coverage without clearing remaining blockers',()=>{
+ const m=conditionMappings.find(mapping=>mapping.id==='SRC-COND-061')!;
+ const d=definition(m.field);d.fields.push({code:'account_kind',type:'code',required:'R',privacy:'INTERNAL',condition:'ALWAYS',enumValues:['HUMAN','SERVICE']});
+ d.rules=[{id:m.id,field:m.field,text:m.text,status:'MACHINE',version:m.version}];
+ d.codeSets=[{field:'account_kind',codeSystem:'TEST',version:'V1',status:'SYNTHETIC_ADOPTED',codes:['HUMAN','SERVICE'],validFrom:'2026-01-01T00:00:00',validTo:null,sourceVersionId:'00000000-0000-0000-0000-000000000001'}];
+ for(const kind of ['HUMAN','SERVICE']){
+  const result=evaluateRuleSet('PER17',d,[{account_kind:kind,[m.field]:''}]);
+  assert.ok(result.executionCoverage?.checks.some(c=>c.rule===m.id&&c.field===m.field&&c.status==='PASS'&&c.rows.includes(1)));
+  assert.notEqual(result.decision,'PASS');
+  if(kind==='HUMAN')assert.ok(result.issues.some(i=>i.rule==='REQUIRED'&&i.status==='FAIL'));
+  for(const rule of ['TYPE','SOURCE','LENGTH'])assert.equal(result.executionCoverage?.checks.some(c=>c.rule===rule&&c.field===m.field&&c.status==='PASS'),kind==='SERVICE');
+ }
+});
+
+test('PR8 valid absence covers applicable value constraints and optional references',()=>{
+ for(const [dataset,field,type,rule] of [['PER06','workload_fraction','decimal','DECIMAL'],['ORG20','weight','decimal','WEIGHT_RANGE'],['ORG01','legal_name','text','ENUM']] as const){
+  const d=definition(field);d.fields[0]!.type=type;d.fields[0]!.required='O';d.fields[0]!.condition='OPTIONAL';d.fields[0]!.enumValues=rule==='ENUM'?['VALUE']:[];
+  const result=evaluateRuleSet(dataset,d,[{[field]:''}]);
+  assert.ok(result.executionCoverage?.checks.some(c=>c.rule===rule&&c.status==='PASS'&&c.code==='VALID_ABSENCE'));
+ }
+ const d=definition('rule_ref');d.fields[0]!.required='O';d.fields[0]!.condition='OPTIONAL';d.references=[{field:'rule_ref',target:'GOV09.config_id',status:'BLOCKED_DEPENDENCY'}];
+ for(const row of [{rule_ref:''},{}]){
+  const result=evaluateRuleSet('ORG20',d,[row]);
+  assert.equal(result.executionCoverage?.checks.some(c=>c.rule==='REFERENCE'&&c.status==='PASS'),'rule_ref' in row);
+  assert.notEqual(result.decision,'PASS');
+ }
+});
+
+test('PR8 only known valid absence records positive field coverage',()=>{
+ for(const required of ['O','R','C'] as const){
+  const d=definition('legal_name');d.fields[0]!.required=required;d.fields[0]!.condition=required==='O'?'OPTIONAL':required==='R'?'ALWAYS':'UNRESOLVED';
+  for(const row of [{legal_name:''},{}]){
+   const result=evaluateRuleSet('ORG01',d,[row]);
+   for(const rule of ['TYPE','SOURCE','LENGTH'])assert.equal(result.executionCoverage?.checks.some(c=>c.rule===rule&&c.status==='PASS'),required==='O'&&'legal_name' in row);
+   assert.notEqual(result.decision,'PASS');
+  }
+ }
+ const d=definition('UNKNOWN_FIELD');d.fields[0]!.required='O';d.fields[0]!.condition='OPTIONAL';
+ const missing=evaluateRuleSet('ORG01',d,[{UNKNOWN_FIELD:''}]);
+ assert.ok(!missing.executionCoverage?.checks.some(c=>['SOURCE','LENGTH'].includes(c.rule)&&c.status==='PASS'));
+});

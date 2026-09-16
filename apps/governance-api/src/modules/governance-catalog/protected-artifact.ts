@@ -4,6 +4,7 @@ import { Type, type Static } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/vnext-types.generated.js';
 import type { ImportJob } from './import-job.js';
+import {CatalogTransactionScope} from './transaction-scope.js';
 
 /** Local synthetic development only. No implicit key, no production key service. */
 export interface KeyProviderPort {
@@ -38,11 +39,11 @@ export interface ProtectedReference { artifactId: string; status: 'QUARANTINED';
 type Envelope = { keyId: string; nonce: string; tag: string; ciphertext: string };
 type Result = ProtectedReference & { error?: string; envelope?: Envelope; binding?: string };
 const publicDigestConflict = Symbol('verified-public-digest-conflict');
-const safeCodes = new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
+const safeCodes = new Set(['BATCH_REJECTED','ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
 function safeError(error: unknown): Error { return new Error(error instanceof Error && safeCodes.has(error.message) ? error.message : 'PROTECTED_OPERATION_FAILED'); }
 
-export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
-  const transaction = <T>(work: (trx: Kysely<DB>) => Promise<T>): Promise<T> => db.isTransaction ? work(db) : db.transaction().execute(work);
+export function protectedArtifacts(db: Kysely<DB>|CatalogTransactionScope, provider?: KeyProviderPort) {
+  const transaction = <T>(work: (trx: Kysely<DB>|CatalogTransactionScope) => Promise<T>): Promise<T> => db instanceof CatalogTransactionScope || db.isTransaction ? work(db) : db.transaction().execute(work);
   const keyProvider = () => { if (!provider) throw new Error('KEY_UNAVAILABLE'); return provider; };
   const call = async (actor: string, action: string, input: unknown, envelope: Envelope | null = null, digest: string | null = null): Promise<Result> => {
     try {
@@ -84,7 +85,7 @@ export function protectedArtifacts(db: Kysely<DB>, provider?: KeyProviderPort) {
       } catch (error) {
         if(error===publicDigestConflict) {
           // The receive root owns rollback and its separate bounded failure audit.
-          if(db.isTransaction)throw new Error('PUBLIC_DIGEST_CONFLICT');
+          if(db instanceof CatalogTransactionScope||db.isTransaction)throw new Error('PUBLIC_DIGEST_CONFLICT');
           // The payload transaction has rolled back. Commit a distinct minimal denial
           // without the bytes, their ordinary SHA, or a false accepted outcome.
           const denial={scope:input.scope,campus:input.campus,purpose:input.purpose,jobId:input.jobId,revisionId:input.revisionId,requestId:input.requestId};

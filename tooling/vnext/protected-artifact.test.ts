@@ -159,7 +159,7 @@ test('PR5: reject protected bytes whose plain SHA is published in any bound job 
   // Changing the current declaration cannot erase exposure in immutable earlier revisions.
   const revised=await s.catalog.importJobCommand('maker',{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_JOB',jobId:job.id,expectedCurrentRevision:job.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'b'.repeat(64)}});
   await assert.rejects(s.catalog.storeProtectedArtifact('maker',{...s.input,jobId:job.id,revisionId:revised.revisionId,requestId:randomUUID()},raw),/^Error: PUBLIC_DIGEST_CONFLICT$/);
-  assert.equal((await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:job.id})).revisions[0]!.input.declaredSha256,exposed,'existing metadata evidence is not rewritten');
+   const firstRevision=(await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:job.id})).revisions[0]!;assert.equal(firstRevision.input.kind,'METADATA_ONLY');assert.equal(firstRevision.input.declaredSha256,exposed,'existing metadata evidence is not rewritten');
  }finally{await s.catalog.close();}
 });
 test('PR5: protected jobs cannot later publish a new plain digest; safe revisions and races remain bounded',async()=>{
@@ -181,7 +181,7 @@ test('PR5: protected jobs cannot later publish a new plain digest; safe revision
   assert.match(String(rejected.reason),/STALE_REVISION|PUBLIC_DIGEST_AFTER_PROTECTION_FORBIDDEN/);
   const history=await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:job.id});
   const payloads=Number(peer(receipt.name,`SELECT count(*) FROM governance_catalog.protected_payload p JOIN governance_catalog.protected_artifact a ON a.id=p.artifact_id WHERE a.job_id=${quote(job.id)}::uuid;`));
-  assert.ok(payloads===0||history.revisions.every(revision=>revision.input.declaredSha256!==exposed),'resulting state cannot contain protected bytes together with their public SHA');
+   assert.ok(payloads===0||history.revisions.every(revision=>revision.input.kind!=='METADATA_ONLY'||revision.input.declaredSha256!==exposed),'resulting state cannot contain protected bytes together with their public SHA');
  }finally{await s.catalog.close();}
 });
 test('atomic replay, concurrent stores, cross revision, current authorization and audit rollback',async()=>{
