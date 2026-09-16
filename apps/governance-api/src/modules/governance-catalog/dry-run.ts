@@ -13,17 +13,18 @@ import type {ImportContractItem} from './contract-schema.js';
 import {planDeclaredGraph,explainTargetImpact} from './dry-run-rules.js';
 
 const Id=QualityEligibilitySchema.properties.jobId;
+const planTokenLimit=1048576;
 const Row=Type.Integer({minimum:1,maximum:1000});
 const Target=Type.Object({dataset:Type.String({pattern:'^(ORG|PER)[0-9]{2}$'}),id:Id,expectedVersion:Type.String({pattern:'^[1-9][0-9]*$',maxLength:20})},{additionalProperties:false});
 const Dependency=Type.Object({field:Type.String({minLength:1,maxLength:128}),alias:Type.Object({kind:Type.Literal('JOB_ALIAS'),row:Row},{additionalProperties:false})},{additionalProperties:false});
 const Command=Type.Object({row:Row,intent:Type.Enum(['CREATE','REVISE','CORRECT','CLOSE','SPLIT','MERGE','TRANSFER']),target:Type.Optional(Target),dependencies:Type.Array(Dependency,{maxItems:100})},{additionalProperties:false});
-export const BuildDryRunSchema=Type.Object({...QualityEligibilitySchema.properties,commands:Type.Array(Command,{minItems:1,maxItems:1000})},{additionalProperties:false});
-export const ApprovalCandidateSchema=Type.Object({planToken:Type.String({minLength:1,maxLength:1048576})},{additionalProperties:false});
+export const BuildDryRunSchema=Type.Object({...QualityEligibilitySchema.properties,commands:Type.Array(Command,{minItems:1,maxItems:1000})},{additionalProperties:false,description:'Structural limits apply together with the aggregate 1 MiB signed-token budget. PLAN_INPUT_LIMIT rejects oversized serialized intent before any database observation.'});
+export const ApprovalCandidateSchema=Type.Object({planToken:Type.String({minLength:1,maxLength:planTokenLimit})},{additionalProperties:false});
 export type BuildDryRunInput=Static<typeof BuildDryRunSchema>;
 export type ApprovalCandidateInput=Static<typeof ApprovalCandidateSchema>;
 const transformation='DECLARED_INTENTS_V2';
 interface ObservationToken {version:'P0_07_OBSERVATION_V1';actor:string;planId:string;observedAt:string;input:BuildDryRunInput;binding:string}
-const safeCodes=new Set(['ACCESS_DENIED','NOT_FOUND','STALE_REVISION','EXACT_CONTRACT_UNAVAILABLE','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE','PROTECTED_OPERATION_FAILED','PARSE_PROVENANCE_REQUIRED','VALIDATION_PROVENANCE_REQUIRED','VALIDATION_EVIDENCE_UNAVAILABLE','CLOSED_INPUT_REQUIRED','INVALID_PLAN_TOKEN','PLAN_EVIDENCE_LIMIT']);
+const safeCodes=new Set(['ACCESS_DENIED','NOT_FOUND','STALE_REVISION','EXACT_CONTRACT_UNAVAILABLE','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE','PROTECTED_OPERATION_FAILED','PARSE_PROVENANCE_REQUIRED','VALIDATION_PROVENANCE_REQUIRED','VALIDATION_EVIDENCE_UNAVAILABLE','CLOSED_INPUT_REQUIRED','INVALID_PLAN_TOKEN','PLAN_EVIDENCE_LIMIT','PLAN_INPUT_LIMIT']);
 async function safe<T>(work:()=>Promise<T>):Promise<T>{try{return await work();}catch(error){throw new Error(error instanceof Error&&safeCodes.has(error.message)?error.message:'DRY_RUN_FAILED');}}
 
 export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
@@ -51,7 +52,7 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
  const token=(observation:ObservationToken)=>{
   // Contains technical references and explicit user intent only; never cells, business keys or issue details.
   const body=Buffer.from(JSON.stringify(observation)).toString('base64url');
-  if(body.length+65>1048576)throw new Error('PLAN_EVIDENCE_LIMIT');
+  if(body.length+65>planTokenLimit)throw new Error('PLAN_EVIDENCE_LIMIT');
   return body+'.'+mac('P0_07_TOKEN_V1',body);
  };
  const readToken=(actor:string,input:ApprovalCandidateInput):ObservationToken=>{
@@ -100,6 +101,11 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
  };
  const buildDryRun=async(actor:string,input:BuildDryRunInput)=>{
   if(!Check(BuildDryRunSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');input=structuredClone(input);
+  // Admission includes aggregate UTF-8/base64 capacity, not only per-array shape.
+  // Reserve more than the DB local timestamp's length; ID/signature lengths are fixed.
+  // Do not touch the provider here: genuine protected-read/key failures must retain their audit.
+  const budget:ObservationToken={version:'P0_07_OBSERVATION_V1',actor,planId:'0'.repeat(36),observedAt:'0'.repeat(64),input,binding:'0'.repeat(64)};
+  if(Math.ceil(Buffer.byteLength(JSON.stringify(budget),'utf8')*4/3)+65>planTokenLimit)throw new Error('PLAN_INPUT_LIMIT');
   return safe(()=>readTransaction(async scope=>{
    const preview=await observe(scope,actor,input);
    const planId=randomUUID();

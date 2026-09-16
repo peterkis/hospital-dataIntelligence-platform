@@ -92,6 +92,18 @@ test('PR9 R2: absent parsed rows cannot produce a planned graph or apply units',
   assert.deepEqual(preview.graph.order,[]);assert.deepEqual(preview.graph.units,[]);
  }finally{await s.catalog.close();}
 });
+
+test('PR9 R3: aggregate token capacity is checked before protected evidence is read',async()=>{
+ const s=await setup();try{
+  const commands:BuildDryRunInput['commands']=Array.from({length:1000},(_,index)=>({row:index+1,intent:'CREATE',dependencies:Array.from({length:100},(_,field)=>({field:`field_${field}`,alias:{kind:'JOB_ALIAS',row:1}}))}));
+  const before=readAuditCount(s.run.resultArtifactId,'REQUEST_AUTHORIZED');
+  await assert.rejects(s.catalog.buildDryRun('maker',{...s.input,commands}),/PLAN_INPUT_LIMIT/);
+  assert.equal(readAuditCount(s.run.resultArtifactId,'REQUEST_AUTHORIZED'),before,'over-budget input must be rejected before database observation');
+  const admitted=await s.catalog.buildDryRun('maker',{...s.input,commands:commands.slice(0,50)});
+  assert.ok(admitted.planToken.length<=1048576);
+  assert.equal((await s.catalog.freezeApprovalCandidate('maker',{planToken:admitted.planToken})).status,'BLOCKED');
+ }finally{await s.catalog.close();}
+});
 test('current run does not hide historical unresolved issues; ledger change stales observation',async()=>{
  const s=await setup();try{
   const old=await s.catalog.buildDryRun('maker',s.input);
