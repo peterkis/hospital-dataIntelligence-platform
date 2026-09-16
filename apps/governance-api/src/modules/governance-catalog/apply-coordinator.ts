@@ -37,8 +37,9 @@ export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:st
 const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE']);
 function failure(error:unknown):Error {
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
- if(typeof code==='string'&&['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','08006','08003','57P01'].includes(code))return new Error('TRANSPORT_FAILED');
  const message=error instanceof Error?error.message:'';
+ if((typeof code==='string'&&(/^08[A-Z0-9]{3}$/.test(code)||['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','57P01'].includes(code)))||
+  ['Connection terminated unexpectedly','Connection terminated','Connection terminated due to connection timeout'].includes(message))return new Error('TRANSPORT_FAILED');
  return new Error(codes.has(message)?message:'APPLY_FAILED');
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
@@ -54,11 +55,15 @@ function bound(unit:ObservedOwnerUnit):void {
 
 export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:ApplyOwnerPort){
  const port=()=>{if(!owner)throw new Error('BLOCKED_DEPENDENCY');return owner;};
- const root=async<T>(work:(scope:CatalogTransactionScope)=>Promise<T>):Promise<T>=>db.transaction().execute(async trx=>{
+ const root=async<T>(work:(scope:CatalogTransactionScope)=>Promise<T>):Promise<T>=>{
+  // Readiness precedes even acquiring a connection: persistent deployments may still be at 0037.
+  port();
+  return db.transaction().execute(async trx=>{
   // Same serialization lock as current authorization/catalog/source changes. No movable read savepoint.
   await sql`select pg_advisory_xact_lock(901002)`.execute(trx);
   return work(CatalogTransactionScope.from(trx));
- });
+  });
+ };
  const record=async<T>(scope:CatalogTransactionScope,actor:string,action:string,input:unknown):Promise<T>=>
   (await sql<{result:T}>`select governance_catalog.apply_record(${actor},${action},${JSON.stringify(input)}::jsonb) as result`.execute(scope)).rows[0]!.result;
  const seal=(unit:ObservedOwnerUnit,digest:string):Envelope=>{
@@ -98,6 +103,10 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
    check(PlanOwnerUnitSchema,input);input=structuredClone(input);
    try{return await root(async scope=>{
     await port().authorize(scope,actor,input,'WRITE');
+    await port().authorize(scope,actor,input,'READ');
+    // Recovery returns the immutable observation, never implicitly replans changed evidence.
+    const prior=await record<{candidateId:string;digest:string}|null>(scope,actor,'FROZEN_PRIOR',{input});
+    if(prior)return prior;
     const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit);
     const digest=planBinding(provider,'APPROVED_OWNER_UNIT_V1',unit);
     return record<{candidateId:string;digest:string}>(scope,actor,'FREEZE',{input,digest,envelope:seal(unit,digest)});

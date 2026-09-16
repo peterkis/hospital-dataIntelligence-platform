@@ -68,7 +68,7 @@ test('positive multi-Owner commit is durable and same request concurrently retur
   const before=counts();assert.deepEqual(await s.coordinator.applyUnit('maker-alias',request),one);assert.equal(counts(),before);
   await assert.rejects(s.coordinator.applyUnit('maker',{...request,requestId:randomUUID()}),/REQUEST_CONFLICT/);
   assert.equal(counts(),before);
-  const other=await s.coordinator.planOwnerUnit('maker',s.input);
+  const other=await s.coordinator.planOwnerUnit('maker',{...s.input,requestId:randomUUID()});
   await assert.rejects(s.coordinator.applyUnit('maker',{...request,candidateId:other.candidateId}),/REQUEST_CONFLICT/);
   assert.equal((await s.coordinator.reconcileCommittedUnit('maker',request)).status,'MATCHED');
  }finally{await s.close();}
@@ -226,5 +226,47 @@ test('review regression: sensitive candidate read audit commits before release a
   try{await assert.rejects(noKey.coordinator.readApplyCandidate('reviewer',{candidateId:c.candidateId}),/KEY_UNAVAILABLE/);}finally{await noKey.close();}
   assert.equal(auditCount(),before+2);
   assert.equal(execute(`SELECT count(*) FROM governance_catalog.apply_candidate WHERE id=${quote(c.candidateId)} AND (input::text LIKE '%PRIVATE_FINITE_%' OR envelope::text LIKE '%PRIVATE_FINITE_%');`),'0');
+ }finally{await s.close();}
+});
+
+test('PR10: concurrent and alias freeze retries preserve one candidate and original committed IDs',async()=>{
+ const s=await setup();try{
+  const [first,retry]=await Promise.all([s.coordinator.planOwnerUnit('maker',s.input),s.coordinator.planOwnerUnit('maker-alias',s.input)]);
+  assert.deepEqual(retry,first);
+  await s.coordinator.approveApplyUnit('reviewer',first);
+  const request={candidateId:first.candidateId,requestId:s.input.requestId};
+  const committed=await s.coordinator.applyUnit('maker',request);
+  execute(`UPDATE p0_08_owner.source SET revision=uuidv7() WHERE id=${quote(s.input.jobId)};`);
+  assert.deepEqual(await s.coordinator.planOwnerUnit('maker-alias',s.input),first);
+  const replay=await s.coordinator.applyUnit('maker-alias',{...request,candidateId:retry.candidateId});
+  assert.deepEqual(replay,committed);
+  const other=await setup();try{
+   await assert.rejects(other.coordinator.planOwnerUnit('maker',{...other.input,requestId:s.input.requestId}),/REQUEST_CONFLICT/);
+  }finally{await other.close();}
+ }finally{await s.close();}
+});
+
+test('PR10: every missing-Owner command blocks before Apply storage access',async()=>{
+ const catalog=await openCatalog(process.env['VNEXT_DATABASE_URL']);
+ const candidateId=randomUUID();const requestId=randomUUID();
+ try{
+  for(const operation of [
+   ()=>catalog.readApplyCandidate('maker',{candidateId}),
+   ()=>catalog.approveApplyUnit('reviewer',{candidateId,digest:'a'.repeat(64)}),
+   ()=>catalog.applyUnit('maker',{candidateId,requestId}),
+   ()=>catalog.resumeOutcome('maker',{candidateId,requestId}),
+   ()=>catalog.reconcileCommittedUnit('maker',{candidateId,requestId})
+  ])await assert.rejects(operation(),/BLOCKED_DEPENDENCY/);
+ }finally{await catalog.close();}
+});
+
+test('PR10: code-less pg termination and class-08 exceptions classify as precommit transport failures',async()=>{
+ const s=await setup();try{
+  const request=await approved(s);const before=counts();
+  for(const mode of ['PG_TERMINATED','PG_TERMINATED_REQUESTED','PG_CLASS_08']){
+   execute(`DELETE FROM p0_08_owner.failure;INSERT INTO p0_08_owner.failure VALUES(3,${quote(mode)});`);
+   await assert.rejects(s.coordinator.applyUnit('maker',request),/TRANSPORT_FAILED/);
+   assert.equal(counts(),before);
+  }
  }finally{await s.close();}
 });

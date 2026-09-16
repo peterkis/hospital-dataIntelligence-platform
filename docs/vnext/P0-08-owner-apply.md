@@ -67,13 +67,31 @@ Owner 的 exact-read，比较实际 ID/版本；缺失或版本不匹配产生 M
 | P0-08-AC-06 应用用户不跨 Owner DML | 普通应用 SQL 写测试 Owner/候选、调用受信命令均 42501 |
 
 适用入口：`npm.cmd run prototype:db:with -- vnext:p0-08:validate`。
-串行执行本票 typecheck、fresh、0048→0049 升级/codegen、P0-07 共享绑定回归、
+串行执行本票 typecheck、fresh、当前前缀升级/codegen、P0-07 共享绑定回归、
 P0-11 保护边界回归、模块边界和 API build；任一子命令失败使总门禁非零。
 其余 P0-05/06 未改的领域规则不重演全部历史矩阵，不宣称本轮重新验收。
 实际命令、失败/后续 GREEN、receipt、最终同候选 Spec/Standards 审阅和
 commit/tree 记录在 ignored `.runtime/vnext/p0-08/`。
 
-源码前缀为 0049；开工实查唯一持久库仍为 0037，`CURRENT_DB_INTEGRATION_PENDING`。
+源码前缀为 0050；开工实查唯一持久库仍为 0037，`CURRENT_DB_INTEGRATION_PENDING`。
 本轮只在 receipt-owned 临时库安装迁移和受信 Owner 角色，并按 receipt 销毁。
 持久库升级/角色部署、数据库实际重启、P0-02 浏览器验收均未执行；
 `BROWSER_BLOCKED` 保留。完成后仅一个本地提交，不 push，不开始 P0-09。
+
+## PR #10 审阅修正
+
+用户随后单独授权 P0-08 的推送、远端 Codex 审阅、修复、合并和分支清理；持久库
+升级/角色部署及 P0-09 仍不在范围。首轮三个反例分别复现后修正，日志保留在
+`pr10-r1-*`，不覆盖原本地完成交接或迁移 0049。
+
+0050 在候选上增加 underlying identity/request 的数据库唯一约束，在同根锁内
+先恢复已冻结候选。同身份别名、并发及重试返回原 candidate ID/digest；不同输入
+使用相同 request 返回 REQUEST_CONFLICT。恢复不隐式重算或替换冻结意图；变更源
+需要新请求、新观察和适用批准，原候选 Apply 仍重查当前版本。0049→0050 的升级
+保留已有候选字节；若历史上已存在重复身份/request，迁移失败关闭，不删除或
+合并历史批准，需独立处置。原 0048→0049 验证日志仍保留。
+
+所有命令在取得数据库连接前检查 Owner 就绪性，未接线的生产 composition 在
+0037 或普通应用角色下均返回 BLOCKED_DEPENDENCY。提交前 transport 分类覆盖
+本地 pg/pg-pool 的已知无 code 连接终止及 SQLSTATE 08 类；COMMIT 附近的异常
+仍单独返回 COMMIT_UNKNOWN，不据此推断回滚。

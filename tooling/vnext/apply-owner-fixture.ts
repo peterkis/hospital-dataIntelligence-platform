@@ -29,6 +29,9 @@ export function finiteCoordinator(connectionString:string,provider?:KeyProviderP
    if(mode==='REJECT')return {ok:false};
    if(mode==='THROW')throw new Error('OWNER_REJECTED');
    if(mode==='NETWORK')throw Object.assign(new Error('socket closed'),{code:'ECONNRESET'});
+   if(mode==='PG_TERMINATED')throw new Error('Connection terminated unexpectedly');
+   if(mode==='PG_TERMINATED_REQUESTED')throw new Error('Connection terminated');
+   if(mode==='PG_CLASS_08')throw Object.assign(new Error('connection exception'),{code:'08001'});
    const value={...command.value};
    for(const alias of command.aliases){const fact=resolved.get(alias);if(!fact)throw new Error('BLOCKED_DEPENDENCY');value['alias_'+alias]=fact.id;}
    const input=JSON.stringify({...command,value});
