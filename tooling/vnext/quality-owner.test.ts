@@ -411,3 +411,20 @@ test('PR8 issue lists count and paginate only the requested campus and purpose',
   assert.equal(empty.total,0);assert.deepEqual(empty.items,[]);
  }finally{await s.catalog.close();}
 });
+
+
+test('PR8 ledger positions remain lossless above the JavaScript safe integer limit',async()=>{
+ const s=await setup();try{
+  const base='9007199254740992';
+  peer(receipt.name,`UPDATE governance_catalog.import_job SET quality_issue_sequence=${base},quality_disposition_sequence=${base} WHERE id=${quote(s.file.job.id)}::uuid;`);
+  const responsibility=await publishResponsibility(s.catalog,s.contract.dataset);
+  const opened=await s.catalog.openIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'BIGINT_POSITIONS',runId:s.run.runId});
+  const assigned=await s.catalog.assignIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),reason:'BIGINT_ASSIGNMENT',issueId:opened.issueIds[0]!,expectedHead:base,responsibilityId:responsibility.id});
+  const list=await s.catalog.qualityIssueRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id});
+  const detail=await s.catalog.qualityIssueDetail('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',issueId:opened.issueIds[0]!});
+  assert.equal(detail.history[0]!.head,'9007199254740993');
+  assert.equal(assigned.head,'9007199254740993');
+  assert.deepEqual(list.items.map(i=>i.sequence),['9007199254740993','9007199254740994']);
+  assert.equal(detail.issue.sequence,'9007199254740993');
+ }finally{await s.catalog.close();}
+});

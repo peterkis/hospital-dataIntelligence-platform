@@ -89,3 +89,7 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 ## PR #8 第六轮修复
 
 0043 对问题列表的总数与分页使用相同的campus/purpose精确过滤，保留原身份、job READ及稳定顺序。混合维度不再使整个job无法列出问题；其他维度的行和计数不会进入当前页。回归覆盖三个合法维度、每页一项、尾页、空交叉维度和runId一致性。
+
+## PR #8 第七轮修复
+
+0044 将列表/详情的 issue sequence 及处置历史 head 以十进制字符串输出，遵循 ADR-0073 的无损 int8 边界；SQL 排序仍使用 bigint。typed API 同步为字符串。受控测试将新作业流水位设在 JavaScript 安全整数上限之外，验证连续序号、详情、历史和命令 head 均不舍入；不改写既有事项或处置。
