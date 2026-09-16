@@ -1,4 +1,5 @@
 import {qualityResolutionProof} from '../../apps/governance-api/src/modules/governance-catalog/quality-resolution-proof.js';
+import {buildQualityIssueCandidates} from '../../apps/governance-api/src/modules/governance-catalog/quality-candidates.js';
 import {test} from 'vitest';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
@@ -454,5 +455,45 @@ test('PR8 optional empty correction resolves its field error while Owner blocker
   assert.equal(resolved.kind,'RESOLVED');
   const eligibility=await s.catalog.qualityEligibilityRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:s.file.job.id,revisionId:run.revisionId,runId:run.runId});
   assert.equal(eligibility.eligible,false);assert.equal(eligibility.isolationBlocked,true);assert.equal(eligibility.applyImplemented,false);
+ }finally{await s.catalog.close();}
+});
+
+test('PR8 direct SQL ingestion and eligibility require current protected READ',async()=>{
+ const s=await setup();const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});try{
+  const dimensions={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const};
+  const {evaluation}=await s.catalog.explainIssue('maker',{...dimensions,runId:s.run.runId});
+  const candidates=JSON.stringify(buildQualityIssueCandidates(evaluation)),notRun=JSON.stringify(evaluation.layers.filter(l=>l.status==='NOT_RUN').map(l=>l.layer));
+  const input={...dimensions,requestId:randomUUID(),reason:'SQL_READ_CHECK',runId:s.run.runId};
+  const eligibility={...dimensions,jobId:s.file.job.id,revisionId:s.run.revisionId,runId:s.run.runId};
+  const ingest=()=>pool.query('SELECT governance_catalog.quality_issue_ingest($1,$2::jsonb,$3::jsonb)',['maker',JSON.stringify(input),candidates]);
+  const read=()=>pool.query('SELECT governance_catalog.quality_eligibility($1,$2::jsonb,$3::jsonb,$4::jsonb)',['maker',JSON.stringify(eligibility),candidates,notRun]);
+  for(const granted of [false,true,false]){
+   if(granted)peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);
+   else peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(s.f.dataset.id)}::uuid AND permission='READ';`);
+   if(granted){await ingest();await read();}
+   else{await assert.rejects(ingest(),/ACCESS_DENIED/);await assert.rejects(read(),/ACCESS_DENIED/);}
+  }
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);
+  peer(receipt.name,`BEGIN; SET LOCAL session_replication_role=replica; UPDATE governance_catalog.protected_artifact SET recorded_at='2019-01-01',expires_at='2020-01-01' WHERE id=${quote(s.run.resultArtifactId)}::uuid; COMMIT;`);
+  await assert.rejects(read(),/VALIDATION_EVIDENCE_UNAVAILABLE/);
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(s.f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','PURGE');`);
+  await s.catalog.purgeOwnedExpiredArtifact('maker',{...dimensions,requestId:randomUUID(),artifactId:s.run.resultArtifactId});
+  await assert.rejects(read(),/VALIDATION_EVIDENCE_UNAVAILABLE/);
+ }finally{await pool.end();await s.catalog.close();}
+});
+
+test('PR8 eligibility retains older unresolved issues until explicit resolution',async()=>{
+ const s=await prepareCorrection();try{
+  const dimensions={scope:'SYNTHETIC' as const,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const};
+  const parsed=await s.catalog.parseFile('maker',{...dimensions,requestId:randomUUID(),outputRequestId:randomUUID(),jobId:s.file.job.id,revisionId:s.correction.revisionId,artifactId:s.correction.artifactId,retentionSeconds:3600});
+  const run=await s.catalog.validateRevision('maker',{...s.validate,requestId:randomUUID(),outputRequestId:randomUUID(),revisionId:s.correction.revisionId,artifactId:parsed.artifact.artifactId});
+  await s.catalog.openIssue('maker',{...dimensions,requestId:randomUUID(),reason:'OPEN_NEW_RUN',runId:run.runId});
+  const input={...dimensions,jobId:s.file.job.id,revisionId:run.revisionId,runId:run.runId};
+  const before=await s.catalog.qualityEligibilityRead('maker',input);
+  assert.equal(before.expectedIssueCount,1);assert.equal(before.ingestedIssueCount,1);assert.equal(before.missingIssueCount,0);
+  assert.equal(before.unresolvedIssueCount,3);assert.equal(before.domainDependencyBlocked,2);assert.equal(before.eligible,false);
+  await s.catalog.resolveWithEvidence('maker',{...dimensions,requestId:randomUUID(),reason:'RESOLVE_OLDER',issueId:s.issue.id,expectedHead:s.correction.head,newRunId:run.runId,newRevisionId:run.revisionId});
+  const after=await s.catalog.qualityEligibilityRead('maker',input);
+  assert.equal(after.unresolvedIssueCount,2);assert.equal(after.domainDependencyBlocked,2);assert.equal(after.eligible,false);
  }finally{await s.catalog.close();}
 });

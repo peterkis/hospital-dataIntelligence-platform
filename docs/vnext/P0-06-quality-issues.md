@@ -101,3 +101,13 @@ resolveWithEvidence明确检查调用方newRevisionId等于新run实际revision�
 字段实际存在且空字符串被 O 或已确定为 false 的条件允许时，校验记录 VALID_ABSENCE 正向覆盖，支持新修订解决原字段值错误。必填、条件未知、缺字段仍不通过；缺少来源时 SOURCE/LENGTH 不生成 PASS。可选引用的合法空值仅证明本字段无需目标引用，不代表领域 Owner 就绪，整体批次继续阻断。
 
 真实反例先复现，日志保持原样。fresh 与 44-to-45 升级、受限 READ 新增/撤销及合法空值局部解决的证据见 ignored pr8-r8 日志和 handoff；持久研发库未升级。
+
+## PR #8 第九轮修复
+
+0046 对直接 SQL quality_issue_ingest 新请求和 quality_eligibility 增加当前 actor、dataset、campus、purpose 的精确 protected READ 检查。已提交摄取重放继续走既有 open prior 的当前授权；资格查询复用既有授权事务锁。
+
+资格查询的 unresolved/manual/dependency 计数覆盖同作业、同院区、同目的的全部未解决事项。expected/ingested/missing 仍对应当前运行。新运行不再自动抹去旧事项阻断，只有明确的 RESOLVED 处置减少相应计数。无生产 Apply 接线。
+
+反例先复现直接 SQL 越权及旧问题漏计；验证和清理结果见 ignored pr8-r9 日志及 handoff。持久研发库仍未安装迁移。
+
+同轮独立审查补充：直接 SQL 资格查询还必须确认结果 artifact 的维度、有效期限及 payload 存在。到期或清理后返回 VALIDATION_EVIDENCE_UNAVAILABLE，不再固定宣称证据可用；测试覆盖两种情况，未伪造可恢复证据。
