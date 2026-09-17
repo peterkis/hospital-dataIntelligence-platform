@@ -250,7 +250,17 @@
     "vnext:apply:upgrade": "node --import tsx tooling/vnext/run-apply-tests.mjs --upgrade",
     "vnext:apply:generate": "node --import tsx tooling/vnext/run-apply-tests.mjs --generate",
     "vnext:apply:typecheck": "tsc -p tooling/vnext/tsconfig.apply.json",
-    "vnext:p0-08:validate": "node tooling/vnext/p0-08-validate.mjs"
+    "vnext:p0-08:validate": "node tooling/vnext/p0-08-validate.mjs",
+    "vnext:owner:provision": "node tooling/vnext/owner-service.mjs --provision",
+    "vnext:workbench:serve": "node --import tsx tooling/vnext/workbench-runtime.mjs --finite",
+    "vnext:workbench:persistent": "node --import tsx tooling/vnext/workbench-runtime.mjs --persistent",
+    "vnext:owner:summary": "node tooling/vnext/owner-service.mjs --activate-summary",
+    "vnext:workbench:smoke": "node --import tsx tooling/vnext/workbench-persistent-smoke.mjs",
+    "vnext:workbench:fresh": "node --import tsx tooling/vnext/workbench-validate.mjs",
+    "vnext:workbench:upgrade": "node --import tsx tooling/vnext/workbench-validate.mjs --upgrade",
+    "vnext:owner:access": "node tooling/vnext/owner-service.mjs --activate-access",
+    "vnext:workbench:control": "node --import tsx tooling/vnext/workbench-control-validate.mjs",
+    "vnext:workbench:unit": "vitest run --config tooling/vnext/vitest.workbench.config.ts"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

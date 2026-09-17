@@ -99,6 +99,23 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
   return current;
  };
  return {
+  async readApplyCandidateAccess(actor:string,input:{candidateId:string}){
+   check(Type.Object({candidateId:Id},{additionalProperties:false}),input);input=structuredClone(input);
+   try{
+    await root(scope=>candidate(scope,actor,input.candidateId,'READ'));
+    // Each advisory permission probe owns its rollback; a SQL denial cannot poison the next probe.
+    const allowed=async(action:'WRITE'|'REVIEW')=>{try{return await root(async scope=>{await candidate(scope,actor,input.candidateId,action);return true;});}catch(error){if(error instanceof Error&&error.message==='ACCESS_DENIED')return false;throw error;}};
+    return {candidateId:input.candidateId,canReview:await allowed('REVIEW'),canExecute:await allowed('WRITE')};
+   }catch(error){throw failure(error);}
+  },
+  async previewOwnerUnit(actor:string,input:PlanOwnerUnitInput){
+   check(PlanOwnerUnitSchema,input);input=structuredClone(input);
+   try{return await root(async scope=>{
+    await port().authorize(scope,actor,input,'READ');
+    const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit);
+    return {status:'OBSERVED' as const,unit};
+   });}catch(error){throw failure(error);}
+  },
   async planOwnerUnit(actor:string,input:PlanOwnerUnitInput){
    check(PlanOwnerUnitSchema,input);input=structuredClone(input);
    try{return await root(async scope=>{

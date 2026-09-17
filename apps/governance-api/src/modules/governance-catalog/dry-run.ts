@@ -127,5 +127,16 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
    return {planRef:{kind:'CHANGE_PLAN' as const,id:original.planId},originalObservedAt:original.observedAt,recheckedAt:null,status:code==='STALE_REVISION'||code==='EXACT_CONTRACT_UNAVAILABLE'?'STALE' as const:'BLOCKED' as const,candidate:null,approvalGranted:false as const,applyImplemented:false as const,blockers:[code]};
   }
  });
- return {buildDryRun,planApplyUnits:buildDryRun,explainImpact:buildDryRun,freezeApprovalCandidate};
+ const previewFileCreates=async(actor:string,input:Static<typeof QualityEligibilitySchema>)=>{
+  if(!Check(QualityEligibilitySchema,input))throw new Error('CLOSED_INPUT_REQUIRED');input=structuredClone(input);
+  return safe(()=>readTransaction(async scope=>{
+   const evidence=await createValidationEvidenceReader(provider).readInTransaction(scope,actor,input,input.runId,true);
+   if(evidence.job.id!==input.jobId||evidence.run.revisionId!==input.revisionId||evidence.job.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');
+   const commands=(evidence.parsed?.rows??[]).map((_row,index)=>({row:index+1,intent:'CREATE' as const,dependencies:[]}));
+   if(!commands.length)throw new Error('PLAN_INPUT_LIMIT');
+   const preview=await observe(scope,actor,{...input,commands});
+   return {...preview,previewIntent:'ALL_FILE_ROWS_CREATE' as const,rowCount:commands.length};
+  }));
+ };
+ return {buildDryRun,previewFileCreates,planApplyUnits:buildDryRun,explainImpact:buildDryRun,freezeApprovalCandidate};
 }

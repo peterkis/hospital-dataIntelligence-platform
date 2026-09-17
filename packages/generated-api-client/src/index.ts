@@ -22,3 +22,5 @@ export function createGovernanceApiClient(options: {
     ...(options.fetch ? { fetch: options.fetch } : {}),
   });
 }
+
+export type {operations as VNextOperations} from './vnext-schema.generated.js';
