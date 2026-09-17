@@ -95,3 +95,13 @@ READ 后预览/复核拒绝、原提交身份仍能恢复技术结果及源消�
 
 第三轮独立审阅通过代码候选 tree `233c2f43fc63fd1e649c3658f32fbb1e8d59f599`，
 Spec/Standards 均零发现。后续仅补充本节验收记录与本票状态；不修改代码。
+
+2026-09-17 Medium-01—04 修复：工作台使用显式状态词典区分 `PARSED`、治理阻断、
+审核就绪、批准与 `COMMITTED`，未知状态保留原代码，不再以通用成功文案代替；
+模板响应同时返回其精确 dataset/profile/contractVersionId/templateVersion 与
+`STRICT_V2` parser policy，HTTP 回归验证 exact contract 绑定；浏览器从 capabilities
+读取 1 MiB 原始文件上限，base64 传输、Protected Store 与边界拒绝均由真实 HTTP
+验证。前端未调用 localStorage、sessionStorage 或 IndexedDB；真实 Chrome 有限 E2E
+观察到 `QUARANTINED → PARSED → BLOCKED/QUALITY_ITEMS → FINITE_PREVIEW → FROZEN
+→ READ_READY → APPROVED → COMMITTED`，浏览器存储键为空。对应单元测试、fresh/upgrade
+receipt 与浏览器 AX/截图证据均保存在 `.runtime/vnext/p0-09/` 忽略目录。

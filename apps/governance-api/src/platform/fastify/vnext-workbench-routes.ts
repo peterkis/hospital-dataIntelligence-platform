@@ -105,6 +105,11 @@ const TemplateResult = Type.Object(
     download: Bytes,
     filename: Text,
     text: Text,
+    dataset: Text,
+    profile: Type.Enum(["CORE", "FULL"]),
+    contractVersionId: Id,
+    templateVersion: Text,
+    parserPolicy: Type.Literal("STRICT_V2"),
   },
   closed,
 );
@@ -280,6 +285,11 @@ export async function registerWorkbenchRoutes(
           parserPolicy: "STRICT_V2",
           xlsxSupport: "TEXT_SUBSET_ONLY_NO_OFFICE_ROUNDTRIP_CLAIM",
         }),
+        dataset: c.dataset,
+        profile: c.profile,
+        contractVersionId: c.versionId,
+        templateVersion: c.definition.templateVersion,
+        parserPolicy: "STRICT_V2" as const,
       };
     },
   );

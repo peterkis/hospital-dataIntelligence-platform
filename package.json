@@ -259,7 +259,8 @@
     "vnext:workbench:fresh": "node --import tsx tooling/vnext/workbench-validate.mjs",
     "vnext:workbench:upgrade": "node --import tsx tooling/vnext/workbench-validate.mjs --upgrade",
     "vnext:owner:access": "node tooling/vnext/owner-service.mjs --activate-access",
-    "vnext:workbench:control": "node --import tsx tooling/vnext/workbench-control-validate.mjs"
+    "vnext:workbench:control": "node --import tsx tooling/vnext/workbench-control-validate.mjs",
+    "vnext:workbench:unit": "vitest run --config tooling/vnext/vitest.workbench.config.ts"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

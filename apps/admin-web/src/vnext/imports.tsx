@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createVNextCatalogClient } from "@hospital-data-intelligence/generated-api-client";
 import type { VNextOperations as operations } from "@hospital-data-intelligence/generated-api-client";
+import { describeImportStatus } from "./import-status.js";
+import {
+  MAX_RAW_FILE_BYTES,
+  encodeWorkbenchFile,
+} from "./workbench-file.js";
 
 type Summary =
   operations["readWorkbenchJob"]["responses"][200]["content"]["application/json"];
@@ -10,6 +15,10 @@ type Contract =
   operations["listImportContracts"]["responses"][200]["content"]["application/json"]["items"][number];
 type Action =
   operations["importWorkbenchAction"]["requestBody"]["content"]["application/json"]["action"];
+const statusLine = (code: string) => {
+  const view = describeImportStatus(code);
+  return view.code + " · " + view.label;
+};
 const dimensions = {
   scope: "SYNTHETIC" as const,
   campus: "NORTH" as const,
@@ -24,14 +33,6 @@ function download(bytes: string, name: string) {
   a.download = name;
   a.click();
   URL.revokeObjectURL(url);
-}
-async function encode(file: File) {
-  if (file.size < 1 || file.size > 1048576)
-    throw new Error("文件必须为 1 字节至 1 MiB");
-  const b = new Uint8Array(await file.arrayBuffer());
-  let text = "";
-  for (let i = 0; i < b.length; i++) text += String.fromCharCode(b[i]!);
-  return btoa(text);
 }
 export function ImportApp() {
   const [responsibilities, setResponsibilities] = useState<
@@ -89,6 +90,7 @@ export function ImportApp() {
     canReceive: boolean;
     canReadProtected: boolean;
   } | null>(null);
+  const [rawByteLimit, setRawByteLimit] = useState(MAX_RAW_FILE_BYTES);
   const write = summary?.canWrite ?? false;
   useEffect(() => {
     let active = true;
@@ -178,8 +180,10 @@ export function ImportApp() {
     let active = true;
     void (async () => {
       const caps = await client().GET("/api/vnext/workbench/capabilities");
-      if (active && token === epoch.current)
+      if (active && token === epoch.current) {
         setMode(caps.data?.mode ?? "UNAVAILABLE");
+        setRawByteLimit(caps.data?.rawByteLimit ?? MAX_RAW_FILE_BYTES);
+      }
       if (actor !== "reviewer") await refresh();
     })();
     return () => {
@@ -253,10 +257,10 @@ export function ImportApp() {
         setResult(r.data);
         setMessage(
           r.data.responseStatus === "POST_COMMIT_FAILED"
-            ? "本地已提交，后续通知/消费未完成"
+            ? statusLine("POST_COMMIT_FAILED")
             : r.data.status === "COMMIT_UNKNOWN"
-              ? "结果待确认，请按原候选和请求恢复结果"
-              : r.data.status,
+              ? statusLine("COMMIT_UNKNOWN") + "；请按原候选和请求恢复结果"
+              : statusLine(r.data.status),
         );
         if (r.data.download)
           download(r.data.download, r.data.filename ?? "receipt.json");
@@ -269,10 +273,12 @@ export function ImportApp() {
           await refresh(r.data.jobId);
         } else if (jobId && actor !== "reviewer") await refresh();
       }
-    } catch {
+    } catch (error) {
       if (token === epoch.current)
         setMessage(
-          "网络结果待确认。执行请求请按原 candidateId/requestId 恢复，不要生成新请求。",
+          error instanceof Error && error.message === "FILE_SIZE_OR_ENCODING"
+            ? "文件必须为 1 至 " + rawByteLimit + " 字节"
+            : "网络结果待确认。执行请求请按原 candidateId/requestId 恢复，不要生成新请求。",
         );
     } finally {
       if (token === epoch.current) setBusy(false);
@@ -308,7 +314,7 @@ export function ImportApp() {
     await run(async () => {
       const response = await client().POST("/api/vnext/workbench/upload", {
         body: {
-          bytes: await encode(file),
+          bytes: await encodeWorkbenchFile(file, rawByteLimit),
           templateVersion: contract.definition.templateVersion,
           contractVersionId: contract.versionId,
           input: {
@@ -416,7 +422,7 @@ export function ImportApp() {
         </p>
         <h2>选择精确契约 → 文件 → 问题 → 预览 → 复核与回执</h2>
         <p>
-          院区 NORTH · 用途 IDENTITY_VERIFY · 文件限 1 MiB。XLSX
+          院区 NORTH · 用途 IDENTITY_VERIFY · 原始文件限 {rawByteLimit} 字节。XLSX
           仅文本子集，未验证 Excel/WPS 编辑重传兼容。
         </p>
         <p role="status">{message}</p>
@@ -547,33 +553,39 @@ export function ImportApp() {
                 job {summary.jobId} · revision {summary.revisionId}
               </p>
               <p>
-                作业 {summary.status} · 文件 QUARANTINED · 安全扫描 NOT_RUN ·
+                作业 {statusLine(summary.status)} · 文件 {statusLine("QUARANTINED")} · 安全扫描 NOT_RUN ·
                 ORG/PER NOT_READY · 发布 NOT_READY
               </p>
               <p>
                 结构解析：
-                {summary.artifacts
+                {statusLine(
+                  summary.artifacts
                   .filter(
                     (a) =>
                       a.revisionId === summary.revisionId &&
                       a.kind === "RAW_CELL",
                   )
-                  .at(-1)?.structuralStatus ?? "NOT_INSPECTED"}{" "}
+                  .at(-1)?.structuralStatus ?? "NOT_INSPECTED",
+                )}{" "}
                 · 批准：
-                {summary.candidates
+                {statusLine(
+                  summary.candidates
                   .filter((c) => c.revisionId === summary.revisionId)
                   .at(-1)?.approved
                   ? "APPROVED"
-                  : "NOT_APPROVED"}{" "}
+                  : "NOT_APPROVED",
+                )}{" "}
                 · 执行：
-                {summary.candidates
+                {statusLine(
+                  summary.candidates
                   .filter((c) => c.revisionId === summary.revisionId)
                   .at(-1)?.committed
                   ? "COMMITTED"
-                  : "NOT_COMMITTED"}
+                  : "NOT_COMMITTED",
+                )}
               </p>
               <p>
-                最近校验：{summary.runs.at(-1)?.decision ?? "NOT_RUN"}；批准与
+                最近校验：{statusLine(summary.runs.at(-1)?.decision ?? "NOT_RUN")}；批准与
                 COMMITTED 以独立回执为准。
               </p>
               {fileAccess?.canReceive && (
@@ -742,7 +754,7 @@ export function ImportApp() {
                       run(async () =>
                         client().POST("/api/vnext/workbench/correction", {
                           body: {
-                            bytes: await encode(file!),
+                            bytes: await encodeWorkbenchFile(file!, rawByteLimit),
                             templateVersion: summary.templateVersion,
                             contractVersionId: summary.contractVersionId,
                             input: {
@@ -898,7 +910,7 @@ export function ImportApp() {
         </section>
         {result && (
           <section aria-label="命令结果">
-            <h3>{result.status}</h3>
+            <h3>{statusLine(result.status)}</h3>
             {result.issues && (
               <>
                 <label>

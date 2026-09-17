@@ -3574,6 +3574,14 @@ export interface operations {
                         download: string;
                         filename: string;
                         text: string;
+                        dataset: string;
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        /** Format: uuid */
+                        contractVersionId: string;
+                        templateVersion: string;
+                        /** @enum {string} */
+                        parserPolicy: "STRICT_V2";
                     };
                 };
             };

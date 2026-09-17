@@ -9000,7 +9000,12 @@
                     "status",
                     "download",
                     "filename",
-                    "text"
+                    "text",
+                    "dataset",
+                    "profile",
+                    "contractVersionId",
+                    "templateVersion",
+                    "parserPolicy"
                   ],
                   "properties": {
                     "status": {
@@ -9019,6 +9024,28 @@
                     },
                     "text": {
                       "type": "string"
+                    },
+                    "dataset": {
+                      "type": "string"
+                    },
+                    "profile": {
+                      "enum": [
+                        "CORE",
+                        "FULL"
+                      ]
+                    },
+                    "contractVersionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "templateVersion": {
+                      "type": "string"
+                    },
+                    "parserPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "STRICT_V2"
+                      ]
                     }
                   },
                   "additionalProperties": false

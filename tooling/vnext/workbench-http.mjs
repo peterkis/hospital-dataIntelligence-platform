@@ -53,13 +53,40 @@ const upload = (text) => ({
   },
 });
 try {
+  const capabilitiesResponse = await fetch(base + "/api/vnext/workbench/capabilities", {
+    headers: { "x-catalog-actor": "maker" },
+  });
+  assert.equal(capabilitiesResponse.status, 200);
+  const capabilities = await capabilitiesResponse.json();
+  assert.equal(capabilities.rawByteLimit, 1048576);
+  evidence.push("RAW_FILE_LIMIT_1_MIB");
   const template = await post("template", {
     contractId: c.id,
     versionId: c.versionId,
     format: "XLSX",
   });
   assert.ok(template.download);
+  assert.equal(template.dataset, c.dataset);
+  assert.equal(template.profile, c.profile);
+  assert.equal(template.contractVersionId, c.versionId);
+  assert.equal(template.templateVersion, c.definition.templateVersion);
+  assert.equal(template.parserPolicy, "STRICT_V2");
   evidence.push("EXACT_XLSX_TEMPLATE");
+  const exactLimitBody = upload("placeholder");
+  exactLimitBody.bytes = Buffer.alloc(capabilities.rawByteLimit, 65).toString(
+    "base64",
+  );
+  assert.equal(
+    (await post("upload", exactLimitBody)).status,
+    "QUARANTINED",
+  );
+  const overLimitBody = upload("placeholder");
+  overLimitBody.bytes = Buffer.alloc(
+    capabilities.rawByteLimit + 1,
+    65,
+  ).toString("base64");
+  await post("upload", overLimitBody, "maker", 413);
+  evidence.push("RAW_FILE_LIMIT_BOUNDARY");
   await post(
     "upload",
     { ...upload(`${field}\nA`), templateVersion: "WRONG_VERSION" },
