@@ -1,5 +1,9 @@
 import { test, expect } from "vitest";
-import { describeImportStatus } from "../../apps/admin-web/src/vnext/import-status.js";
+import {
+  describeImportJobStatus,
+  describeImportStatus,
+  describeParseStatus,
+} from "../../apps/admin-web/src/vnext/import-status.js";
 
 test("P0-09 keeps parsed, blocked, review, and committed states distinct", () => {
   expect(describeImportStatus("PARSED")).toEqual({
@@ -30,6 +34,12 @@ test("P0-09 keeps parsed, blocked, review, and committed states distinct", () =>
   expect(describeImportStatus("PARSED").label).not.toBe(
     describeImportStatus("COMMITTED").label,
   );
+});
+
+test("P0-09 gives REJECTED a context-specific meaning", () => {
+  expect(describeImportJobStatus("REJECTED").label).toBe("批次已拒绝");
+  expect(describeParseStatus("REJECTED").label).toBe("文件结构解析失败");
+  expect(describeImportStatus("REJECTED").label).toBe("状态：REJECTED");
 });
 
 test("P0-09 preserves unknown backend states instead of calling them success", () => {

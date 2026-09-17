@@ -9920,7 +9920,10 @@
                   "purpose",
                   "jobId",
                   "revisionId",
-                  "action"
+                  "action",
+                  "requestId",
+                  "outputRequestId",
+                  "issueRequestId"
                 ],
                 "properties": {
                   "scope": {
@@ -9959,6 +9962,18 @@
                       "ERROR_WORKBOOK",
                       "PREVIEW"
                     ]
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "outputRequestId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "issueRequestId": {
+                    "type": "string",
+                    "format": "uuid"
                   },
                   "offset": {
                     "type": "integer",
@@ -10000,6 +10015,14 @@
                       "format": "uuid"
                     },
                     "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
                       "type": "string",
                       "format": "uuid"
                     },
@@ -10825,6 +10848,14 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "digest": {
                       "type": "string"
                     },
@@ -11262,6 +11293,14 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "digest": {
                       "type": "string"
                     },
@@ -11660,6 +11699,14 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "digest": {
                       "type": "string"
                     },
@@ -12050,6 +12097,14 @@
                       "format": "uuid"
                     },
                     "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
                       "type": "string",
                       "format": "uuid"
                     },
@@ -13533,6 +13588,14 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "digest": {
                       "type": "string"
                     },
@@ -13884,6 +13947,14 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "digest": {
                       "type": "string"
                     },
@@ -14232,6 +14303,14 @@
                       "format": "uuid"
                     },
                     "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resultArtifactId": {
                       "type": "string",
                       "format": "uuid"
                     },

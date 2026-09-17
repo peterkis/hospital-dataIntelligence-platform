@@ -3896,6 +3896,12 @@ export interface operations {
                     revisionId: string;
                     /** @enum {unknown} */
                     action: "PARSE" | "VALIDATE" | "ISSUES" | "EXPLAIN" | "ERROR_WORKBOOK" | "PREVIEW";
+                    /** Format: uuid */
+                    requestId: string;
+                    /** Format: uuid */
+                    outputRequestId: string;
+                    /** Format: uuid */
+                    issueRequestId: string;
                     offset?: number;
                 };
             };
@@ -3917,6 +3923,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -4238,6 +4248,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -4410,6 +4424,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -4574,6 +4592,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -4737,6 +4759,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -5451,6 +5477,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -5611,6 +5641,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;
@@ -5771,6 +5805,10 @@ export interface operations {
                         candidateId?: string;
                         /** Format: uuid */
                         requestId?: string;
+                        /** Format: uuid */
+                        runId?: string;
+                        /** Format: uuid */
+                        resultArtifactId?: string;
                         digest?: string;
                         head?: string;
                         text?: string;

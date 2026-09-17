@@ -105,3 +105,12 @@ Spec/Standards 均零发现。后续仅补充本节验收记录与本票状态�
 观察到 `QUARANTINED → PARSED → BLOCKED/QUALITY_ITEMS → FINITE_PREVIEW → FROZEN
 → READ_READY → APPROVED → COMMITTED`，浏览器存储键为空。对应单元测试、fresh/upgrade
 receipt 与浏览器 AX/截图证据均保存在 `.runtime/vnext/p0-09/` 忽略目录。
+
+2026-09-17 Medium-01/02 复核修复：状态解释器按作业、解析、校验与应用上下文分开，
+作业 `REJECTED` 显示“批次已拒绝”，解析 `REJECTED` 显示“文件结构解析失败”，
+通用未知码保留原值。Action API 现在要求调用方提供稳定的 `requestId`、
+`outputRequestId` 与 `issueRequestId`；同一工作台操作重放复用下层解析、校验和质量事项
+幂等身份，响应丢失后不新增 `RAW_CELL`、ValidationRun、结果 artifact 或 quality issue，
+改变同一请求输入返回 `REQUEST_CONFLICT`。真实 fresh/upgrade HTTP 反例已覆盖并通过。
+前端 pending operation identity 在响应后的刷新失败时仍保留，直到作业或修订上下文改变，
+真实 Chrome 重复点击保持相同状态语义与操作边界。

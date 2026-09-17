@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { peer, quote, readReceipt } from "./lineage.mjs";
 const server = JSON.parse(
   readFileSync(".runtime/vnext/p0-09/server.json", "utf8"),
 );
+const receipt = readReceipt(server.receipt);
 const base = server.url;
 const c = server.setup.contract;
 const field = server.setup.field;
@@ -22,6 +24,15 @@ async function post(path, body, actor = "maker", expected = 200) {
   const value = await r.json();
   assert.equal(r.status, expected, `${path}: ${value.code ?? value.status}`);
   return value;
+}
+async function discard(path, body, actor = "maker", expected = 200) {
+  const r = await fetch(base + "/api/vnext/workbench/" + path, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-catalog-actor": actor },
+    body: JSON.stringify(body),
+  });
+  assert.equal(r.status, expected);
+  await r.arrayBuffer();
 }
 const summary = async (jobId) => {
   const r = await fetch(base + "/api/vnext/workbench/jobs/" + jobId, {
@@ -109,15 +120,116 @@ try {
     upload(`${field}\nSYNTHETIC_A\nSYNTHETIC_B`),
   );
   let s = await summary(file.jobId);
-  const action = (action) =>
-    post("action", {
+  const actionOperations = new Map();
+  const action = (action, job = s, operation) => {
+    const key = `${job.jobId}:${job.revisionId}:${action}`;
+    const ids =
+      operation ??
+      actionOperations.get(key) ?? {
+        requestId: randomUUID(),
+        outputRequestId: randomUUID(),
+        issueRequestId: randomUUID(),
+      };
+    actionOperations.set(key, ids);
+    return post("action", {
+      ...dimensions,
+      jobId: job.jobId,
+      revisionId: job.revisionId,
+      action,
+      offset: 0,
+      ...ids,
+    });
+  };
+  const parseBefore = s.artifacts.filter((item) => item.kind === "RAW_CELL").length;
+  const parseOperation = {
+    requestId: randomUUID(),
+    outputRequestId: randomUUID(),
+    issueRequestId: randomUUID(),
+  };
+  const parseArtifactCount = () =>
+    Number(
+      peer(
+        receipt.name,
+        `SELECT count(*) FROM governance_catalog.parse_provenance WHERE job_id=${quote(file.jobId)}::uuid;`,
+      ),
+    );
+  await discard("action", {
+    ...dimensions,
+    jobId: s.jobId,
+    revisionId: s.revisionId,
+    action: "PARSE",
+    offset: 0,
+    ...parseOperation,
+  });
+  const parseArtifactsAfterFirst = parseArtifactCount();
+  const parsedReplay = await action("PARSE", s, parseOperation);
+  assert.equal(parsedReplay.status, "PARSED");
+  s = await summary(file.jobId);
+  assert.equal(
+    s.artifacts.filter((item) => item.kind === "RAW_CELL").length,
+    parseBefore + 1,
+  );
+  assert.equal(parseArtifactsAfterFirst, parseBefore + 1);
+  assert.equal(parseArtifactCount(), parseArtifactsAfterFirst);
+  evidence.push("PARSE_ACTION_REPLAY");
+  const validationOperation = {
+    requestId: randomUUID(),
+    outputRequestId: randomUUID(),
+    issueRequestId: randomUUID(),
+  };
+  const validationBefore = s.runs.length;
+  await discard("action", {
+    ...dimensions,
+    jobId: s.jobId,
+    revisionId: s.revisionId,
+    action: "VALIDATE",
+    offset: 0,
+    ...validationOperation,
+  });
+  const validationAfterFirst = JSON.parse(
+    peer(
+      receipt.name,
+      `SELECT json_build_object('runId',(SELECT id::text FROM governance_catalog.validation_run WHERE job_id=${quote(file.jobId)}::uuid ORDER BY recorded_at DESC,id DESC LIMIT 1),'resultArtifactId',(SELECT result_artifact_id::text FROM governance_catalog.validation_run WHERE job_id=${quote(file.jobId)}::uuid ORDER BY recorded_at DESC,id DESC LIMIT 1),'runCount',(SELECT count(*) FROM governance_catalog.validation_run WHERE job_id=${quote(file.jobId)}::uuid),'issueCount',(SELECT count(*) FROM governance_catalog.quality_issue WHERE job_id=${quote(file.jobId)}::uuid));`,
+    ),
+  );
+  const validatedReplay = await action("VALIDATE", s, validationOperation);
+  assert.equal(validatedReplay.status, "BLOCKED");
+  assert.ok(validatedReplay.runId);
+  assert.ok(validatedReplay.resultArtifactId);
+  assert.equal(validatedReplay.runId, validationAfterFirst.runId);
+  assert.equal(
+    validatedReplay.resultArtifactId,
+    validationAfterFirst.resultArtifactId,
+  );
+  s = await summary(file.jobId);
+  assert.equal(s.runs.length, validationBefore + 1);
+  const validationAfterReplay = JSON.parse(
+    peer(
+      receipt.name,
+      `SELECT json_build_object('runId',(SELECT id::text FROM governance_catalog.validation_run WHERE job_id=${quote(file.jobId)}::uuid ORDER BY recorded_at DESC,id DESC LIMIT 1),'resultArtifactId',(SELECT result_artifact_id::text FROM governance_catalog.validation_run WHERE job_id=${quote(file.jobId)}::uuid ORDER BY recorded_at DESC,id DESC LIMIT 1),'runCount',(SELECT count(*) FROM governance_catalog.validation_run WHERE job_id=${quote(file.jobId)}::uuid),'issueCount',(SELECT count(*) FROM governance_catalog.quality_issue WHERE job_id=${quote(file.jobId)}::uuid));`,
+    ),
+  );
+  assert.deepEqual(validationAfterReplay, validationAfterFirst);
+  const issuePage = await action("ISSUES");
+  const issueReplay = await action("ISSUES");
+  assert.equal(issueReplay.total, issuePage.total);
+  evidence.push("VALIDATE_ACTION_REPLAY");
+  const validationConflict = await post(
+    "action",
+    {
       ...dimensions,
       jobId: s.jobId,
       revisionId: s.revisionId,
-      action,
-    });
-  assert.equal((await action("PARSE")).status, "PARSED");
-  assert.equal((await action("VALIDATE")).status, "BLOCKED");
+      action: "VALIDATE",
+      offset: 0,
+      ...validationOperation,
+      outputRequestId: randomUUID(),
+    },
+    "maker",
+    409,
+  );
+  assert.equal(validationConflict.code, "REQUEST_CONFLICT");
+  evidence.push("ACTION_REQUEST_CONFLICT");
   const explanation = await action("EXPLAIN");
   writeFileSync(".runtime/vnext/p0-09/http-explanation.json", explanation.text);
   await action("ISSUES");
@@ -187,6 +299,10 @@ try {
       jobId: s.jobId,
       revisionId: s.revisionId,
       action: "ERROR_WORKBOOK",
+      offset: 0,
+      requestId: randomUUID(),
+      outputRequestId: randomUUID(),
+      issueRequestId: randomUUID(),
     },
     "outsider",
     403,
@@ -194,13 +310,8 @@ try {
   evidence.push("REPORT_DENIAL_NO_PLAINTEXT");
   const bad = await post("upload", upload(`${field}\n"UNTERMINATED`));
   const badSummary = await summary(bad.jobId);
-  const parsed = await post("action", {
-    ...dimensions,
-    jobId: bad.jobId,
-    revisionId: badSummary.revisionId,
-    action: "PARSE",
-  });
-  assert.notEqual(parsed.status, "PARSED");
+  const parsedBad = await action("PARSE", badSummary);
+  assert.notEqual(parsedBad.status, "PARSED");
   await post(
     "plan",
     {

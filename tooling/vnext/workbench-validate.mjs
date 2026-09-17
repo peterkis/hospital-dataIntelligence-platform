@@ -40,6 +40,25 @@ try {
     assert.equal(r.status, status, `${path}:${v.code ?? v.status}`);
     return v;
   };
+  const actionOperations = new Map();
+  const action = (job, name, offset = 0) => {
+    const key = `${job.jobId}:${job.revisionId}:${name}:${offset}`;
+    const ids =
+      actionOperations.get(key) ?? {
+        requestId: randomUUID(),
+        outputRequestId: randomUUID(),
+        issueRequestId: randomUUID(),
+      };
+    actionOperations.set(key, ids);
+    return post("action", {
+      ...dimensions,
+      jobId: job.jobId,
+      revisionId: job.revisionId,
+      action: name,
+      offset,
+      ...ids,
+    });
+  };
   const receive = (text, job) => ({
     bytes: Buffer.from(text).toString("base64"),
     templateVersion: c.definition.templateVersion,
@@ -119,13 +138,7 @@ try {
     (await post("correction", correction, "maker", 409)).code,
     "TEMPLATE_VERSION_MISMATCH",
   );
-  for (const action of ["PARSE", "VALIDATE"])
-    await post("action", {
-      ...dimensions,
-      jobId: s.jobId,
-      revisionId: s.revisionId,
-      action,
-    });
+  for (const name of ["PARSE", "VALIDATE"]) await action(s, name);
   const frozen = await post("plan", {
     ...dimensions,
     jobId: s.jobId,
@@ -185,19 +198,9 @@ try {
     scope: "SYNTHETIC",
     jobId: duplicateFile.jobId,
   });
-  for (const action of ["PARSE", "VALIDATE"])
-    await post("action", {
-      ...dimensions,
-      jobId: duplicateJob.jobId,
-      revisionId: duplicateJob.revisionId,
-      action,
-    });
-  const duplicatePreview = await post("action", {
-    ...dimensions,
-    jobId: duplicateJob.jobId,
-    revisionId: duplicateJob.revisionId,
-    action: "PREVIEW",
-  });
+  for (const name of ["PARSE", "VALIDATE"])
+    await action(duplicateJob, name);
+  const duplicatePreview = await action(duplicateJob, "PREVIEW");
   const duplicateUnit = JSON.parse(duplicatePreview.text).unit;
   assert.equal(duplicateUnit.commands.length, 1);
   assert.deepEqual(duplicateUnit.basis.ignoredRows, [2]);
@@ -234,6 +237,10 @@ try {
       jobId: duplicateJob.jobId,
       revisionId: duplicateJob.revisionId,
       action: "PREVIEW",
+      offset: 0,
+      requestId: randomUUID(),
+      outputRequestId: randomUUID(),
+      issueRequestId: randomUUID(),
     },
     "maker-alias",
     403,

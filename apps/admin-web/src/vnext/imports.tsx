@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createVNextCatalogClient } from "@hospital-data-intelligence/generated-api-client";
 import type { VNextOperations as operations } from "@hospital-data-intelligence/generated-api-client";
-import { describeImportStatus } from "./import-status.js";
+import {
+  describeImportStatus,
+  type ImportStatusContext,
+} from "./import-status.js";
 import {
   MAX_RAW_FILE_BYTES,
   encodeWorkbenchFile,
@@ -15,10 +18,19 @@ type Contract =
   operations["listImportContracts"]["responses"][200]["content"]["application/json"]["items"][number];
 type Action =
   operations["importWorkbenchAction"]["requestBody"]["content"]["application/json"]["action"];
-const statusLine = (code: string) => {
-  const view = describeImportStatus(code);
+const statusLine = (
+  code: string,
+  context: ImportStatusContext = "generic",
+) => {
+  const view = describeImportStatus(code, context);
   return view.code + " · " + view.label;
 };
+function actionStatusContext(action: Action): ImportStatusContext {
+  if (action === "PARSE") return "parse";
+  if (action === "VALIDATE" || action === "ERROR_WORKBOOK")
+    return "validation";
+  return "generic";
+}
 const dimensions = {
   scope: "SYNTHETIC" as const,
   campus: "NORTH" as const,
@@ -56,6 +68,8 @@ export function ImportApp() {
     [message, setMessage] = useState("");
   const [result, setResult] = useState<Result | null>(null),
     [offset, setOffset] = useState(0);
+  const [resultContext, setResultContext] =
+    useState<ImportStatusContext>("generic");
   const [candidateId, setCandidateId] = useState(
       () => new URLSearchParams(location.search).get("candidate") ?? "",
     ),
@@ -82,6 +96,13 @@ export function ImportApp() {
     requestId: string;
     fileRequestId: string;
   } | null>(null);
+  const pendingActions = useRef(
+    new Map<
+      string,
+      { requestId: string; outputRequestId: string; issueRequestId: string }
+      >(),
+  );
+  const pendingActionScope = useRef("");
   const epoch = useRef(0);
   const client = () => createVNextCatalogClient(location.origin, actor);
   const contract = contracts.find((c) => c.versionId === selected);
@@ -236,6 +257,7 @@ export function ImportApp() {
       data?: Result;
       error?: { code: string; message: string };
     }>,
+    context: ImportStatusContext = "generic",
   ) {
     const token = epoch.current;
     setBusy(true);
@@ -255,12 +277,13 @@ export function ImportApp() {
       }
       if (r.data) {
         setResult(r.data);
+        setResultContext(context);
         setMessage(
           r.data.responseStatus === "POST_COMMIT_FAILED"
-            ? statusLine("POST_COMMIT_FAILED")
+            ? statusLine("POST_COMMIT_FAILED", "apply")
             : r.data.status === "COMMIT_UNKNOWN"
-              ? statusLine("COMMIT_UNKNOWN") + "；请按原候选和请求恢复结果"
-              : statusLine(r.data.status),
+              ? statusLine("COMMIT_UNKNOWN", "apply") + "；请按原候选和请求恢复结果"
+              : statusLine(r.data.status, context),
         );
         if (r.data.download)
           download(r.data.download, r.data.filename ?? "receipt.json");
@@ -284,18 +307,48 @@ export function ImportApp() {
       if (token === epoch.current) setBusy(false);
     }
   }
-  const action = (action: Action) =>
-    run(() =>
-      client().POST("/api/vnext/workbench/action", {
-        body: {
-          ...dimensions,
-          jobId,
-          revisionId: summary!.revisionId,
-          action,
-          offset,
-        },
-      }),
+  const action = (action: Action) => {
+    if (!summary) return;
+    const scope = `${actor}:${jobId}:${summary.revisionId}`;
+    if (pendingActionScope.current !== scope) {
+      pendingActions.current.clear();
+      pendingActionScope.current = scope;
+    }
+    const key = [
+      actor,
+      jobId,
+      summary.revisionId,
+      action,
+      action === "ISSUES" ? offset : "",
+    ].join(":");
+    const operation =
+      pendingActions.current.get(key) ??
+      {
+        requestId: uuid(),
+        outputRequestId: uuid(),
+        issueRequestId: uuid(),
+      };
+    pendingActions.current.set(key, operation);
+    const context = actionStatusContext(action);
+    void run(
+      async () => {
+        const response = await client().POST("/api/vnext/workbench/action", {
+          body: {
+            ...dimensions,
+            jobId,
+            revisionId: summary.revisionId,
+            action,
+            offset,
+            ...operation,
+          },
+        });
+        // Keep the operation identity for this job/revision so a refresh failure
+        // after a committed response can still be retried without duplication.
+        return response;
+      },
+      context,
     );
+  };
   async function upload() {
     if (!file || !contract) return;
     if (
@@ -553,7 +606,7 @@ export function ImportApp() {
                 job {summary.jobId} · revision {summary.revisionId}
               </p>
               <p>
-                作业 {statusLine(summary.status)} · 文件 {statusLine("QUARANTINED")} · 安全扫描 NOT_RUN ·
+                作业 {statusLine(summary.status, "job")} · 文件 {statusLine("QUARANTINED")} · 安全扫描 NOT_RUN ·
                 ORG/PER NOT_READY · 发布 NOT_READY
               </p>
               <p>
@@ -566,6 +619,7 @@ export function ImportApp() {
                       a.kind === "RAW_CELL",
                   )
                   .at(-1)?.structuralStatus ?? "NOT_INSPECTED",
+                  "parse",
                 )}{" "}
                 · 批准：
                 {statusLine(
@@ -574,6 +628,7 @@ export function ImportApp() {
                   .at(-1)?.approved
                   ? "APPROVED"
                   : "NOT_APPROVED",
+                  "apply",
                 )}{" "}
                 · 执行：
                 {statusLine(
@@ -582,10 +637,11 @@ export function ImportApp() {
                   .at(-1)?.committed
                   ? "COMMITTED"
                   : "NOT_COMMITTED",
+                  "apply",
                 )}
               </p>
               <p>
-                最近校验：{statusLine(summary.runs.at(-1)?.decision ?? "NOT_RUN")}；批准与
+                最近校验：{statusLine(summary.runs.at(-1)?.decision ?? "NOT_RUN", "validation")}；批准与
                 COMMITTED 以独立回执为准。
               </p>
               {fileAccess?.canReceive && (
@@ -910,7 +966,7 @@ export function ImportApp() {
         </section>
         {result && (
           <section aria-label="命令结果">
-            <h3>{statusLine(result.status)}</h3>
+            <h3>{statusLine(result.status, resultContext)}</h3>
             {result.issues && (
               <>
                 <label>

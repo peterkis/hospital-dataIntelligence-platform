@@ -100,6 +100,25 @@ try {
     campus: "NORTH",
     purpose: "IDENTITY_VERIFY",
   };
+  const actionOperations = new Map();
+  const action = (job, name, offset = 0) => {
+    const key = `${job.jobId}:${job.revisionId}:${name}:${offset}`;
+    const ids =
+      actionOperations.get(key) ?? {
+        requestId: randomUUID(),
+        outputRequestId: randomUUID(),
+        issueRequestId: randomUUID(),
+      };
+    actionOperations.set(key, ids);
+    return post("action", {
+      ...dimensions,
+      jobId: job.jobId,
+      revisionId: job.revisionId,
+      action: name,
+      offset,
+      ...ids,
+    });
+  };
   const uploaded = await post("upload", {
     bytes: Buffer.from(
       contract.definition.fields[0].code +
@@ -138,13 +157,8 @@ try {
     scope: "SYNTHETIC",
     jobId: uploaded.jobId,
   });
-  for (const action of ["PARSE", "VALIDATE", "ISSUES"])
-    await post("action", {
-      ...dimensions,
-      jobId: s.jobId,
-      revisionId: s.revisionId,
-      action,
-    });
+  for (const name of ["PARSE", "VALIDATE", "ISSUES"])
+    await action(s, name);
   await post(
     "plan",
     {

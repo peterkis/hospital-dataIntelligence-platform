@@ -24,6 +24,25 @@ try {
     assert.equal(r.status, status, v.code);
     return v;
   };
+  const actionOperations = new Map();
+  const action = (job, name, offset = 0) => {
+    const key = `${job.jobId}:${job.revisionId}:${name}:${offset}`;
+    const ids =
+      actionOperations.get(key) ?? {
+        requestId: randomUUID(),
+        outputRequestId: randomUUID(),
+        issueRequestId: randomUUID(),
+      };
+    actionOperations.set(key, ids);
+    return post("action", {
+      ...dimensions,
+      jobId: job.jobId,
+      revisionId: job.revisionId,
+      action: name,
+      offset,
+      ...ids,
+    });
+  };
   const file = await post("upload", {
     bytes: Buffer.from(field + "\nCONTROL_A\nCONTROL_B").toString("base64"),
     contractVersionId: c.versionId,
@@ -50,19 +69,9 @@ try {
     scope: "SYNTHETIC",
     jobId: file.jobId,
   });
-  for (const action of ["PARSE", "VALIDATE", "ISSUES"])
-    await post("action", {
-      ...dimensions,
-      jobId: job.jobId,
-      revisionId: job.revisionId,
-      action,
-    });
-  const preview = await post("action", {
-    ...dimensions,
-    jobId: job.jobId,
-    revisionId: job.revisionId,
-    action: "PREVIEW",
-  });
+  for (const name of ["PARSE", "VALIDATE", "ISSUES"])
+    await action(job, name);
+  const preview = await action(job, "PREVIEW");
   assert.equal(preview.status, "BLOCKED");
   const details = JSON.parse(preview.text);
   assert.equal(details.rowCount, 2);

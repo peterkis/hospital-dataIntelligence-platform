@@ -4,6 +4,13 @@ export interface ImportStatusView {
   terminal: boolean;
 }
 
+export type ImportStatusContext =
+  | "generic"
+  | "job"
+  | "parse"
+  | "validation"
+  | "apply";
+
 const statusLabels: Readonly<Record<string, Omit<ImportStatusView, "code">>> =
   Object.freeze({
     RECEIVED: { label: "文件已接收", terminal: false },
@@ -13,7 +20,6 @@ const statusLabels: Readonly<Record<string, Omit<ImportStatusView, "code">>> =
     WAITING_INPUT: { label: "等待文件输入", terminal: false },
     NOT_INSPECTED: { label: "尚未解析", terminal: false },
     PARSED: { label: "文件结构解析完成", terminal: false },
-    REJECTED: { label: "文件结构解析失败", terminal: false },
     VALIDATION_COMPLETED: { label: "校验已完成", terminal: false },
     VALIDATION_FAILED: { label: "存在数据质量问题", terminal: false },
     FAIL: { label: "存在数据质量问题", terminal: false },
@@ -38,11 +44,52 @@ const statusLabels: Readonly<Record<string, Omit<ImportStatusView, "code">>> =
     MISMATCH: { label: "对账不一致", terminal: false },
   });
 
-export function describeImportStatus(code: string): ImportStatusView {
-  const view = Object.prototype.hasOwnProperty.call(statusLabels, code)
-    ? statusLabels[code]
-    : undefined;
+const contextualStatusLabels: Readonly<
+  Record<ImportStatusContext, Readonly<Record<string, Omit<ImportStatusView, "code">>>>
+> = Object.freeze({
+  generic: Object.freeze({}),
+  job: Object.freeze({
+    REJECTED: { label: "批次已拒绝", terminal: false },
+  }),
+  parse: Object.freeze({
+    REJECTED: { label: "文件结构解析失败", terminal: false },
+  }),
+  validation: Object.freeze({
+    REJECTED: { label: "校验结果被拒绝", terminal: false },
+  }),
+  apply: Object.freeze({
+    REJECTED: { label: "候选已拒绝", terminal: false },
+  }),
+});
+
+export function describeImportStatus(
+  code: string,
+  context: ImportStatusContext = "generic",
+): ImportStatusView {
+  const contextual = contextualStatusLabels[context];
+  let view: Omit<ImportStatusView, "code"> | undefined;
+  if (Object.prototype.hasOwnProperty.call(contextual, code)) {
+    view = contextual[code];
+  } else if (Object.prototype.hasOwnProperty.call(statusLabels, code)) {
+    view = statusLabels[code];
+  }
   return view
     ? { code, ...view }
     : { code, label: "状态：" + code, terminal: false };
+}
+
+export function describeImportJobStatus(code: string): ImportStatusView {
+  return describeImportStatus(code, "job");
+}
+
+export function describeParseStatus(code: string): ImportStatusView {
+  return describeImportStatus(code, "parse");
+}
+
+export function describeValidationStatus(code: string): ImportStatusView {
+  return describeImportStatus(code, "validation");
+}
+
+export function describeApplyStatus(code: string): ImportStatusView {
+  return describeImportStatus(code, "apply");
 }

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { Type, type Static } from "typebox";
 import type { FastifyInstance } from "fastify";
 import type { Catalog } from "../../modules/governance-catalog/index.js";
@@ -63,6 +62,8 @@ const Result = Type.Object(
     jobId: Type.Optional(Id),
     candidateId: Type.Optional(Id),
     requestId: Type.Optional(Id),
+    runId: Type.Optional(Id),
+    resultArtifactId: Type.Optional(Id),
     digest: Type.Optional(Text),
     head: Type.Optional(Text),
     text: Type.Optional(Type.String({ maxLength: 1048576 })),
@@ -131,6 +132,9 @@ const Action = Type.Object(
       "ERROR_WORKBOOK",
       "PREVIEW",
     ]),
+    requestId: Id,
+    outputRequestId: Id,
+    issueRequestId: Id,
     offset: Type.Optional(Type.Integer({ minimum: 0, maximum: 100000 })),
   },
   closed,
@@ -413,7 +417,7 @@ export async function registerWorkbenchRoutes(
                 ...dimensions,
                 jobId: input.jobId,
                 revisionId: input.revisionId,
-                requestId: randomUUID(),
+                requestId: input.requestId,
               }),
             ),
           };
@@ -431,24 +435,27 @@ export async function registerWorkbenchRoutes(
         jobId: input.jobId,
         revisionId: input.revisionId,
         artifactId: artifact.artifactId,
-        requestId: randomUUID(),
-        outputRequestId: randomUUID(),
+        requestId: input.requestId,
+        outputRequestId: input.outputRequestId,
         retentionSeconds: 3600,
       };
       if (input.action === "PARSE") {
         const result = await o.parseFile(a, p);
-        return { status: result.structuralStatus };
+        return { status: result.structuralStatus, requestId: input.requestId };
       }
       if (input.action === "VALIDATE") {
         const result = await o.validateRevision(a, p);
         await o.openIssue(a, {
           ...dimensions,
           runId: result.runId,
-          requestId: randomUUID(),
+          requestId: input.issueRequestId,
           reason: "WORKBENCH_VALIDATION",
         });
         return {
           status: result.decision,
+          requestId: input.requestId,
+          runId: result.runId,
+          resultArtifactId: result.resultArtifactId,
           text: JSON.stringify({
             decision: result.decision,
             issueCount: result.issueCount,
@@ -461,11 +468,12 @@ export async function registerWorkbenchRoutes(
       const raw = await o.authorizeSensitiveRead(a, {
         ...dimensions,
         artifactId: report.artifactId,
-        requestId: randomUUID(),
+        requestId: input.issueRequestId,
       });
       try {
         return {
           status: "RESTRICTED_REPORT",
+          requestId: input.requestId,
           filename: "import-errors.xlsx",
           download: Buffer.from(raw).toString("base64"),
         };
