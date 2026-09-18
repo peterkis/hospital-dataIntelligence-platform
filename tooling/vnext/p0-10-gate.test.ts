@@ -65,10 +65,14 @@ describe("P0-10 M0 synthetic gate", () => {
     try {
       cpSync(resolve('db/vnext/sources/package-v2'), directory, {recursive: true});
       expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
-      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000']) {
+      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000', 'TEL13800138000', 'ID11010119900101123X', '13800138000TEL']) {
         writeFileSync(join(directory, 'q42-test.json'), JSON.stringify({sample: value}));
         expect(() => verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
         try { verifyQ42DeliveryArtifacts(directory); } catch(error) { expect(String(error)).not.toContain(value); }
+      }
+      for(const value of ['DEMO_ORG01_01','2026-01-01','00000000-0000-0000-0000-000000000000','a'.repeat(25)+'13800138000'+'b'.repeat(28)]) {
+        writeFileSync(join(directory,'q42-test.json'),JSON.stringify({sample:value}));
+        expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_UNLISTED_ARTIFACT/);
       }
       rmSync(join(directory,'q42-test.json'));
       writeFileSync(join(directory,'q42-test.csv'),'a,b\n138,00138000');

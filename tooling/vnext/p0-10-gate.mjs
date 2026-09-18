@@ -140,10 +140,13 @@ function artifactText(bytes, extension) {
 
 function sensitiveValue(value) {
   const normalized = value.normalize('NFKC').replace(/\p{Cf}/gu, '').replace(/[\u2010-\u2015]/gu, '-');
+  // Whole-value UUIDs and cryptographic digests are metadata, not identifier labels.
+  if(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(normalized)
+    || /^(?:[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})$/iu.test(normalized))return false;
   // Work within a single cell/value. Never join digits across artifact fields.
   const separator='[()./\\- \\t\\u00a0]*';
-  const phone=new RegExp('(?<![A-Za-z0-9_])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![A-Za-z0-9_])','u');
-  const identity=new RegExp('(?<![A-Za-z0-9_])[0-9](?:'+separator+'[0-9]){16}'+separator+'[0-9Xx](?![A-Za-z0-9_])','u');
+  const phone=new RegExp('(?<![0-9])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![0-9])','u');
+  const identity=new RegExp('(?<![0-9])[0-9](?:'+separator+'[0-9]){16}'+separator+'[0-9Xx](?![0-9])','u');
   return phone.test(normalized)||identity.test(normalized);
 }
 
