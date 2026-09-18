@@ -139,7 +139,7 @@ function artifactText(bytes, extension) {
 }
 
 function sensitiveValue(value) {
-  const normalized = value.normalize('NFKC').replace(/[\u2010-\u2015]/gu, '-');
+  const normalized = value.normalize('NFKC').replace(/\p{Cf}/gu, '').replace(/[\u2010-\u2015]/gu, '-');
   // Work within a single cell/value. Never join digits across artifact fields.
   const separator='[()./\\- \\t\\u00a0]*';
   const phone=new RegExp('(?<![A-Za-z0-9_])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![A-Za-z0-9_])','u');
@@ -220,6 +220,15 @@ export function verifyQ42DeliveryArtifacts(directory = packageRoot) {
     if (values.some(sensitiveValue)) throw new Error(`Q42_SENSITIVE_VALUE:${artifact.relative}`);
     scanned.push(artifact.relative);
   }
+  // Source definitions are metadata, not sample rows. Pin their reviewed inventory;
+  // only the three manifest-declared in-memory demos may introduce sample values.
+  const authority=readJson(resolve(root,'db/vnext/sources/p0-10-delivery-authority.json'));
+  const approved=new Map(authority.metadataArtifacts.map(item=>[item.path,item.sha256]));
+  for(const artifact of artifacts) {
+    if(!approved.has(artifact.relative))throw new Error(`Q42_UNLISTED_ARTIFACT:${artifact.relative}`);
+    if(createHash('sha256').update(readFileSync(artifact.absolute)).digest('hex')!==approved.get(artifact.relative))throw new Error(`Q42_METADATA_CHANGED:${artifact.relative}`);
+  }
+  if(artifacts.length!==approved.size)throw new Error('Q42_METADATA_MISSING');
   const generatedDemos = Object.entries(DEMO_FORMATS).map(([dataset, format]) => {
     const input = demoInput(dataset, format);
     const text = artifactText(input, `.${format.toLowerCase()}`);

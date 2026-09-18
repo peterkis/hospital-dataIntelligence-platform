@@ -58,6 +58,7 @@ export function verifyParserBoundaries() {
     ),
     'ACTIVE_CONTENT',
   );
+  expect(a004Formula.issues[0]).toEqual({code:'ACTIVE_CONTENT',row:2,column:1,sheet:'Data'});
   const wrongSheetFiles = Object.fromEntries(unzip(textWorkbook([['code'], ['DEMO']])));
   wrongSheetFiles['xl/workbook.xml'] = wrongSheetFiles['xl/workbook.xml']!.replace('name="Data"', 'name="Wrong"');
   const a004WrongSheet = rejected(parseBytes(zipText(wrongSheetFiles), 'XLSX', [{ code: 'code', type: 'text' }], 'STRICT_V2'), 'SHEET_CONTRACT');
@@ -81,7 +82,9 @@ export function verifyParserBoundaries() {
     wrongSheet: a004WrongSheet.issues[0]?.code === 'SHEET_CONTRACT',
     activeContent: a004Formula.issues[0]?.code === 'ACTIVE_CONTENT' && a004Macro.issues[0]?.code === 'ACTIVE_CONTENT',
     locationEvidence: [a004Unknown, a004Missing, a004Formula, a004WrongSheet, a004Macro].every(hasLocation)
-      && a004WrongSheet.issues[0]?.sheet === 'Wrong',
+      && a004WrongSheet.issues[0]?.sheet === 'Wrong'
+      && a004Formula.issues[0]?.row === 2 && a004Formula.issues[0]?.column === 1 && a004Formula.issues[0]?.sheet === 'Data',
+    formulaLocation: a004Formula.issues[0],
   };
   assert.ok(Object.values(a001).slice(1).every(Boolean), 'A001_SOURCE_ACCEPTANCE');
   assert.ok(Object.values(a004).slice(1).every(Boolean), 'A004_SOURCE_ACCEPTANCE');

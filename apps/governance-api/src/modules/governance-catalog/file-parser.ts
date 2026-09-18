@@ -260,7 +260,20 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
   };
   for (const [name,doc] of docs) {
     const location=name==='xl/worksheets/sheet1.xml'?'Data':name;
-    const visit = (n: Xml) => { if(n.attrs['s']!==undefined||n.attrs['style']!==undefined)fail('XLSX_STYLE_UNSUPPORTED',1,1,location);if(n!==doc && Object.keys(n.attrs).some(a=>a==='xmlns'||a.startsWith('xmlns:')))fail('XML_NAMESPACE',1,1,location); if (['f','externalLink','oleObject','extLst','AlternateContent'].includes(n.name) || n.attrs['TargetMode'] === 'External') fail('ACTIVE_CONTENT',1,1,location); for (const child of n.children) visit(child); }; visit(doc);
+    const visit = (n: Xml, row=1, column=1) => {
+      if(name==='xl/worksheets/sheet1.xml' && n.name==='c') {
+        const cell=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(n.attrs['r'] ?? '');
+        if(cell) {
+          const cellColumn=[...cell[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0);
+          const cellRow=Number(cell[2]);
+          if(cellColumn<=16384 && cellRow<=1048576) {row=cellRow;column=cellColumn;}
+        }
+      }
+      if(n.attrs['s']!==undefined||n.attrs['style']!==undefined)fail('XLSX_STYLE_UNSUPPORTED',row,column,location);
+      if(n!==doc && Object.keys(n.attrs).some(a=>a==='xmlns'||a.startsWith('xmlns:')))fail('XML_NAMESPACE',row,column,location);
+      if (['f','externalLink','oleObject','extLst','AlternateContent'].includes(n.name) || n.attrs['TargetMode'] === 'External') fail('ACTIVE_CONTENT',row,column,location);
+      for (const child of n.children) visit(child,row,column);
+    }; visit(doc);
   }
   const types = get('[Content_Types].xml', 'Types'); only(types, ['Default','Override']);
   for(const entry of types.children)only(entry,[]);

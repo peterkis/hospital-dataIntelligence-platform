@@ -47,19 +47,33 @@ describe("P0-10 M0 synthetic gate", () => {
     input.integration.sourceAcceptance.A001.evidence.pop();
     expect(runGateM0(input).checks['P0-10-AC-02']).toBe(false);
   });
+  test('Q42 rejects undeclared artifacts and altered metadata even without identifier patterns', () => {
+    const directory=mkdtempSync(join(tmpdir(),'p0-10-membership-'));
+    try {
+      cpSync(resolve('db/vnext/sources/package-v2'),directory,{recursive:true});
+      expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
+      const extra=join(directory,'inputs/dataset-v2/unlisted-sample.json');
+      writeFileSync(extra,JSON.stringify({name:'ordinary_employee_value'}));
+      expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_UNLISTED_ARTIFACT/);
+      rmSync(extra);
+      writeFileSync(join(directory,'inputs/dataset-v2/models.ORG-PER.json'),JSON.stringify({name:'ordinary_employee_value'}));
+      expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_METADATA_CHANGED/);
+    } finally {rmSync(directory,{recursive:true,force:true});}
+  });
   test('Q42 rejects formatted identifiers in decoded sample values without exposing them', () => {
     const directory = mkdtempSync(join(tmpdir(), 'p0-10-q42-'));
     try {
       cpSync(resolve('db/vnext/sources/package-v2'), directory, {recursive: true});
       expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
-      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000']) {
+      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000']) {
         writeFileSync(join(directory, 'q42-test.json'), JSON.stringify({sample: value}));
         expect(() => verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
         try { verifyQ42DeliveryArtifacts(directory); } catch(error) { expect(String(error)).not.toContain(value); }
       }
       rmSync(join(directory,'q42-test.json'));
       writeFileSync(join(directory,'q42-test.csv'),'a,b\n138,00138000');
-      expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
+      expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_UNLISTED_ARTIFACT/);
+      rmSync(join(directory,'q42-test.csv'));
       writeFileSync(join(directory,'q42-test.xlsx'),textWorkbook([['sample'],['138-0013-8000']]));
       expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
       writeFileSync(join(directory,'q42-test.xlsx'),Buffer.from('invalid workbook'));
