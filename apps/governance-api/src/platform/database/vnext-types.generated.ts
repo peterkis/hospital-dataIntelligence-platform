@@ -481,6 +481,12 @@ export interface VnextControlObjectGrant {
   scope: string;
 }
 
+export interface VnextControlOrganizationKeyBinding {
+  lookup_fingerprint: string;
+  payload_fingerprint: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlOutcome {
   actor_code: string;
   input_digest: string;
@@ -547,6 +553,7 @@ export interface DB {
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.object_grant": VnextControlObjectGrant;
+  "vnext_control.organization_key_binding": VnextControlOrganizationKeyBinding;
   "vnext_control.outcome": VnextControlOutcome;
   "vnext_control.protected_grant": VnextControlProtectedGrant;
   "vnext_control.request_identity": VnextControlRequestIdentity;

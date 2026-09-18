@@ -14,12 +14,12 @@ if(process.argv[1]?.replaceAll('\\','/').endsWith('/p1-01-validate.mjs')){
  const owned=createTemporary('P1-01');let owner;
  try{
   let before;
-  if(args.includes('--upgrade')){await migrate(owned.receipt,migrationFiles().slice(0,53));await seed(owned.receipt);before=peer(owned.receipt.name,'SELECT row_to_json(t) FROM (SELECT count(*) objects FROM governance_catalog.object) t;');}
+  if(args.includes('--upgrade')){await migrate(owned.receipt,migrationFiles().slice(0,54));await seed(owned.receipt);before=peer(owned.receipt.name,'SELECT row_to_json(t) FROM (SELECT count(*) objects FROM governance_catalog.object) t;');}
   await migrate(owned.receipt);await seed(owned.receipt);
   if(before)assert.equal(peer(owned.receipt.name,'SELECT row_to_json(t) FROM (SELECT count(*) objects FROM governance_catalog.object) t;'),before);
   const types=spawnSync(process.execPath,['tooling/vnext/managed.mjs',args.includes('--generate')?'types-generate':'types-verify',owned.receiptPath],{cwd:root,env:process.env,stdio:'inherit',windowsHide:true});if(types.status!==0)throw new Error('P1_01_CODEGEN_FAILED');
   owner=await createValidationOwnerSession(owned.receipt);grantOrganization(owned.receipt,owner.receipt.role);
   const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.p1-01-db.config.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_VALIDATION_OWNER_URL:owner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P1-01'},stdio:'inherit',windowsHide:true});
-  process.exitCode=run.status??1;console.log(JSON.stringify({gate:'P1-01',exit:run.status,receipt:owned.receiptPath,migrations:(await inspect(owned.receipt)).ledger.length,mode:args.includes('--upgrade')?'53_TO_54':'FRESH'}));
+  process.exitCode=run.status??1;console.log(JSON.stringify({gate:'P1-01',exit:run.status,receipt:owned.receiptPath,migrations:(await inspect(owned.receipt)).ledger.length,mode:args.includes('--upgrade')?'54_TO_56':'FRESH'}));
  }catch(error){owner??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(owner)dropValidationOwnerSession(owner);}
 }

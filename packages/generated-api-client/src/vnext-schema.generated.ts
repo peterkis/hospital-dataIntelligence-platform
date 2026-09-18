@@ -7942,6 +7942,7 @@ export interface operations {
                             field: string;
                             before: string | null;
                             after: string | null;
+                            redacted?: boolean;
                         }[];
                     };
                 };

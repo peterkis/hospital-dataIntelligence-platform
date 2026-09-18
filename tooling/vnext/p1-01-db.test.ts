@@ -1,6 +1,19 @@
-import {test,expect} from 'vitest';
+import {test,expect,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,unlinkSync,existsSync} from 'node:fs';
+import {organizationKeys} from './organization-keys.mjs';
+// Redirect only the external secret-file boundary to this receipt's temporary
+// file. All cryptography, Owner calls and PostgreSQL behavior remain real.
+vi.mock('node:fs',async importOriginal=>{
+ const fs=await importOriginal<typeof import('node:fs')>();
+ const r=JSON.parse(fs.readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
+ const redirect=<T>(p:T):T|string=>typeof p==='string'&&p.replaceAll('\\','/').endsWith('/.runtime/vnext/p1-01/keys.secret.json')?`${process.cwd()}/.runtime/vnext/fresh/${r.name}.keys.secret.json`:p;
+ return {...fs,
+  existsSync:(p:Parameters<typeof fs.existsSync>[0])=>fs.existsSync(redirect(p)),
+  readFileSync:(...a:Parameters<typeof fs.readFileSync>)=>fs.readFileSync(redirect(a[0]),a[1]),
+  writeFileSync:(...a:Parameters<typeof fs.writeFileSync>)=>fs.writeFileSync(redirect(a[0]),a[1],a[2]),
+ };
+});
 import {openOrganization,type StageInput,type OrganizationCommand} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {fixture} from './protected-fixture.js';
@@ -24,6 +37,18 @@ const create=():OrganizationCommand=>({...structuredClone(common),action:'CREATE
 const input=(command:OrganizationCommand):StageInput=>({requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',command});
 async function prepare(command:OrganizationCommand){const i=await org.stage('maker',input(command));const requestId=randomUUID();const c=await org.plan('maker',{inputId:i.inputId,requestId});await org.readApplyCandidate('reviewer',{candidateId:c.candidateId});await org.approveApplyUnit('reviewer',c);return {candidateId:c.candidateId,requestId};}
 async function apply(command:OrganizationCommand){const request=await prepare(command);const result=await org.applyUnit('maker',request);expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error('NOT_COMMITTED');return result.facts[0]!;}
+test('TDD R1: redeploy after losing a provisioned key fails closed and restoring it preserves input readability',async()=>{
+ const keyPath=`${process.cwd()}/.runtime/vnext/fresh/${receipt.name}.keys.secret.json`;
+ const initial=organizationKeys(receipt,{create:true}),service=openOrganization(connection,initial);
+ let original:Buffer|undefined;
+ try{
+  const staged=await service.stage('maker',input(create()));original=readFileSync(keyPath);unlinkSync(keyPath);
+  expect(()=>organizationKeys(receipt,{create:true})).toThrow('KEY_UNAVAILABLE');
+  expect(existsSync(keyPath)).toBe(false);
+  writeFileSync(keyPath,original,{flag:'wx'});
+  const restored=openOrganization(connection,organizationKeys(receipt));try{expect((await restored.readRestrictedInput('maker',staged.inputId)).command.source.alias).toBe('DEMO_ORG');}finally{await restored.close();}
+ }finally{await service.close();if(existsSync(keyPath))unlinkSync(keyPath);}
+});
 test('AC01 same names remain separate identities; rename appends immutable history',async()=>{
  const a=await apply(create()),b=await apply(create());expect(a.id).not.toBe(b.id);
  const revised=create();if(revised.action!=='CREATE')throw new Error();
@@ -168,6 +193,57 @@ test('two connections contend for the same license: one commits and the other re
  const requests=await Promise.all([prepare({...common,action:'ADD_LICENSE',target:{id:a.id,version:a.version},license}),prepare({...common,action:'ADD_LICENSE',target:{id:b.id,version:b.version},license})]);
  const other=openOrganization(connection,provider);try{const results=await Promise.allSettled([org.applyUnit('maker',requests[0]!),other.applyUnit('maker',requests[1]!)]);expect(results.filter(r=>r.status==='fulfilled'&&r.value.status==='COMMITTED')).toHaveLength(1);expect(results.filter(r=>r.status==='rejected')).toHaveLength(1);}finally{await other.close();}
  expect((await org.historyDetails('maker',a.id)).licenses.length+(await org.historyDetails('maker',b.id)).licenses.length).toBe(1);
+});
+test('TDD R2: scheduled future versions do not prevent first verification of a still-effective older business period',async()=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_R2',value:randomUUID()}];
+ const a=await apply(c),target={id:a.id,version:a.version};
+ const license={namespace:'DEMO_R2_LICENSE',number:'DEMO_'+randomUUID(),authority:'DEMO',evidence:artifact.artifactId,validFrom:'2026-01-01',validTo:'2027-01-01',endKind:'FINITE' as const};
+ const l=await apply({...common,action:'ADD_LICENSE',target,license});
+ const future=await apply({...common,action:'REVISE_LICENSE',target,licenseTarget:{id:l.id,version:l.version},license:{...license,validFrom:'2027-01-01',validTo:'2028-01-01'}});
+ // The subject still spans both years here: one verification can reference both
+ // exact versions of the same license, without inventing a second license ID.
+ await apply({...common,action:'VERIFY_REGISTRATION',target,licenseTargets:[{id:l.id,version:l.version},{id:future.id,version:future.version}],creditCodeStatus:'NOT_APPLICABLE',evidence:artifact.artifactId,validTo:'2028-01-01T00:00:00'});
+ const laterSubject=await apply({...c,action:'REVISE',target,validFrom:'2027-01-01T00:00:00',facts:{...c.facts,legalName:'DEMO Scheduled'}});
+ await apply({...common,action:'VERIFY_REGISTRATION',target,licenseTargets:[{id:l.id,version:l.version}],creditCodeStatus:'NOT_APPLICABLE',evidence:artifact.artifactId,validTo:'2027-01-01T00:00:00'});
+ expect((await org.qualification('maker',{id:a.id,validFrom:common.validFrom,validTo:'2027-01-01T00:00:00'})).status).toBe('LICENSED_REGISTRATION');
+ const history=await org.read('maker',{id:a.id,mode:'HISTORY'});
+ expect((await org.historyDetails('maker',a.id)).verifications.at(-1)!.subjectVersionId).toBe(history[0]!.versionId);
+ // A superseded business segment cannot be approved using the old subject.
+ await expect(prepare({...common,action:'VERIFY_REGISTRATION',target,licenseTargets:[{id:future.id,version:future.version}],creditCodeStatus:'NOT_APPLICABLE',evidence:artifact.artifactId,validFrom:'2027-01-01T00:00:00',validTo:'2028-01-01T00:00:00'})).rejects.toThrow('LICENSE_PERIOD_NOT_COVERED');
+ expect(laterSubject.version).toBe('2');
+});
+test('TDD R3: frozen candidates remain readable after commit or supersession, without authorizing another write',async()=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_R3',value:randomUUID()}];
+ const request=await prepare(c);const before=await org.readApplyCandidate('reviewer',{candidateId:request.candidateId});
+ const committed=await org.applyUnit('maker',request);if(committed.status!=='COMMITTED')throw new Error('NOT_COMMITTED');
+ const after=await org.readApplyCandidate('reviewer',{candidateId:request.candidateId});expect(after.unit).toEqual(before.unit);expect(after.digest).toBe(before.digest);
+ const subject=committed.facts[0]!,target={id:subject.id,version:subject.version};
+ const pending=await prepare({...c,action:'REVISE',target,facts:{...c.facts,legalName:'DEMO Pending'}});
+ const frozen=await org.readApplyCandidate('reviewer',{candidateId:pending.candidateId});
+ await apply({...c,action:'REVISE',target,facts:{...c.facts,legalName:'DEMO Current'}});
+ expect((await org.readApplyCandidate('reviewer',{candidateId:pending.candidateId})).unit).toEqual(frozen.unit);
+ await expect(org.applyUnit('maker',pending)).rejects.toThrow('STALE_VALIDATION');
+ exec(`DELETE FROM organization_master.access WHERE actor='reviewer' AND subject_id=${quote(subject.id)}::uuid AND permission='READ_RESTRICTED';`);
+ await expect(org.readApplyCandidate('reviewer',{candidateId:pending.candidateId})).rejects.toThrow('ACCESS_DENIED');
+});
+test('TDD R4: identifier-only and evidence-only revisions appear as redacted changes through Owner and HTTP',async()=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();
+ c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_R4',value:'DEMO_OLD_INST_'+randomUUID()},{kind:'UNIFIED_CREDIT_CODE',namespace:'DEMO_R4',value:'DEMO_OLD_CREDIT_'+randomUUID()}];
+ const a=await apply(c);
+ const proof=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:3600},Buffer.from('DEMO_REVISED_REGISTRATION_EVIDENCE'));
+ const identifiers=c.identifiers.map(i=>({...i,value:'DEMO_NEW_'+randomUUID()}));
+ const b=await apply({...c,action:'REVISE',target:{id:a.id,version:a.version},facts:{...c.facts,registrationEvidence:proof.artifactId},identifiers});
+ const expected={id:a.id,fromVersion:a.version,toVersion:b.version,changes:[
+  {field:'institutionCode',before:null,after:null,redacted:true},
+  {field:'unifiedCreditCode',before:null,after:null,redacted:true},
+  {field:'registrationEvidence',before:null,after:null,redacted:true},
+ ]};
+ expect(await org.diff('maker',a.id,a.version,b.version)).toEqual(expected);
+ // Reordering an unchanged identifier set is not a semantic change.
+ const same=await apply({...c,action:'REVISE',target:{id:a.id,version:b.version},facts:{...c.facts,registrationEvidence:proof.artifactId},identifiers:[...identifiers].reverse()});
+ expect((await org.diff('maker',a.id,b.version,same.version)).changes).toEqual([]);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
+ try{const address=app.server.address();if(!address||typeof address==='string')throw new Error('NO_ADDRESS');const result=await fetch(`http://127.0.0.1:${address.port}/api/vnext/organizations/diff`,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({id:a.id,fromVersion:a.version,toVersion:b.version})});expect(result.status).toBe(200);expect(await result.json()).toEqual(expected);}finally{await app.close();}
 });
 test('historical registration materials retain their own source version during a new source review',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REGISTRY',value:randomUUID()}];const a=await apply(c),target={id:a.id,version:a.version};

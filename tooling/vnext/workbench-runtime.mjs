@@ -81,7 +81,8 @@ export async function startWorkbench({
     const connection = owned
       ? session.connectionString
       : await ownerServiceConnection();
-    const organizationReady=persistent&&existsSync(resolve(root,'.runtime/vnext/p1-01/keys.secret.json'));
+    // An installed persistent Owner must never silently fall back to fresh keys.
+    const organizationReady=persistent;
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
     if(organizationReady)organization=openOrganization(connection,provider);
     catalog = await openCatalog(connection, provider);

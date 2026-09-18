@@ -171,6 +171,9 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     // Both executor and original approver must retain current permissions until this commit.
     await port().authorize(scope,c.approvedBy,c.input,'REVIEW');
     await record(scope,c.approvedBy,'CHECK_APPROVAL',{candidateId:c.id});
+    // Admission belongs to approval/apply, never to reading immutable history.
+    // Recheck the approver's source/material permissions in this same write root.
+    await recheck(scope,c.approvedBy,c);
     const unit=unseal(c);await recheck(scope,actor,c);
     const resolved=new Map<number,OwnerFact>();
     for(const command of unit.commands){

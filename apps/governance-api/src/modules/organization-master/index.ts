@@ -10,8 +10,9 @@ export * from './contracts.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 interface InputRecord {id:string;revision:string;digest:string;campus:'NORTH'|'SOUTH';target:string|null;envelope:Envelope;jobId:string;jobRevision:string;currentRevision:string;withdrawn:boolean}
-interface Version {id:string;number:number;valid_from:string;valid_to:string|null;recorded_at:string;registration_evidence:string;identifier_keys:Array<{kind:string}>;input_id:string}
-interface LicenseVersion extends Version {license_id:string;end_kind:'FINITE'|'VERIFIED_UNBOUNDED'|'UNKNOWN';evidence:string;revoked:boolean}
+interface StoredPeriod {id:string;number:number;valid_from:string;valid_to:string|null;recorded_at:string;input_id:string}
+interface Version extends StoredPeriod {registration_evidence:string;identifier_keys:Array<{kind:string;namespace:string;digest:string}>;legal_name:string;entity_nature:string;authority:string|null;legal_address:string|null}
+interface LicenseVersion extends StoredPeriod {license_id:string;end_kind:'FINITE'|'VERIFIED_UNBOUNDED'|'UNKNOWN';evidence:string;revoked:boolean}
 interface Verification {id:string;subject_version:string;licenses:string[];valid_from:string;valid_to:string|null;recorded_at:string}
 interface Snapshot {versions:Version[];licenses:LicenseVersion[];verifications:Verification[];identifierKinds:string[]}
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
@@ -47,7 +48,7 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
   const r=result.rows[0]!.r,bytes=authenticateRegistrationEvidence(r,provider);try{return {artifactId:r.artifactId,sourceVersion:r.sourceVersion,expiresAt:r.expiresAt,contentDigest:planBinding(provider,'ORGANIZATION_EVIDENCE_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}
  };
  const port:ApplyOwnerPort={
-  async authorize(scope,actor,input,permission){const r=await record(scope,actor,input.jobId,permission);if(permission==='REVIEW'){await record(scope,actor,input.jobId,'READ_RESTRICTED');const unit=await port.observe(scope,actor,input);await port.validate(scope,actor,unit);}if(r.campus!==input.campus||input.purpose!=='IDENTITY_VERIFY'||input.revisionId!==r.revision)throw new Error('ACCESS_DENIED');},
+  async authorize(scope,actor,input,permission){const r=await record(scope,actor,input.jobId,permission);if(permission==='REVIEW')await record(scope,actor,input.jobId,'READ_RESTRICTED');if(r.campus!==input.campus||input.purpose!=='IDENTITY_VERIFY'||input.revisionId!==r.revision)throw new Error('ACCESS_DENIED');},
   async observe(scope,actor,input){
    // The original input identity owns planning; coordinator approval checks the same identity.
    // Rechecks by a reviewer do not create candidates and must not acquire planning authority.
@@ -60,18 +61,25 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
   async validate(scope,actor,unit){
    const c=JSON.parse(unit.commands[0]!.value['command']!) as OrganizationCommand;check(OrganizationCommandSchema,c);
    const r=await record(scope,actor,unit.input.jobId);const s=r.target?await snapshot(scope,actor,r.target,r.campus):null;
-   if('target' in c&&(!s?.versions.length||String(s.versions.at(-1)!.number)!==c.target.version||r.target!==c.target.id))throw new Error('STALE_VALIDATION');
+   if('target' in c&&(!s?.versions.length||r.target!==c.target.id||
+    (c.action!=='VERIFY_REGISTRATION'&&String(s.versions.at(-1)!.number)!==c.target.version)))throw new Error('STALE_VALIDATION');
    if('licenseTarget' in c){const current=s!.licenses.filter(v=>v.license_id===c.licenseTarget.id).at(-1);if(!current||String(current.number)!==c.licenseTarget.version)throw new Error('STALE_VALIDATION');}
    if(c.action!=='REVOKE_LICENSE'&&!c.source.approvalRef)throw new Error('APPROVAL_REQUIRED');
    if(c.action!=='REVOKE_LICENSE'&&c.source.recordStatus!=='PUBLISHED')throw new Error('BLOCKED_DEPENDENCY');
    const collision=(await sql<{r:boolean}>`select organization_master.conflict(${r.target}::uuid,${JSON.stringify(keys(c))}::jsonb) r`.execute(scope)).rows[0]!.r;if(collision)throw new Error('IDENTIFIER_CONFLICT');
    if(c.action==='VERIFY_REGISTRATION'){
-    const kinds=s!.versions.at(-1)!.identifier_keys.map(k=>k.kind);
+    // Verification references immutable business versions; observe() separately
+    // freezes every current head, so concurrent changes still invalidate approval.
+    const subject=s!.versions.find(v=>String(v.number)===c.target.version);
+    if(!subject)throw new Error('STALE_VALIDATION');
+    const kinds=subject.identifier_keys.map(k=>k.kind);
     if(!kinds.includes('INSTITUTION_CODE')||(c.creditCodeStatus==='HELD'&&!kinds.includes('UNIFIED_CREDIT_CODE')))throw new Error('BLOCKED_DEPENDENCY');
-    const selected=c.licenseTargets.map(ref=>{const latest=s!.licenses.filter(v=>v.license_id===ref.id).at(-1);if(!latest||String(latest.number)!==ref.version||latest.revoked)throw new Error('STALE_VALIDATION');licenseEnd(latest.valid_to,latest.end_kind,true);return latest;});
-    if(new Set(c.licenseTargets.map(v=>v.id)).size!==c.licenseTargets.length)throw new Error('CLOSED_INPUT_REQUIRED');
-    const subject=s!.versions.at(-1)!;
-    if(!covered([{from:stamp(subject.valid_from),to:subject.valid_to&&stamp(subject.valid_to)}],c.validFrom,c.validTo)||!covered(selected.map(l=>({from:stamp(l.valid_from),to:l.valid_to&&stamp(l.valid_to)})),c.validFrom,c.validTo))throw new Error('LICENSE_PERIOD_NOT_COVERED');
+    const selected=c.licenseTargets.map(ref=>{const v=s!.licenses.find(l=>l.license_id===ref.id&&String(l.number)===ref.version);if(!v||v.revoked)throw new Error('STALE_VALIDATION');licenseEnd(v.valid_to,v.end_kind,true);return v;});
+    if(new Set(c.licenseTargets.map(v=>`${v.id}/${v.version}`)).size!==c.licenseTargets.length)throw new Error('CLOSED_INPUT_REQUIRED');
+    const span=(v:StoredPeriod)=>({from:stamp(v.valid_from),to:v.valid_to&&stamp(v.valid_to)});
+    const subjectSpans=subtract(span(subject),s!.versions.filter(v=>v.number>subject.number).map(span));
+    const licenseSpans=selected.flatMap(l=>subtract(span(l),s!.licenses.filter(v=>v.license_id===l.license_id&&v.number>l.number).map(span)));
+    if(!covered(subjectSpans,c.validFrom,c.validTo)||!covered(licenseSpans,c.validFrom,c.validTo))throw new Error('LICENSE_PERIOD_NOT_COVERED');
     for(const l of selected){const original=unseal(await record(scope,actor,l.input_id)).command;await evidence(scope,actor,l.evidence,original,r.campus,stamp(l.recorded_at));}
     const original=unseal(await record(scope,actor,subject.input_id)).command;
     await evidence(scope,actor,subject.registration_evidence,original,r.campus,stamp(subject.recorded_at));
@@ -135,9 +143,21 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    return [...chosen.values()].filter(l=>!l.revoked);
   },
   async diff(actor:string,id:string,fromVersion:string,toVersion:string){
-   const before=(await service.read(actor,{id,mode:'EXACT',version:fromVersion}))[0],after=(await service.read(actor,{id,mode:'EXACT',version:toVersion}))[0];if(!before||!after)throw new Error('NOT_FOUND');
-   const fields=['legalName','entityNature','authority','legalAddress','validFrom','validTo'] as const;
-   return {id,fromVersion,toVersion,changes:fields.filter(f=>before[f]!==after[f]).map(field=>({field,before:before[field],after:after[field]}))};
+   for(const version of [fromVersion,toVersion])check(ReadSchema,{id,mode:'EXACT',version});
+   try{return await root(async scope=>{
+    const s=(await sql<{r:Snapshot}>`select organization_master.qualification_snapshot(${actor},${id}::uuid) r`.execute(scope)).rows[0]!.r;
+    const before=s.versions.find(v=>String(v.number)===fromVersion),after=s.versions.find(v=>String(v.number)===toVersion);if(!before||!after)throw new Error('NOT_FOUND');
+    const publicFacts=(v:Version)=>({legalName:v.legal_name,entityNature:v.entity_nature,authority:v.authority,legalAddress:v.legal_address,validFrom:stamp(v.valid_from),validTo:v.valid_to&&stamp(v.valid_to)});
+    const old=publicFacts(before),next=publicFacts(after);
+    const fields=['legalName','entityNature','authority','legalAddress','validFrom','validTo'] as const;
+    const changes:Array<{field:string;before:string|null;after:string|null;redacted?:boolean}>=fields.filter(f=>old[f]!==next[f]).map(field=>({field,before:old[field],after:next[field]}));
+    for(const [kind,field] of [['INSTITUTION_CODE','institutionCode'],['UNIFIED_CREDIT_CODE','unifiedCreditCode']] as const){
+     const fingerprint=(v:Version)=>canonicalPlan(v.identifier_keys.filter(k=>k.kind===kind).map(k=>[k.namespace,k.digest]).sort((a,b)=>canonicalPlan(a).localeCompare(canonicalPlan(b))));
+     if(fingerprint(before)!==fingerprint(after))changes.push({field,before:null,after:null,redacted:true});
+    }
+    if(before.registration_evidence!==after.registration_evidence)changes.push({field:'registrationEvidence',before:null,after:null,redacted:true});
+    return {id,fromVersion,toVersion,changes};
+   });}catch(error){throw safe(error);}
   },
   async close(){await db.destroy();},
  };

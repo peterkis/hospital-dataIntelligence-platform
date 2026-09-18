@@ -12,7 +12,8 @@ import {buildCatalogServer} from '../../apps/governance-api/src/composition/buil
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
 import {fixture} from './protected-fixture.ts';
 const receipt=readReceipt();const before=await inspect(receipt);
-const retained=()=>peer(receipt.name,"SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(o) ORDER BY id)::text,'[]'),'UTF8')),'hex') FROM governance_catalog.object o;");
+const retainedTables=['governance_catalog.object',...before.tables.filter(t=>t.startsWith('organization_master.'))];
+const retained=()=>JSON.stringify(retainedTables.map(table=>[table,peer(receipt.name,`SELECT encode(sha256(convert_to(coalesce(jsonb_agg(to_jsonb(o) ORDER BY to_jsonb(o)::text)::text,'[]'),'UTF8')),'hex') FROM ${table} o;`)]));
 const previousObjects=retained();
 await migrate(receipt);assert.equal(retained(),previousObjects);assert.equal((await inspect(receipt)).identity.oid,before.identity.oid);
 const connection=await ownerServiceConnection();const ownership=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));

@@ -21043,6 +21043,9 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "redacted": {
+                            "type": "boolean"
                           }
                         },
                         "additionalProperties": false
