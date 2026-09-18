@@ -144,7 +144,7 @@ function sensitiveValue(value) {
   if(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(normalized)
     || /^(?:[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})$/iu.test(normalized))return false;
   // Work within a single cell/value. Never join digits across artifact fields.
-  const separator='[\\p{P}\\s]*';
+  const separator='[^\\p{L}\\p{N}]*';
   const phone=new RegExp('(?<![0-9])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![0-9])','u');
   const identity=new RegExp('(?<![0-9])[0-9](?:'+separator+'[0-9]){16}'+separator+'[0-9Xx](?![0-9])','u');
   return phone.test(normalized)||identity.test(normalized);

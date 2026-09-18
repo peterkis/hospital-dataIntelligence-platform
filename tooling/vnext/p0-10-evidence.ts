@@ -18,7 +18,7 @@ const browserOutcomes:Record<string,RegExp[][]>={
   contractValidationAccept:[[/校验 ACCEPT/u]],
   makerCheckerContract:[[/\[SELF_REVIEW_FORBIDDEN\]/u],[independentSelected,/已批准 · 命令已接受/u],[independentSelected,/已发布 · 命令已接受/u]],
   brEffectivePublishedRead:[[/B\/R 有效发布/u,/text 1 当前查询契约/u]],
-  retireImpactAndRetire:[[/审批绑定摘要： [a-f0-9]{64}/u],[/已废止 · 命令已接受/u,/text 0 当前查询契约/u]],
+  retireImpactAndRetire:[[/审批绑定摘要： [a-f0-9]{64}/u],[/已废止 · 命令已接受/u,/text 0 当前查询契约/u],[/text 已废止\s+\/ v [1-9][0-9]*/u]],
   historyAndNoDomainWriteBoundary:[[/下载 v1 原版本 schema/u,/下载 v2 原版本 schema/u],[/不执行文件导入或业务 apply/u]],
   'AC-01':[[/\[UNKNOWN_FIELD\]/u],[/\[CODESET_AUTHORITY_INVALID\]/u]],
   'AC-02':[[/校验 REVIEW · UNRESOLVED_REQUIRED_CONDITION/u],[independentSelected,/\[CONTRACT_VALIDATION_BLOCKED\]/u]],
@@ -34,7 +34,7 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};ca
     const refs=record.steps?.[key];
     if(!Array.isArray(refs)||!refs.length||new Set(refs).size!==refs.length)return false;
     if(!refs.every((index,position)=>Number.isInteger(index)&&index>=0&&typeof record.captures[index]?.text==='string'
-      &&Number.isFinite(Date.parse(record.captures[index]!.at))&&(position===0||index>refs[position-1]!)))return false;
+      &&Number.isFinite(Date.parse(record.captures[index]!.at))&&(position===0||(index>refs[position-1]!&&Date.parse(record.captures[index]!.at)>Date.parse(record.captures[refs[position-1]!]!.at)))))return false;
     const selected=refs.map(index=>record.captures[index]!.text);
     const kind=key==='makerCheckerDataset'?'DATASET':key==='makerCheckerSource'?'SOURCE':'CONTRACT';
     for(const text of selected) {
@@ -47,9 +47,16 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};ca
       if(identities.has(kind)&&identities.get(kind)!==id.toLowerCase())return false;
       identities.set(kind,id.toLowerCase());
     }
-    if(!browserOutcomes[key]!.every(patterns=>selected.some(text=>patterns.every(pattern=>pattern.test(text)))))return false;
+    let matched=-1;
+    for(const patterns of browserOutcomes[key]!) {
+      const next=selected.findIndex((text,index)=>index>matched&&patterns.every(pattern=>pattern.test(text)));
+      if(next<0)return false;
+      matched=next;
+    }
   }
-  const acceptedRefs=new Set([...record.steps.contractValidationAccept!,...record.steps.makerCheckerContract!,...record.steps['AC-03']!,...record.steps.brEffectivePublishedRead!,record.steps.retireImpactAndRetire![0]!]);
+  const retirement=record.steps.retireImpactAndRetire!;
+  if(retirement.length!==3||!/text 已废止\s+\/ v [1-9][0-9]*/u.test(record.captures[retirement[2]!]!.text))return false;
+  const acceptedRefs=new Set([...record.steps.contractCoreCandidate!,...record.steps.contractValidationAccept!,...record.steps.makerCheckerContract!,...record.steps['AC-03']!,...record.steps.brEffectivePublishedRead!,retirement[0]!,retirement[2]!]);
   const versions=[...acceptedRefs].map(index=>/text 契约版本： ([a-f0-9-]+)/iu.exec(record.captures[index]!.text)?.[1]?.toLowerCase());
   if(versions.some(id=>!id||!uuid.test(id))||new Set(versions).size!==1)return false;
   const rejected=record.steps['AC-02']!.map(index=>record.captures[index]!).filter(capture=>independentSelected.test(capture.text)&&/\[CONTRACT_VALIDATION_BLOCKED\]/u.test(capture.text));
@@ -59,14 +66,28 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};ca
   if(rejected[0]!.action!.sourceRef===rejected[1]!.action!.sourceRef)return false;
   const replay=record.steps['AC-03']!.map(index=>record.captures[index]!);
   if(replay.length!==2||!replay.every(item=>/已发布 · 命令已接受/u.test(item.text))||Date.parse(replay[0]!.at)>=Date.parse(replay[1]!.at))return false;
-  const history=(text:string)=>text.split('\n').map(line=>line.trim().replace(/^\d+ /u,'')).filter(line=>/^text (?:草稿|已批准|已发布|已废止)\s+· v \d+\s+· /u.test(line)||/^button 下载 v\d+ 原版本 schema$/u.test(line));
+  const history=(text:string)=>text.split('\n').map(line=>line.trim().replace(/^\d+ /u,'')).filter(line=>/^text .+\s+· v \d+\s+· /u.test(line)||/^button 下载 v\d+ 原版本 schema$/u.test(line));
   const firstHistory=history(replay[0]!.text);
   const fullRows=firstHistory.filter(line=>line.startsWith('text '));
   const timestamp='\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?';
-  const rowShape=new RegExp('^text (?:草稿|已批准|已发布|已废止)\\s+· v [1-9][0-9]*\\s+·\\s+\\S+ ('+timestamp+') \\[ ('+timestamp+') ,\\s+(无界|'+timestamp+') \\)$','u');
-  if(!fullRows.every(row=>{const match=rowShape.exec(row);return match && [match[1],match[2],...(match[3]==='无界'?[]:[match[3]])].every(time=>Number.isFinite(Date.parse(time!)));}))return false;
+  const rowShape=new RegExp('^text (草稿|已批准|已发布|已废止)\\s+· v ([1-9][0-9]*)\\s+·\\s+(\\S+) ('+timestamp+') \\[ ('+timestamp+') ,\\s+(无界|'+timestamp+') \\)$','u');
   const rows=fullRows.length;
-  return rows>=3 && firstHistory.length===rows*2 && JSON.stringify(firstHistory)===JSON.stringify(history(replay[1]!.text));
+  if(rows<5||firstHistory.length!==rows*2||JSON.stringify(firstHistory)!==JSON.stringify(history(replay[1]!.text)))return false;
+  let previousVersion=0,previousState=-1,previousTime='',definition='';
+  for(let index=0;index<rows;index++) {
+    const row=rowShape.exec(firstHistory[index*2]!);
+    if(!row||![row[4],row[5],...(row[6]==='无界'?[]:[row[6]])].every(time=>Number.isFinite(Date.parse(time!))))return false;
+    const version=Number(row[2]),state=['草稿','已批准','已发布','已废止'].indexOf(row[1]!);
+    if(!Number.isSafeInteger(version)||firstHistory[index*2+1]!==`button 下载 v${version} 原版本 schema`)return false;
+    const time=row[4]!.includes('.')?row[4]!.padEnd(26,'0'):row[4]+'.000000';
+    const currentDefinition=[row[3],row[5],row[6]].join('|');
+    if(time<=previousTime)return false;
+    if(version===previousVersion) {
+      if(state!==previousState+1||currentDefinition!==definition)return false;
+    } else if(version!==previousVersion+1||state!==0)return false;
+    previousVersion=version;previousState=state;previousTime=time;definition=currentDefinition;
+  }
+  return previousVersion>=3 && previousState===2;
 }
 export async function collectStages(stages: {name:string;run:()=>Promise<Record<string,unknown>>}[]) {
   const results: Record<string, Record<string,unknown>> = {};
