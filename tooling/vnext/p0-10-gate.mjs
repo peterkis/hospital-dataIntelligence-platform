@@ -176,7 +176,7 @@ function workbookValues(bytes) {
     if(/<!DOCTYPE|<!ENTITY/iu.test(xml)||XMLValidator.validate(xml)!==true)throw new Error('Q42_XML_INVALID');
     visit(parser.parse(xml));
   }
-  return values;
+  return values.map(value=>value.replace(/_x([0-9a-f]{4})_/giu,(_,hex)=>String.fromCharCode(parseInt(hex,16))));
 }
 
 function artifactValues(bytes, extension) {

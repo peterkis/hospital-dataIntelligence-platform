@@ -1,6 +1,8 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
+import {randomUUID} from 'node:crypto';
+import {evidenceRunDirectory} from '../vnext/p0-10-run-directory.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
@@ -46,6 +48,8 @@ if (!distributionOwnedByRunner && initialService.status !== 0) {
 }
 
 const serviceOwnedByRunner = distributionOwnedByRunner || initialService.status !== 0;
+const p0RunDirectory=targetScript==='vnext:p0-10:validate'?evidenceRunDirectory(resolve(repositoryRoot,'.runtime/vnext/p0-10',`${Date.now()}-${randomUUID()}`),{create:true,exclusive:true}):undefined;
+let ready=false;
 let keepalive;
 let targetProcess;
 let interruptedSignal;
@@ -88,6 +92,7 @@ try {
   });
 
   const readyCheck = await waitForDatabase();
+  ready=true;
   write({
     status: 'DATABASE_SESSION_READY',
     distribution: DISTRIBUTION,
@@ -113,7 +118,7 @@ try {
 
   targetProcess = spawn(process.execPath, npmArguments, {
     cwd: repositoryRoot,
-    env: process.env,
+    env: p0RunDirectory?{...process.env,VNEXT_P0_10_RUN_DIRECTORY:p0RunDirectory}:process.env,
     stdio: 'inherit',
     windowsHide: false,
   });
@@ -152,8 +157,9 @@ try {
   if (!cleanupPassed) {
     targetExitCode = 1;
   }
-  write({
+  const terminal={
     status: 'DATABASE_SESSION_CLOSED',
+    ready,
     distributionOwnedByRunner,
     distributionTerminateAttempted: distributionOwnedByRunner,
     distributionTerminateSucceeded,
@@ -164,8 +170,16 @@ try {
     databaseReachableAfterCleanup: finalDatabaseCheck.passed,
     finalDatabaseErrorCode: finalDatabaseCheck.observation.errorCode,
     cleanupPassed,
-    targetExitCode,
-  });
+    targetExitCode: interruptedSignal ? 130 : targetExitCode,
+  };
+  write(terminal);
+  if(p0RunDirectory) {
+    // P0-10 is terminal only after this outer session's cleanup, never in its child.
+    evidenceRunDirectory(p0RunDirectory);
+    writeFileSync(resolve(p0RunDirectory,'wrapper-cleanup.json'),JSON.stringify(terminal,null,2)+'\n',{flag:'wx'});
+    const finalized=spawnSync(process.execPath,['--import','tsx','tooling/vnext/p0-10-finalize.mjs',p0RunDirectory],{cwd:repositoryRoot,env:process.env,stdio:'inherit',windowsHide:true});
+    if(finalized.status!==0)targetExitCode=finalized.status ?? 1;
+  }
 }
 
 process.exitCode = interruptedSignal ? 130 : targetExitCode;

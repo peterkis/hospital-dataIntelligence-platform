@@ -10,6 +10,8 @@ for(const name of ['package-coverage','parser-boundaries','db-integration','brow
 }
 const acceptance=JSON.parse(readFileSync(resolve(directory,'m0-result.json'),'utf8')).status;
 if(acceptance==='PASS'){
+  const cleanup=JSON.parse(readFileSync(resolve(directory,'wrapper-cleanup.json'),'utf8'));
+  if(cleanup.status!=='DATABASE_SESSION_CLOSED'||cleanup.ready!==true||cleanup.cleanupPassed!==true||cleanup.targetExitCode!==0)throw new Error('WRAPPER_CLEANUP_REQUIRED');
   const manifest=JSON.parse(readFileSync(resolve(directory,'manifest.json'),'utf8'));
   const index=JSON.parse(readFileSync(resolve(directory,'source-index.json'),'utf8'));
   const mapping=Object.fromEntries(index.entries.map(entry=>[entry.sourcePath,entry.packagedPath]));

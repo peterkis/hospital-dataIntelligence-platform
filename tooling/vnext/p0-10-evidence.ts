@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
-import {readFileSync, writeFileSync, readdirSync, lstatSync, realpathSync} from 'node:fs';
+import {readFileSync, writeFileSync, readdirSync, lstatSync, realpathSync, existsSync} from 'node:fs';
+import {evidenceRunDirectory} from './p0-10-run-directory.mjs';
 import {resolve, relative, isAbsolute} from 'node:path';
 import {canonicalJson} from '../verification/src/evidence/recorder.js';
 
@@ -44,7 +45,11 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;captures:{text:string;a
   if(replay.length!==2||!replay.every(item=>/已发布 · 命令已接受/u.test(item.text))||Date.parse(replay[0]!.at)>=Date.parse(replay[1]!.at))return false;
   const history=(text:string)=>text.split('\n').map(line=>line.trim().replace(/^\d+ /u,'')).filter(line=>/^text (?:草稿|已批准|已发布|已废止)\s+· v \d+\s+· /u.test(line)||/^button 下载 v\d+ 原版本 schema$/u.test(line));
   const firstHistory=history(replay[0]!.text);
-  const rows=firstHistory.filter(line=>line.startsWith('text ')).length;
+  const fullRows=firstHistory.filter(line=>line.startsWith('text '));
+  const timestamp='\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?';
+  const rowShape=new RegExp('^text (?:草稿|已批准|已发布|已废止)\\s+· v [1-9][0-9]*\\s+·\\s+\\S+ ('+timestamp+') \\[ ('+timestamp+') ,\\s+(无界|'+timestamp+') \\)$','u');
+  if(!fullRows.every(row=>{const match=rowShape.exec(row);return match && [match[1],match[2],...(match[3]==='无界'?[]:[match[3]])].every(time=>Number.isFinite(Date.parse(time!)));}))return false;
+  const rows=fullRows.length;
   return rows>=3 && firstHistory.length===rows*2 && JSON.stringify(firstHistory)===JSON.stringify(history(replay[1]!.text));
 }
 export async function collectStages(stages: {name:string;run:()=>Promise<Record<string,unknown>>}[]) {
@@ -64,6 +69,26 @@ export async function collectStages(stages: {name:string;run:()=>Promise<Record<
 }
 export function writeEvidence(path: string, value: unknown) {
   writeFileSync(path, JSON.stringify(value, null, 2) + '\n', {flag:'wx'});
+}
+export function finalizeP0Evidence(directory:string,currentCandidate:string) {
+  evidenceRunDirectory(directory);
+  const read=(name:string)=>{try{return JSON.parse(readFileSync(resolve(directory,name+'.json'),'utf8'));}catch{return undefined;}};
+  const pending=read('pending-finalization');
+  const terminal=read('wrapper-cleanup');
+  const gate=['PASS','BLOCKED'].includes(pending?.gate?.status) && Array.isArray(pending.gate.blockers)?pending.gate:{status:'BLOCKED',blockers:['PENDING_EVIDENCE_MISSING']};
+  const context=pending?.context ?? {candidateDigest:currentCandidate};
+  const cleanupPassed=terminal?.status==='DATABASE_SESSION_CLOSED'&&terminal.ready===true&&terminal.targetExitCode===0&&terminal.cleanupPassed===true;
+  if(!cleanupPassed){gate.status='BLOCKED';gate.blockers.push('WRAPPER_CLEANUP_REQUIRED');}
+  if(context.candidateDigest!==currentCandidate){gate.status='BLOCKED';gate.blockers.push('CANDIDATE_CHANGED');}
+  for(const name of ['package-coverage','parser-boundaries','db-integration','browser','review','guardrails']) {
+    if(read(name)?.status!=='PASS'){gate.status='BLOCKED';gate.blockers.push('REQUIRED_STAGE_'+name);}
+    if(!existsSync(resolve(directory,name+'.json')))writeEvidence(resolve(directory,name+'.json'),{status:'NOT_RUN',reason:'WRAPPER_TARGET_DID_NOT_COMPLETE'});
+  }
+  gate.wrapperCleanupPassed=cleanupPassed;
+  writeEvidence(resolve(directory,'m0-result.json'),gate);
+  const manifestDigest=sealEvidence(directory,context);
+  verifyEvidencePackage(directory,manifestDigest);
+  return {status:gate.status,blockers:gate.blockers,manifestDigest,evidence:directory};
 }
 export function verifySourceArtifacts(directory: string, sources: unknown, candidateDigest: string, kind: string, mapping?: Record<string,string>): boolean {
   if (!Array.isArray(sources) || sources.length === 0) return false;
@@ -123,7 +148,7 @@ export function sealEvidence(directory: string, context: Record<string, unknown>
     const bytes = readFileSync(safePath(directory, path));
     return {path, byteLength:bytes.length, sha256:hash(bytes)};
   });
-  const manifest = {schemaVersion:'P0_10_EVIDENCE_V2', context, entries};
+  const manifest = {schemaVersion:'P0_10_EVIDENCE_V3', context, entries};
   const bytes = canonicalJson(manifest as Parameters<typeof canonicalJson>[0]) + '\n';
   writeFileSync(resolve(directory, 'manifest.json'), bytes, {flag:'wx'});
   const digest = hash(bytes);
@@ -136,7 +161,7 @@ export function verifyEvidencePackage(directory: string, expectedDigest?: string
   const digest = hash(bytes);
   if (digest !== readFileSync(resolve(directory, 'manifest.sha256'),'utf8').trim() || (expectedDigest && digest !== expectedDigest)) throw new Error('EVIDENCE_MANIFEST_CHANGED');
   const manifest = JSON.parse(bytes.toString());
-  if (manifest.schemaVersion !== 'P0_10_EVIDENCE_V2' || !Array.isArray(manifest.entries)) throw new Error('EVIDENCE_MANIFEST_INVALID');
+  if (manifest.schemaVersion !== 'P0_10_EVIDENCE_V3' || !Array.isArray(manifest.entries)) throw new Error('EVIDENCE_MANIFEST_INVALID');
   const paths = manifest.entries.map((entry: {path:string}) => entry.path);
   if (new Set(paths).size !== paths.length || JSON.stringify(paths) !== JSON.stringify(files(directory))) throw new Error('EVIDENCE_FILE_SET_CHANGED');
   for (const entry of manifest.entries) {

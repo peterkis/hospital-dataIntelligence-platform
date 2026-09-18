@@ -1,13 +1,17 @@
-import {randomUUID, createHash} from 'node:crypto';
+import {createHash} from 'node:crypto';
 import {mkdirSync, readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
-import {resolve} from 'node:path';
+import {resolve,relative,isAbsolute} from 'node:path';
 import {root, migrationFiles} from './lineage.mjs';
+import {evidenceRunDirectory} from './p0-10-run-directory.mjs';
 import {readEvidence, runGateM0, verifyPackageCoverage, workingTreeDigest} from './p0-10-gate.mjs';
-import {collectStages, writeEvidence, sealEvidence, verifyEvidencePackage, packageSourceArtifacts} from './p0-10-evidence.ts';
+import {collectStages, writeEvidence, packageSourceArtifacts} from './p0-10-evidence.ts';
 
-const runDirectory = resolve(root, '.runtime/vnext/p0-10', `${Date.now()}-${randomUUID()}`);
-mkdirSync(runDirectory, {recursive:true});
+if(!process.env.VNEXT_P0_10_RUN_DIRECTORY)throw new Error('P0_10_WRAPPER_REQUIRED');
+const runDirectory = resolve(process.env.VNEXT_P0_10_RUN_DIRECTORY);
+const runRelative=relative(resolve(root,'.runtime/vnext/p0-10'),runDirectory);
+if(!runRelative||runRelative.startsWith('..')||isAbsolute(runRelative)||runRelative.includes('/')||runRelative.includes('\\'))throw new Error('P0_10_RUN_DIRECTORY_REQUIRED');
+evidenceRunDirectory(runDirectory);
 const candidate = workingTreeDigest();
 const reports = await collectStages([
   {name:'guardrails',run:async()=>{
@@ -61,7 +65,6 @@ catch {gate={status:'BLOCKED',checks:{},evidence:{},blockers:['EVIDENCE_EVALUATI
 if(reports.guardrails.status!=='PASS'){gate.status='BLOCKED';gate.blockers.push('GUARDRAIL_TESTS_REQUIRED');}
 if(!sourcesValid){gate.status='BLOCKED';gate.blockers.push('SOURCE_ARTIFACTS_INVALID');}
 if(candidate!==workingTreeDigest()){gate.status='BLOCKED';gate.blockers.push('CANDIDATE_CHANGED');}
-writeEvidence(resolve(runDirectory,'m0-result.json'),gate);
 const digestFile=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const pkg=JSON.parse(readFileSync(resolve(root,'node_modules/vitest/package.json'),'utf8'));
 const context={
@@ -71,7 +74,6 @@ const context={
   contractDigest:digestFile(resolve(root,'contracts/openapi/vnext-catalog.openapi.json')),
   migrations:migrationFiles().map(({id,sha256})=>({id,sha256})),
 };
-const manifestDigest=sealEvidence(runDirectory,context);
-verifyEvidencePackage(runDirectory,manifestDigest);
-console.log(JSON.stringify({gate:'P0-10',status:gate.status,blockers:gate.blockers,manifestDigest,evidence:runDirectory}));
+writeEvidence(resolve(runDirectory,'pending-finalization.json'),{status:'PENDING_WRAPPER_CLEANUP',gate,context});
+console.log(JSON.stringify({gate:'P0-10',status:'PENDING_WRAPPER_CLEANUP',evidence:runDirectory}));
 if(gate.status!=='PASS')process.exitCode=2;

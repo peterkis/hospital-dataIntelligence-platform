@@ -3,6 +3,7 @@ import { cpSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, relative } from 'node:path';
 import { createHash } from 'node:crypto';
+import {unzipSync,zipSync} from 'fflate';
 import {textWorkbook} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
 import {contractSources} from './contract-sources.mjs';
 import {
@@ -80,6 +81,12 @@ describe("P0-10 M0 synthetic gate", () => {
       rmSync(join(directory,'q42-test.csv'));
       writeFileSync(join(directory,'q42-test.xlsx'),textWorkbook([['sample'],['138-0013-8000']]));
       expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
+      writeFileSync(join(directory,'q42-test.xlsx'),textWorkbook([['sample'],['138_x200B_0013_x200B_8000']]));
+      expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_UNLISTED_ARTIFACT/);
+      const escaped=unzipSync(textWorkbook([['sample'],['138_x200B_0013_x200B_8000']]));
+      escaped['xl/worksheets/sheet1.xml']=new TextEncoder().encode(new TextDecoder().decode(escaped['xl/worksheets/sheet1.xml']).replaceAll('_x005F_x200B_','_x200B_'));
+      writeFileSync(join(directory,'q42-test.xlsx'),zipSync(escaped));
+      expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
       writeFileSync(join(directory,'q42-test.xlsx'),Buffer.from('invalid workbook'));
       expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_ARTIFACT_INVALID/);
     } finally { rmSync(directory, {recursive: true, force: true}); }
@@ -109,7 +116,7 @@ describe("P0-10 M0 synthetic gate", () => {
     const maker='20 pop up button (collapsed, settable) Description: 合成验证身份, Value: 编制者 · Maker, Secondary Actions: Expand';
     const reviewer='20 pop up button (collapsed, settable) Description: 合成验证身份, Value: 复核者 · Reviewer, Secondary Actions: Expand';
     const independent='21 pop up button (collapsed, settable) Description: 合成操作者, Value: 独立复核人, Secondary Actions: Expand';
-    const published='48 text 已发布 · 命令已接受 · adapter NOT_READY\n173 text 草稿 · v 1 · SYNTHETIC_UI_1 2026-01-01T00:00:00 [ 2026-01-01 , 无界 )\n174 button 下载 v1 原版本 schema\n178 text 草稿 · v 2 · SYNTHETIC_UI_2 2026-01-02T00:00:00 [ 2026-01-01 , 无界 )\n179 button 下载 v2 原版本 schema\n183 text 已发布 · v 3 · SYNTHETIC_UI_3 2026-01-03T00:00:00 [ 2026-01-01 , 无界 )\n184 button 下载 v3 原版本 schema';
+    const published='48 text 已发布 · 命令已接受 · adapter NOT_READY\n173 text 草稿 · v 1 · SYNTHETIC_UI_1 2026-01-01T00:00:00 [ 2026-01-01T00:00:00 , 无界 )\n174 button 下载 v1 原版本 schema\n178 text 草稿 · v 2 · SYNTHETIC_UI_2 2026-01-02T00:00:00 [ 2026-01-01T00:00:00 , 无界 )\n179 button 下载 v2 原版本 schema\n183 text 已发布 · v 3 · SYNTHETIC_UI_3 2026-01-03T00:00:00 [ 2026-01-01T00:00:00 , 无界 )\n184 button 下载 v3 原版本 schema';
     const record={kind:'BROWSER_CAPTURE',candidateDigest:browser.captureTreeDigest,producerId:'synthetic-unit-test',sourceRef:'SYNTHETIC_UNIT_FIXTURE_NOT_ACCEPTANCE',observations:browser.observations,
       session:{oid:'test',requestId:'test',receipt:{path:relative(resolve('.runtime/vnext'),join(directory,'receipt.json')).replaceAll('\\','/'),sha256:createHash('sha256').update(receipt).digest('hex')}},
       captures:[
@@ -146,6 +153,10 @@ describe("P0-10 M0 synthetic gate", () => {
     const duplicated=structuredClone(record);duplicated.captures[9]=structuredClone(duplicated.captures[8]!);
     const duplicatedBytes=JSON.stringify(duplicated);writeFileSync(join(directory,'capture.json'),duplicatedBytes);
     expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(duplicatedBytes).digest('hex')}]})).toBe(false);
+    const skeletal=structuredClone(record);
+    for(const index of [18,19])skeletal.captures[index]!.text=skeletal.captures[index]!.text.replace(/(text (?:草稿|已发布) · v \d+ · ).*/gu,'$1x');
+    const skeletalBytes=JSON.stringify(skeletal);writeFileSync(join(directory,'capture.json'),skeletalBytes);
+    expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(skeletalBytes).digest('hex')}]})).toBe(false);
     writeFileSync(join(directory,'capture.json'),capture);
     expect(check({...browser,method:{}})).toBe(false);
     expect(check({...browser, requiredFlow: {}})).toBe(false);

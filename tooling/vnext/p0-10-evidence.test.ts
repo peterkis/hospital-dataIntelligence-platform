@@ -1,11 +1,37 @@
 import {test, expect} from 'vitest';
-import {mkdtempSync, writeFileSync, rmSync, mkdirSync, readFileSync} from 'node:fs';
+import {mkdtempSync, writeFileSync, rmSync, mkdirSync, readFileSync, symlinkSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {sealEvidence, verifyEvidencePackage, collectStages} from './p0-10-evidence.ts';
+import {sealEvidence, verifyEvidencePackage, collectStages, finalizeP0Evidence} from './p0-10-evidence.ts';
 import {readEvidence} from './p0-10-gate.mjs';
 import {verifySourceArtifacts,packageSourceArtifacts} from './p0-10-evidence.ts';
 import {createHash} from 'node:crypto';
+
+test('finalization refuses redirected directories before writing any terminal artifacts',()=>{
+  const parent=mkdtempSync(join(tmpdir(),'p0-10-redirect-'));
+  try {
+    const target=join(parent,'outside');mkdirSync(target);
+    const redirected=join(parent,'run');symlinkSync(target,redirected,'junction');
+    expect(()=>finalizeP0Evidence(redirected,'a'.repeat(64))).toThrow(/P0_10_RUN_PATH_INVALID/);
+    expect(readdirSync(target)).toEqual([]);
+  } finally {rmSync(parent,{recursive:true,force:true});}
+});
+
+test('M0 cannot be sealed PASS until the outer wrapper records ready, successful exit and cleanup',()=>{
+  for(const terminal of [undefined,{status:'DATABASE_SESSION_CLOSED',ready:true,targetExitCode:0,cleanupPassed:false},{status:'DATABASE_SESSION_CLOSED',ready:true,targetExitCode:2,cleanupPassed:true},{status:'DATABASE_SESSION_CLOSED',ready:false,targetExitCode:0,cleanupPassed:true},{status:'DATABASE_SESSION_CLOSED',ready:true,targetExitCode:0,cleanupPassed:true}]) {
+    const directory=mkdtempSync(join(tmpdir(),'p0-10-finalize-'));
+    try {
+      writeFileSync(join(directory,'pending-finalization.json'),JSON.stringify({gate:{status:'PASS',blockers:[]},context:{candidateDigest:'a'.repeat(64)}}));
+      for(const name of ['package-coverage','parser-boundaries','db-integration','browser','review','guardrails'])writeFileSync(join(directory,name+'.json'),JSON.stringify({status:'PASS',fixture:'SYNTHETIC_UNIT_TEST_ONLY'}));
+      if(terminal)writeFileSync(join(directory,'wrapper-cleanup.json'),JSON.stringify(terminal));
+      const result=finalizeP0Evidence(directory,'a'.repeat(64));
+      const expected=terminal?.ready&&terminal.targetExitCode===0&&terminal.cleanupPassed?'PASS':'BLOCKED';
+      expect(result.status).toBe(expected);
+      expect(JSON.parse(readFileSync(join(directory,'m0-result.json'),'utf8')).status).toBe(expected);
+      expect(verifyEvidencePackage(directory,result.manifestDigest).status).toBe('PASS');
+    } finally {rmSync(directory,{recursive:true,force:true});}
+  }
+});
 
 test('evidence source references require real matching artifacts and reject tampering', () => {
   const directory=mkdtempSync(join(tmpdir(),'p0-10-source-'));
