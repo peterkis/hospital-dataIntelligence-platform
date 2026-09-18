@@ -259,7 +259,9 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     if (!doc || doc.name !== root || doc.attrs['xmlns']!==namespace) return fail('XLSX_STRUCTURE'); return doc;
   };
   for (const [name,doc] of docs) {
-    const location=name==='xl/worksheets/sheet1.xml'?'Data':name;
+    const sheetRelations=docs.get('xl/_rels/workbook.xml.rels')?.children.filter(r=>r.name==='Relationship' && r.attrs['Target']==='worksheets/sheet1.xml') ?? [];
+    const declaredSheets=docs.get('xl/workbook.xml')?.children.find(n=>n.name==='sheets')?.children.filter(n=>n.name==='sheet' && sheetRelations.some(r=>r.attrs['Id']===n.attrs['r:id'])) ?? [];
+    const location=name==='xl/worksheets/sheet1.xml'?(declaredSheets.length===1?declaredSheets[0]!.attrs['name'] ?? 'workbook':'workbook'):name;
     const visit = (n: Xml, row=1, column=1) => {
       if(name==='xl/worksheets/sheet1.xml' && n.name==='c') {
         const cell=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(n.attrs['r'] ?? '');

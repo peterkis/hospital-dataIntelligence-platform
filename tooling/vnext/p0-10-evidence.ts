@@ -5,6 +5,48 @@ import {canonicalJson} from '../verification/src/evidence/recorder.js';
 
 const hash = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
 const browserSteps=['makerCheckerDataset','makerCheckerSource','contractCoreCandidate','contractValidationAccept','makerCheckerContract','brEffectivePublishedRead','retireImpactAndRetire','historyAndNoDomainWriteBoundary','AC-01','AC-02','AC-03','AC-04','AC-05'];
+const makerSelected=/pop up button[^\n]*Description: 合成验证身份, Value: 编制者 · Maker,/u;
+const reviewerSelected=/pop up button[^\n]*Description: 合成验证身份, Value: 复核者 · Reviewer,/u;
+const independentSelected=/pop up button[^\n]*Description: 合成操作者, Value: 独立复核人,/u;
+// These are the visible outcomes of the fixed synthetic UI protocol, not an
+// authenticity signature. The producer's tool transcript remains the trust source.
+const browserOutcomes:Record<string,RegExp[][]>={
+  makerCheckerDataset:[[makerSelected,/ORG07/u,/已保存 · DRAFT/u],[makerSelected,/ORG07/u,/已保存 · REVIEW/u],[reviewerSelected,/ORG07/u,/已保存 · PUBLISHED/u]],
+  makerCheckerSource:[[makerSelected,/P0_\w*SOURCE/u,/已保存 · DRAFT/u],[makerSelected,/P0_\w*SOURCE/u,/已保存 · REVIEW/u],[reviewerSelected,/P0_\w*SOURCE/u,/已保存 · PUBLISHED/u]],
+  contractCoreCandidate:[[/CORE/u,/草稿/u,/命令已接受/u]],
+  contractValidationAccept:[[/校验 ACCEPT/u]],
+  makerCheckerContract:[[/\[SELF_REVIEW_FORBIDDEN\]/u],[independentSelected,/已批准 · 命令已接受/u],[independentSelected,/已发布 · 命令已接受/u]],
+  brEffectivePublishedRead:[[/B\/R 有效发布/u,/text 1 当前查询契约/u]],
+  retireImpactAndRetire:[[/审批绑定摘要： [a-f0-9]{64}/u],[/已废止 · 命令已接受/u,/text 0 当前查询契约/u]],
+  historyAndNoDomainWriteBoundary:[[/下载 v1 原版本 schema/u,/下载 v2 原版本 schema/u],[/不执行文件导入或业务 apply/u]],
+  'AC-01':[[/\[UNKNOWN_FIELD\]/u],[/\[CODESET_AUTHORITY_INVALID\]/u]],
+  'AC-02':[[/校验 REVIEW · UNRESOLVED_REQUIRED_CONDITION/u],[independentSelected,/\[CONTRACT_VALIDATION_BLOCKED\]/u]],
+  'AC-03':[[/已发布 · 命令已接受/u,/下载 v3 原版本 schema/u]],
+  'AC-04':[[/\[IMMUTABLE_RULE_VERSION\]/u,/下载 v1 原版本 schema/u,/下载 v2 原版本 schema/u]],
+  'AC-05':[[/校验 REVIEW · CODESET_NOT_ADOPTED/u],[independentSelected,/\[CONTRACT_VALIDATION_BLOCKED\]/u]],
+};
+function browserOutcomesMatch(record:{sourceRef?:unknown;captures:{text:string;at:string;action?:{command:string;sourceRef:string}}[];steps:Record<string,number[]>}) {
+  if(typeof record.sourceRef!=='string'||!record.sourceRef)return false;
+  for(const key of browserSteps) {
+    const refs=record.steps?.[key];
+    if(!Array.isArray(refs)||!refs.length||new Set(refs).size!==refs.length)return false;
+    if(!refs.every((index,position)=>Number.isInteger(index)&&index>=0&&typeof record.captures[index]?.text==='string'
+      &&Number.isFinite(Date.parse(record.captures[index]!.at))&&(position===0||index>refs[position-1]!)))return false;
+    const selected=refs.map(index=>record.captures[index]!.text);
+    if(!browserOutcomes[key]!.every(patterns=>selected.some(text=>patterns.every(pattern=>pattern.test(text)))))return false;
+  }
+  const rejected=record.steps['AC-02']!.map(index=>record.captures[index]!).filter(capture=>independentSelected.test(capture.text)&&/\[CONTRACT_VALIDATION_BLOCKED\]/u.test(capture.text));
+  if(rejected.length!==2||Date.parse(rejected[0]!.at)>=Date.parse(rejected[1]!.at))return false;
+  if(!['APPROVE_CONTRACT','PUBLISH_CONTRACT'].every((command,index)=>rejected[index]!.action?.command===command
+    &&typeof rejected[index]!.action?.sourceRef==='string'&&rejected[index]!.action!.sourceRef.length>0))return false;
+  if(rejected[0]!.action!.sourceRef===rejected[1]!.action!.sourceRef)return false;
+  const replay=record.steps['AC-03']!.map(index=>record.captures[index]!);
+  if(replay.length!==2||!replay.every(item=>/已发布 · 命令已接受/u.test(item.text))||Date.parse(replay[0]!.at)>=Date.parse(replay[1]!.at))return false;
+  const history=(text:string)=>text.split('\n').map(line=>line.trim().replace(/^\d+ /u,'')).filter(line=>/^text (?:草稿|已批准|已发布|已废止)\s+· v \d+\s+· /u.test(line)||/^button 下载 v\d+ 原版本 schema$/u.test(line));
+  const firstHistory=history(replay[0]!.text);
+  const rows=firstHistory.filter(line=>line.startsWith('text ')).length;
+  return rows>=3 && firstHistory.length===rows*2 && JSON.stringify(firstHistory)===JSON.stringify(history(replay[1]!.text));
+}
 export async function collectStages(stages: {name:string;run:()=>Promise<Record<string,unknown>>}[]) {
   const results: Record<string, Record<string,unknown>> = {};
   let blocked = false;
@@ -42,7 +84,7 @@ export function verifySourceArtifacts(directory: string, sources: unknown, candi
         const receipt=JSON.parse(receiptBytes.toString());
         if(receipt.purpose!=='TEMPORARY_VALIDATION' || receipt.oid!==record.session.oid || receipt.requestId!==record.session.requestId)return false;
         if(!Array.isArray(record.captures)||record.captures.length===0)return false;
-        return browserSteps.every(key=>{const refs=record.steps?.[key];return Array.isArray(refs)&&refs.length>0&&refs.every(index=>Number.isInteger(index)&&typeof record.captures[index]?.text==='string'&&record.captures[index].text.length>0);});
+        return browserOutcomesMatch(record);
       }
       return record.status==='PASS' && Array.isArray(record.findings) && record.findings.length===0 && typeof record.sourceRef==='string' && record.sourceRef.length>0;
     });

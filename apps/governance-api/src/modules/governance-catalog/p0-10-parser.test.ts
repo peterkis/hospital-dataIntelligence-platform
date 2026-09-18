@@ -13,6 +13,13 @@ test('an extra worksheet is identified instead of blaming the valid Data sheet',
   const result=parseBytes(zipText(files),'XLSX',[{code:'code',type:'text'}],'STRICT_V2');
   expect(result.issues[0]).toEqual({code:'SHEET_CONTRACT',row:1,column:1,sheet:'Secret'});
 });
+test('a formula on a renamed worksheet reports its declared sheet and exact cell',()=>{
+  const files=Object.fromEntries(unzip(textWorkbook([['code'],['DEMO']])));
+  files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('name="Data"','name="Secret"');
+  files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('<c r="A2" t="inlineStr"><is><t xml:space="preserve">DEMO</t></is></c>','<c r="A2"><f>1+1</f><v>2</v></c>');
+  const result=parseBytes(zipText(files),'XLSX',[{code:'code',type:'text'}],'STRICT_V2');
+  expect(result.issues[0]).toEqual({code:'ACTIVE_CONTENT',row:2,column:1,sheet:'Secret'});
+});
 function rejected(result:ParserResult, code:string) {
   assert.equal(result.structuralStatus, 'REJECTED', `PARSER_STATUS_${code}`);
   assert.equal(result.issues[0]?.code, code, `PARSER_CODE_${code}`);
@@ -42,7 +49,8 @@ export function verifyParserBoundaries() {
     XLSX: rejected(parseBytes(textWorkbook([fields.map((field) => field.code), fields.map(() => '')]), 'XLSX', fields, 'STRICT_V2'), 'EMPTY_ROW'),
   };
   const a004Unknown = rejected(parseBytes(Buffer.from(`${header.slice(0, -1)},unknown\n${fields.map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'FIELD_CONTRACT');
-  const a004Missing = rejected(parseBytes(Buffer.from(`${header.slice(0, -1)}\n${fields.slice(0, -1).map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'FIELD_CONTRACT');
+  const missingHeader=fields.slice(0,-1).map(field=>field.code).join(',');
+  const a004Missing = rejected(parseBytes(Buffer.from(`${missingHeader}\n${fields.slice(0, -1).map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'FIELD_CONTRACT');
   rejected(parseBytes(Buffer.from(`${fields[0]!.code},${fields[0]!.code},${fields.slice(2).map((field) => field.code).join(',')}\n${fields.map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'DUPLICATE_FIELD');
 
   const formulaNeedle = '<c r="A2" t="inlineStr"><is><t xml:space="preserve">DEMO</t></is></c>';
@@ -85,6 +93,7 @@ export function verifyParserBoundaries() {
       && a004WrongSheet.issues[0]?.sheet === 'Wrong'
       && a004Formula.issues[0]?.row === 2 && a004Formula.issues[0]?.column === 1 && a004Formula.issues[0]?.sheet === 'Data',
     formulaLocation: a004Formula.issues[0],
+    missingHeader:{expectedColumns:fields.length,suppliedColumns:missingHeader.split(',').length,unknownFields:missingHeader.split(',').filter(code=>!fields.some(field=>field.code===code)).length,errorCode:a004Missing.issues[0]?.code},
   };
   assert.ok(Object.values(a001).slice(1).every(Boolean), 'A001_SOURCE_ACCEPTANCE');
   assert.ok(Object.values(a004).slice(1).every(Boolean), 'A004_SOURCE_ACCEPTANCE');
@@ -151,5 +160,6 @@ test('P0-10 module parser reports preserve three formats and rejection locations
   expect(result.a001.cases).toHaveLength(9);
   expect(result.positiveFormats).toBe(3);
   expect(result.a004.locationEvidence).toBe(true);
+  expect(result.a004.missingHeader).toEqual({expectedColumns:19,suppliedColumns:18,unknownFields:0,errorCode:'FIELD_CONTRACT'});
   if(process.env['VNEXT_P0_10_PARSER_REPORT'])writeFileSync(process.env['VNEXT_P0_10_PARSER_REPORT'],JSON.stringify(result,null,2)+'\n',{flag:'wx'});
 });

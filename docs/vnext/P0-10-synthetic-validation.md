@@ -34,6 +34,8 @@ npm run vnext:p0-10:evidence -- <run-directory> <expected-manifest-sha256>
 
 每次验证在 `.runtime/vnext/p0-10/<run>/` 写入独立证据包：`package-coverage.json`、`parser-boundaries.json`、`db-integration.json`、`browser.json`、`review.json` 和 `m0-result.json`。失败阶段标 BLOCKED，后继未执行阶段标 NOT_RUN。额外收集 Vitest JSON、来源附件、运行版本、fixture、契约及迁移摘要，再以排序路径、字节长度、SHA-256 生成 manifest 和独立摘要。这些文件均被忽略且不覆盖历史运行。外部保留的 manifest 摘要用于检测整个包被替换；包内摘要本身不构成独立可信签名。
 
+浏览器固定流程还要逐项匹配所引用 AX 观察中的选中角色与实际结果：Maker 草稿/提交、Reviewer 发布、契约 ACCEPT 或相应拒绝码、B/R 数量、废止摘要/结果及历史。不得用未选中角色选项冒充当前操作者。重复发布须引用时间先后的两次观察，并比较完整历史行（状态、规则、记录时间、有效期间及下载条目）；AC-02 的批准/发布拒绝分别绑定实际工具动作引用和不同的有序时间。任意非空文本、错误页面或与结论相反的结果不能支撑 PASS。这是来源内容与摘要的一致性检查，不是对本地作者的密码学认证；仍需通过实际浏览器工具原始记录核验来源。
+
 ## 浏览器与依赖状态
 
 浏览器证据必须包含八个具名流程及 P0-02 AC-01～05，绑定本次候选源码、receipt/OID、服务会话、原始页面观察及步骤引用。review 的两轴报告绑定独立审查者及来源记录。仅填写 PASS 或复制旧摘要不能作为修复后验收；来源真实性仍需核对原始工具记录，文件哈希只验证完整性。
