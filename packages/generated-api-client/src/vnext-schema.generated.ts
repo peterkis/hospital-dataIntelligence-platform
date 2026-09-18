@@ -7180,6 +7180,7 @@ export interface operations {
                             };
                             reason: string;
                         };
+                        blockingIssues?: "IDENTIFIER_CONFLICT"[];
                     };
                 };
             };

@@ -16,7 +16,7 @@ interface LicenseVersion extends StoredPeriod {license_id:string;end_kind:'FINIT
 interface Verification {id:string;subject_version:string;licenses:string[];valid_from:string;valid_to:string|null;recorded_at:string}
 interface Snapshot {versions:Version[];licenses:LicenseVersion[];verifications:Verification[];identifierKinds:string[]}
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
-const safeCodes=new Set(['ACCESS_DENIED','NOT_FOUND','STALE_VALIDATION','REQUEST_CONFLICT','BLOCKED_DEPENDENCY','PAYLOAD_UNAVAILABLE','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','APPROVAL_REQUIRED','ALREADY_COMMITTED']);
+const safeCodes=new Set(['ACCESS_DENIED','NOT_FOUND','STALE_VALIDATION','REQUEST_CONFLICT','BLOCKED_DEPENDENCY','PAYLOAD_UNAVAILABLE','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','APPROVAL_REQUIRED','ALREADY_COMMITTED']);
 function safe(error:unknown):Error {return new Error(error instanceof Error&&safeCodes.has(error.message)?error.message:'ORGANIZATION_OPERATION_FAILED');}
 function check<S>(schema:S,value:unknown){if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');}
 
@@ -56,9 +56,10 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    const raw=unseal(r);if(raw.profile==='FULL'||raw.dependencies?.length)throw new Error('BLOCKED_DEPENDENCY');
    const c=normalize(raw.command);const facts=r.target?await snapshot(scope,actor,r.target,r.campus):null;
    const source=c.action==='REVOKE_LICENSE'?null:await evidence(scope,actor,'facts' in c?c.facts.registrationEvidence:'license' in c?c.license.evidence:c.evidence,c,r.campus);
-   return {input,atomicRule:'ORGANIZATION_SINGLE_COMMAND_V1',basis:{contract:'ORG01-MANUAL-CORE-V1',inputDigest:r.digest,source,heads:facts,keys:keys(c)},commands:[{owner:'organization-master',row:1,intent:c.action==='CREATE'?'CREATE':'REVISE',target:'target' in c?{owner:'organization-master',...c.target}:null,aliases:[],value:{inputId:r.id,command:canonicalPlan(c),original:canonicalPlan(raw.command)}}],diff:[c]};
+   const collision=(await sql<{r:boolean}>`select organization_master.conflict(${r.target}::uuid,${JSON.stringify(keys(c))}::jsonb) r`.execute(scope)).rows[0]!.r;
+   return {input,atomicRule:'ORGANIZATION_SINGLE_COMMAND_V1',basis:{contract:'ORG01-MANUAL-CORE-V1',inputDigest:r.digest,source,heads:facts,keys:keys(c),...(collision?{blockingIssues:['IDENTIFIER_CONFLICT']}:{})},commands:[{owner:'organization-master',row:1,intent:c.action==='CREATE'?'CREATE':'REVISE',target:'target' in c?{owner:'organization-master',...c.target}:null,aliases:[],value:{inputId:r.id,command:canonicalPlan(c),original:canonicalPlan(raw.command)}}],diff:[c]};
   },
-  async validate(scope,actor,unit){
+  async validate(scope,actor,unit,stage){
    const c=JSON.parse(unit.commands[0]!.value['command']!) as OrganizationCommand;check(OrganizationCommandSchema,c);
    const r=await record(scope,actor,unit.input.jobId);const s=r.target?await snapshot(scope,actor,r.target,r.campus):null;
    if('target' in c&&(!s?.versions.length||r.target!==c.target.id||
@@ -66,8 +67,10 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    if('licenseTarget' in c){const current=s!.licenses.filter(v=>v.license_id===c.licenseTarget.id).at(-1);if(!current||String(current.number)!==c.licenseTarget.version)throw new Error('STALE_VALIDATION');}
    if(c.action!=='REVOKE_LICENSE'&&!c.source.approvalRef)throw new Error('APPROVAL_REQUIRED');
    if(c.action!=='REVOKE_LICENSE'&&c.source.recordStatus!=='PUBLISHED')throw new Error('BLOCKED_DEPENDENCY');
-   const collision=(await sql<{r:boolean}>`select organization_master.conflict(${r.target}::uuid,${JSON.stringify(keys(c))}::jsonb) r`.execute(scope)).rows[0]!.r;if(collision)throw new Error('IDENTIFIER_CONFLICT');
+   const collision=(await sql<{r:boolean}>`select organization_master.conflict(${r.target}::uuid,${JSON.stringify(keys(c))}::jsonb) r`.execute(scope)).rows[0]!.r;
+   if(collision&&stage!=='FREEZE')throw new Error('IDENTIFIER_CONFLICT');
    if(c.action==='VERIFY_REGISTRATION'){
+    if(new Set(c.licenseTargets.map(ref=>ref.id)).size!==1)throw new Error('LICENSE_ID_MISMATCH');
     // Verification references immutable business versions; observe() separately
     // freezes every current head, so concurrent changes still invalidate approval.
     const subject=s!.versions.find(v=>String(v.number)===c.target.version);
@@ -116,13 +119,20 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
     const s=(await sql<{r:Snapshot}>`select organization_master.qualification_snapshot(${actor},${input.id}::uuid) r`.execute(scope)).rows[0]!.r;
     const asOf=input.asOf?localTime(input.asOf):null;const known=(r:{recorded_at:string})=>asOf===null||stamp(r.recorded_at)<=asOf;
     const span=(v:{valid_from:string;valid_to:string|null})=>({from:stamp(v.valid_from),to:v.valid_to&&stamp(v.valid_to)});
-    const spans=s.verifications.filter(known).flatMap(v=>{
-     const subject=s.versions.find(x=>x.id===v.subject_version&&known(x));if(!subject)return [];
+    const perLicense=new Map<string,Array<{from:string;to:string|null}>>();
+    for(const v of s.verifications.filter(known)){
+     const subject=s.versions.find(x=>x.id===v.subject_version&&known(x));if(!subject)continue;
+     const selected=v.licenses.map(id=>s.licenses.find(x=>x.id===id&&known(x)));
+     const licenseId=selected[0]?.license_id;
+     // Older mixed-credential assertions remain historical evidence but cannot
+     // establish qualification, nor can separate partial assertions be spliced.
+     if(!licenseId||selected.some(l=>!l||l.license_id!==licenseId))continue;
      const subjectSpans=subtract(span(subject),s.versions.filter(x=>known(x)&&x.number>subject.number).map(span));
      const licensed=v.licenses.flatMap(id=>{const l=s.licenses.find(x=>x.id===id&&known(x));if(!l||l.revoked||l.end_kind==='UNKNOWN')return [];return subtract(span(l),s.licenses.filter(x=>known(x)&&x.license_id===l.license_id&&x.number>l.number).map(span));});
-     return subjectSpans.flatMap(p=>intersect(p,span(v))).flatMap(p=>licensed.flatMap(l=>intersect(p,l)));
-    });
-    return {status:covered(spans,from,to)?'LICENSED_REGISTRATION' as const:'NOT_ESTABLISHED' as const,organizationId:input.id,validFrom:from,validTo:to,operatingPermission:'NOT_EVALUABLE' as const};
+     const spans=subjectSpans.flatMap(p=>intersect(p,span(v))).flatMap(p=>licensed.flatMap(l=>intersect(p,l)));
+     perLicense.set(licenseId,[...(perLicense.get(licenseId)??[]),...spans]);
+    }
+    return {status:[...perLicense.values()].some(spans=>covered(spans,from,to))?'LICENSED_REGISTRATION' as const:'NOT_ESTABLISHED' as const,organizationId:input.id,validFrom:from,validTo:to,operatingPermission:'NOT_EVALUABLE' as const};
    });}catch(error){throw safe(error);}
   },
   async historyDetails(actor:string,id:string){

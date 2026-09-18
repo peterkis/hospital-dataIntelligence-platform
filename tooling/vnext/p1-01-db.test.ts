@@ -57,10 +57,21 @@ test('AC01 same names remain separate identities; rename appends immutable histo
  const history=await org.read('maker',{id:a.id,mode:'HISTORY'});expect(history.map(v=>v.legalName)).toEqual(['DEMO 同名医院','DEMO 新名称']);
  const prior=await org.read('maker',{id:a.id,mode:'EFFECTIVE',businessAt:'2026-06-01T00:00:00',asOf:history[0]!.recordedAt});expect(prior[0]!.version).toBe('1');
 });
-test('AC02 duplicate credential isolates the second subject without deleting its input',async()=>{
+test('AC02 / PR13 P2: a conflicting credential has an immutable reviewable candidate but cannot publish',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REGISTRY',value:'DEMO_COLLISION'}];
- await apply(c);const staged=await org.stage('maker',input(c));await expect(org.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow();
- expect(exec(`SELECT count(*) FROM organization_master.input WHERE id=${quote(staged.inputId)}::uuid;`)).toBe('1');
+ await apply(c);const before=await org.read('maker',{mode:'LIST'});
+ const staged=await org.stage('maker',input(c)),requestId=randomUUID();const plan={inputId:staged.inputId,requestId};
+ const candidate=await org.plan('maker',plan);expect(await org.plan('maker',plan)).toEqual(candidate);
+ const frozen=await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(frozen.unit.basis['blockingIssues']).toEqual(['IDENTIFIER_CONFLICT']);
+ expect(JSON.parse(frozen.unit.commands[0]!.value['original']!)).toEqual(c);
+ expect((await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId})).unit).toEqual(frozen.unit);
+ await expect(org.approveApplyUnit('reviewer',candidate)).rejects.toThrow('IDENTIFIER_CONFLICT');
+ await expect(org.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).rejects.toThrow('APPROVAL_REQUIRED');
+ expect(await org.read('maker',{mode:'LIST'})).toEqual(before);
+ await expect(org.readApplyCandidate('outsider',{candidateId:candidate.candidateId})).rejects.toThrow('ACCESS_DENIED');
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
+ try{const address=app.server.address();if(!address||typeof address==='string')throw new Error('NO_ADDRESS');const result=await fetch(`http://127.0.0.1:${address.port}/api/vnext/organizations/review`,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'reviewer'},body:JSON.stringify({candidateId:candidate.candidateId})});expect(result.status).toBe(200);expect((await result.json() as {blockingIssues:string[]}).blockingIssues).toEqual(['IDENTIFIER_CONFLICT']);}finally{await app.close();}
 });
 test('AC03 and AC05 registered qualification requires evidence and whole licensed window',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REGISTRY',value:randomUUID()}];
@@ -244,6 +255,19 @@ test('TDD R4: identifier-only and evidence-only revisions appear as redacted cha
  expect((await org.diff('maker',a.id,b.version,same.version)).changes).toEqual([]);
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
  try{const address=app.server.address();if(!address||typeof address==='string')throw new Error('NO_ADDRESS');const result=await fetch(`http://127.0.0.1:${address.port}/api/vnext/organizations/diff`,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({id:a.id,fromVersion:a.version,toVersion:b.version})});expect(result.status).toBe(200);expect(await result.json()).toEqual(expected);}finally{await app.close();}
+});
+test('PR13 P1: unrelated credentials cannot jointly establish a full-window qualification',async()=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_PR13',value:randomUUID()}];const a=await apply(c),target={id:a.id,version:a.version};
+ const license={namespace:'DEMO_PR13_LICENSE',number:'DEMO_'+randomUUID(),authority:'DEMO',evidence:artifact.artifactId,validFrom:'2026-01-01',validTo:'2026-07-01',endKind:'FINITE' as const};
+ const first=await apply({...common,action:'ADD_LICENSE',target,license});
+ const second=await apply({...common,action:'ADD_LICENSE',target,license:{...license,number:'DEMO_'+randomUUID(),validFrom:'2026-07-01',validTo:'2027-01-01'}});
+ const verify={...common,action:'VERIFY_REGISTRATION' as const,target,creditCodeStatus:'NOT_APPLICABLE' as const,evidence:artifact.artifactId,validTo:'2027-01-01T00:00:00'};
+ await expect(prepare({...verify,licenseTargets:[{id:first.id,version:first.version},{id:second.id,version:second.version}]})).rejects.toThrow('LICENSE_ID_MISMATCH');
+ // Separate valid partial verifications must not bypass the same-license rule.
+ await apply({...verify,validTo:'2026-07-01T00:00:00',licenseTargets:[{id:first.id,version:first.version}]});
+ await apply({...verify,validFrom:'2026-07-01T00:00:00',licenseTargets:[{id:second.id,version:second.version}]});
+ expect((await org.qualification('maker',{id:a.id,validFrom:common.validFrom,validTo:verify.validTo})).status).toBe('NOT_ESTABLISHED');
+ expect((await org.qualification('maker',{id:a.id,validFrom:common.validFrom,validTo:'2026-07-01T00:00:00'})).status).toBe('LICENSED_REGISTRATION');
 });
 test('historical registration materials retain their own source version during a new source review',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REGISTRY',value:randomUUID()}];const a=await apply(c),target={id:a.id,version:a.version};

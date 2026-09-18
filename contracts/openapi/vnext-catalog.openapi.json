@@ -18413,6 +18413,17 @@
                           "additionalProperties": false
                         }
                       ]
+                    },
+                    "blockingIssues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "IDENTIFIER_CONFLICT"
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
                     }
                   },
                   "additionalProperties": false

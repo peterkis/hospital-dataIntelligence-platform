@@ -22,9 +22,9 @@ export function registerOrganizationRoutes(app:FastifyInstance,context?:Organiza
  app.post<{Body:Static<typeof ApplyUnitSchema>}>('/api/vnext/organizations/resume',{schema:{operationId:'resumeOrganizationOutcome',body:ApplyUnitSchema,response:{200:Type.Union([Result,Type.Null()]),...errors}}},r=>owner().resumeOutcome(actor(r),r.body));
  // Candidate content is restricted to reviewers by the existing Coordinator.
  const CandidateRead=Type.Object({candidateId:Id},closed);
- const Candidate=Type.Object({candidateId:Id,digest:Text,approvedBy:Nullable,command:StageSchema.properties.command},closed);
+ const Candidate=Type.Object({candidateId:Id,digest:Text,approvedBy:Nullable,command:StageSchema.properties.command,blockingIssues:Type.Optional(Type.Array(Type.Literal('IDENTIFIER_CONFLICT'),{minItems:1,maxItems:1}))},closed);
  app.post<{Body:Static<typeof CandidateRead>}>('/api/vnext/organizations/review',{schema:{operationId:'readOrganizationCandidate',body:CandidateRead,response:{200:Candidate,...errors}}},async r=>{
-  const result=await owner().readApplyCandidate(actor(r),r.body);return {candidateId:result.candidateId,digest:result.digest,approvedBy:result.approvedBy,command:JSON.parse(result.unit.commands[0]!.value['original']!)};
+  const result=await owner().readApplyCandidate(actor(r),r.body);const issues=result.unit.basis['blockingIssues'];return {candidateId:result.candidateId,digest:result.digest,approvedBy:result.approvedBy,command:JSON.parse(result.unit.commands[0]!.value['original']!),...(Array.isArray(issues)&&issues.includes('IDENTIFIER_CONFLICT')?{blockingIssues:['IDENTIFIER_CONFLICT']}: {})};
  });
  app.post<{Body:Static<typeof ReadSchema>}>('/api/vnext/organizations/query',{schema:{operationId:'readOrganizations',body:ReadSchema,response:{200:Type.Array(Fact),...errors}}},r=>owner().read(actor(r),r.body));
  const Target=Type.Object({id:Id},closed);
