@@ -1,7 +1,7 @@
 {
   "dialect": "postgres",
   "defaultSchemas": ["__qualified_schema_only__"],
-  "includePattern": "{vnext_control,governance_catalog}.*",
+  "includePattern": "{vnext_control,governance_catalog,organization_master}.*",
   "dateParser": "string",
   "numericParser": "string",
   "typeMapping": { "timestamp": "string" },

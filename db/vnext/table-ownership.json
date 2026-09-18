@@ -2,10 +2,16 @@
   "lineage": "HDIP-MC-VNEXT",
   "schemas": {
     "vnext_control": "catalog-control-plane",
-    "governance_catalog": "governance-catalog"
+    "governance_catalog": "governance-catalog",
+    "organization_master": "organization-master"
   },
   "publicOwner": "apps/governance-api/src/modules/governance-catalog/index.ts",
   "migrationRole": "postgres via fixed local WSL peer",
   "applicationRole": "hdi_prototype",
-  "businessInstanceSchemas": []
+  "businessInstanceSchemas": [
+    "organization_master"
+  ],
+  "domainOwners": {
+    "organization_master": "apps/governance-api/src/modules/organization-master/index.ts"
+  }
 }

@@ -320,6 +320,100 @@ export interface GovernanceCatalogVersion {
   valid_to: string | null;
 }
 
+export interface OrganizationMasterAccess {
+  actor: string;
+  campus: string;
+  permission: string;
+  subject_id: string;
+}
+
+export interface OrganizationMasterIdentifier {
+  input_id: string;
+  kind: string;
+  lookup_digest: string;
+  namespace: string;
+  subject_id: string;
+}
+
+export interface OrganizationMasterInput {
+  campus: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  target: string | null;
+}
+
+export interface OrganizationMasterInputRequest {
+  input_id: string;
+  request_id: string;
+}
+
+export interface OrganizationMasterLicense {
+  id: Generated<string>;
+  subject_id: string;
+}
+
+export interface OrganizationMasterLicenseVersion {
+  authority: string;
+  end_kind: string;
+  evidence: string;
+  id: Generated<string>;
+  input_id: string;
+  license_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  revoked: Generated<boolean>;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface OrganizationMasterSubject {
+  campus: string;
+  id: Generated<string>;
+}
+
+export interface OrganizationMasterVerification {
+  evidence: string;
+  id: Generated<string>;
+  input_id: string;
+  licenses: string[];
+  recorded_at: Generated<string>;
+  subject_id: string;
+  subject_version: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface OrganizationMasterVersion {
+  authority: string | null;
+  entity_nature: string;
+  id: Generated<string>;
+  identifier_keys: Generated<Json>;
+  input_id: string;
+  legal_address: string | null;
+  legal_name: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  registration_evidence: string;
+  subject_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface OrganizationMasterWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface VnextControlActor {
   active: boolean;
   code: string;
@@ -435,6 +529,16 @@ export interface DB {
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.validation_run": GovernanceCatalogValidationRun;
   "governance_catalog.version": GovernanceCatalogVersion;
+  "organization_master.access": OrganizationMasterAccess;
+  "organization_master.identifier": OrganizationMasterIdentifier;
+  "organization_master.input": OrganizationMasterInput;
+  "organization_master.input_request": OrganizationMasterInputRequest;
+  "organization_master.license": OrganizationMasterLicense;
+  "organization_master.license_version": OrganizationMasterLicenseVersion;
+  "organization_master.subject": OrganizationMasterSubject;
+  "organization_master.verification": OrganizationMasterVerification;
+  "organization_master.version": OrganizationMasterVersion;
+  "organization_master.withdrawal": OrganizationMasterWithdrawal;
   "vnext_control.actor": VnextControlActor;
   "vnext_control.actor_grant": VnextControlActorGrant;
   "vnext_control.audit": VnextControlAudit;

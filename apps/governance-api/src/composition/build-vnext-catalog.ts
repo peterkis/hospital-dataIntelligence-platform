@@ -6,8 +6,9 @@ import { registerCatalogRoutes } from '../platform/fastify/vnext-catalog-routes.
 import { registerContractRoutes } from '../platform/fastify/vnext-contract-routes.js';
 import { registerWorkbenchRoutes } from '../platform/fastify/vnext-workbench-routes.js';
 import { validCatalogLocalTime, catalogClockTime } from '../platform/fastify/vnext-local-time.js';
+import {registerOrganizationRoutes,type OrganizationHttpContext} from '../platform/fastify/vnext-organization-routes.js';
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE') {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
   app.addHook('onRequest',async request=>{if(request.method==='GET')started.set(request,performance.now());});
@@ -41,5 +42,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   await registerCatalogRoutes(app,catalog);
   await registerContractRoutes(app,catalog);
   await registerWorkbenchRoutes(app,catalog,workbenchMode);
+  registerOrganizationRoutes(app,organization);
   return app;
 }
