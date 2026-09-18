@@ -26,16 +26,32 @@ const browserOutcomes:Record<string,RegExp[][]>={
   'AC-04':[[/\[IMMUTABLE_RULE_VERSION\]/u,/下载 v1 原版本 schema/u,/下载 v2 原版本 schema/u]],
   'AC-05':[[/校验 REVIEW · CODESET_NOT_ADOPTED/u],[independentSelected,/\[CONTRACT_VALIDATION_BLOCKED\]/u]],
 };
-function browserOutcomesMatch(record:{sourceRef?:unknown;captures:{text:string;at:string;action?:{command:string;sourceRef:string}}[];steps:Record<string,number[]>}) {
+function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};captures:{text:string;at:string;action?:{command:string;sourceRef:string}}[];steps:Record<string,number[]>}) {
   if(typeof record.sourceRef!=='string'||!record.sourceRef)return false;
+  const identities=new Map<string,string>();
+  const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu;
   for(const key of browserSteps) {
     const refs=record.steps?.[key];
     if(!Array.isArray(refs)||!refs.length||new Set(refs).size!==refs.length)return false;
     if(!refs.every((index,position)=>Number.isInteger(index)&&index>=0&&typeof record.captures[index]?.text==='string'
       &&Number.isFinite(Date.parse(record.captures[index]!.at))&&(position===0||index>refs[position-1]!)))return false;
     const selected=refs.map(index=>record.captures[index]!.text);
+    const kind=key==='makerCheckerDataset'?'DATASET':key==='makerCheckerSource'?'SOURCE':'CONTRACT';
+    for(const text of selected) {
+      const observedUrl=/^Browser tab:[^\n]*, URL: "([^"]+)"\.$/u.exec(text.split('\n')[0]!);
+      if(!observedUrl)return false;
+      const url=new URL(observedUrl[1]!);
+      const id=url.searchParams.get('id') ?? '';
+      if(url.origin!==new URL(record.session.url).origin||url.searchParams.get('scope')!=='SYNTHETIC'||!uuid.test(id))return false;
+      if(url.pathname!==(kind==='CONTRACT'?'/admin/vnext/contracts':'/admin/vnext/catalog')||(kind!=='CONTRACT'&&url.searchParams.get('kind')!==kind))return false;
+      if(identities.has(kind)&&identities.get(kind)!==id.toLowerCase())return false;
+      identities.set(kind,id.toLowerCase());
+    }
     if(!browserOutcomes[key]!.every(patterns=>selected.some(text=>patterns.every(pattern=>pattern.test(text)))))return false;
   }
+  const acceptedRefs=new Set([...record.steps.contractValidationAccept!,...record.steps.makerCheckerContract!,...record.steps['AC-03']!,...record.steps.brEffectivePublishedRead!,record.steps.retireImpactAndRetire![0]!]);
+  const versions=[...acceptedRefs].map(index=>/text 契约版本： ([a-f0-9-]+)/iu.exec(record.captures[index]!.text)?.[1]?.toLowerCase());
+  if(versions.some(id=>!id||!uuid.test(id))||new Set(versions).size!==1)return false;
   const rejected=record.steps['AC-02']!.map(index=>record.captures[index]!).filter(capture=>independentSelected.test(capture.text)&&/\[CONTRACT_VALIDATION_BLOCKED\]/u.test(capture.text));
   if(rejected.length!==2||Date.parse(rejected[0]!.at)>=Date.parse(rejected[1]!.at))return false;
   if(!['APPROVE_CONTRACT','PUBLISH_CONTRACT'].every((command,index)=>rejected[index]!.action?.command===command

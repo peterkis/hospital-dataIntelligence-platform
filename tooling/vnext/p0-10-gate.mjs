@@ -144,7 +144,7 @@ function sensitiveValue(value) {
   if(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(normalized)
     || /^(?:[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})$/iu.test(normalized))return false;
   // Work within a single cell/value. Never join digits across artifact fields.
-  const separator='[()./\\- \\t\\u00a0]*';
+  const separator='[\\p{P}\\s]*';
   const phone=new RegExp('(?<![0-9])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![0-9])','u');
   const identity=new RegExp('(?<![0-9])[0-9](?:'+separator+'[0-9]){16}'+separator+'[0-9Xx](?![0-9])','u');
   return phone.test(normalized)||identity.test(normalized);
@@ -183,7 +183,7 @@ function artifactValues(bytes, extension) {
   const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
   if (extension === '.json') {
     const walk = (value) => typeof value === 'string' || typeof value === 'number'
-      ? [String(value)] : value && typeof value === 'object' ? Object.values(value).flatMap(walk) : [];
+      ? [String(value)] : Array.isArray(value) ? value.flatMap(walk) : value && typeof value === 'object' ? Object.entries(value).flatMap(([key,item])=>[key,...walk(item)]) : [];
     return walk(JSON.parse(text));
   }
   if (extension === '.csv') return parseCsvRecords(text).flat();

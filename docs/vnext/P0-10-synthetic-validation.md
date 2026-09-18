@@ -38,6 +38,8 @@ npm run vnext:p0-10:evidence -- <run-directory> <expected-manifest-sha256>
 
 证据格式 V3 将封存移到外层 wrapper 完成清理之后：子进程只写 `pending-finalization.json`，外层写入 `wrapper-cleanup.json` 后再调用终态封存。必须有 READY、目标 exit 0、cleanupPassed=true；缺失、失败或中断均阻断 PASS。只读校验也必须检查这份终态清理记录。既有 V2 包保留为历史，不由新门禁自动认可。
 
+每段浏览器摘录保留工具输出的页面 URL。数据集、来源、契约分别在全过程绑定同一个 URL UUID、SYNTHETIC 范围与当前会话 origin；校验通过、同人拒绝、独立批准、发布/重放、B/R 读取及废止影响还须包含同一个“契约版本”UUID。不得把不同对象或不同版本的成功观察拼成同一生命周期。
+
 ## 浏览器与依赖状态
 
 浏览器证据必须包含八个具名流程及 P0-02 AC-01～05，绑定本次候选源码、receipt/OID、服务会话、原始页面观察及步骤引用。review 的两轴报告绑定独立审查者及来源记录。仅填写 PASS 或复制旧摘要不能作为修复后验收；来源真实性仍需核对原始工具记录，文件哈希只验证完整性。

@@ -83,7 +83,7 @@ describe("P0-10 M0 synthetic gate", () => {
     try {
       cpSync(resolve('db/vnext/sources/package-v2'), directory, {recursive: true});
       expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
-      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000', 'TEL13800138000', 'ID11010119900101123X', '13800138000TEL', '138−0013−8000']) {
+      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000', 'TEL13800138000', 'ID11010119900101123X', '13800138000TEL', '138−0013−8000', '138·0013·8000', '138_0013_8000', '138：0013：8000', '138\n0013\t8000']) {
         writeFileSync(join(directory, 'q42-test.json'), JSON.stringify({sample: value}));
         expect(() => verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
         try { verifyQ42DeliveryArtifacts(directory); } catch(error) { expect(String(error)).not.toContain(value); }
@@ -92,6 +92,9 @@ describe("P0-10 M0 synthetic gate", () => {
         writeFileSync(join(directory,'q42-test.json'),JSON.stringify({sample:value}));
         expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_UNLISTED_ARTIFACT/);
       }
+      rmSync(join(directory,'q42-test.json'));
+      writeFileSync(join(directory,'q42-test.json'),JSON.stringify({'13800138000':'DEMO'}));
+      expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
       rmSync(join(directory,'q42-test.json'));
       writeFileSync(join(directory,'q42-test.csv'),'a,b\n138,00138000');
       expect(()=>verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_UNLISTED_ARTIFACT/);
@@ -135,7 +138,7 @@ describe("P0-10 M0 synthetic gate", () => {
     const independent='21 pop up button (collapsed, settable) Description: 合成操作者, Value: 独立复核人, Secondary Actions: Expand';
     const published='48 text 已发布 · 命令已接受 · adapter NOT_READY\n173 text 草稿 · v 1 · SYNTHETIC_UI_1 2026-01-01T00:00:00 [ 2026-01-01T00:00:00 , 无界 )\n174 button 下载 v1 原版本 schema\n178 text 草稿 · v 2 · SYNTHETIC_UI_2 2026-01-02T00:00:00 [ 2026-01-01T00:00:00 , 无界 )\n179 button 下载 v2 原版本 schema\n183 text 已发布 · v 3 · SYNTHETIC_UI_3 2026-01-03T00:00:00 [ 2026-01-01T00:00:00 , 无界 )\n184 button 下载 v3 原版本 schema';
     const record={kind:'BROWSER_CAPTURE',candidateDigest:browser.captureTreeDigest,producerId:'synthetic-unit-test',sourceRef:'SYNTHETIC_UNIT_FIXTURE_NOT_ACCEPTANCE',observations:browser.observations,
-      session:{oid:'test',requestId:'test',receipt:{path:relative(resolve('.runtime/vnext'),join(directory,'receipt.json')).replaceAll('\\','/'),sha256:createHash('sha256').update(receipt).digest('hex')}},
+      session:{url:'http://127.0.0.1:4317',oid:'test',requestId:'test',receipt:{path:relative(resolve('.runtime/vnext'),join(directory,'receipt.json')).replaceAll('\\','/'),sha256:createHash('sha256').update(receipt).digest('hex')}},
       captures:[
         maker+'\nORG07 已保存 · DRAFT',maker+'\nORG07 已保存 · REVIEW',reviewer+'\nORG07 已保存 · PUBLISHED',
         maker+'\nP0_FINAL_SOURCE 已保存 · DRAFT',maker+'\nP0_FINAL_SOURCE 已保存 · REVIEW',reviewer+'\nP0_FINAL_SOURCE 已保存 · PUBLISHED',
@@ -146,7 +149,7 @@ describe("P0-10 M0 synthetic gate", () => {
         '校验 ACCEPT','[SELF_REVIEW_FORBIDDEN]',independent+'\n已批准 · 命令已接受',
         independent+'\n'+published,independent+'\n'+published,'B/R 有效发布\n27 text 1 当前查询契约',
         '审批绑定摘要： '+'a'.repeat(64),'已废止 · 命令已接受\n27 text 0 当前查询契约\n不执行文件导入或业务 apply',
-      ].map((text,index):{text:string;at:string;action?:{command:string;sourceRef:string}}=>({text,at:new Date(Date.UTC(2026,0,1,0,0,index)).toISOString(),...(index===8||index===9?{action:{command:index===8?'APPROVE_CONTRACT':'PUBLISH_CONTRACT',sourceRef:'synthetic-tool-action-'+index}}:{})})),
+      ].map((text,index):{text:string;at:string;action?:{command:string;sourceRef:string}}=>({text:`Browser tab: synthetic, URL: "http://127.0.0.1:4317/admin/vnext/${index<6?'catalog':'contracts'}?scope=SYNTHETIC&id=00000000-0000-4000-8000-00000000000${index<3?'1':index<6?'2':'3'}${index<6?'&kind='+(index<3?'DATASET':'SOURCE'):''}".\n${index>=6&&index<22?'60 text 契约版本： 00000000-0000-4000-8000-000000000005\n':''}${text}`,at:new Date(Date.UTC(2026,0,1,0,0,index)).toISOString(),...(index===8||index===9?{action:{command:index===8?'APPROVE_CONTRACT':'PUBLISH_CONTRACT',sourceRef:'synthetic-tool-action-'+index}}:{})})),
       steps:{makerCheckerDataset:[0,1,2],makerCheckerSource:[3,4,5],contractCoreCandidate:[6],contractValidationAccept:[15],makerCheckerContract:[16,17,18],brEffectivePublishedRead:[20],retireImpactAndRetire:[21,22],historyAndNoDomainWriteBoundary:[14,18,19,22],'AC-01':[10,11],'AC-02':[7,8,9],'AC-03':[18,19],'AC-04':[14,18],'AC-05':[12,13]},
     };
     const capture=JSON.stringify(record);
@@ -155,14 +158,23 @@ describe("P0-10 M0 synthetic gate", () => {
     const check = (value: unknown) => runGateM0({browser: value}).evidence.browser;
     try {
     expect(check(browser)).toBe(true);
+    for(const index of [1,4,15,19]) {
+      const changed=structuredClone(record);changed.captures[index]!.text=changed.captures[index]!.text.replace(/id=[a-f0-9-]+/u,'id=00000000-0000-4000-8000-000000000004');
+      const bytes=JSON.stringify(changed);writeFileSync(join(directory,'capture.json'),bytes);
+      expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(bytes).digest('hex')}]})).toBe(false);
+    }
+    const wrongVersion=structuredClone(record);wrongVersion.captures[17]!.text=wrongVersion.captures[17]!.text.replace('契约版本： 00000000-0000-4000-8000-000000000005','契约版本： 00000000-0000-4000-8000-000000000006');
+    const versionBytes=JSON.stringify(wrongVersion);writeFileSync(join(directory,'capture.json'),versionBytes);
+    expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(versionBytes).digest('hex')}]})).toBe(false);
+    writeFileSync(join(directory,'capture.json'),capture);
     for(const key of Object.keys(record.steps)) {
       const changed=structuredClone(record);changed.steps[key]=[changed.captures.length];
-      changed.captures.push({text:'Chrome error page: connection refused',at:'2026-01-01T00:01:00.000Z'});
+      changed.captures.push({text:record.captures[record.steps[key][0]]!.text.split('\n').filter(line=>line.startsWith('Browser tab:')||line.includes('契约版本：')).join('\n')+'\nChrome error page: connection refused',at:'2026-01-01T00:01:00.000Z'});
       const bytes=JSON.stringify(changed);writeFileSync(join(directory,'capture.json'),bytes);
       expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(bytes).digest('hex')}]})).toBe(false);
     }
     for(const [index,text] of [[2,'Maker ORG07 已保存 · PUBLISHED'],[15,'校验 REVIEW'],[19,published+'\n195 button 下载 v3 原版本 schema'],[22,'已废止 · 命令已接受\n27 text 1 当前查询契约'],[2,maker+'\nORG07 已保存 · PUBLISHED\n24 menu 复核者 · Reviewer'],[19,independent+'\n'+published.replace('2026-01-03T00:00:00','2026-01-04T00:00:00')]] as const) {
-      const changed=structuredClone(record);changed.captures[index]!.text=text;
+      const changed=structuredClone(record);changed.captures[index]!.text=changed.captures[index]!.text.split('\n').filter(line=>line.startsWith('Browser tab:')||line.includes('契约版本：')).join('\n')+'\n'+text;
       const bytes=JSON.stringify(changed);writeFileSync(join(directory,'capture.json'),bytes);
       expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(bytes).digest('hex')}]})).toBe(false);
     }
