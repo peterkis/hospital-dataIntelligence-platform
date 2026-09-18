@@ -5,8 +5,21 @@ import {parseBytes,unzip} from './file-parser.js';
 import type {ParserResult,FileFormat} from './file-parser.js';
 import {textWorkbook,zipText} from './issue-workbook.js';
 import {evaluateRuleSet} from './validation-rules.js';
+import {verifyParsedPayload} from './parse-provenance.js';
 import {demoInput,sourceContractFields} from '../../../../../tooling/vnext/p0-10-gate.mjs';
 const DEMO_FORMATS={ORG01:'CSV',ORG04:'JSON',PER01:'XLSX'} as const;
+
+test('high XLSX rejection coordinates survive protected parser provenance verification',()=>{
+  for(const row of [100001,1048576]) {
+    const files=Object.fromEntries(unzip(textWorkbook([['code'],['DEMO']])));
+    files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('<c r="A2" t="inlineStr"><is><t xml:space="preserve">DEMO</t></is></c>',`<c r="A${row}"><f>1+1</f><v>2</v></c>`);
+    const fields=[{code:'code',type:'text'}];
+    const result=parseBytes(zipText(files),'XLSX',fields,'STRICT_V2');
+    expect(result.issues[0]).toEqual({code:'ACTIVE_CONTENT',row,column:1,sheet:'Data'});
+    const verified=verifyParsedPayload(Buffer.from(JSON.stringify({sourceArtifactId:'DEMO',result})),{sourceArtifactId:'DEMO',policy:'STRICT_V2',format:'XLSX',status:'REJECTED'},fields);
+    expect(verified.issues[0]).toEqual(result.issues[0]);
+  }
+});
 test('an extra worksheet is identified instead of blaming the valid Data sheet',()=>{
   const files=Object.fromEntries(unzip(textWorkbook([['code'],['DEMO']])));
   files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('</sheets>','<sheet name="Secret" sheetId="2" r:id="rId2"/></sheets>');
@@ -19,6 +32,16 @@ test('a formula on a renamed worksheet reports its declared sheet and exact cell
   files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace('<c r="A2" t="inlineStr"><is><t xml:space="preserve">DEMO</t></is></c>','<c r="A2"><f>1+1</f><v>2</v></c>');
   const result=parseBytes(zipText(files),'XLSX',[{code:'code',type:'text'}],'STRICT_V2');
   expect(result.issues[0]).toEqual({code:'ACTIVE_CONTENT',row:2,column:1,sheet:'Secret'});
+});
+test('an unapproved extra worksheet is rejected at the archive boundary before formula traversal',()=>{
+  const files=Object.fromEntries(unzip(textWorkbook([['code'],['DEMO']])));
+  files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('</sheets>','<sheet name="Secret" sheetId="2" r:id="rId2"/></sheets>');
+  files['xl/_rels/workbook.xml.rels']=files['xl/_rels/workbook.xml.rels']!.replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>');
+  files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+  files['xl/worksheets/sheet2.xml']='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="4"><c r="B4"><f>1+1</f><v>2</v></c></row></sheetData></worksheet>';
+  const result=parseBytes(zipText(files),'XLSX',[{code:'code',type:'text'}],'STRICT_V2');
+  expect(result.structuralStatus).toBe('REJECTED');
+  expect(result.issues[0]).toEqual({code:'ZIP_MEMBER_REJECTED',row:0,column:0});
 });
 function rejected(result:ParserResult, code:string) {
   assert.equal(result.structuralStatus, 'REJECTED', `PARSER_STATUS_${code}`);

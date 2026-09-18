@@ -5,13 +5,14 @@ import type {KeyProviderPort} from './protected-artifact.js';
 import type {ParserResult,ParserField} from './file-parser.js';
 
 const Int=Type.Integer({minimum:0,maximum:100000});
+const IssueRow=Type.Integer({minimum:0,maximum:1048576});
 const Text=Type.String({maxLength:8192});
 const ResultSchema=Type.Object({
  policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
  manifest:Type.Object({bomDetected:Type.Boolean(),bomMembers:Type.Array(Text,{maxItems:16}),defaultRowsHidden:Type.Boolean(),hiddenSheets:Type.Array(Text,{maxItems:16}),hiddenRows:Type.Array(Int,{maxItems:1000}),hiddenColumns:Type.Array(Text,{maxItems:100})},{additionalProperties:false}),
  rows:Type.Array(Type.Record(Type.String(),Text),{maxItems:1000}),
  cells:Type.Array(Type.Object({row:Int,sourceRow:Int,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
- issues:Type.Array(Type.Object({code:Type.String({pattern:'^[A-Z_]{1,64}$'}),row:Int,column:Int,sheet:Type.Optional(Text)},{additionalProperties:false}),{maxItems:100000}),
+ issues:Type.Array(Type.Object({code:Type.String({pattern:'^[A-Z_]{1,64}$'}),row:IssueRow,column:Int,sheet:Type.Optional(Text)},{additionalProperties:false}),{maxItems:100000}),
 },{additionalProperties:false});
 const PayloadSchema=Type.Object({sourceArtifactId:Type.String(),result:ResultSchema},{additionalProperties:false});
 export function parseSignature(provider:KeyProviderPort|undefined,artifactId:string,jobId:string,revisionId:string,contractVersionId:string,bytes:Uint8Array):string {

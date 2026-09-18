@@ -68,11 +68,17 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};ca
     return visible&&visible!==target?undefined:target;
   });
   if(versions.some(id=>!id||!uuid.test(id))||new Set(versions).size!==1)return false;
-  const rejected=record.steps['AC-02']!.map(index=>record.captures[index]!).filter(capture=>independentSelected.test(capture.text)&&/\[CONTRACT_VALIDATION_BLOCKED\]/u.test(capture.text));
-  if(rejected.length!==2||Date.parse(rejected[0]!.at)>=Date.parse(rejected[1]!.at))return false;
-  if(!['APPROVE_CONTRACT','PUBLISH_CONTRACT'].every((command,index)=>rejected[index]!.action?.command===command
-    &&typeof rejected[index]!.action?.sourceRef==='string'&&rejected[index]!.action!.sourceRef.length>0))return false;
-  if(rejected[0]!.action!.sourceRef===rejected[1]!.action!.sourceRef)return false;
+  for(const [key,commands] of [['AC-02',['APPROVE_CONTRACT','PUBLISH_CONTRACT']],['AC-05',['APPROVE_CONTRACT']]] as const) {
+    const group=record.steps[key]!.map(index=>record.captures[index]!);
+    const negativeVersions=group.map(capture=>/text 契约版本： ([a-f0-9-]+)/iu.exec(capture.text)?.[1]?.toLowerCase());
+    if(negativeVersions.some(id=>!id||!uuid.test(id))||new Set(negativeVersions).size!==1)return false;
+    const rejected=group.filter(capture=>independentSelected.test(capture.text)&&/\[CONTRACT_VALIDATION_BLOCKED\]/u.test(capture.text));
+    if(rejected.length!==commands.length)return false;
+    if(!commands.every((command,index)=>rejected[index]!.action?.command===command
+      &&typeof rejected[index]!.action?.sourceRef==='string'&&rejected[index]!.action!.sourceRef.trim().length>0
+      &&rejected[index]!.action!.targetVersionId?.toLowerCase()===negativeVersions[0]))return false;
+    if(new Set(rejected.map(capture=>capture.action!.sourceRef.trim())).size!==rejected.length)return false;
+  }
   const replay=record.steps['AC-03']!.map(index=>record.captures[index]!);
   if(replay.length!==2||!replay.every(item=>/已发布 · 命令已接受/u.test(item.text))||Date.parse(replay[0]!.at)>=Date.parse(replay[1]!.at))return false;
   if(!replay.every(item=>item.action?.command==='PUBLISH_CONTRACT'&&typeof item.action.sourceRef==='string'&&item.action.sourceRef.trim().length>0&&item.action.targetVersionId?.toLowerCase()===versions[0]))return false;

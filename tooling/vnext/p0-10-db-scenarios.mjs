@@ -11,10 +11,10 @@ import {
   contractInputSchemas,
 } from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
 import { fixture } from './protected-fixture.ts';
-import { createTemporary, dropTemporary } from './fresh.mjs';
+import { createTemporary } from './fresh.mjs';
+import { reconcileValidationCleanup } from './p0-10-cleanup.mjs';
 import {
   createValidationOwnerSession,
-  dropValidationOwnerRole,
 } from './validation-owner-session.mjs';
 import {
   inspect,
@@ -486,7 +486,7 @@ export async function runDbIntegration() {
     const cleanup=[];
     for(const [database,owner] of [[owned,validationOwner],[legacyOwned,legacyOwner]]) {
       if(!database)continue;
-      try {dropTemporary(database.receipt);if(owner)dropValidationOwnerRole(owner);cleanup.push({receipt:database.receipt,status:'PASS'});}
+      try {cleanup.push({receipt:database.receipt,...reconcileValidationCleanup(database.receipt,owner)});}
       catch {cleanup.push({receipt:database.receipt,status:'BLOCKED',errorCode:'TEMPORARY_CLEANUP_FAILED'});}
     }
     const cleanupPassed=closes.every(item=>item.status==='fulfilled') && cleanup.every(item=>item.status==='PASS');
