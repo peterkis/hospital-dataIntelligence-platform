@@ -149,7 +149,7 @@ describe("P0-10 M0 synthetic gate", () => {
         '校验 ACCEPT','[SELF_REVIEW_FORBIDDEN]',independent+'\n已批准 · 命令已接受',
         independent+'\n'+published,independent+'\n'+published,'B/R 有效发布\n27 text 1 当前查询契约',
         '审批绑定摘要： '+'a'.repeat(64),'已废止 · 命令已接受\n27 text 0 当前查询契约\n不执行文件导入或业务 apply','57 text 已废止  / v 3',
-      ].map((text,index):{text:string;at:string;action?:{command:string;sourceRef:string}}=>({text:`Browser tab: synthetic, URL: "http://127.0.0.1:4317/admin/vnext/${index<6?'catalog':'contracts'}?scope=SYNTHETIC&id=00000000-0000-4000-8000-00000000000${index<3?'1':index<6?'2':'3'}${index<6?'&kind='+(index<3?'DATASET':'SOURCE'):''}".\n${index>=6&&index!==22?'60 text 契约版本： 00000000-0000-4000-8000-000000000005\n':''}${text}`,at:new Date(Date.UTC(2026,0,1,0,0,index)).toISOString(),...(index===8||index===9?{action:{command:index===8?'APPROVE_CONTRACT':'PUBLISH_CONTRACT',sourceRef:'synthetic-tool-action-'+index}}:{})})),
+      ].map((text,index):{text:string;at:string;action?:{command:string;sourceRef:string;targetVersionId?:string}}=>({text:`Browser tab: synthetic, URL: "http://127.0.0.1:4317/admin/vnext/${index<6?'catalog':'contracts'}?scope=SYNTHETIC&id=00000000-0000-4000-8000-00000000000${index<3?'1':index<6?'2':'3'}${index<6?'&kind='+(index<3?'DATASET':'SOURCE'):''}".\n${index>=6&&index!==22?'60 text 契约版本： 00000000-0000-4000-8000-000000000005\n':''}${text}`,at:new Date(Date.UTC(2026,0,1,0,0,index)).toISOString(),...([8,9,18,19,22].includes(index)?{action:{command:index===8?'APPROVE_CONTRACT':index===22?'RETIRE_CONTRACT':'PUBLISH_CONTRACT',sourceRef:'synthetic-tool-action-'+index,...(index>=18?{targetVersionId:'00000000-0000-4000-8000-000000000005'}:{})}}:{})})),
       steps:{makerCheckerDataset:[0,1,2],makerCheckerSource:[3,4,5],contractCoreCandidate:[6],contractValidationAccept:[15],makerCheckerContract:[16,17,18],brEffectivePublishedRead:[20],retireImpactAndRetire:[21,22,23],historyAndNoDomainWriteBoundary:[14,18,19,22],'AC-01':[10,11],'AC-02':[7,8,9],'AC-03':[18,19],'AC-04':[14,18],'AC-05':[12,13]},
     };
     const capture=JSON.stringify(record);
@@ -158,6 +158,17 @@ describe("P0-10 M0 synthetic gate", () => {
     const check = (value: unknown) => runGateM0({browser: value}).evidence.browser;
     try {
     expect(check(browser)).toBe(true);
+    for(const action of [undefined,{command:'READ',sourceRef:'synthetic-read',targetVersionId:'00000000-0000-4000-8000-000000000005'},record.captures[18]!.action,{command:'PUBLISH_CONTRACT',sourceRef:'synthetic-replay',targetVersionId:'00000000-0000-4000-8000-000000000006'}]) {
+      const changed=structuredClone(record);changed.captures[19]!.action=action;
+      const bytes=JSON.stringify(changed);writeFileSync(join(directory,'capture.json'),bytes);
+      expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(bytes).digest('hex')}]})).toBe(false);
+    }
+    for(const action of [undefined,{command:'RETIRE_CONTRACT',sourceRef:'synthetic-retire',targetVersionId:'00000000-0000-4000-8000-000000000006'}]) {
+      const changed=structuredClone(record);changed.captures[22]!.action=action;
+      const bytes=JSON.stringify(changed);writeFileSync(join(directory,'capture.json'),bytes);
+      expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(bytes).digest('hex')}]})).toBe(false);
+    }
+    writeFileSync(join(directory,'capture.json'),capture);
     const reversed=structuredClone(record);reversed.captures[0]!.text=record.captures[2]!.text;reversed.captures[2]!.text=record.captures[0]!.text;
     const reversedBytes=JSON.stringify(reversed);writeFileSync(join(directory,'capture.json'),reversedBytes);
     expect(check({...browser,sources:[{...browser.sources[0],sha256:createHash('sha256').update(reversedBytes).digest('hex')}]})).toBe(false);

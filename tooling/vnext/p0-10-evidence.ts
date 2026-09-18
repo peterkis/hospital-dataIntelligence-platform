@@ -26,7 +26,7 @@ const browserOutcomes:Record<string,RegExp[][]>={
   'AC-04':[[/\[IMMUTABLE_RULE_VERSION\]/u,/下载 v1 原版本 schema/u,/下载 v2 原版本 schema/u]],
   'AC-05':[[/校验 REVIEW · CODESET_NOT_ADOPTED/u],[independentSelected,/\[CONTRACT_VALIDATION_BLOCKED\]/u]],
 };
-function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};captures:{text:string;at:string;action?:{command:string;sourceRef:string}}[];steps:Record<string,number[]>}) {
+function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};captures:{text:string;at:string;action?:{command:string;sourceRef:string;targetVersionId?:string}}[];steps:Record<string,number[]>}) {
   if(typeof record.sourceRef!=='string'||!record.sourceRef)return false;
   const identities=new Map<string,string>();
   const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu;
@@ -56,8 +56,17 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};ca
   }
   const retirement=record.steps.retireImpactAndRetire!;
   if(retirement.length!==3||!/text 已废止\s+\/ v [1-9][0-9]*/u.test(record.captures[retirement[2]!]!.text))return false;
-  const acceptedRefs=new Set([...record.steps.contractCoreCandidate!,...record.steps.contractValidationAccept!,...record.steps.makerCheckerContract!,...record.steps['AC-03']!,...record.steps.brEffectivePublishedRead!,retirement[0]!,retirement[2]!]);
-  const versions=[...acceptedRefs].map(index=>/text 契约版本： ([a-f0-9-]+)/iu.exec(record.captures[index]!.text)?.[1]?.toLowerCase());
+  const retireAction=record.captures[retirement[1]!]!.action;
+  if(retireAction?.command!=='RETIRE_CONTRACT'||typeof retireAction.sourceRef!=='string'||!retireAction.sourceRef.trim()||typeof retireAction.targetVersionId!=='string'||!uuid.test(retireAction.targetVersionId))return false;
+  const acceptedRefs=new Set([...record.steps.contractCoreCandidate!,...record.steps.contractValidationAccept!,...record.steps.makerCheckerContract!,...record.steps['AC-03']!,...record.steps.brEffectivePublishedRead!,...retirement]);
+  const versions=[...acceptedRefs].map(index=>{
+    const visible=/text 契约版本： ([a-f0-9-]+)/iu.exec(record.captures[index]!.text)?.[1]?.toLowerCase();
+    if(index!==retirement[1])return visible;
+    // A successful retirement clears the detail pane. Bind the actual dispatched
+    // action target, never fabricate a version line in that post-action snapshot.
+    const target=retireAction.targetVersionId!.toLowerCase();
+    return visible&&visible!==target?undefined:target;
+  });
   if(versions.some(id=>!id||!uuid.test(id))||new Set(versions).size!==1)return false;
   const rejected=record.steps['AC-02']!.map(index=>record.captures[index]!).filter(capture=>independentSelected.test(capture.text)&&/\[CONTRACT_VALIDATION_BLOCKED\]/u.test(capture.text));
   if(rejected.length!==2||Date.parse(rejected[0]!.at)>=Date.parse(rejected[1]!.at))return false;
@@ -66,6 +75,8 @@ function browserOutcomesMatch(record:{sourceRef?:unknown;session:{url:string};ca
   if(rejected[0]!.action!.sourceRef===rejected[1]!.action!.sourceRef)return false;
   const replay=record.steps['AC-03']!.map(index=>record.captures[index]!);
   if(replay.length!==2||!replay.every(item=>/已发布 · 命令已接受/u.test(item.text))||Date.parse(replay[0]!.at)>=Date.parse(replay[1]!.at))return false;
+  if(!replay.every(item=>item.action?.command==='PUBLISH_CONTRACT'&&typeof item.action.sourceRef==='string'&&item.action.sourceRef.trim().length>0&&item.action.targetVersionId?.toLowerCase()===versions[0]))return false;
+  if(replay[0]!.action!.sourceRef.trim()===replay[1]!.action!.sourceRef.trim())return false;
   const history=(text:string)=>text.split('\n').map(line=>line.trim().replace(/^\d+ /u,'')).filter(line=>/^text .+\s+· v \d+\s+· /u.test(line)||/^button 下载 v\d+ 原版本 schema$/u.test(line));
   const firstHistory=history(replay[0]!.text);
   const fullRows=firstHistory.filter(line=>line.startsWith('text '));
