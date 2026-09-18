@@ -262,12 +262,15 @@
     "vnext:workbench:control": "node --import tsx tooling/vnext/workbench-control-validate.mjs",
     "vnext:workbench:unit": "vitest run --config tooling/vnext/vitest.workbench.config.ts",
     "vnext:p0-10:unit": "vitest run --config tooling/vnext/vitest.p0-10.config.ts",
-    "vnext:p0-10:validate": "node --import tsx tooling/vnext/p0-10-validate.mjs"
+    "vnext:p0-10:validate": "node --import tsx tooling/vnext/p0-10-validate.mjs",
+    "vnext:p0-10:evidence": "node --import tsx tooling/vnext/p0-10-verify.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",
     "@types/node": "24.13.3",
     "@vitest/coverage-v8": "4.1.6",
+    "fast-xml-parser": "5.11.1",
+    "fflate": "0.8.3",
     "tsx": "4.23.11",
     "typescript": "7.0.2",
     "vitest": "4.1.6"

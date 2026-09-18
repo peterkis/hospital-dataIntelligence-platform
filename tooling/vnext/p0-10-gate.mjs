@@ -6,9 +6,10 @@ import { resolve } from 'node:path';
 import pg from 'pg';
 import { contractSources } from './contract-sources.mjs';
 import { inspect, resolveTarget, root } from './lineage.mjs';
-import { parseBytes, unzip } from '../../apps/governance-api/src/modules/governance-catalog/file-parser.ts';
-import { textWorkbook, zipText } from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.ts';
-import { evaluateRuleSet } from '../../apps/governance-api/src/modules/governance-catalog/validation-rules.ts';
+import {textWorkbook} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+import {unzipSync} from 'fflate';
+import {XMLParser, XMLValidator} from 'fast-xml-parser';
+import {verifySourceArtifacts} from './p0-10-evidence.ts';
 
 export const PACKAGE_EXPECTATIONS = Object.freeze({
   datasets: 53,
@@ -53,16 +54,9 @@ function gitOutput(args) {
 }
 
 export function workingTreeDigest() {
-  const diff = gitOutput(['diff', '--binary', P0_10_REVIEW_BASE]);
-  const status = gitOutput(['status', '--porcelain=v1', '--untracked-files=all']);
-  const untracked = status
-    .split(/\r?\n/u)
-    .filter((line) => line.startsWith('?? '))
-    .map((line) => line.slice(3))
-    .sort()
-    .map((path) => `${path}\n${readFileSync(resolve(root, path)).toString('base64')}\n`)
-    .join('');
-  return createHash('sha256').update(`${diff}\n${untracked}`).digest('hex');
+  const paths = [...new Set(gitOutput(['ls-files','--cached','--others','--exclude-standard','-z']).split('\0').filter(Boolean))].sort();
+  const entries = paths.map(path => ({path,sha256:existsSync(resolve(root,path)) ? createHash('sha256').update(readFileSync(resolve(root,path))).digest('hex') : 'DELETED'}));
+  return createHash('sha256').update(JSON.stringify(entries)).digest('hex');
 }
 
 function readJson(path) {
@@ -141,11 +135,60 @@ function packageArtifactFiles(directory, relative = '') {
 
 function artifactText(bytes, extension) {
   if (extension.toLowerCase() !== '.xlsx') return bytes.toString('utf8');
-  return Object.values(Object.fromEntries(unzip(bytes))).join('\n');
+  return workbookValues(bytes).join('\n');
 }
 
-export function verifyQ42DeliveryArtifacts() {
-  const manifest = readJson(q42ManifestPath);
+function sensitiveValue(value) {
+  const normalized = value.normalize('NFKC').replace(/[\u2010-\u2015]/gu, '-');
+  // Work within a single cell/value. Never join digits across artifact fields.
+  const separator='[()\\- \\t\\u00a0]*';
+  const phone=new RegExp('(?<![A-Za-z0-9_])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![A-Za-z0-9_])','u');
+  const identity=new RegExp('(?<![A-Za-z0-9_])[0-9](?:'+separator+'[0-9]){16}'+separator+'[0-9Xx](?![A-Za-z0-9_])','u');
+  return phone.test(normalized)||identity.test(normalized);
+}
+
+function workbookValues(bytes) {
+  let total=0; const names=new Set();
+  if(bytes.length>16*1024*1024)throw new Error('Q42_ARCHIVE_LIMIT');
+  const archive=unzipSync(bytes,{filter(entry){
+    total+=entry.originalSize;
+    if(names.has(entry.name) || names.size>=1024 || total>64*1024*1024 || entry.originalSize>16*1024*1024)throw new Error('Q42_ARCHIVE_LIMIT');
+    names.add(entry.name);return true;
+  }});
+  if(!archive['xl/workbook.xml'] || !archive['[Content_Types].xml'])throw new Error('Q42_WORKBOOK_INVALID');
+  const parser=new XMLParser({ignoreAttributes:false,parseTagValue:false,parseAttributeValue:false,trimValues:false,removeNSPrefix:true});
+  const values=[];
+  const leaves=value=>typeof value==='string'? [value]:value&&typeof value==='object'?Object.entries(value).filter(([key])=>!key.startsWith('@_')).flatMap(([,item])=>leaves(item)):[];
+  const visit=value=>{
+    if(!value || typeof value!=='object')return;
+    for(const [key,item] of Object.entries(value)){
+      if(key==='si'||key==='is')for(const cell of Array.isArray(item)?item:[item])values.push(leaves(cell).join(''));
+      else if(typeof item==='string')values.push(item);
+      else visit(item);
+    }
+  };
+  for(const [name,content] of Object.entries(archive)){
+    if(!/\.(xml|rels)$/iu.test(name))continue;
+    const xml=new TextDecoder('utf-8',{fatal:true}).decode(content);
+    if(/<!DOCTYPE|<!ENTITY/iu.test(xml)||XMLValidator.validate(xml)!==true)throw new Error('Q42_XML_INVALID');
+    visit(parser.parse(xml));
+  }
+  return values;
+}
+
+function artifactValues(bytes, extension) {
+  const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+  if (extension === '.json') {
+    const walk = (value) => typeof value === 'string' || typeof value === 'number'
+      ? [String(value)] : value && typeof value === 'object' ? Object.values(value).flatMap(walk) : [];
+    return walk(JSON.parse(text));
+  }
+  if (extension === '.csv') return parseCsvRecords(text).flat();
+  throw new Error('Q42_FORMAT_UNSUPPORTED');
+}
+
+export function verifyQ42DeliveryArtifacts(directory = packageRoot) {
+  const manifest = readJson(resolve(directory, 'inputs/dataset-v2/p0-10-demo-manifest.json'));
   assert.equal(manifest.task, 'P0-10', 'Q42_MANIFEST_TASK');
   assert.equal(manifest.scope, 'SYNTHETIC', 'Q42_MANIFEST_SCOPE');
   assert.equal(manifest.synthetic_only, true, 'Q42_MANIFEST_SYNTHETIC');
@@ -163,12 +206,18 @@ export function verifyQ42DeliveryArtifacts() {
     /(?:^|[^\d])1[3-9]\d{9}(?:$|[^\d])/u,
     /\b\d{17}[\dXx]\b/u,
   ];
-  const artifacts = packageArtifactFiles(packageRoot);
+  const artifacts = packageArtifactFiles(directory);
   const scanned = [];
   for (const artifact of artifacts) {
     const bytes = readFileSync(artifact.absolute);
-    const text = artifactText(bytes, artifact.absolute.slice(-5));
-    for (const pattern of sensitivePatterns) assert.doesNotMatch(text, pattern, `Q42_SENSITIVE_VALUE:${artifact.relative}`);
+    const extension = /\.[^.]+$/u.exec(artifact.absolute)[0].toLowerCase();
+    let values;
+    try {
+      values = extension === '.xlsx'
+        ? workbookValues(bytes)
+        : artifactValues(bytes, extension);
+    } catch { throw new Error(`Q42_ARTIFACT_INVALID:${artifact.relative}`); }
+    if (values.some(sensitiveValue)) throw new Error(`Q42_SENSITIVE_VALUE:${artifact.relative}`);
     scanned.push(artifact.relative);
   }
   const generatedDemos = Object.entries(DEMO_FORMATS).map(([dataset, format]) => {
@@ -176,8 +225,7 @@ export function verifyQ42DeliveryArtifacts() {
     const text = artifactText(input, `.${format.toLowerCase()}`);
     assert.match(text, new RegExp(`DEMO_${dataset}`, 'u'), `Q42_DEMO_LABEL:${dataset}`);
     for (const pattern of sensitivePatterns) assert.doesNotMatch(text, pattern, `Q42_DEMO_SENSITIVE_VALUE:${dataset}`);
-    const parsed = parseBytes(input, format, sourceContractFields(dataset), 'STRICT_V2');
-    for (const value of Object.values(parsed.rows[0] ?? {})) {
+    for (const value of Object.values(demoRow(dataset))) {
       assert.ok(
         value.startsWith('DEMO_') || /^2026-01-0[12](?:T00:00:00)?$/u.test(value) || value === '1',
         `Q42_NON_DEMO_SAMPLE_VALUE:${dataset}`,
@@ -243,6 +291,12 @@ export function demoInput(dataset, format = DEMO_FORMATS[dataset]) {
 export function verifyPackageCoverage() {
   const metadata = readJson(packageMetadataPath);
   const sources = contractSources();
+  const authority=readJson(resolve(root,'db/vnext/sources/p0-10-condition-authority.json'));
+  const disposition=readFileSync(resolve(root,'db/vnext/sources/contract-inputs/conditional-rule-disposition.json'));
+  assert.equal(createHash('sha256').update(disposition).digest('hex'),authority.dispositionSha256,'CONDITION_DISPOSITION_AUTHORITY_DRIFT');
+  assert.deepEqual(sources.conditions.map(item=>item.source),authority.rules,'CONDITION_SOURCE_DRIFT');
+  assert.equal(new Set(sources.conditions.map(item=>item.id)).size,196,'CONDITION_IDENTITIES');
+  for(const draft of sources.drafts)assert.deepEqual(draft.conditionIds,sources.conditions.filter(item=>item.source.dataset===draft.dataset).map(item=>item.id),'CONDITION_CONTRACT_REFERENCES');
   const qualityGates = readJson(qualityGatesPath);
   const records = metadata.records ?? [];
   const routedFields = sources.drafts.flatMap((draft) => draft.fieldRouting);
@@ -387,134 +441,6 @@ export function verifyPackageCoverage() {
   };
 }
 
-function rejected(result, code) {
-  assert.equal(result.structuralStatus, 'REJECTED', `PARSER_STATUS_${code}`);
-  assert.equal(result.issues[0]?.code, code, `PARSER_CODE_${code}`);
-  return result;
-}
-
-export function verifyParserBoundaries() {
-  const demoReports = Object.entries(DEMO_FORMATS).map(([dataset, format]) => {
-    const result = parseBytes(demoInput(dataset, format), format, sourceContractFields(dataset), 'STRICT_V2');
-    assert.equal(result.structuralStatus, 'PARSED', `${dataset}_${format}_PARSED`);
-    assert.equal(result.rows.length, 1, `${dataset}_${format}_ONE_ROW`);
-    assert.ok(Object.values(result.rows[0]).every((value) => value.startsWith('DEMO_') || /^2026-01-0[12]/u.test(value) || value === '1'), `${dataset}_${format}_SYNTHETIC_VALUES`);
-    return { dataset, format, status: result.structuralStatus, rows: result.rows.length };
-  });
-
-  const fields = sourceContractFields('ORG01');
-  const header = fields.map((field) => field.code).join(',');
-  const a001EmptyFile = rejected(parseBytes(Buffer.alloc(0), 'CSV', fields, 'STRICT_V2'), 'EMPTY_FILE');
-  const a001NoData = {
-    CSV: rejected(parseBytes(Buffer.alloc(0), 'CSV', fields, 'STRICT_V2'), 'EMPTY_FILE'),
-    JSON: rejected(parseBytes(Buffer.from('[]'), 'JSON', fields, 'STRICT_V2'), 'NO_DATA'),
-    XLSX: rejected(parseBytes(textWorkbook([fields.map((field) => field.code)]), 'XLSX', fields, 'STRICT_V2'), 'NO_DATA'),
-  };
-  const a001EmptyRows = {
-    CSV: rejected(parseBytes(Buffer.from(`${header}\n${fields.map(() => '').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'EMPTY_ROW'),
-    JSON: rejected(parseBytes(Buffer.from(JSON.stringify([Object.fromEntries(fields.map((field) => [field.code, '']))])), 'JSON', fields, 'STRICT_V2'), 'EMPTY_ROW'),
-    XLSX: rejected(parseBytes(textWorkbook([fields.map((field) => field.code), fields.map(() => '')]), 'XLSX', fields, 'STRICT_V2'), 'EMPTY_ROW'),
-  };
-  const a004Unknown = rejected(parseBytes(Buffer.from(`${header.slice(0, -1)},unknown\n${fields.map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'FIELD_CONTRACT');
-  const a004Missing = rejected(parseBytes(Buffer.from(`${header.slice(0, -1)}\n${fields.slice(0, -1).map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'FIELD_CONTRACT');
-  rejected(parseBytes(Buffer.from(`${fields[0].code},${fields[0].code},${fields.slice(2).map((field) => field.code).join(',')}\n${fields.map(() => 'DEMO').join(',')}`), 'CSV', fields, 'STRICT_V2'), 'DUPLICATE_FIELD');
-
-  const formulaNeedle = '<c r="A2" t="inlineStr"><is><t xml:space="preserve">DEMO</t></is></c>';
-  const formulaFiles = Object.fromEntries(unzip(textWorkbook([['code'], ['DEMO']])));
-  assert.ok(formulaFiles['xl/worksheets/sheet1.xml']?.includes(formulaNeedle), 'FORMULA_FIXTURE_SHAPE');
-  formulaFiles['xl/worksheets/sheet1.xml'] = formulaFiles['xl/worksheets/sheet1.xml'].replace(formulaNeedle, '<c r="A2"><f>1+1</f><v>2</v></c>');
-  const a004Formula = rejected(
-    parseBytes(
-      zipText(formulaFiles),
-      'XLSX',
-      [{ code: 'code', type: 'text' }],
-      'STRICT_V2',
-    ),
-    'ACTIVE_CONTENT',
-  );
-  const wrongSheetFiles = Object.fromEntries(unzip(textWorkbook([['code'], ['DEMO']])));
-  wrongSheetFiles['xl/workbook.xml'] = wrongSheetFiles['xl/workbook.xml'].replace('name="Data"', 'name="Wrong"');
-  const a004WrongSheet = rejected(parseBytes(zipText(wrongSheetFiles), 'XLSX', [{ code: 'code', type: 'text' }], 'STRICT_V2'), 'SHEET_CONTRACT');
-  const macroFiles = Object.fromEntries(unzip(textWorkbook([['code'], ['DEMO']])));
-  macroFiles['[Content_Types].xml'] = macroFiles['[Content_Types].xml'].replace('</Types>', '<Default Extension="bin" ContentType="application/vnd.ms-office.vbaProject"/></Types>');
-  const a004Macro = rejected(parseBytes(zipText(macroFiles), 'XLSX', [{ code: 'code', type: 'text' }], 'STRICT_V2'), 'ACTIVE_CONTENT');
-  const hasLocation = (result) => Number.isInteger(result.issues[0]?.row)
-    && result.issues[0].row >= 1
-    && Number.isInteger(result.issues[0]?.column)
-    && result.issues[0].column >= 1;
-  const a001 = {
-    status: 'PASS',
-    emptyFile: a001EmptyFile.issues[0]?.code === 'EMPTY_FILE',
-    noData: Object.values(a001NoData).every((result) => result.structuralStatus === 'REJECTED'),
-    emptyRow: Object.values(a001EmptyRows).every((result) => result.issues[0]?.code === 'EMPTY_ROW'),
-  };
-  const a004 = {
-    status: 'PASS',
-    unknownAndMissingFields: a004Unknown.issues[0]?.code === 'FIELD_CONTRACT' && a004Missing.issues[0]?.code === 'FIELD_CONTRACT',
-    wrongSheet: a004WrongSheet.issues[0]?.code === 'SHEET_CONTRACT',
-    activeContent: a004Formula.issues[0]?.code === 'ACTIVE_CONTENT' && a004Macro.issues[0]?.code === 'ACTIVE_CONTENT',
-    locationEvidence: [a004Unknown, a004Missing, a004Formula, a004WrongSheet, a004Macro].every(hasLocation)
-      && a004WrongSheet.issues[0]?.sheet === 'Wrong',
-  };
-  assert.ok(Object.values(a001).slice(1).every(Boolean), 'A001_SOURCE_ACCEPTANCE');
-  assert.ok(Object.values(a004).slice(1).every(Boolean), 'A004_SOURCE_ACCEPTANCE');
-
-  const duplicateKey = evaluateRuleSet(
-    'ORG01',
-    {
-      ruleVersion: 'P0_10_DUPLICATE_KEY_V1',
-      templateVersion: 'P0_10_DUPLICATE_KEY_V1',
-      sourceVersionId: null,
-      fields: [
-        { code: 'key', type: 'text', required: 'R', privacy: 'INTERNAL', condition: 'ALWAYS', enumValues: [] },
-        { code: 'value', type: 'text', required: 'R', privacy: 'INTERNAL', condition: 'ALWAYS', enumValues: [] },
-      ],
-      rules: [],
-      references: [],
-      codeSets: [],
-      businessKey: ['key'],
-    },
-    [
-      { key: 'DEMO_KEY', value: 'DEMO_FIRST' },
-      { key: 'DEMO_KEY', value: 'DEMO_SECOND' },
-    ],
-  );
-  assert.ok(duplicateKey.issues.some((issue) => issue.code === 'CONFLICTING_SOURCE_ID'), 'DUPLICATE_KEY_NEGATIVE');
-
-  const boundaryFields = [{ code: 'value', type: 'text' }];
-  const boundaryRows = (count) => Array.from({ length: count }, () => ({ value: 'DEMO' }));
-  const boundaryInput = (format, count) => {
-    if (format === 'CSV') return Buffer.from(`value\n${Array.from({ length: count }, () => 'DEMO').join('\n')}`);
-    if (format === 'JSON') return Buffer.from(JSON.stringify(boundaryRows(count)));
-    return textWorkbook([['value'], ...Array.from({ length: count }, () => ['DEMO'])]);
-  };
-  for (const format of ['CSV', 'JSON', 'XLSX']) {
-    const atLimit = parseBytes(boundaryInput(format, 1000), format, boundaryFields, 'STRICT_V2');
-    assert.equal(atLimit.structuralStatus, 'PARSED', `${format}_ROW_BOUNDARY_1000`);
-    rejected(parseBytes(boundaryInput(format, 1001), format, boundaryFields, 'STRICT_V2'), 'ROW_LIMIT');
-    const empty = format === 'JSON' ? Buffer.from('[]') : format === 'XLSX' ? textWorkbook([['value']]) : Buffer.alloc(0);
-    rejected(parseBytes(empty, format, boundaryFields, 'STRICT_V2'), format === 'CSV' ? 'EMPTY_FILE' : 'NO_DATA');
-    const invalid = format === 'JSON'
-      ? Buffer.from('[{"unknown":"DEMO"}]')
-      : format === 'XLSX'
-        ? textWorkbook([['unknown'], ['DEMO']])
-        : Buffer.from('unknown\nDEMO');
-    rejected(parseBytes(invalid, format, boundaryFields, 'STRICT_V2'), 'FIELD_CONTRACT');
-  }
-
-  return {
-    status: 'PASS',
-    positiveFormats: demoReports.length,
-    negativeCases: 18,
-    boundary: { rowsAtLimit: 1000, rowsOverLimit: 1001 },
-    demoReports,
-    syntheticOnly: true,
-    a001,
-    a004,
-    q42: { status: 'PASS', demoFormats: demoReports.length, syntheticValuesOnly: true },
-  };
-}
-
 export async function verifyNoDomainWrites(receipt) {
   const observation = await inspect(receipt);
   const pool = new pg.Pool({
@@ -542,6 +468,12 @@ export async function verifyNoDomainWrites(receipt) {
   }
 }
 
+export const REQUIRED_BROWSER_FLOWS = Object.freeze([
+  'makerCheckerDataset', 'makerCheckerSource', 'contractCoreCandidate',
+  'contractValidationAccept', 'makerCheckerContract', 'brEffectivePublishedRead',
+  'retireImpactAndRetire', 'historyAndNoDomainWriteBoundary',
+]);
+
 function browserEvidenceComplete(browser) {
   const flow = browser?.requiredFlow;
   const p0_02 = browser?.p0_02_acceptance;
@@ -560,11 +492,13 @@ function browserEvidenceComplete(browser) {
     && p0_02?.['AC-04'] === 'PASS_IMMUTABLE_RULE_VERSION_AND_HISTORY_RETAINED'
     && p0_02?.['AC-05'] === 'PASS_CANDIDATE_CODESET_APPROVAL_BLOCKED'
     && browser?.captureBaseCommit === P0_10_REVIEW_BASE
-    && browser?.captureTreeDigest === workingTreeDigest()
-    && browser?.method?.includes('Chrome')
-    && flow && Object.values(flow).every((value) => value === true)
+    && typeof browser?.method === 'string' && browser.method.includes('Chrome')
+    && flow !== null && typeof flow === 'object' && !Array.isArray(flow)
+    && REQUIRED_BROWSER_FLOWS.every((key) => Object.hasOwn(flow, key) && flow[key] === true)
     && Array.isArray(browser.observations)
     && browser.observations.length >= 8
+    && browser?.captureTreeDigest === workingTreeDigest()
+    && verifySourceArtifacts(resolve(root,'.runtime/vnext'),browser?.sources,browser?.captureTreeDigest,'BROWSER_CAPTURE')
     && !browser.observations.some((value) => /待形成|不能作为.*凭证|PARTIAL|(?:^|[^A-Z0-9_])BLOCKED(?:$|[^A-Z0-9_])/u.test(value));
 }
 
@@ -572,6 +506,8 @@ function reviewEvidenceComplete(review) {
   return review?.status === 'PASS'
     && review.baseCommit === P0_10_REVIEW_BASE
     && review.treeDigest === workingTreeDigest()
+    && verifySourceArtifacts(resolve(root,'.runtime/vnext'),review.standards?.sources,review.treeDigest,'STANDARDS_REVIEW')
+    && verifySourceArtifacts(resolve(root,'.runtime/vnext'),review.spec?.sources,review.treeDigest,'SPEC_REVIEW')
     && review.standards?.status === 'PASS'
     && review.spec?.status === 'PASS'
     && Array.isArray(review.findings)
@@ -581,14 +517,35 @@ function reviewEvidenceComplete(review) {
 export function runGateM0({ packageCoverage, parser, integration, browser, review }) {
   const browserPass = browserEvidenceComplete(browser);
   const reviewPass = reviewEvidenceComplete(review);
+  const scenariosPass = ['fresh','upgrade','codegen'].every(key=>integration?.[key]==='PASS')
+    && Array.isArray(integration?.formats) && integration.formats.length===3
+    && ['CSV','JSON','XLSX'].every(format=>integration.formats.filter(item=>item.format===format && item.receive==='QUARANTINED' && item.parse==='PARSED' && item.validation==='BLOCKED' && item.replay==='SAME_RESULT' && item.inputSnapshot==='PRESERVED').length===1)
+    && Array.isArray(integration?.concurrencyAndPermission?.concurrency) && ['CSV','JSON','XLSX'].every(format=>integration.concurrencyAndPermission.concurrency.includes(format))
+    && integration.concurrencyAndPermission.permission==='ACCESS_DENIED' && integration.concurrencyAndPermission.ordinaryProjection==='NO_RAW_VALUE'
+    && ['unknownAndMissingFields','wrongSheet','activeContent','locationEvidence'].every(key=>parser?.a004?.[key]===true)
+    && Array.isArray(parser?.demoReports) && parser.demoReports.length===3
+    && Object.entries(DEMO_FORMATS).every(([dataset,format])=>parser.demoReports.filter(item=>item.dataset===dataset && item.format===format && item.status==='PARSED' && item.rows===1).length===1);
+  const contracts = integration?.contractExplanation;
+  const contractsPass = contracts?.status === 'PASS' && contracts.otherContracts === 50 && Array.isArray(contracts.evidence) && contracts.evidence.length === 53
+    && contractSources().drafts.every(source=>contracts.evidence.filter(item=>item.dataset===source.dataset && item.status==='PASS' && item.profile==='FULL' && item.approval==='DRAFT' && item.adapterReadiness==='NOT_READY' && item.fields===source.definition.fields.length).length===1);
+  const oldApproval = integration?.oldApproval;
+  const oldApprovalComplete = oldApproval?.status === 'PASS' && ['oldDigestRejected','oldPublishRejected','historyUnchanged','oldExecutionRejected'].every(key => oldApproval[key] === true);
+  const a001 = integration?.sourceAcceptance?.A001;
+  const a001Complete = a001?.status === 'PASS' && Array.isArray(a001.evidence)
+    && a001.evidence.length === 9
+    && ['CSV','JSON','XLSX'].every(format => ['EMPTY_FILE','NO_DATA','EMPTY_ROW'].every(kind =>
+      a001.evidence.filter(item => item.id === `${kind}_${format}` && item.format === format
+        && item.domainCountsStable === true && (kind === 'EMPTY_FILE' ? item.receive === 'REJECTED' : item.parse === 'REJECTED')).length === 1));
   const checks = {
     'P0-10-AC-01': integration?.noDomainWrites === true && integration?.domainCountsStable === true && integration?.domainCounts?.fresh !== undefined && integration?.domainCounts?.legacy !== undefined,
-    'P0-10-AC-02': packageCoverage?.approvalNegative === true && parser?.status === 'PASS' && parser.positiveFormats === 3 && parser?.a001?.status === 'PASS' && parser?.a004?.status === 'PASS' && integration?.sourceAcceptance?.A001?.status === 'PASS' && integration?.draftExecution?.status === 'PASS' && integration?.duplicateKey?.status === 'PASS' && integration?.orphan?.status === 'PASS',
-    'P0-10-AC-03': integration?.restartRecovery === true && integration?.restartEvidence?.status === 'PASS' && integration?.restartEvidence?.receiptBound === true && integration?.restartEvidence?.recovered === true,
+    'P0-10-AC-02': packageCoverage?.approvalNegative === true && parser?.status === 'PASS' && parser.positiveFormats === 3 && parser?.a001?.status === 'PASS' && parser?.a004?.status === 'PASS' && a001Complete && oldApprovalComplete && integration?.draftExecution?.status === 'PASS' && integration?.duplicateKey?.status === 'PASS' && integration?.orphan?.status === 'PASS',
+    'P0-10-AC-03': integration?.restartRecovery === true && integration?.restartEvidence?.status === 'PASS' && integration?.restartEvidence?.receiptBound === true && integration?.restartEvidence?.recovered === true && integration?.restartEvidence?.method === 'HTTP_SERVICE_RESTART' && integration?.restartEvidence?.firstProcessExited === true && integration?.restartEvidence?.portClosed === true && integration?.restartEvidence?.secondProcessExited === true,
     'P0-10-AC-04': packageCoverage?.syntheticOnly === true && parser?.syntheticOnly === true,
-    'P0-10-AC-05': packageCoverage?.status === 'PASS' && packageCoverage?.sourceFidelity === 'PASS' && packageCoverage?.sourcePolicyFidelity === 'PASS' && packageCoverage?.q42Verified === true && packageCoverage?.q42Evidence?.status === 'PASS' && parser?.q42?.status === 'PASS' && integration?.status === 'PASS' && browserPass && reviewPass,
+    'P0-10-AC-05': packageCoverage?.status === 'PASS' && packageCoverage?.sourceFidelity === 'PASS' && packageCoverage?.sourcePolicyFidelity === 'PASS' && packageCoverage?.q42Verified === true && packageCoverage?.q42Evidence?.status === 'PASS' && parser?.q42?.status === 'PASS' && integration?.status === 'PASS' && integration?.cleanupPassed === true && contractsPass && scenariosPass && browserPass && reviewPass,
   };
   const evidence = {
+    scenarios: scenariosPass,
+    contracts: contractsPass,
     packageCoverage: packageCoverage?.status === 'PASS',
     integration: integration?.status === 'PASS',
     browser: browserPass,
@@ -606,7 +563,9 @@ export function runGateM0({ packageCoverage, parser, integration, browser, revie
 
 export function readEvidence(path, fallbackStatus = 'NOT_RUN') {
   if (!existsSync(path)) return { status: fallbackStatus };
-  const value = readJson(path);
-  assert.ok(['PASS', 'PARTIAL', 'BLOCKED', 'NOT_RUN'].includes(value.status), 'EVIDENCE_STATUS_INVALID');
-  return value;
+  try {
+    const value = readJson(path);
+    assert.ok(value && ['PASS', 'PARTIAL', 'BLOCKED', 'NOT_RUN'].includes(value.status), 'EVIDENCE_STATUS_INVALID');
+    return value;
+  } catch {return {status:'BLOCKED',errorCode:'EVIDENCE_INVALID'};}
 }

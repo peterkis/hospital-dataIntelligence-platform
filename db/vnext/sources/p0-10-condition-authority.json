@@ -1,0 +1,1183 @@
+{
+  "source": "HDIP-Codex-Multicampus-Development-Pack-v3/inputs/dataset-v2/condition_rules.json",
+  "dispositionSource": "maps/conditional-rule-disposition.json",
+  "dispositionSha256": "f9e76e57d9298f95cff6bc0281a93367f4065e0c2ddb456109ba1f2840e1e1a3",
+  "rules": [
+    {
+      "dataset": "ORG01",
+      "field": "unified_credit_code",
+      "rule": "主体持有统一社会信用代码时必填；无法确认主体性质时不得以院区代码代替。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG01",
+      "field": "institution_code",
+      "rule": "作为持证医疗机构上线时必填，依据已核验的登记/执业证照填写；筹建主体不得伪造。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG01",
+      "field": "license_number",
+      "rule": "作为持证医疗机构上线时必填，依据已核验的登记/执业证照填写；筹建主体不得伪造。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG01",
+      "field": "license_valid_from",
+      "rule": "作为持证医疗机构上线时必填，依据已核验的登记/执业证照填写；筹建主体不得伪造。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG02",
+      "field": "campus_address",
+      "rule": "实际对外服务的物理院区启用时必填；行政区划绑定已确认的代码集版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG02",
+      "field": "admin_division_code",
+      "rule": "实际对外服务的物理院区启用时必填；行政区划绑定已确认的代码集版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG03",
+      "field": "license_scope",
+      "rule": "该主体在该院区开展需许可的医疗服务时必填，并核对证照覆盖。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG04",
+      "field": "established_on",
+      "rule": "新设、合并、拆分或正式调整组织时必填；历史证据缺失进入问题台账，不臆造日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG04",
+      "field": "establishment_doc",
+      "rule": "新设、合并、拆分或正式调整组织时必填；历史证据缺失进入问题台账，不臆造日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG05",
+      "field": "owner_org_id",
+      "rule": "视图拟正式发布时必填，明确唯一最终负责组织。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG06",
+      "field": "parent_org_id",
+      "rule": "非根节点必填；视图正式声明的根节点可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG07",
+      "field": "receiving_rule_ref",
+      "rule": "存在年龄、性别、病种、门急住或其他收治限制时必填；无特殊限制需经业务确认。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG07",
+      "field": "business_owner_id",
+      "rule": "院区业务单元启用前必填；指向有效人员，不填写自由文本姓名作为关联。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG08",
+      "field": "managing_unit_id",
+      "rule": "病区启用时必填；管理归口与可收治科室关联分别维护。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG08",
+      "field": "admission_rule_ref",
+      "rule": "有专科收治、混合病区、年龄或特殊隔离限制时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG10",
+      "field": "sharing_rule",
+      "rule": "同病区被多个科室使用或存在跨院区转入边界时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG12",
+      "field": "floor_label",
+      "rule": "地点属于楼层、房间或楼层内设施时必填；院区、楼宇层级可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG12",
+      "field": "room_number",
+      "rule": "地点属于具有房间编号的房间/诊室/手术间时必填；不得以显示名作为稳定ID。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG15",
+      "field": "appointment_doc",
+      "rule": "负责人关系正式启用或调整时必填，可引用受控签审记录。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG17",
+      "field": "permitted_scope",
+      "rule": "许可/备案/院内准入存在范围、级别或条件限制时必填；不以空值表示无限许可。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG20",
+      "field": "weight",
+      "rule": "分配方式为固定比例时必填，0≤weight≤1；同口径同期间同分配组之和为1。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG20",
+      "field": "rule_ref",
+      "rule": "分配方式不是固定比例时必填；按工时、工作量等动态规则引用，不编造固定比例。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG22",
+      "field": "resolution_rule",
+      "rule": "源代码在相同有效期下对应多个目标或存在拆分时必填，并可由上下文唯一裁决。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG24",
+      "field": "location_id",
+      "rule": "实体床位投入使用时必填；非实体候床/虚拟资源须另行明确类型。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG24",
+      "field": "charge_item_id",
+      "rule": "该床位需按床位类别收费时必填，指向已批准收费项目，不直接填价格。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG26",
+      "field": "migration_plan_ref",
+      "rule": "组织调整影响在途患者、账号、库存、财务或消费者映射时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG27",
+      "field": "from_target_type",
+      "rule": "撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG27",
+      "field": "from_target_id",
+      "rule": "撤销、合并、拆分、更名/迁移等存在前身对象的事件必填；纯新设可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG27",
+      "field": "to_target_type",
+      "rule": "新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG27",
+      "field": "to_target_id",
+      "rule": "新设、合并、拆分、迁移等存在承继对象的事件必填；无承继撤销可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "ORG27",
+      "field": "context_rule",
+      "rule": "一对多承继或不同业务采取不同迁移去向时必填；不按比例盲目改写历史业务外键。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER01",
+      "field": "gender_code",
+      "rule": "相关实名核验、执业或必要业务要求使用性别时填；非必要消费视图不下发。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER01",
+      "field": "identity_evidence_ref",
+      "rule": "身份核验状态为已核验时必填；共享表只保留安全引用。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER02",
+      "field": "evidence_ref",
+      "rule": "证件标识被确认为有效身份匹配依据时必填；不得用未经确认的号码建立同人关系。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER04",
+      "field": "join_date",
+      "rule": "来院时间被用于本轮在岗判定或任职有效期核验时必填；历史缺失单独标记。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER05",
+      "field": "position_level",
+      "rule": "岗位采用分级管理/聘任等级时必填；非分级岗位可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER05",
+      "field": "clinical_admin_class",
+      "rule": "岗位参与临床/行政分类报表或厂商岗位映射时必填；分类不自动授予系统权限。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER05",
+      "field": "qualification_requirement",
+      "rule": "岗位设置了任职资质、职称或培训准入要求时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER06",
+      "field": "unit_id",
+      "rule": "承担具体临床、护理、医技或药学业务的任职必填；纯院级行政任职可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER06",
+      "field": "campus_id",
+      "rule": "存在明确工作地点的院区任职必填；院级行政关系可空但不得解读为全院区授权。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER06",
+      "field": "appointment_date",
+      "rule": "岗位任命/聘任有正式起始日期时必填；不得复用工号或以录入日期替代。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER07",
+      "field": "specialty_code",
+      "rule": "按已批准标准专业目录管理时必填；没有可用标准映射时不得编造代码。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER07",
+      "field": "specialty_name",
+      "rule": "本次启用专业身份时必填；应与已采用专业代码对应，未编码专业须审签。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER08",
+      "field": "qualification_code",
+      "rule": "证书采用标准专业/类别/等级编码或被准入规则引用时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER08",
+      "field": "issuer",
+      "rule": "资质用于正式临床准入前必填；证据、核验日期和责任岗位均应可追溯。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER08",
+      "field": "evidence_ref",
+      "rule": "资质用于正式临床准入前必填；证据、核验日期和责任岗位均应可追溯。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER08",
+      "field": "verified_on",
+      "rule": "资质用于正式临床准入前必填；证据、核验日期和责任岗位均应可追溯。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER08",
+      "field": "verified_by",
+      "rule": "资质用于正式临床准入前必填；证据、核验日期和责任岗位均应可追溯。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER09",
+      "field": "practice_scope_code",
+      "rule": "该执业登记存在执业范围/专业编码时必填，按登记证照或权威登记资料核验。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER09",
+      "field": "multi_site_record_ref",
+      "rule": "经医务部门核定实际依法需要多机构执业备案时必填；不能按院区数量推断。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER10",
+      "field": "unit_id",
+      "rule": "执业服务关系限定到具体业务单元时必填；仅到院区须显式说明批准范围。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER11",
+      "field": "unit_id",
+      "rule": "专项医疗授权限定到特定单元时必填；院区级授权不得自动扩大至其他院区。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER11",
+      "field": "revocation_reason",
+      "rule": "授权被提前撤销时必填，并同时记载撤销生效时间与批准依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER12",
+      "field": "acquired_on",
+      "rule": "技术资格被用于聘任、监管或准入时必填；证据缺失时不得宣告资格已核验。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER13",
+      "field": "assignment_id",
+      "rule": "技术职务聘任与具体人事任职绑定时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER13",
+      "field": "title_qualification_id",
+      "rule": "该项职务聘任以已取得技术资格为前提时必填；特殊聘任须保留批准依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER14",
+      "field": "assignment_id",
+      "rule": "成员资格依托本院具体任职时必填；外部协作成员采用已审定的替代依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER14",
+      "field": "team_role",
+      "rule": "医疗组按组长、成员、带教等职责分工运作时必填，不由系统角色反推。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER15",
+      "field": "from_assignment_id",
+      "rule": "已有本院任职人员轮转/支援调出时必填；外部首次来院可空。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER15",
+      "field": "supervisor_person_id",
+      "rule": "学生、进修、规培等需带教审核或支援需指定接收责任人时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER17",
+      "field": "person_id",
+      "rule": "账号类型为HUMAN时必填；服务账号不得绑定虚构员工。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER17",
+      "field": "default_unit_id",
+      "rule": "应用需要默认登录单元时必填；默认值不等于完整授权范围。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER18",
+      "field": "separation_of_duties",
+      "rule": "角色涉及制单/审核/付款、处方/审核或其他互斥职责时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER19",
+      "field": "unit_id",
+      "rule": "权限按临床业务单元/科室隔离时必填；空范围不能被实现为全部科室。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER19",
+      "field": "assignment_id",
+      "rule": "账号权限依据员工岗位任职批准时必填；其他依据必须显式审签。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER19",
+      "field": "scope_expression",
+      "rule": "存在患者、资源、操作类别等额外权限过滤条件时必填，使用版本化可执行表达式。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER21",
+      "field": "resolution_evidence",
+      "rule": "完成同一人映射、冲突工号裁决或人工身份归并时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER23",
+      "field": "school_name",
+      "rule": "该学历学位经历用于人事确认、资格核验或监管报送时必填；尚在读应另设明确状态而非伪造毕业日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER23",
+      "field": "major_name",
+      "rule": "该学历学位经历用于人事确认、资格核验或监管报送时必填；尚在读应另设明确状态而非伪造毕业日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER23",
+      "field": "education_code",
+      "rule": "该学历学位经历用于人事确认、资格核验或监管报送时必填；尚在读应另设明确状态而非伪造毕业日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER23",
+      "field": "graduation_date",
+      "rule": "该学历学位经历用于人事确认、资格核验或监管报送时必填；尚在读应另设明确状态而非伪造毕业日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER23",
+      "field": "evidence_ref",
+      "rule": "该学历学位经历用于人事确认、资格核验或监管报送时必填；尚在读应另设明确状态而非伪造毕业日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER24",
+      "field": "employment_id",
+      "rule": "事件针对某一聘用关系的入职、离职、返聘或调动时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER24",
+      "field": "affected_assignments",
+      "rule": "事件影响一个以上任职或需批量停用关系时必填，并可列举受影响ID。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER24",
+      "field": "access_revocation_ticket",
+      "rule": "离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER24",
+      "field": "access_verified_at",
+      "rule": "离职、停岗或其他需撤权事件闭环前必填；仅修改人员状态不算撤权完成。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PER25",
+      "field": "public_title",
+      "rule": "拟向预约/互联网渠道展示职称时必填，取自经核验且当前有效的资格/聘任依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV01",
+      "field": "vendor_name",
+      "rule": "系统由外部厂商提供或维护时必填；院内自研可填院内研发责任主体。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV01",
+      "field": "system_version",
+      "rule": "系统参加上线或接口联调时必填，记录实际部署版本而非最新市场版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV01",
+      "field": "interface_contract_ref",
+      "rule": "系统作为主数据发布或消费方接入时必填，引用签审后的接口/文件契约。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV02",
+      "field": "authoritative_system_id",
+      "rule": "字段组已进入正式维护阶段时必填；人工来源同样须登记为受控来源。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV03",
+      "field": "manifest_sha256",
+      "rule": "批次正式发布时必填；草稿阶段可空，发布时间不能早于本次批准时间。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV03",
+      "field": "approved_by",
+      "rule": "批次正式发布时必填；草稿阶段可空，发布时间不能早于本次批准时间。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV03",
+      "field": "approved_at",
+      "rule": "批次正式发布时必填；草稿阶段可空，发布时间不能早于本次批准时间。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV03",
+      "field": "published_at",
+      "rule": "批次正式发布时必填；草稿阶段可空，发布时间不能早于本次批准时间。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV04",
+      "field": "requires_dataset_ids",
+      "rule": "该项导入存在前置外键、标准版本或消费依赖时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV05",
+      "field": "reconciliation_ref",
+      "rule": "消费回执宣告业务对账完成/验收通过时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV05",
+      "field": "signed_by",
+      "rule": "消费回执宣告业务对账完成/验收通过时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV07",
+      "field": "quality_rule_id",
+      "rule": "问题由已登记质量规则发现时必填；人工问题可先登记后补规则。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV07",
+      "field": "due_on",
+      "rule": "问题进入整改处理阶段时必填，按上线阻断程度确定截止日期。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV07",
+      "field": "resolution",
+      "rule": "问题宣告关闭时必填；仅修改状态而无复核依据不能闭环。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV07",
+      "field": "review_evidence",
+      "rule": "问题宣告关闭时必填；仅修改状态而无复核依据不能闭环。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV07",
+      "field": "exception_approval_ref",
+      "rule": "申请或实施临时例外时必填，不能用永久豁免替代整改。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV07",
+      "field": "exception_expires_on",
+      "rule": "申请或实施临时例外时必填，不能用永久豁免替代整改。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV08",
+      "field": "evidence_ref",
+      "rule": "任务标为已完成、已签审或已验收时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV08",
+      "field": "not_applicable_reason",
+      "rule": "任务判为本批次不适用时必填，并保留业务A批准。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV09",
+      "field": "schema_ref",
+      "rule": "参数将影响患者安全、计费、路由或授权且拟正式生效时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV09",
+      "field": "test_case_ref",
+      "rule": "参数将影响患者安全、计费、路由或授权且拟正式生效时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV10",
+      "field": "source_amount_or_quantity",
+      "rule": "对账对象涉及金额、库存或数量时必填，源目标单位/币种应一致。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV10",
+      "field": "target_amount_or_quantity",
+      "rule": "对账对象涉及金额、库存或数量时必填，源目标单位/币种应一致。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV10",
+      "field": "unit_or_currency",
+      "rule": "对账对象涉及金额、库存或数量时必填，源目标单位/币种应一致。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV10",
+      "field": "difference_explanation",
+      "rule": "源目标数量、金额或记录数存在差异时必填，不得以总体成功掩盖差异。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV10",
+      "field": "signed_reconciliation_ref",
+      "rule": "期初/在途切换对账宣告完成时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV12",
+      "field": "approved_by_role",
+      "rule": "变更获准执行时必填，审批者应与唯一最终负责岗位对应。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV12",
+      "field": "evidence_ref",
+      "rule": "变更获准执行时必填，审批者应与唯一最终负责岗位对应。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "GOV13",
+      "field": "denominator_definition",
+      "rule": "指标为比例、率或人均值等含分母的计算时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF01",
+      "field": "published_date",
+      "rule": "引入正式外部标准且原文给出相应日期时必填；缺失时留待核对，不推算。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF01",
+      "field": "effective_date",
+      "rule": "引入正式外部标准且原文给出相应日期时必填；缺失时留待核对，不推算。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF01",
+      "field": "license_terms",
+      "rule": "代码集涉及授权、版权、许可限制或外部术语分发时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF02",
+      "field": "definition",
+      "rule": "同名异义、业务解释不直观或权威原文提供代码项定义时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF02",
+      "field": "source_page_or_row",
+      "rule": "从外部规范/文件导入的代码项正式发布前必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF03",
+      "field": "context_rule",
+      "rule": "不是全局无条件一一对应映射时必填，含上下文、方向、时间与版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF04",
+      "field": "representation_format",
+      "rule": "数据元用于系统采集/交换字段约束时必填；以原标准表示格式为依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF04",
+      "field": "unit",
+      "rule": "数据元为具量纲的数量时必填；无量纲计数与代码型数据元不强填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF04",
+      "field": "source_page",
+      "rule": "数据元来自正式标准文档时必填并逐字核对标识符。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF05",
+      "field": "data_element_id",
+      "rule": "字段采用外部或院内已登记的数据元定义时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF05",
+      "field": "code_system_id",
+      "rule": "字段采用枚举/术语代码值域时必填；同一代码脱离版本不能确定语义。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF05",
+      "field": "code_system_version",
+      "rule": "字段采用枚举/术语代码值域时必填；同一代码脱离版本不能确定语义。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF05",
+      "field": "allowed_value_rule",
+      "rule": "字段采用数值范围、格式、正则或组合条件而非仅枚举代码时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "REF05",
+      "field": "verification_ref",
+      "rule": "字段标准绑定正式发布前必填，指向审签或核对证据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ01",
+      "field": "specialty_code",
+      "rule": "临床服务需按专业准入/统计分类时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ01",
+      "field": "body_site_code",
+      "rule": "检查、操作或治疗项目由解剖部位决定语义时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ01",
+      "field": "method_code",
+      "rule": "不同方法会改变项目含义、适用设备、收费或结果解释时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ01",
+      "field": "default_unit",
+      "rule": "项目按时长、次数、面积等临床数量计量时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ01",
+      "field": "safety_requirement",
+      "rule": "项目存在安全评估、禁忌、知情同意或特殊资质要求时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ02",
+      "field": "pricing_catalog_code",
+      "rule": "收费项目采用外部物价目录时必填；院内特殊项目需另有批准依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ02",
+      "field": "pricing_catalog_version",
+      "rule": "收费项目采用外部物价目录时必填；院内特殊项目需另有批准依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ02",
+      "field": "exclusion_rule",
+      "rule": "价格政策存在不得另收、打包排除或互斥收费限制时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ04",
+      "field": "rule_ref",
+      "rule": "临床与收费映射依赖数量、部位、耗时、打包等动态条件时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ06",
+      "field": "method_code",
+      "rule": "方法会改变参考区间或结果可比性时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ06",
+      "field": "unit_code",
+      "rule": "定量结果指标必填；定性结果用明确定义的结果值域而非数值单位。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ06",
+      "field": "precision_rule",
+      "rule": "定量结果指标必填；定性结果用明确定义的结果值域而非数值单位。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ06",
+      "field": "terminology_version",
+      "rule": "填有外部术语编码时必填，不承诺全院均已采用LOINC等术语。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ07",
+      "field": "conditional_rule",
+      "rule": "组合成员不是每次固定必做/必报时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ08",
+      "field": "minimum_volume",
+      "rule": "该标本采集规程规定最小采集量时必填且成对出现。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ08",
+      "field": "volume_unit",
+      "rule": "该标本采集规程规定最小采集量时必填且成对出现。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ08",
+      "field": "preparation_rule",
+      "rule": "项目存在相应患者准备、运输保存或拒收要求时必填；由检验专业组批准。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ08",
+      "field": "transport_rule",
+      "rule": "项目存在相应患者准备、运输保存或拒收要求时必填；由检验专业组批准。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ08",
+      "field": "rejection_rule",
+      "rule": "项目存在相应患者准备、运输保存或拒收要求时必填；由检验专业组批准。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ08",
+      "field": "label_template_ref",
+      "rule": "通过条码/采血系统自动打印标本标签时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ09",
+      "field": "notification_rule_ref",
+      "rule": "存在危急值判定范围时必填，引用闭环通知流程；本包不预设临床阈值。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ10",
+      "field": "controlled_class",
+      "rule": "药品涉及毒麻精神等管制属性时必填；具体类别依据批准目录。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ10",
+      "field": "antibiotic_level",
+      "rule": "药品属于本院分级管理抗菌药物目录时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ10",
+      "field": "clinical_route_code",
+      "rule": "药品需校验给药途径时必填；多种途径需关系化或受控值域，不拼接不明字符串。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ11",
+      "field": "approval_number",
+      "rule": "药品依法持有批准文号等注册标识时必填；其他情形保留有效准入依据。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ11",
+      "field": "insurance_product_code",
+      "rule": "药品参与医保结算/对码时必填并同步核验目录版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ11",
+      "field": "insurance_catalog_version",
+      "rule": "药品参与医保结算/对码时必填并同步核验目录版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ11",
+      "field": "storage_requirement",
+      "rule": "产品有温度、避光、特殊管制等储存要求时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ12",
+      "field": "rounding_rule",
+      "rule": "换算结果会出现非整数、余量或计费精度差异时必填；临床剂量不自动四舍五入。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ13",
+      "field": "registration_number",
+      "rule": "耗材依法需注册/备案时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ13",
+      "field": "udi_di",
+      "rule": "本批次产品适用UDI管理且采用该标识时两项均必填；不将UDI-PI批次序列混入DI。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ13",
+      "field": "udi_package_level",
+      "rule": "本批次产品适用UDI管理且采用该标识时两项均必填；不将UDI-PI批次序列混入DI。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ13",
+      "field": "insurance_material_code",
+      "rule": "耗材参与医保结算对码时必填，并通过REF映射管理采用版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ13",
+      "field": "charge_item_id",
+      "rule": "耗材可单独计费或需明确收费映射时必填，计费仍受政策约束。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ14",
+      "field": "unified_credit_code",
+      "rule": "供应主体依法持有统一社会信用代码时必填；境外主体用核准的替代标识体系。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ14",
+      "field": "qualification_ref",
+      "rule": "合作方进入正式供货/生产准入名单前必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ14",
+      "field": "approved_scope",
+      "rule": "合作方进入正式供货/生产准入名单前必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ15",
+      "field": "unit_id",
+      "rule": "药房/库房存在明确的管理业务单元时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ15",
+      "field": "location_id",
+      "rule": "实体药房/库房正式运行时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ15",
+      "field": "dispensing_rule_ref",
+      "rule": "承担发药、调配或特殊出入库业务且规则影响处方执行时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ16",
+      "field": "supply_party_id",
+      "rule": "院区产品准入通过指定供应来源/采购批准实施时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ16",
+      "field": "procurement_ref",
+      "rule": "院区产品准入通过指定供应来源/采购批准实施时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ16",
+      "field": "replacement_rule_ref",
+      "rule": "支持缺货替代、跨库调拨或同类替换时必填；未配置不得自动替药。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ17",
+      "field": "service_id",
+      "rule": "非药品医嘱对应临床服务项目时必填；与药品医嘱关联按医嘱类型互斥判定。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ17",
+      "field": "drug_product_id",
+      "rule": "药品医嘱指定具体药品商品时必填；不得同时当作收费项目ID。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ17",
+      "field": "required_privilege",
+      "rule": "医嘱涉及手术、抗菌、麻精药等特殊医疗行为权限时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ17",
+      "field": "billing_rule_ref",
+      "rule": "医嘱执行需触发收费或进行费用互斥校验时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ18",
+      "field": "frequency_id",
+      "rule": "给药规则限定频次执行语义时必填，不将q8h机械改成三个固定时间点。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ19",
+      "field": "applicable_unit_id",
+      "rule": "模板仅适用于指定业务单元时必填；院级模板必须显式标明覆盖范围。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ19",
+      "field": "standard_document_ref",
+      "rule": "模板需对照共享文档、病案或监管规范时必填并记录版本。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ20",
+      "field": "data_element_id",
+      "rule": "模板字段采用已登记数据元时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ20",
+      "field": "value_binding_id",
+      "rule": "模板字段采用已登记值域/格式绑定时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ20",
+      "field": "display_rule",
+      "rule": "字段有条件显示、自动带入或计算逻辑时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ21",
+      "field": "applicable_unit_id",
+      "rule": "医嘱组合仅对指定业务单元开放时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ21",
+      "field": "contraindication",
+      "rule": "组合存在病种、年龄、孕哺或其他不适用条件时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ22",
+      "field": "default_quantity",
+      "rule": "组合明细实际预设数量时必填；不是每个组合都必须预设数量。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ22",
+      "field": "clinical_dose_rule_ref",
+      "rule": "组合明细含药物剂量或需根据患者条件计算剂量时必填，经药学/临床审签。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ23",
+      "field": "practitioner_id",
+      "rule": "实名专家/医生预约资源必填；普通非实名号别可空且不能建成自然人。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ23",
+      "field": "eligibility_rule",
+      "rule": "预约资源存在接收年龄、病种、渠道等限制时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ23",
+      "field": "location_id",
+      "rule": "线下固定诊室资源正式开放预约时必填；虚拟诊室须显式区分。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ24",
+      "field": "limitation_rule",
+      "rule": "医保项目存在限支付条件、限定人群或频次时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ24",
+      "field": "settlement_rule_ref",
+      "rule": "本院系统需要据此参与结算计算或模拟计算时必填，并通过医保联调确认。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ25",
+      "field": "model_number",
+      "rule": "实物设备有厂家型号与出厂唯一编号且用于身份定位时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ25",
+      "field": "serial_number",
+      "rule": "实物设备有厂家型号与出厂唯一编号且用于身份定位时必填。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ25",
+      "field": "location_id",
+      "rule": "固定安装的临床设备接入使用时必填；移动设备位置由有效期关系维护。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ25",
+      "field": "interface_identifier",
+      "rule": "设备通过LIS、PACS等系统对接时必填，注明所属接口命名空间。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ26",
+      "field": "interval_value",
+      "rule": "频次采用固定间隔模式时两项必填且间隔值大于0。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ26",
+      "field": "interval_unit",
+      "rule": "频次采用固定间隔模式时两项必填且间隔值大于0。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ26",
+      "field": "fixed_times",
+      "rule": "频次采用固定时点模式时必填，明确时区及跨日规则。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ26",
+      "field": "as_needed_condition",
+      "rule": "频次采用按需模式时必填，并明确由谁判断触发。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "BIZ26",
+      "field": "standard_code_mapping",
+      "rule": "对外交换或厂商导入需要标准频次对码时必填并引用版本化映射。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PAT01",
+      "field": "patient_display_name",
+      "rule": "非未知身份患者登记时必填；未知身份遵循临时命名规则而不是伪造实名。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PAT01",
+      "field": "sex_code",
+      "rule": "身份资料或当前临床安全场景需要且已可核实时填写；未知不得由姓名猜测。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PAT01",
+      "field": "identity_evidence_ref",
+      "rule": "主索引身份核验状态标为已核实时必填；急诊临时身份可待核。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PAT04",
+      "field": "reviewer_role",
+      "rule": "人工复核队列完成处理时必填；未定应保留未定，不自动合并。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    },
+    {
+      "dataset": "PAT04",
+      "field": "decision",
+      "rule": "人工复核队列完成处理时必填；未定应保留未定，不自动合并。",
+      "mode": "DESIGN_REQUIREMENT_NOT_ALL_EXECUTABLE"
+    }
+  ]
+}
