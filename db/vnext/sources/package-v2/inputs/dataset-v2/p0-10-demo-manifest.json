@@ -1,0 +1,26 @@
+{
+  "task": "P0-10",
+  "scope": "SYNTHETIC",
+  "synthetic_only": true,
+  "materialization": "IN_MEMORY_RECEIPT",
+  "samples": [
+    {
+      "dataset": "ORG01",
+      "format": "CSV",
+      "sample_label": "DEMO_ORG01",
+      "execution": "PARSER_REPORT_ONLY"
+    },
+    {
+      "dataset": "ORG04",
+      "format": "JSON",
+      "sample_label": "DEMO_ORG04",
+      "execution": "PARSER_REPORT_ONLY"
+    },
+    {
+      "dataset": "PER01",
+      "format": "XLSX",
+      "sample_label": "DEMO_PER01",
+      "execution": "PARSER_REPORT_ONLY"
+    }
+  ]
+}

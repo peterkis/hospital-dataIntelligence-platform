@@ -9,7 +9,7 @@ import {saveExclusiveReceipt,localReceiptTime} from './receipt.mjs';
 /** Temporary test facility. No provider key or database password enters receipts. */
 export async function createValidationOwnerSession(receipt,{failAfterRoleCreation=false}={}){
  const base=resolveTarget(receipt);
- if(receipt.purpose!=='TEMPORARY_VALIDATION'||!['P0-05','P0-06','P0-07','P0-08','P0-09'].includes(receipt.taskId))throw new Error('TEMPORARY_VALIDATION_REQUIRED');
+ if(receipt.purpose!=='TEMPORARY_VALIDATION'||!['P0-05','P0-06','P0-07','P0-08','P0-09','P0-10'].includes(receipt.taskId))throw new Error('TEMPORARY_VALIDATION_REQUIRED');
  peer(receipt.name,identitySQL(receipt));
  const role='hdi_validation_'+randomUUID().replaceAll('-','').slice(0,16);
  const path=resolve(root,'.runtime/vnext/fresh',role+'.json');
@@ -47,16 +47,36 @@ export async function createValidationOwnerSession(receipt,{failAfterRoleCreatio
  }
 }
 
-/** Call only after the owned database is disposed; unknown dependencies fail closed. */
-export function dropValidationOwnerSession(session){
+/**
+ * Dispose the validation owner role after its receipt-owned database is gone.
+ * Application pools must be closed before dropTemporary; this final step only
+ * removes the role after verifying that no session or membership remains.
+ */
+export function dropValidationOwnerRole(session){
  const r=session.receipt;
- if(r.purpose!=='TEMPORARY_VALIDATION_OWNER'||!['P0-05','P0-06','P0-07','P0-08','P0-09'].includes(r.taskId)||!/^hdi_mc_vnext_[a-f0-9]{16}$/.test(r.database)||!/^hdi_validation_[a-f0-9]{16}$/.test(r.role)||!/^\d+$/.test(r.roleOid))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
+ if(r.purpose!=='TEMPORARY_VALIDATION_OWNER'||!['P0-05','P0-06','P0-07','P0-08','P0-09','P0-10'].includes(r.taskId)||!/^hdi_mc_vnext_[a-f0-9]{16}$/.test(r.database)||!/^hdi_validation_[a-f0-9]{16}$/.test(r.role)||!/^\d+$/.test(r.roleOid))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
  if(resolve(session.receiptPath)!==resolve(root,'.runtime/vnext/fresh',r.role+'.json'))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
  const disposed=JSON.parse(readFileSync(resolve(root,'.runtime/vnext/fresh',r.database+'.disposed.json'),'utf8'));
  if(disposed.name!==r.database||disposed.oid!==r.databaseOid||disposed.disposed!==true)throw new Error('OWNER_DATABASE_NOT_DISPOSED');
  const persisted=existsSync(session.receiptPath)?JSON.parse(readFileSync(session.receiptPath,'utf8')):r;
  const intent=JSON.parse(readFileSync(session.receiptPath+'.intent','utf8'));
  if(JSON.stringify(persisted)!==JSON.stringify(r)||JSON.stringify(intent)!==JSON.stringify({taskId:r.taskId,purpose:r.purpose,role:r.role,database:r.database,databaseOid:r.databaseOid,databaseRequestId:r.databaseRequestId}))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
+ const roleIdentity=peer('postgres',`SELECT oid::text||E'\\t'||rolname FROM pg_roles WHERE rolname=${quote(r.role)};`);
+ const roleInUse=peer('postgres',`SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE usesysid::text=${quote(r.roleOid)}) OR EXISTS(SELECT 1 FROM pg_auth_members WHERE roleid::text=${quote(r.roleOid)} OR member::text=${quote(r.roleOid)});`);
+ if(roleInUse==='t')throw new Error('OWNER_ROLE_IN_USE');
+ if(!roleIdentity){
+  // A prior cleanup may have dropped the exact role before its marker write.
+  // Record the observed terminal state without recreating or guessing anything.
+  const disposedPath=session.receiptPath+'.disposed.json';
+  if(existsSync(disposedPath)){
+   const marker=JSON.parse(readFileSync(disposedPath,'utf8'));
+   if(marker.role!==r.role||marker.roleOid!==r.roleOid||marker.databaseOid!==r.databaseOid||marker.disposed!==true)throw new Error('OWNER_DISPOSAL_MARKER_MISMATCH');
+   return;
+  }
+  saveExclusiveReceipt(disposedPath,{role:r.role,roleOid:r.roleOid,databaseOid:r.databaseOid,disposed:true,disposition:'ALREADY_ABSENT',time:localReceiptTime()});
+  return;
+ }
+ if(roleIdentity!==`${r.roleOid}\t${r.role}`)throw new Error('OWNER_ROLE_IDENTITY_MISMATCH');
  peer('postgres',`DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_database WHERE oid::text=${quote(r.databaseOid)} OR datname=${quote(r.database)}) THEN RAISE EXCEPTION 'OWNER_DATABASE_NOT_DISPOSED'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=${quote(r.role)} AND oid::text=${quote(r.roleOid)} AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole AND NOT rolreplication AND NOT rolbypassrls) THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH'; END IF;
@@ -64,3 +84,7 @@ export function dropValidationOwnerSession(session){
  END $$; DROP ROLE ${r.role};`);
  saveExclusiveReceipt(session.receiptPath+'.disposed.json',{role:r.role,roleOid:r.roleOid,databaseOid:r.databaseOid,disposed:true,time:localReceiptTime()});
 }
+
+// Compatibility name for existing validation runners; the operation removes a
+// role after database disposal and is not an application-session close.
+export const dropValidationOwnerSession = dropValidationOwnerRole;

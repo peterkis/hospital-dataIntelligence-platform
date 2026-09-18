@@ -74,6 +74,8 @@ GOV01 复用来源版本授权。GOV09 提供参数身份、不可变值结构�
 
 真实维护页门禁 BLOCKED：浏览器工具返回 `privileged native pipe bridge is not available; browser-client is not trusted`。没有改平台权限或改走通道绕过拒绝，也没有用 HTTP inject 冒充浏览器通过。
 
+2026-09-18 接续观察：使用本机 Chrome accessibility tree 完成了当前 P0-10 合成控制平面维护页的真实浏览器闭环；该观察用于解除上述历史浏览器桥传输阻断，并单独标记为 `SYNTHETIC`。在同一合成 owner 上又逐项观察了 P0-02 五项维护页 AC：未知字段与 `CODESET_AUTHORITY_INVALID` 拒绝、未解析条件导致校验 REVIEW 且批准/发布均 `CONTRACT_VALIDATION_BLOCKED`、同规则版本发布回放不新增历史事件、旧规则版本不可覆盖且历史保留、B/R 发布读取与废止影响闭环。真实 ORG/PER adapter 与业务实例仍为 `NOT_READY`，不被合成证据替代。详见 P0-10 的候选树绑定浏览器证据。
+
 后续证据：44 日志的八组受影响 vNext 回归全部通过；51 为 11→14 前缀升级、codegen 和专项/权限/事务/API 测试通过；46/47 使用连接 guard V2；54 为旧 wrapper 入口拒绝测试；55/57/64/68 为当前 OpenAPI 生成、维护页构建、typecheck、完整构建。61 实际执行 fresh，npm.ps1 消耗了两个参数，因此不算前缀升级；63 改用 npm.cmd，实际完成 11→14 和 codegen，新增期间断言在两次均通过。59 验证实际 PostgreSQL postmaster 变化后，历史 schema、参数批准定义、旧 R 与 ACK 丢失重放一致。实际浏览器证据与构建、HTTP inject 分开记录。
 
 首轮独立审查固定 tree `995c6868465a7720010582d0090f1f556a5ce723`。Spec 四项、Standards 四项阻断已进入修复：API 输入/输出矛盾、参数定义缺口、契约来源影响缺口、原请求授权、废止来源授权及代码集来源检查。修复不能代替最终树复核。Standards 另有摘要表达式重复的低优先级维护建议。
@@ -86,4 +88,4 @@ GOV01 复用来源版本授权。GOV09 提供参数身份、不可变值结构�
 
 67 日志最终八组受影响 vNext 回归全部 exit 0；68 完整构建 exit 0。最后托管会话 cleanupPassed=true，serviceInactiveAfterCleanup=true，databaseReachableAfterCleanup=false。运行时资源按本次所有权恢复，不能把临时库清理说成物理清除旧库。
 
-维护页仍是未通过的必需门禁。全部必需门禁通过前，不写 DONE、不创建完成提交。预期唯一提交仍为 `feat(vnext): add governed import contract registry`。后续只能在浏览器信任桥恢复后接续本票；不得因此开始 P0-03。最终 tree 与双轴复核结果写外部阻断交接 receipt，避免文档自引用 tree 哈希。
+历史交接中的维护页阻断保留为历史事实；当前合成 Chrome 证据已覆盖上述五项 UI AC，但不等同真实医院数据或生产就绪。最终 tree 与双轴复核结果写外部/ignored 证据，避免文档自引用 tree 哈希；不得因此开始 P0-03。

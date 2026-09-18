@@ -8,7 +8,7 @@ const {parseLocalDateTime}:typeof import('../../platform/local-datetime/local-da
 export type FileFormat = 'CSV' | 'JSON' | 'XLSX';
 type XlsxCellType='inlineStr'|'s';
 export interface ParserField { code: string; type: string }
-export interface ParserIssue { code: string; row: number; column: number }
+export interface ParserIssue { code: string; row: number; column: number; sheet?: string }
 export type CanonicalRow = Record<string,string>;
 export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:'CSV'|'JSON'|XlsxCellType}
 export interface ParserResult {
@@ -22,9 +22,10 @@ class ParseFailure extends Error {
   readonly code: string;
   readonly row: number;
   readonly column: number;
-  constructor(code: string, row = 0, column = 0) { super(code); this.code=code; this.row=row; this.column=column; }
+  readonly sheet: string | undefined;
+  constructor(code: string, row = 0, column = 0, sheet?: string) { super(code); this.code=code; this.row=row; this.column=column; this.sheet=sheet; }
 }
-const fail = (code: string, row = 0, column = 0): never => { throw new ParseFailure(code, row, column); };
+const fail = (code: string, row = 0, column = 0, sheet?: string): never => { throw new ParseFailure(code, row, column, sheet); };
 function exceedsCellLimit(value:string):boolean {
   let count=0;for(const character of value){if(++count>8192)return true;}
   return false;
@@ -257,12 +258,28 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     const namespace=root==='Types'?'http://schemas.openxmlformats.org/package/2006/content-types':root==='Relationships'?'http://schemas.openxmlformats.org/package/2006/relationships':'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
     if (!doc || doc.name !== root || doc.attrs['xmlns']!==namespace) return fail('XLSX_STRUCTURE'); return doc;
   };
-  for (const doc of docs.values()) {
-    const visit = (n: Xml) => { if(n.attrs['s']!==undefined||n.attrs['style']!==undefined)fail('XLSX_STYLE_UNSUPPORTED');if(n!==doc && Object.keys(n.attrs).some(a=>a==='xmlns'||a.startsWith('xmlns:')))fail('XML_NAMESPACE'); if (['f','externalLink','oleObject','extLst','AlternateContent'].includes(n.name) || n.attrs['TargetMode'] === 'External') fail('ACTIVE_CONTENT'); for (const child of n.children) visit(child); }; visit(doc);
+  for (const [name,doc] of docs) {
+    const sheetRelations=docs.get('xl/_rels/workbook.xml.rels')?.children.filter(r=>r.name==='Relationship' && r.attrs['Target']==='worksheets/sheet1.xml') ?? [];
+    const declaredSheets=docs.get('xl/workbook.xml')?.children.find(n=>n.name==='sheets')?.children.filter(n=>n.name==='sheet' && sheetRelations.some(r=>r.attrs['Id']===n.attrs['r:id'])) ?? [];
+    const location=name==='xl/worksheets/sheet1.xml'?(declaredSheets.length===1?declaredSheets[0]!.attrs['name'] ?? 'workbook':'workbook'):name;
+    const visit = (n: Xml, row=1, column=1) => {
+      if(name==='xl/worksheets/sheet1.xml' && n.name==='c') {
+        const cell=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(n.attrs['r'] ?? '');
+        if(cell) {
+          const cellColumn=[...cell[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0);
+          const cellRow=Number(cell[2]);
+          if(cellColumn<=16384 && cellRow<=1048576) {row=cellRow;column=cellColumn;}
+        }
+      }
+      if(n.attrs['s']!==undefined||n.attrs['style']!==undefined)fail('XLSX_STYLE_UNSUPPORTED',row,column,location);
+      if(n!==doc && Object.keys(n.attrs).some(a=>a==='xmlns'||a.startsWith('xmlns:')))fail('XML_NAMESPACE',row,column,location);
+      if (['f','externalLink','oleObject','extLst','AlternateContent'].includes(n.name) || n.attrs['TargetMode'] === 'External') fail('ACTIVE_CONTENT',row,column,location);
+      for (const child of n.children) visit(child,row,column);
+    }; visit(doc);
   }
   const types = get('[Content_Types].xml', 'Types'); only(types, ['Default','Override']);
   for(const entry of types.children)only(entry,[]);
-  if (types.children.some(n => /macro|vba|ole|external/i.test(n.attrs['ContentType'] ?? ''))) fail('ACTIVE_CONTENT');
+  if (types.children.some(n => /macro|vba|ole|external/i.test(n.attrs['ContentType'] ?? ''))) fail('ACTIVE_CONTENT',1,1,'workbook');
   const spreadsheetMime='application/vnd.openxmlformats-officedocument.spreadsheetml.';
   const partTypes:Record<string,string>={
     '/xl/workbook.xml':spreadsheetMime+'sheet.main+xml','/xl/worksheets/sheet1.xml':spreadsheetMime+'worksheet+xml',
@@ -300,7 +317,11 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
   for(const entry of sheets.children)only(entry,[]);
   for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
-  const sheet = sheets.children[0]; if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') fail('SHEET_CONTRACT');
+  const sheet = sheets.children[0];
+  if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') {
+    const offending = sheets.children.find(entry => entry.attrs['name'] !== 'Data');
+    fail('SHEET_CONTRACT',1,1,offending?.attrs['name'] ?? 'workbook');
+  }
   unsignedAttribute(sheet!.attrs['sheetId'],true);
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
   const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings'},'xl/','worksheets/sheet1.xml');
@@ -392,15 +413,17 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',rowNum); result.rows.push(row);
     }
     result.structuralStatus = 'PARSED';
-  } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column} : {code:'PARSER_FAILED',row:0,column:0}); }
+  } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
   return result;
 }
 function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): SourceObject[] {
   const header = table[0]; if (!header) return fail('NO_DATA');
   header.forEach((key,column)=>assertTextSafety(key,1,column+1));
-  if (new Set(header).size !== header.length) fail('DUPLICATE_FIELD',1);
-  if (header.length !== fields.length || header.some(h=>!fields.some(f=>f.code===h))) fail('FIELD_CONTRACT',1);
+  const duplicateColumn=header.findIndex((key,index)=>header.indexOf(key)!==index);
+  if (duplicateColumn>=0) fail('DUPLICATE_FIELD',1,duplicateColumn+1);
+  const unknownColumn=header.findIndex(h=>!fields.some(f=>f.code===h));
+  if (header.length !== fields.length || unknownColumn>=0) fail('FIELD_CONTRACT',1,unknownColumn>=0?unknownColumn+1:header.length+1);
   return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });
 }
 

@@ -20,5 +20,5 @@ export async function fixture(catalog:Awaited<ReturnType<typeof openCatalog>>,op
   await assert.rejects(catalog.importJobCommand('maker',create),/EXACT_CONTRACT_UNAVAILABLE/,'draft is never an execution contract');
   const approved=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:draft.id,expectedHead:draft.head,reviewDigest:draft.reviewDigest}));
   const contract=await catalog.contractCommand('reviewer',cmd('PUBLISH',{target:draft.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest}));
-  return {create,contract,dataset,cmd};
+  return {create,contract,dataset,cmd,draftExecution:{status:'PASS',decision:'EXACT_CONTRACT_UNAVAILABLE'}};
 }
