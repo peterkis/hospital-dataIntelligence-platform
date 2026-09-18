@@ -244,7 +244,7 @@ async function runA001DbBoundaries(catalog, receipt, create, fields) {
     const input = fileInput(create, item.format);
     if (item.receiveOnly) {
       await assert.rejects(catalog.receiveFile('maker', input, item.bytes), /CLOSED_FILE_REQUIRED/);
-      evidence.push({ id: item.id, format: item.format, receive: 'REJECTED', domainCountsStable: true });
+      evidence.push({ id: item.id, format: item.format, receive: 'REJECTED', errorCode:'CLOSED_FILE_REQUIRED', domainCountsStable: true });
     } else {
       const received = await catalog.receiveFile('maker', input, item.bytes);
       const parsedInput = {
@@ -258,7 +258,11 @@ async function runA001DbBoundaries(catalog, receipt, create, fields) {
       };
       const parsed = await catalog.parseFile('maker', parsedInput);
       assert.equal(parsed.structuralStatus, 'REJECTED', `${item.id}_NOT_REJECTED`);
-      evidence.push({ id: item.id, format: item.format, receive: 'QUARANTINED', parse: 'REJECTED', domainCountsStable: true });
+      const payload=await catalog.authorizeSensitiveRead('maker',{...dimensions,requestId:randomUUID(),artifactId:parsed.artifact.artifactId});
+      let errorCode;
+      try {errorCode=JSON.parse(Buffer.from(payload).toString('utf8')).result.issues[0].code;} finally {payload.fill(0);}
+      assert.equal(errorCode,item.id.replace(/_(CSV|JSON|XLSX)$/u,''),'A001_REJECTION_CATEGORY');
+      evidence.push({ id: item.id, format: item.format, receive: 'QUARANTINED', parse: 'REJECTED', errorCode, domainCountsStable: true });
     }
     const after = await verifyNoDomainWrites(receipt);
     assert.deepEqual(after.domainCounts, before.domainCounts, `${item.id}_DOMAIN_COUNTS_CHANGED`);

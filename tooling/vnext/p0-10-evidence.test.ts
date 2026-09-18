@@ -64,6 +64,7 @@ test('sealed evidence rejects changes to a completed report', () => {
   try {
     writeFileSync(join(directory, 'm0-result.json'), JSON.stringify({status:'BLOCKED'}));
     const digest = sealEvidence(directory, {schemaVersion: 'P0_10_EVIDENCE_V2', scope:'SYNTHETIC'});
+    expect(()=>verifyEvidencePackage(directory)).toThrow(/EXTERNAL_DIGEST_REQUIRED/);
     expect(verifyEvidencePackage(directory, digest).status).toBe('PASS');
     writeFileSync(join(directory, 'm0-result.json'), JSON.stringify({status:'PASS'}));
     expect(() => verifyEvidencePackage(directory, digest)).toThrow(/EVIDENCE_FILE_CHANGED/);

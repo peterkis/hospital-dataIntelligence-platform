@@ -37,10 +37,10 @@ describe("P0-10 M0 synthetic gate", () => {
   test('AC02 cannot accept A001 PASS without all nine independently observed cases', () => {
     const input = {
       packageCoverage:{approvalNegative:true},
-      parser:{status:'PASS',positiveFormats:3,a001:{status:'PASS'},a004:{status:'PASS'}},
+      parser:{status:'PASS',positiveFormats:3,a001:{status:'PASS',cases:['CSV','JSON','XLSX'].flatMap(format=>['EMPTY_FILE','NO_DATA','EMPTY_ROW'].map(kind=>({id:`${kind}_${format}`,format,errorCode:kind})))},a004:{status:'PASS'}},
       integration:{draftExecution:{status:'PASS'},duplicateKey:{status:'PASS'},orphan:{status:'PASS'},
         oldApproval:{status:'PASS',oldDigestRejected:true,oldPublishRejected:true,historyUnchanged:true,oldExecutionRejected:true},
-        sourceAcceptance:{A001:{status:'PASS',evidence:['CSV','JSON','XLSX'].flatMap(format=>['EMPTY_FILE','NO_DATA','EMPTY_ROW'].map(kind=>({id:`${kind}_${format}`,format,receive:kind==='EMPTY_FILE'?'REJECTED':'QUARANTINED',parse:kind==='EMPTY_FILE'?undefined:'REJECTED',domainCountsStable:true})))}}},
+        sourceAcceptance:{A001:{status:'PASS',evidence:['CSV','JSON','XLSX'].flatMap(format=>['EMPTY_FILE','NO_DATA','EMPTY_ROW'].map(kind=>({id:`${kind}_${format}`,format,receive:kind==='EMPTY_FILE'?'REJECTED':'QUARANTINED',parse:kind==='EMPTY_FILE'?undefined:'REJECTED',errorCode:kind==='EMPTY_FILE'?'CLOSED_FILE_REQUIRED':kind,domainCountsStable:true})))}}},
     };
     expect(runGateM0(input).checks['P0-10-AC-02']).toBe(true);
     expect(runGateM0({...input,integration:{...input.integration,oldApproval:undefined}}).checks['P0-10-AC-02']).toBe(false);
@@ -52,7 +52,7 @@ describe("P0-10 M0 synthetic gate", () => {
     try {
       cpSync(resolve('db/vnext/sources/package-v2'), directory, {recursive: true});
       expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
-      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000']) {
+      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000']) {
         writeFileSync(join(directory, 'q42-test.json'), JSON.stringify({sample: value}));
         expect(() => verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
         try { verifyQ42DeliveryArtifacts(directory); } catch(error) { expect(String(error)).not.toContain(value); }

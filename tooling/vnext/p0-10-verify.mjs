@@ -2,7 +2,7 @@ import {resolve} from 'node:path';
 import {readFileSync} from 'node:fs';
 import {verifyEvidencePackage,verifySourceArtifacts} from './p0-10-evidence.ts';
 const [directory,expectedDigest]=process.argv.slice(2);
-if(!directory || process.argv.length>4 || (expectedDigest && !/^[a-f0-9]{64}$/u.test(expectedDigest)))throw new Error('EVIDENCE_ARGUMENTS_REQUIRED');
+if(!directory || process.argv.length!==4 || !expectedDigest || !/^[a-f0-9]{64}$/u.test(expectedDigest))throw new Error('EXTERNAL_DIGEST_REQUIRED');
 const result=verifyEvidencePackage(resolve(directory),expectedDigest);
 for(const name of ['package-coverage','parser-boundaries','db-integration','browser','review','m0-result']){
   const report=JSON.parse(readFileSync(resolve(directory,name+'.json'),'utf8'));

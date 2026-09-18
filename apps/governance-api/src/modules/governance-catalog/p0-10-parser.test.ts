@@ -7,6 +7,12 @@ import {textWorkbook,zipText} from './issue-workbook.js';
 import {evaluateRuleSet} from './validation-rules.js';
 import {demoInput,sourceContractFields} from '../../../../../tooling/vnext/p0-10-gate.mjs';
 const DEMO_FORMATS={ORG01:'CSV',ORG04:'JSON',PER01:'XLSX'} as const;
+test('an extra worksheet is identified instead of blaming the valid Data sheet',()=>{
+  const files=Object.fromEntries(unzip(textWorkbook([['code'],['DEMO']])));
+  files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('</sheets>','<sheet name="Secret" sheetId="2" r:id="rId2"/></sheets>');
+  const result=parseBytes(zipText(files),'XLSX',[{code:'code',type:'text'}],'STRICT_V2');
+  expect(result.issues[0]).toEqual({code:'SHEET_CONTRACT',row:1,column:1,sheet:'Secret'});
+});
 function rejected(result:ParserResult, code:string) {
   assert.equal(result.structuralStatus, 'REJECTED', `PARSER_STATUS_${code}`);
   assert.equal(result.issues[0]?.code, code, `PARSER_CODE_${code}`);
@@ -24,9 +30,9 @@ export function verifyParserBoundaries() {
 
   const fields = sourceContractFields('ORG01');
   const header = fields.map((field) => field.code).join(',');
-  const a001EmptyFile = rejected(parseBytes(Buffer.alloc(0), 'CSV', fields, 'STRICT_V2'), 'EMPTY_FILE');
+  const a001EmptyFile = Object.fromEntries((['CSV','JSON','XLSX'] as const).map(format=>[format,rejected(parseBytes(Buffer.alloc(0),format,fields,'STRICT_V2'),'EMPTY_FILE')]));
   const a001NoData = {
-    CSV: rejected(parseBytes(Buffer.alloc(0), 'CSV', fields, 'STRICT_V2'), 'EMPTY_FILE'),
+    CSV: rejected(parseBytes(Buffer.from(header), 'CSV', fields, 'STRICT_V2'), 'NO_DATA'),
     JSON: rejected(parseBytes(Buffer.from('[]'), 'JSON', fields, 'STRICT_V2'), 'NO_DATA'),
     XLSX: rejected(parseBytes(textWorkbook([fields.map((field) => field.code)]), 'XLSX', fields, 'STRICT_V2'), 'NO_DATA'),
   };
@@ -64,8 +70,9 @@ export function verifyParserBoundaries() {
     && (result.issues[0]?.column ?? 0) >= 1;
   const a001 = {
     status: 'PASS',
-    emptyFile: a001EmptyFile.issues[0]?.code === 'EMPTY_FILE',
-    noData: Object.values(a001NoData).every((result) => result.structuralStatus === 'REJECTED'),
+    cases: Object.entries({EMPTY_FILE:a001EmptyFile,NO_DATA:a001NoData,EMPTY_ROW:a001EmptyRows}).flatMap(([kind,results])=>Object.entries(results).map(([format,result])=>({id:`${kind}_${format}`,format,errorCode:result.issues[0]?.code}))),
+    emptyFile: Object.values(a001EmptyFile).every(result=>result.issues[0]?.code === 'EMPTY_FILE'),
+    noData: Object.values(a001NoData).every((result) => result.issues[0]?.code === 'NO_DATA'),
     emptyRow: Object.values(a001EmptyRows).every((result) => result.issues[0]?.code === 'EMPTY_ROW'),
   };
   const a004 = {
@@ -138,6 +145,7 @@ export function verifyParserBoundaries() {
 
 test('P0-10 module parser reports preserve three formats and rejection locations',()=>{
   const result=verifyParserBoundaries();
+  expect(result.a001.cases).toHaveLength(9);
   expect(result.positiveFormats).toBe(3);
   expect(result.a004.locationEvidence).toBe(true);
   if(process.env['VNEXT_P0_10_PARSER_REPORT'])writeFileSync(process.env['VNEXT_P0_10_PARSER_REPORT'],JSON.stringify(result,null,2)+'\n',{flag:'wx'});

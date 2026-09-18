@@ -141,7 +141,7 @@ function artifactText(bytes, extension) {
 function sensitiveValue(value) {
   const normalized = value.normalize('NFKC').replace(/[\u2010-\u2015]/gu, '-');
   // Work within a single cell/value. Never join digits across artifact fields.
-  const separator='[()\\- \\t\\u00a0]*';
+  const separator='[()./\\- \\t\\u00a0]*';
   const phone=new RegExp('(?<![A-Za-z0-9_])(?:\\+86'+separator+'|0086'+separator+'|86'+separator+')?1'+separator+'[3-9](?:'+separator+'[0-9]){9}(?![A-Za-z0-9_])','u');
   const identity=new RegExp('(?<![A-Za-z0-9_])[0-9](?:'+separator+'[0-9]){16}'+separator+'[0-9Xx](?![A-Za-z0-9_])','u');
   return phone.test(normalized)||identity.test(normalized);
@@ -531,14 +531,16 @@ export function runGateM0({ packageCoverage, parser, integration, browser, revie
   const oldApproval = integration?.oldApproval;
   const oldApprovalComplete = oldApproval?.status === 'PASS' && ['oldDigestRejected','oldPublishRejected','historyUnchanged','oldExecutionRejected'].every(key => oldApproval[key] === true);
   const a001 = integration?.sourceAcceptance?.A001;
+  const parserA001Complete=Array.isArray(parser?.a001?.cases)&&parser.a001.cases.length===9
+    && ['CSV','JSON','XLSX'].every(format=>['EMPTY_FILE','NO_DATA','EMPTY_ROW'].every(kind=>parser.a001.cases.filter(item=>item.id===`${kind}_${format}`&&item.format===format&&item.errorCode===kind).length===1));
   const a001Complete = a001?.status === 'PASS' && Array.isArray(a001.evidence)
     && a001.evidence.length === 9
     && ['CSV','JSON','XLSX'].every(format => ['EMPTY_FILE','NO_DATA','EMPTY_ROW'].every(kind =>
       a001.evidence.filter(item => item.id === `${kind}_${format}` && item.format === format
-        && item.domainCountsStable === true && (kind === 'EMPTY_FILE' ? item.receive === 'REJECTED' : item.parse === 'REJECTED')).length === 1));
+        && item.domainCountsStable === true && (kind === 'EMPTY_FILE' ? item.receive === 'REJECTED' && item.errorCode==='CLOSED_FILE_REQUIRED' : item.parse === 'REJECTED' && item.errorCode===kind)).length === 1));
   const checks = {
     'P0-10-AC-01': integration?.noDomainWrites === true && integration?.domainCountsStable === true && integration?.domainCounts?.fresh !== undefined && integration?.domainCounts?.legacy !== undefined,
-    'P0-10-AC-02': packageCoverage?.approvalNegative === true && parser?.status === 'PASS' && parser.positiveFormats === 3 && parser?.a001?.status === 'PASS' && parser?.a004?.status === 'PASS' && a001Complete && oldApprovalComplete && integration?.draftExecution?.status === 'PASS' && integration?.duplicateKey?.status === 'PASS' && integration?.orphan?.status === 'PASS',
+    'P0-10-AC-02': packageCoverage?.approvalNegative === true && parser?.status === 'PASS' && parser.positiveFormats === 3 && parserA001Complete && parser?.a001?.status === 'PASS' && parser?.a004?.status === 'PASS' && a001Complete && oldApprovalComplete && integration?.draftExecution?.status === 'PASS' && integration?.duplicateKey?.status === 'PASS' && integration?.orphan?.status === 'PASS',
     'P0-10-AC-03': integration?.restartRecovery === true && integration?.restartEvidence?.status === 'PASS' && integration?.restartEvidence?.receiptBound === true && integration?.restartEvidence?.recovered === true && integration?.restartEvidence?.method === 'HTTP_SERVICE_RESTART' && integration?.restartEvidence?.firstProcessExited === true && integration?.restartEvidence?.portClosed === true && integration?.restartEvidence?.secondProcessExited === true,
     'P0-10-AC-04': packageCoverage?.syntheticOnly === true && parser?.syntheticOnly === true,
     'P0-10-AC-05': packageCoverage?.status === 'PASS' && packageCoverage?.sourceFidelity === 'PASS' && packageCoverage?.sourcePolicyFidelity === 'PASS' && packageCoverage?.q42Verified === true && packageCoverage?.q42Evidence?.status === 'PASS' && parser?.q42?.status === 'PASS' && integration?.status === 'PASS' && integration?.cleanupPassed === true && contractsPass && scenariosPass && browserPass && reviewPass,
@@ -554,6 +556,8 @@ export function runGateM0({ packageCoverage, parser, integration, browser, revie
   const blockers = Object.entries(checks).filter(([, passed]) => !passed).map(([id]) => id);
   return {
     status: blockers.length === 0 ? 'PASS' : 'BLOCKED',
+    validationClass: 'LOCAL_SYNTHETIC_STAGE',
+    formalAcceptance: 'NOT_RUN',
     checks,
     evidence,
     blockers,

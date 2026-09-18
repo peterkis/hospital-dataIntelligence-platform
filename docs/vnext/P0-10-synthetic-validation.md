@@ -4,6 +4,8 @@
 
 ## 范围
 
+本命令的结论为 `LOCAL_SYNTHETIC_STAGE`：用户批准的本地 P0 合成工程门禁。它不是 ADR-0081 的正式 ABG、容量认证或生产验收；正式验收状态始终为 `NOT_RUN`，必须另用其既有权威 runner 和冻结环境。采用证据清单和 Vitest 不会把 prototype wrapper 升格为正式验证环境。
+
 P0-10 复用现有 vNext control-plane、文件接收、严格解析、校验、Protected Artifact、workbench 摘要和 receipt-owned 临时数据库。它不会创建 ORG/PER 业务表，也不会把源契约草案当成可执行的业务适配器。
 
 包覆盖原始数据集定义 53 个、`field-routing.csv` 及契约路由共 866 个字段、196 条条件规则，其中 77 条属于 ORG/PER 当前范围。字段责任归属仍为 0；P0-10 只验证包覆盖和平台边界。

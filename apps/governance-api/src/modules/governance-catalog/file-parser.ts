@@ -302,7 +302,11 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
   for(const entry of sheets.children)only(entry,[]);
   for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
-  const sheet = sheets.children[0]; if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') fail('SHEET_CONTRACT',1,1,sheet?.attrs['name'] ?? 'workbook');
+  const sheet = sheets.children[0];
+  if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') {
+    const offending = sheets.children.find(entry => entry.attrs['name'] !== 'Data');
+    fail('SHEET_CONTRACT',1,1,offending?.attrs['name'] ?? 'workbook');
+  }
   unsignedAttribute(sheet!.attrs['sheetId'],true);
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
   const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings'},'xl/','worksheets/sheet1.xml');

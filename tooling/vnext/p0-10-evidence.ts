@@ -89,6 +89,7 @@ export function sealEvidence(directory: string, context: Record<string, unknown>
   return digest;
 }
 export function verifyEvidencePackage(directory: string, expectedDigest?: string) {
+  if(typeof expectedDigest!=='string' || !/^[a-f0-9]{64}$/u.test(expectedDigest))throw new Error('EXTERNAL_DIGEST_REQUIRED');
   const bytes = readFileSync(resolve(directory, 'manifest.json'));
   const digest = hash(bytes);
   if (digest !== readFileSync(resolve(directory, 'manifest.sha256'),'utf8').trim() || (expectedDigest && digest !== expectedDigest)) throw new Error('EVIDENCE_MANIFEST_CHANGED');
