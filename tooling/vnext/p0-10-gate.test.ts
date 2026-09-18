@@ -15,6 +15,23 @@ import {
 } from "./p0-10-gate.mjs";
 
 describe("P0-10 M0 synthetic gate", () => {
+  test('review axes require distinct verified reviewer identities',()=>{
+    const directory=mkdtempSync(resolve('.runtime/vnext/p0-10-review-test-'));
+    const digest=workingTreeDigest();
+    const source=(kind:string,producerId:string)=>{
+      const bytes=JSON.stringify({kind,producerId,candidateDigest:digest,status:'PASS',findings:[],sourceRef:'SYNTHETIC_UNIT_TEST_ONLY',observations:['synthetic review']});
+      const path=join(directory,kind+'.json');writeFileSync(path,bytes);
+      return {path:relative(resolve('.runtime/vnext'),path).replaceAll('\\','/'),sha256:createHash('sha256').update(bytes).digest('hex')};
+    };
+    try {
+      const review={status:'PASS',baseCommit:P0_10_REVIEW_BASE,treeDigest:digest,findings:[],standards:{status:'PASS',sources:[source('STANDARDS_REVIEW','reviewer-a')]},spec:{status:'PASS',sources:[source('SPEC_REVIEW','reviewer-a')]}};
+      expect(runGateM0({review}).evidence.review).toBe(false);
+      review.spec.sources=[source('SPEC_REVIEW',' reviewer-A ')];
+      expect(runGateM0({review}).evidence.review).toBe(false);
+      review.spec.sources=[source('SPEC_REVIEW','reviewer-b')];
+      expect(runGateM0({review}).evidence.review).toBe(true);
+    } finally {rmSync(directory,{recursive:true,force:true});}
+  });
   test('required execution evidence includes formats, security, fresh, upgrade and parser negatives',()=>{
     const input={integration:{fresh:'PASS',upgrade:'PASS',codegen:'PASS',formats:['CSV','JSON','XLSX'].map(format=>({format,receive:'QUARANTINED',parse:'PARSED',validation:'BLOCKED',replay:'SAME_RESULT',inputSnapshot:'PRESERVED'})),concurrencyAndPermission:{concurrency:['CSV','JSON','XLSX'],permission:'ACCESS_DENIED',ordinaryProjection:'NO_RAW_VALUE'}},
       parser:{a004:{status:'PASS',unknownAndMissingFields:true,wrongSheet:true,activeContent:true,locationEvidence:true},demoReports:[{dataset:'ORG01',format:'CSV',status:'PARSED',rows:1},{dataset:'ORG04',format:'JSON',status:'PARSED',rows:1},{dataset:'PER01',format:'XLSX',status:'PARSED',rows:1}]}};
@@ -66,7 +83,7 @@ describe("P0-10 M0 synthetic gate", () => {
     try {
       cpSync(resolve('db/vnext/sources/package-v2'), directory, {recursive: true});
       expect(verifyQ42DeliveryArtifacts(directory).status).toBe('PASS');
-      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000', 'TEL13800138000', 'ID11010119900101123X', '13800138000TEL']) {
+      for (const value of ['138-0013-8000', '+86 (138) 0013 8000', '１３８００１３８０００', '110101 19900101 123X', '电话138-0013-8000', '138-0013-8000张', '13800138000 13900139000', '138.0013.8000', '138/0013/8000', '138\u200b0013\u200b8000', '110101\u200b19900101\u200b123X', '138\u20600013\uFEFF8000', 'TEL13800138000', 'ID11010119900101123X', '13800138000TEL', '138−0013−8000']) {
         writeFileSync(join(directory, 'q42-test.json'), JSON.stringify({sample: value}));
         expect(() => verifyQ42DeliveryArtifacts(directory)).toThrow(/Q42_SENSITIVE_VALUE/);
         try { verifyQ42DeliveryArtifacts(directory); } catch(error) { expect(String(error)).not.toContain(value); }

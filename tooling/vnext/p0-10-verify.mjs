@@ -1,6 +1,6 @@
 import {resolve} from 'node:path';
 import {readFileSync} from 'node:fs';
-import {verifyEvidencePackage,verifySourceArtifacts} from './p0-10-evidence.ts';
+import {verifyEvidencePackage,verifySourceArtifacts,verifyIndependentReviews} from './p0-10-evidence.ts';
 const [directory,expectedDigest]=process.argv.slice(2);
 if(!directory || process.argv.length!==4 || !expectedDigest || !/^[a-f0-9]{64}$/u.test(expectedDigest))throw new Error('EXTERNAL_DIGEST_REQUIRED');
 const result=verifyEvidencePackage(resolve(directory),expectedDigest);
@@ -20,6 +20,7 @@ if(acceptance==='PASS'){
   for(const [sources,kind] of [[browser.sources,'BROWSER_CAPTURE'],[review.standards?.sources,'STANDARDS_REVIEW'],[review.spec?.sources,'SPEC_REVIEW']]){
     if(!verifySourceArtifacts(resolve(directory),sources,manifest.context.candidateDigest,kind,mapping))throw new Error('PACKAGED_PROVENANCE_INVALID');
   }
+  if(!verifyIndependentReviews(resolve(directory),review.standards?.sources,review.spec?.sources,manifest.context.candidateDigest,mapping))throw new Error('INDEPENDENT_REVIEWERS_REQUIRED');
   if(JSON.parse(readFileSync(resolve(directory,'guardrails.json'),'utf8')).status!=='PASS')throw new Error('GUARDRAIL_EVIDENCE_REQUIRED');
 }
 console.log(JSON.stringify({...result,acceptance}));

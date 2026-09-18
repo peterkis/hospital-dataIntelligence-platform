@@ -9,7 +9,7 @@ import { inspect, resolveTarget, root } from './lineage.mjs';
 import {textWorkbook} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
 import {unzipSync} from 'fflate';
 import {XMLParser, XMLValidator} from 'fast-xml-parser';
-import {verifySourceArtifacts} from './p0-10-evidence.ts';
+import {verifySourceArtifacts,verifyIndependentReviews} from './p0-10-evidence.ts';
 
 export const PACKAGE_EXPECTATIONS = Object.freeze({
   datasets: 53,
@@ -139,7 +139,7 @@ function artifactText(bytes, extension) {
 }
 
 function sensitiveValue(value) {
-  const normalized = value.normalize('NFKC').replace(/\p{Cf}/gu, '').replace(/[\u2010-\u2015]/gu, '-');
+  const normalized = value.normalize('NFKC').replace(/\p{Cf}/gu, '').replace(/[\p{Pd}\u2212]/gu, '-');
   // Whole-value UUIDs and cryptographic digests are metadata, not identifier labels.
   if(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(normalized)
     || /^(?:[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})$/iu.test(normalized))return false;
@@ -518,8 +518,7 @@ function reviewEvidenceComplete(review) {
   return review?.status === 'PASS'
     && review.baseCommit === P0_10_REVIEW_BASE
     && review.treeDigest === workingTreeDigest()
-    && verifySourceArtifacts(resolve(root,'.runtime/vnext'),review.standards?.sources,review.treeDigest,'STANDARDS_REVIEW')
-    && verifySourceArtifacts(resolve(root,'.runtime/vnext'),review.spec?.sources,review.treeDigest,'SPEC_REVIEW')
+    && verifyIndependentReviews(resolve(root,'.runtime/vnext'),review.standards?.sources,review.spec?.sources,review.treeDigest)
     && review.standards?.status === 'PASS'
     && review.spec?.status === 'PASS'
     && Array.isArray(review.findings)

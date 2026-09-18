@@ -115,6 +115,14 @@ export function verifySourceArtifacts(directory: string, sources: unknown, candi
     });
   } catch {return false;}
 }
+export function verifyIndependentReviews(directory:string,standards:unknown,spec:unknown,candidateDigest:string,mapping?:Record<string,string>) {
+  if(!Array.isArray(standards)||!Array.isArray(spec)
+    ||!verifySourceArtifacts(directory,standards,candidateDigest,'STANDARDS_REVIEW',mapping)
+    ||!verifySourceArtifacts(directory,spec,candidateDigest,'SPEC_REVIEW',mapping))return false;
+  const identities=(sources:{path:string}[])=>sources.map(source=>JSON.parse(readFileSync(safePath(directory,mapping?mapping[source.path]??'':source.path),'utf8')).producerId.trim().toLowerCase());
+  const first=identities(standards),second=identities(spec);
+  return first.every(id=>id.length>0)&&second.every(id=>id.length>0&&!first.includes(id));
+}
 export function packageSourceArtifacts(directory:string, destination:string, references: {path:string;sha256:string}[]) {
   const mappings: {sourcePath:string;packagedPath:string;sha256:string}[]=[];
   for(const ref of references) {
