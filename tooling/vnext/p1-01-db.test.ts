@@ -269,6 +269,24 @@ test('PR13 P1: unrelated credentials cannot jointly establish a full-window qual
  expect((await org.qualification('maker',{id:a.id,validFrom:common.validFrom,validTo:verify.validTo})).status).toBe('NOT_ESTABLISHED');
  expect((await org.qualification('maker',{id:a.id,validFrom:common.validFrom,validTo:'2026-07-01T00:00:00'})).status).toBe('LICENSED_REGISTRATION');
 });
+test.each([
+ {recordStatus:'DRAFT' as const,approvalRef:'DEMO_OFFICE_APPROVAL',error:'BLOCKED_DEPENDENCY'},
+ {recordStatus:'PUBLISHED' as const,approvalRef:null,error:'APPROVAL_REQUIRED'},
+])('PR13 revocation requires source intent and approval: $error',async(invalid)=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REVOKE',value:randomUUID()}];
+ const a=await apply(c),target={id:a.id,version:a.version};
+ const l=await apply({...common,action:'ADD_LICENSE',target,license:{namespace:'DEMO_REVOKE_LICENSE',number:'DEMO_'+randomUUID(),authority:'DEMO',evidence:artifact.artifactId,validFrom:'2026-01-01',validTo:null,endKind:'VERIFIED_UNBOUNDED'}});
+ await apply({...common,action:'VERIFY_REGISTRATION',target,licenseTargets:[{id:l.id,version:l.version}],creditCodeStatus:'NOT_APPLICABLE',evidence:artifact.artifactId});
+ const query={id:a.id,validFrom:common.validFrom,validTo:null};
+ expect((await org.qualification('maker',query)).status).toBe('LICENSED_REGISTRATION');
+ // Unavailable upstream material must not prevent a properly approved contraction.
+ const revoke={...common,action:'REVOKE_LICENSE' as const,target,licenseTarget:{id:l.id,version:l.version},reason:'DEMO_WITHDRAW',source:{...common.source,systemId:randomUUID(),versionId:randomUUID()}};
+ await expect(prepare({...revoke,source:{...revoke.source,recordStatus:invalid.recordStatus,approvalRef:invalid.approvalRef}})).rejects.toThrow(invalid.error);
+ expect((await org.qualification('maker',query)).status).toBe('LICENSED_REGISTRATION');
+ expect((await apply(revoke)).version).toBe('2');
+ expect((await org.qualification('maker',query)).status).toBe('NOT_ESTABLISHED');
+});
+
 test('historical registration materials retain their own source version during a new source review',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REGISTRY',value:randomUUID()}];const a=await apply(c),target={id:a.id,version:a.version};
  const l=await apply({...common,action:'ADD_LICENSE',target,license:{namespace:'DEMO_LICENSE',number:'DEMO_'+randomUUID(),authority:'DEMO',evidence:artifact.artifactId,validFrom:'2026-01-01',validTo:null,endKind:'VERIFIED_UNBOUNDED'}});

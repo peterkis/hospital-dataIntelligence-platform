@@ -65,8 +65,8 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    if('target' in c&&(!s?.versions.length||r.target!==c.target.id||
     (c.action!=='VERIFY_REGISTRATION'&&String(s.versions.at(-1)!.number)!==c.target.version)))throw new Error('STALE_VALIDATION');
    if('licenseTarget' in c){const current=s!.licenses.filter(v=>v.license_id===c.licenseTarget.id).at(-1);if(!current||String(current.number)!==c.licenseTarget.version)throw new Error('STALE_VALIDATION');}
-   if(c.action!=='REVOKE_LICENSE'&&!c.source.approvalRef)throw new Error('APPROVAL_REQUIRED');
-   if(c.action!=='REVOKE_LICENSE'&&c.source.recordStatus!=='PUBLISHED')throw new Error('BLOCKED_DEPENDENCY');
+   if(!c.source.approvalRef)throw new Error('APPROVAL_REQUIRED');
+   if(c.source.recordStatus!=='PUBLISHED')throw new Error('BLOCKED_DEPENDENCY');
    const collision=(await sql<{r:boolean}>`select organization_master.conflict(${r.target}::uuid,${JSON.stringify(keys(c))}::jsonb) r`.execute(scope)).rows[0]!.r;
    if(collision&&stage!=='FREEZE')throw new Error('IDENTIFIER_CONFLICT');
    if(c.action==='VERIFY_REGISTRATION'){
