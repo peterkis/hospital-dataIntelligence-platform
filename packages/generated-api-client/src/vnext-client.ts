@@ -27,3 +27,23 @@ export function createOrganizationClient(baseUrl:string,actor:string){
   resume:(body:operations['resumeOrganizationOutcome']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organizations/resume',{body}),
  };
 }
+
+export type CampusInput=operations['stageCampusCommand']['requestBody']['content']['application/json'];
+export function createCampusClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  stage:(body:CampusInput)=>client.POST('/api/vnext/campuses/inputs',{body}),
+  plan:(body:operations['planCampusCommand']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/plan',{body}),
+  review:(candidateId:string)=>client.POST('/api/vnext/campuses/review',{body:{candidateId}}),
+  approve:(body:operations['approveCampusCommand']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/approve',{body}),
+  apply:(body:operations['applyCampusCommand']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/apply',{body}),
+  resume:(body:operations['resumeCampusOutcome']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/resume',{body}),
+  withdraw:(body:operations['withdrawCampusInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/withdraw',{body}),
+  getCampusAsOf:(body:operations['getCampusAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/query',{body}),
+  list:(body:operations['listCampuses']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/list',{body}),
+  version:(body:operations['getCampusVersion']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/versions/query',{body}),
+  history:(id:string)=>client.POST('/api/vnext/campuses/history',{body:{id}}),
+  diff:(body:operations['compareCampusVersions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/diff',{body}),
+  restrictedInput:(id:string)=>client.POST('/api/vnext/campuses/restricted-input',{body:{id}}),
+ };
+}

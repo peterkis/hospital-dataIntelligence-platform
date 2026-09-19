@@ -772,6 +772,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/campuses/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageCampusCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planCampusCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawCampusInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCampusCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveCampusCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyCampusCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeCampusOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getCampusAsOf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listCampuses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/versions/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getCampusVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getCampusHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["compareCampusVersions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/campuses/restricted-input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCampusRestrictedInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8061,6 +8269,2131 @@ export interface operations {
                         validTo: string | null;
                         /** @enum {string} */
                         operatingPermission: "NOT_EVALUABLE";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageCampusCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    jobId: string;
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {string} */
+                    purpose: "IDENTITY_VERIFY";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        /** @enum {unknown} */
+                        kind: "CAMPUS_OPERATION" | "LOCATION";
+                        id: string;
+                    }[];
+                    command: {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "CREATE";
+                        facts: {
+                            campusCode: string;
+                            campusName: string;
+                            /** @enum {unknown} */
+                            nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind: "PHYSICAL";
+                            campusAddress: string | null;
+                            adminDivision: {
+                                contractId: string;
+                                contractVersionId: string;
+                                codeSystem: string;
+                                version: string;
+                                code: string;
+                                sourceVersionId: string;
+                            } | null;
+                            publicPhone: string | null;
+                            openingDate: string | null;
+                        };
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "REVISE";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        facts: {
+                            campusCode: string;
+                            campusName: string;
+                            /** @enum {unknown} */
+                            nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind: "PHYSICAL";
+                            campusAddress: string | null;
+                            adminDivision: {
+                                contractId: string;
+                                contractVersionId: string;
+                                codeSystem: string;
+                                version: string;
+                                code: string;
+                                sourceVersionId: string;
+                            } | null;
+                            publicPhone: string | null;
+                            openingDate: string | null;
+                        };
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "SCHEDULE_OPENING";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        plannedOpeningAt: string;
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "CANCEL_OPENING";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "ACTIVATE";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        /** @enum {unknown} */
+                        state: "TRIAL_RUNNING" | "RUNNING";
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "SUSPEND";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        revisionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    planCampusCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawCampusInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCampusCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        approvedBy: string | null;
+                        command: {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "CREATE";
+                            facts: {
+                                campusCode: string;
+                                campusName: string;
+                                /** @enum {unknown} */
+                                nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind: "PHYSICAL";
+                                campusAddress: string | null;
+                                adminDivision: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    code: string;
+                                    sourceVersionId: string;
+                                } | null;
+                                publicPhone: string | null;
+                                openingDate: string | null;
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                campusCode: string;
+                                campusName: string;
+                                /** @enum {unknown} */
+                                nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind: "PHYSICAL";
+                                campusAddress: string | null;
+                                adminDivision: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    code: string;
+                                    sourceVersionId: string;
+                                } | null;
+                                publicPhone: string | null;
+                                openingDate: string | null;
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "SCHEDULE_OPENING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            plannedOpeningAt: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "CANCEL_OPENING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "ACTIVATE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            /** @enum {unknown} */
+                            state: "TRIAL_RUNNING" | "RUNNING";
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "SUSPEND";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        };
+                        blockingIssues: "IDENTIFIER_CONFLICT"[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveCampusCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    applyCampusCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeCampusOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getCampusAsOf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    businessAt?: string;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        head: string;
+                        facts: {
+                            campusCode: string;
+                            campusName: string;
+                            /** @enum {unknown} */
+                            nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind: "PHYSICAL";
+                            campusAddress: string | null;
+                            adminDivision: {
+                                contractId: string;
+                                contractVersionId: string;
+                                codeSystem: string;
+                                version: string;
+                                code: string;
+                                sourceVersionId: string;
+                            } | null;
+                            publicPhone: string | null;
+                            openingDate: string | null;
+                        } | null;
+                        operationStatus: ("PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED") | "NOT_ESTABLISHED";
+                        plannedOpeningAt: string | null;
+                        /** @enum {string} */
+                        operatingPermission: "NOT_EVALUABLE";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listCampuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    after?: string;
+                    limit?: number;
+                    businessAt?: string;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        head: string;
+                        facts: {
+                            campusCode: string;
+                            campusName: string;
+                            /** @enum {unknown} */
+                            nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind: "PHYSICAL";
+                            campusAddress: string | null;
+                            adminDivision: {
+                                contractId: string;
+                                contractVersionId: string;
+                                codeSystem: string;
+                                version: string;
+                                code: string;
+                                sourceVersionId: string;
+                            } | null;
+                            publicPhone: string | null;
+                            openingDate: string | null;
+                        } | null;
+                        operationStatus: ("PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED") | "NOT_ESTABLISHED";
+                        plannedOpeningAt: string | null;
+                        /** @enum {string} */
+                        operatingPermission: "NOT_EVALUABLE";
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getCampusVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    version: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: string;
+                        versionId: string;
+                        /** @enum {unknown} */
+                        action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            campusCode: string;
+                            campusName: string;
+                            /** @enum {unknown} */
+                            nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind: "PHYSICAL";
+                            campusAddress: string | null;
+                            adminDivision: {
+                                contractId: string;
+                                contractVersionId: string;
+                                codeSystem: string;
+                                version: string;
+                                code: string;
+                                sourceVersionId: string;
+                            } | null;
+                            publicPhone: string | null;
+                            openingDate: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getCampusHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        head: string;
+                        versions: {
+                            version: string;
+                            versionId: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                campusCode: string;
+                                campusName: string;
+                                /** @enum {unknown} */
+                                nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind: "PHYSICAL";
+                                campusAddress: string | null;
+                                adminDivision: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    code: string;
+                                    sourceVersionId: string;
+                                } | null;
+                                publicPhone: string | null;
+                                openingDate: string | null;
+                            };
+                        }[];
+                        plans: {
+                            version: string;
+                            versionId: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            plannedOpeningAt: string | null;
+                        }[];
+                        operations: {
+                            version: string;
+                            versionId: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            /** @enum {unknown} */
+                            state: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    compareCampusVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    fromVersion: string;
+                    toVersion: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        fromVersion: string;
+                        toVersion: string;
+                        changes: {
+                            field: string;
+                            before: string | null;
+                            after: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCampusRestrictedInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {string} */
+                        purpose: "IDENTITY_VERIFY";
+                        /** @enum {unknown} */
+                        profile?: "CORE" | "FULL";
+                        dependencies?: {
+                            /** @enum {unknown} */
+                            kind: "CAMPUS_OPERATION" | "LOCATION";
+                            id: string;
+                        }[];
+                        command: {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "CREATE";
+                            facts: {
+                                campusCode: string;
+                                campusName: string;
+                                /** @enum {unknown} */
+                                nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind: "PHYSICAL";
+                                campusAddress: string | null;
+                                adminDivision: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    code: string;
+                                    sourceVersionId: string;
+                                } | null;
+                                publicPhone: string | null;
+                                openingDate: string | null;
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                campusCode: string;
+                                campusName: string;
+                                /** @enum {unknown} */
+                                nodeRole: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind: "PHYSICAL";
+                                campusAddress: string | null;
+                                adminDivision: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    codeSystem: string;
+                                    version: string;
+                                    code: string;
+                                    sourceVersionId: string;
+                                } | null;
+                                publicPhone: string | null;
+                                openingDate: string | null;
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "SCHEDULE_OPENING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            plannedOpeningAt: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "CANCEL_OPENING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "ACTIVATE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            /** @enum {unknown} */
+                            state: "TRIAL_RUNNING" | "RUNNING";
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "SUSPEND";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        };
                     };
                 };
             };

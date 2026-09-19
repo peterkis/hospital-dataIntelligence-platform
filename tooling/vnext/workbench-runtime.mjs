@@ -30,7 +30,7 @@ import { buildCatalogServer } from "../../apps/governance-api/src/composition/bu
 import { fixture } from "./protected-fixture.ts";
 import { fileOwner } from "./workbench-owner.ts";
 import {organizationKeys} from './organization-keys.mjs';
-import {openOrganization} from '../../apps/governance-api/src/modules/organization-master/index.ts';
+import {openOrganization,openCampus} from '../../apps/governance-api/src/modules/organization-master/index.ts';
 import {actor as syntheticActor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
 
 export async function startWorkbench({
@@ -41,10 +41,11 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization;
+  let session, catalog, app, organization, campus;
   const close = async () => {
     await app?.close();
     await organization?.close();
+    await campus?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -84,7 +85,7 @@ export async function startWorkbench({
     // An installed persistent Owner must never silently fall back to fresh keys.
     const organizationReady=persistent;
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
-    if(organizationReady)organization=openOrganization(connection,provider);
+    if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -136,6 +137,7 @@ export async function startWorkbench({
       catalog,
       finite ? "FINITE_E2E" : "CONTROL_PLANE",
       organization?{owner:organization,actor:r=>syntheticActor(r.headers)}:undefined,
+      campus?{owner:campus,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

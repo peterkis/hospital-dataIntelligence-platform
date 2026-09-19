@@ -9,7 +9,7 @@ import {localTime,licenseEnd,covered,intersect,subtract} from './time.js';
 export * from './contracts.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
-interface InputRecord {id:string;revision:string;digest:string;campus:'NORTH'|'SOUTH';target:string|null;envelope:Envelope;jobId:string;jobRevision:string;currentRevision:string;withdrawn:boolean}
+interface InputRecord {id:string;domain?:string;revision:string;digest:string;campus:'NORTH'|'SOUTH';target:string|null;envelope:Envelope;jobId:string;jobRevision:string;currentRevision:string;withdrawn:boolean}
 interface StoredPeriod {id:string;number:number;valid_from:string;valid_to:string|null;recorded_at:string;input_id:string}
 interface Version extends StoredPeriod {registration_evidence:string;identifier_keys:Array<{kind:string;namespace:string;digest:string}>;legal_name:string;entity_nature:string;authority:string|null;legal_address:string|null}
 interface LicenseVersion extends StoredPeriod {license_id:string;authority:string;end_kind:'FINITE'|'VERIFIED_UNBOUNDED'|'UNKNOWN';evidence:string;revoked:boolean}
@@ -23,7 +23,7 @@ function check<S>(schema:S,value:unknown){if(!Check(schema as never,value))throw
 export function openOrganization(connectionString:string,provider?:KeyProviderPort){
  const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
- const record=(scope:Scope,actor:string,id:string,permission='READ')=>sql<{r:InputRecord}>`select organization_master.input_read(${actor},${id}::uuid,${permission}) r`.execute(scope).then(r=>r.rows[0]!.r);
+ const record=(scope:Scope,actor:string,id:string,permission='READ')=>sql<{r:InputRecord}>`select organization_master.input_read(${actor},${id}::uuid,${permission}) r`.execute(scope).then(result=>{const r=result.rows[0]!.r;if(r.domain!==undefined&&r.domain!=='ORG01')throw new Error('ACCESS_DENIED');return r;});
  const snapshot=(scope:Scope,actor:string,id:string,campus:string)=>sql<{r:Snapshot}>`select organization_master.snapshot(${actor},${id}::uuid,${campus}) r`.execute(scope).then(r=>r.rows[0]!.r);
  const seal=(value:unknown,digest:string):Envelope=>{
   if(!provider)throw new Error('KEY_UNAVAILABLE');
@@ -107,8 +107,8 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    const digest=planBinding(provider,'ORGANIZATION_INPUT_V1',input);
    return (await sql<{r:{inputId:string;revisionId:string}}>`select organization_master.stage(${actor},${JSON.stringify({requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,campus:input.campus,target:'target' in input.command?input.command.target.id:null})}::jsonb,${digest},${JSON.stringify(seal(input,digest))}::jsonb) r`.execute(scope)).rows[0]!.r;
   });}catch(error){throw safe(error);}},
-  async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);try{const r=await root(async scope=>(await sql<{r:InputRecord}>`select organization_master.plan_input(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});}catch(error){throw safe(error);}},
-  async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);try{return await root(async scope=>(await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);}catch(error){throw safe(error);}},
+  async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);try{const r=await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:InputRecord}>`select organization_master.plan_input(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});}catch(error){throw safe(error);}},
+  async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);try{return await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;});}catch(error){throw safe(error);}},
   async read(actor:string,input:OrganizationRead):Promise<OrganizationFact[]>{check(ReadSchema,input);if(input.mode!=='LIST'&&!input.id||input.mode==='EXACT'&&!input.version)throw new Error('CLOSED_INPUT_REQUIRED');for(const t of [input.asOf,input.businessAt])if(t)localTime(t);try{return await root(async scope=>(await sql<{r:OrganizationFact[]}>`select organization_master.read(${actor},${JSON.stringify(input)}::jsonb) r`.execute(scope)).rows[0]!.r);}catch(error){throw safe(error);}},
   async qualification(actor:string,input:{id:string;validFrom:string;validTo:string|null;asOf?:string}){
    check(QualificationSchema,input);const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);if(to!==null&&to<=from)throw new Error('CLOSED_INPUT_REQUIRED');
@@ -174,3 +174,5 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
  return service;
 }
 export type OrganizationOwner=ReturnType<typeof openOrganization>;
+
+export {openCampus,type CampusOwner,CampusStageSchema,CampusCommandSchema,CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,Facts as CampusFactsSchema} from './campus/index.js';

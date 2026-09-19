@@ -327,6 +327,42 @@ export interface OrganizationMasterAccess {
   subject_id: string;
 }
 
+export interface OrganizationMasterCampus {
+  id: Generated<string>;
+  scope: string;
+}
+
+export interface OrganizationMasterCampusCode {
+  campus_id: string;
+  code: string;
+}
+
+export interface OrganizationMasterCampusEvent {
+  action: string;
+  campus_id: string;
+  id: Generated<string>;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface OrganizationMasterCampusOperation {
+  event_id: string;
+  state: string;
+}
+
+export interface OrganizationMasterCampusPlan {
+  event_id: string;
+  planned_opening_at: string | null;
+}
+
+export interface OrganizationMasterCampusVersion {
+  event_id: string;
+  facts: Json;
+}
+
 export interface OrganizationMasterIdentifier {
   input_id: string;
   kind: string;
@@ -338,6 +374,7 @@ export interface OrganizationMasterIdentifier {
 export interface OrganizationMasterInput {
   campus: string;
   digest: string;
+  domain: Generated<string>;
   envelope: Json;
   id: Generated<string>;
   identity_code: string;
@@ -536,6 +573,12 @@ export interface DB {
   "governance_catalog.validation_run": GovernanceCatalogValidationRun;
   "governance_catalog.version": GovernanceCatalogVersion;
   "organization_master.access": OrganizationMasterAccess;
+  "organization_master.campus": OrganizationMasterCampus;
+  "organization_master.campus_code": OrganizationMasterCampusCode;
+  "organization_master.campus_event": OrganizationMasterCampusEvent;
+  "organization_master.campus_operation": OrganizationMasterCampusOperation;
+  "organization_master.campus_plan": OrganizationMasterCampusPlan;
+  "organization_master.campus_version": OrganizationMasterCampusVersion;
   "organization_master.identifier": OrganizationMasterIdentifier;
   "organization_master.input": OrganizationMasterInput;
   "organization_master.input_request": OrganizationMasterInputRequest;
