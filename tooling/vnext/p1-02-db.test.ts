@@ -1,7 +1,9 @@
+import {provisionCampusAuthority} from './campus-authority.mjs';
 import {createCampusClient} from '../../packages/generated-api-client/src/index.js';
 import {campusCodeSet} from './campus-fixture.js';
 import {test,expect,afterAll} from 'vitest';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHmac} from 'node:crypto';
+import {canonicalPlan,planBinding} from '../../apps/governance-api/src/modules/governance-catalog/plan-binding.js';
 import {readFileSync,existsSync,writeFileSync,unlinkSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {createTemporary,dropTemporary} from './fresh.mjs';
@@ -16,6 +18,7 @@ import {peer,quote} from './lineage.mjs';
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
 const exec=(s:string)=>peer(receipt.name,s);
 const provider=new LocalSyntheticKeyProvider();
+provisionCampusAuthority(receipt,provider);
 const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!;
 const org=openCampus(connection,provider);
 const catalog=await openCatalog(connection,provider);
@@ -242,4 +245,38 @@ test('suspension stays visible after descriptive facts expire, including HTTP an
  expect(await org.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00',asOf:old})).toMatchObject({facts:null,operationStatus:'NOT_ESTABLISHED'});
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
  try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const client=createCampusClient(`http://127.0.0.1:${address.port}`,'maker');const result=await client.getCampusAsOf({id:a.id,businessAt:'2026-08-01T00:00:00'});expect(result.response.status).toBe(200);expect(result.data).toMatchObject({facts:null,operationStatus:'SUSPENDED'});}finally{await app.close();}
+});
+
+ test('service SQL cannot forge a campus write without the approved coordinator command',async()=>{
+ const staged=await org.stage('maker',input(create())),pool=new Pool({connectionString:connection}),client=await pool.connect();
+ try{await client.query('BEGIN');await expect(client.query('SELECT organization_master.campus_write($1,$2::uuid,$3::jsonb)',['maker',staged.inputId,JSON.stringify(create())])).rejects.toThrow('ACCESS_DENIED');}
+ finally{await client.query('ROLLBACK');client.release();await pool.end();}
+ });
+
+test('service SQL rejects fabricated attestations and cannot read the coordinator authority',async()=>{
+ const staged=await org.stage('maker',input(create())),requestId=randomUUID(),candidate=await org.plan('maker',{inputId:staged.inputId,requestId});
+ await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await org.approveApplyUnit('reviewer',candidate);
+ const pool=new Pool({connectionString:connection});
+ try{
+  await expect(pool.query('SELECT key_hex FROM vnext_control.campus_write_authority')).rejects.toThrow('permission denied');
+  const ticket=JSON.stringify({actor:'maker',inputId:staged.inputId,candidateId:candidate.candidateId,digest:candidate.digest,command:create(),transaction:'0'});
+  await expect(pool.query('SELECT organization_master.campus_write_approved($1,$2)',[ticket,'0'.repeat(64)])).rejects.toThrow('ACCESS_DENIED');
+ }finally{await pool.end();}
+});
+test('SQL attestation cannot be changed or replayed in another transaction',async()=>{
+ const staged=await org.stage('maker',input(create())),requestId=randomUUID(),candidate=await org.plan('maker',{inputId:staged.inputId,requestId});
+ await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await org.approveApplyUnit('reviewer',candidate);
+ const pool=new Pool({connectionString:connection}),client=await pool.connect();let ticket='',signature='';
+ try{
+  await client.query('BEGIN');const transaction=(await client.query('SELECT pg_current_xact_id()::text id')).rows[0].id;
+  ticket=canonicalPlan({actor:'maker',inputId:staged.inputId,candidateId:candidate.candidateId,digest:candidate.digest,command:create(),transaction});
+  signature=createHmac('sha256',Buffer.from(planBinding(provider,'CAMPUS_SQL_AUTHORITY_V1',{}),'hex')).update(ticket).digest('hex');
+  for(const changed of [ticket.replace('"actor":"maker"','"actor":"maker-alias"'),ticket.replace('"sourceOperationStatus":"PLANNING"','"sourceOperationStatus":"RUNNING"')]){
+   await client.query('SAVEPOINT tamper');
+   await expect(client.query('SELECT organization_master.campus_write_approved($1,$2)',[changed,signature])).rejects.toThrow('ACCESS_DENIED');
+   await client.query('ROLLBACK TO SAVEPOINT tamper');
+  }
+  await client.query('ROLLBACK');
+  await expect(client.query('SELECT organization_master.campus_write_approved($1,$2)',[ticket,signature])).rejects.toThrow('ACCESS_DENIED');
+ }finally{await client.query('ROLLBACK');client.release();await pool.end();}
 });

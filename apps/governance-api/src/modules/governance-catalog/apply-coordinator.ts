@@ -30,7 +30,7 @@ export interface ApplyOwnerPort {
  // FREEZE may retain an Owner-declared blocked observation for review. Omitted
  // means full admission; approval and apply never accept a freeze-only decision.
  validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,stage?:'FREEZE'):Promise<void>;
- apply(scope:CatalogTransactionScope,actor:string,command:OwnerCommand,resolved:ReadonlyMap<number,OwnerFact>):Promise<{ok:true;fact:OwnerFact}|{ok:false}>;
+ apply(scope:CatalogTransactionScope,actor:string,command:OwnerCommand,resolved:ReadonlyMap<number,OwnerFact>,approval:{candidateId:string;digest:string}):Promise<{ok:true;fact:OwnerFact}|{ok:false}>;
  exactRead(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,fact:OwnerFact):Promise<OwnerFact|null>;
 }
 interface Candidate {id:string;maker:string;makerIdentity:string;input:PlanOwnerUnitInput;digest:string;envelope:Envelope;approvedBy:string|null}
@@ -179,7 +179,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     const unit=unseal(c);await recheck(scope,actor,c);
     const resolved=new Map<number,OwnerFact>();
     for(const command of unit.commands){
-     const result=await port().apply(scope,actor,command,resolved);
+     const result=await port().apply(scope,actor,command,resolved,{candidateId:c.id,digest:c.digest});
      if(!result.ok)throw new Error('OWNER_REJECTED');
      resolved.set(command.row,result.fact);
     }

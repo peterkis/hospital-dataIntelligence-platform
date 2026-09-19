@@ -273,6 +273,7 @@
     "vnext:p1-01:deploy": "node --import tsx tooling/vnext/p1-01-deploy.mjs",
     "vnext:p1-02:deploy": "node --import tsx tooling/vnext/p1-02-deploy.mjs",
     "vnext:p1-02:cleanup": "node tooling/vnext/p1-02-cleanup.mjs",
+    "vnext:p1-02:approved-deploy": "node --import tsx tooling/vnext/p1-02-approved-deploy.mjs",
     "vnext:p1-02:review-deploy": "node --import tsx tooling/vnext/p1-02-review-deploy.mjs",
     "vnext:p1-02:fix-deploy": "node --import tsx tooling/vnext/p1-02-list-deploy.mjs"
   },

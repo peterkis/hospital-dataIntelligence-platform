@@ -1,3 +1,4 @@
+import {createHmac} from 'node:crypto';
 import {sql} from 'kysely';
 import {applyCoordinator,type ApplyOwnerPort,type OwnerFact,canonicalPlan,planBinding,authenticateRegistrationEvidence,type KeyProviderPort} from '../../governance-catalog/index.js';
 import {localTime,covered,subtract,intersect} from '../time.js';
@@ -62,7 +63,12 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    const expected=c.action==='CREATE'?'PLANNING':c.action==='ACTIVATE'?c.state:c.action==='SUSPEND'?'SUSPENDED':current;
    if(c.sourceOperationStatus!==expected)throw new Error('BLOCKED_DEPENDENCY');
   },
-  async apply(scope,actor,command){return {ok:true,fact:(await sql<{r:OwnerFact}>`select organization_master.campus_write(${actor},${command.value['inputId']}::uuid,${command.value['command']}::jsonb) r`.execute(scope)).rows[0]!.r};},
+  async apply(scope,actor,command,_resolved,approval){
+   const transaction=(await sql<{id:string}>`select pg_current_xact_id()::text id`.execute(scope)).rows[0]!.id;
+   const ticket=canonicalPlan({actor,inputId:command.value['inputId'],command:JSON.parse(command.value['command']!),candidateId:approval.candidateId,digest:approval.digest,transaction});
+   const key=Buffer.from(planBinding(provider,'CAMPUS_SQL_AUTHORITY_V1',{}),'hex');
+   try{const signature=createHmac('sha256',key).update(ticket).digest('hex');return {ok:true,fact:(await sql<{r:OwnerFact}>`select organization_master.campus_write_approved(${ticket},${signature}) r`.execute(scope)).rows[0]!.r};}finally{key.fill(0);}
+  },
   async exactRead(scope,actor,_input,fact){if(fact.owner!=='organization-master/campus')return null;const s=await snapshot(scope,actor,fact.id);return s.events.some(e=>String(e.number)===fact.version)?fact:null;}
  };
  const coordinator=applyCoordinator(db,provider,port);

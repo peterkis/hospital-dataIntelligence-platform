@@ -1,3 +1,4 @@
+import {provisionCampusAuthority} from './campus-authority.mjs';
 import {predecessorTables,predecessorDigest} from './p1-02-preservation.mjs';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
@@ -14,22 +15,22 @@ import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalo
 import {fixture} from './protected-fixture.ts';
 import {campusCodeSet} from './campus-fixture.ts';
 const args=process.argv.slice(2);if(args.some(a=>a!=='--resume')||args.length>1)throw new Error('CLOSED_COMMAND_REQUIRED');
-const files=migrationFiles();assert.equal(files.length,59,'This deployment entry is bounded to the reviewed 0059 chain');
+const files=migrationFiles();assert.equal(files.length,60,'This deployment entry is bounded to the reviewed 0060 chain');
 const receipt=readReceipt(),before=await inspect(receipt),checkpointPath='.runtime/vnext/p1-02/migration-0057.json';
 const keyHash=()=>createHash('sha256').update(readFileSync('.runtime/vnext/p1-01/keys.secret.json')).digest('hex');const previousKeys=keyHash();
 let checkpoint;
 if(before.ledger.length===56&&!args.length){
  const tables=predecessorTables(before.tables),digest=predecessorDigest(receipt,tables);const after=await migrate(receipt,files);
  assert.equal(predecessorDigest(receipt,tables),digest);assert.equal(after.identity.oid,before.identity.oid);
- assert.equal(after.ledger.length,59);assert.deepEqual(after.ledger.slice(0,56),before.ledger);assert.equal(after.ledger[56].id,'0057_campus_master');
+ assert.equal(after.ledger.length,60);assert.deepEqual(after.ledger.slice(0,56),before.ledger);assert.equal(after.ledger[56].id,'0057_campus_master');
  checkpoint={status:'MIGRATION_VERIFIED',databaseOid:receipt.oid,requestId:receipt.requestId,previousPrefix:56,ledger:after.ledger,retainedTables:tables.length,previousDataPreserved:true,keyFileHash:previousKeys};
  mkdirSync('.runtime/vnext/p1-02',{recursive:true});writeFileSync(checkpointPath,JSON.stringify(checkpoint,null,2),{flag:'wx'});
-}else if([57,58,59].includes(before.ledger.length)&&args[0]==='--resume'){
- checkpoint=JSON.parse(readFileSync(checkpointPath,'utf8'));assert.equal(checkpoint.status,'MIGRATION_VERIFIED');assert.equal(checkpoint.databaseOid,receipt.oid);assert.equal(checkpoint.requestId,receipt.requestId);assert.equal(checkpoint.keyFileHash,previousKeys);assert.ok([57,58,59].includes(checkpoint.ledger.length));assert.deepEqual(before.ledger.slice(0,checkpoint.ledger.length),checkpoint.ledger);const tables=predecessorTables(before.tables),digest=predecessorDigest(receipt,tables),after=await migrate(receipt,files);assert.equal(predecessorDigest(receipt,tables),digest);assert.deepEqual(after.ledger.slice(0,before.ledger.length),before.ledger);
+}else if([57,58,59,60].includes(before.ledger.length)&&args[0]==='--resume'){
+ checkpoint=JSON.parse(readFileSync(checkpointPath,'utf8'));assert.equal(checkpoint.status,'MIGRATION_VERIFIED');assert.equal(checkpoint.databaseOid,receipt.oid);assert.equal(checkpoint.requestId,receipt.requestId);assert.equal(checkpoint.keyFileHash,previousKeys);assert.ok([57,58,59,60].includes(checkpoint.ledger.length));assert.deepEqual(before.ledger.slice(0,checkpoint.ledger.length),checkpoint.ledger);const tables=predecessorTables(before.tables),digest=predecessorDigest(receipt,tables),after=await migrate(receipt,files);assert.equal(predecessorDigest(receipt,tables),digest);assert.deepEqual(after.ledger.slice(0,before.ledger.length),before.ledger);
 }else throw new Error('P1_02_PREFIX_OR_RECOVERY_CHECKPOINT_REQUIRED');
 const connection=await ownerServiceConnection(),ownership=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));
 peer(receipt.name,identitySQL(receipt));grantOrganization(receipt,ownership.role);
-const provider=organizationKeys(receipt),campus=openCampus(connection,provider),catalog=await openCatalog(connection,provider);let app;
+const provider=organizationKeys(receipt);provisionCampusAuthority(receipt,provider);const campus=openCampus(connection,provider),catalog=await openCatalog(connection,provider);let app;
 try{
  const f=await fixture(catalog,{textField:true,ruleVersion:'ORG02_MANUAL_EVIDENCE_TRANSPORT_V1'}),job=await catalog.importJobCommand('maker',{...f.create,requestId:randomUUID()});
  peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;`);

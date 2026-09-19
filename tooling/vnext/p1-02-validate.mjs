@@ -12,8 +12,8 @@ export function grantOrganization(receipt,role){
  INSERT INTO organization_master.access SELECT a,'00000000-0000-0000-0000-000000000000'::uuid,'NORTH',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','REVIEW','READ_RESTRICTED']) p ON CONFLICT DO NOTHING;`);
 }
 if(process.argv[1]?.replaceAll('\\','/').endsWith('/p1-02-validate.mjs')){
- const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade','--upgrade-57','--upgrade-58'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
- const prefix=args.includes('--upgrade-58')?58:args.includes('--upgrade-57')?57:56;const upgrading=args.includes('--upgrade')||args.includes('--upgrade-57')||args.includes('--upgrade-58');
+ const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade','--upgrade-57','--upgrade-58','--upgrade-59'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
+ const prefix=args.includes('--upgrade-59')?59:args.includes('--upgrade-58')?58:args.includes('--upgrade-57')?57:56;const upgrading=args.includes('--upgrade')||args.includes('--upgrade-57')||args.includes('--upgrade-58')||args.includes('--upgrade-59');
  const owned=createTemporary('P1-02');let owner;
  try{
   let before,beforeLedger,tables;

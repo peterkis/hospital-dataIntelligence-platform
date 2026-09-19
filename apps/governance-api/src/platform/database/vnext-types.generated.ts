@@ -489,6 +489,11 @@ export interface VnextControlAuditStreamGrant {
   stream_id: string;
 }
 
+export interface VnextControlCampusWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlCreationPolicy {
   campus: string;
   creator_actor: string;
@@ -593,6 +598,7 @@ export interface DB {
   "vnext_control.audit": VnextControlAudit;
   "vnext_control.audit_chain": VnextControlAuditChain;
   "vnext_control.audit_stream_grant": VnextControlAuditStreamGrant;
+  "vnext_control.campus_write_authority": VnextControlCampusWriteAuthority;
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.object_grant": VnextControlObjectGrant;
