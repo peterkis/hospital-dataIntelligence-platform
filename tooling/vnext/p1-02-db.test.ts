@@ -2,7 +2,9 @@ import {createCampusClient} from '../../packages/generated-api-client/src/index.
 import {campusCodeSet} from './campus-fixture.js';
 import {test,expect,afterAll} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync,writeFileSync,unlinkSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {createTemporary,dropTemporary} from './fresh.mjs';
 import {openCampus,type CampusCommand} from '../../apps/governance-api/src/modules/organization-master/campus/index.js';
 import {openOrganization} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
@@ -178,4 +180,35 @@ test('an approved campus change is blocked after exact code-set retirement; cont
  await expect(org.applyUnit('maker',pending)).rejects.toThrow('BLOCKED_DEPENDENCY');
  const stop=await apply({...common,action:'SUSPEND',target:target(a),evidence:randomUUID(),sourceOperationStatus:'SUSPENDED',reason:'DEMO_STOP'});
  expect(await org.read('maker',{id:stop.id})).toMatchObject({operationStatus:'SUSPENDED'});
+});
+
+test('historical lists exclude not-yet-known campus identities before output pagination',async()=>{
+ const first=await apply(create()),cutoff=(await org.history('maker',first.id)).versions[0]!.recordedAt;
+ const later=await apply(create());
+ expect(await org.list('maker',{asOf:'2025-01-01T00:00:00',limit:1})).toEqual([]);
+ expect(await org.list('maker',{after:first.id,asOf:cutoff,limit:1})).toEqual([]);
+ expect((await org.list('maker',{after:first.id,limit:1})).map(v=>v.id)).toEqual([later.id]);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
+ try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const client=createCampusClient(`http://127.0.0.1:${address.port}`,'maker');const result=await client.list({after:first.id,asOf:cutoff,limit:1});expect(result.response.status).toBe(200);expect(result.data).toEqual([]);}finally{await app.close();}
+});
+
+test('cleanup CLI accepts Windows uppercase receipt extension and actually disposes its owned database',()=>{
+ const owned=createTemporary('P1-02');const marker=owned.receiptPath.replace(/\.json$/u,'.disposed.json');
+ try{
+  const run=spawnSync(process.execPath,['tooling/vnext/p1-02-cleanup.mjs',owned.receiptPath.replace(/\.json$/u,'.JSON')],{cwd:process.cwd(),env:process.env,encoding:'utf8',windowsHide:true});
+  expect(run.status,run.stderr).toBe(0);
+  expect(peer('postgres',`SELECT count(*) FROM pg_database WHERE datname=${quote(owned.receipt.name)};`)).toBe('0');
+  expect(JSON.parse(readFileSync(marker,'utf8'))).toMatchObject({name:owned.receipt.name,oid:owned.receipt.oid,disposed:true});
+  const replay=spawnSync(process.execPath,['tooling/vnext/p1-02-cleanup.mjs',owned.receiptPath],{cwd:process.cwd(),env:process.env,encoding:'utf8',windowsHide:true});expect(replay.status,replay.stderr).toBe(0);
+ }finally{if(!existsSync(marker))dropTemporary(owned.receipt);}
+});
+
+test('cleanup rejects a mismatched disposal receipt without claiming success or deleting a database',()=>{
+ const owned=createTemporary('P1-02'),marker=owned.receiptPath.replace(/\.json$/u,'.disposed.json');
+ try{
+  writeFileSync(marker,JSON.stringify({name:owned.receipt.name,oid:'0',disposed:true}),{flag:'wx'});
+  const result=spawnSync(process.execPath,['tooling/vnext/p1-02-cleanup.mjs',owned.receiptPath],{cwd:process.cwd(),env:process.env,encoding:'utf8',windowsHide:true});
+  expect(result.status).not.toBe(0);expect(result.stdout).not.toContain('OWNED_TEMPORARY_CLEANED');
+  expect(peer('postgres',`SELECT count(*) FROM pg_database WHERE datname=${quote(owned.receipt.name)};`)).toBe('1');
+ }finally{if(existsSync(marker))unlinkSync(marker);dropTemporary(owned.receipt);}
 });

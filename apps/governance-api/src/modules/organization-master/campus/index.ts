@@ -88,7 +88,16 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
   async readRestrictedInput(actor:string,id:string){check(Id,id);return root(async scope=>unseal(await record(scope,actor,id,'READ_RESTRICTED')));},
   history,
   read,exact,
-  async list(actor:string,input:{after?:string;limit?:number;businessAt?:string;asOf?:string}){check(CampusListSchema,input);const ids=await root(async scope=>(await sql<{r:string[]}>`select organization_master.campus_list(${actor},${input.after??null}::uuid,${input.limit??100}) r`.execute(scope)).rows[0]!.r);return Promise.all(ids.map(id=>read(actor,{id,...(input.businessAt?{businessAt:input.businessAt}:{}),...(input.asOf?{asOf:input.asOf}:{})})));},
+  async list(actor:string,input:{after?:string;limit?:number;businessAt?:string;asOf?:string}){
+   check(CampusListSchema,input);
+   const page=await root(async scope=>{
+    const now=(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(scope)).rows[0]!.v;
+    const businessAt=localTime(input.businessAt??now),asOf=localTime(input.asOf??now);
+    const ids=(await sql<{r:string[]}>`select organization_master.campus_list(${actor},${input.after??null}::uuid,${input.limit??100},${asOf}::timestamp) r`.execute(scope)).rows[0]!.r;
+    return {ids,businessAt,asOf};
+   });
+   return Promise.all(page.ids.map(id=>read(actor,{id,businessAt:page.businessAt,asOf:page.asOf})));
+  },
   async diff(actor:string,input:{id:string;fromVersion:string;toVersion:string}){
    check(CampusDiffSchema,input);const a=await exact(actor,{id:input.id,version:input.fromVersion}),b=await exact(actor,{id:input.id,version:input.toVersion});
    const before={...a.facts,validFrom:a.validFrom,validTo:a.validTo},after={...b.facts,validFrom:b.validFrom,validTo:b.validTo};

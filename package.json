@@ -272,7 +272,8 @@
     "vnext:p1-01:validate": "node --import tsx tooling/vnext/p1-01-validate.mjs",
     "vnext:p1-01:deploy": "node --import tsx tooling/vnext/p1-01-deploy.mjs",
     "vnext:p1-02:deploy": "node --import tsx tooling/vnext/p1-02-deploy.mjs",
-    "vnext:p1-02:cleanup": "node tooling/vnext/p1-02-cleanup.mjs"
+    "vnext:p1-02:cleanup": "node tooling/vnext/p1-02-cleanup.mjs",
+    "vnext:p1-02:fix-deploy": "node --import tsx tooling/vnext/p1-02-list-deploy.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",
