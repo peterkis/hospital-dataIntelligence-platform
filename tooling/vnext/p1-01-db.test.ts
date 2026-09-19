@@ -287,6 +287,32 @@ test.each([
  expect((await org.qualification('maker',query)).status).toBe('NOT_ESTABLISHED');
 });
 
+test('PR13 ordinary license reads expose issuing authority for each version without restricted access',async()=>{
+ const a=await apply(create()),target={id:a.id,version:a.version};
+ const license={namespace:'DEMO_AUTHORITY',number:'DEMO_SECRET_'+randomUUID(),authority:'DEMO_FIRST_AUTHORITY',evidence:artifact.artifactId,validFrom:'2026-01-01',validTo:'2027-01-01',endKind:'FINITE' as const};
+ const command={...common,action:'ADD_LICENSE' as const,target,license};
+ const l=await apply(command);
+ await apply({...common,action:'REVISE_LICENSE',target,licenseTarget:{id:l.id,version:l.version},license:{...license,authority:'DEMO_RENEWAL_AUTHORITY',validFrom:'2027-01-01',validTo:'2028-01-01'}});
+ const staged=await org.stage('maker',input(command));
+ exec(`DELETE FROM organization_master.access WHERE actor='maker' AND subject_id=${quote(a.id)}::uuid AND permission='READ_RESTRICTED';`);
+ await expect(org.readRestrictedInput('maker',staged.inputId)).rejects.toThrow('ACCESS_DENIED');
+ const expected=[{version:'1',authority:'DEMO_FIRST_AUTHORITY'},{version:'2',authority:'DEMO_RENEWAL_AUTHORITY'}];
+ const queries=[{id:a.id,licenseId:l.id,mode:'HISTORY' as const},{id:a.id,licenseId:l.id,mode:'EXACT' as const,version:'1'},{id:a.id,licenseId:l.id,mode:'EFFECTIVE' as const,businessAt:'2027-06-01T00:00:00'}];
+ expect((await org.historyDetails('maker',a.id)).licenses).toMatchObject(expected);
+ for(const [i,query] of queries.entries())expect(await org.readLicenses('maker',query)).toMatchObject(i===0?expected:[expected[i-1]]);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
+ try{
+  const address=app.server.address();if(!address||typeof address==='string')throw new Error('NO_ADDRESS');
+  for(const [i,body] of [{id:a.id},...queries].entries()){
+   const response=await fetch(`http://127.0.0.1:${address.port}/api/vnext/organizations/${i===0?'history-details':'licenses/query'}`,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(body)});
+   expect(response.status).toBe(200);const data=await response.json();
+   const rows=i===0&&data!==null&&typeof data==='object'&&'licenses' in data?data.licenses:data;
+   expect(rows).toMatchObject(i<2?expected:[expected[i-2]]);
+   expect(JSON.stringify(data)).not.toContain(license.number);expect(JSON.stringify(data)).not.toContain(artifact.artifactId);
+  }
+ }finally{await app.close();}
+});
+
 test('historical registration materials retain their own source version during a new source review',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.identifiers=[{kind:'INSTITUTION_CODE',namespace:'DEMO_REGISTRY',value:randomUUID()}];const a=await apply(c),target={id:a.id,version:a.version};
  const l=await apply({...common,action:'ADD_LICENSE',target,license:{namespace:'DEMO_LICENSE',number:'DEMO_'+randomUUID(),authority:'DEMO',evidence:artifact.artifactId,validFrom:'2026-01-01',validTo:null,endKind:'VERIFIED_UNBOUNDED'}});

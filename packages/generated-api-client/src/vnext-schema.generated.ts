@@ -7419,6 +7419,7 @@ export interface operations {
                         recordedAt: string;
                         id: string;
                         version: string;
+                        authority: string;
                         endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
                         revoked: boolean;
                     }[];
@@ -7534,6 +7535,7 @@ export interface operations {
                             recordedAt: string;
                             id: string;
                             version: string;
+                            authority: string;
                             endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
                             revoked: boolean;
                         }[];

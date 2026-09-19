@@ -12,7 +12,7 @@ interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 interface InputRecord {id:string;revision:string;digest:string;campus:'NORTH'|'SOUTH';target:string|null;envelope:Envelope;jobId:string;jobRevision:string;currentRevision:string;withdrawn:boolean}
 interface StoredPeriod {id:string;number:number;valid_from:string;valid_to:string|null;recorded_at:string;input_id:string}
 interface Version extends StoredPeriod {registration_evidence:string;identifier_keys:Array<{kind:string;namespace:string;digest:string}>;legal_name:string;entity_nature:string;authority:string|null;legal_address:string|null}
-interface LicenseVersion extends StoredPeriod {license_id:string;end_kind:'FINITE'|'VERIFIED_UNBOUNDED'|'UNKNOWN';evidence:string;revoked:boolean}
+interface LicenseVersion extends StoredPeriod {license_id:string;authority:string;end_kind:'FINITE'|'VERIFIED_UNBOUNDED'|'UNKNOWN';evidence:string;revoked:boolean}
 interface Verification {id:string;subject_version:string;licenses:string[];valid_from:string;valid_to:string|null;recorded_at:string}
 interface Snapshot {versions:Version[];licenses:LicenseVersion[];verifications:Verification[];identifierKinds:string[]}
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
@@ -138,7 +138,7 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
   async historyDetails(actor:string,id:string){
    check(Id,id);try{return await root(async scope=>{
     const s=(await sql<{r:Snapshot}>`select organization_master.qualification_snapshot(${actor},${id}::uuid) r`.execute(scope)).rows[0]!.r;
-    return {organizationId:id,licenses:s.licenses.map(l=>({id:l.license_id,version:String(l.number),versionId:l.id,validFrom:stamp(l.valid_from),validTo:l.valid_to&&stamp(l.valid_to),endKind:l.end_kind,revoked:l.revoked,recordedAt:stamp(l.recorded_at)})),verifications:s.verifications.map(v=>({id:v.id,subjectVersionId:v.subject_version,licenseVersionIds:v.licenses,validFrom:stamp(v.valid_from),validTo:v.valid_to&&stamp(v.valid_to),recordedAt:stamp(v.recorded_at)}))};
+    return {organizationId:id,licenses:s.licenses.map(l=>({id:l.license_id,version:String(l.number),versionId:l.id,authority:l.authority,validFrom:stamp(l.valid_from),validTo:l.valid_to&&stamp(l.valid_to),endKind:l.end_kind,revoked:l.revoked,recordedAt:stamp(l.recorded_at)})),verifications:s.verifications.map(v=>({id:v.id,subjectVersionId:v.subject_version,licenseVersionIds:v.licenses,validFrom:stamp(v.valid_from),validTo:v.valid_to&&stamp(v.valid_to),recordedAt:stamp(v.recorded_at)}))};
    });}catch(error){throw safe(error);}
   },
   async readRestrictedInput(actor:string,id:string){check(Id,id);try{const r=await root(scope=>record(scope,actor,id,'READ_RESTRICTED'));return unseal(r);}catch(error){throw safe(error);}},

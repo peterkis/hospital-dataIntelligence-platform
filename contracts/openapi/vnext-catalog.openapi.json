@@ -18988,6 +18988,7 @@
                       "recordedAt",
                       "id",
                       "version",
+                      "authority",
                       "endKind",
                       "revoked"
                     ],
@@ -19020,6 +19021,9 @@
                         "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
                       },
                       "version": {
+                        "type": "string"
+                      },
+                      "authority": {
                         "type": "string"
                       },
                       "endKind": {
@@ -19264,6 +19268,7 @@
                           "recordedAt",
                           "id",
                           "version",
+                          "authority",
                           "endKind",
                           "revoked"
                         ],
@@ -19296,6 +19301,9 @@
                             "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
                           },
                           "version": {
+                            "type": "string"
+                          },
+                          "authority": {
                             "type": "string"
                           },
                           "endKind": {
