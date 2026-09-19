@@ -12,6 +12,11 @@ export interface KeyProviderPort {
   payload(id: string): KeyObject;
   lookup(): KeyObject;
 }
+/** Authenticate an existing P0-11 envelope supplied by the catalog's finite evidence port. */
+export function authenticateRegistrationEvidence(value:{binding:unknown[];envelope:{keyId:string;nonce:string;tag:string;ciphertext:string}},provider?:KeyProviderPort):Buffer {
+ if(!provider)throw new Error('KEY_UNAVAILABLE');
+ try{const e=value.envelope,d=createDecipheriv('aes-256-gcm',provider.payload(e.keyId),Buffer.from(e.nonce,'hex'));d.setAAD(Buffer.from(JSON.stringify(value.binding)));d.setAuthTag(Buffer.from(e.tag,'hex'));return Buffer.concat([d.update(Buffer.from(e.ciphertext,'hex')),d.final()]);}catch{throw new Error('PAYLOAD_UNAVAILABLE');}
+}
 export class LocalSyntheticKeyProvider implements KeyProviderPort {
   private readonly keys = new Map<string, KeyObject>();
   private active = '';

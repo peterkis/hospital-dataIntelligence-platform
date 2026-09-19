@@ -27,14 +27,16 @@ export interface ObservedOwnerUnit {
 export interface ApplyOwnerPort {
  observe(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<ObservedOwnerUnit>;
  authorize(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,action:'READ'|'WRITE'|'REVIEW'):Promise<void>;
- validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit):Promise<void>;
+ // FREEZE may retain an Owner-declared blocked observation for review. Omitted
+ // means full admission; approval and apply never accept a freeze-only decision.
+ validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,stage?:'FREEZE'):Promise<void>;
  apply(scope:CatalogTransactionScope,actor:string,command:OwnerCommand,resolved:ReadonlyMap<number,OwnerFact>):Promise<{ok:true;fact:OwnerFact}|{ok:false}>;
  exactRead(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,fact:OwnerFact):Promise<OwnerFact|null>;
 }
 interface Candidate {id:string;maker:string;makerIdentity:string;input:PlanOwnerUnitInput;digest:string;envelope:Envelope;approvedBy:string|null}
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
-const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE']);
+const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH']);
 function failure(error:unknown):Error {
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';
@@ -124,7 +126,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     // Recovery returns the immutable observation, never implicitly replans changed evidence.
     const prior=await record<{candidateId:string;digest:string}|null>(scope,actor,'FROZEN_PRIOR',{input});
     if(prior)return prior;
-    const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit);
+    const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit,'FREEZE');
     const digest=planBinding(provider,'APPROVED_OWNER_UNIT_V1',unit);
     return record<{candidateId:string;digest:string}>(scope,actor,'FREEZE',{input,digest,envelope:seal(unit,digest)});
    });}catch(error){throw failure(error);}
@@ -171,6 +173,9 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     // Both executor and original approver must retain current permissions until this commit.
     await port().authorize(scope,c.approvedBy,c.input,'REVIEW');
     await record(scope,c.approvedBy,'CHECK_APPROVAL',{candidateId:c.id});
+    // Admission belongs to approval/apply, never to reading immutable history.
+    // Recheck the approver's source/material permissions in this same write root.
+    await recheck(scope,c.approvedBy,c);
     const unit=unseal(c);await recheck(scope,actor,c);
     const resolved=new Map<number,OwnerFact>();
     for(const command of unit.commands){

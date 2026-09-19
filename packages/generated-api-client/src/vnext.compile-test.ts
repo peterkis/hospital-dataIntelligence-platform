@@ -1,4 +1,12 @@
 import { createVNextCatalogClient, type VNextCommand } from './vnext-client.js';
+import type {OrganizationInput} from './vnext-client.js';
+declare const organizationInput:OrganizationInput;
+// @ts-expect-error Institution stable identity is issued by the DB, never in the input envelope.
+const forgedOrganization:OrganizationInput={...organizationInput,stableId:'forged'};
+void forgedOrganization;
+// @ts-expect-error Approval identity is supplied by trusted composition, not the command body.
+const forgedReviewer:OrganizationInput={...organizationInput,approvedBy:'reviewer'};
+void forgedReviewer;
 const client=createVNextCatalogClient('http://127.0.0.1:4317','maker');
 const valid:VNextCommand={action:'CREATE',scope:'SYNTHETIC',kind:'SOURCE',code:'TEST',requestId:'synthetic-test',reason:'TEST',values:{name:'Synthetic',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'SYNTHETIC_BOOTSTRAP'},validFrom:'2026-01-01T00:00:00'};
 void valid;

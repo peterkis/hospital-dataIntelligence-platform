@@ -10,6 +10,12 @@ import {workbench} from './workbench.js';
 export {WorkbenchSummarySchema,WorkbenchAccessSchema,WorkbenchAccessInputSchema} from './workbench.js';
 export {textWorkbook} from './issue-workbook.js';
 export {PlanOwnerUnitSchema,ApproveApplyUnitSchema,ApplyUnitSchema} from './apply-coordinator.js';
+// In-process Owner composition seam; these capabilities are never serialized to clients.
+export {applyCoordinator} from './apply-coordinator.js';
+export type {ApplyOwnerPort,ObservedOwnerUnit,OwnerFact} from './apply-coordinator.js';
+export {CatalogTransactionScope} from './transaction-scope.js';
+export {canonicalPlan,planBinding} from './plan-binding.js';
+export {authenticateRegistrationEvidence} from './protected-artifact.js';
 export type {PlanOwnerUnitInput,ApplyUnitInput,UnitOutcome} from './apply-coordinator.js';
 import {dryRun} from './dry-run.js';
 export {BuildDryRunSchema,ApprovalCandidateSchema} from './dry-run.js';

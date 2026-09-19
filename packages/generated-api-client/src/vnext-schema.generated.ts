@@ -564,6 +564,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/organizations/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageOrganizationCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planOrganizationCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawOrganizationInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveOrganizationCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyOrganizationCommand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeOrganizationOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/licenses/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationLicenses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/history-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationLicenseHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/restricted-input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationRestrictedInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["compareOrganizationVersions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organizations/qualification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationQualification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5898,6 +6106,2005 @@ export interface operations {
             };
             /** @description Default Response */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageOrganizationCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    jobId: string;
+                    revisionId: string;
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {string} */
+                    purpose: "IDENTITY_VERIFY";
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                        id: string;
+                    }[];
+                    command: {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "CREATE";
+                        facts: {
+                            legalName: string;
+                            entityNature: string;
+                            authority: string | null;
+                            legalAddress: string | null;
+                            registrationEvidence: string;
+                        };
+                        identifiers: {
+                            kind: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace: string;
+                            value: string;
+                        }[];
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "REVISE";
+                        target: {
+                            id: string;
+                            version: string;
+                        };
+                        facts: {
+                            legalName: string;
+                            entityNature: string;
+                            authority: string | null;
+                            legalAddress: string | null;
+                            registrationEvidence: string;
+                        };
+                        identifiers: {
+                            kind: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace: string;
+                            value: string;
+                        }[];
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "ADD_LICENSE";
+                        target: {
+                            id: string;
+                            version: string;
+                        };
+                        license: {
+                            namespace: string;
+                            number: string;
+                            authority: string;
+                            evidence: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "REVISE_LICENSE";
+                        target: {
+                            id: string;
+                            version: string;
+                        };
+                        licenseTarget: {
+                            id: string;
+                            version: string;
+                        };
+                        license: {
+                            namespace: string;
+                            number: string;
+                            authority: string;
+                            evidence: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "VERIFY_REGISTRATION";
+                        target: {
+                            id: string;
+                            version: string;
+                        };
+                        licenseTargets: {
+                            id: string;
+                            version: string;
+                        }[];
+                        creditCodeStatus: "HELD" | "NOT_APPLICABLE";
+                        evidence: string;
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "REVOKE_LICENSE";
+                        target: {
+                            id: string;
+                            version: string;
+                        };
+                        licenseTarget: {
+                            id: string;
+                            version: string;
+                        };
+                        reason: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        revisionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    planOrganizationCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawOrganizationInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveOrganizationCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    applyOrganizationCommand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            owner: string;
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeOrganizationOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            owner: string;
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        approvedBy: string | null;
+                        command: {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "CREATE";
+                            facts: {
+                                legalName: string;
+                                entityNature: string;
+                                authority: string | null;
+                                legalAddress: string | null;
+                                registrationEvidence: string;
+                            };
+                            identifiers: {
+                                kind: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                namespace: string;
+                                value: string;
+                            }[];
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            facts: {
+                                legalName: string;
+                                entityNature: string;
+                                authority: string | null;
+                                legalAddress: string | null;
+                                registrationEvidence: string;
+                            };
+                            identifiers: {
+                                kind: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                namespace: string;
+                                value: string;
+                            }[];
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "ADD_LICENSE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            license: {
+                                namespace: string;
+                                number: string;
+                                authority: string;
+                                evidence: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVISE_LICENSE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            licenseTarget: {
+                                id: string;
+                                version: string;
+                            };
+                            license: {
+                                namespace: string;
+                                number: string;
+                                authority: string;
+                                evidence: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "VERIFY_REGISTRATION";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            licenseTargets: {
+                                id: string;
+                                version: string;
+                            }[];
+                            creditCodeStatus: "HELD" | "NOT_APPLICABLE";
+                            evidence: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVOKE_LICENSE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            licenseTarget: {
+                                id: string;
+                                version: string;
+                            };
+                            reason: string;
+                        };
+                        blockingIssues?: "IDENTIFIER_CONFLICT"[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id?: string;
+                    mode: "LIST" | "HISTORY" | "EFFECTIVE" | "EXACT";
+                    businessAt?: string;
+                    asOf?: string;
+                    version?: string;
+                    afterVersion?: string;
+                    limit?: number;
+                    after?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        versionId: string;
+                        legalName: string;
+                        entityNature: string;
+                        authority: string | null;
+                        legalAddress: string | null;
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationLicenses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    licenseId?: string;
+                    mode: "HISTORY" | "EFFECTIVE" | "EXACT";
+                    version?: string;
+                    businessAt?: string;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        versionId: string;
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        id: string;
+                        version: string;
+                        authority: string;
+                        endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        revoked: boolean;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationLicenseHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        organizationId: string;
+                        licenses: {
+                            versionId: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            id: string;
+                            version: string;
+                            authority: string;
+                            endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            revoked: boolean;
+                        }[];
+                        verifications: {
+                            id: string;
+                            subjectVersionId: string;
+                            licenseVersionIds: string[];
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationRestrictedInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {string} */
+                        purpose: "IDENTITY_VERIFY";
+                        profile?: "CORE" | "FULL";
+                        dependencies?: {
+                            kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                            id: string;
+                        }[];
+                        command: {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "CREATE";
+                            facts: {
+                                legalName: string;
+                                entityNature: string;
+                                authority: string | null;
+                                legalAddress: string | null;
+                                registrationEvidence: string;
+                            };
+                            identifiers: {
+                                kind: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                namespace: string;
+                                value: string;
+                            }[];
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            facts: {
+                                legalName: string;
+                                entityNature: string;
+                                authority: string | null;
+                                legalAddress: string | null;
+                                registrationEvidence: string;
+                            };
+                            identifiers: {
+                                kind: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                namespace: string;
+                                value: string;
+                            }[];
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "ADD_LICENSE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            license: {
+                                namespace: string;
+                                number: string;
+                                authority: string;
+                                evidence: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVISE_LICENSE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            licenseTarget: {
+                                id: string;
+                                version: string;
+                            };
+                            license: {
+                                namespace: string;
+                                number: string;
+                                authority: string;
+                                evidence: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                endKind: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "VERIFY_REGISTRATION";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            licenseTargets: {
+                                id: string;
+                                version: string;
+                            }[];
+                            creditCodeStatus: "HELD" | "NOT_APPLICABLE";
+                            evidence: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "REVOKE_LICENSE";
+                            target: {
+                                id: string;
+                                version: string;
+                            };
+                            licenseTarget: {
+                                id: string;
+                                version: string;
+                            };
+                            reason: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    compareOrganizationVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    fromVersion: string;
+                    toVersion: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        fromVersion: string;
+                        toVersion: string;
+                        changes: {
+                            field: string;
+                            before: string | null;
+                            after: string | null;
+                            redacted?: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationQualification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: "LICENSED_REGISTRATION" | "NOT_ESTABLISHED";
+                        organizationId: string;
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        operatingPermission: "NOT_EVALUABLE";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
