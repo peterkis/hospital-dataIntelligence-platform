@@ -1,5 +1,6 @@
+import {campusCodeSet} from './campus-fixture.js';
 import {randomUUID} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {openOrganization} from '../../apps/governance-api/src/modules/organization-master/index.js';
@@ -14,4 +15,5 @@ try{
  const source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(v=>v.kind==='SOURCE'&&v.status==='PUBLISHED')!;
  const input=await org.stage('maker',{requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',command:{action:'CREATE',validFrom:'2026-01-01T00:00:00',validTo:null,source:{systemId:source.id,versionId:source.versionId,alias:'DEMO_PREFIX',versionNo:1,recordLocator:'DEMO_ROW',recordedAt:'2026-01-01T00:00:00',recordStatus:'PUBLISHED',approvalRef:'DEMO_APPROVAL'},facts:{legalName:'DEMO 升级前主体',entityNature:'DEMO',authority:'DEMO',legalAddress:null,registrationEvidence:evidence.artifactId},identifiers:[]}});
  const requestId=randomUUID(),candidate=await org.plan('maker',{inputId:input.inputId,requestId});await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await org.approveApplyUnit('reviewer',candidate);const result=await org.applyUnit('maker',{candidateId:candidate.candidateId,requestId});assert.equal(result.status,'COMMITTED');console.log(JSON.stringify({status:'PREFIX_BUSINESS_FACT_COMMITTED',prefix:process.env['VNEXT_UPGRADE_PREFIX']??'56'}));
+ if(process.env['VNEXT_UPGRADE_PREFIX']==='58'){const legacy=await campusCodeSet(catalog,source.versionId,['SRC-COND-006']);writeFileSync(`.runtime/vnext/fresh/${receipt.name}.legacy-campus.json`,JSON.stringify(legacy.reference),{flag:'wx'});}
 }finally{await org.close();await catalog.close();}

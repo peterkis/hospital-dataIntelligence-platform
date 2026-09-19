@@ -83,3 +83,13 @@ A011仅覆盖三个服务节点及不推导法人，运营关系部分留给P1-0
 cleanup从经过验证的规范receipt身份定位disposed文件，不依赖命令行扩展名大小写。已有凭证须匹配name/OID/disposed，且原OID数据库确已不存在才能报告重复清理成功。真实CLI回归覆盖大写路径、重复调用和错误OID凭证；测试只操作本次receipt-owned临时库。
 
 初次部署入口同步至已审查的0058链（允许从56部署）；57或58的恢复请求按原检查点账本前缀验证，并再次检查新增迁移不改业务数据。已完成0057交付的库使用只读冒烟修复入口 vnext:p1-02:fix-deploy（经prototype:db:with）；只接受57/58，验证旧表内容和旧账本前缀不变，以现有服务角色完成真实HTTP历史列表读取，不新增业务记录。最终修复证据见ignored修复handoff。
+
+## PR #14 第一轮远程审查修复
+
+0059 前向迁移在 legacy organization write/plan/withdraw SQL 入口的任何副作用前固定 ORG01 域检查；院区使用显式 ORG02 的受控 plan/withdraw 入口。新增入口继承既有服务角色 EXECUTE ACL，不扩大表写权限。
+
+ORG02_MANUAL_CORE_V1 发布必须同时声明 SRC-COND-005/campus_address 与 SRC-COND-006/admin_division_code，并绑定相应 EVALUATED 字段。区划准入重新检查该完整声明；旧的不完整发布记录保留历史，但不能支持新的扩张准入，需另行签审完整后继版本。
+
+运营空档返回 NOT_ESTABLISHED，资料修订及计划命令不能以 PLANNING 冒充；运营状态按自身 B/R 断言读取，不依赖资料是否存在，故资料到期后的有效停用仍可见。
+
+四个问题分别保留公共 SQL/Owner/HTTP 的 RED→GREEN 证据。validate --upgrade-58 覆盖旧不完整契约升级后阻断、旧发布历史保留、旧服务权限及业务内容保留。当前完整链为0059；初次部署入口同步至0059，恢复接受57/58/59并核验既有检查点。已部署58使用 vnext:p1-02:review-deploy，经 receipt wrapper 执行；只接受58/59，核对OID、旧账本与业务摘要，以既有服务角色进行真实HTTP只读冒烟，不重写历史契约或新增业务记录。旧 fix-deploy 仍限定其0058历史修复链。

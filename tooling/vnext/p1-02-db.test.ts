@@ -162,13 +162,17 @@ test('source +08:00 precision is preserved as evidence while invalid calendar in
 test('exact division references and full profile coverage reject wrong versions and business gaps',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.facts.adminDivision=adopted.reference;c.facts.campusAddress='DEMO';
  for(const bad of [{...adopted.reference,contractVersionId:randomUUID()},{...adopted.reference,sourceVersionId:randomUUID()},{...adopted.reference,version:'UNKNOWN'}])await expect(prepare({...c,facts:{...c.facts,adminDivision:bad}})).rejects.toThrow();
- const a=await apply({...c,validTo:'2026-06-01T00:00:00'}),b=await apply({...c,action:'REVISE',target:target(a),validFrom:'2026-07-01T00:00:00'});
- await expect(prepare({...common,action:'ACTIVATE',target:target(b),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validTo:'2027-01-01T00:00:00'})).rejects.toThrow('BLOCKED_DEPENDENCY');
+ const a=await apply({...c,validTo:'2026-06-01T00:00:00'});
+ await expect(prepare({...common,action:'ACTIVATE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validTo:'2027-01-01T00:00:00'})).rejects.toThrow('BLOCKED_DEPENDENCY');
 });
 
 test('version diff reports business-period changes even when descriptive facts are unchanged',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();const a=await apply(c),b=await apply({...c,action:'REVISE',target:target(a),validFrom:'2026-02-01T00:00:00',validTo:'2027-01-01T00:00:00'});
  expect((await org.diff('maker',{id:a.id,fromVersion:a.version,toVersion:b.version})).changes).toEqual([{field:'validFrom',before:'2026-01-01T00:00:00.000000',after:'2026-02-01T00:00:00.000000'},{field:'validTo',before:null,after:'2027-01-01T00:00:00.000000'}]);
+});
+
+test.each([{rules:['SRC-COND-005']},{rules:['SRC-COND-006']},{rules:[]}])('manual CORE cannot publish an incomplete owner-condition set: $rules',async({rules})=>{
+ try{await expect(campusCodeSet(catalog,source.versionId,rules)).rejects.toThrow('FINITE_RULE_REQUIRED');}finally{adopted=await campusCodeSet(catalog,source.versionId);}
 });
 
 test('an approved campus change is blocked after exact code-set retirement; contraction remains possible',async()=>{
@@ -211,4 +215,31 @@ test('cleanup rejects a mismatched disposal receipt without claiming success or 
   expect(result.status).not.toBe(0);expect(result.stdout).not.toContain('OWNED_TEMPORARY_CLEANED');
   expect(peer('postgres',`SELECT count(*) FROM pg_database WHERE datname=${quote(owned.receipt.name)};`)).toBe('1');
  }finally{if(existsSync(marker))unlinkSync(marker);dropTemporary(owned.receipt);}
+});
+
+test.each(['write','plan_input','withdraw'] as const)('legacy SQL %s rejects an ORG02 input before mutation',async(action)=>{
+ const staged=await org.stage('maker',input(create()));const pool=new Pool({connectionString:connection}),client=await pool.connect();
+ try{await client.query('BEGIN');
+  const command={...common,action:'CREATE',facts:{legalName:'DEMO_FORGED_ORG',entityNature:'DEMO',authority:null,legalAddress:null,registrationEvidence:artifact.artifactId},identifiers:[]};
+  const query=action==='write'?client.query('SELECT organization_master.write($1,$2::uuid,$3::jsonb,$4::jsonb)',['maker',staged.inputId,JSON.stringify(command),'[]']):client.query(`SELECT organization_master.${action}($1,$2::uuid,$3::uuid)`,['maker',staged.inputId,randomUUID()]);
+  await expect(query).rejects.toThrow('ACCESS_DENIED');
+ }finally{await client.query('ROLLBACK');client.release();await pool.end();}
+});
+
+
+test.each(['REVISE','SCHEDULE_OPENING','CANCEL_OPENING'] as const)('operation gaps cannot be represented as PLANNING by %s',async(action)=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();const a=await apply({...c,validTo:'2026-06-01T00:00:00'});
+ expect(await org.read('maker',{id:a.id,businessAt:'2026-07-01T00:00:00'})).toMatchObject({operationStatus:'NOT_ESTABLISHED'});
+ const base={...common,target:target(a),validFrom:'2026-07-01T00:00:00',sourceOperationStatus:'PLANNING' as const,evidence:artifact.artifactId};
+ const command:CampusCommand=action==='REVISE'?{...base,action,facts:c.facts}:action==='SCHEDULE_OPENING'?{...base,action,plannedOpeningAt:'2027-01-01T00:00:00'}:{...base,action,reason:'DEMO_CANCEL'};
+ await expect(prepare(command)).rejects.toThrow('BLOCKED_DEPENDENCY');
+});
+
+test('suspension stays visible after descriptive facts expire, including HTTP and old R',async()=>{
+ const a=await apply({...create(),validTo:'2026-06-01T00:00:00'}),old=(await org.history('maker',a.id)).operations[0]!.recordedAt;
+ await apply({...common,action:'SUSPEND',target:target(a),validFrom:'2026-07-01T00:00:00',sourceOperationStatus:'SUSPENDED',evidence:randomUUID(),reason:'DEMO_CLOSE_EXPIRED_PROFILE'});
+ expect(await org.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00'})).toMatchObject({facts:null,operationStatus:'SUSPENDED'});
+ expect(await org.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00',asOf:old})).toMatchObject({facts:null,operationStatus:'NOT_ESTABLISHED'});
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
+ try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const client=createCampusClient(`http://127.0.0.1:${address.port}`,'maker');const result=await client.getCampusAsOf({id:a.id,businessAt:'2026-08-01T00:00:00'});expect(result.response.status).toBe(200);expect(result.data).toMatchObject({facts:null,operationStatus:'SUSPENDED'});}finally{await app.close();}
 });

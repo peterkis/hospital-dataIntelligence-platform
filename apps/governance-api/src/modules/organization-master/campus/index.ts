@@ -58,7 +58,7 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    if('target' in c&&(c.target.id!==r.target||String(s?.events.at(-1)?.number)!==c.target.expectedVersion))throw new Error('STALE_VALIDATION');
    if(!c.source.approvalRef?.trim())throw new Error('APPROVAL_REQUIRED');if(c.source.recordStatus!=='PUBLISHED')throw new Error('BLOCKED_DEPENDENCY');
    if(await conflict(scope,c)&&stage!=='FREEZE')throw new Error('IDENTIFIER_CONFLICT');
-   const at=c.validFrom;const current=s?.events.filter(e=>e.state!==null&&stamp(e.valid_from)<=at&&(e.valid_to===null||at<stamp(e.valid_to))).at(-1)?.state??'PLANNING';
+   const at=c.validFrom;const current=s?.events.filter(e=>e.state!==null&&stamp(e.valid_from)<=at&&(e.valid_to===null||at<stamp(e.valid_to))).at(-1)?.state??'NOT_ESTABLISHED';
    const expected=c.action==='CREATE'?'PLANNING':c.action==='ACTIVATE'?c.state:c.action==='SUSPEND'?'SUSPENDED':current;
    if(c.sourceOperationStatus!==expected)throw new Error('BLOCKED_DEPENDENCY');
   },
@@ -76,15 +76,15 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    const at=localTime(input.businessAt??now),asOf=localTime(input.asOf??now),known=s.events.filter(e=>stamp(e.recorded_at)<=asOf);
    const effective=(rows:CampusEvent[])=>rows.filter(e=>stamp(e.valid_from)<=at&&(e.valid_to===null||at<stamp(e.valid_to))).at(-1);
    const v=effective(known.filter(e=>e.facts!==null)),p=effective(known.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action))),o=effective(known.filter(e=>e.state!==null));
-   return {id:s.id,head:String(known.at(-1)?.number??0),facts:v?.facts??null,operationStatus:v?o?.state??'NOT_ESTABLISHED':'NOT_ESTABLISHED',plannedOpeningAt:p?.planned_opening_at?stamp(p.planned_opening_at):null,operatingPermission:'NOT_EVALUABLE' as const};
+   return {id:s.id,head:String(known.at(-1)?.number??0),facts:v?.facts??null,operationStatus:o?.state??'NOT_ESTABLISHED',plannedOpeningAt:p?.planned_opening_at?stamp(p.planned_opening_at):null,operatingPermission:'NOT_EVALUABLE' as const};
   });
  };
  const exact=async(actor:string,input:{id:string;version:string})=>{check(CampusVersionSchema,input);const v=(await history(actor,input.id)).versions.find(v=>v.version===input.version);if(!v)throw new Error('NOT_FOUND');return v;};
 
  return {
   async stage(actor:string,input:Parameters<typeof store.stage>[1]){check(CampusCommandSchema,input.command);normalize(input.command);return store.stage(actor,input);},readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
-  async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);const r=await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:Awaited<ReturnType<typeof record>>}>`select organization_master.plan_input(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
-  async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);return root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;});},
+  async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);const r=await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:Awaited<ReturnType<typeof record>>}>`select organization_master.plan_input_for(${actor},${input.inputId}::uuid,${input.requestId}::uuid,'ORG02') r`.execute(scope)).rows[0]!.r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
+  async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);return root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.withdraw_for(${actor},${input.inputId}::uuid,${input.requestId}::uuid,'ORG02') r`.execute(scope)).rows[0]!.r;});},
   async readRestrictedInput(actor:string,id:string){check(Id,id);return root(async scope=>unseal(await record(scope,actor,id,'READ_RESTRICTED')));},
   history,
   read,exact,
