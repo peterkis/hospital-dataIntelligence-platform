@@ -178,6 +178,33 @@ test.each([{rules:['SRC-COND-005']},{rules:['SRC-COND-006']},{rules:[]}])('manua
  try{await expect(campusCodeSet(catalog,source.versionId,rules)).rejects.toThrow('FINITE_RULE_REQUIRED');}finally{adopted=await campusCodeSet(catalog,source.versionId);}
 });
 
+test('suspension blocks backdated activation even when it ends exactly at suspension',async()=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();c.facts.campusAddress='DEMO';c.facts.adminDivision=adopted.reference;
+ const a=await apply(c),stopped=await apply({...common,action:'SUSPEND',target:target(a),evidence:randomUUID(),sourceOperationStatus:'SUSPENDED',validFrom:'2027-01-01T00:00:00',reason:'DEMO_TERMINAL_STOP'});
+ await expect(prepare({...common,action:'ACTIVATE',target:target(stopped),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validTo:'2027-01-01T00:00:00'})).rejects.toThrow('BLOCKED_DEPENDENCY');
+ // Non-overlapping historical plans remain allowed and never activate the node.
+ await apply({...common,action:'SCHEDULE_OPENING',target:target(stopped),evidence:artifact.artifactId,sourceOperationStatus:'PLANNING',validTo:'2027-01-01T00:00:00',plannedOpeningAt:'2026-06-01T00:00:00'});
+ expect((await org.read('maker',{id:a.id,businessAt:'2026-06-01T00:00:00'})).operationStatus).toBe('PLANNING');
+});
+
+test('SQL independently rejects a signed backdated activation after suspension',async()=>{
+ const c=create();if(c.action!=='CREATE')throw new Error();c.facts.campusAddress='DEMO';c.facts.adminDivision=adopted.reference;
+ const a=await apply(c),command:CampusCommand={...common,action:'ACTIVATE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validTo:'2027-01-01T00:00:00'};
+ const staged=await org.stage('maker',input(command)),requestId=randomUUID(),candidate=await org.plan('maker',{inputId:staged.inputId,requestId});
+ await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await org.approveApplyUnit('reviewer',candidate);
+ const stopped=await apply({...common,action:'SUSPEND',target:target(a),evidence:randomUUID(),sourceOperationStatus:'SUSPENDED',validFrom:'2027-01-01T00:00:00',reason:'DEMO_STOP'});
+ const before=await org.history('maker',a.id),pool=new Pool({connectionString:connection}),client=await pool.connect();
+ try{
+  await client.query('BEGIN');const transaction=(await client.query('SELECT pg_current_xact_id()::text id')).rows[0].id;
+  // Trusted test signer advances the expected head to isolate the SQL lifecycle guard,
+  // independently of the coordinator's stale-candidate and admission checks.
+  const ticket=canonicalPlan({actor:'maker',inputId:staged.inputId,candidateId:candidate.candidateId,digest:candidate.digest,command:{...command,target:target(stopped)},transaction});
+  const signature=createHmac('sha256',Buffer.from(planBinding(provider,'CAMPUS_SQL_AUTHORITY_V1',{}),'hex')).update(ticket).digest('hex');
+  await expect(client.query('SELECT organization_master.campus_write_approved($1,$2)',[ticket,signature])).rejects.toThrow('BLOCKED_DEPENDENCY');
+ }finally{await client.query('ROLLBACK');client.release();await pool.end();}
+ expect(await org.history('maker',a.id)).toEqual(before);
+});
+
 test('an approved campus change is blocked after exact code-set retirement; contraction remains possible',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();c.facts.campusAddress='DEMO';c.facts.adminDivision=adopted.reference;
  const a=await apply(c),pending=await prepare({...c,action:'REVISE',target:target(a),facts:{...c.facts,campusName:'DEMO_PENDING'}});

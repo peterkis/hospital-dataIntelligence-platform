@@ -33,7 +33,7 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    if(!covered(spans,c.validFrom,c.validTo))throw new Error('BLOCKED_DEPENDENCY');
   }
   if(c.action==='ACTIVATE'||c.action==='SCHEDULE_OPENING'){
-   if(s!.events.some(e=>e.state==='SUSPENDED'&&intersect(span(e),period).length))throw new Error('BLOCKED_DEPENDENCY');
+   if(s!.events.some(e=>e.state==='SUSPENDED'&&(c.action==='ACTIVATE'||intersect(span(e),period).length)))throw new Error('BLOCKED_DEPENDENCY');
   }
   return deps;
  };
