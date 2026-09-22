@@ -43,7 +43,8 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
   if('identifiers' in c&&new Set(c.identifiers.map(i=>i.kind)).size!==c.identifiers.length)throw new Error('CLOSED_INPUT_REQUIRED');
   return c;
  };
- const keys=(c:OrganizationCommand)=>('identifiers' in c?c.identifiers:'license' in c?[{kind:'LICENSE',namespace:c.license.namespace,value:c.license.number}]:[]).map(i=>({kind:i.kind,namespace:i.namespace,digest:planBinding(provider,'ORGANIZATION_IDENTIFIER_V1',[i.kind,i.namespace,i.value])}));
+ const claimKeys=(claims:Array<{kind:string;namespace:string;value:string}>)=>claims.map(i=>({kind:i.kind,namespace:i.namespace,digest:planBinding(provider,'ORGANIZATION_IDENTIFIER_V1',[i.kind,i.namespace,i.value])}));
+ const keys=(c:OrganizationCommand)=>claimKeys('identifiers' in c?c.identifiers:'license' in c?[{kind:'LICENSE',namespace:c.license.namespace,value:c.license.number}]:[]);
  const evidence=async(scope:Scope,actor:string,id:string,c:OrganizationCommand,campus:string,asOf:string|null=null)=>{
   const result=await sql<{r:{artifactId:string;sourceVersion:string;expiresAt:string;binding:unknown[];envelope:Envelope}}>`select organization_master.evidence(${actor},${id}::uuid,${c.source.systemId}::uuid,${c.source.versionId}::uuid,${campus},${c.validFrom}::timestamp,${c.validTo}::timestamp,${asOf}::timestamp) r`.execute(scope);
   const r=result.rows[0]!.r,bytes=authenticateRegistrationEvidence(r,provider);try{return {artifactId:r.artifactId,sourceVersion:r.sourceVersion,expiresAt:r.expiresAt,contentDigest:planBinding(provider,'ORGANIZATION_EVIDENCE_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}
@@ -97,17 +98,22 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    const found=fact.owner==='organization-master'?s.versions.some(v=>String(v.number)===fact.version):fact.owner==='organization-master/license'?s.licenses.some(v=>v.license_id===fact.id&&String(v.number)===fact.version):s.verifications.some(v=>v.id===fact.id&&fact.version==='1');return found?fact:null;
   }
  };
+ const stageInTransaction=async(scope:Scope,actor:string,input:StageInput)=>{check(StageSchema,input);input=structuredClone(input);normalize(input.command);
+   const digest=planBinding(provider,'ORGANIZATION_INPUT_V1',input);
+   return (await sql<{r:{inputId:string;revisionId:string}}>`select organization_master.stage(${actor},${JSON.stringify({requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,campus:input.campus,target:'target' in input.command?input.command.target.id:null})}::jsonb,${digest},${JSON.stringify(seal(input,digest))}::jsonb) r`.execute(scope)).rows[0]!.r;
+ };
  const coordinator=applyCoordinator(db,provider,port);
- const service={registration:createRegistrationReader(root),
+ const service={commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:StageInput)=>stageInTransaction(scope,actor,input),port}),registration:createRegistrationReader(root),
+  async inspectClaimsInTransaction(scope:Scope,actor:string,input:{subjectId:string|null;campus:'NORTH'|'SOUTH';claims:Array<{kind:'UNIFIED_CREDIT_CODE'|'INSTITUTION_CODE'|'LICENSE';namespace:string;value:string}>}){
+   await sql`select organization_master.authorize(${actor},${input.subjectId}::uuid,${input.campus},'READ')`.execute(scope);const claims=claimKeys(input.claims);
+   if((await sql<{r:boolean}>`select organization_master.conflict(${input.subjectId}::uuid,${JSON.stringify(claims)}::jsonb) r`.execute(scope)).rows[0]!.r)throw new Error('IDENTIFIER_CONFLICT');return claims;
+  },
   readApplyCandidate:coordinator.readApplyCandidate,
   approveApplyUnit:coordinator.approveApplyUnit,
   applyUnit:coordinator.applyUnit,
   resumeOutcome:coordinator.resumeOutcome,
   reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
-  async stage(actor:string,input:StageInput){check(StageSchema,input);input=structuredClone(input);normalize(input.command);try{return await root(async scope=>{
-   const digest=planBinding(provider,'ORGANIZATION_INPUT_V1',input);
-   return (await sql<{r:{inputId:string;revisionId:string}}>`select organization_master.stage(${actor},${JSON.stringify({requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,campus:input.campus,target:'target' in input.command?input.command.target.id:null})}::jsonb,${digest},${JSON.stringify(seal(input,digest))}::jsonb) r`.execute(scope)).rows[0]!.r;
-  });}catch(error){throw safe(error);}},
+  async stage(actor:string,input:StageInput){try{return await root(scope=>stageInTransaction(scope,actor,input));}catch(error){throw safe(error);}},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);try{const r=await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:InputRecord}>`select organization_master.plan_input(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});}catch(error){throw safe(error);}},
   async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);try{return await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;});}catch(error){throw safe(error);}},
   async read(actor:string,input:OrganizationRead):Promise<OrganizationFact[]>{check(ReadSchema,input);if(input.mode!=='LIST'&&!input.id||input.mode==='EXACT'&&!input.version)throw new Error('CLOSED_INPUT_REQUIRED');for(const t of [input.asOf,input.businessAt])if(t)localTime(t);try{return await root(async scope=>(await sql<{r:OrganizationFact[]}>`select organization_master.read(${actor},${JSON.stringify(input)}::jsonb) r`.execute(scope)).rows[0]!.r);}catch(error){throw safe(error);}},
@@ -171,3 +177,6 @@ export type {OrganizationRegistrationPort} from './registration.js';
 
 export {openOperatingRelations,type OperatingOwner} from './operating/index.js';
 export * from './operating/contracts.js';
+
+export {openOrganizationImport} from './import/index.js';
+export * from './import/contracts.js';

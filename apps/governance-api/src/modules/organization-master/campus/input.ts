@@ -20,11 +20,11 @@ export function campusInput(connectionString:string,provider?:KeyProviderPort){
   if(!provider)throw new Error('KEY_UNAVAILABLE');
   try{const e=r.envelope,d=createDecipheriv('aes-256-gcm',provider.payload(e.keyId),Buffer.from(e.nonce,'hex'));d.setAAD(Buffer.from('CAMPUS_INPUT_V1\0'+r.digest));d.setAuthTag(Buffer.from(e.tag,'hex'));const bytes=Buffer.concat([d.update(Buffer.from(e.ciphertext,'hex')),d.final()]);try{const value=JSON.parse(bytes.toString());check(CampusStageSchema,value);if(planBinding(provider,'CAMPUS_INPUT_V1',value)!==r.digest)throw new Error();return value;}finally{bytes.fill(0);}}catch{throw new Error('PAYLOAD_UNAVAILABLE');}
  };
- const stage=async(actor:string,input:CampusStage)=>{
+ const stageInTransaction=async(scope:Scope,actor:string,input:CampusStage)=>{
   check(CampusStageSchema,input);input=structuredClone(input);if(!provider)throw new Error('KEY_UNAVAILABLE');
-  return root(async scope=>{const digest=planBinding(provider,'CAMPUS_INPUT_V1',input),{id,key}=provider.current(),nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,nonce);cipher.setAAD(Buffer.from('CAMPUS_INPUT_V1\0'+digest));const bytes=Buffer.from(canonicalPlan(input));let envelope:Envelope;try{const encrypted=Buffer.concat([cipher.update(bytes),cipher.final()]);envelope={keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:encrypted.toString('hex')};}finally{bytes.fill(0);}
+  const digest=planBinding(provider,'CAMPUS_INPUT_V1',input),{id,key}=provider.current(),nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,nonce);cipher.setAAD(Buffer.from('CAMPUS_INPUT_V1\0'+digest));const bytes=Buffer.from(canonicalPlan(input));let envelope:Envelope;try{const encrypted=Buffer.concat([cipher.update(bytes),cipher.final()]);envelope={keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:encrypted.toString('hex')};}finally{bytes.fill(0);}
    return (await sql<{r:{inputId:string;revisionId:string}}>`select organization_master.stage(${actor},${JSON.stringify({domain:'ORG02',requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,campus:input.campus,target:'target' in input.command?input.command.target.id:null})}::jsonb,${digest},${JSON.stringify(envelope)}::jsonb) r`.execute(scope)).rows[0]!.r;
-  });
  };
- return {db,root,record,unseal,stage};
+ const stage=(actor:string,input:CampusStage)=>root(scope=>stageInTransaction(scope,actor,input));
+ return {db,root,record,unseal,stage,stageInTransaction};
 }

@@ -32,6 +32,7 @@ export const WorkbenchSummarySchema = Type.Object(
     contractVersionId: Id,
     templateVersion: text,
     canWrite: Type.Boolean(),
+    adapterReadiness: Type.Optional(Type.Enum(['READY','NOT_READY'])),
     artifacts: Type.Array(
       Type.Object(
         {

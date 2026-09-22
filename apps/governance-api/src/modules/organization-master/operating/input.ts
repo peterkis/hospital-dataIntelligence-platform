@@ -16,14 +16,13 @@ export function operatingInput(connectionString:string,provider?:KeyProviderPort
   if(!provider)throw new Error('KEY_UNAVAILABLE');
   try{const e=r.envelope,d=createDecipheriv('aes-256-gcm',provider.payload(e.keyId),Buffer.from(e.nonce,'hex'));d.setAAD(Buffer.from('OPERATING_INPUT_V1\0'+r.digest));d.setAuthTag(Buffer.from(e.tag,'hex'));const bytes=Buffer.concat([d.update(Buffer.from(e.ciphertext,'hex')),d.final()]);try{const value=JSON.parse(bytes.toString());check(OperatingStageSchema,value);if(planBinding(provider,'OPERATING_INPUT_V1',value)!==r.digest)throw new Error();return value;}finally{bytes.fill(0);}}catch{throw new Error('PAYLOAD_UNAVAILABLE');}
  };
- const stage=async(actor:string,input:OperatingStage)=>{
+ const stageInTransaction=async(scope:Scope,actor:string,input:OperatingStage)=>{
   check(OperatingStageSchema,input);input=structuredClone(input);if(!provider)throw new Error('KEY_UNAVAILABLE');
-  return root(async scope=>{
-   const digest=planBinding(provider,'OPERATING_INPUT_V1',input),{id,key}=provider.current(),nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,nonce);cipher.setAAD(Buffer.from('OPERATING_INPUT_V1\0'+digest));const bytes=Buffer.from(canonicalPlan(input));let envelope:Envelope;
+  const digest=planBinding(provider,'OPERATING_INPUT_V1',input),{id,key}=provider.current(),nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,nonce);cipher.setAAD(Buffer.from('OPERATING_INPUT_V1\0'+digest));const bytes=Buffer.from(canonicalPlan(input));let envelope:Envelope;
    try{envelope={keyId:id,nonce:nonce.toString('hex'),ciphertext:Buffer.concat([cipher.update(bytes),cipher.final()]).toString('hex'),tag:cipher.getAuthTag().toString('hex')};}finally{bytes.fill(0);}
    const c=input.command,metadata={requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,subjectId:c.subject.id,campusId:c.campus.id,kind:kindOf(c.action),action:c.action,target:'target' in c?c.target.id:null};
    return (await sql<{r:{inputId:string;revisionId:string}}>`select organization_master.operating_stage(${actor},${JSON.stringify(metadata)}::jsonb,${digest},${JSON.stringify(envelope)}::jsonb) r`.execute(scope)).rows[0]!.r;
-  });
  };
- return {db,root,record,unseal,stage};
+ const stage=(actor:string,input:OperatingStage)=>root(scope=>stageInTransaction(scope,actor,input));
+ return {db,root,record,unseal,stage,stageInTransaction};
 }

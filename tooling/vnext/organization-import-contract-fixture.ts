@@ -1,0 +1,15 @@
+import {randomUUID} from 'node:crypto';
+import type {Catalog} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import {conditionMappings} from '../../apps/governance-api/src/modules/governance-catalog/validation-sources.generated.js';
+export async function organizationImportContracts(catalog:Catalog,sourceVersionId:string){
+ const result=[];const cmd=<A extends string>(action:A,extra:Record<string,unknown>={})=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'DEMO_ORG_BUNDLE_CONTRACT',...extra});
+ for(const code of ['ORG01','ORG02','ORG03'] as const){
+  let dataset=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='DATASET'&&i.code===code&&i.status==='PUBLISHED');
+  if(!dataset){const d=await catalog.command('maker',cmd('CREATE',{kind:'DATASET',code,values:{name:'DEMO '+code+' workbook'},validFrom:'2026-01-01T00:00:00'}));const r=await catalog.command('maker',cmd('SUBMIT',{target:d.id,expectedHead:d.head}));await catalog.command('reviewer',cmd('PUBLISH',{target:d.id,expectedHead:r.head,reviewDigest:r.reviewDigest}));dataset=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.id===d.id)!;}
+  const rules=conditionMappings.filter(r=>r.dataset===code),fields=dataset.payload.fields!.map(f=>f.original);
+  const definition={templateVersion:code+'_BUNDLE_CORE_V1',ruleVersion:'BUNDLE_'+randomUUID().replaceAll('-','').toUpperCase(),sourceVersionId,businessKey:[code==='ORG01'?'legal_entity_id':code==='ORG02'?'campus_id':'legal_campus_rel_id'],fields:fields.map(f=>({code:f.code,type:f.type,required:f.required,privacy:f.privacy,condition:f.required==='C'?'EVALUATED':f.required==='R'?'ALWAYS':'OPTIONAL',enumValues:[]})),rules:[...rules.map(r=>({id:r.id,field:r.field,text:r.text,status:'MACHINE',version:r.version})),{id:'ORG_BUNDLE_APPROVAL_V1',field:'approval_ref',text:'Published source intent requires an approval reference; platform review is separate.',status:'MACHINE',version:'P1_05_BUNDLE_V1'}],references:fields.filter(f=>f.ref).map(f=>({field:f.code,target:f.ref,status:'ORG_BUNDLE'})),codeSets:[]};
+  const old=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.dataset===code&&c.profile==='CORE'&&c.definition.templateVersion===definition.templateVersion);
+  const draft=await catalog.contractCommand('maker',cmd(old?'REVISE':'CREATE',{...(old?{target:old.id,expectedHead:old.head}:{profile:'CORE'}),datasetVersionId:dataset.versionId,definition,validFrom:'2026-01-01T00:00:00',validTo:null}));const approved=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:draft.id,expectedHead:draft.head,reviewDigest:draft.reviewDigest}));const impact=await catalog.contractImpact('reviewer','SYNTHETIC',draft.id,'PUBLISH');const published=await catalog.contractCommand('reviewer',cmd('PUBLISH',{target:draft.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest,impactDigest:impact.impactDigest}));result.push({dataset:code,contractId:published.id,contractVersionId:published.versionId,fields:definition.fields});
+ }
+ return result;
+}

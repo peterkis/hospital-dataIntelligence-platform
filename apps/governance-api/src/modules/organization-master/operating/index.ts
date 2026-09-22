@@ -1,4 +1,5 @@
 import {createHmac} from 'node:crypto';
+import {licensedServices as medical} from './service-policy.js';
 import {sql} from 'kysely';
 import {applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,type ApplyOwnerPort,type OwnerFact,type KeyProviderPort} from '../../governance-catalog/index.js';
 import {createCampusReader,type CampusSnapshot} from '../campus/reader.js';
@@ -16,7 +17,6 @@ interface Basis {scopeDependencies:ScopeDependency[];catalog?:unknown;evidence?:
 const stamp=registrationStamp,span=registrationSpan;
 const known=(s:Snapshot,asOf:string)=>s.versions.filter(v=>stamp(v.recorded_at)<=asOf);
 const effective=(versions:Version[],v:Version)=>subtract(span(v),versions.filter(x=>x.number>v.number).map(span));
-const medical=['DEMO_MEDICAL_A','DEMO_MEDICAL_B'];
 const scopeFacts=(v:Version)=>{if(!v.facts||!('license' in v.facts))throw new Error('BLOCKED_DEPENDENCY');return v.facts;};
 const relationFacts=(v:Version)=>{if(!v.facts||!('role' in v.facts))throw new Error('BLOCKED_DEPENDENCY');return v.facts;};
 export function openOperatingRelations(connectionString:string,provider?:KeyProviderPort){
@@ -29,13 +29,28 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
  const catalog=async(scope:Scope,actor:string,ref:CatalogReference,p:Span,asOf?:string)=>{const result=(await sql<{r:unknown}>`select governance_catalog.operating_catalog(${actor},${JSON.stringify(ref)}::jsonb,${p.from}::timestamp,${p.to}::timestamp,${asOf??null}::timestamp) r`.execute(scope)).rows[0]!.r;if(result===null)throw new Error('BLOCKED_DEPENDENCY');return result;};
  const normalize=(raw:OperatingCommand)=>{const c=structuredClone(raw);c.validFrom=localTime(c.validFrom.replace(/\+08:00$/u,''));c.validTo=c.validTo===null?null:localTime(c.validTo.replace(/\+08:00$/u,''));c.source.recordedAt=localTime(c.source.recordedAt.replace(/\+08:00$/u,''));if(c.validTo!==null&&c.validTo<=c.validFrom)throw new Error('INVALID_BUSINESS_PERIOD');if(isClosing(c)&&c.validTo!==null)throw new Error('CLOSED_INPUT_REQUIRED');if('target' in c&&c.target.owner!==ownerOf(kindOf(c.action)))throw new Error('ACCESS_DENIED');return c;};
  const conflict=async(scope:Scope,actor:string,c:OperatingCommand)=>'facts' in c&&'primary' in c.facts&&c.facts.primary==='Y'&&(await sql<{r:boolean}>`select organization_master.operating_primary_conflict(${actor},${c.campus.id}::uuid,${'target' in c?c.target.id:null}::uuid,${c.validFrom}::timestamp,${c.validTo}::timestamp) r`.execute(scope)).rows[0]!.r;
- const validateScope=async(scope:Scope,actor:string,subjectId:string,campusId:string,v:Version,p:Span,asOf:string)=>{
-  const f=scopeFacts(v);const reg=await registration.inTransaction(scope).read(actor,{id:subjectId,asOf});
+ const validateLicense=async(scope:Scope,actor:string,subjectId:string,f:Pick<ScopeFactsValue,'license'|'catalog'>,p:Span,asOf:string)=>{
+  const reg=await registration.inTransaction(scope).read(actor,{id:subjectId,asOf});
   const license=reg.licenses.find(l=>l.license_id===f.license.id&&l.id===f.license.versionId&&String(l.number)===f.license.version);
   if(!license||license.revoked||license.end_kind==='UNKNOWN')throw new Error('BLOCKED_DEPENDENCY');
   if(!covered(reg.qualified.filter(q=>q.licenseVersionId===license.id),p.from,p.to))throw new Error('BLOCKED_DEPENDENCY');
   await catalog(scope,actor,f.catalog,p,asOf);
   return {license,qualified:reg.qualified.filter(q=>q.licenseVersionId===license.id)};
+ };
+ const validateScope=(scope:Scope,actor:string,subjectId:string,_campusId:string,v:Version,p:Span,asOf:string)=>validateLicense(scope,actor,subjectId,scopeFacts(v),p,asOf);
+ const scopeCoverage=async(scope:Scope,actor:string,subjectId:string,campusId:string,references:RelationFactsValue['scopeTargets'],expectedCatalog:CatalogReference,services:string[],p:Span,asOf:string,cuts:Span[]=[])=>{
+  if(new Set(references.map(ref=>ref.id+'/'+ref.versionId)).size!==references.length)throw new Error('CLOSED_INPUT_REQUIRED');
+  const spans:Record<string,Span[]>={},dependencies:ScopeDependency[]=[];for(const service of services)spans[service]=[];
+  for(const ref of references){
+   const snapshotValue=await snapshot(scope,actor,ref.id,'SCOPE');if(snapshotValue.subject_id!==subjectId||snapshotValue.campus_id!==campusId)throw new Error('BLOCKED_DEPENDENCY');
+   const versions=known(snapshotValue,asOf),v=versions.find(x=>x.id===ref.versionId&&String(x.number)===ref.version);if(!v?.facts)throw new Error('BLOCKED_DEPENDENCY');
+   const facts=scopeFacts(v);if(canonicalPlan(facts.catalog)!==canonicalPlan(expectedCatalog))throw new Error('BLOCKED_DEPENDENCY');
+   const original=effective(versions,v).flatMap(q=>intersect(q,p));if(!original.length)throw new Error('BLOCKED_DEPENDENCY');
+   const parts=original.flatMap(part=>subtract(part,cuts));
+   for(const part of parts){await validateScope(scope,actor,subjectId,campusId,v,part,asOf);for(const code of facts.services)spans[code]?.push(part);}
+   dependencies.push({reference:{owner:'organization-master/license-scope',id:snapshotValue.id,version:String(v.number),versionId:v.id},license:facts.license,catalog:facts.catalog});
+  }
+  return {spans,dependencies};
  };
  const admission=async(scope:Scope,actor:string,c:OperatingCommand,current:Snapshot|null,asOf:string)=>{
   const basis:Basis={scopeDependencies:[]},blockers:string[]=[];if(isClosing(c))return {basis,blockers};
@@ -57,16 +72,9 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
    else{
     if(!f.services.length||f.services.some(code=>!medical.includes(code))||!f.licenseScopeText?.trim())blockers.push('UNSUPPORTED_SERVICE');
     if(new Set(f.scopeTargets.map(x=>x.id+'/'+x.versionId)).size!==f.scopeTargets.length)throw new Error('CLOSED_INPUT_REQUIRED');
-    const byService=new Map(f.services.map(code=>[code,[] as Span[]]));
-    for(const ref of f.scopeTargets){
-     const s=await snapshot(scope,actor,ref.id,'SCOPE');if(s.subject_id!==c.subject.id||s.campus_id!==c.campus.id)throw new Error('BLOCKED_DEPENDENCY');
-     const versions=known(s,asOf),v=versions.find(x=>x.id===ref.versionId&&String(x.number)===ref.version);if(!v?.facts)throw new Error('BLOCKED_DEPENDENCY');
-     const sf=scopeFacts(v);if(canonicalPlan(sf.catalog)!==canonicalPlan(f.catalog))throw new Error('BLOCKED_DEPENDENCY');
-     const parts=effective(versions,v).flatMap(q=>intersect(q,p));if(!parts.length)throw new Error('BLOCKED_DEPENDENCY');
-     for(const part of parts){await validateScope(scope,actor,c.subject.id,c.campus.id,v,part,asOf);for(const code of sf.services)byService.get(code)?.push(part);}
-     basis.scopeDependencies.push({reference:{owner:'organization-master/license-scope',id:s.id,version:String(v.number),versionId:v.id},license:sf.license,catalog:sf.catalog});
-    }
-    if(!blockers.includes('UNSUPPORTED_SERVICE')&&f.services.some(code=>!covered(byService.get(code)??[],p.from,p.to)))throw new Error('LICENSE_PERIOD_NOT_COVERED');
+    const coverage=await scopeCoverage(scope,actor,c.subject.id,c.campus.id,f.scopeTargets,f.catalog,f.services,p,asOf);
+    basis.scopeDependencies.push(...coverage.dependencies);
+    if(!blockers.includes('UNSUPPORTED_SERVICE')&&f.services.some(code=>!covered(coverage.spans[code]??[],p.from,p.to)))throw new Error('LICENSE_PERIOD_NOT_COVERED');
    }
    if(c.action==='REVALIDATE'&&current){
     const versions=known(current,asOf),active=versions.filter(v=>v.facts&&effective(versions,v).some(q=>intersect(q,p).length));
@@ -174,12 +182,21 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
    return {policy:'ORG03_SYNTHETIC_V1' as const,status,observedAt,asOf,subject:input.subject,campus:input.campus,validFrom:requested.from,validTo:requested.to,services};
   });
  };
- return {stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stage(actor,input);},
+ return {commandsInTransaction:(scope:Scope)=>({stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stageInTransaction(scope,actor,input);},port}),stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stage(actor,input);},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);const r=await root(async scope=>(await sql<{r:Awaited<ReturnType<typeof record>>}>`select organization_master.operating_plan(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);return root(async scope=>(await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.operating_withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
   async requireInputKind(actor:string,id:string,kind:'RELATION'|'SCOPE'){check(Id,id);await root(async scope=>{if((await record(scope,actor,id)).kind!==kind)throw new Error('ACCESS_DENIED');});},
   async requireCandidateKind(actor:string,id:string,kind:'RELATION'|'SCOPE'){check(Id,id);await root(async scope=>{const c=(await sql<{r:{input:{jobId:string}}}>`select governance_catalog.apply_record(${actor},'READ_CANDIDATE',${JSON.stringify({candidateId:id})}::jsonb) r`.execute(scope)).rows[0]!.r;if((await record(scope,actor,c.input.jobId)).kind!==kind)throw new Error('ACCESS_DENIED');});},
+  async licenseCoverageInTransaction(scope:Scope,actor:string,input:{subjectId:string;license:ScopeFactsValue['license'];catalog:CatalogReference;period:Span}){const proof=await validateLicense(scope,actor,input.subjectId,input,input.period,await clock(scope));return proof.qualified.map(({from,to})=>({from,to}));},
+  async scopeCoverageInTransaction(scope:Scope,actor:string,input:{subjectId:string;campusId:string;references:RelationFactsValue['scopeTargets'];catalog:CatalogReference;services:string[];period:Span;subjectRevisionCuts:Span[]}){return scopeCoverage(scope,actor,input.subjectId,input.campusId,input.references,input.catalog,input.services,input.period,await clock(scope),input.subjectRevisionCuts);},
+  async inspectCommandInTransaction(scope:Scope,actor:string,raw:OperatingCommand):Promise<unknown>{
+   check(OperatingCommandSchema,raw);const c=normalize(raw),current='target' in c?await snapshot(scope,actor,c.target.id,kindOf(c.action)):null;
+   if(c.source.recordStatus!=='PUBLISHED'||!c.source.approvalRef?.trim())throw new Error('APPROVAL_REQUIRED');
+   if('target' in c){if(!current||current.subject_id!==c.subject.id||current.campus_id!==c.campus.id||String(current.versions.at(-1)?.number)!==c.target.expectedVersion)throw new Error('STALE_VALIDATION');if(current.versions.some(v=>v.action==='CLOSE'||v.action==='REVOKE_SCOPE'))throw new Error('OPERATING_CLOSED');}
+   const checked=await admission(scope,actor,c,current,await clock(scope));
+   if(await conflict(scope,actor,c))throw new Error('PRIMARY_OPERATOR_CONFLICT');if(checked.blockers.length)throw new Error('BLOCKED_DEPENDENCY');return checked.basis;
+  },
   read,evaluateOperatingWindow,async readRestrictedInput(actor:string,id:string){check(Id,id);return root(async scope=>unseal(await record(scope,actor,id,'READ_RESTRICTED')));},
   close:()=>db.destroy()
  };

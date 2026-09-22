@@ -13,7 +13,7 @@ export const ApproveApplyUnitSchema=Type.Object({candidateId:Id,digest:Type.Stri
 export const ApplyUnitSchema=Type.Object({candidateId:Id,requestId:Id},{additionalProperties:false});
 export type PlanOwnerUnitInput=Static<typeof PlanOwnerUnitSchema>;
 export type ApplyUnitInput=Static<typeof ApplyUnitSchema>;
-export interface OwnerFact {owner:string;id:string;version:string}
+export interface OwnerFact {owner:string;id:string;version:string;source?:{dataset:string;row:number;step:string}}
 export interface OwnerCommand {owner:string;row:number;intent:'CREATE'|'REVISE';target:OwnerFact|null;aliases:number[];value:Record<string,string>}
 export interface ObservedOwnerUnit {
  input:PlanOwnerUnitInput;
@@ -32,11 +32,12 @@ export interface ApplyOwnerPort {
  validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,stage?:'FREEZE'):Promise<void>;
  apply(scope:CatalogTransactionScope,actor:string,command:OwnerCommand,resolved:ReadonlyMap<number,OwnerFact>,approval:{candidateId:string;digest:string}):Promise<{ok:true;fact:OwnerFact}|{ok:false}>;
  exactRead(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,fact:OwnerFact):Promise<OwnerFact|null>;
+ beforeCommit?(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,approval:{candidateId:string;digest:string},facts:OwnerFact[]):Promise<void>;
 }
 interface Candidate {id:string;maker:string;makerIdentity:string;input:PlanOwnerUnitInput;digest:string;envelope:Envelope;approvedBy:string|null}
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
-const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED']);
+const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','PAIR_PREAUTHORIZATION_REQUIRED','STALE_REVISION','BUNDLE_CONTEXT_REQUIRED','LEGAL_REVIEW_REQUIRED','BATCH_REJECTED','UNSUPPORTED_STATE_TRANSITION','PARENT_PERIOD_NOT_COVERED']);
 function failure(error:unknown):Error {
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';
@@ -183,6 +184,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
      if(!result.ok)throw new Error('OWNER_REJECTED');
      resolved.set(command.row,result.fact);
     }
+    await port().beforeCommit?.(scope,actor,unit,{candidateId:c.id,digest:c.digest},[...resolved.values()]);
     const result=await record<UnitOutcome>(scope,actor,'COMMIT',{...input,facts:[...resolved.values()]});
     attemptedCommit=true;
     return result;

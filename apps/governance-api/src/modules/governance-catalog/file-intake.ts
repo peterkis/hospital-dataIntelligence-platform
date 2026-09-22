@@ -5,7 +5,7 @@ import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/vnext-types.generated.js';
 import { ImportJobCommandSchema, type ImportJob, type ImportJobOutcome } from './import-job.js';
 import { protectedArtifacts, ProtectedReadSchema, type KeyProviderPort } from './protected-artifact.js';
-import type { ParserField, ParserResult, FileFormat } from './file-parser.js';
+import type { ParserField, ParserResult, FileFormat,OrganizationSheet,OrganizationWorkbookResult } from './file-parser.js';
 import { issueWorkbook } from './issue-workbook.js';
 import {parseSignature} from './parse-provenance.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
@@ -17,25 +17,28 @@ export const ParseFileSchema = Type.Object({...ProtectedReadSchema.properties,jo
 export type ReceiveFileInput = Static<typeof ReceiveFileSchema>;
 export type ParseFileInput = Static<typeof ParseFileSchema>;
 let activeWorkers = 0;
-async function boundedParse(bytes: Uint8Array, format: FileFormat, fields: ParserField[],policy:ParserResult['policy']): Promise<ParserResult> {
+async function runParser<T>(workerData:unknown):Promise<T> {
   if (activeWorkers >= 2) throw new Error('PARSER_BUSY');
   activeWorkers++;
   try {
-    return await new Promise<ParserResult>((resolve,reject)=> {
+    return await new Promise<T>((resolve,reject)=> {
       const worker = new Worker(new URL(import.meta.url.endsWith('.ts') ? './file-parser.ts' : './file-parser.js',import.meta.url),{
-        workerData:{bytes,format,fields,policy},execArgv:[],resourceLimits:{maxOldGenerationSizeMb:64,maxYoungGenerationSizeMb:16,stackSizeMb:2},
+        workerData,execArgv:[],resourceLimits:{maxOldGenerationSizeMb:64,maxYoungGenerationSizeMb:16,stackSizeMb:2},
       });
       let settled = false;
-      const finish = (value?:ParserResult) => {
+      const finish = (value?:T) => {
         if (settled) return; settled = true; clearTimeout(timer);
         void worker.terminate().then(()=> { if(value) resolve(value); else reject(new Error('PARSER_LIMIT')); });
       };
       const timer = setTimeout(()=>finish(),2000);
-      worker.once('message',(value:ParserResult|null)=>finish(value??undefined));
+      worker.once('message',(value:T|null)=>finish(value??undefined));
       worker.once('error',()=>finish()); worker.once('exit',()=>finish());
     });
   } finally { activeWorkers--; }
 }
+
+const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'])=>runParser<ParserResult>({bytes,format,fields,policy});
+export const parseOrganizationWorkbookBounded=(bytes:Uint8Array,organizationFields:Record<OrganizationSheet,ParserField[]>)=>runParser<OrganizationWorkbookResult>({bytes,organizationFields,policy:'STRICT_ORG_BUNDLE_V1'});
 
 /** Internal root-transaction seam used when a file receive must be linked to another Owner write. */
 function assertReceiveFileInput(input:ReceiveFileInput,bytes:Uint8Array){
@@ -65,6 +68,7 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
       if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED'); input={...input};
       const job=await jobRead(actor,input);const metadata=job.revisions.at(-1)!.input;
       if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
+      if(metadata.parserPolicy==='STRICT_ORG_BUNDLE_V1')throw new Error('BUNDLE_CONTEXT_REQUIRED');
       const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
       try {
         const result=await boundedParse(raw,metadata.format,job.contract.definition.fields,metadata.parserPolicy);
@@ -96,7 +100,7 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
         try { await sql`select governance_catalog.file_receive_denial(${actor},${JSON.stringify(denial)}::jsonb)`.execute(db); }
         catch {throw new Error('FILE_RECEIVE_FAILED');}
         const code=error instanceof Error?error.message:'';
-        throw new Error(['ACCESS_DENIED','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','BATCH_REJECTED','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT'].includes(code)?code:'FILE_RECEIVE_FAILED');
+        throw new Error(['BUNDLE_CONTEXT_REQUIRED','ACCESS_DENIED','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','BATCH_REJECTED','PROTECTED_OPERATION_FAILED','PUBLIC_DIGEST_CONFLICT'].includes(code)?code:'FILE_RECEIVE_FAILED');
       } finally {raw.fill(0);}
     },
     // Both commands close over the same authorized parser, independent of the receiver.

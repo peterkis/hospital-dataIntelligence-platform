@@ -90,6 +90,7 @@ export interface GovernanceCatalogImpactEvent {
 }
 
 export interface GovernanceCatalogImportContract {
+  bundle_org: Generated<boolean>;
   dataset_id: string;
   id: Generated<string>;
   manual_org03: Generated<boolean>;
@@ -328,6 +329,45 @@ export interface OrganizationMasterAccess {
   subject_id: string;
 }
 
+export interface OrganizationMasterBundleAdministrator {
+  actor: string;
+}
+
+export interface OrganizationMasterBundleChild {
+  candidate_id: string;
+  command_digest: string;
+  input_id: string;
+  legal_review_id: string;
+  step_key: string;
+}
+
+export interface OrganizationMasterBundleControlEvent {
+  actor: string;
+  details: Json;
+  digest: string;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  kind: string;
+  recorded_at: Generated<string>;
+  revision_id: string;
+  sequence: Generated<Int8>;
+}
+
+export interface OrganizationMasterBundleRevision {
+  bindings: Json;
+  campus: string;
+  contracts_digest: string;
+  dimensions: Json;
+  job_id: string;
+  manifest_digest: string;
+  manifest_id: string;
+  raw_id: string;
+  recorded_at: Generated<string>;
+  revision_id: string;
+  scopes: Json;
+}
+
 export interface OrganizationMasterCampus {
   id: Generated<string>;
   scope: string;
@@ -527,6 +567,11 @@ export interface VnextControlAuditStreamGrant {
   stream_id: string;
 }
 
+export interface VnextControlBundleWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlCampusWriteAuthority {
   key_hex: string;
   singleton: Generated<boolean>;
@@ -621,6 +666,10 @@ export interface DB {
   "governance_catalog.validation_run": GovernanceCatalogValidationRun;
   "governance_catalog.version": GovernanceCatalogVersion;
   "organization_master.access": OrganizationMasterAccess;
+  "organization_master.bundle_administrator": OrganizationMasterBundleAdministrator;
+  "organization_master.bundle_child": OrganizationMasterBundleChild;
+  "organization_master.bundle_control_event": OrganizationMasterBundleControlEvent;
+  "organization_master.bundle_revision": OrganizationMasterBundleRevision;
   "organization_master.campus": OrganizationMasterCampus;
   "organization_master.campus_code": OrganizationMasterCampusCode;
   "organization_master.campus_event": OrganizationMasterCampusEvent;
@@ -645,6 +694,7 @@ export interface DB {
   "vnext_control.audit": VnextControlAudit;
   "vnext_control.audit_chain": VnextControlAuditChain;
   "vnext_control.audit_stream_grant": VnextControlAuditStreamGrant;
+  "vnext_control.bundle_write_authority": VnextControlBundleWriteAuthority;
   "vnext_control.campus_write_authority": VnextControlCampusWriteAuthority;
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.migration": VnextControlMigration;

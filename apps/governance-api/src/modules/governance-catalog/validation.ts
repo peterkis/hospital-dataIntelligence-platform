@@ -18,7 +18,7 @@ const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-
 const ReadDimensions={scope:ProtectedReadSchema.properties.scope,campus:ProtectedReadSchema.properties.campus,purpose:ProtectedReadSchema.properties.purpose};
 export const ExplainValidationSchema=Type.Object({...ReadDimensions,runId:Id},{additionalProperties:false});
 export const CompareValidationSchema=Type.Object({...ReadDimensions,leftRunId:Id,rightRunId:Id},{additionalProperties:false});
-export interface ValidationRun {runId:string;jobId:string;revisionId:string;parseArtifactId:string;sourceArtifactId:string;parserPolicy:string;contractVersionId:string;ruleVersion:string;interpretationPolicy:string;decision:'FAIL'|'BLOCKED';issueCount:number;resultArtifactId:string;recordedAt:string;adapterReadiness:'NOT_READY';securityScan:'NOT_RUN';qualityCandidateDigest?:string|null;qualityEligibilityDigest?:string|null;qualityResolutionDigest?:string|null}
+export interface ValidationRun {runId:string;jobId:string;revisionId:string;parseArtifactId:string;sourceArtifactId:string;parserPolicy:string;contractVersionId:string;ruleVersion:string;interpretationPolicy:string;decision:'PASS'|'FAIL'|'BLOCKED';issueCount:number;resultArtifactId:string;recordedAt:string;adapterReadiness:'NOT_READY'|'READY';securityScan:'NOT_RUN';qualityCandidateDigest?:string|null;qualityEligibilityDigest?:string|null;qualityResolutionDigest?:string|null}
 type SignedRun=ValidationRun&{signature:string};
 interface Provenance {artifact_id:string;source_artifact_id:string;job_id:string;revision_id:string;contract_version_id:string;policy:'STRICT_V1'|'STRICT_V2';structural_status:string;signature:string}
 
@@ -153,3 +153,28 @@ export function validation(db:Kysely<DB>,provider?:KeyProviderPort){
  };
 }
 function ReadDimensionsInput(input:{scope:'SYNTHETIC';campus:'NORTH'|'SOUTH';purpose:'IDENTITY_VERIFY'|'CONTACT_VERIFY'|'HR_RESTRICTED'}){return {scope:input.scope,campus:input.campus,purpose:input.purpose};}
+
+/** Owner-produced file evidence uses the existing protected parser and validation ledger. */
+export async function recordOwnerFileValidation(scope:CatalogTransactionScope,provider:KeyProviderPort|undefined,actor:string,input:{jobId:string;revisionId:string;sourceArtifactId:string;campus:'NORTH'|'SOUTH';requestId:string;parseRequestId:string;outputRequestId:string;contractVersionId:string;ruleVersion:string;parserPolicy:string;structuralStatus:'PARSED'|'REJECTED';parsed:unknown;evaluation:ValidationEvaluation}){
+ const dimensions={scope:'SYNTHETIC' as const,campus:input.campus,purpose:'IDENTITY_VERIFY' as const};
+ const store=protectedArtifacts(scope,provider),parsedBytes=Buffer.from(JSON.stringify(input.parsed));
+ let parsedId:string;
+ try{
+  const saved=await store.storeProtectedArtifact(actor,{...dimensions,requestId:input.parseRequestId,jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_CELL',retentionSeconds:3600},parsedBytes);parsedId=saved.artifactId;
+  await sql`select governance_catalog.register_parse(${actor},${parsedId}::uuid,${input.sourceArtifactId}::uuid,${parseSignature(provider,parsedId,input.jobId,input.revisionId,input.contractVersionId,parsedBytes)},${input.structuralStatus})`.execute(scope);
+ }finally{parsedBytes.fill(0);}
+ const request={...dimensions,requestId:input.requestId,outputRequestId:input.outputRequestId,retentionSeconds:3600,jobId:input.jobId,revisionId:input.revisionId,artifactId:parsedId};
+ const prior=(await sql<{r:SignedRun|null}>`select governance_catalog.validation_prior(${actor},${JSON.stringify(request)}::jsonb) r`.execute(scope)).rows[0]!.r;
+ if(prior){const evaluation=await createValidationEvidenceReader(provider).readEvaluation(scope,actor,{...dimensions,runId:prior.runId},prior);const {signature:_,...run}=prior;return {run,evaluation};}
+ const payload=Buffer.from(JSON.stringify(input.evaluation));
+ try{
+  if(payload.length>1048576)throw new Error('VALIDATION_RESULT_LIMIT');
+  const outputRequestId=input.outputRequestId,saved=await store.storeProtectedArtifact(actor,{...dimensions,requestId:outputRequestId,jobId:input.jobId,revisionId:input.revisionId,kind:'ERROR_REPORT',retentionSeconds:3600},payload);
+  const stamp=(await sql<{id:string;time:string}>`select uuidv7()::text id,to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') time`.execute(scope)).rows[0]!;
+  const candidates=buildQualityIssueCandidates(input.evaluation),candidateDigest=qualityCandidateDigest(candidates,dimensions),eligibilityDigest=qualityEligibilityDigest(candidates,input.evaluation.layers.filter(l=>l.status==='NOT_RUN').map(l=>l.layer),dimensions);
+  const run:ValidationRun={runId:stamp.id,jobId:input.jobId,revisionId:input.revisionId,parseArtifactId:parsedId,sourceArtifactId:input.sourceArtifactId,parserPolicy:input.parserPolicy,contractVersionId:input.contractVersionId,ruleVersion:input.ruleVersion,interpretationPolicy:input.evaluation.interpretationPolicy,decision:input.evaluation.decision,issueCount:input.evaluation.issues.length,resultArtifactId:saved.artifactId,recordedAt:stamp.time,adapterReadiness:input.parserPolicy==='STRICT_ORG_BUNDLE_V1'?'READY':'NOT_READY',securityScan:'NOT_RUN',qualityCandidateDigest:candidateDigest,qualityEligibilityDigest:eligibilityDigest};
+  const accepted=(await sql<{r:SignedRun}>`select governance_catalog.accept_validation(${actor},${JSON.stringify(request)}::jsonb,${saved.artifactId}::uuid,${run.decision},${run.issueCount},${run.runId}::uuid,${run.recordedAt},${validationSignature(provider,run,payload)},${candidateDigest},${eligibilityDigest},NULL) r`.execute(scope)).rows[0]!.r;
+  if(!signaturesEqual(validationSignature(provider,accepted,payload),accepted.signature))throw new Error('VALIDATION_PROVENANCE_REQUIRED');
+  const {signature:_,...runResult}=accepted;return {run:runResult,evaluation:input.evaluation};
+ }finally{payload.fill(0);}
+}
