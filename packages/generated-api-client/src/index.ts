@@ -24,3 +24,5 @@ export function createGovernanceApiClient(options: {
 }
 
 export type {operations as VNextOperations} from './vnext-schema.generated.js';
+
+export {createCampusClient,type CampusInput} from './vnext-client.js';
