@@ -92,6 +92,7 @@ export interface GovernanceCatalogImpactEvent {
 export interface GovernanceCatalogImportContract {
   dataset_id: string;
   id: Generated<string>;
+  manual_org03: Generated<boolean>;
   profile: string;
 }
 
@@ -411,6 +412,43 @@ export interface OrganizationMasterLicenseVersion {
   valid_to: string | null;
 }
 
+export interface OrganizationMasterOperatingAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  subject_id: string;
+}
+
+export interface OrganizationMasterOperatingInput {
+  action: string;
+  campus_id: string;
+  input_id: string;
+  kind: string;
+  subject_id: string;
+}
+
+export interface OrganizationMasterOperatingObject {
+  campus_id: string;
+  id: Generated<string>;
+  kind: string;
+  scope: string;
+  subject_id: string;
+}
+
+export interface OrganizationMasterOperatingVersion {
+  action: string;
+  basis: Json;
+  facts: Json | null;
+  id: Generated<string>;
+  input_id: string;
+  number: Int8;
+  object_id: string;
+  recorded_at: Generated<string>;
+  reviewer: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface OrganizationMasterSubject {
   campus: string;
   id: Generated<string>;
@@ -523,6 +561,11 @@ export interface VnextControlObjectGrant {
   scope: string;
 }
 
+export interface VnextControlOperatingWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlOrganizationKeyBinding {
   lookup_fingerprint: string;
   payload_fingerprint: string;
@@ -589,6 +632,10 @@ export interface DB {
   "organization_master.input_request": OrganizationMasterInputRequest;
   "organization_master.license": OrganizationMasterLicense;
   "organization_master.license_version": OrganizationMasterLicenseVersion;
+  "organization_master.operating_access": OrganizationMasterOperatingAccess;
+  "organization_master.operating_input": OrganizationMasterOperatingInput;
+  "organization_master.operating_object": OrganizationMasterOperatingObject;
+  "organization_master.operating_version": OrganizationMasterOperatingVersion;
   "organization_master.subject": OrganizationMasterSubject;
   "organization_master.verification": OrganizationMasterVerification;
   "organization_master.version": OrganizationMasterVersion;
@@ -602,6 +649,7 @@ export interface DB {
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.object_grant": VnextControlObjectGrant;
+  "vnext_control.operating_write_authority": VnextControlOperatingWriteAuthority;
   "vnext_control.organization_key_binding": VnextControlOrganizationKeyBinding;
   "vnext_control.outcome": VnextControlOutcome;
   "vnext_control.protected_grant": VnextControlProtectedGrant;

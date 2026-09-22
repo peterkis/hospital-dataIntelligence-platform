@@ -36,7 +36,7 @@ export interface ApplyOwnerPort {
 interface Candidate {id:string;maker:string;makerIdentity:string;input:PlanOwnerUnitInput;digest:string;envelope:Envelope;approvedBy:string|null}
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
-const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH']);
+const codes=new Set(['ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED']);
 function failure(error:unknown):Error {
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';

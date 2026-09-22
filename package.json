@@ -266,6 +266,8 @@
     "vnext:p0-10:evidence": "node --import tsx tooling/vnext/p0-10-verify.mjs",
     "vnext:p1-01:unit": "vitest run --config tooling/vnext/vitest.p1-01-unit.config.ts",
     "vnext:p1-03:deploy": "node --import tsx tooling/vnext/p1-03-deploy.mjs",
+    "vnext:p1-04:validate": "node --import tsx tooling/vnext/p1-04-validate.mjs",
+    "vnext:p1-04:typecheck": "tsc -p tooling/vnext/tsconfig.p1-04.json",
     "vnext:p1-03:validate": "node --import tsx tooling/vnext/p1-03-validate.mjs",
     "vnext:p1-03:unit": "vitest run --config tooling/vnext/vitest.p1-03-unit.config.ts",
     "vnext:p1-03:boundaries": "node tooling/vnext/p1-03-boundaries.mjs",
@@ -281,7 +283,9 @@
     "vnext:p1-02:suspension-deploy": "node --import tsx tooling/vnext/p1-02-suspension-deploy.mjs",
     "vnext:p1-02:approved-deploy": "node --import tsx tooling/vnext/p1-02-approved-deploy.mjs",
     "vnext:p1-02:review-deploy": "node --import tsx tooling/vnext/p1-02-review-deploy.mjs",
-    "vnext:p1-02:fix-deploy": "node --import tsx tooling/vnext/p1-02-list-deploy.mjs"
+    "vnext:p1-02:fix-deploy": "node --import tsx tooling/vnext/p1-02-list-deploy.mjs",
+    "vnext:p1-04:unit": "vitest run --config tooling/vnext/vitest.p1-04-unit.config.ts",
+    "vnext:p1-04:deploy": "node --import tsx tooling/vnext/p1-04-deploy.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

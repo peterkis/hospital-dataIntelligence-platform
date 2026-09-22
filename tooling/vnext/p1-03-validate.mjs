@@ -7,7 +7,8 @@ import {createValidationOwnerSession,dropValidationOwnerSession} from './validat
 import {migrate,migrationFiles,inspect,root,resolveTarget} from './lineage.mjs';
 import {seed} from './catalog-seed.mjs';
 import {grantOrganization} from './p1-02-validate.mjs';
-assert.equal(migrationFiles().length,61,'P1-03 adds no DDL');
+// P1-03 added no DDL; its read regression runs against the current forward chain.
+assert.ok(migrationFiles().length>=61,'Campus reference baseline 0061 is required');
 console.log(JSON.stringify(verifyCampusBoundaries(JSON.parse(readFileSync('tooling/vnext/p1-03-call-sites.json','utf8')).runtimeEntries)));
 const owned=createTemporary('P1-03');let owner;
 try{

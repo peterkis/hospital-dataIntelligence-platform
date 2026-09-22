@@ -50,3 +50,34 @@ export function createCampusClient(baseUrl:string,actor:string){
   restrictedInput:(id:string)=>client.POST('/api/vnext/campuses/restricted-input',{body:{id}}),
  };
 }
+
+export function createOperatingRelationClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  stage:(body:operations['stageOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/inputs',{body}),
+  plan:(body:operations['planOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/plan',{body}),
+  review:(body:operations['reviewOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/review',{body}),
+  approve:(body:operations['approveOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/approve',{body}),
+  apply:(body:operations['applyOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/apply',{body}),
+  resume:(body:operations['resumeOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/resume',{body}),
+  withdraw:(body:operations['withdrawOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/withdraw',{body}),
+  read:(body:operations['readOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/query',{body}),
+  restrictedInput:(body:operations['restrictedOperatingRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/restricted-input',{body}),
+  evaluateOperatingWindow:(body:operations['evaluateOperatingWindow']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/operating-relations/evaluate',{body}),
+ };
+}
+
+export function createLicenseScopeClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  stage:(body:operations['stageLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/inputs',{body}),
+  plan:(body:operations['planLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/plan',{body}),
+  review:(body:operations['reviewLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/review',{body}),
+  approve:(body:operations['approveLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/approve',{body}),
+  apply:(body:operations['applyLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/apply',{body}),
+  resume:(body:operations['resumeLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/resume',{body}),
+  withdraw:(body:operations['withdrawLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/withdraw',{body}),
+  read:(body:operations['readLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/query',{body}),
+  restrictedInput:(body:operations['restrictedLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/restricted-input',{body}),
+ };
+}
