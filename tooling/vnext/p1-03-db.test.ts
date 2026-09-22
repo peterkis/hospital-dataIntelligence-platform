@@ -109,6 +109,19 @@ test('AC04 cached pins never bypass current READ permission; a mixed batch fails
   await expect(org.references.readCampusReferenceCoverage('maker',{references:[ref(a.id)],validFrom:'2026-01-01T00:00:00',validTo:null})).rejects.toThrow('ACCESS_DENIED');
  }finally{exec(`INSERT INTO organization_master.access VALUES('maker',${quote(a.id)}::uuid,'NORTH','READ');`);}
 });
+test('empty reference batches still require a current coarse READ grant',async()=>{
+ const inactive='p1-03-empty-inactive',revoked='p1-03-empty-revoked',unknown='p1-03-empty-unknown';
+ exec(`INSERT INTO vnext_control.actor(code,identity_code,active) VALUES(${quote(inactive)},'P1_03_EMPTY_INACTIVE',false),(${quote(revoked)},'P1_03_EMPTY_REVOKED',true); INSERT INTO vnext_control.actor_grant VALUES(${quote(inactive)},'SYNTHETIC','READ');`);
+ const calls=(candidate:string)=>[
+  ()=>org.references.resolveCampusReference(candidate,{references:[]}),
+  ()=>org.references.pinCampusVersion(candidate,{references:[]}),
+  ()=>org.references.readCampusReferenceCoverage(candidate,{references:[],validFrom:'2026-01-01T00:00:00',validTo:null})
+ ];
+ try{for(const candidate of [unknown,inactive,revoked])for(const request of calls(candidate))await expect(request()).rejects.toThrow('ACCESS_DENIED');}
+ finally{exec(`DELETE FROM vnext_control.actor_grant WHERE actor_code IN (${quote(inactive)},${quote(revoked)}); DELETE FROM vnext_control.actor WHERE code IN (${quote(inactive)},${quote(revoked)});`);}
+ for(const request of calls('maker'))expect((await request()).items).toEqual([]);
+});
+
 test('closed references reject wrong owners, extras, unknown IDs, impossible dates and oversized batches',async()=>{
  const a=await apply(create());
  for(const input of [{references:[{...ref(a.id),owner:'platform/campus'}]},{references:[{...ref(a.id),campusName:'cached'}]},{references:Array.from({length:101},()=>ref(a.id))},{references:[ref(a.id)],scope:'NORTH'}])await expect(org.references.resolveCampusReference('maker',JSON.parse(JSON.stringify(input)))).rejects.toThrow('CLOSED_INPUT_REQUIRED');
@@ -145,6 +158,7 @@ test('HTTP fails closed without a reference Owner and with closed-input violatio
  const readOnly=await buildCatalogServer(undefined,'CONTROL_PLANE',undefined,{references:org.references,actor:r=>actor(r.headers)});
  try{
   const invalid=await readOnly.inject({method:'POST',url:'/api/vnext/campuses/references/resolve',headers:{'x-catalog-actor':'maker'},payload:{references:[],actor:'reviewer'}});expect(invalid.statusCode).toBe(400);
+  const denied=await readOnly.inject({method:'POST',url:'/api/vnext/campuses/references/resolve',headers:{'x-catalog-actor':'p1-03-http-unknown'},payload:{references:[]}});expect(denied.statusCode).toBe(403);expect(denied.json()).toMatchObject({code:'ACCESS_DENIED'});
   const a=await apply(create());const result=await readOnly.inject({method:'POST',url:'/api/vnext/campuses/references/resolve',headers:{'x-catalog-actor':'maker'},payload:{references:[ref(a.id)]}});expect(result.statusCode).toBe(200);
   const write=await readOnly.inject({method:'POST',url:'/api/vnext/campuses/inputs',headers:{'x-catalog-actor':'maker'},payload:input(create())});expect(write.statusCode).toBe(503);
  }finally{await readOnly.close();}

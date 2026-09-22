@@ -21,9 +21,12 @@ function project(s:CampusSnapshot,businessAt:string,asOf:string){
 /** One Owner projection shared by both legacy-shaped reads and typed references. */
 export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,id:string)=>Promise<CampusSnapshot>){
  const make=(execute:Root)=>{
-  const run=<T>(work:(scope:Scope,now:string)=>Promise<T>)=>execute(async scope=>{
+  const run=<T>(actor:string,work:(scope:Scope,now:string)=>Promise<T>)=>execute(async scope=>{
    // Reentrant for existing roots; also protects transaction-bound consumer calls.
    await sql`select pg_advisory_xact_lock(901002)`.execute(scope);
+   // Empty reference batches are valid, but every read still needs a current actor grant.
+   // Reuse the granted Owner-level list boundary; per-reference snapshot() keeps exact object checks.
+   await sql`select organization_master.campus_list(${actor},null::uuid,1,null::timestamp)`.execute(scope);
    const now=(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(scope)).rows[0]!.v;
    return work(scope,now);
   });
@@ -34,7 +37,7 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
   return {
    async resolveCampusReference(actor:string,input:CampusResolveInput){
     check(CampusResolveSchema,input);input=structuredClone(input);unique(input.references);
-    return run(async(scope,observedAt)=>{
+    return run(actor,async(scope,observedAt)=>{
      const businessAt=localTime(input.businessAt??observedAt),asOf=localTime(input.asOf??observedAt),items=[];
      for(const ref of input.references){const s=await snapshot(scope,actor,ref.id),p=project(s,businessAt,asOf);if(p.view.head==='0')throw new Error('NOT_FOUND');items.push({...p.view,reference:reference(s.id),profileVersion:p.version?versionReference(s.id,p.version):null});}
      return {observedAt,businessAt,asOf,items};
@@ -42,7 +45,7 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
    },
    async pinCampusVersion(actor:string,input:CampusPinInput){
     check(CampusPinSchema,input);input=structuredClone(input);unique(input.references);
-    return run(async(scope,observedAt)=>{
+    return run(actor,async(scope,observedAt)=>{
      const asOf=localTime(input.asOf??observedAt),items=[];
      for(const ref of input.references){
       const s=await snapshot(scope,actor,ref.id);
@@ -56,7 +59,7 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
     check(CampusCoverageSchema,input);input=structuredClone(input);unique(input.references);
     const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);
     if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');
-    return run(async(scope,observedAt)=>{
+    return run(actor,async(scope,observedAt)=>{
      const asOf=localTime(input.asOf??observedAt),items=[];
      const span=(e:CampusEvent)=>({from:stamp(e.valid_from),to:e.valid_to===null?null:stamp(e.valid_to)});
      for(const ref of input.references){
@@ -72,21 +75,21 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
    },
    async read(actor:string,input:{id:string;businessAt?:string;asOf?:string}){
     check(CampusReadSchema,input);input=structuredClone(input);
-    return run(async(scope,now)=>project(await snapshot(scope,actor,input.id),localTime(input.businessAt??now),localTime(input.asOf??now)).view);
+    return run(actor,async(scope,now)=>project(await snapshot(scope,actor,input.id),localTime(input.businessAt??now),localTime(input.asOf??now)).view);
    },
    async list(actor:string,input:{after?:string;limit?:number;businessAt?:string;asOf?:string}){
     check(CampusListSchema,input);input=structuredClone(input);
-    return run(async(scope,now)=>{
+    return run(actor,async(scope,now)=>{
      const at=localTime(input.businessAt??now),asOf=localTime(input.asOf??now);
      const ids=(await sql<{r:string[]}>`select organization_master.campus_list(${actor},${input.after??null}::uuid,${input.limit??100},${asOf}::timestamp) r`.execute(scope)).rows[0]!.r;
      const rows=[];for(const id of ids)rows.push(project(await snapshot(scope,actor,id),at,asOf).view);return rows;
     });
    },
-   async history(actor:string,id:string){check(Id,id);return run(async scope=>{const s=await snapshot(scope,actor,id);return {id:s.id,head:String(s.events.at(-1)!.number),versions:s.events.filter(e=>e.facts!==null).map(e=>({...publicEvent(e),facts:e.facts!})),plans:s.events.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action)).map(e=>({...publicEvent(e),plannedOpeningAt:e.planned_opening_at&&stamp(e.planned_opening_at)})),operations:s.events.filter(e=>e.state!==null).map(e=>({...publicEvent(e),state:e.state!}))};});},
-   async exact(actor:string,input:{id:string;version:string}){check(CampusVersionSchema,input);input=structuredClone(input);return run(scope=>exactIn(scope,actor,input.id,input.version));},
+   async history(actor:string,id:string){check(Id,id);return run(actor,async scope=>{const s=await snapshot(scope,actor,id);return {id:s.id,head:String(s.events.at(-1)!.number),versions:s.events.filter(e=>e.facts!==null).map(e=>({...publicEvent(e),facts:e.facts!})),plans:s.events.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action)).map(e=>({...publicEvent(e),plannedOpeningAt:e.planned_opening_at&&stamp(e.planned_opening_at)})),operations:s.events.filter(e=>e.state!==null).map(e=>({...publicEvent(e),state:e.state!}))};});},
+   async exact(actor:string,input:{id:string;version:string}){check(CampusVersionSchema,input);input=structuredClone(input);return run(actor,scope=>exactIn(scope,actor,input.id,input.version));},
    async diff(actor:string,input:{id:string;fromVersion:string;toVersion:string}){
     check(CampusDiffSchema,input);input=structuredClone(input);
-    return run(async scope=>{
+    return run(actor,async scope=>{
      const a=await exactIn(scope,actor,input.id,input.fromVersion),b=await exactIn(scope,actor,input.id,input.toVersion);
      const before={...a.facts,validFrom:a.validFrom,validTo:a.validTo},after={...b.facts,validFrom:b.validFrom,validTo:b.validTo};
      const render=(v:unknown)=>v===null?null:typeof v==='string'?v:canonicalPlan(v);const changes=[];
