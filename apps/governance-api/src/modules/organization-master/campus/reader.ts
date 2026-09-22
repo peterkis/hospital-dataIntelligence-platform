@@ -49,6 +49,7 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
      const asOf=localTime(input.asOf??observedAt),items=[];
      for(const ref of input.references){
       const s=await snapshot(scope,actor,ref.id);
+      if(!s.events.some(e=>stamp(e.recorded_at)<=asOf))throw new Error('NOT_FOUND');
       const e=s.events.find(e=>e.facts!==null&&String(e.number)===ref.version&&e.id===ref.versionId&&stamp(e.recorded_at)<=asOf);
       if(!e)throw new Error('CAMPUS_VERSION_MISMATCH');items.push({reference:versionReference(s.id,e),validFrom:stamp(e.valid_from),validTo:e.valid_to&&stamp(e.valid_to),recordedAt:stamp(e.recorded_at),facts:e.facts!});
      }

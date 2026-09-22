@@ -80,7 +80,7 @@ test('pins reject operation heads, invisible versions and duplicate IDs across v
  const h=await org.references.history('maker',a.id),pinned={...ref(a.id),version:v.version,versionId:v.versionId};
  expect((await org.references.resolveCampusReference('maker',{references:[ref(a.id)]})).items[0]).toMatchObject({head:plan.version,profileVersion:{version:'1'}});
  await expect(org.references.pinCampusVersion('maker',{references:[{...ref(a.id),version:plan.version,versionId:h.plans[0]!.versionId}]})).rejects.toThrow('CAMPUS_VERSION_MISMATCH');
- await expect(org.references.pinCampusVersion('maker',{references:[pinned],asOf:'2025-01-01T00:00:00'})).rejects.toThrow('CAMPUS_VERSION_MISMATCH');
+ await expect(org.references.pinCampusVersion('maker',{references:[pinned],asOf:'2025-01-01T00:00:00'})).rejects.toThrow('NOT_FOUND');
  await expect(org.references.pinCampusVersion('maker',{references:[pinned,{...pinned,version:'2'}]})).rejects.toThrow('CAMPUS_REFERENCE_CONFLICT');
 });
 test('coverage uses the latest known profile only inside its asserted business interval',async()=>{
