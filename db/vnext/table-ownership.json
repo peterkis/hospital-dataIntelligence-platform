@@ -13,5 +13,21 @@
   ],
   "domainOwners": {
     "organization_master": "apps/governance-api/src/modules/organization-master/index.ts"
+  },
+  "operatingCapabilities": {
+    "owner": "organization-master",
+    "tables": [
+      "operating_object",
+      "operating_version",
+      "operating_input",
+      "operating_access"
+    ],
+    "writeAuthority": "vnext_control.operating_write_authority",
+    "catalogRead": "governance_catalog.operating_catalog",
+    "schemaPrefix": 64,
+    "inputProfile": "ORG03_MANUAL_CORE_V1",
+    "fileAdapter": "NOT_READY",
+    "FULL": "BLOCKED_DEPENDENCY",
+    "manualContractIdentity": "governance_catalog.import_contract.manual_org03"
   }
 }

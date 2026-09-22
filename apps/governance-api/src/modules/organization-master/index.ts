@@ -1,3 +1,4 @@
+import {createRegistrationReader} from './registration.js';
 import {createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
 import {Pool,types} from 'pg';
 import {Kysely,PostgresDialect,sql} from 'kysely';
@@ -97,7 +98,7 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
   }
  };
  const coordinator=applyCoordinator(db,provider,port);
- const service={
+ const service={registration:createRegistrationReader(root),
   readApplyCandidate:coordinator.readApplyCandidate,
   approveApplyUnit:coordinator.approveApplyUnit,
   applyUnit:coordinator.applyUnit,
@@ -115,23 +116,9 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
    try{return await root(async scope=>{
     const rows=(await sql<{r:OrganizationFact[]}>`select organization_master.read(${actor},${JSON.stringify({id:input.id,mode:'HISTORY',...(input.asOf?{asOf:input.asOf}:{})})}::jsonb) r`.execute(scope)).rows[0]!.r;
     if(!rows.length)throw new Error('NOT_FOUND');
-    // Exact grants are checked by the public read above; derive campus internally.
-    const s=(await sql<{r:Snapshot}>`select organization_master.qualification_snapshot(${actor},${input.id}::uuid) r`.execute(scope)).rows[0]!.r;
-    const asOf=input.asOf?localTime(input.asOf):null;const known=(r:{recorded_at:string})=>asOf===null||stamp(r.recorded_at)<=asOf;
-    const span=(v:{valid_from:string;valid_to:string|null})=>({from:stamp(v.valid_from),to:v.valid_to&&stamp(v.valid_to)});
+    const basis=await createRegistrationReader(root).inTransaction(scope).read(actor,{id:input.id,...(input.asOf?{asOf:input.asOf}:{})});
     const perLicense=new Map<string,Array<{from:string;to:string|null}>>();
-    for(const v of s.verifications.filter(known)){
-     const subject=s.versions.find(x=>x.id===v.subject_version&&known(x));if(!subject)continue;
-     const selected=v.licenses.map(id=>s.licenses.find(x=>x.id===id&&known(x)));
-     const licenseId=selected[0]?.license_id;
-     // Older mixed-credential assertions remain historical evidence but cannot
-     // establish qualification, nor can separate partial assertions be spliced.
-     if(!licenseId||selected.some(l=>!l||l.license_id!==licenseId))continue;
-     const subjectSpans=subtract(span(subject),s.versions.filter(x=>known(x)&&x.number>subject.number).map(span));
-     const licensed=v.licenses.flatMap(id=>{const l=s.licenses.find(x=>x.id===id&&known(x));if(!l||l.revoked||l.end_kind==='UNKNOWN')return [];return subtract(span(l),s.licenses.filter(x=>known(x)&&x.license_id===l.license_id&&x.number>l.number).map(span));});
-     const spans=subjectSpans.flatMap(p=>intersect(p,span(v))).flatMap(p=>licensed.flatMap(l=>intersect(p,l)));
-     perLicense.set(licenseId,[...(perLicense.get(licenseId)??[]),...spans]);
-    }
+    for(const p of basis.qualified)perLicense.set(p.licenseId,[...(perLicense.get(p.licenseId)??[]),{from:p.from,to:p.to}]);
     return {status:[...perLicense.values()].some(spans=>covered(spans,from,to))?'LICENSED_REGISTRATION' as const:'NOT_ESTABLISHED' as const,organizationId:input.id,validFrom:from,validTo:to,operatingPermission:'NOT_EVALUABLE' as const};
    });}catch(error){throw safe(error);}
   },
@@ -179,3 +166,8 @@ export {openCampus,type CampusOwner,type CampusCommand,CampusStageSchema,CampusC
 
 export * from './campus/reference-contracts.js';
 export type {CampusReferencePort} from './campus/reader.js';
+
+export type {OrganizationRegistrationPort} from './registration.js';
+
+export {openOperatingRelations,type OperatingOwner} from './operating/index.js';
+export * from './operating/contracts.js';

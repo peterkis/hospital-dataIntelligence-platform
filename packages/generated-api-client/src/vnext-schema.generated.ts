@@ -1028,6 +1028,310 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/operating-relations/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/restricted-input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restrictedOperatingRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/license-scope-evidence/restricted-input": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restrictedLicenseScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/operating-relations/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["evaluateOperatingWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2264,6 +2568,13 @@ export interface operations {
                                     version: string;
                                 }[];
                                 references: ({
+                                    /** @enum {string} */
+                                    field: "is_primary_operator";
+                                    /** @enum {string} */
+                                    target: "enum:yes_no";
+                                    /** @enum {string} */
+                                    status: "ADOPTED_CODESET";
+                                } | {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
@@ -2446,6 +2757,13 @@ export interface operations {
                                     version: string;
                                 }[];
                                 references: ({
+                                    /** @enum {string} */
+                                    field: "is_primary_operator";
+                                    /** @enum {string} */
+                                    target: "enum:yes_no";
+                                    /** @enum {string} */
+                                    status: "ADOPTED_CODESET";
+                                } | {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
@@ -2629,6 +2947,13 @@ export interface operations {
                                     version: string;
                                 }[];
                                 references: ({
+                                    /** @enum {string} */
+                                    field: "is_primary_operator";
+                                    /** @enum {string} */
+                                    target: "enum:yes_no";
+                                    /** @enum {string} */
+                                    status: "ADOPTED_CODESET";
+                                } | {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
@@ -2787,6 +3112,13 @@ export interface operations {
                             version: string;
                         }[];
                         references: ({
+                            /** @enum {string} */
+                            field: "is_primary_operator";
+                            /** @enum {string} */
+                            target: "enum:yes_no";
+                            /** @enum {string} */
+                            status: "ADOPTED_CODESET";
+                        } | {
                             field: string;
                             target: string;
                             /** @enum {string} */
@@ -2857,6 +3189,13 @@ export interface operations {
                             version: string;
                         }[];
                         references: ({
+                            /** @enum {string} */
+                            field: "is_primary_operator";
+                            /** @enum {string} */
+                            target: "enum:yes_no";
+                            /** @enum {string} */
+                            status: "ADOPTED_CODESET";
+                        } | {
                             field: string;
                             target: string;
                             /** @enum {string} */
@@ -10883,6 +11222,4001 @@ export interface operations {
                             };
                             reason: string;
                         };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    jobId: string;
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: string;
+                        id: string;
+                    }[];
+                    command: {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "VERIFY_SCOPE";
+                        facts: {
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string;
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "REVISE_SCOPE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        facts: {
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string;
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "REVOKE_SCOPE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "ESTABLISH";
+                        facts: {
+                            /** @enum {unknown} */
+                            role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText: string;
+                            /** @enum {unknown} */
+                            primary: "Y" | "N";
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string | null;
+                            scopeTargets: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            }[];
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {unknown} */
+                        action: "REVISE_RELATION" | "REVALIDATE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        facts: {
+                            /** @enum {unknown} */
+                            role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText: string;
+                            /** @enum {unknown} */
+                            primary: "Y" | "N";
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string | null;
+                            scopeTargets: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            }[];
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "CLOSE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        revisionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    planOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    reviewOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        approvedBy: string | null;
+                        command: {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "VERIFY_SCOPE";
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVISE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVOKE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "ESTABLISH";
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {unknown} */
+                            action: "REVISE_RELATION" | "REVALIDATE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "CLOSE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        };
+                        blockingIssues: string[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    applyOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "RELATION" | "SCOPE";
+                    id?: string;
+                    subjectId?: string;
+                    campusId?: string;
+                    /** @enum {unknown} */
+                    mode: "LIST" | "HISTORY" | "EXACT" | "EFFECTIVE";
+                    version?: string;
+                    businessAt?: string;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {unknown} */
+                        kind: "RELATION" | "SCOPE";
+                        head: string;
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        version: string;
+                        versionId: string;
+                        /** @enum {unknown} */
+                        action: "VERIFY_SCOPE" | "REVISE_SCOPE" | "REVOKE_SCOPE" | "ESTABLISH" | "REVISE_RELATION" | "REVALIDATE" | "CLOSE";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string;
+                        } | {
+                            /** @enum {unknown} */
+                            role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText: string;
+                            /** @enum {unknown} */
+                            primary: "Y" | "N";
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string | null;
+                            scopeTargets: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            }[];
+                        } | null;
+                        scopeDependencies: {
+                            reference: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                        }[];
+                        reviewer: string;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    restrictedOperatingRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        dependencies?: {
+                            kind: string;
+                            id: string;
+                        }[];
+                        command: {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "VERIFY_SCOPE";
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVISE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVOKE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "ESTABLISH";
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {unknown} */
+                            action: "REVISE_RELATION" | "REVALIDATE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "CLOSE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    jobId: string;
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: string;
+                        id: string;
+                    }[];
+                    command: {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "VERIFY_SCOPE";
+                        facts: {
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string;
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "REVISE_SCOPE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        facts: {
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string;
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "REVOKE_SCOPE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "ESTABLISH";
+                        facts: {
+                            /** @enum {unknown} */
+                            role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText: string;
+                            /** @enum {unknown} */
+                            primary: "Y" | "N";
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string | null;
+                            scopeTargets: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            }[];
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {unknown} */
+                        action: "REVISE_RELATION" | "REVALIDATE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        facts: {
+                            /** @enum {unknown} */
+                            role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText: string;
+                            /** @enum {unknown} */
+                            primary: "Y" | "N";
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string | null;
+                            scopeTargets: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            }[];
+                        };
+                    } | {
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string | null;
+                        validFrom: string;
+                        validTo: (string) | null;
+                        /** @enum {string} */
+                        action: "CLOSE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        revisionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    planLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    reviewLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        approvedBy: string | null;
+                        command: {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "VERIFY_SCOPE";
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVISE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVOKE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "ESTABLISH";
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {unknown} */
+                            action: "REVISE_RELATION" | "REVALIDATE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "CLOSE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        };
+                        blockingIssues: string[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    applyLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "COMMITTED" | "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                        facts?: {
+                            /** @enum {unknown} */
+                            owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id: string;
+                            version: string;
+                        }[];
+                        recordedAt?: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "RELATION" | "SCOPE";
+                    id?: string;
+                    subjectId?: string;
+                    campusId?: string;
+                    /** @enum {unknown} */
+                    mode: "LIST" | "HISTORY" | "EXACT" | "EFFECTIVE";
+                    version?: string;
+                    businessAt?: string;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {unknown} */
+                        kind: "RELATION" | "SCOPE";
+                        head: string;
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        version: string;
+                        versionId: string;
+                        /** @enum {unknown} */
+                        action: "VERIFY_SCOPE" | "REVISE_SCOPE" | "REVOKE_SCOPE" | "ESTABLISH" | "REVISE_RELATION" | "REVALIDATE" | "CLOSE";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string;
+                        } | {
+                            /** @enum {unknown} */
+                            role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText: string;
+                            /** @enum {unknown} */
+                            primary: "Y" | "N";
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                            services: string[];
+                            licenseScopeText: string | null;
+                            scopeTargets: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            }[];
+                        } | null;
+                        scopeDependencies: {
+                            reference: {
+                                /** @enum {string} */
+                                owner: "organization-master/license-scope";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                id: string;
+                                version: string;
+                                versionId: string;
+                            };
+                            catalog: {
+                                contractId: string;
+                                contractVersionId: string;
+                                /** @enum {string} */
+                                codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                version: string;
+                                sourceVersionId: string;
+                            };
+                        }[];
+                        reviewer: string;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    restrictedLicenseScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        dependencies?: {
+                            kind: string;
+                            id: string;
+                        }[];
+                        command: {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "VERIFY_SCOPE";
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVISE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string;
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "REVOKE_SCOPE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "ESTABLISH";
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {unknown} */
+                            action: "REVISE_RELATION" | "REVALIDATE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            facts: {
+                                /** @enum {unknown} */
+                                role: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText: string;
+                                /** @enum {unknown} */
+                                primary: "Y" | "N";
+                                catalog: {
+                                    contractId: string;
+                                    contractVersionId: string;
+                                    /** @enum {string} */
+                                    codeSystem: "SYNTHETIC_OPERATING_SERVICE";
+                                    version: string;
+                                    sourceVersionId: string;
+                                };
+                                services: string[];
+                                licenseScopeText: string | null;
+                                scopeTargets: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                }[];
+                            };
+                        } | {
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string | null;
+                            validFrom: string;
+                            validTo: (string) | null;
+                            /** @enum {string} */
+                            action: "CLOSE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    evaluateOperatingWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: {
+                        /** @enum {string} */
+                        owner: "organization-master";
+                        id: string;
+                    };
+                    campus: {
+                        /** @enum {string} */
+                        owner: "organization-master/campus";
+                        id: string;
+                    };
+                    services: string[];
+                    validFrom: string;
+                    validTo: string | null;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        policy: "ORG03_SYNTHETIC_V1";
+                        /** @enum {unknown} */
+                        status: "SATISFIED" | "NOT_SATISFIED" | "REVIEW_REQUIRED" | "NOT_EVALUABLE";
+                        observedAt: string;
+                        asOf: string;
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        services: {
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "SATISFIED" | "NOT_SATISFIED" | "REVIEW_REQUIRED" | "NOT_EVALUABLE";
+                            segments: {
+                                from: string;
+                                to: string | null;
+                                relation: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/operating-relation";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                scope: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license-scope";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    id: string;
+                                    version: string;
+                                    versionId: string;
+                                };
+                            }[];
+                            gaps: {
+                                from: string;
+                                to: string | null;
+                            }[];
+                            reviewRequired: {
+                                from: string;
+                                to: string | null;
+                            }[];
+                            reasons: string[];
+                        }[];
                     };
                 };
             };
