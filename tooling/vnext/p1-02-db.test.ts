@@ -44,16 +44,16 @@ test('AC01/02: create and rename preserve campus identity without legal subject 
  const before=exec('SELECT count(*) FROM organization_master.subject;');const c=create();if(c.action!=='CREATE')throw new Error();
  const a=await apply(c),b=await apply({...c,action:'REVISE',target:target(a),facts:{...c.facts,campusName:'DEMO 更名',campusAddress:'DEMO 迁址'}});
  expect(b.id).toBe(a.id);expect(b.version).toBe('2');
- const history=await org.history('maker',a.id);expect(history.versions).toHaveLength(2);
- expect((await org.read('maker',{id:a.id,businessAt:'2026-06-01T00:00:00'})).facts?.campusName).toBe('DEMO 更名');
+ const history=await org.references.history('maker',a.id);expect(history.versions).toHaveLength(2);
+ expect((await org.references.read('maker',{id:a.id,businessAt:'2026-06-01T00:00:00'})).facts?.campusName).toBe('DEMO 更名');
  expect(exec('SELECT count(*) FROM organization_master.subject;')).toBe(before);
 });
 
 test('AC03: scheduling and cancelling never activate a campus',async()=>{
  const a=await apply(create());const b=await apply({...common,action:'SCHEDULE_OPENING',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'PLANNING',plannedOpeningAt:'2027-01-01T00:00:00'});
- expect(await org.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING',plannedOpeningAt:'2027-01-01T00:00:00.000000'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING',plannedOpeningAt:'2027-01-01T00:00:00.000000'});
  await apply({...common,action:'CANCEL_OPENING',target:target(b),evidence:artifact.artifactId,sourceOperationStatus:'PLANNING',reason:'DEMO_CANCEL'});
- expect(await org.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING',plannedOpeningAt:null});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING',plannedOpeningAt:null});
 });
 
 test('AC05: physical campus activation cannot be approved with a null address or division',async()=>{
@@ -65,12 +65,12 @@ test('adopted exact division enables scheduled operation; suspension overrides f
  adopted=await campusCodeSet(catalog,source.versionId);
  const c=create();if(c.action!=='CREATE')throw new Error();c.facts.campusAddress='DEMO 地址';c.facts.adminDivision=adopted.reference;
  const a=await apply(c);const b=await apply({...common,action:'ACTIVATE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validFrom:'2027-01-01T00:00:00.000001'});
- const h=await org.history('maker',a.id);
- expect(await org.read('maker',{id:a.id,businessAt:'2027-01-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING'});
- expect(await org.read('maker',{id:a.id,businessAt:'2027-01-01T00:00:00.000001'})).toMatchObject({operationStatus:'RUNNING'});
+ const h=await org.references.history('maker',a.id);
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2027-01-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2027-01-01T00:00:00.000001'})).toMatchObject({operationStatus:'RUNNING'});
  await apply({...common,action:'SUSPEND',target:target(b),evidence:randomUUID(),source:{...common.source,systemId:randomUUID(),versionId:randomUUID()},sourceOperationStatus:'SUSPENDED',validFrom:'2026-12-01T00:00:00',reason:'DEMO_CLOSE'});
- expect(await org.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00'})).toMatchObject({operationStatus:'SUSPENDED'});
- expect(await org.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00',asOf:h.operations.at(-1)!.recordedAt})).toMatchObject({operationStatus:'RUNNING'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00'})).toMatchObject({operationStatus:'SUSPENDED'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2027-02-01T00:00:00',asOf:h.operations.at(-1)!.recordedAt})).toMatchObject({operationStatus:'RUNNING'});
 });
 
 test('real HTTP exposes campus creation, review, apply and ordinary version facts',async()=>{
@@ -113,7 +113,7 @@ test('concurrent replay and lost response recover unchanged facts with current R
  const value=input(create());expect(await org.stage('maker',value)).toEqual(await org.stage('maker',value));
  await expect(org.stage('maker',{...value,command:{...value.command,source:{...value.command.source,alias:'DEMO_CHANGED'}}})).rejects.toThrow('REQUEST_CONFLICT');
  const request=await prepare(create());const first=await org.applyUnit('maker',request,async()=>{throw new Error('DEMO_LOST_ACK');});expect(first).toMatchObject({status:'COMMITTED',responseStatus:'POST_COMMIT_FAILED'});
- const [a,b]=await Promise.all([org.applyUnit('maker',request),org.applyUnit('maker-alias',request)]);expect(a).toEqual(b);if(a.status!=='COMMITTED')throw new Error();expect(await org.history('maker',a.facts[0]!.id)).toMatchObject({head:'1'});
+ const [a,b]=await Promise.all([org.applyUnit('maker',request),org.applyUnit('maker-alias',request)]);expect(a).toEqual(b);if(a.status!=='COMMITTED')throw new Error();expect(await org.references.history('maker',a.facts[0]!.id)).toMatchObject({head:'1'});
  const noKey=openCampus(connection);try{expect(await noKey.resumeOutcome('maker',request)).toMatchObject({facts:a.facts});}finally{await noKey.close();}
  exec(`DELETE FROM organization_master.access WHERE actor='maker' AND subject_id=${quote(a.facts[0]!.id)}::uuid AND permission='READ';`);
  await expect(org.resumeOutcome('maker',request)).rejects.toThrow('ACCESS_DENIED');
@@ -137,8 +137,8 @@ test('bad division, future actual date and active address removal are blocked; m
  const a=await apply(c),b=await apply({...common,action:'ACTIVATE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING'});
  await expect(prepare({...c,action:'REVISE',target:target(b),sourceOperationStatus:'RUNNING',facts:{...c.facts,campusAddress:null}})).rejects.toThrow('BLOCKED_DEPENDENCY');
  const moved=await apply({...c,action:'REVISE',target:target(b),sourceOperationStatus:'RUNNING',facts:{...c.facts,campusAddress:'DEMO_NEW_ADDRESS',publicPhone:'DEMO_PUBLIC_PHONE'}});
- expect(await org.read('maker',{id:moved.id})).toMatchObject({operationStatus:'RUNNING',facts:{campusAddress:'DEMO_NEW_ADDRESS',publicPhone:'DEMO_PUBLIC_PHONE'}});
- expect((await org.diff('maker',{id:a.id,fromVersion:'1',toVersion:moved.version})).changes.map(c=>c.field).sort()).toEqual(['campusAddress','publicPhone']);
+ expect(await org.references.read('maker',{id:moved.id})).toMatchObject({operationStatus:'RUNNING',facts:{campusAddress:'DEMO_NEW_ADDRESS',publicPhone:'DEMO_PUBLIC_PHONE'}});
+ expect((await org.references.diff('maker',{id:a.id,fromVersion:'1',toVersion:moved.version})).changes.map(c=>c.field).sort()).toEqual(['campusAddress','publicPhone']);
 });
 test('FULL and unsupported dependencies never downgrade; source approval is mandatory for contraction',async()=>{
  const c=create();for(const extra of [{profile:'FULL' as const},{dependencies:[{kind:'LOCATION' as const,id:randomUUID()}]}]){const i=await org.stage('maker',{...input(c),...extra});await expect(org.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow('BLOCKED_DEPENDENCY');}
@@ -171,7 +171,7 @@ test('exact division references and full profile coverage reject wrong versions 
 
 test('version diff reports business-period changes even when descriptive facts are unchanged',async()=>{
  const c=create();if(c.action!=='CREATE')throw new Error();const a=await apply(c),b=await apply({...c,action:'REVISE',target:target(a),validFrom:'2026-02-01T00:00:00',validTo:'2027-01-01T00:00:00'});
- expect((await org.diff('maker',{id:a.id,fromVersion:a.version,toVersion:b.version})).changes).toEqual([{field:'validFrom',before:'2026-01-01T00:00:00.000000',after:'2026-02-01T00:00:00.000000'},{field:'validTo',before:null,after:'2027-01-01T00:00:00.000000'}]);
+ expect((await org.references.diff('maker',{id:a.id,fromVersion:a.version,toVersion:b.version})).changes).toEqual([{field:'validFrom',before:'2026-01-01T00:00:00.000000',after:'2026-02-01T00:00:00.000000'},{field:'validTo',before:null,after:'2027-01-01T00:00:00.000000'}]);
 });
 
 test.each([{rules:['SRC-COND-005']},{rules:['SRC-COND-006']},{rules:[]}])('manual CORE cannot publish an incomplete owner-condition set: $rules',async({rules})=>{
@@ -184,7 +184,7 @@ test('suspension blocks backdated activation even when it ends exactly at suspen
  await expect(prepare({...common,action:'ACTIVATE',target:target(stopped),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validTo:'2027-01-01T00:00:00'})).rejects.toThrow('BLOCKED_DEPENDENCY');
  // Non-overlapping historical plans remain allowed and never activate the node.
  await apply({...common,action:'SCHEDULE_OPENING',target:target(stopped),evidence:artifact.artifactId,sourceOperationStatus:'PLANNING',validTo:'2027-01-01T00:00:00',plannedOpeningAt:'2026-06-01T00:00:00'});
- expect((await org.read('maker',{id:a.id,businessAt:'2026-06-01T00:00:00'})).operationStatus).toBe('PLANNING');
+ expect((await org.references.read('maker',{id:a.id,businessAt:'2026-06-01T00:00:00'})).operationStatus).toBe('PLANNING');
 });
 
 test('SQL independently rejects a signed backdated activation after suspension',async()=>{
@@ -193,7 +193,7 @@ test('SQL independently rejects a signed backdated activation after suspension',
  const staged=await org.stage('maker',input(command)),requestId=randomUUID(),candidate=await org.plan('maker',{inputId:staged.inputId,requestId});
  await org.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await org.approveApplyUnit('reviewer',candidate);
  const stopped=await apply({...common,action:'SUSPEND',target:target(a),evidence:randomUUID(),sourceOperationStatus:'SUSPENDED',validFrom:'2027-01-01T00:00:00',reason:'DEMO_STOP'});
- const before=await org.history('maker',a.id),pool=new Pool({connectionString:connection}),client=await pool.connect();
+ const before=await org.references.history('maker',a.id),pool=new Pool({connectionString:connection}),client=await pool.connect();
  try{
   await client.query('BEGIN');const transaction=(await client.query('SELECT pg_current_xact_id()::text id')).rows[0].id;
   // Trusted test signer advances the expected head to isolate the SQL lifecycle guard,
@@ -202,7 +202,7 @@ test('SQL independently rejects a signed backdated activation after suspension',
   const signature=createHmac('sha256',Buffer.from(planBinding(provider,'CAMPUS_SQL_AUTHORITY_V1',{}),'hex')).update(ticket).digest('hex');
   await expect(client.query('SELECT organization_master.campus_write_approved($1,$2)',[ticket,signature])).rejects.toThrow('BLOCKED_DEPENDENCY');
  }finally{await client.query('ROLLBACK');client.release();await pool.end();}
- expect(await org.history('maker',a.id)).toEqual(before);
+ expect(await org.references.history('maker',a.id)).toEqual(before);
 });
 
 test('an approved campus change is blocked after exact code-set retirement; contraction remains possible',async()=>{
@@ -213,15 +213,15 @@ test('an approved campus change is blocked after exact code-set retirement; cont
  await catalog.contractCommand('reviewer',{...f.cmd('RETIRE'),target:latest.id,expectedHead:latest.head,reviewDigest:latest.reviewDigest,impactDigest:impact.impactDigest});
  await expect(org.applyUnit('maker',pending)).rejects.toThrow('BLOCKED_DEPENDENCY');
  const stop=await apply({...common,action:'SUSPEND',target:target(a),evidence:randomUUID(),sourceOperationStatus:'SUSPENDED',reason:'DEMO_STOP'});
- expect(await org.read('maker',{id:stop.id})).toMatchObject({operationStatus:'SUSPENDED'});
+ expect(await org.references.read('maker',{id:stop.id})).toMatchObject({operationStatus:'SUSPENDED'});
 });
 
 test('historical lists exclude not-yet-known campus identities before output pagination',async()=>{
- const first=await apply(create()),cutoff=(await org.history('maker',first.id)).versions[0]!.recordedAt;
+ const first=await apply(create()),cutoff=(await org.references.history('maker',first.id)).versions[0]!.recordedAt;
  const later=await apply(create());
- expect(await org.list('maker',{asOf:'2025-01-01T00:00:00',limit:1})).toEqual([]);
- expect(await org.list('maker',{after:first.id,asOf:cutoff,limit:1})).toEqual([]);
- expect((await org.list('maker',{after:first.id,limit:1})).map(v=>v.id)).toEqual([later.id]);
+ expect(await org.references.list('maker',{asOf:'2025-01-01T00:00:00',limit:1})).toEqual([]);
+ expect(await org.references.list('maker',{after:first.id,asOf:cutoff,limit:1})).toEqual([]);
+ expect((await org.references.list('maker',{after:first.id,limit:1})).map(v=>v.id)).toEqual([later.id]);
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
  try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const client=createCampusClient(`http://127.0.0.1:${address.port}`,'maker');const result=await client.list({after:first.id,asOf:cutoff,limit:1});expect(result.response.status).toBe(200);expect(result.data).toEqual([]);}finally{await app.close();}
 });
@@ -259,17 +259,17 @@ test.each(['write','plan_input','withdraw'] as const)('legacy SQL %s rejects an 
 
 test.each(['REVISE','SCHEDULE_OPENING','CANCEL_OPENING'] as const)('operation gaps cannot be represented as PLANNING by %s',async(action)=>{
  const c=create();if(c.action!=='CREATE')throw new Error();const a=await apply({...c,validTo:'2026-06-01T00:00:00'});
- expect(await org.read('maker',{id:a.id,businessAt:'2026-07-01T00:00:00'})).toMatchObject({operationStatus:'NOT_ESTABLISHED'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2026-07-01T00:00:00'})).toMatchObject({operationStatus:'NOT_ESTABLISHED'});
  const base={...common,target:target(a),validFrom:'2026-07-01T00:00:00',sourceOperationStatus:'PLANNING' as const,evidence:artifact.artifactId};
  const command:CampusCommand=action==='REVISE'?{...base,action,facts:c.facts}:action==='SCHEDULE_OPENING'?{...base,action,plannedOpeningAt:'2027-01-01T00:00:00'}:{...base,action,reason:'DEMO_CANCEL'};
  await expect(prepare(command)).rejects.toThrow('BLOCKED_DEPENDENCY');
 });
 
 test('suspension stays visible after descriptive facts expire, including HTTP and old R',async()=>{
- const a=await apply({...create(),validTo:'2026-06-01T00:00:00'}),old=(await org.history('maker',a.id)).operations[0]!.recordedAt;
+ const a=await apply({...create(),validTo:'2026-06-01T00:00:00'}),old=(await org.references.history('maker',a.id)).operations[0]!.recordedAt;
  await apply({...common,action:'SUSPEND',target:target(a),validFrom:'2026-07-01T00:00:00',sourceOperationStatus:'SUSPENDED',evidence:randomUUID(),reason:'DEMO_CLOSE_EXPIRED_PROFILE'});
- expect(await org.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00'})).toMatchObject({facts:null,operationStatus:'SUSPENDED'});
- expect(await org.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00',asOf:old})).toMatchObject({facts:null,operationStatus:'NOT_ESTABLISHED'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00'})).toMatchObject({facts:null,operationStatus:'SUSPENDED'});
+ expect(await org.references.read('maker',{id:a.id,businessAt:'2026-08-01T00:00:00',asOf:old})).toMatchObject({facts:null,operationStatus:'NOT_ESTABLISHED'});
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
  try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const client=createCampusClient(`http://127.0.0.1:${address.port}`,'maker');const result=await client.getCampusAsOf({id:a.id,businessAt:'2026-08-01T00:00:00'});expect(result.response.status).toBe(200);expect(result.data).toMatchObject({facts:null,operationStatus:'SUSPENDED'});}finally{await app.close();}
 });

@@ -175,4 +175,7 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
 }
 export type OrganizationOwner=ReturnType<typeof openOrganization>;
 
-export {openCampus,type CampusOwner,CampusStageSchema,CampusCommandSchema,CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,Facts as CampusFactsSchema} from './campus/index.js';
+export {openCampus,type CampusOwner,type CampusCommand,CampusStageSchema,CampusCommandSchema,CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,Facts as CampusFactsSchema} from './campus/index.js';
+
+export * from './campus/reference-contracts.js';
+export type {CampusReferencePort} from './campus/reader.js';
