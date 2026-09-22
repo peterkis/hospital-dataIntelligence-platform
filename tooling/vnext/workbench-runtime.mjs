@@ -137,7 +137,7 @@ export async function startWorkbench({
       catalog,
       finite ? "FINITE_E2E" : "CONTROL_PLANE",
       organization?{owner:organization,actor:r=>syntheticActor(r.headers)}:undefined,
-      campus?{owner:campus,actor:r=>syntheticActor(r.headers)}:undefined,
+      campus?{owner:campus,references:campus.references,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

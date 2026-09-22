@@ -1,0 +1,68 @@
+{
+  "ticket": "P1-03",
+  "authority": "organization-master",
+  "runtimeEntries": [
+    "tooling/vnext/workbench-runtime.mjs",
+    "tooling/vnext/serve.mjs",
+    "apps/governance-api/src/composition/build-vnext-catalog.ts",
+    "packages/generated-api-client/src/vnext-client.ts",
+    "tooling/vnext/p1-03-deploy.mjs"
+  ],
+  "currentReaders": [
+    {
+      "entry": "apps/governance-api/src/platform/fastify/vnext-campus-routes.ts",
+      "via": "CampusReferencePort",
+      "evidence": "P1-03 HTTP and generated client tests"
+    },
+    {
+      "entry": "tooling/vnext/workbench-runtime.mjs",
+      "via": "Owner references facet injected at composition",
+      "evidence": "persistent P1-03 HTTP smoke"
+    },
+    {
+      "entry": "packages/generated-api-client/src/vnext-client.ts",
+      "via": "vNext HTTP",
+      "evidence": "P1-03 generated client compile and HTTP"
+    },
+    {
+      "entry": "tooling/vnext/p1-02-db.test.ts",
+      "via": "Owner references facet",
+      "evidence": "P1-02 regression"
+    },
+    {
+      "entry": "tooling/vnext/p1-03-db.test.ts",
+      "via": "public Owner reference port, scoped transaction and generated client",
+      "evidence": "P1-03 DOMAIN tests"
+    },
+    {
+      "entry": "tooling/vnext/p1-03-deploy.mjs",
+      "via": "read-only HTTP composition and generated client",
+      "evidence": "P1-03 persistent HTTP evidence"
+    }
+  ],
+  "governanceScope": {
+    "values": [
+      "NORTH",
+      "SOUTH"
+    ],
+    "meaning": "synthetic authorization and protected input scope, not physical campus identity",
+    "changed": false
+  },
+  "legacyOutsideCurrentRuntime": [
+    "apps/governance-api/src/platform/campus/campus-reference-reader.ts",
+    "apps/governance-api/src/composition/create-scoped-modules.ts",
+    "apps/governance-api/src/composition/create-department-governance-http-dependencies.ts",
+    "apps/governance-api/src/composition/phase-01-vertical-slice.ts"
+  ],
+  "existingDeploymentReaders": [
+    "tooling/vnext/p1-02-deploy.mjs",
+    "tooling/vnext/p1-02-list-deploy.mjs",
+    "tooling/vnext/p1-02-review-deploy.mjs",
+    "tooling/vnext/p1-02-approved-deploy.mjs",
+    "tooling/vnext/p1-02-suspension-deploy.mjs"
+  ],
+  "physicalForeignKeysToMigrate": [],
+  "newSourceFields": 0,
+  "sourceDataset": "ORG02 (17-field adoption unchanged)",
+  "A012": "current vNext readers only; legacy Price/Department not exercised"
+}

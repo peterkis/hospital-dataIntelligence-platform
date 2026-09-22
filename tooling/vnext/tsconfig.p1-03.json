@@ -1,0 +1,1 @@
+{"extends":"../../tsconfig.base.json","compilerOptions":{"noEmit":true,"allowJs":true,"checkJs":false,"types":["node"]},"include":["p1-03*.ts","vitest.p1-03*.ts","../../apps/governance-api/src/modules/organization-master/**/*.ts"]}

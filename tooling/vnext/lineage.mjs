@@ -13,7 +13,7 @@ export function resolveTarget(receipt, env = process.env) {
   if (!/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name) || !/^\d+$/u.test(receipt.oid) ||
       receipt.owner !== 'hdi_prototype' || receipt.lineage !== 'HDIP-MC-VNEXT' ||
       receipt.distro !== 'Anolis-8.9-HDI-POC' || receipt.port !== 55434 ||
-      !['P0-00', 'P0-01', 'P0-02', 'P0-03', 'P0-04', 'P0-05', 'P0-06', 'P0-07', 'P0-08', 'P0-09', 'P0-10', 'P0-11', 'P1-01', 'P1-02'].includes(receipt.taskId) || !/^[a-f0-9-]{36}$/u.test(receipt.requestId)) throw new Error('RECEIPT_INVALID');
+      !['P0-00', 'P0-01', 'P0-02', 'P0-03', 'P0-04', 'P0-05', 'P0-06', 'P0-07', 'P0-08', 'P0-09', 'P0-10', 'P0-11', 'P1-01', 'P1-02','P1-03'].includes(receipt.taskId) || !/^[a-f0-9-]{36}$/u.test(receipt.requestId)) throw new Error('RECEIPT_INVALID');
   if (Object.keys(env).some(key => /^PG[A-Z_]*$/iu.test(key) && env[key])) throw new Error('OVERRIDE_FORBIDDEN');
   let url;
   try { url = localDatabaseUrl(env.DATABASE_URL); } catch { throw new Error('OVERRIDE_FORBIDDEN'); }

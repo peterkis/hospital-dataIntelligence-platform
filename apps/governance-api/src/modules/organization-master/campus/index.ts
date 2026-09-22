@@ -2,11 +2,12 @@ import {createHmac} from 'node:crypto';
 import {sql} from 'kysely';
 import {applyCoordinator,type ApplyOwnerPort,type OwnerFact,canonicalPlan,planBinding,authenticateRegistrationEvidence,type KeyProviderPort} from '../../governance-catalog/index.js';
 import {localTime,covered,subtract,intersect} from '../time.js';
-import {CampusCommandSchema,CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,InputSchema,Id,type CampusCommand,type CampusFacts} from './contracts.js';
+import {CampusCommandSchema,InputSchema,Id,type CampusCommand,type CampusFacts} from './contracts.js';
 import {campusInput,check,type Scope} from './input.js';
 export * from './contracts.js';
-export interface CampusEvent {id:string;number:number;action:CampusCommand['action'];valid_from:string;valid_to:string|null;recorded_at:string;input_id:string;facts:CampusFacts|null;state:'PLANNING'|'TRIAL_RUNNING'|'RUNNING'|'SUSPENDED'|null;planned_opening_at:string|null}
-export interface CampusSnapshot {id:string;scope:string;events:CampusEvent[]}
+export type {CampusEvent,CampusSnapshot,CampusReferencePort} from './reader.js';
+import {createCampusReader,type CampusEvent,type CampusSnapshot} from './reader.js';
+export * from './reference-contracts.js';
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
 export function openCampus(connectionString:string,provider?:KeyProviderPort){
  const store=campusInput(connectionString,provider),{db,root,record,unseal}=store;
@@ -72,45 +73,14 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
   async exactRead(scope,actor,_input,fact){if(fact.owner!=='organization-master/campus')return null;const s=await snapshot(scope,actor,fact.id);return s.events.some(e=>String(e.number)===fact.version)?fact:null;}
  };
  const coordinator=applyCoordinator(db,provider,port);
- const publicEvent=(e:CampusEvent)=>({version:String(e.number),versionId:e.id,action:e.action,validFrom:stamp(e.valid_from),validTo:e.valid_to&&stamp(e.valid_to),recordedAt:stamp(e.recorded_at)});
- const history=async(actor:string,id:string)=>{check(Id,id);const s=await root(scope=>snapshot(scope,actor,id));return {id:s.id,head:String(s.events.at(-1)!.number),versions:s.events.filter(e=>e.facts!==null).map(e=>({...publicEvent(e),facts:e.facts!})),plans:s.events.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action)).map(e=>({...publicEvent(e),plannedOpeningAt:e.planned_opening_at&&stamp(e.planned_opening_at)})),operations:s.events.filter(e=>e.state!==null).map(e=>({...publicEvent(e),state:e.state!}))};};
-
- const read=async(actor:string,input:{id:string;businessAt?:string;asOf?:string})=>{
-  check(CampusReadSchema,input);
-  return root(async scope=>{
-   const s=await snapshot(scope,actor,input.id);const now=(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(scope)).rows[0]!.v;
-   const at=localTime(input.businessAt??now),asOf=localTime(input.asOf??now),known=s.events.filter(e=>stamp(e.recorded_at)<=asOf);
-   const effective=(rows:CampusEvent[])=>rows.filter(e=>stamp(e.valid_from)<=at&&(e.valid_to===null||at<stamp(e.valid_to))).at(-1);
-   const v=effective(known.filter(e=>e.facts!==null)),p=effective(known.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action))),o=effective(known.filter(e=>e.state!==null));
-   return {id:s.id,head:String(known.at(-1)?.number??0),facts:v?.facts??null,operationStatus:o?.state??'NOT_ESTABLISHED',plannedOpeningAt:p?.planned_opening_at?stamp(p.planned_opening_at):null,operatingPermission:'NOT_EVALUABLE' as const};
-  });
- };
- const exact=async(actor:string,input:{id:string;version:string})=>{check(CampusVersionSchema,input);const v=(await history(actor,input.id)).versions.find(v=>v.version===input.version);if(!v)throw new Error('NOT_FOUND');return v;};
+ const references=createCampusReader(root,snapshot);
 
  return {
   async stage(actor:string,input:Parameters<typeof store.stage>[1]){check(CampusCommandSchema,input.command);normalize(input.command);return store.stage(actor,input);},readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
   async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);const r=await root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:Awaited<ReturnType<typeof record>>}>`select organization_master.plan_input_for(${actor},${input.inputId}::uuid,${input.requestId}::uuid,'ORG02') r`.execute(scope)).rows[0]!.r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);return root(async scope=>{await record(scope,actor,input.inputId,'WRITE');return (await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.withdraw_for(${actor},${input.inputId}::uuid,${input.requestId}::uuid,'ORG02') r`.execute(scope)).rows[0]!.r;});},
   async readRestrictedInput(actor:string,id:string){check(Id,id);return root(async scope=>unseal(await record(scope,actor,id,'READ_RESTRICTED')));},
-  history,
-  read,exact,
-  async list(actor:string,input:{after?:string;limit?:number;businessAt?:string;asOf?:string}){
-   check(CampusListSchema,input);
-   const page=await root(async scope=>{
-    const now=(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(scope)).rows[0]!.v;
-    const businessAt=localTime(input.businessAt??now),asOf=localTime(input.asOf??now);
-    const ids=(await sql<{r:string[]}>`select organization_master.campus_list(${actor},${input.after??null}::uuid,${input.limit??100},${asOf}::timestamp) r`.execute(scope)).rows[0]!.r;
-    return {ids,businessAt,asOf};
-   });
-   return Promise.all(page.ids.map(id=>read(actor,{id,businessAt:page.businessAt,asOf:page.asOf})));
-  },
-  async diff(actor:string,input:{id:string;fromVersion:string;toVersion:string}){
-   check(CampusDiffSchema,input);const a=await exact(actor,{id:input.id,version:input.fromVersion}),b=await exact(actor,{id:input.id,version:input.toVersion});
-   const before={...a.facts,validFrom:a.validFrom,validTo:a.validTo},after={...b.facts,validFrom:b.validFrom,validTo:b.validTo};
-   const render=(v:unknown)=>v===null?null:typeof v==='string'?v:canonicalPlan(v);const changes=[];
-   for(const field of Object.keys(before) as Array<keyof typeof before>)if(canonicalPlan(before[field])!==canonicalPlan(after[field]))changes.push({field,before:render(before[field]),after:render(after[field])});
-   return {...input,changes};
-  },
+  references,
   close:()=>db.destroy(),
  };
 }
