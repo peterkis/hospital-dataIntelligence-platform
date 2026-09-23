@@ -1,4 +1,4 @@
-import {zipText} from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.js';
+import {zipText,textWorkbook,issueWorkbook} from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.js';
 import {test,expect} from 'vitest';
 import * as parser from '../../apps/governance-api/src/modules/governance-catalog/file-parser.js';
 import {organizationWorkbook} from './organization-workbook-fixture.js';
@@ -29,4 +29,32 @@ test('only declared organization workbook CORE capabilities are ready',()=>{
  const request={dataset:'ORG01',profile:'CORE' as const,contractVersion:1,templateVersion:'ORG01_BUNDLE_CORE_V1',parserPolicy:'STRICT_ORG_BUNDLE_V1'};
  expect(selectImportAdapter(request).capability).toBe('READY');
  for(const overrides of [{profile:'FULL' as const},{parserPolicy:'STRICT_V2'},{templateVersion:'ORG01_MANUAL_CORE_V1'},{dataset:'ORG04'}])expect(selectImportAdapter({...request,...overrides}).capability).toBe('NOT_READY');
+});
+
+
+test('organization parser errors retain physical worksheet rows, while header errors stay on row one',()=>{
+ const fields={ORG01:[{code:'id',type:'id'},{code:'t',type:'datetime'}],ORG02:[{code:'id',type:'id'}],ORG03:[{code:'id',type:'id'}]};
+ for(const [bad,code,column] of [
+  [[' PAD','2026-01-01T00:00:00'],'WHITESPACE_REJECTED',1],
+  [['ROW','not-a-date'],'LOCAL_TIME_REQUIRED',2],
+  [['',''],'EMPTY_ROW',0],
+ ] as const){
+  for(const preceding of [[],[['OK','2026-01-01T00:00:00']]]){
+   const result=parser.parseOrganizationWorkbook(organizationWorkbook({ORG01:[['id','t'],...preceding,[...bad]],ORG02:[['id']],ORG03:[['id']]}),fields);
+   expect(result.structuralStatus).toBe('REJECTED');
+   expect(result.issues[0]).toMatchObject({code,row:preceding.length+2,column,sheet:'ORG01'});
+  }
+ }
+ const header=parser.parseOrganizationWorkbook(organizationWorkbook({ORG01:[['id','unknown']],ORG02:[['id']],ORG03:[['id']]}),fields);
+ expect(header.issues[0]).toMatchObject({code:'FIELD_CONTRACT',row:1,sheet:'ORG01'});
+});
+
+test('single-sheet and multiline CSV field failures use source coordinates without shifting canonical rows',()=>{
+ const fields=[{code:'id',type:'id'},{code:'t',type:'datetime'}];
+ const csv=parser.parseBytes(Buffer.from('id,t\n"multi\nline",2026-01-01T00:00:00\nNEXT,bad-date'),'CSV',fields,'STRICT_V2');
+ expect(csv.issues[0]).toMatchObject({code:'LOCAL_TIME_REQUIRED',row:4,column:2});
+ expect(csv.cells.find(c=>c.field==='t'&&c.row===2)).toMatchObject({row:2,sourceRow:4,column:2});
+ expect(parser.unzip(issueWorkbook(csv)).get('xl/worksheets/sheet1.xml')).toContain('bad-date');
+ const xlsx=parser.parseBytes(textWorkbook([['id','t'],['ROW','bad-date']]),'XLSX',fields,'STRICT_V2');
+ expect(xlsx.issues[0]).toMatchObject({code:'LOCAL_TIME_REQUIRED',row:2,column:2});
 });

@@ -93,7 +93,8 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
     importJobRead:readImportJob,
     async importJobAdapter(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';jobId:string}) {
       const job=await readImportJob(actor,input);
-      return selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version});
+      const revision=job.revisions.find(r=>r.id===job.currentRevisionId);
+      return selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version,templateVersion:job.contract.definition.templateVersion,...(revision?.input.kind==='FILE'?{parserPolicy:revision.input.parserPolicy}:{})});
     },
     async parameterCommand(actor:string,input:Record<string,unknown>):Promise<ParameterOutcome> {
       return (await sql<{result:ParameterOutcome}>`select governance_catalog.parameter_command(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;

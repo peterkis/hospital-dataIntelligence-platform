@@ -90,7 +90,7 @@ test('PR6 round18: multiline CSV limits identify the starting physical row',()=>
 test('PR6 round17: protected issue workbook preserves CR and CRLF values',()=>{
  for(const value of ['left\rright','left\r\nright','literal&#13;_x000d_']){
   const result=parse('code,label\n0012,"'+value+'"');assert.equal(result.structuralStatus,'PARSED');
-  result.issues.push({code:'TEST_ISSUE',row:1,column:2});
+  result.issues.push({code:'TEST_ISSUE',row:result.cells[1]!.sourceRow,column:2});
   const report=parseBytes(issueWorkbook(result),'XLSX',['issue','row','column','originalValue'].map(code=>({code,type:'text'})));
   assert.equal(report.structuralStatus,'PARSED');assert.equal(report.rows[0]?.['originalValue'],value);
  }

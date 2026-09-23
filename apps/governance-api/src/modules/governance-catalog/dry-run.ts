@@ -82,7 +82,8 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
    if(offset+page.items.length>=page.total)break;
   }
   const contracts=(await sql<{result:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:input.scope,mode:'CURRENT',target:job.contract.id})}::jsonb) as result`.execute(scope)).rows[0]!.result;
-  const adapter=selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version});
+  const revision=job.revisions.find(r=>r.id===run.revisionId);
+  const adapter=selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version,templateVersion:job.contract.definition.templateVersion,...(revision?.input.kind==='FILE'?{parserPolicy:revision.input.parserPolicy}:{})});
   const graph=planDeclaredGraph(job.contract.dataset,job.contract.definition.references,input.commands,evidence.parsed?.rows.length??0);
   const blockers=new Set(graph.blockers);
   // Adapter declarations do not provide a domain reader, field transformation or atomic business bundle.

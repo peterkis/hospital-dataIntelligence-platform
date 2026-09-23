@@ -74,14 +74,16 @@ test('review: failed atomic receive retains separate minimal denial audit after 
 test('three actual owner paths persist protected canonical evidence, same semantic rows, no ordinary SHA/value',async()=>{
  const s=await setup();try{
   s.grant('STORE');s.grant('READ');const rows=[];
+  // A four-hex-character substring can collide with unrelated UUIDs/digests.
+  const value='0012_DEMO_PRIVATE_FILE_ROW_SENTINEL';
   for(const format of ['CSV','JSON','XLSX'] as const){
    const input:ReceiveFileInput={...s.input,extension:format==='CSV'?'.csv':format==='JSON'?'.json':'.xlsx',fileRequestId:randomUUID(),job:{...s.input.job,requestId:randomUUID(),input:{kind:'FILE',format,parserPolicy:'STRICT_V1'}}};
-   const raw=format==='CSV'?Buffer.from(`${s.field}\n0012`):format==='JSON'?Buffer.from(JSON.stringify([{[s.field]:'0012'}])):textWorkbook([[s.field],['0012']]);
+   const raw=format==='CSV'?Buffer.from(`${s.field}\n${value}`):format==='JSON'?Buffer.from(JSON.stringify([{[s.field]:value}])):textWorkbook([[s.field],[value]]);
    const file=await s.catalog.receiveFile('maker',input,raw);assert.equal(file.job.digestStatus,'PROTECTED_REFERENCE');
    assert.deepEqual(await s.catalog.receiveFile('maker',input,raw),file,'ACK replay returns same file/revision');
    const parsed=await s.catalog.parseFile('maker',s.parseInput(file.job.id,file.job.revisionId,file.artifact.artifactId));assert.equal(parsed.structuralStatus,'PARSED');assert.equal(parsed.adapterReadiness,'NOT_READY');assert.equal(parsed.artifact.status,'QUARANTINED');
-   const saved:{result:ParserResult}=JSON.parse(Buffer.from(await s.read(parsed.artifact.artifactId)).toString());rows.push(saved.result.rows);
-   const ordinary=JSON.stringify(await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:file.job.id}));assert.ok(!ordinary.includes('0012'));assert.ok(!ordinary.includes('declaredSha256'));
+   const saved:{result:ParserResult}=JSON.parse(Buffer.from(await s.read(parsed.artifact.artifactId)).toString());rows.push(saved.result.rows);assert.deepEqual(saved.result.rows,[{[s.field]:value}]);
+   const ordinary=JSON.stringify(await s.catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:file.job.id}));assert.ok(!ordinary.includes(value));assert.ok(!ordinary.includes('declaredSha256'));
   }
   assert.deepEqual(rows[0],rows[1]);assert.deepEqual(rows[1],rows[2]);assert.equal((await s.catalog.verifyAudit('auditor')).status,'PASS');
  }finally{await s.catalog.close();}

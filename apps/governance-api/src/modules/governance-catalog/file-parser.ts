@@ -388,20 +388,20 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], organ
 function appendObjects(result:Pick<ParserResult,'rows'|'cells'>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false){
     for (const [index, source] of objects.entries()) {
       const obj=source.values;
-      const row: Record<string,string> = Object.create(null); const rowNum = index + 1;
-      if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',rowNum);
+      const row: Record<string,string> = Object.create(null); const rowNum = index + 1, sourceRow = physicalRows[index] ?? rowNum;
+      if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',sourceRow);
       for (const f of fields) {
         const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code];
         const text = typeof value==='string'?value:value?.lexeme??'';
-        result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
-        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',rowNum,column);
-        assertTextSafety(text,rowNum,column);
-        if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
-        if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}
+        result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
+        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
+        assertTextSafety(text,sourceRow,column);
+        if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
+        if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
         row[f.code] = text;
       }
-      if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',rowNum); result.rows.push(row);
+      if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow); result.rows.push(row);
     }
 }
 

@@ -287,3 +287,87 @@ test('unmanifested worksheet data cannot bypass its protected read dimension',as
  try{await expect(owner.inspectWorkbook('reviewer',ref)).rejects.toThrow('ACCESS_DENIED');}finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('reviewer',${quote(dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ') ON CONFLICT DO NOTHING`);}
  }finally{await owner.close();await f.close();}
 });
+
+
+test('job-based adapter discovery uses exact bundle template and current revision parser metadata',async()=>{
+ const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),f=await organizationBundleFixture(receipt,connection,provider,catalog),owner=organization.openOrganizationImport(connection,provider);
+ try{
+  const received=await owner.receive('maker',f.input,f.workbook());
+  const input={scope:'SYNTHETIC' as const,jobId:received.jobId};
+  expect(await catalog.importJobAdapter('maker',input)).toMatchObject({capability:'READY',owner:'organization-master',supportedContractRange:'ORG_BUNDLE_CORE_V1'});
+  await expect(catalog.importJobAdapter('outsider',input)).rejects.toThrow('ACCESS_DENIED');
+ }finally{await owner.close();await f.close();}
+});
+
+test('persisted bundle validation errors retain physical sheet coordinates',async()=>{
+ const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),f=await organizationBundleFixture(receipt,connection,provider,catalog),owner=organization.openOrganizationImport(connection,provider);
+ try{
+  f.values['ORG02']![1]!['campus_name']=' DEMO invalid whitespace';
+  const received=await owner.receive('maker',f.input,f.workbook());
+  const run=await owner.validate('maker',{jobId:received.jobId,revisionId:received.revisionId,requestId:randomUUID()});
+  expect(run.decision).toBe('FAIL');
+  const explanation=await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:run.run!.runId});
+  expect(explanation.evaluation.issues).toEqual(expect.arrayContaining([expect.objectContaining({code:'WHITESPACE_REJECTED',row:3})]));
+ }finally{await owner.close();await f.close();}
+});
+
+
+test('converted pair grants intersect each grantee current creation policy without widening rights',async()=>{
+ const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),f=await organizationBundleFixture(receipt,connection,provider,catalog),owner=organization.openOrganizationImport(connection,provider);
+ const prefix='DEMO_PR17_'+randomUUID().slice(0,8),names=['none','read','south','revoked','inactive','coarse','review','full'] as const;
+ const actors=Object.fromEntries(names.map(name=>[name,prefix+'_'+name])) as Record<typeof names[number],string>;
+ const allPermissions=['READ','WRITE','REVIEW','READ_RESTRICTED'];
+ try{
+  for(const name of names){
+   const a=quote(actors[name]);
+   peer(receipt.name,`INSERT INTO vnext_control.actor VALUES(${a},${a},true);INSERT INTO vnext_control.actor_grant SELECT ${a},'SYNTHETIC',p FROM unnest(ARRAY['READ','WRITE','REVIEW']) p;`);
+   if(name!=='none'){
+    const permissions=name==='read'?['READ']:name==='review'?['READ','REVIEW']:allPermissions;
+    peer(receipt.name,`INSERT INTO organization_master.access SELECT ${a},'00000000-0000-0000-0000-000000000000',${quote(name==='south'?'SOUTH':'NORTH')},p FROM unnest(ARRAY[${permissions.map(quote).join(',')}]) p;`);
+   }
+  }
+  const received=await owner.receive('maker',f.input,f.workbook()),ref={jobId:received.jobId,revisionId:received.revisionId};
+  await owner.preauthorize('bundle-admin',{...ref,requestId:randomUUID(),grants:[...[2,3,4].flatMap(row=>['maker','reviewer'].map(actor=>({row,actor,permissions:['READ' as const,'CREATE' as const,'REVISE' as const,'REVIEW' as const]}))),...names.map(name=>({row:2,actor:actors[name],permissions:['READ' as const,'CREATE' as const,'REVISE' as const,'REVIEW' as const]}))]});
+  const legal=await owner.readLegalReview('reviewer',ref);await owner.verifyLegalReview('reviewer',{...ref,requestId:randomUUID(),digest:legal.digest});
+  const requestId=randomUUID(),candidate=await owner.plan('maker',{...ref,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
+  peer(receipt.name,`DELETE FROM organization_master.access WHERE actor=${quote(actors.revoked)};UPDATE vnext_control.actor SET active=false WHERE code=${quote(actors.inactive)};DELETE FROM vnext_control.actor_grant WHERE actor_code=${quote(actors.coarse)};`);
+  const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error();
+  const subject=result.facts.find(x=>x.owner==='organization-master')!,first=result.facts.find(x=>x.owner==='organization-master/campus'&&x.source?.row===2)!;
+  const permissions=(actor:string)=>JSON.parse(peer(receipt.name,`SELECT coalesce(jsonb_agg(permission ORDER BY permission),'[]') FROM organization_master.operating_access WHERE actor=${quote(actor)} AND subject_id=${quote(subject.id)}::uuid AND campus_id=${quote(first.id)}::uuid`)) as string[];
+  for(const name of ['none','south','revoked','inactive','coarse'] as const)expect(permissions(actors[name]),name).toEqual([]);
+  expect(permissions(actors.read)).toEqual(['READ']);
+  expect(permissions(actors.review)).toEqual(['READ','REVIEW']);
+  expect(permissions(actors.full)).toEqual(['ESTABLISH','READ','READ_RESTRICTED','REVIEW','REVISE']);
+  for(const node of result.facts.filter(x=>x.owner==='organization-master/campus'&&x.id!==first.id)){
+   expect(peer(receipt.name,`SELECT count(*) FROM organization_master.operating_access WHERE actor=${quote(actors.full)} AND campus_id=${quote(node.id)}::uuid`)).toBe('0');
+  }
+  const before=peer(receipt.name,`SELECT count(*) FROM organization_master.operating_access WHERE actor LIKE ${quote(prefix+'%')}`);
+  expect(await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).toMatchObject({status:'COMMITTED',facts:result.facts});
+  expect(peer(receipt.name,`SELECT count(*) FROM organization_master.operating_access WHERE actor LIKE ${quote(prefix+'%')}`)).toBe(before);
+ }finally{await owner.close();await f.close();}
+});
+
+
+test('mixed existing subject and new campus require exact existing READ, not existing WRITE',async()=>{
+ const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),f=await organizationBundleFixture(receipt,connection,provider,catalog),owner=organization.openOrganizationImport(connection,provider);
+ try{
+  const subject=await f.x.createSubject(),license=await f.x.addLicense(subject);
+  f.values['ORG01']=[];f.input.manifest.rows=f.input.manifest.rows.filter(r=>r.dataset!=='ORG01');
+  for(const row of f.input.manifest.rows)if(row.dataset==='ORG03'){
+   row.subject={kind:'PLATFORM_REF',dataset:'ORG01',id:subject.id,expectedVersion:subject.version};
+   for(const scope of row.scopes)if(scope.kind==='VERIFY_SCOPE')scope.license=license;
+  }
+  for(const row of f.values['ORG03']!)row['legal_entity_id']=subject.id;
+  const allowed='DEMO_MIXED_'+randomUUID().slice(0,8),denied=allowed+'_denied';
+  for(const actor of [allowed,denied])peer(receipt.name,`INSERT INTO vnext_control.actor VALUES(${quote(actor)},${quote(actor)},true);INSERT INTO vnext_control.actor_grant SELECT ${quote(actor)},'SYNTHETIC',p FROM unnest(ARRAY['READ','WRITE','REVIEW']) p;INSERT INTO organization_master.access SELECT ${quote(actor)},'00000000-0000-0000-0000-000000000000','NORTH',p FROM unnest(ARRAY['READ','WRITE']) p;`);
+  peer(receipt.name,`INSERT INTO organization_master.access VALUES(${quote(allowed)},${quote(subject.id)}::uuid,'NORTH','READ');`);
+  const received=await owner.receive('maker',f.input,f.workbook()),ref={jobId:received.jobId,revisionId:received.revisionId};
+  await owner.preauthorize('bundle-admin',{...ref,requestId:randomUUID(),grants:[...[2,3,4].flatMap(row=>['maker','reviewer'].map(actor=>({row,actor,permissions:['READ' as const,'CREATE' as const,'REVIEW' as const]}))),...[allowed,denied].map(actor=>({row:2,actor,permissions:['READ' as const,'CREATE' as const,'REVISE' as const,'REVIEW' as const]}))]});
+  const legal=await owner.readLegalReview('reviewer',ref);await owner.verifyLegalReview('reviewer',{...ref,requestId:randomUUID(),digest:legal.digest});
+  const requestId=randomUUID(),candidate=await owner.plan('maker',{...ref,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
+  const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error();
+  const campus=result.facts.find(f=>f.owner==='organization-master/campus'&&f.source?.row===2)!;
+  const permissions=(actor:string)=>JSON.parse(peer(receipt.name,`SELECT coalesce(jsonb_agg(permission ORDER BY permission),'[]') FROM organization_master.operating_access WHERE actor=${quote(actor)} AND subject_id=${quote(subject.id)}::uuid AND campus_id=${quote(campus.id)}::uuid`));
+  expect(permissions(allowed)).toEqual(['ESTABLISH','READ','REVISE']);expect(permissions(denied)).toEqual([]);
+ }finally{await owner.close();await f.close();}
+});
