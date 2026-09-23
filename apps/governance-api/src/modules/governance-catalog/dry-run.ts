@@ -8,7 +8,7 @@ import {CatalogTransactionScope} from './transaction-scope.js';
 import {createValidationEvidenceReader} from './validation.js';
 import {QualityEligibilitySchema,qualityEligibilityInTransaction,type QualityIssueListResult,type QualityIssueDetail} from './quality-issues.js';
 import {protectedArtifacts,type KeyProviderPort} from './protected-artifact.js';
-import {signaturesEqual} from './parse-provenance.js';
+import {parsedRowsForDataset,signaturesEqual} from './parse-provenance.js';
 import {selectImportAdapter} from './import-adapter.js';
 import type {ImportContractItem} from './contract-schema.js';
 import {planDeclaredGraph,explainTargetImpact} from './dry-run-rules.js';
@@ -82,8 +82,11 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
    if(offset+page.items.length>=page.total)break;
   }
   const contracts=(await sql<{result:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:input.scope,mode:'CURRENT',target:job.contract.id})}::jsonb) as result`.execute(scope)).rows[0]!.result;
-  const adapter=selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version});
-  const graph=planDeclaredGraph(job.contract.dataset,job.contract.definition.references,input.commands,evidence.parsed?.rows.length??0);
+  const revision=job.revisions.find(r=>r.id===run.revisionId);
+  const adapter=selectImportAdapter({dataset:job.contract.dataset,profile:job.profile,contractVersion:job.contract.version,templateVersion:job.contract.definition.templateVersion,...(revision?.input.kind==='FILE'?{parserPolicy:revision.input.parserPolicy}:{})});
+  const verifiedParsed=evidence.organizationBundle??evidence.parsed;
+  const parsedRows=parsedRowsForDataset(verifiedParsed,job.contract.dataset);
+  const graph=planDeclaredGraph(job.contract.dataset,job.contract.definition.references,input.commands,parsedRows.length);
   const blockers=new Set(graph.blockers);
   // Adapter declarations do not provide a domain reader, field transformation or atomic business bundle.
   blockers.add('BLOCKED_DEPENDENCY');blockers.add('INTENT_MAPPING_UNAVAILABLE');
@@ -93,7 +96,7 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
   const diff=input.commands.map(command=>({row:command.row,intent:command.intent,alias:{kind:'JOB_ALIAS' as const,jobId:job.id,revisionId:run.revisionId,row:command.row},target:command.target??null,...explainTargetImpact({...command,dependencies:command.dependencies.map(dependency=>dependency.alias.row)},[]),effect:'NOT_EVALUABLE' as const,dependencies:command.dependencies}));
   const basis={jobId:job.id,revisionId:run.revisionId,runId:run.runId,sourceArtifactId:run.sourceArtifactId,parseArtifactId:run.parseArtifactId,resultArtifactId:run.resultArtifactId,contractVersionId:run.contractVersionId,ruleVersion:run.ruleVersion,parserPolicy:run.parserPolicy,interpretationPolicy:run.interpretationPolicy,transformation,profile:job.profile,validationRecordedAt:run.recordedAt};
   const orderedBlockers=[...blockers].sort();
-  const binding=planBinding(provider,'P0_07_COMPLETE_BASIS_V1',{actor,input,sourceBinding,basis,job,contracts,run,parsed:evidence.parsed??null,evaluation:evidence.evaluation,issues,quality,adapter,graph,diff,blockers:orderedBlockers});
+  const binding=planBinding(provider,'P0_07_COMPLETE_BASIS_V1',{actor,input,sourceBinding,basis,job,contracts,run,parsed:verifiedParsed??null,evaluation:evidence.evaluation,issues,quality,adapter,graph,diff,blockers:orderedBlockers});
   const observedAt=(await sql<{time:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') as time`.execute(scope)).rows[0]!.time;
   const qualityReferences=issues.map(detail=>({issueId:detail.issue.id,sequence:detail.issue.sequence,dispositionHeads:detail.history.map(event=>event.head)}));
   const currentContractReferences=contracts.map(contract=>({id:contract.id,versionId:contract.versionId,head:contract.head,status:contract.status}));
@@ -132,7 +135,7 @@ export function dryRun(db:Kysely<DB>,provider?:KeyProviderPort){
   return safe(()=>readTransaction(async scope=>{
    const evidence=await createValidationEvidenceReader(provider).readInTransaction(scope,actor,input,input.runId,true);
    if(evidence.job.id!==input.jobId||evidence.run.revisionId!==input.revisionId||evidence.job.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');
-   const commands=(evidence.parsed?.rows??[]).map((_row,index)=>({row:index+1,intent:'CREATE' as const,dependencies:[]}));
+   const commands=parsedRowsForDataset(evidence.organizationBundle??evidence.parsed,evidence.job.contract.dataset).map((_row,index)=>({row:index+1,intent:'CREATE' as const,dependencies:[]}));
    if(!commands.length)throw new Error('PLAN_INPUT_LIMIT');
    const preview=await observe(scope,actor,{...input,commands});
    return {...preview,previewIntent:'ALL_FILE_ROWS_CREATE' as const,rowCount:commands.length};

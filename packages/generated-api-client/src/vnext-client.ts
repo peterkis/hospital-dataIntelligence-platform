@@ -81,3 +81,23 @@ export function createLicenseScopeClient(baseUrl:string,actor:string){
   restrictedInput:(body:operations['restrictedLicenseScope']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/license-scope-evidence/restricted-input',{body}),
  };
 }
+
+export function createOrganizationBundleClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  receive:(body:operations['receiveOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/receive',{body}),
+  revision:(body:operations['readOrganizationBundleRevision']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/revision',{body}),
+  validate:(body:operations['validateOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/validate/bundle',{body}),
+  validateORG01:(body:operations['validateORG01']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/validate/ORG01',{body}),
+  validateORG02:(body:operations['validateORG02']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/validate/ORG02',{body}),
+  validateORG03:(body:operations['validateORG03']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/validate/ORG03',{body}),
+  preauthorize:(body:operations['preauthorizeOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/preauthorize',{body}),
+  legalReview:(body:operations['readOrganizationBundleLegalReview']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/legal-review',{body}),
+  verify:(body:operations['verifyOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/verify',{body}),
+  plan:(body:operations['planOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/plan',{body}),
+  review:(body:operations['reviewOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/review',{body}),
+  approve:(body:operations['approveOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/approve',{body}),
+  apply:(body:operations['applyOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/apply',{body}),
+  resume:(body:operations['resumeOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/resume',{body}),
+ };
+}

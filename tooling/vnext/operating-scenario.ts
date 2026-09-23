@@ -10,7 +10,7 @@ import {operatingCodeSet} from './operating-fixture.js';
 interface Governed<T> {stage(actor:string,input:T):Promise<{inputId:string;revisionId:string}>;plan(actor:string,input:{inputId:string;requestId:string}):Promise<{candidateId:string;digest:string}>;readApplyCandidate(actor:string,input:{candidateId:string}):Promise<unknown>;approveApplyUnit(actor:string,input:{candidateId:string;digest:string}):Promise<unknown>;applyUnit(actor:string,input:{candidateId:string;requestId:string}):Promise<{status:string;facts?:OwnerFact[]}>}
 export async function prepare<T>(owner:Governed<T>,input:T){const staged=await owner.stage('maker',input),requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);return {candidateId:candidate.candidateId,requestId};}
 export async function commit<T>(owner:Governed<T>,input:T){const result=await owner.applyUnit('maker',await prepare(owner,input));if(result.status!=='COMMITTED'||!result.facts?.[0])throw new Error('FIXTURE_NOT_COMMITTED');return result.facts[0];}
-export async function operatingScenario(receipt:{name:string},connection:string,provider:KeyProviderPort,catalog:Catalog){
+export async function operatingScenario(receipt:{name:string},connection:string,provider:KeyProviderPort,catalog:Catalog,reusePublishedServiceCatalog=false){
  provisionCampusAuthority(receipt,provider);provisionOperatingAuthority(receipt,provider);
  const org=openOrganization(connection,provider),campus=openCampus(connection,provider),operating=openOperatingRelations(connection,provider);
  try{
@@ -41,7 +41,13 @@ export async function operatingScenario(receipt:{name:string},connection:string,
   await orgApply({...common,validFrom:from,validTo:to,action:'VERIFY_REGISTRATION',target:{id:subject.id,version:subject.version},licenseTargets:[{id:l.id,version:l.version}],creditCodeStatus:'NOT_APPLICABLE',evidence:artifact.artifactId});
   const v=(await org.historyDetails('maker',subject.id)).licenses.find(v=>v.id===l.id&&v.version===l.version)!;return {owner:'organization-master/license' as const,id:l.id,version:l.version,versionId:v.versionId};
  };
- const codeSet=await operatingCodeSet(catalog,source.versionId);
+ const codeSet=await (async()=>{
+  if(!reusePublishedServiceCatalog)return operatingCodeSet(catalog,source.versionId);
+  const published=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.status==='PUBLISHED'&&c.dataset==='ORG03'&&c.profile==='CORE'&&c.definition.templateVersion==='ORG03_MANUAL_CORE_V1');
+  const service=published?.definition.codeSets.find(c=>c.field==='license_scope'&&c.codeSystem==='SYNTHETIC_OPERATING_SERVICE'&&c.status==='SYNTHETIC_ADOPTED');
+  if(!published||!service)throw new Error('BLOCKED_DEPENDENCY');
+  return {published,reference:{contractId:published.id,contractVersionId:published.versionId,codeSystem:'SYNTHETIC_OPERATING_SERVICE' as const,version:service.version,sourceVersionId:service.sourceVersionId}};
+ })();
  const endpoints=(subject:OwnerFact,campus:OwnerFact)=>({subject:{owner:'organization-master' as const,id:subject.id},campus:{owner:'organization-master/campus' as const,id:campus.id}});
  const verifyScope=async(subject:OwnerFact,node:OwnerFact,license:Awaited<ReturnType<typeof addLicense>>,services=['DEMO_MEDICAL_A'],from='2026-01-01T00:00:00',to:string|null=null)=>{
   const s=await operatingApply({...common,...endpoints(subject,node),action:'VERIFY_SCOPE',evidence:artifact.artifactId,validFrom:from,validTo:to,facts:{license,catalog:codeSet.reference,services,licenseScopeText:'DEMO independently checked service scope'}});

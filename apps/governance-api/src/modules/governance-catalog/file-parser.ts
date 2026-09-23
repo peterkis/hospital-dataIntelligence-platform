@@ -104,7 +104,7 @@ function jsonRows(text: string): SourceObject[] {
   expect(']'); ws(); if (i !== text.length) jsonFailure('JSON_SYNTAX'); return rows;
 }
 
-export function unzip(bytes: Uint8Array): Map<string, string> {
+export function unzip(bytes: Uint8Array, organization=false): Map<string, string> {
   const b = Buffer.from(bytes); const files = new Map<string, string>();
   if (b.length < 22 || b.readUInt32LE(0) !== 0x04034b50) return fail('ZIP_FORMAT');
   // Fixed ZIP32 package, no comments, multidisk, encryption or ZIP64.
@@ -123,7 +123,7 @@ export function unzip(bytes: Uint8Array): Map<string, string> {
     if(method===0?![10,20].includes(neededVersion):neededVersion!==20)fail('ZIP_UNSUPPORTED');
     if (p + 46 + nameSize > end) fail('ZIP_FORMAT');
     const nameBytes = b.subarray(p + 46, p + 46 + nameSize), name = utf8(nameBytes);
-    if (!['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/worksheets/sheet1.xml','xl/sharedStrings.xml'].includes(name) || files.has(name)) fail('ZIP_MEMBER_REJECTED');
+    if (!['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/worksheets/sheet1.xml','xl/sharedStrings.xml'].includes(name) && !(organization && /^xl\/worksheets\/sheet[1-9][0-9]{0,3}\.xml$/u.test(name)) || files.has(name)) fail('ZIP_MEMBER_REJECTED');
     total += size;
     if (size > 2097152 || total > 4194304 || size > Math.max(1, compressed) * 100) fail('ZIP_LIMIT');
     if (local !== nextLocal || local + 30 > central || b.readUInt32LE(local) !== 0x04034b50 || b.readUInt16LE(local + 4) !== b.readUInt16LE(p + 6) || b.readUInt16LE(local + 10) !== b.readUInt16LE(p + 12) || b.readUInt16LE(local + 12) !== b.readUInt16LE(p + 14) || b.readUInt16LE(local + 6) !== flags || b.readUInt16LE(local + 8) !== method || b.readUInt32LE(local + 14) !== crc || b.readUInt32LE(local + 18) !== compressed || b.readUInt32LE(local + 22) !== size || b.readUInt16LE(local + 26) !== nameSize || b.readUInt16LE(local + 28) !== 0) fail('ZIP_FORMAT');
@@ -248,8 +248,11 @@ function decodeXlsxText(value:string,row=0,column=0):string {
   const decoded=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
   assertTextSafety(decoded,row,column);return decoded;
 }
-function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:string[][];sourceTypes:XlsxCellType[][]} {
-  const files = unzip(bytes);
+interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][]}
+function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], organization=false): Map<string,XlsxTable> {
+  const files = unzip(bytes,organization);
+  const worksheetParts=[...files.keys()].filter(name=>/^xl\/worksheets\//u.test(name));
+  if(worksheetParts.length!==(organization?3:1))fail('SHEET_CONTRACT');
   manifest.bomMembers=[...files].filter(([,value])=>value.startsWith('\uFEFF')).map(([name])=>name);
   manifest.bomDetected=manifest.bomMembers.length>0;
   const docs = new Map([...files].map(([name, value]) => [name, xml(value)]));
@@ -259,11 +262,11 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     if (!doc || doc.name !== root || doc.attrs['xmlns']!==namespace) return fail('XLSX_STRUCTURE'); return doc;
   };
   for (const [name,doc] of docs) {
-    const sheetRelations=docs.get('xl/_rels/workbook.xml.rels')?.children.filter(r=>r.name==='Relationship' && r.attrs['Target']==='worksheets/sheet1.xml') ?? [];
+    const sheetRelations=docs.get('xl/_rels/workbook.xml.rels')?.children.filter(r=>r.name==='Relationship' && 'xl/'+r.attrs['Target']===name) ?? [];
     const declaredSheets=docs.get('xl/workbook.xml')?.children.find(n=>n.name==='sheets')?.children.filter(n=>n.name==='sheet' && sheetRelations.some(r=>r.attrs['Id']===n.attrs['r:id'])) ?? [];
-    const location=name==='xl/worksheets/sheet1.xml'?(declaredSheets.length===1?declaredSheets[0]!.attrs['name'] ?? 'workbook':'workbook'):name;
+    const location=worksheetParts.includes(name)?(declaredSheets.length===1?declaredSheets[0]!.attrs['name'] ?? 'workbook':'workbook'):name;
     const visit = (n: Xml, row=1, column=1) => {
-      if(name==='xl/worksheets/sheet1.xml' && n.name==='c') {
+      if(worksheetParts.includes(name) && n.name==='c') {
         const cell=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(n.attrs['r'] ?? '');
         if(cell) {
           const cellColumn=[...cell[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0);
@@ -282,7 +285,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
   if (types.children.some(n => /macro|vba|ole|external/i.test(n.attrs['ContentType'] ?? ''))) fail('ACTIVE_CONTENT',1,1,'workbook');
   const spreadsheetMime='application/vnd.openxmlformats-officedocument.spreadsheetml.';
   const partTypes:Record<string,string>={
-    '/xl/workbook.xml':spreadsheetMime+'sheet.main+xml','/xl/worksheets/sheet1.xml':spreadsheetMime+'worksheet+xml',
+    '/xl/workbook.xml':spreadsheetMime+'sheet.main+xml',...Object.fromEntries(worksheetParts.map(part=>['/'+part,spreadsheetMime+'worksheet+xml'])),
     '/xl/sharedStrings.xml':spreadsheetMime+'sharedStrings+xml',
   };
   const defaults:Record<string,string>={xml:'application/xml',rels:'application/vnd.openxmlformats-package.relationships+xml'};
@@ -293,7 +296,7 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     if(Object.keys(entry.attrs).some(k=>k!==keyName&&k!=='ContentType')||!Object.hasOwn(mapping,key)||mapping[key]!==mime||declarations.has(identity)||!isDefault&&!files.has(key.slice(1)))fail('CONTENT_TYPE_REJECTED');
     declarations.set(identity,mime);
   }
-  for(const part of ['/xl/workbook.xml','/xl/worksheets/sheet1.xml',...Object.keys(partTypes).filter(p=>files.has(p.slice(1)))]){
+  for(const part of ['/xl/workbook.xml',...Object.keys(partTypes).filter(p=>files.has(p.slice(1)))]){
     if(declarations.get('Override:'+part)!==partTypes[part])fail('CONTENT_TYPE_REJECTED');
   }
   if(declarations.get('Default:rels')!==defaults['rels'])fail('CONTENT_TYPE_REJECTED');
@@ -317,15 +320,14 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
   for(const entry of sheets.children)only(entry,[]);
   for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
-  const sheet = sheets.children[0];
-  if (sheets.children.length !== 1 || sheet?.attrs['name'] !== 'Data') {
-    const offending = sheets.children.find(entry => entry.attrs['name'] !== 'Data');
-    fail('SHEET_CONTRACT',1,1,offending?.attrs['name'] ?? 'workbook');
-  }
-  unsignedAttribute(sheet!.attrs['sheetId'],true);
+  const expected=organization?['ORG01','ORG02','ORG03']:['Data'];
+  if(sheets.children.length!==expected.length||new Set(sheets.children.map(s=>s.attrs['name'])).size!==expected.length||sheets.children.some(s=>!expected.includes(s.attrs['name']??'')))fail('SHEET_CONTRACT',1,1,sheets.children.find(s=>!expected.includes(s.attrs['name']??''))?.attrs['name']??'workbook');
+  const ids=new Set<number>();for(const sheet of sheets.children){const id=unsignedAttribute(sheet.attrs['sheetId'],true);if(ids.has(id))fail('SHEET_CONTRACT');ids.add(id);}
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
-  const workbookTargets=relationships(wr,{'worksheets/sheet1.xml':office+'worksheet','sharedStrings.xml':office+'sharedStrings'},'xl/','worksheets/sheet1.xml');
-  if (!wr.children.some(r => r.attrs['Id'] === sheet!.attrs['r:id'] && r.attrs['Target'] === 'worksheets/sheet1.xml')) fail('RELATIONSHIP_REJECTED');
+  const workbookTargets=relationships(wr,{...Object.fromEntries(worksheetParts.map(part=>[part.slice(3),office+'worksheet'])),'sharedStrings.xml':office+'sharedStrings'},'xl/',worksheetParts[0]!.slice(3));
+  if(worksheetParts.some(part=>!workbookTargets.has(part.slice(3))))fail('RELATIONSHIP_REJECTED');
+  const boundParts=new Set<string>();const targets=new Map<string,string>();
+  for(const sheet of sheets.children){const target=wr.children.find(r=>r.attrs['Id']===sheet.attrs['r:id'])?.attrs['Target'];if(!target||!worksheetParts.includes('xl/'+target)||boundParts.has(target))fail('RELATIONSHIP_REJECTED');boundParts.add(target!);targets.set(sheet.attrs['name']!,target!);}
   const shared = docs.get('xl/sharedStrings.xml'); const strings: string[] = [];
   let declaredCount:number|undefined,sharedReferences=0;
   if (shared) { if(!workbookTargets.has('sharedStrings.xml'))fail('RELATIONSHIP_REJECTED');get('xl/sharedStrings.xml','sst'); only(shared,['si']); for (const si of shared.children) { only(si,['t']); strings.push(decodeXlsxText(leaf(one(si,'t')))); } }
@@ -333,7 +335,10 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     if(shared.attrs['count']!==undefined)declaredCount=unsignedAttribute(shared.attrs['count']);
     if(shared.attrs['uniqueCount']!==undefined&&unsignedAttribute(shared.attrs['uniqueCount'])!==strings.length)fail('SHARED_STRING_COUNT');
   }
-  const worksheet = get('xl/worksheets/sheet1.xml','worksheet'); only(worksheet,['sheetFormatPr','cols','sheetData']);
+  const tables=new Map<string,XlsxTable>();
+  for(const [sheetName,target] of targets){
+  try{
+  const worksheet = get('xl/'+target,'worksheet'); only(worksheet,['sheetFormatPr','cols','sheetData']);
   let previousWorksheetChild = -1;
   for(const child of worksheet.children){
     const position = ['sheetFormatPr','cols','sheetData'].indexOf(child.name);
@@ -373,8 +378,31 @@ function xlsx(bytes: Uint8Array, manifest: ParserResult['manifest']): {rows:stri
     rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
+  tables.set(sheetName,{rows,sourceTypes});
+  }catch(error){if(organization&&error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheetName);throw error;}
+  }
   if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
-  return {rows,sourceTypes};
+  return tables;
+}
+
+function appendObjects(result:Pick<ParserResult,'rows'|'cells'>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false){
+    for (const [index, source] of objects.entries()) {
+      const obj=source.values;
+      const row: Record<string,string> = Object.create(null); const rowNum = index + 1, sourceRow = physicalRows[index] ?? rowNum;
+      if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',sourceRow);
+      for (const f of fields) {
+        const column=source.columns.indexOf(f.code)+1;
+        const value = obj[f.code];
+        const text = typeof value==='string'?value:value?.lexeme??'';
+        result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
+        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
+        assertTextSafety(text,sourceRow,column);
+        if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
+        if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
+        row[f.code] = text;
+      }
+      if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow); result.rows.push(row);
+    }
 }
 
 export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[], policy: ParserResult['policy']='STRICT_V1'): ParserResult {
@@ -386,7 +414,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
     let objects: SourceObject[];
     let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
-      const table = xlsx(bytes,result.manifest); objects = tableObjects(table.rows,fields);physicalRows=table.rows.slice(1).map((_,i)=>i+2);sourceTypes=table.sourceTypes.slice(1);
+      const table = xlsxTables(bytes,result.manifest).get('Data')!; objects = tableObjects(table.rows,fields);physicalRows=table.rows.slice(1).map((_,i)=>i+2);sourceTypes=table.sourceTypes.slice(1);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
@@ -395,28 +423,35 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    for (const [index, source] of objects.entries()) {
-      const obj=source.values;
-      const row: Record<string,string> = Object.create(null); const rowNum = index + 1;
-      if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',rowNum);
-      for (const f of fields) {
-        const column=source.columns.indexOf(f.code)+1;
-        const value = obj[f.code];
-        const text = typeof value==='string'?value:value?.lexeme??'';
-        result.cells.push({row:rowNum,sourceRow:physicalRows[index]??rowNum,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
-        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',rowNum,column);
-        assertTextSafety(text,rowNum,column);
-        if (text !== text.trim()) fail('WHITESPACE_REJECTED',rowNum,column);
-        if (f.type === 'datetime' && !(policy==='STRICT_V2' && text==='')) {try{parseLocalDateTime(text);}catch{fail('LOCAL_TIME_REQUIRED',rowNum,column);}}
-        row[f.code] = text;
-      }
-      if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',rowNum); result.rows.push(row);
-    }
+    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy==='STRICT_V2');
     result.structuralStatus = 'PARSED';
   } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
   return result;
 }
+export const organizationSheets=['ORG01','ORG02','ORG03'] as const;
+export type OrganizationSheet=typeof organizationSheets[number];
+export interface OrganizationWorkbookResult {
+ policy:'STRICT_ORG_BUNDLE_V1';structuralStatus:'PARSED'|'REJECTED';manifest:ParserResult['manifest'];
+ sheets:Record<OrganizationSheet,{rows:CanonicalRow[];cells:Array<RawCellProvenance&{sheet:OrganizationSheet}>}>;issues:ParserIssue[];
+}
+export function parseOrganizationWorkbook(bytes:Uint8Array,fields:Record<OrganizationSheet,ParserField[]>):OrganizationWorkbookResult{
+ const result:OrganizationWorkbookResult={policy:'STRICT_ORG_BUNDLE_V1',structuralStatus:'REJECTED',manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},sheets:{ORG01:{rows:[],cells:[]},ORG02:{rows:[],cells:[]},ORG03:{rows:[],cells:[]}},issues:[]};
+ try{
+  if(!bytes.length)fail('EMPTY_FILE');if(bytes.length>1048576)fail('FILE_LIMIT');
+  const tables=xlsxTables(bytes,result.manifest,true);let count=0;
+  for(const sheet of organizationSheets){try{
+   const fs=fields[sheet];if(!fs?.length||fs.length>100||new Set(fs.map(f=>f.code)).size!==fs.length)fail('FIELD_CONTRACT');
+   const table=tables.get(sheet)!;const objects=tableObjects(table.rows,fs);count+=objects.length;if(count>1000)fail('ROW_LIMIT');
+   const parsed:Pick<ParserResult,'rows'|'cells'>={rows:[],cells:[]};appendObjects(parsed,objects,fs,table.rows.slice(1).map((_,i)=>i+2),table.sourceTypes.slice(1),'XLSX',true,true);
+   result.sheets[sheet]={rows:parsed.rows,cells:parsed.cells.map(cell=>({...cell,sheet}))};
+  }catch(error){if(error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheet);throw error;}}
+  if(!count)fail('NO_DATA');result.structuralStatus='PARSED';
+ }catch(error){for(const sheet of organizationSheets)result.sheets[sheet].rows=[];result.issues.push(error instanceof ParseFailure?{code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})}:{code:'PARSER_FAILED',row:0,column:0});}
+ if(Buffer.byteLength(JSON.stringify(result))>1048576){for(const sheet of organizationSheets)result.sheets[sheet]={rows:[],cells:[]};result.structuralStatus='REJECTED';result.issues=[{code:'RESULT_LIMIT',row:0,column:0}];}
+ return result;
+}
+
 function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): SourceObject[] {
   const header = table[0]; if (!header) return fail('NO_DATA');
   header.forEach((key,column)=>assertTextSafety(key,1,column+1));
@@ -428,6 +463,6 @@ function tableObjects(table: string[][], fields: ParserField[], physicalRows?:nu
 }
 
 if (!isMainThread && parentPort) {
-  try { parentPort.postMessage(parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy)); }
+  try { parentPort.postMessage(workerData.policy==='STRICT_ORG_BUNDLE_V1'?parseOrganizationWorkbook(workerData.bytes,workerData.organizationFields):parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy)); }
   catch { parentPort.postMessage(null); }
 }

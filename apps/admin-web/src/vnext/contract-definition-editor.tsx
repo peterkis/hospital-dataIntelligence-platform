@@ -34,7 +34,11 @@ export function ContractDefinitionEditor({definition,onChange,parameters,disable
   </div></div>)}
   <button type="button" onClick={()=>onChange({...definition,codeSets:[...definition.codeSets,{field:'',codeSystem:'SYNTHETIC_CODES',version:definition.ruleVersion,status:'CANDIDATE',codes:[],sourceVersionId:definition.sourceVersionId??'',validFrom:'2026-01-01T00:00:00',validTo:null}]})}>添加代码集</button>
   <h4>固定引用</h4>{definition.references.map((value,index)=><div className="editor" key={index}><div className="toolbar">
-   <label>引用字段<input value={value.field} onChange={event=>reference(index,{...value,field:event.target.value})}/></label>
+   <label>引用字段<input value={value.field} onChange={event=>{
+    if(value.status==='ADOPTED_CODESET'){
+     if(event.target.value!==value.field)reference(index,{field:event.target.value,target:value.target,status:'BLOCKED_DEPENDENCY'});
+    }else reference(index,{...value,field:event.target.value});
+   }}/></label>
    <label>引用目标<input value={value.target} onChange={event=>reference(index,{field:value.field,target:event.target.value,status:'BLOCKED_DEPENDENCY'})}/></label>
    {value.target==='GOV09.config_id'&&<label>固定参数定义<select value={value.status==='DECLARED_PARAMETER'?value.parameterVersionId:''} onChange={event=>{const parameter=parameters.find(parameter=>parameter.versionId===event.target.value);reference(index,parameter?{field:value.field,target:'GOV09.config_id',status:'DECLARED_PARAMETER',parameterVersionId:parameter.versionId,parameterDigest:parameter.reviewDigest}:{field:value.field,target:value.target,status:'BLOCKED_DEPENDENCY'});}}>
     <option value="">未绑定（依赖未就绪）</option>{value.status==='DECLARED_PARAMETER'&&!parameters.some(parameter=>parameter.versionId===value.parameterVersionId)&&<option value={value.parameterVersionId}>原固定版本 {value.parameterVersionId}</option>}{parameters.map(parameter=><option key={parameter.versionId} value={parameter.versionId}>{parameter.parameterKey} · v{parameter.version} · {parameter.ownerRole}</option>)}
