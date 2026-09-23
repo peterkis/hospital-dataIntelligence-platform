@@ -371,3 +371,20 @@ test('mixed existing subject and new campus require exact existing READ, not exi
   expect(permissions(allowed)).toEqual(['ESTABLISH','READ','REVISE']);expect(permissions(denied)).toEqual([]);
  }finally{await owner.close();await f.close();}
 });
+
+
+test('generic dry-run verifies signed organization bundle evidence before adapter selection',async()=>{
+ const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
+ const f=await organizationBundleFixture(receipt,connection,provider,catalog),owner=organization.openOrganizationImport(connection,provider);
+ try{
+  const received=await owner.receive('maker',f.input,f.workbook());
+  const validation=await owner.validate('maker',{jobId:received.jobId,revisionId:received.revisionId,requestId:randomUUID()});
+  expect(validation.run?.runId).toBeTruthy();
+  const preview=await catalog.buildDryRun('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',jobId:received.jobId,revisionId:received.revisionId,runId:validation.run!.runId,commands:[{row:1,intent:'CREATE',dependencies:[]}]});
+  expect(preview.analysisAvailable).toBe(true);
+  expect(preview.blockers).toEqual(expect.arrayContaining(['BLOCKED_DEPENDENCY','INTENT_MAPPING_UNAVAILABLE']));
+  expect(preview.blockers).not.toContain('ROW_REFERENCE_INVALID');
+  expect(preview.planToken.length).toBeGreaterThan(0);
+  expect(await catalog.importJobAdapter('maker',{scope:'SYNTHETIC',jobId:received.jobId})).toMatchObject({capability:'READY'});
+ }finally{await owner.close();await f.close();}
+});

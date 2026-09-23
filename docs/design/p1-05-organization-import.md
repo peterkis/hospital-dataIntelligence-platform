@@ -51,3 +51,11 @@
 文件 Owner 回归曾因旧测试将 `0012` 子串与所有随机 UUID/摘要混搜而失败；已改为长合成哨兵值并增加原值精确往返断言，重跑12/12。首次失败和后续成功分别保留，不重写总退出码。本票运行时/数据库修复没有因此放宽隐私检查。
 
 持久库及持久授权本轮未修改、未升级0070；没有重写历史授权或新增业务表。0070需经后续发布流程安装，不能用本轮临时库结果声称已部署。此次为定向源码复核和真实测试；最终Codex复审将在修复提交推送后另行请求，未沿用旧提交的review当作当前批准。
+
+## PR #17 第二轮追加审阅修复：组合解析证据进入通用 Dry-run
+
+组织组合校验保存的是 `STRICT_ORG_BUNDLE_V1` 多工作表受保护包络，不得交给只接受单表 `STRICT_V1/STRICT_V2` 的验证器。共享验证证据读取现在先校验签名、准确 source/job/revision/contract、manifest/contracts digest 及三表结构，再以区分字段返回 flat parse 或 organization bundle。通用质量纠错继续只消费 flat parse；bundle 不被伪装成单表行集。
+
+Dry-run 按锚点数据集从已验证组合证据中选择相应工作表行数，并把完整受保护解析证据纳入观察绑定。它仍只返回带 `BLOCKED_DEPENDENCY` / `INTENT_MAPPING_UNAVAILABLE` 的诊断预览，不绕过组织 Owner 的独立核验、审批与原子 Apply，也不把 READY 适配器等同于业务可执行。
+
+本轮新增真实数据库反例在旧运行时得到 `DRY_RUN_FAILED`，其余32项通过；修复后 fresh 33/33、0064→0070升级 33/33，既有 Dry-run 数据库/单元回归17/17，P0-06质量阶段门禁、parser 56/56、P1-05 unit 6/6及相关 typecheck/build/boundary/layout/diff检查通过。持久库、持久授权和迁移前缀均未变；源码迁移仍为0070。
