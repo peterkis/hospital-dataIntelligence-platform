@@ -9,8 +9,8 @@ import {organizationKeys} from './organization-keys.mjs';
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false}={}){
- const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();assert.equal(files.length,71);
- const prefix=checkPrefix(files,before.ledger);assert.ok(prefix===70||prefix===71,'P1_05_LATEST_DEPLOYMENT_REQUIRED');if(reuseExisting)assert.equal(prefix,71,'WORKSPACE_ALREADY_DEPLOYED_REQUIRED');
+ const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();assert.equal(files.length,72);
+ const prefix=checkPrefix(files,before.ledger);assert.ok([70,71,72].includes(prefix),'P1_05_LATEST_DEPLOYMENT_REQUIRED');if(reuseExisting)assert.equal(prefix,72,'WORKSPACE_ALREADY_DEPLOYED_REQUIRED');
  mkdirSync('.runtime/vnext/p1-06',{recursive:true});const evidence='.runtime/vnext/p1-06/deployment-'+Date.now();
  const tables=predecessorTables(before.tables),digest=predecessorDigest(receipt,tables);
  const keyDigest=()=>createHash('sha256').update(readFileSync('.runtime/vnext/p1-01/keys.secret.json')).digest('hex'),keysBefore=keyDigest();
