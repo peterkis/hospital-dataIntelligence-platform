@@ -1,0 +1,51 @@
+import {spawnSync} from 'node:child_process';
+import {randomBytes,randomUUID} from 'node:crypto';
+import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import pg from 'pg';
+
+// This is a GitHub-hosted synthetic database adapter, not a substitute for the
+// receipt-owned WSL/persistent deployment runner. Production URLs are refused.
+const base=new URL(process.env.HDIP_REVIEW_CI_ADMIN_URL??'postgresql://invalid/');
+if(process.env.GITHUB_ACTIONS!=='true'||base.hostname!=='127.0.0.1'||base.port!=='55434'||base.pathname!=='/postgres'||base.username!=='postgres')throw new Error('ISOLATED_REVIEW_CI_REQUIRED');
+const root=resolve(import.meta.dirname,'../..');
+const allowed=new Set(['postgres']);
+const quote=value=>"'"+String(value).replaceAll("'","''")+"'";
+export function peer(name,sql){
+ if(!allowed.has(name))throw new Error('REVIEW_CI_TARGET_DENIED');
+ const url=new URL(base);url.pathname='/'+name;
+ const result=spawnSync('psql',['-X','-q','-v','ON_ERROR_STOP=1','-h',url.hostname,'-p',url.port,'-U',url.username,'-d',name,'-At'],{input:sql,encoding:'utf8',env:{...process.env,PGPASSWORD:decodeURIComponent(url.password)},maxBuffer:32*1024*1024});
+ if(result.status!==0)throw new Error(result.stderr||'REVIEW_CI_SQL_FAILED');return result.stdout.trim();
+}
+export function resolveTarget(receipt){if(!allowed.has(receipt.name))throw new Error('REVIEW_CI_TARGET_DENIED');const url=new URL(base);url.pathname='/'+receipt.name;return url.href;}
+export async function inspect(receipt){
+ const pool=new pg.Pool({connectionString:resolveTarget(receipt)});
+ try{
+  const identity=(await pool.query("select current_database() name,d.oid::text oid,pg_get_userbyid(d.datdba) owner,inet_server_port() port from pg_database d where datname=current_database()" )).rows[0];
+  if(identity.name!==receipt.name||identity.oid!==receipt.oid||identity.owner!=='hdi_prototype')throw new Error('REVIEW_CI_IDENTITY_MISMATCH');
+  const present=(await pool.query("select to_regclass('vnext_control.migration') is not null present")).rows[0].present;
+  const ledger=present?(await pool.query('select id,sha256 from vnext_control.migration order by id')).rows:[];
+  const tables=(await pool.query("select schemaname||'.'||tablename name from pg_tables where schemaname in ('vnext_control','governance_catalog','organization_master') order by 1")).rows.map(r=>r.name);
+  return {identity,ledger,tables};
+ }finally{await pool.end();}
+}
+export async function provision(){
+ const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');
+ peer('postgres',"DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hdi_prototype') THEN CREATE ROLE hdi_prototype NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;END IF;END $$;");
+ peer('postgres',`CREATE DATABASE ${name} OWNER hdi_prototype;CREATE ROLE ${role} LOGIN PASSWORD ${quote(password)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT;`);
+ allowed.add(name);
+ const receipt={name,oid:peer(name,'SELECT oid::text FROM pg_database WHERE datname=current_database()'),owner:'hdi_prototype',port:55434,purpose:'GITHUB_ACTIONS_SYNTHETIC_REVIEW',requestId:randomUUID()};
+ const path=resolve(root,'.runtime/vnext/review-ci-'+name+'.json');mkdirSync(resolve(root,'.runtime/vnext'),{recursive:true});writeFileSync(path,JSON.stringify(receipt));
+ const files=readdirSync(resolve(root,'db/vnext/migrations')).filter(f=>/^\d{4}_[a-z0-9_]+\.sql$/.test(f)).sort();
+ for(const file of files){const bytes=readFileSync(resolve(root,'db/vnext/migrations',file));peer(name,`BEGIN;${bytes.toString()}\nINSERT INTO vnext_control.migration(lineage,id,sha256,runner_version) VALUES('HDIP-MC-VNEXT',${quote(file.slice(0,-4))},${quote(createHash('sha256').update(bytes).digest('hex'))},'GITHUB_REVIEW_CI');COMMIT;`);}
+ peer(name,`GRANT CONNECT ON DATABASE ${name} TO ${role};GRANT USAGE ON SCHEMA governance_catalog,vnext_control,organization_master TO ${role};
+ DO $$ DECLARE f record;t record;BEGIN
+ FOR f IN SELECT p.oid::regprocedure signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('governance_catalog','vnext_control') AND (has_function_privilege('hdi_prototype',p.oid,'EXECUTE') OR p.proname IN ('accept_validation','quality_issue_record_correction','apply_record','campus_division','operating_catalog')) LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO ${role}',f.signature);END LOOP;
+ FOR t IN SELECT n.nspname,c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('governance_catalog','vnext_control') AND c.relkind='r' AND has_table_privilege('hdi_prototype',c.oid,'SELECT') LOOP EXECUTE format('GRANT SELECT ON TABLE %I.%I TO ${role}',t.nspname,t.relname);END LOOP;
+ END $$;GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA organization_master TO ${role};`);
+ const connection=new URL(base);connection.pathname='/'+name;connection.username=role;connection.password=password;
+ process.env.VNEXT_VALIDATION_OWNER_URL=connection.href;process.env.VNEXT_TEST_RECEIPT=path;
+ console.log(JSON.stringify({database:name,role,server:peer(name,'SHOW server_version'),migrations:files.length,environment:'ISOLATED_GITHUB_CI'}));
+ return {receipt,async close(){peer('postgres',`DROP DATABASE ${name} WITH (FORCE);DROP ROLE ${role};`);allowed.delete(name);}};
+}
