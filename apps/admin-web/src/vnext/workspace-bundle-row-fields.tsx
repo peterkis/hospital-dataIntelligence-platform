@@ -1,5 +1,5 @@
 import type {VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
-import {Field,Group,textField,objectField} from './workspace-fields.js';
+import {Group,textField,objectField} from './workspace-fields.js';
 import {WorkspaceLicenseSelection} from './workspace-reference-fields.js';
 
 type Contract=Operations['listImportContracts']['responses'][200]['content']['application/json']['items'][number];
