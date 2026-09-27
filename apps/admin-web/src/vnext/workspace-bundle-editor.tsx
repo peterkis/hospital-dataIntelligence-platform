@@ -24,6 +24,9 @@ export function WorkspaceBundleEditor({actor,draft,contracts,disabled,onChange}:
  async function upload(file:File|undefined){
   if(!file)return;const e=++generation.current;
   try{const bytesBase64=await encodeWorkbenchFile(file);if(e!==generation.current)return;
+   // An old-file preview may have started while this file was being decoded.
+   // Cancel its result and release its busy state, including same-byte reuploads.
+   generation.current++;setBusy(false);
    // File decoding may finish after a campus or metadata edit. Only the new
    // bytes and their obsolete manifest belong to this asynchronous operation.
    const current=latestDraft.current;change({...current,bytesBase64,metadata:{...current.metadata,manifest:{policy:'ORG_BUNDLE_V1'}}});
