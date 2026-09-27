@@ -24,8 +24,9 @@ const wire=<T>(value:T):T=>JSON.parse(JSON.stringify(value)) as T;
 const post=(url:string,payload:Record<string,unknown>)=>app.inject({method:'POST',url,headers:{'x-catalog-actor':'maker'},payload});
 const draft=(metadata:ReceiveOrganizationBundleInput):BundleDraft=>({domain:'BUNDLE',campus:'NORTH',metadata,bytesBase64:fixture.workbook().toString('base64')});
 async function save(content:BundleDraft,prior?:{id:string;version:string}){
- const result=await post('/api/vnext/organization-workspace/drafts/save',{...content,requestId:randomUUID(),...(prior?{id:prior.id,expectedVersion:prior.version}:{})});expect(result.statusCode,result.body).toBe(200);
- return result.json<{id:string;version:string}>();
+ const requestId=randomUUID();
+ const result=await post('/api/vnext/organization-workspace/drafts/save',{...content,requestId,...(prior?{id:prior.id,expectedVersion:prior.version}:{})});expect(result.statusCode,result.body).toBe(200);
+ return {...result.json<{id:string;version:string}>(),requestId};
 }
 beforeAll(async()=>{
  catalog=await openCatalog(connection,provider);workspace=openOrganizationWorkspace(connection,provider);bundle=openOrganizationImport(connection,provider);
@@ -55,7 +56,7 @@ test('source-scoped CREATE rows remove stale targets and complete saved workbook
  const compiled=compileOrganizationBundle(parsed,metadata.manifest,contracts);expect(compiled.issues).toEqual([]);expect(compiled.steps).toHaveLength(12);
  for(const step of compiled.steps)expect(step.command['source']).toMatchObject({systemId:fixture.x.source.id,versionId:bundleRowSourceVersions(step.dataset,metadata.contracts,contracts)[0]});
  const content={...draft(metadata),bytesBase64:bytesBefore},saved=await save(content);
- const restored=await workspace.readDraft('maker',saved.id);expect(restored.content).toEqual(content);
+ const restored=await workspace.readDraft('maker',saved.id);expect(restored.content).toEqual({...content,requestId:saved.requestId});
  const request={id:saved.id,expectedVersion:saved.version,requestId:randomUUID()};
  const response=await post('/api/vnext/organization-workspace/drafts/submit',request);expect(response.statusCode,response.body).toBe(200);
  const submitted=response.json<{jobId:string;revisionId:string}>(),ref={jobId:submitted.jobId,revisionId:submitted.revisionId};
@@ -99,8 +100,8 @@ test('a persisted incomplete license revision restores its exact target and can 
  const before=await fixture.x.org.historyDetails('maker',subject.id);
  const submitted=await post('/api/vnext/organization-workspace/drafts/submit',{id:updated.id,expectedVersion:updated.version,requestId:randomUUID()});expect(submitted.statusCode,submitted.body).toBe(200);
  const ref=submitted.json<{jobId:string;revisionId:string}>(),validated=await createOrganizationBundleClient(base,'maker').validate({jobId:ref.jobId,revisionId:ref.revisionId,requestId:randomUUID()});
- expect(validated.response.status,JSON.stringify(validated.error)).toBe(200);expect(validated.data!.decision).toBe('BLOCKED');
- expect(validated.data!.issues).toContainEqual(expect.objectContaining({dataset:'ORG01',code:'EXPLICIT_TARGET_REQUIRED'}));
+ expect(validated.response.status,JSON.stringify(validated.error)).toBe(200);expect(validated.data!.decision).toBe('FAIL');
+ expect(validated.data!.issues).toContainEqual(expect.objectContaining({dataset:'ORG01',code:'EXPLICIT_TARGET_REQUIRED',status:'FAIL'}));
  expect(await fixture.x.org.historyDetails('maker',subject.id)).toEqual(before);
 });
 test('switching a license sub-operation to CREATE removes the nested target accepted by the strict compiler',async()=>{
