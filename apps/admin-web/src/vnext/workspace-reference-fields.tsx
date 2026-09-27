@@ -1,5 +1,5 @@
 import {displayTime} from './workspace-fields.js';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,useId} from 'react';
 import {createVNextCatalogClient,type VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
 import {Field,Group,textField,objectField} from './workspace-fields.js';
 import {readAllWorkspacePages} from './workspace-pagination.js';
@@ -30,10 +30,10 @@ export function WorkspaceTargetPicker({actor,kind,id,disabled,subjectId,campusId
  async function choose(id:string){const e=++generation.current;if(!id){latestSelect.current(undefined);return;}const r=await createVNextCatalogClient(location.origin,actor).POST('/api/vnext/organization-workspace/references/context',{body:{kind,id}});if(e!==generation.current)return;if(r.error){setError(r.error.message);return;}latestSelect.current({owner:kind==='ORGANIZATION'?'organization-master':kind==='CAMPUS'?'organization-master/campus':'organization-master/operating-relation',id:r.data.id,expectedVersion:r.data.head});}
  return <label>准确既有对象<select value={id} disabled={disabled} onChange={e=>void choose(e.target.value)}><option value="">选择对象并固定当前并发版本</option>{rows.map(r=><option key={r.id} value={r.id}>{r.name} · {r.id.slice(-8)}</option>)}</select>{error&&<span role="alert">{error}</span>}</label>;
 }
-export function WorkspaceLicenseSelection({actor,subjectId,selected,multiple,disabled,onChange}:{actor:string;subjectId:string;selected:Array<{id:string;version:string}>;multiple:boolean;disabled:boolean;onChange:(refs:Array<{owner:'organization-master/license';id:string;version:string;versionId:string}>)=>void}){
- const [rows,setRows]=useState<License[]>([]),[error,setError]=useState('');
+export function WorkspaceLicenseSelection({actor,subjectId,selected,multiple,disabled,onChange,purpose='DEPENDENCY'}:{actor:string;subjectId:string;selected:Array<{id:string;version:string}>;multiple:boolean;disabled:boolean;purpose?:'DEPENDENCY'|'CURRENT_REVISION';onChange:(refs:Array<{owner:'organization-master/license';id:string;version:string;versionId:string}>)=>void}){
+ const [rows,setRows]=useState<License[]>([]),[error,setError]=useState(''),groupName=useId();
  useEffect(()=>{let live=true;setRows([]);setError('');if(subjectId)void createVNextCatalogClient(location.origin,actor).POST('/api/vnext/organizations/licenses/query',{body:{id:subjectId,mode:'HISTORY'}}).then(r=>{if(!live)return;if(r.error)setError(r.error.message);else setRows(r.data);}).catch(()=>{if(live)setError('证照版本读取失败');});return()=>{live=false;};},[actor,subjectId]);
- return <Group title="准确证照版本">{error?<p role="alert">{error}</p>:<WorkspaceLicenseDependencyOptions rows={rows} selected={selected} multiple={multiple} disabled={disabled} onChange={onChange} label={row=><>{row.id.slice(-8)} · v{row.version} · {displayTime(row.validFrom)} 至 {(row.validTo?displayTime(row.validTo):null)??(row.endKind==='VERIFIED_UNBOUNDED'?'已核验无界':'结束时间未知')}</>}/>}</Group>;
+ return <Group title="准确证照版本">{error?<p role="alert">{error}</p>:<WorkspaceLicenseDependencyOptions rows={rows} selected={selected} multiple={multiple} disabled={disabled} purpose={purpose} groupName={groupName} onChange={onChange} label={row=><>{row.id.slice(-8)} · v{row.version} · {displayTime(row.validFrom)} 至 {(row.validTo?displayTime(row.validTo):null)??(row.endKind==='VERIFIED_UNBOUNDED'?'已核验无界':'结束时间未知')}</>}/>}</Group>;
 }
 export function WorkspaceServiceSelection({actor,command,contracts,disabled,onChange}:{actor:string;command:unknown;contracts:Contract[];disabled:boolean;onChange:(patch:Record<string,unknown>)=>void}){
  const facts=objectField(command,'facts'),subjectId=textField(objectField(command,'subject'),'id'),campusId=textField(objectField(command,'campus'),'id'),action=textField(command,'action');
