@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {createVNextCatalogClient,type VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
 import {Field,Group,textField,objectField} from './workspace-fields.js';
 import {readAllWorkspacePages} from './workspace-pagination.js';
+import {WorkspaceLicenseDependencyOptions} from './workspace-license-dependencies.js';
 export function WorkspaceEndpointFields({actor,subjectId,campusId,disabled=false,onChange}:{actor:string;subjectId:string;campusId:string;disabled?:boolean;onChange:(subjectId:string,campusId:string)=>void}){
  const [subjects,setSubjects]=useState<Array<{id:string;legalName:string}>>([]),[campuses,setCampuses]=useState<Array<{id:string;name:string}>>([]),[error,setError]=useState('');
  useEffect(()=>{let live=true;setSubjects([]);setCampuses([]);setError('');const api=createVNextCatalogClient(location.origin,actor);
@@ -32,9 +33,7 @@ export function WorkspaceTargetPicker({actor,kind,id,disabled,subjectId,campusId
 export function WorkspaceLicenseSelection({actor,subjectId,selected,multiple,disabled,onChange}:{actor:string;subjectId:string;selected:Array<{id:string;version:string}>;multiple:boolean;disabled:boolean;onChange:(refs:Array<{owner:'organization-master/license';id:string;version:string;versionId:string}>)=>void}){
  const [rows,setRows]=useState<License[]>([]),[error,setError]=useState('');
  useEffect(()=>{let live=true;setRows([]);setError('');if(subjectId)void createVNextCatalogClient(location.origin,actor).POST('/api/vnext/organizations/licenses/query',{body:{id:subjectId,mode:'HISTORY'}}).then(r=>{if(!live)return;if(r.error)setError(r.error.message);else setRows(r.data);}).catch(()=>{if(live)setError('证照版本读取失败');});return()=>{live=false;};},[actor,subjectId]);
- const key=(r:{id:string;version:string})=>r.id+'/'+r.version;
- const ref=(l:License)=>({owner:'organization-master/license' as const,id:l.id,version:l.version,versionId:l.versionId});
- return <Group title="准确证照版本">{error&&<p role="alert">{error}</p>}{rows.map(row=><label key={row.versionId}><input type={multiple?'checkbox':'radio'} name="license-version" disabled={disabled} checked={selected.some(s=>key(s)===key(row))} onChange={e=>onChange(multiple?rows.filter(r=>key(r)===key(row)?e.target.checked:selected.some(s=>key(s)===key(r))).map(ref):[ref(row)])}/>{row.id.slice(-8)} · v{row.version} · {displayTime(row.validFrom)} 至 {(row.validTo?displayTime(row.validTo):null)??(row.endKind==='VERIFIED_UNBOUNDED'?'已核验无界':'结束时间未知')}</label>)}{!rows.length&&!error&&<p>当前主体没有可读取的证照版本。</p>}</Group>;
+ return <Group title="准确证照版本">{error?<p role="alert">{error}</p>:<WorkspaceLicenseDependencyOptions rows={rows} selected={selected} multiple={multiple} disabled={disabled} onChange={onChange} label={row=><>{row.id.slice(-8)} · v{row.version} · {displayTime(row.validFrom)} 至 {(row.validTo?displayTime(row.validTo):null)??(row.endKind==='VERIFIED_UNBOUNDED'?'已核验无界':'结束时间未知')}</>}/>}</Group>;
 }
 export function WorkspaceServiceSelection({actor,command,contracts,disabled,onChange}:{actor:string;command:unknown;contracts:Contract[];disabled:boolean;onChange:(patch:Record<string,unknown>)=>void}){
  const facts=objectField(command,'facts'),subjectId=textField(objectField(command,'subject'),'id'),campusId=textField(objectField(command,'campus'),'id'),action=textField(command,'action');
