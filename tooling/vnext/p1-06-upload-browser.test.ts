@@ -13,7 +13,7 @@ import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/s
 import {openOrganizationWorkspace} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
-type Mode='NORTH_TO_SOUTH'|'SOUTH_TO_NORTH'|'NEWER_FILE_WINS'|'CONTRACT_CHANGED'|'REPLACE_DURING_PREVIEW';
+type Mode='EARLY_UPLOAD'|'NORTH_TO_SOUTH'|'SOUTH_TO_NORTH'|'NEWER_FILE_WINS'|'CONTRACT_CHANGED'|'REPLACE_DURING_PREVIEW';
 type Json=Record<string,any>;
 const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,provider=new LocalSyntheticKeyProvider();
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
@@ -40,7 +40,24 @@ function browser(){
   }
  });
  const call=(method:string,params:Json={},sessionId?:string):Promise<Json>=>new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error('BROWSER_TIMEOUT '+method+' '+stderr));},45000);pending.set(id,{resolve,reject,timer});input.write(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})})+'\0');});
- return {call,completedPreviews:()=>completedPreviews,async open(url:string){const t=await call('Target.createTarget',{url:'about:blank'}),s=await call('Target.attachToTarget',{targetId:t['targetId'],flatten:true}),id=s['sessionId'] as string;await call('Page.enable',{},id);await call('Network.enable',{},id);await call('Page.navigate',{url},id);for(let n=0;n<200;n++){const r=await call('Runtime.evaluate',{expression:'location.href === '+JSON.stringify(url)+' && document.readyState === "complete"',returnByValue:true},id);if(r['result']?.value)return id;await delay(25);}throw new Error('PAGE_NOT_READY');},async close(){fail(new Error('BROWSER_CLOSED'));child.kill('SIGTERM');for(let i=0;i<40&&child.exitCode===null&&child.signalCode===null;i++)await delay(25);if(child.exitCode===null&&child.signalCode===null){child.kill('SIGKILL');await delay(100);}rmSync(profile,{recursive:true,force:true});}};
+ return {call,completedPreviews:()=>completedPreviews,async open(url:string,earlyBytes?:string){const t=await call('Target.createTarget',{url:'about:blank'}),s=await call('Target.attachToTarget',{targetId:t['targetId'],flatten:true}),id=s['sessionId'] as string;await call('Page.enable',{},id);await call('Network.enable',{},id);if(earlyBytes)await call('Page.addScriptToEvaluateOnNewDocument',{source:'('+armEarlyUpload.toString()+')('+JSON.stringify(earlyBytes)+')'},id);await call('Page.navigate',{url},id);for(let n=0;n<200;n++){const r=await call('Runtime.evaluate',{expression:'location.href === '+JSON.stringify(url)+' && document.readyState === "complete"',returnByValue:true},id);if(r['result']?.value)return id;await delay(25);}throw new Error('PAGE_NOT_READY');},async close(){fail(new Error('BROWSER_CLOSED'));child.kill('SIGTERM');for(let i=0;i<40&&child.exitCode===null&&child.signalCode===null;i++)await delay(25);if(child.exitCode===null&&child.signalCode===null){child.kill('SIGKILL');await delay(100);}rmSync(profile,{recursive:true,force:true});}};
+}
+
+// Start through the real DOM handler in the first commit's microtask, before
+// passive effects may run. This makes the initial-generation race reproducible
+// rather than hiding it behind sleeps or waiting for a later capability fetch.
+function armEarlyUpload(bytes:string){
+ const observer=new MutationObserver(()=>{
+  const input=document.querySelector<HTMLInputElement>('input[type="file"][accept=".xlsx"]');
+  if(!input||input.disabled)return;
+  observer.disconnect();const raw=Uint8Array.from(atob(bytes),c=>c.charCodeAt(0));
+  let release!:()=>void,started=false,finished=false;
+  const file=new File([raw],'first-commit.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  Object.defineProperty(file,'arrayBuffer',{value:()=>{started=true;return new Promise<ArrayBuffer>(resolve=>{release=()=>{finished=true;resolve(raw.slice().buffer);};});}});
+  Reflect.set(window,'__earlyWorkbookUpload',{started:()=>started,finished:()=>finished,release:()=>release()});
+  const transfer=new DataTransfer();transfer.items.add(file);input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+ });
+ observer.observe(document,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
 }
 
 // Only file decoding and one preview response can be held. React, fetch,
@@ -57,8 +74,9 @@ async function uploadRace(input:{mode:Mode;bytes:string}){
   Object.defineProperty(file,'arrayBuffer',{value:()=>{started=true;return new Promise<ArrayBuffer>(resolve=>{release=()=>{finished=true;resolve(bytes.slice().buffer as ArrayBuffer);};});}});
   const transfer=new DataTransfer();transfer.items.add(file);fileInput.files=transfer.files;fileInput.dispatchEvent(new Event('change',{bubbles:true}));return {release:()=>release(),started:()=>started,finished:()=>finished};
  };
- const first=delayed('first.xlsx',input.mode==='NEWER_FILE_WINS'?new Uint8Array([1,2,3]):raw);
+ const first=input.mode==='EARLY_UPLOAD'?await wait(()=>Reflect.get(window,'__earlyWorkbookUpload') as {release:()=>void;started:()=>boolean;finished:()=>boolean}|undefined,'first-commit upload'):delayed('first.xlsx',input.mode==='NEWER_FILE_WINS'?new Uint8Array([1,2,3]):raw);
  await wait(first.started,'file read pending');
+ if(input.mode==='EARLY_UPLOAD')await frames();
  if(input.mode==='REPLACE_DURING_PREVIEW'){
   Reflect.set(window,'__releaseWorkbookRead',first.release);
   (await wait(()=>button('读取受限原文件预览'),'old preview enabled')).click();
@@ -87,7 +105,7 @@ beforeAll(async()=>{
  await app.listen({host:'127.0.0.1',port:0});const address=app.server.address();if(!address||typeof address==='string')throw new Error('HTTP_ADDRESS_REQUIRED');base='http://127.0.0.1:'+address.port;
 });
 afterAll(async()=>{previewGate?.release();await app?.close();await workspace?.close();await fixture?.close();await catalog?.close();});
-for(const mode of ['NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT_CHANGED','REPLACE_DURING_PREVIEW'] as const)test('real workbook upload: '+mode+' preserves latest editing intent',async()=>{
+for(const mode of ['EARLY_UPLOAD','NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT_CHANGED','REPLACE_DURING_PREVIEW'] as const)test('real workbook upload: '+mode+' preserves latest editing intent',async()=>{
  const campus=mode==='SOUTH_TO_NORTH'?'SOUTH':'NORTH',bytes=fixture.workbook().toString('base64');
  const metadata={...fixture.input,campus,retentionSeconds:1800};
  let oldBytes:string|undefined;
@@ -98,7 +116,7 @@ for(const mode of ['NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT
  const saved=await workspace.saveDraft('maker',{domain:'BUNDLE',campus,requestId:randomUUID(),metadata,...(oldBytes?{bytesBase64:oldBytes}:{})});
  const chrome=browser();
  try{
-  const session=await chrome.open(base+'/admin/vnext/organizations?as=maker&draft='+saved.id);
+  const session=await chrome.open(base+'/admin/vnext/organizations?as=maker&draft='+saved.id,mode==='EARLY_UPLOAD'?bytes:undefined);
   const exercise=chrome.call('Runtime.evaluate',{expression:'('+uploadRace.toString()+')('+JSON.stringify({mode,bytes})+')',awaitPromise:true,returnByValue:true},session);void exercise.catch(()=>{});
   if(mode==='REPLACE_DURING_PREVIEW'){
    await expect.poll(()=>previewGate?.started,{timeout:15000}).toBe(true);
@@ -111,7 +129,7 @@ for(const mode of ['NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT
    expect(stale['exceptionDetails']).toBeUndefined();expect(stale['result'].value).toBe(true);
   }
   const restored=await workspace.readDraft('maker',saved.id);expect(restored.version).toBe('2');expect(restored.content.domain).toBe('BUNDLE');if(restored.content.domain!=='BUNDLE')throw new Error('BUNDLE_REQUIRED');
-  const expected=mode==='NORTH_TO_SOUTH'||mode==='NEWER_FILE_WINS'?'SOUTH':'NORTH';expect(restored.content.campus).toBe(expected);expect(restored.content.metadata['campus']).toBe(expected);expect(restored.content.metadata['retentionSeconds']).toBe(1800);
+  const expected=mode==='EARLY_UPLOAD'||mode==='NORTH_TO_SOUTH'||mode==='NEWER_FILE_WINS'?'SOUTH':'NORTH';expect(restored.content.campus).toBe(expected);expect(restored.content.metadata['campus']).toBe(expected);expect(restored.content.metadata['retentionSeconds']).toBe(1800);
   if(mode==='CONTRACT_CHANGED'){expect(restored.content.bytesBase64).toBeUndefined();expect(restored.content.metadata['contracts']).toHaveLength(2);}
   else{
    expect(restored.content.bytesBase64).toBe(bytes);expect(restored.content.metadata['manifest']).toEqual({policy:'ORG_BUNDLE_V1'});expect(restored.content.metadata['contracts']).toEqual(metadata.contracts);
