@@ -39,6 +39,10 @@ beforeAll(async()=>{
  INSERT INTO organization_master.access SELECT '${steward}',${quote(campus.id)}::uuid,'NORTH',p FROM unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p;
  INSERT INTO vnext_control.object_grant SELECT '${steward}',object_id,scope,object_kind,campus,purpose,field_group,permission FROM vnext_control.object_grant WHERE actor_code='maker' AND permission='READ' ON CONFLICT DO NOTHING;
  INSERT INTO vnext_control.protected_grant SELECT '${steward}',dataset_id,campus,purpose,permission FROM vnext_control.protected_grant WHERE actor_code='maker' AND permission='READ' ON CONFLICT DO NOTHING;`);
+ if(process.env['HDIP_REVIEW_CI_UPGRADE']==='1'){
+  const {workspaceUpgradeProof}=await import('./workspace-upgrade-proof.js');
+  await workspaceUpgradeProof(workspace,catalog,connection,receipt,campus);
+ }
  app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,{owner:workspace,actor:r=>actor(r.headers)});
 });
 afterAll(async()=>{await app?.close();await pool?.end();await workspace?.close();await bundle?.close();await fixture?.close();await catalog?.close();});
@@ -107,4 +111,22 @@ test('a same-domain published non-manual template is not an execution transport'
  const saved=await save('maker',{domain:'ORG01',campus:'NORTH',transport:{contractId:published.id,contractVersionId:published.versionId},command:{action:'CREATE',source:{...fixture.x.common.source}}}),before=counts();
  await expect(workspace.submitDraft('maker',{id:saved.id,expectedVersion:saved.version,requestId:randomUUID()})).rejects.toThrow('BLOCKED_DEPENDENCY');expect(counts()).toBe(before);
  await workspaceManualFixture(catalog);
+});
+test('a steward cannot borrow the maintenance exception for an unrelated source version',async()=>{
+ const oldContent=await revision();
+ const command=<A extends string>(action:A,extra:Record<string,unknown>)=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'DEMO_UNRELATED_SOURCE',...extra});
+ const sourceDraft=await catalog.command('maker',command('CREATE',{kind:'SOURCE',code:'UNRELATED_'+randomUUID().replaceAll('-','').toUpperCase(),values:{name:'DEMO unrelated source',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'SYNTHETIC_BOOTSTRAP'},validFrom:'2026-01-01T00:00:00'}));
+ const sourceReview=await catalog.command('maker',command('SUBMIT',{target:sourceDraft.id,expectedHead:sourceDraft.head}));
+ const source=await catalog.command('reviewer',command('PUBLISH',{target:sourceDraft.id,expectedHead:sourceReview.head,reviewDigest:sourceReview.reviewDigest}));
+ const changed=await campusCodeSet(catalog,source.versionId);
+ peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT '${steward}',object_id,scope,object_kind,campus,purpose,field_group,permission FROM vnext_control.object_grant WHERE actor_code='maker' AND object_id=${quote(source.id)}::uuid AND permission='READ' ON CONFLICT DO NOTHING;`);
+ try{
+  const originalSource=oldContent.command['source'];if(!originalSource||typeof originalSource!=='object')throw new Error('SOURCE_REQUIRED');
+  const changedBinding={contractId:changed.published.id,contractVersionId:changed.published.versionId};
+  const saved=await save(steward,{...oldContent,transport:changedBinding,command:{...oldContent.command,source:{...originalSource,systemId:source.id,versionId:source.versionId}}});
+  const before=counts(),response=await post(steward,'/api/vnext/organization-workspace/drafts/submit',{id:saved.id,expectedVersion:saved.version,requestId:randomUUID()});
+  expect(response.statusCode,response.body).toBe(403);expect(response.json().code).toBe('ACCESS_DENIED');expect(counts()).toBe(before);
+  await expect(pool.query('select organization_master.workspace_transport_authorize($1,$2::jsonb)',[steward,JSON.stringify(job(saved,changedBinding))])).rejects.toThrow('ACCESS_DENIED');
+  expect(counts()).toBe(before);expect((await workspace.readDraft(steward,saved.id)).state).toBe('EDITING');
+ }finally{await campusCodeSet(catalog,fixture.x.source.versionId);}
 });
