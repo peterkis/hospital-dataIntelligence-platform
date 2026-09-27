@@ -19,6 +19,8 @@ async function post(path:string,payload:unknown,who='maker'){
  const response=await fetch(base+'/api/vnext/organization-workspace/'+path,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':who},body:JSON.stringify(payload)});
  return {status:response.status,body:await response.json(),cache:response.headers.get('cache-control')};
 }
+// Match the editor's closed capability projection, not the persisted save request envelope.
+const capabilities=(content:Manual)=>post('capabilities',{domain:content.domain,campus:content.campus,command:Object.fromEntries(Object.entries(content.command).filter(([key])=>['action','target','subject','campus'].includes(key)))});
 async function save(content:DraftContent,prior?:{id:string;version:string}){
  const payload={...content,requestId:randomUUID(),...(prior?{id:prior.id,expectedVersion:prior.version}:{})},response=await post('drafts/save',payload);
  expect(response.status,JSON.stringify(response.body)).toBe(200);return response.body as {id:string;version:string;state:string};
@@ -53,10 +55,10 @@ for(const action of ['ESTABLISH','VERIFY_SCOPE'] as const)test(`${action}: save 
  const changed=choose(read.content.command,subjectB.id,campusB.id);
  if(action==='ESTABLISH')expect(changed).toHaveProperty('facts.scopeTargets',[]);else expect(changed['facts']).not.toHaveProperty('license');
  changed['facts']={...(changed['facts'] as Command),...(action==='ESTABLISH'?{scopeTargets:[scopeB]}:{license:licenseB})};
- const corrected={...restored,command:changed};expect((await post('capabilities',corrected)).body).toMatchObject({canRead:true,canWrite:true});
+ const corrected={...restored,command:changed};expect((await capabilities(corrected)).body).toMatchObject({canRead:true,canWrite:true});
  const three=await save(corrected,two);
  const unauthorized={...corrected,command:choose(changed,subjectB.id,campusA.id)};
- expect((await post('capabilities',unauthorized)).body).toMatchObject({canWrite:false});
+ expect((await capabilities(unauthorized)).body).toMatchObject({canWrite:false});
  const denied=await post('drafts/save',{...unauthorized,id:three.id,expectedVersion:three.version,requestId:randomUUID()});expect(denied.status).toBe(403);
  expect((await workspace.readDraft('maker',three.id)).version).toBe(three.version);
  const submission={id:three.id,expectedVersion:three.version,requestId:randomUUID()},submitted=await post('drafts/submit',submission);expect(submitted.status,JSON.stringify(submitted.body)).toBe(200);
@@ -65,6 +67,7 @@ for(const action of ['ESTABLISH','VERIFY_SCOPE'] as const)test(`${action}: save 
  const requestId=randomUUID(),candidate=await x.operating.plan('maker',{inputId:submitted.body.inputId,requestId});
  await x.operating.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await x.operating.approveApplyUnit('reviewer',candidate);
  const applied=await x.operating.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(applied.status).toBe('COMMITTED');
+ if(applied.status!=='COMMITTED')throw new Error('NOT_COMMITTED');
  expect(await x.operating.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).toEqual(applied);
  const fact=applied.facts![0]!,kind=action==='ESTABLISH'?'RELATION':'SCOPE';
  const rows=await x.operating.read('maker',{kind,mode:'EXACT',id:fact.id,version:fact.version});expect(rows[0]).toMatchObject(x.endpoints(subjectB,campusB));
@@ -74,7 +77,7 @@ for(const action of ['ESTABLISH','VERIFY_SCOPE'] as const)test(`${action}: save 
 });
 
 test('exact one-MiB XLSX traverses real HTTP preview, capabilities, private save and restore unchanged',async()=>{
- const original=fixture.workbook(),files=Object.fromEntries(unzip(original));
+ const original=fixture.workbook(),files=Object.fromEntries(unzip(original,true));
  // Stored ZIP members make byte size deterministic. XML trailing whitespace adds no cells or facts.
  files['xl/workbook.xml']+=' '.repeat(1048576-original.length);const bytes=zipText(files);expect(bytes.length).toBe(1048576);
  const content:DraftContent={domain:'BUNDLE',campus:'NORTH',metadata:fixture.input,bytesBase64:bytes.toString('base64')};
