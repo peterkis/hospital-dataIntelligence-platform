@@ -4,7 +4,7 @@ import {WorkspaceLicenseSelection} from './workspace-reference-fields.js';
 
 type Contract=Operations['listImportContracts']['responses'][200]['content']['application/json']['items'][number];
 export type BundleSourceContract=Pick<Contract,'id'|'versionId'|'dataset'|'profile'|'status'>&{definition:Pick<Contract['definition'],'sourceVersionId'|'templateVersion'>};
-export interface BundleSourceBinding {dataset:string;contractId:string;contractVersionId:string}
+export interface BundleSourceBinding {dataset?:string;contractId?:string;contractVersionId?:string}
 type Row=Record<string,unknown>;
 type Target={owner:'organization-master'|'organization-master/campus'|'organization-master/operating-relation';id:string;expectedVersion:string};
 
@@ -13,6 +13,7 @@ export function bundleRowSourceVersions(dataset:string,bindings:readonly BundleS
  const bound=bindings.filter(binding=>binding.dataset===dataset);
  if(bound.length!==1)return [];
  const binding=bound[0]!;
+ if(!binding.contractId||!binding.contractVersionId)return [];
  const matches=contracts.filter(contract=>contract.dataset===dataset&&contract.id===binding.contractId&&contract.versionId===binding.contractVersionId&&contract.profile==='CORE'&&contract.status==='PUBLISHED'&&contract.definition.templateVersion===dataset+'_BUNDLE_CORE_V1');
  const source=matches.length===1?matches[0]!.definition.sourceVersionId:undefined;
  return source?[source]:[];
