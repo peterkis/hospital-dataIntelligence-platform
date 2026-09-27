@@ -19,6 +19,18 @@ jobs:
   workspace:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: synthetic-review-only
+        ports:
+          - 127.0.0.1:55434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,3 +48,9 @@ jobs:
         run: npm run vnext:p1-06:unit
       - name: Workspace typecheck
         run: npm run vnext:p1-06:typecheck
+      - name: PostgreSQL client
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Isolated PostgreSQL Owner and HTTP regressions
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts
