@@ -113,7 +113,12 @@ for(const mode of ['NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT
   const restored=await workspace.readDraft('maker',saved.id);expect(restored.version).toBe('2');expect(restored.content.domain).toBe('BUNDLE');if(restored.content.domain!=='BUNDLE')throw new Error('BUNDLE_REQUIRED');
   const expected=mode==='NORTH_TO_SOUTH'||mode==='NEWER_FILE_WINS'?'SOUTH':'NORTH';expect(restored.content.campus).toBe(expected);expect(restored.content.metadata['campus']).toBe(expected);expect(restored.content.metadata['retentionSeconds']).toBe(1800);
   if(mode==='CONTRACT_CHANGED'){expect(restored.content.bytesBase64).toBeUndefined();expect(restored.content.metadata['contracts']).toHaveLength(2);}
-  else{expect(restored.content.bytesBase64).toBe(bytes);expect(restored.content.metadata['manifest']).toEqual({policy:'ORG_BUNDLE_V1'});expect(restored.content.metadata['contracts']).toEqual(metadata.contracts);expect(await workspace.previewWorkbook('maker',restored.content)).toMatchObject({structuralStatus:'PARSED'});}
+  else{
+   expect(restored.content.bytesBase64).toBe(bytes);expect(restored.content.metadata['manifest']).toEqual({policy:'ORG_BUNDLE_V1'});expect(restored.content.metadata['contracts']).toEqual(metadata.contracts);
+   // Preview takes DraftContent, not the saved draft's request/id/version envelope.
+   const preview=await workspace.previewWorkbook('maker',{domain:'BUNDLE',campus:restored.content.campus,metadata:restored.content.metadata,bytesBase64:bytes});
+   expect(preview).toMatchObject({structuralStatus:'PARSED'});
+  }
   await expect(workspace.readDraft('reviewer',saved.id)).rejects.toThrow('ACCESS_DENIED');
   console.log(JSON.stringify({check:'WORKBOOK_UPLOAD_RACE',mode,campus:restored.content.campus,version:restored.version,bytesMatch:restored.content.bytesBase64===bytes}));
  }finally{previewGate?.release();previewGate=null;await chrome.close();}
@@ -121,7 +126,7 @@ for(const mode of ['NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT
 test('real HTTP refuses the completed workbook in a receiving scope whose WRITE was revoked',async()=>{
  const metadata={...fixture.input,manifest:{policy:'ORG_BUNDLE_V1'}},saved=await workspace.saveDraft('maker',{domain:'BUNDLE',campus:'NORTH',requestId:randomUUID(),metadata});
  const original=await workspace.readDraft('maker',saved.id),rows=peer(receipt.name,'SELECT count(*) FROM organization_master.workspace_draft_revision');
- peer(receipt.name,"DELETE FROM organization_master.access WHERE actor='maker' AND subject_id='00000000-0000-0000-000000000000'::uuid AND campus='SOUTH' AND permission='WRITE'");
+ peer(receipt.name,"DELETE FROM organization_master.access WHERE actor='maker' AND subject_id='00000000-0000-0000-0000-000000000000'::uuid AND campus='SOUTH' AND permission='WRITE'");
  try{
   const payload={...original.content,id:saved.id,expectedVersion:saved.version,requestId:randomUUID(),campus:'SOUTH',metadata:{...metadata,campus:'SOUTH'},bytesBase64:fixture.workbook().toString('base64')};
   const response=await fetch(base+'/api/vnext/organization-workspace/drafts/save',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(payload)});
