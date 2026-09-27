@@ -1,3 +1,4 @@
+import {workspaceManualFixture} from './workspace-manual-fixture.js';
 import {Pool} from 'pg';
 import {operatingScenario} from './operating-scenario.js';
 import {campusCodeSet} from './campus-fixture.js';
@@ -88,7 +89,7 @@ test('a complete saved draft submits through the existing Owner and replays the 
  const catalog=await openCatalog(connection,provider),owner=organization.openOrganizationWorkspace(connection,provider),org=organization.openOrganization(connection,provider),receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
  try{
   expect(owner).toHaveProperty('submitDraft');
-  const f=await fixture(catalog,{textField:true,ruleVersion:'WORKSPACE_MANUAL_TRANSPORT'}),job=await catalog.importJobCommand('maker',{...f.create,requestId:randomUUID()});
+  const f=await workspaceManualFixture(catalog,{ruleVersion:'WORKSPACE_MANUAL_TRANSPORT'}),job=await catalog.importJobCommand('maker',{...f.create,requestId:randomUUID()});
   peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;`);
   const evidence=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:3600},Buffer.from('DEMO_WORKSPACE_REGISTRATION'));
   const source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='SOURCE'&&i.status==='PUBLISHED')!;
@@ -114,7 +115,7 @@ test('a complete saved draft submits through the existing Owner and replays the 
 test('a private evidence attachment becomes a real protected reference only when its draft is submitted',async()=>{
  const catalog=await openCatalog(connection,provider),owner=organization.openOrganizationWorkspace(connection,provider),org=organization.openOrganization(connection,provider),receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
  try{
-  const f=await fixture(catalog,{textField:true,ruleVersion:'WORKSPACE_ATTACHMENT'}),source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='SOURCE'&&i.status==='PUBLISHED')!;
+  const f=await workspaceManualFixture(catalog,{ruleVersion:'WORKSPACE_ATTACHMENT'}),source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='SOURCE'&&i.status==='PUBLISHED')!;
   peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;`);
   const saved=await owner.saveDraft('maker',{requestId:randomUUID(),domain:'ORG01',campus:'NORTH',transport:{contractId:f.contract.id,contractVersionId:f.contract.versionId},attachment:{filename:'DEMO-evidence.txt',bytesBase64:Buffer.from('DEMO_PRIVATE_ATTACHMENT').toString('base64')},command:{action:'CREATE',source:{systemId:source.id,versionId:source.versionId,alias:'DEMO_ATTACHMENT',versionNo:1,recordLocator:'DEMO_PRIVATE_LOCATOR',recordedAt:'2026-01-01T00:00:00',recordStatus:'PUBLISHED',approvalRef:'DEMO_APPROVAL'},validFrom:'2026-01-01T00:00:00',validTo:null,facts:{legalName:'DEMO attachment subject',entityNature:'DEMO',authority:null,legalAddress:null},identifiers:[]}});
   await expect(owner.readDraft('reviewer',saved.id)).rejects.toThrow('ACCESS_DENIED');
@@ -151,6 +152,7 @@ test('an assigned campus steward submits a revision without acquiring dataset-wi
  const catalog=await openCatalog(connection,provider),owner=organization.openOrganizationWorkspace(connection,provider),receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),f=await operatingScenario(receipt,connection,provider,catalog);
  try{
   const node=await f.createCampus();
+  await campusCodeSet(catalog,f.source.versionId);
   peer(receipt.name,`INSERT INTO vnext_control.actor VALUES('workspace-steward','DEMO_WORKSPACE_STEWARD',true);INSERT INTO vnext_control.actor_grant SELECT 'workspace-steward','SYNTHETIC',p FROM unnest(ARRAY['READ','WRITE']) p;INSERT INTO organization_master.access SELECT 'workspace-steward',${quote(node.id)}::uuid,'NORTH',p FROM unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p;INSERT INTO vnext_control.object_grant SELECT 'workspace-steward',object_id,scope,object_kind,campus,purpose,field_group,permission FROM vnext_control.object_grant WHERE actor_code='maker' AND permission='READ' ON CONFLICT DO NOTHING;INSERT INTO vnext_control.protected_grant SELECT 'workspace-steward',dataset_id,campus,purpose,permission FROM vnext_control.protected_grant WHERE actor_code='maker' AND permission='READ' ON CONFLICT DO NOTHING;`);
   const content=await owner.prepareRevision('workspace-steward',{kind:'CAMPUS',id:node.id,version:node.version});if(content.domain!=='ORG02')throw new Error('WRONG_DOMAIN');
   const saved=await owner.saveDraft('workspace-steward',{...content,requestId:randomUUID(),command:{...content.command,validFrom:'2026-02-01T00:00:00',sourceOperationStatus:'PLANNING'}});
