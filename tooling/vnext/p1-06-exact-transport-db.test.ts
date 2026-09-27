@@ -61,6 +61,8 @@ beforeAll(async()=>{
  catalog=await openCatalog(connection,provider);workspace=openOrganizationWorkspace(connection,provider);org=openOrganization(connection,provider);pool=new Pool({connectionString:connection});
  app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,{owner:workspace,actor:r=>actor(r.headers)});
  const f=await workspaceManualFixture(catalog);sourceA=f.source;transportA={contractId:f.contract.id,contractVersionId:f.contract.versionId};
+ const original=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'HISTORY',target:f.contract.id,versionId:f.contract.versionId})).filter(c=>c.status==='PUBLISHED').at(-1);
+ if(!original)throw new Error('EXACT_PUBLISHED_CONTRACT_REQUIRED');
  peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(f.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;`);
  async function evidence(t:Transport){const j=await catalog.importJobCommand('maker',{...f.create,...t,requestId:randomUUID()});return (await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:3600},Buffer.from('DEMO_EXACT_EVIDENCE'))).artifactId;}
  evidenceA=await evidence(transportA);
@@ -69,7 +71,7 @@ beforeAll(async()=>{
  const cmd=<A extends string>(action:A,extra:Record<string,unknown>)=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'DEMO_EXACT_SOURCE_B',...extra});
  const sd=await catalog.command('maker',cmd('CREATE',{kind:'SOURCE',code:'EXACT_B_'+randomUUID().replaceAll('-','').toUpperCase(),values:{name:'DEMO independent source B',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:sourceA.id},validFrom:from}));
  const sr=await catalog.command('maker',cmd('SUBMIT',{target:sd.id,expectedHead:sd.head}));sourceB=await catalog.command('reviewer',cmd('PUBLISH',{target:sd.id,expectedHead:sr.head,reviewDigest:sr.reviewDigest}));
- const cd=await catalog.contractCommand('maker',cmd('REVISE',{target:f.contract.id,expectedHead:f.contract.head,datasetVersionId:f.dataset.versionId,definition:{...f.contract.definition,sourceVersionId:sourceB.versionId,ruleVersion:'EXACT_B_'+randomUUID().replaceAll('-','').toUpperCase()},validFrom:from,validTo:null}));
+ const cd=await catalog.contractCommand('maker',cmd('REVISE',{target:original.id,expectedHead:original.head,datasetVersionId:original.datasetVersionId,definition:{...original.definition,sourceVersionId:sourceB.versionId,ruleVersion:'EXACT_B_'+randomUUID().replaceAll('-','').toUpperCase()},validFrom:from,validTo:null}));
  const ca=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:cd.id,expectedHead:cd.head,reviewDigest:cd.reviewDigest})),impact=await catalog.contractImpact('reviewer','SYNTHETIC',cd.id,'PUBLISH');
  const cp=await catalog.contractCommand('reviewer',cmd('PUBLISH',{target:cd.id,expectedHead:ca.head,reviewDigest:ca.reviewDigest,impactDigest:impact.impactDigest}));transportB={contractId:cp.id,contractVersionId:cp.versionId};evidenceB=await evidence(transportB);
  licenseB=await commit('maker',content('B',licenseCommand(evidenceB,'ADD_LICENSE')));
