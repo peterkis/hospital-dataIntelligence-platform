@@ -1,6 +1,6 @@
 import {displayTime} from './workspace-fields.js';
 import {WorkspaceMaterial} from './workspace-material.js';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createVNextCatalogClient,createOrganizationWorkspaceClient,type VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
 export type Application=Operations['listOrganizationApplications']['responses'][200]['content']['application/json'][number];
 const routes={
@@ -23,6 +23,12 @@ export function ApplicationPanel({actor,entry,onChanged}:{actor:string;entry:App
  const [busy,setBusy]=useState(false),[message,setMessage]=useState('审批只针对成功读取的准确候选。'),[review,setReview]=useState<{candidateId:string;digest:string;approvedBy:string|null;command:unknown;blockingIssues?:string[]}|null>(null),[confirmed,setConfirmed]=useState(false),[outcome,setOutcome]=useState<{status:string;facts?:Array<{owner:string;id:string;version:string}>}|null>(null);
  const [materials,setMaterials]=useState<Array<{artifactId:string;bytesBase64:string}>>([]),[seen,setSeen]=useState<string[]>([]),[materialsReady,setMaterialsReady]=useState(false);
  const generation=useRef(0),planRequest=useRef(entry.requestId??crypto.randomUUID()),withdrawRequest=useRef(crypto.randomUUID());
+ useLayoutEffect(()=>{
+  const url=new URL(location.href);
+  const changed=url.searchParams.get('input')!==entry.inputId||url.searchParams.has('draft')||url.searchParams.has('bundle')||url.searchParams.has('bundleRevision');
+  url.searchParams.delete('draft');url.searchParams.delete('bundle');url.searchParams.delete('bundleRevision');url.searchParams.set('input',entry.inputId);
+  if(changed)history.replaceState(null,'',url.pathname+url.search);
+ },[entry.inputId]);
  useEffect(()=>()=>{generation.current++;},[]);
  const api=()=>createVNextCatalogClient(location.origin,actor),paths=routes[entry.domain==='ORG03'?entry.kind??'RELATION':entry.domain];
  const candidateId=entry.candidateId??review?.candidateId;
