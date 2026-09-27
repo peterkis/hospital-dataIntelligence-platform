@@ -44,9 +44,11 @@ jobs:
       - id: install
         run: npm ci
       - name: Record exact candidate
-        run: git rev-parse HEAD
+        run: |
+          mkdir -p .runtime/vnext/review-results
+          git rev-parse HEAD | tee .runtime/vnext/review-results/commit.txt
       - name: Workspace unit regressions
-        run: npm run vnext:p1-06:unit
+        run: npm run vnext:p1-06:unit -- --reporter=json --outputFile=.runtime/vnext/review-results/unit.json
       - name: Workspace typecheck
         run: npm run vnext:p1-06:typecheck
       - name: Admin web typecheck and build
@@ -58,7 +60,7 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
-        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts --reporter=json --outputFile=.runtime/vnext/review-results/fresh.json
       - name: Real browser submission and upload races
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
@@ -66,16 +68,25 @@ jobs:
         run: |
           command -v google-chrome
           google-chrome --version
-          npx vitest run --config tooling/vnext/vitest.p1-06-browser-ci.config.ts
+          npx vitest run --config tooling/vnext/vitest.p1-06-browser-ci.config.ts --reporter=json --outputFile=.runtime/vnext/review-results/browser.json
       - name: Populated 0071 to 0072 upgrade and regression
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_UPGRADE: '1'
-        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-review-db.test.ts
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-review-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0071.json
       - name: Populated 0072 to 0073 exact-license upgrade
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_LICENSE_UPGRADE: '1'
-        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-exact-transport-db.test.ts
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-exact-transport-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0072.json
+      - name: Retain exact-head regression evidence
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-06-review-${{ github.event.pull_request.head.sha }}
+          path: .runtime/vnext/review-results/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
