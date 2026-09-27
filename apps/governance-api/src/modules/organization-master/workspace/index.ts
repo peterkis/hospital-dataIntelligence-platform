@@ -22,8 +22,16 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
   try{const content:DraftSave=JSON.parse(bytes.toString());check(DraftSaveSchema,content);
    // Verify old envelopes against their original projection. Missing licenseTarget
    // stays missing in SQL and never gains the 0073 maintenance exception on read.
-   const metadata=draftMetadata(content,Object.hasOwn(r.metadata,'licenseTarget')?'V2':'V1');
-   if(planBinding(provider,'WORKSPACE_DRAFT_V1',{state:r.state,input:content})!==r.digest||canonicalPlan(metadata)!==canonicalPlan(r.metadata))throw new Error('PAYLOAD_UNAVAILABLE');return content;
+   const format=Object.hasOwn(r.metadata,'manifestProtected')?'V3':Object.hasOwn(r.metadata,'licenseTarget')?'V2':'V1';
+   const metadata=draftMetadata(content,format);
+   if(planBinding(provider,'WORKSPACE_DRAFT_V1',{state:r.state,input:content})!==r.digest||canonicalPlan(metadata)!==canonicalPlan(r.metadata))throw new Error('PAYLOAD_UNAVAILABLE');
+   // Historical payload-free bundle metadata could not prove whether its
+   // manifest retained protected rows. Never release that ambiguous plaintext;
+   // the immutable legacy draft remains as an audit record and must be replaced.
+   const legacyManifest=content.domain==='BUNDLE'?content.metadata['manifest']:null;
+   const legacyRows=legacyManifest&&typeof legacyManifest==='object'?Reflect.get(legacyManifest,'rows'):null;
+   if(format!=='V3'&&content.domain==='BUNDLE'&&!content.bytesBase64&&Array.isArray(legacyRows)&&legacyRows.length)throw new Error('BLOCKED_DEPENDENCY');
+   return content;
   }finally{bytes.fill(0);}
  };
  const part=(requestId:string,label:string)=>{const bytes=createHash('sha256').update('WORKSPACE_REQUEST_V1\0'+requestId+'\0'+label).digest().subarray(0,16);bytes[6]=(bytes[6]!&15)|80;bytes[8]=(bytes[8]!&63)|128;const h=bytes.toString('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;};
