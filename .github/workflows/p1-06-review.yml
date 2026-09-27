@@ -59,6 +59,14 @@ jobs:
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts
+      - name: Real browser submission retries
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_BROWSER_EXECUTABLE: google-chrome
+        run: |
+          command -v google-chrome
+          google-chrome --version
+          npx vitest run --config tooling/vnext/vitest.p1-06-browser-ci.config.ts
       - name: Populated 0071 to 0072 upgrade and regression
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
