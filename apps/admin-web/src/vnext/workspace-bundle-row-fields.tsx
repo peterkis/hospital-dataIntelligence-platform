@@ -59,7 +59,7 @@ export function BundleLicenseTargetField({actor,current,disabled,onChange}:{acto
  const license=objectField(current,'license'),target=objectField(license,'target'),subjectId=textField(objectField(current,'target'),'id');
  const selected=bundleLicenseSelected(current),hasTarget=license['target']!==undefined;
  const change=(reference:unknown)=>{if(!disabled)onChange({license:{...license,target:reference}});};
- return <><WorkspaceLicenseSelection actor={actor} subjectId={subjectId} disabled={disabled||!subjectId} multiple={false} selected={selected} onChange={references=>{if(subjectId)change(references[0]);}}/>
+ return <><WorkspaceLicenseSelection actor={actor} subjectId={subjectId} disabled={disabled||!subjectId} multiple={false} purpose="CURRENT_REVISION" selected={selected} onChange={references=>{if(subjectId)change(references[0]);}}/>
  {hasTarget&&<p>已选证照修订目标：{textField(target,'id')} · v{textField(target,'version')}</p>}
  <button type="button" className="secondary" disabled={disabled||!hasTarget} onClick={()=>{if(hasTarget)change(undefined);}}>清除证照修订目标</button></>;
 }
