@@ -113,3 +113,8 @@ test('disabled row, license intent, clear and selection callbacks do not mutate 
  const node=BundleLicenseTargetField({actor:'maker',current:revision,disabled:true,onChange});
  controls(node,'button')[0]!.onClick!();picker(node).onChange([licenseTarget]);expect(onChange).not.toHaveBeenCalled();
 });
+test('incomplete saved bindings expose no source instead of inferring another contract',()=>{
+ for(const binding of [{},{dataset:'ORG01'},{dataset:'ORG01',contractId:id(1)},{dataset:'ORG01',contractVersionId:id(11)}]){
+  expect(bundleRowSourceVersions('ORG01',[binding],contracts)).toEqual([]);
+ }
+});
