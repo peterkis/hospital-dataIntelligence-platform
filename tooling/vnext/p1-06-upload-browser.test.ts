@@ -62,8 +62,8 @@ async function uploadRace(input:{mode:Mode;bytes:string}){
 }
 beforeAll(async()=>{
  catalog=await openCatalog(connection,provider);workspace=openOrganizationWorkspace(connection,provider);fixture=await organizationBundleFixture(receipt,connection,provider,catalog);
- // Both scopes are explicitly authorized in this synthetic race fixture. A
- // separate negative case removes SOUTH access before the completed file is saved.
+ // Both scopes are explicitly authorized for the four browser races. The last
+ // HTTP case removes SOUTH WRITE and confirms that saving cannot bypass policy.
  peer(receipt.name,"INSERT INTO organization_master.access SELECT 'maker','00000000-0000-0000-0000-000000000000'::uuid,'SOUTH',p FROM unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p ON CONFLICT DO NOTHING;INSERT INTO vnext_control.protected_grant SELECT actor_code,dataset_id,'SOUTH',purpose,permission FROM vnext_control.protected_grant WHERE actor_code='maker' AND campus='NORTH' ON CONFLICT DO NOTHING;");
  app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,{owner:workspace,actor:r=>actor(r.headers)});
  const dist=resolve('apps/admin-web/dist-vnext');await app.register(staticPlugin,{root:dist,prefix:'/admin/vnext/'});app.get('/admin/vnext/organizations',(_r,reply)=>reply.sendFile('vnext.html'));
@@ -79,12 +79,22 @@ for(const mode of ['NORTH_TO_SOUTH','SOUTH_TO_NORTH','NEWER_FILE_WINS','CONTRACT
   const session=await chrome.open(base+'/admin/vnext/organizations?as=maker&draft='+saved.id),r=await chrome.call('Runtime.evaluate',{expression:'('+uploadRace.toString()+')('+JSON.stringify({mode,bytes})+')',awaitPromise:true,returnByValue:true},session);
   expect(r['exceptionDetails'],JSON.stringify(r['exceptionDetails'])).toBeUndefined();
   const restored=await workspace.readDraft('maker',saved.id);expect(restored.version).toBe('2');expect(restored.content.domain).toBe('BUNDLE');if(restored.content.domain!=='BUNDLE')throw new Error('BUNDLE_REQUIRED');
-  const expected=mode==='NORTH_TO_SOUTH'||mode==='NEWER_FILE_WINS'?'SOUTH':'NORTH';expect(restored.content.campus).toBe(expected);expect(restored.content.metadata.campus).toBe(expected);expect(restored.content.metadata.retentionSeconds).toBe(7200);
-  if(mode==='CONTRACT_CHANGED'){expect(restored.content.bytesBase64).toBeUndefined();expect(restored.content.metadata.contracts).toHaveLength(2);}
-  else{expect(restored.content.bytesBase64).toBe(bytes);expect(restored.content.metadata.manifest).toEqual({policy:'ORG_BUNDLE_V1'});expect(restored.content.metadata.contracts).toEqual(metadata.contracts);
+  const expected=mode==='NORTH_TO_SOUTH'||mode==='NEWER_FILE_WINS'?'SOUTH':'NORTH';expect(restored.content.campus).toBe(expected);expect(restored.content.metadata['campus']).toBe(expected);expect(restored.content.metadata['retentionSeconds']).toBe(7200);
+  if(mode==='CONTRACT_CHANGED'){expect(restored.content.bytesBase64).toBeUndefined();expect(restored.content.metadata['contracts']).toHaveLength(2);}
+  else{expect(restored.content.bytesBase64).toBe(bytes);expect(restored.content.metadata['manifest']).toEqual({policy:'ORG_BUNDLE_V1'});expect(restored.content.metadata['contracts']).toEqual(metadata.contracts);
    expect(await workspace.previewWorkbook('maker',restored.content)).toMatchObject({structuralStatus:'PARSED'});
   }
   await expect(workspace.readDraft('reviewer',saved.id)).rejects.toThrow('ACCESS_DENIED');
   console.log(JSON.stringify({check:'WORKBOOK_UPLOAD_RACE',mode,campus:restored.content.campus,version:restored.version,bytesMatch:restored.content.bytesBase64===bytes}));
  }finally{await chrome.close();}
+});
+test('real HTTP refuses the completed workbook in a receiving scope whose WRITE was revoked',async()=>{
+ const metadata={...fixture.input,manifest:{policy:'ORG_BUNDLE_V1'}},saved=await workspace.saveDraft('maker',{domain:'BUNDLE',campus:'NORTH',requestId:randomUUID(),metadata});
+ const original=await workspace.readDraft('maker',saved.id),rows=peer(receipt.name,'SELECT count(*) FROM organization_master.workspace_draft_revision');
+ peer(receipt.name,"DELETE FROM organization_master.access WHERE actor='maker' AND subject_id='00000000-0000-0000-0000-000000000000'::uuid AND campus='SOUTH' AND permission='WRITE'");
+ try{
+  const payload={...original.content,id:saved.id,expectedVersion:saved.version,requestId:randomUUID(),campus:'SOUTH',metadata:{...metadata,campus:'SOUTH'},bytesBase64:fixture.workbook().toString('base64')};
+  const response=await fetch(base+'/api/vnext/organization-workspace/drafts/save',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(payload)});
+  expect(response.status).toBe(403);expect((await response.json() as {code:string}).code).toBe('ACCESS_DENIED');expect(await workspace.readDraft('maker',saved.id)).toEqual(original);expect(peer(receipt.name,'SELECT count(*) FROM organization_master.workspace_draft_revision')).toBe(rows);
+ }finally{peer(receipt.name,"INSERT INTO organization_master.access VALUES('maker','00000000-0000-0000-0000-000000000000'::uuid,'SOUTH','WRITE') ON CONFLICT DO NOTHING");}
 });
