@@ -57,12 +57,19 @@ beforeAll(async()=>{
   if(upgrade){
    const probe=await workspace.saveDraft('maker',{...old,requestId:randomUUID()}),restore=revoke(kind,permission);
    try{
-    // The same actor loses old READ/READ_RESTRICTED, but can still WRITE it and
-    // access the replacement. Baseline succeeds only via the flawed save path.
+    // The same actor loses old READ/READ_RESTRICTED, but can still access the
+    // replacement. Under 0074, ORG01/02 and restricted-only ORG03 changes can
+    // replace the unreadable envelope because only previous WRITE is checked.
+    // Complete-pair ORG03 WRITE maps to ESTABLISH and already depends on pair
+    // READ, so those two READ-revocation cases are valid negative controls.
     expect((await post('drafts/read',{id:probe.id})).status).toBe(403);
     expect(await workspace.capabilities('maker',next)).toMatchObject({canRead:true,canWrite:true});
-    const resaved=await post('drafts/save',{...next,id:probe.id,expectedVersion:probe.version,requestId:randomUUID()});expect(resaved.status,JSON.stringify(resaved.body)).toBe(200);
-    const leaked=await workspace.readDraft('maker',probe.id);expect('attachment' in leaked.content&&leaked.content.attachment).toEqual(attachment);
+    const before=snapshot(),resaved=await post('drafts/save',{...next,id:probe.id,expectedVersion:probe.version,requestId:randomUUID()});
+    const exposed=permission==='READ_RESTRICTED'||kind==='ORG01'||kind==='ORG02';
+    if(exposed){
+     expect(resaved.status,JSON.stringify(resaved.body)).toBe(200);
+     const leaked=await workspace.readDraft('maker',probe.id);expect('attachment' in leaked.content&&leaked.content.attachment).toEqual(attachment);
+    }else{expect(resaved.status,JSON.stringify(resaved.body)).toBe(403);expect(resaved.body['code']).toBe('ACCESS_DENIED');expect(snapshot()).toBe(before);}
    }finally{restore();}
   }
   cases.push({kind,permission,old,next,saved,original});
@@ -70,7 +77,7 @@ beforeAll(async()=>{
  if(upgrade){
   expect((await inspect(receipt)).ledger).toHaveLength(74);
   expect(()=>workspaceStartupPrefix(migrationFiles(),(migrationFiles().slice(0,74)))).toThrow('WORKSPACE_MIGRATION_REQUIRED');
-  console.log(JSON.stringify({check:'0074_RESTRICTED_RETARGET_REPRODUCED',httpResaves:cases.length}));
+  console.log(JSON.stringify({check:'0074_RESTRICTED_RETARGET_REPRODUCED',httpResaves:8,alreadyBlockedControls:2}));
   const {upgradePreviousDraftAccess}=await import('./review-ci-database.mjs');await upgradePreviousDraftAccess(receipt);
  }
  expect(workspaceStartupPrefix(migrationFiles(),(await inspect(receipt)).ledger)).toBe(migrationFiles().length);
