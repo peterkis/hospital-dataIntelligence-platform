@@ -41,13 +41,24 @@ async function apply(domain:'ORG01'|'ORG03',content:DraftContent){
 }
 async function revokedHistory(){
  const subject=await scenario.createSubject(),license=await scenario.addLicense(subject);
- await scenario.orgApply({...scenario.common,action:'REVOKE_LICENSE',validFrom:cut,target:{id:subject.id,version:subject.version},licenseTarget:{id:license.id,version:license.version},reason:'DEMO_FUTURE_REVOCATION'});
+ const original=await workspace.prepareRevision('maker',{kind:'LICENSE',id:license.id,version:license.version});
+ if(original.domain!=='ORG01')throw new Error('LICENSE_DOMAIN_REQUIRED');
+ const facts=original.command['license'];if(!facts||typeof facts!=='object')throw new Error('LICENSE_FACTS_REQUIRED');
+ // Revocation copies the target version's period. Create an actual future
+ // business version first; changing only REVOKE_LICENSE.validFrom cannot do this.
+ const future=await apply('ORG01',{...original,command:{...original.command,validFrom:cut,license:{...facts,validFrom:cut}}});
+ expect(future).toMatchObject({id:license.id,version:'2'});
+ await scenario.orgApply({...scenario.common,action:'REVOKE_LICENSE',validFrom:cut,target:{id:subject.id,version:subject.version},licenseTarget:{id:future.id,version:future.version},reason:'DEMO_FUTURE_REVOCATION'});
  const response=await post('/api/vnext/organizations/licenses/query',{id:subject.id,mode:'HISTORY'});expect(response.statusCode,response.body).toBe(200);
- const history=response.json<License[]>();expect(history).toHaveLength(2);
+ const history=response.json<License[]>();expect(history).toHaveLength(3);
  const revoked=history.find(row=>row.revoked)!,eligible=licenseDependencyOptions(history);
- expect(revoked).toMatchObject({id:license.id,version:'2',revoked:true});
- expect(eligible).toEqual([expect.objectContaining({id:license.id,version:'1',revoked:false})]);
- return {subject,history,revoked,eligible};
+ expect(revoked).toMatchObject({id:license.id,version:'3',revoked:true,validFrom:cut+'.000000'});
+ expect(eligible.map(row=>({id:row.id,version:row.version,revoked:row.revoked}))).toEqual([
+  {id:license.id,version:'1',revoked:false},{id:license.id,version:'2',revoked:false},
+ ]);
+ const earlier=eligible.find(row=>row.version==='1')!;
+ expect(earlier.validFrom).toBe(from+'.000000');
+ return {subject,history,revoked,earlier};
 }
 beforeAll(async()=>{
  catalog=await openCatalog(connection,provider);workspace=openOrganizationWorkspace(connection,provider);
@@ -58,19 +69,19 @@ beforeAll(async()=>{
 afterAll(async()=>{await app?.close();await scenario?.close();await workspace?.close();await catalog?.close();});
 
 test('registration rejects a revoked assertion but accepts its non-revoked predecessor for the earlier covered period',async()=>{
- const {subject,history,revoked,eligible}=await revokedHistory();
+ const {subject,history,revoked,earlier}=await revokedHistory();
  const command={action:'VERIFY_REGISTRATION',target:{id:subject.id,version:subject.version},creditCodeStatus:'NOT_APPLICABLE',evidence:scenario.artifact.artifactId};
  const before=await scenario.org.historyDetails('maker',subject.id),beforeCounts=counts();
  const invalid=await submit(draft('ORG01',{...command,licenseTargets:[{id:revoked.id,version:revoked.version}]}));
  expect(await workspace.preflight('maker',{domain:'ORG01',inputId:invalid})).toMatchObject({status:'BLOCKED',codes:['STALE_VALIDATION']});
  await expect(scenario.org.plan('maker',{inputId:invalid,requestId:randomUUID()})).rejects.toThrow('STALE_VALIDATION');
  expect(await scenario.org.historyDetails('maker',subject.id)).toEqual(before);expect(counts()).toBe(beforeCounts);
- const selected=eligible.map(({id,version})=>({id,version}));
+ const selected=[{id:earlier.id,version:earlier.version}];
  const result=await apply('ORG01',draft('ORG01',{...command,licenseTargets:selected}));expect(result.owner).toBe('organization-master/verification');
  const after=await scenario.org.historyDetails('maker',subject.id);expect(after.licenses).toEqual(history);expect(after.verifications).toHaveLength(before.verifications.length+1);
 });
 test('scope verification rejects a revoked exact reference but commits using the historical non-revoked dependency',async()=>{
- const {subject,history,revoked,eligible}=await revokedHistory(),campus=await scenario.createCampus();scenario.grantPair(subject.id,campus.id);
+ const {subject,history,revoked,earlier}=await revokedHistory(),campus=await scenario.createCampus();scenario.grantPair(subject.id,campus.id);
  const command={action:'VERIFY_SCOPE',...scenario.endpoints(subject,campus),evidence:scenario.artifact.artifactId};
  const facts={catalog:scenario.codeSet.reference,services:['DEMO_MEDICAL_A'],licenseScopeText:'DEMO historical verified scope'};
  const query={kind:'SCOPE' as const,mode:'LIST' as const,subjectId:subject.id,campusId:campus.id,businessAt:from};
@@ -79,7 +90,7 @@ test('scope verification rejects a revoked exact reference but commits using the
  expect(await workspace.preflight('maker',{domain:'ORG03',inputId:invalid})).toMatchObject({status:'BLOCKED',codes:['BLOCKED_DEPENDENCY']});
  await expect(scenario.operating.plan('maker',{inputId:invalid,requestId:randomUUID()})).rejects.toThrow('BLOCKED_DEPENDENCY');
  expect(await scenario.operating.read('maker',query)).toEqual(before);expect(counts()).toBe(beforeCounts);
- const selected=reference(eligible[0]!);
+ const selected=reference(earlier);
  const result=await apply('ORG03',draft('ORG03',{...command,facts:{...facts,license:selected}}));expect(result.owner).toBe('organization-master/license-scope');
  const committed=await scenario.operating.read('maker',{kind:'SCOPE',mode:'EXACT',id:result.id,version:result.version});
  expect(committed[0]!.facts).toMatchObject({license:selected});
