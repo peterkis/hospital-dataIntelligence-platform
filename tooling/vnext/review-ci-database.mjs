@@ -58,6 +58,7 @@ export async function upgradePartialEndpoint(receipt){
 export async function upgradePreviousDraftAccess(receipt){
  if(process.env.HDIP_REVIEW_CI_PREVIOUS_UPGRADE!=='1')throw new Error('REVIEW_PREVIOUS_UPGRADE_MODE_REQUIRED');
  await upgradeOne(receipt,74,'0075_workspace_previous_draft_access.sql','POPULATED_0074_TO_0075');
+ await upgradeOne(receipt,75,'0076_workspace_retained_manifest_access.sql','POPULATED_0075_TO_0076');
 }
 export async function provision(){
  const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');
