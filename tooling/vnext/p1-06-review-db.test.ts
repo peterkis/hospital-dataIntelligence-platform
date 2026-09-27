@@ -115,10 +115,10 @@ test('a same-domain published non-manual template is not an execution transport'
 test('a steward cannot borrow the maintenance exception for an unrelated source version',async()=>{
  const oldContent=await revision();
  const command=<A extends string>(action:A,extra:Record<string,unknown>)=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'DEMO_UNRELATED_SOURCE',...extra});
- const sourceDraft=await catalog.command('maker',command('CREATE',{kind:'SOURCE',code:'UNRELATED_'+randomUUID().replaceAll('-','').toUpperCase(),values:{name:'DEMO unrelated source',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:'SYNTHETIC_BOOTSTRAP'},validFrom:'2026-01-01T00:00:00'}));
+ const sourceDraft=await catalog.command('maker',command('CREATE',{kind:'SOURCE',code:'UNRELATED_'+randomUUID().replaceAll('-','').toUpperCase(),values:{name:'DEMO unrelated source',environment:'SYNTHETIC',sourceKind:'MANUAL',deploymentScope:'SYNTHETIC_ALL',businessOwnerRole:'TEST',technicalRole:'TEST',sourceEvidence:fixture.x.source.id},validFrom:'2026-01-01T00:00:00'}));
  const sourceReview=await catalog.command('maker',command('SUBMIT',{target:sourceDraft.id,expectedHead:sourceDraft.head}));
  const source=await catalog.command('reviewer',command('PUBLISH',{target:sourceDraft.id,expectedHead:sourceReview.head,reviewDigest:sourceReview.reviewDigest}));
- const changed=await campusCodeSet(catalog,source.versionId);
+ const changed=await campusCodeSet(catalog,source.versionId,[]);
  peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT '${steward}',object_id,scope,object_kind,campus,purpose,field_group,permission FROM vnext_control.object_grant WHERE actor_code='maker' AND object_id=${quote(source.id)}::uuid AND permission='READ' ON CONFLICT DO NOTHING;`);
  try{
   const originalSource=oldContent.command['source'];if(!originalSource||typeof originalSource!=='object')throw new Error('SOURCE_REQUIRED');
