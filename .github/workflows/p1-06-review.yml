@@ -14,7 +14,7 @@ permissions:
   contents: read
 concurrency:
   group: p1-06-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   workspace:
     runs-on: ubuntu-24.04
@@ -41,16 +41,21 @@ jobs:
           node-version: '24.18.0'
           cache: npm
       - run: npm install --global npm@11.9.0
-      - run: npm ci
+      - id: install
+        run: npm ci
       - name: Record exact candidate
         run: git rev-parse HEAD
       - name: Workspace unit regressions
         run: npm run vnext:p1-06:unit
       - name: Workspace typecheck
         run: npm run vnext:p1-06:typecheck
+      - name: Admin web typecheck and build
+        run: npm --workspace apps/admin-web run typecheck && npm --workspace apps/admin-web run build:vnext
       - name: PostgreSQL client
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
       - name: Isolated PostgreSQL Owner and HTTP regressions
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts
