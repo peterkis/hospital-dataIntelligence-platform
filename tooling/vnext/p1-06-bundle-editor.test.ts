@@ -91,11 +91,11 @@ test('selected license identity and version survive wire restore and are visibly
  const onChange=(patch:Row)=>{current=wire({...current,...patch});};
  picker(BundleLicenseTargetField({actor:'maker',current,disabled:false,onChange})).onChange([licenseTarget]);
  const restored=BundleLicenseTargetField({actor:'maker',current:wire(current),disabled:false,onChange}),props=picker(restored);
- expect(props.subjectId).toBe(target.id);expect(props.selected).toEqual([{id:licenseTarget.id,version:'2'}]);
+ expect(props.subjectId).toBe(target.id);expect(props.selected).toEqual([{id:licenseTarget.id,version:'2'}]);expect(props.purpose).toBe('CURRENT_REVISION');
  expect(renderToStaticMarkup(restored)).toContain(licenseTarget.id);
  const row=(version:string):Parameters<typeof WorkspaceLicenseDependencyOptions>[0]['rows'][number]=>({id:licenseTarget.id,version,versionId:version==='2'?licenseTarget.versionId:id(44),revoked:false,authority:'DEMO',validFrom:'2026-01-01T00:00:00',validTo:null,endKind:'VERIFIED_UNBOUNDED',recordedAt:'2026-09-01T00:00:00'});
  const options=WorkspaceLicenseDependencyOptions({...props,rows:[row('1'),row('2')],label:row=>row.version});
- expect(controls(options,'input').map(input=>input.checked)).toEqual([false,true]);
+ expect(controls(options,'input').map(input=>input.checked)).toEqual([true]);
  controls(restored,'button')[0]!.onClick!();expect(bundleLicenseSelected(current)).toEqual([]);expect(current['license']).not.toHaveProperty('target');
  expect(current['license']).toMatchObject({intent:'REVISE',namespace:'DEMO'});
 });
@@ -117,4 +117,30 @@ test('incomplete saved bindings expose no source instead of inferring another co
  for(const binding of [{},{dataset:'ORG01'},{dataset:'ORG01',contractId:id(1)},{dataset:'ORG01',contractVersionId:id(11)}]){
   expect(bundleRowSourceVersions('ORG01',[binding],contracts)).toEqual([]);
  }
+});
+
+type License=Parameters<typeof WorkspaceLicenseDependencyOptions>[0]['rows'][number];
+const assertion=(version:string,revoked=false):License=>({id:id(81),version,versionId:id(100+Number(version)),revoked,authority:'DEMO',validFrom:'2026-01-01T00:00:00',validTo:null,endKind:'VERIFIED_UNBOUNDED',recordedAt:'2026-09-01T00:00:00'});
+const choices=(rows:License[],purpose:'DEPENDENCY'|'CURRENT_REVISION',selected:Array<{id:string;version:string}>=[])=>WorkspaceLicenseDependencyOptions({rows,purpose,selected,multiple:false,disabled:false,onChange:vi.fn(),label:row=>row.version});
+test('workbook revision choices use numeric current versions including future heads',()=>{
+ const old=assertion('2'),head={...assertion('10'),validFrom:'2030-01-01T00:00:00'};
+ const node=choices([head,old],'CURRENT_REVISION',[head]);
+ expect(controls(node,'input')).toHaveLength(1);expect(controls(node,'input')[0]!.checked).toBe(true);
+ expect(controls(choices([old,head],'DEPENDENCY'),'input')).toHaveLength(2);
+});
+test('a revoked head cannot promote its non-revoked predecessor into a revision target',()=>{
+ const node=choices([assertion('1'),assertion('2',true)],'CURRENT_REVISION',[assertion('1')]);
+ expect(controls(node,'input')).toHaveLength(0);expect(renderToStaticMarkup(node)).toContain('不是当前可修订版本');
+ expect(controls(choices([assertion('1'),assertion('2',true)],'DEPENDENCY'),'input')).toHaveLength(1);
+});
+test('a stale saved license target is reported rather than silently rebound to the current head',()=>{
+ const selected=Object.freeze([{id:id(81),version:'1'}]),onChange=vi.fn();
+ const node=WorkspaceLicenseDependencyOptions({rows:[assertion('1'),assertion('2')],purpose:'CURRENT_REVISION',selected,multiple:false,disabled:false,onChange,label:row=>row.version});
+ expect(renderToStaticMarkup(node)).toContain('不会自动替换目标');expect(controls(node,'input')[0]!.checked).toBe(false);expect(onChange).not.toHaveBeenCalled();expect(selected[0]!.version).toBe('1');
+});
+test('separate picker group names do not share the old global license-version radio group',()=>{
+ const props={rows:[assertion('1')],selected:[assertion('1')],multiple:false,disabled:false,onChange:vi.fn(),label:(row:License)=>row.version};
+ const first=renderToStaticMarkup(WorkspaceLicenseDependencyOptions({...props,groupName:'row-one'}));
+ const second=renderToStaticMarkup(WorkspaceLicenseDependencyOptions({...props,groupName:'row-two'}));
+ expect(first).toContain('name="row-one"');expect(second).toContain('name="row-two"');expect(first+second).not.toContain('name="license-version"');
 });
