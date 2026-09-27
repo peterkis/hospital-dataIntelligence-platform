@@ -21,7 +21,7 @@ const post=(who:string,url:string,payload:unknown)=>app.inject({method:'POST',ur
 const save=(who:string,content:DraftContent)=>workspace.saveDraft(who,{...content,requestId:randomUUID()});
 const transport=async(domain:string)=>{const item=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.dataset===domain&&c.status==='PUBLISHED'&&c.definition.templateVersion===domain+'_MANUAL_CORE_V1');if(!item)throw new Error('MANUAL_FIXTURE_REQUIRED');return {contractId:item.id,contractVersionId:item.versionId};};
 const job=(draft:{id:string;version:string},binding:{contractId:string;contractVersionId:string})=>({action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'WORKSPACE_MANUAL',profile:'CORE',...binding,input:{kind:'METADATA_ONLY',declaredSha256:'a'.repeat(64)},workspaceDraft:{id:draft.id,expectedVersion:draft.version}});
-async function revision(who:string=steward){const draft=await workspace.prepareRevision(who,{kind:'CAMPUS',id:campus.id,version:campus.version});if(draft.domain!=='ORG02')throw new Error('WRONG_DOMAIN');return {...draft,command:{...draft.command,validFrom:'2026-02-01T00:00:00',sourceOperationStatus:'PLANNING' as const}};}
+async function revision(who:string=steward):Promise<Extract<DraftContent,{domain:'ORG02'}>>{const draft=await workspace.prepareRevision(who,{kind:'CAMPUS',id:campus.id,version:campus.version});if(draft.domain!=='ORG02')throw new Error('WRONG_DOMAIN');return {...draft,command:{...draft.command,validFrom:'2026-02-01T00:00:00',sourceOperationStatus:'PLANNING'}};}
 beforeAll(async()=>{
  catalog=await openCatalog(connection,provider);workspace=openOrganizationWorkspace(connection,provider);bundle=openOrganizationImport(connection,provider);pool=new Pool({connectionString:connection});
  fixture=await organizationBundleFixture(receipt,connection,provider,catalog);
@@ -41,6 +41,7 @@ for(const [domain,kind,owner] of [['ORG01','ORGANIZATION','organization-master']
  for(const wrong of ['ORG01','ORG02','ORG03'].filter(d=>d!==domain))test(`${domain} refuses ${wrong} transport through HTTP and SQL with no job or artifact side effects`,async()=>{
   const target=facts.find(f=>f.owner===owner)!;
   const original=await workspace.prepareRevision('maker',{kind,id:target.id,version:target.version});
+  if(original.domain==='BUNDLE')throw new Error('WRONG_DOMAIN');
   const bad={...original,transport:await transport(wrong),attachment:{filename:'DEMO.txt',bytesBase64:Buffer.from('DEMO domain mismatch').toString('base64')},command:{...original.command,validFrom:'2026-02-01T00:00:00'}};
   const saved=await save('maker',bad),before=counts();
   const response=await post('maker','/api/vnext/organization-workspace/drafts/submit',{id:saved.id,expectedVersion:saved.version,requestId:randomUUID()});
@@ -52,8 +53,9 @@ for(const [domain,kind,owner] of [['ORG01','ORGANIZATION','organization-master']
 test('imported campus revision uses a matching manual transport and completes independent approval without catalog WRITE',async()=>{
  const old=await fixture.x.campus.references.history('maker',campus.id);
  const content=await revision();expect(content.transport).toEqual(await transport('ORG02'));
- expect(content.command.source).toEqual((await workspace.prepareRevision('maker',{kind:'CAMPUS',id:campus.id,version:campus.version})).command.source);
- const saved=await save(steward,{...content,command:{...content.command,facts:{...content.command.facts,campusName:'DEMO steward revised imported campus'}}});
+ expect(content.command['source']).toEqual((await revision('maker')).command['source']);
+ const originalFacts=content.command['facts'];if(!originalFacts||typeof originalFacts!=='object')throw new Error('CAMPUS_FACTS_REQUIRED');
+ const saved=await save(steward,{...content,command:{...content.command,facts:{...originalFacts,campusName:'DEMO steward revised imported campus'}}});
  const response=await post(steward,'/api/vnext/organization-workspace/drafts/submit',{id:saved.id,expectedVersion:saved.version,requestId:randomUUID()});
  expect(response.statusCode,response.body).toBe(200);const submitted=response.json();
  expect(await workspace.preflight(steward,{domain:'ORG02',inputId:submitted.inputId})).toMatchObject({status:'ELIGIBLE_FOR_CANDIDATE'});
