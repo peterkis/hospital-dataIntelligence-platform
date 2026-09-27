@@ -1,3 +1,4 @@
+import {workspaceManualFixture} from './workspace-manual-fixture.ts';
 import {prepareWorkspaceDeployment} from './p1-06-deployment.mjs';
 import {randomUUID} from 'node:crypto';
 import {campusCodeSet} from './campus-fixture.ts';
@@ -26,6 +27,8 @@ try{
  bundle=openOrganizationImport(connection,provider);
  if(!reuseExisting){
  fixture=await organizationBundleFixture(owned.receipt,connection,provider,catalog,persistent,persistent);
+ const manualTransports=await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'});
+ if(!manualTransports.some(c=>c.dataset==='ORG01'&&c.profile==='CORE'&&c.status==='PUBLISHED'&&c.definition.templateVersion==='ORG01_MANUAL_CORE_V1'&&c.definition.sourceVersionId===fixture.x.source.versionId))await workspaceManualFixture(catalog);
 
  const transportDataset=peer(owned.receipt.name,`SELECT c.dataset_id FROM governance_catalog.protected_artifact a JOIN governance_catalog.import_job j ON j.id=a.job_id JOIN governance_catalog.import_contract c ON c.id=j.contract_id WHERE a.id=${quote(fixture.x.artifact.artifactId)}::uuid;`);
  if(!/^[a-f0-9-]{36}$/.test(transportDataset))throw new Error('FIXTURE_TRANSPORT_NOT_FOUND');
