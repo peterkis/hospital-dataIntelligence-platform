@@ -1,6 +1,7 @@
 import {test,expect} from 'vitest';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import {readAllWorkspacePages} from '../../apps/admin-web/src/vnext/workspace-pagination.js';
+import {isManualWorkspaceContract} from '../../apps/admin-web/src/vnext/workspace-transport.js';
 test('workspace HTTP fails closed without an Owner even for a valid incomplete draft',async()=>{
  const app=await buildCatalogServer();try{
   const response=await app.inject({method:'POST',url:'/api/vnext/organization-workspace/drafts/save',payload:{requestId:'00000000-0000-0000-0000-000000000001',domain:'ORG01',campus:'NORTH',command:{action:'CREATE',facts:{legalName:'DEMO incomplete'}}}});
@@ -40,4 +41,13 @@ test('workspace pagination fails closed when a full page does not advance its cu
  expect(result.data).toBeUndefined();
  expect(result.error).toBeInstanceOf(Error);
  expect(calls).toBe(2);
+});
+for(const domain of ['ORG01','ORG02','ORG03'])test(domain+' selector permits only its published CORE manual template',()=>{
+ const valid={dataset:domain,status:'PUBLISHED',profile:'CORE',definition:{templateVersion:domain+'_MANUAL_CORE_V1'}};
+ expect(isManualWorkspaceContract(valid,domain)).toBe(true);
+ for(const dataset of ['ORG01','ORG02','ORG03','GOV01'].filter(d=>d!==domain))expect(isManualWorkspaceContract({...valid,dataset},domain)).toBe(false);
+ for(const status of ['DRAFT','APPROVED','RETIRED'])expect(isManualWorkspaceContract({...valid,status},domain)).toBe(false);
+ expect(isManualWorkspaceContract({...valid,profile:'FULL'},domain)).toBe(false);
+ for(const templateVersion of [domain+'_BUNDLE_CORE_V1',domain+'_OTHER_CORE_V1','ORG99_MANUAL_CORE_V1'])expect(isManualWorkspaceContract({...valid,definition:{templateVersion}},domain)).toBe(false);
+ expect(isManualWorkspaceContract(valid,'BUNDLE')).toBe(false);
 });
