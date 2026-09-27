@@ -102,7 +102,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
    }else{if(content.profile==='FULL'||content.dependencies?.length||!content.transport)throw new Error('BLOCKED_DEPENDENCY');
    const contracts=(await sql<{r:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:'SYNTHETIC',mode:'HISTORY',target:content.transport.contractId,versionId:content.transport.contractVersionId})}::jsonb) r`.execute(scope)).rows[0]!.r;
    const contract=contracts.filter(c=>c.status==='PUBLISHED').at(-1),source=content.command['source'];
-   if(!contract||contract.profile!=='CORE'||contract.definition.templateVersion.endsWith('_BUNDLE_CORE_V1')||!source||typeof source!=='object'||!('versionId' in source)||source.versionId!==contract.definition.sourceVersionId)throw new Error('BLOCKED_DEPENDENCY');
+   if(!contract||contract.dataset!==content.domain||contract.profile!=='CORE'||contract.definition.templateVersion!==content.domain+'_MANUAL_CORE_V1'||!source||typeof source!=='object'||!('versionId' in source)||source.versionId!==contract.definition.sourceVersionId)throw new Error('BLOCKED_DEPENDENCY');
    const jobInput={action:'CREATE',scope:'SYNTHETIC',requestId:part(input.requestId,'job'),reason:'WORKSPACE_MANUAL',workspaceDraft:{id:input.id,expectedVersion:input.expectedVersion},...content.transport,profile:'CORE',input:{kind:'METADATA_ONLY',declaredSha256:planBinding(provider,'WORKSPACE_TRANSPORT_V1',input)}};
    const job=(await sql<{r:{id:string;revisionId:string}}>`select governance_catalog.import_job_command(${actor},${JSON.stringify(jobInput)}::jsonb) r`.execute(scope)).rows[0]!.r;
    const command=structuredClone(content.command);
