@@ -56,7 +56,7 @@ function browser(){
   fail(new Error('BROWSER_CLOSED'));child.kill('SIGTERM');
   for(let i=0;i<40&&child.exitCode===null&&child.signalCode===null;i++)await delay(25);
   if(child.exitCode===null&&child.signalCode===null){child.kill('SIGKILL');await delay(100);}
-  rmSync(profile,{recursive:true,force:true});
+  rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:100});
  }};
 }
 
@@ -108,7 +108,14 @@ beforeAll(async()=>{
  app.addHook('onSend',async(request,reply,payload)=>{
   if(request.url==='/api/vnext/organization-workspace/drafts/submit'&&reply.statusCode===200&&fault?.id===(request.body as DraftAction).id){
    fault.armed=true;
-   if(fault.mode==='LOST_RESPONSE'&&!fault.used){fault.used=true;reply.hijack();reply.raw.destroy();return;}
+   if(fault.mode==='LOST_RESPONSE'&&!fault.used){
+    // Send headers and a fragment before disconnecting. Closing an entirely
+    // unread socket lets Chromium transparently retry instead of exposing loss.
+    fault.used=true;reply.hijack();
+    reply.raw.writeHead(200,{'content-type':'application/json','content-length':Buffer.byteLength(String(payload)),'connection':'close'});
+    reply.raw.flushHeaders();reply.raw.write('{');
+    await delay(50);reply.raw.destroy();return;
+   }
   }return payload;
  });
  await app.register(staticPlugin,{root:dist,prefix:'/admin/vnext/'});
@@ -127,7 +134,9 @@ for(const mode of ['NORMAL','LOST_RESPONSE','RESTORE_FAILURE','SWITCH_AFTER_FAIL
  try{
   const session=await chrome.open(base+'/admin/vnext/organizations?as=maker&draft='+a.id);
   const result=await chrome.call('Runtime.evaluate',{expression:'('+exercise.toString()+')('+JSON.stringify({a:a.id,b:b.id,mode})+')',awaitPromise:true,returnByValue:true},session);
+  console.log(JSON.stringify({check:'WORKSPACE_BROWSER_RETRY',mode,faultObserved:fault?.used,attempts:submittedRequests.slice(start),browserException:result['exceptionDetails']??null}));
   expect(result['exceptionDetails'],JSON.stringify(result['exceptionDetails'])).toBeUndefined();
+  expect(fault?.used).toBe(mode!=='NORMAL');
   const visible=result['result'].value as {first:string;second:string};expect(visible.first).not.toBe(visible.second);
   const attempts=submittedRequests.slice(start),expected=mode==='NORMAL'?[a.id,b.id]:mode==='SWITCH_AFTER_FAILURE'?[a.id,b.id,a.id]:[a.id,a.id,b.id];
   expect(attempts.map(r=>r.id)).toEqual(expected);expect(attempts.every(r=>r.expectedVersion==='1')).toBe(true);
