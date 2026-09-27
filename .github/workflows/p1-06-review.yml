@@ -50,7 +50,7 @@ jobs:
       - name: Workspace typecheck
         run: npm run vnext:p1-06:typecheck
       - name: Admin web typecheck and build
-        run: npm --workspace apps/admin-web run typecheck && npm --workspace apps/admin-web run build:vnext
+        run: npm --workspace packages/generated-api-client run build && npm --workspace apps/admin-web run typecheck && npm --workspace apps/admin-web run build:vnext
       - name: PostgreSQL client
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
