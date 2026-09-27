@@ -29,22 +29,28 @@ export type DraftContent=Static<typeof DraftContentSchema>;
 // Flatten the union so closed members include the request envelope explicitly.
 export const DraftSaveSchema=Type.Union(DraftContentSchema.anyOf.map(member=>Type.Object({...member.properties,requestId:Id,id:Type.Optional(Id),expectedVersion:Type.Optional(Type.String({pattern:'^[1-9][0-9]*$'}))},closed)));
 export type DraftSave=DraftContent & {requestId:string;id?:string;expectedVersion?:string};
-export interface DraftMetadata {transport:{contractId:string;contractVersionId:string}|null;domain:string;campus:string;target:string|null;subject:string|null;campusId:string|null;action:string|null;hasPayload:boolean;bindings:Array<{dataset:string;contractId:string;contractVersionId:string}>;scopes:string[];licenseTarget?:{id:string;version:string}|null}
+export interface DraftMetadata {transport:{contractId:string;contractVersionId:string}|null;domain:string;campus:string;target:string|null;subject:string|null;campusId:string|null;action:string|null;hasPayload:boolean;bindings:Array<{dataset:string;contractId:string;contractVersionId:string}>;scopes:string[];licenseTarget?:{id:string;version:string}|null;manifestProtected?:boolean}
 const ExactLicenseTarget=Type.Object({id:Id,version:Type.String({pattern:'^[1-9][0-9]*$'})},closed);
-// V1 is only for authenticating pre-0073 stored envelopes. New saves always use V2.
-export function draftMetadata(content:DraftContent,format:'V1'|'V2'='V2'):DraftMetadata{
+// V1/V2 authenticate historical envelopes. V3 binds payload-free manifests so
+// their exact contracts and governance dimensions cannot disappear from auth.
+export function draftMetadata(content:DraftContent,format:'V1'|'V2'|'V3'='V3'):DraftMetadata{
  const command='command' in content?content.command:{};
  const ref=(key:string)=>{const r=command[key];return r&&typeof r==='object'&&'id' in r&&typeof r.id==='string'?r.id:null;};
  const metadata=content.domain==='BUNDLE'?content.metadata:{};
  const hasPayload=content.domain==='BUNDLE'&&!!content.bytesBase64;
- const candidates=metadata['contracts'];
- if(hasPayload&&!Check(ReceiveOrganizationBundleSchema.properties.contracts,candidates))throw new Error('BLOCKED_DEPENDENCY');
- const bindings=hasPayload?candidates as DraftMetadata['bindings']:[];
- const scopes=new Set<string>([content.campus]);
  const manifest=metadata['manifest'];
- if(manifest&&typeof manifest==='object'&&'rows' in manifest&&Array.isArray(manifest.rows))for(const row of manifest.rows)if(row&&typeof row==='object'&&['NORTH','SOUTH'].includes(row.governanceScope))scopes.add(row.governanceScope);
+ const manifestRows=manifest&&typeof manifest==='object'&&'rows' in manifest&&Array.isArray(manifest.rows)?manifest.rows:[];
+ // A manifest remains protected even while its workbook bytes are absent. This
+ // prevents contract changes or direct API calls from turning exact targets and
+ // evidence references into a generic-scope draft.
+ const protectedBundle=content.domain==='BUNDLE'&&(hasPayload||(format==='V3'&&manifestRows.length>0));
+ const candidates=metadata['contracts'];
+ if(protectedBundle&&!Check(ReceiveOrganizationBundleSchema.properties.contracts,candidates))throw new Error('BLOCKED_DEPENDENCY');
+ const bindings=protectedBundle?candidates as DraftMetadata['bindings']:[];
+ const scopes=new Set<string>([content.campus]);
+ for(const row of manifestRows)if(row&&typeof row==='object'&&['NORTH','SOUTH'].includes(row.governanceScope))scopes.add(row.governanceScope);
  const licenseTarget=content.domain==='ORG01'&&Check(ExactLicenseTarget,command['licenseTarget'])?{id:command['licenseTarget'].id,version:command['licenseTarget'].version}:null;
- return {transport:'transport' in content?content.transport??null:null,hasPayload,bindings,scopes:[...scopes].sort(),domain:content.domain,campus:content.campus,target:ref('target'),subject:ref('subject'),campusId:ref('campus'),action:typeof command['action']==='string'?command['action']:null,...(format==='V2'?{licenseTarget}:{})};
+ return {transport:'transport' in content?content.transport??null:null,hasPayload,bindings,scopes:[...scopes].sort(),domain:content.domain,campus:content.campus,target:ref('target'),subject:ref('subject'),campusId:ref('campus'),action:typeof command['action']==='string'?command['action']:null,...(format!=='V1'?{licenseTarget}:{}),...(format==='V3'&&content.domain==='BUNDLE'?{manifestProtected:manifestRows.length>0}:{})};
 }
 
 export const ApplicationAccessSchema=Type.Object({canRead:Type.Boolean(),canWrite:Type.Boolean(),canReview:Type.Boolean(),canPlan:Type.Boolean()},closed);
