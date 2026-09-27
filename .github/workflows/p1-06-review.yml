@@ -47,11 +47,15 @@ jobs:
         run: |
           mkdir -p .runtime/vnext/review-results
           git rev-parse HEAD | tee .runtime/vnext/review-results/commit.txt
+          git archive --format=tar HEAD | gzip > .runtime/vnext/review-results/source.tar.gz
       - name: Workspace unit regressions
         run: npm run vnext:p1-06:unit -- --reporter=json --outputFile=.runtime/vnext/review-results/unit.json
       - name: Workspace typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run vnext:p1-06:typecheck
       - name: Admin web typecheck and build
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm --workspace packages/generated-api-client run build && npm --workspace apps/admin-web run typecheck && npm --workspace apps/admin-web run build:vnext
       - name: PostgreSQL client
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -62,6 +66,7 @@ jobs:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts --reporter=json --outputFile=.runtime/vnext/review-results/fresh.json
       - name: Real browser submission and upload races
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_BROWSER_EXECUTABLE: google-chrome
@@ -81,6 +86,12 @@ jobs:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_LICENSE_UPGRADE: '1'
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-exact-transport-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0072.json
+      - name: Populated 0073 to 0074 partial-endpoint authorization upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_ENDPOINT_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-partial-endpoint-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0073.json
       - name: Retain exact-head regression evidence
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         uses: actions/upload-artifact@v4

@@ -34,11 +34,11 @@ export async function inspect(receipt){
 const migrationFiles=()=>readdirSync(resolve(root,'db/vnext/migrations')).filter(f=>/^\d{4}_[a-z0-9_]+\.sql$/.test(f)).sort();
 function applyMigration(name,file){const bytes=readFileSync(resolve(root,'db/vnext/migrations',file));peer(name,`BEGIN;${bytes.toString()}\nINSERT INTO vnext_control.migration(lineage,id,sha256,runner_version) VALUES('HDIP-MC-VNEXT',${quote(file.slice(0,-4))},${quote(createHash('sha256').update(bytes).digest('hex'))},'GITHUB_REVIEW_CI');COMMIT;`);}
 async function upgradeOne(receipt,oldCount,file,check){
- const before=await inspect(receipt),files=migrationFiles();assert.equal(files.length,73);assert.equal(before.ledger.length,oldCount);assert.equal(files[oldCount],file);
+ const before=await inspect(receipt),files=migrationFiles();assert.ok(files.length>=oldCount+1);assert.equal(before.ledger.length,oldCount);assert.equal(files[oldCount],file);
  for(let i=0;i<oldCount;i++){assert.equal(before.ledger[i].id,files[i].slice(0,-4));assert.equal(before.ledger[i].sha256,createHash('sha256').update(readFileSync(resolve(root,'db/vnext/migrations',files[i]))).digest('hex'));}
  const tables=before.tables.filter(t=>t!=='vnext_control.migration');
  const hash=()=>Object.fromEntries(tables.map(t=>[t,peer(receipt.name,`SELECT encode(sha256(convert_to(coalesce(string_agg(to_jsonb(r)::text,E'\n' ORDER BY to_jsonb(r)::text),''),'UTF8')),'hex') FROM ${t} r`)]));
- const acl=()=>peer(receipt.name,"SELECT coalesce(jsonb_agg(jsonb_build_array(p.oid::regprocedure::text,p.proowner,p.proacl) ORDER BY p.oid::regprocedure::text),'[]')::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='organization_master' AND p.proname IN ('workspace_version_source','workspace_transport_authorize')");
+ const acl=()=>peer(receipt.name,"SELECT coalesce(jsonb_agg(jsonb_build_array(p.oid,p.oid::regprocedure::text,p.proowner,p.proacl) ORDER BY p.oid::regprocedure::text),'[]')::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='organization_master' AND p.proname IN ('workspace_version_source','workspace_transport_authorize','workspace_authorize')");
  const rowsBefore=hash(),aclBefore=acl();applyMigration(receipt.name,file);const after=await inspect(receipt);
  assert.deepEqual(after.identity,before.identity);assert.deepEqual(after.ledger.slice(0,oldCount),before.ledger);assert.equal(after.ledger.length,oldCount+1);assert.deepEqual(after.tables,before.tables);assert.deepEqual(hash(),rowsBefore);assert.equal(acl(),aclBefore);
  console.log(JSON.stringify({status:'PASS',check,oid:after.identity.oid,oldLedgerEntriesPreserved:oldCount,tableHashesPreserved:tables.length,functionOwnersAndACLsPreserved:true}));
@@ -51,6 +51,10 @@ export async function upgradeLicenseTransport(receipt){
  if(process.env.HDIP_REVIEW_CI_LICENSE_UPGRADE!=='1')throw new Error('REVIEW_LICENSE_UPGRADE_MODE_REQUIRED');
  await upgradeOne(receipt,72,'0073_workspace_exact_license_transport.sql','POPULATED_0072_TO_0073');
 }
+export async function upgradePartialEndpoint(receipt){
+ if(process.env.HDIP_REVIEW_CI_ENDPOINT_UPGRADE!=='1')throw new Error('REVIEW_ENDPOINT_UPGRADE_MODE_REQUIRED');
+ await upgradeOne(receipt,73,'0074_workspace_partial_endpoint_authorization.sql','POPULATED_0073_TO_0074');
+}
 export async function provision(){
  const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');
  peer('postgres',"DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hdi_prototype') THEN CREATE ROLE hdi_prototype NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;END IF;END $$;");
@@ -58,8 +62,9 @@ export async function provision(){
  allowed.add(name);
  const receipt={name,oid:peer(name,'SELECT oid::text FROM pg_database WHERE datname=current_database()'),owner:'hdi_prototype',port:55434,purpose:'GITHUB_ACTIONS_SYNTHETIC_REVIEW',requestId:randomUUID()};
  const path=resolve(root,'.runtime/vnext/review-ci-'+name+'.json');mkdirSync(resolve(root,'.runtime/vnext'),{recursive:true});writeFileSync(path,JSON.stringify(receipt));
- const count=process.env.HDIP_REVIEW_CI_UPGRADE==='1'?71:process.env.HDIP_REVIEW_CI_LICENSE_UPGRADE==='1'?72:73;
- const files=migrationFiles().slice(0,count);assert.equal(files.length,count);
+ const all=migrationFiles();
+ const count=process.env.HDIP_REVIEW_CI_UPGRADE==='1'?71:process.env.HDIP_REVIEW_CI_LICENSE_UPGRADE==='1'?72:process.env.HDIP_REVIEW_CI_ENDPOINT_UPGRADE==='1'?73:all.length;
+ const files=all.slice(0,count);assert.equal(files.length,count);
  for(const file of files)applyMigration(name,file);
  peer(name,`GRANT CONNECT ON DATABASE ${name} TO ${role};GRANT USAGE ON SCHEMA governance_catalog,vnext_control,organization_master TO ${role};
  DO $$ DECLARE f record;t record;BEGIN

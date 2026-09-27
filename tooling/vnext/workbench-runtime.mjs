@@ -20,6 +20,7 @@ import {
   resolveTarget,
   identitySQL,
 } from "./lineage.mjs";
+import { workspaceStartupPrefix } from "./workspace-migrations.mjs";
 import { ownerServiceConnection } from "./owner-service.mjs";
 import { seed } from "./catalog-seed.mjs";
 import {
@@ -61,6 +62,11 @@ export async function startWorkbench({
     }
   };
   try {
+    // Inspect once, before loading credentials/keys, constructing Owners or
+    // listening. Never expose workspace routes backed by unrepaired SQL.
+    const persistentPrefix = persistent
+      ? workspaceStartupPrefix(migrationFiles(), (await inspect(receipt)).ledger)
+      : 0;
     if (owned) {
       if (upgrade) {
         await migrate(receipt, migrationFiles().slice(0, 52));
@@ -89,8 +95,8 @@ export async function startWorkbench({
     const organizationReady=persistent;
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
-    if(persistent&&(await inspect(receipt)).ledger.length>=69)organizationImport=openOrganizationImport(connection,provider);
-    if(persistent&&(await inspect(receipt)).ledger.length>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
+    if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
+    if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
