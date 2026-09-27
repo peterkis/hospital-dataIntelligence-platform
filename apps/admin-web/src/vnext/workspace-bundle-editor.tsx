@@ -1,6 +1,6 @@
 import {WorkspaceTargetPicker,WorkspaceLicenseSelection,WorkspaceScopeReferencePicker} from './workspace-reference-fields.js';
 import {BundleRowAdoptionFields,BundleLicenseIntentField,BundleLicenseTargetField,bundleRowTargetPatch} from './workspace-bundle-row-fields.js';
-import {useEffect,useRef,useState} from 'react';
+import {useLayoutEffect,useRef,useState} from 'react';
 import {createOrganizationWorkspaceClient,type VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
 import {Field,Group,textField,objectField} from './workspace-fields.js';
 import {encodeWorkbenchFile} from './workbench-file.js';
@@ -10,7 +10,9 @@ type Preview=Operations['previewOrganizationWorkbook']['responses'][200]['conten
 const sheets=['ORG01','ORG02','ORG03'] as const;
 export function WorkspaceBundleEditor({actor,draft,contracts,disabled,onChange}:{actor:string;draft:Draft;contracts:Contract[];disabled:boolean;onChange:(draft:Draft)=>void}){
  const [preview,setPreview]=useState<Preview|null>(null),[message,setMessage]=useState('先选择三个准确文件契约，再上传三工作表 XLSX。'),[busy,setBusy]=useState(false);const generation=useRef(0);
- useEffect(()=>{generation.current++;setPreview(null);return()=>{generation.current++;};},[actor,draft.bytesBase64,JSON.stringify(draft.metadata.contracts)]);
+ // Invalidate at commit, before the controls can start their first file read.
+ // A deferred mount effect could otherwise cancel a newer user interaction.
+ useLayoutEffect(()=>{generation.current++;setPreview(null);setBusy(false);return()=>{generation.current++;};},[actor,draft.bytesBase64,JSON.stringify(draft.metadata.contracts)]);
  const latestDraft=useRef(draft);latestDraft.current=draft;
  const metadata=draft.metadata,bindings=Array.isArray(metadata.contracts)?metadata.contracts:[],manifest=objectField(metadata,'manifest'),rows:Array<Record<string,unknown>>=Array.isArray(manifest['rows'])?manifest['rows']:[];
  function change(next:Draft){latestDraft.current=next;onChange(next);}
