@@ -1556,6 +1556,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/organization-workspace/bundles/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listWorkspaceOrganizationBundles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/references/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["organizationObjectContext"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/references/revision-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["prepareOrganizationRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/applications/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["preflightOrganizationApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/applications/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationCandidateMaterials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/applications/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listOrganizationApplications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/applications/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["organizationApplicationAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/workbook/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewOrganizationWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/drafts/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitOrganizationDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["organizationWorkspaceCapabilities"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/drafts/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["saveOrganizationDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/drafts/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readOrganizationDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/drafts/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listOrganizationDrafts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/organization-workspace/drafts/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discardOrganizationDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8380,6 +8604,7 @@ export interface operations {
             content: {
                 "application/json": {
                     id: string;
+                    asOf?: string;
                 };
             };
         };
@@ -11013,6 +11238,7 @@ export interface operations {
             content: {
                 "application/json": {
                     id: string;
+                    asOf?: string;
                 };
             };
         };
@@ -17814,6 +18040,6173 @@ export interface operations {
                         /** @enum {unknown} */
                         responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
                     } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listWorkspaceOrganizationBundles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    jobId?: string;
+                    revisionId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        jobId: string;
+                        revisionId: string;
+                        currentRevision: boolean;
+                        maker: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        state: "STAGED" | "VERIFIED" | "CANDIDATE" | "APPROVED" | "COMMITTED";
+                        requestId: string | null;
+                        candidateId: string | null;
+                        approvedBy: string | null;
+                        access: {
+                            canRead: boolean;
+                            canWrite: boolean;
+                            canReview: boolean;
+                            canPlan: boolean;
+                            canPreauthorize: boolean;
+                        };
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    organizationObjectContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "ORGANIZATION" | "LICENSE" | "CAMPUS" | "RELATION" | "SCOPE";
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        kind: "ORGANIZATION" | "LICENSE" | "CAMPUS" | "RELATION" | "SCOPE";
+                        id: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        head: string;
+                        subjectId: string | null;
+                        campusId: string | null;
+                        subjectHead: string | null;
+                        canWrite: boolean;
+                        canClose: boolean;
+                        canActivate: boolean;
+                        terminal: boolean;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    prepareOrganizationRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "ORGANIZATION" | "LICENSE" | "CAMPUS" | "RELATION" | "SCOPE";
+                    id: string;
+                    version: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        domain: "ORG01";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        profile?: "CORE" | "FULL";
+                        dependencies?: {
+                            kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                            id: string;
+                        }[];
+                        transport?: {
+                            contractId: string;
+                            contractVersionId: string;
+                        };
+                        attachment?: {
+                            filename: string;
+                            bytesBase64: string;
+                        };
+                        command: {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                            facts?: {
+                                legalName?: string;
+                                entityNature?: string;
+                                authority?: string | null;
+                                legalAddress?: string | null;
+                                registrationEvidence?: string;
+                            };
+                            identifiers?: {
+                                kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                namespace?: string;
+                                value?: string;
+                            }[];
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            target?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            facts?: {
+                                legalName?: string;
+                                entityNature?: string;
+                                authority?: string | null;
+                                legalAddress?: string | null;
+                                registrationEvidence?: string;
+                            };
+                            identifiers?: {
+                                kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                namespace?: string;
+                                value?: string;
+                            }[];
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "ADD_LICENSE";
+                            target?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            license?: {
+                                namespace?: string;
+                                number?: string;
+                                authority?: string;
+                                evidence?: string;
+                                validFrom?: string;
+                                validTo?: string | null;
+                                endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            };
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "REVISE_LICENSE";
+                            target?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            licenseTarget?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            license?: {
+                                namespace?: string;
+                                number?: string;
+                                authority?: string;
+                                evidence?: string;
+                                validFrom?: string;
+                                validTo?: string | null;
+                                endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                            };
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "VERIFY_REGISTRATION";
+                            target?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            licenseTargets?: {
+                                id?: string;
+                                version?: string;
+                            }[];
+                            creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                            evidence?: string;
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "REVOKE_LICENSE";
+                            target?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            licenseTarget?: {
+                                id?: string;
+                                version?: string;
+                            };
+                            reason?: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        domain: "ORG02";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        profile?: "CORE" | "FULL";
+                        dependencies?: {
+                            /** @enum {unknown} */
+                            kind: "CAMPUS_OPERATION" | "LOCATION";
+                            id: string;
+                        }[];
+                        transport?: {
+                            contractId: string;
+                            contractVersionId: string;
+                        };
+                        attachment?: {
+                            filename: string;
+                            bytesBase64: string;
+                        };
+                        command: {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                            facts?: {
+                                campusCode?: string;
+                                campusName?: string;
+                                /** @enum {unknown} */
+                                nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind?: "PHYSICAL";
+                                campusAddress?: string | null;
+                                adminDivision?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    codeSystem?: string;
+                                    version?: string;
+                                    code?: string;
+                                    sourceVersionId?: string;
+                                } | null;
+                                publicPhone?: string | null;
+                                openingDate?: string | null;
+                            };
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            facts?: {
+                                campusCode?: string;
+                                campusName?: string;
+                                /** @enum {unknown} */
+                                nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                /** @enum {string} */
+                                nodeKind?: "PHYSICAL";
+                                campusAddress?: string | null;
+                                adminDivision?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    codeSystem?: string;
+                                    version?: string;
+                                    code?: string;
+                                    sourceVersionId?: string;
+                                } | null;
+                                publicPhone?: string | null;
+                                openingDate?: string | null;
+                            };
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "SCHEDULE_OPENING";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            plannedOpeningAt?: string;
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "CANCEL_OPENING";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "ACTIVATE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            /** @enum {unknown} */
+                            state?: "TRIAL_RUNNING" | "RUNNING";
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "SUSPEND";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        domain: "ORG03";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        profile?: "CORE" | "FULL";
+                        dependencies?: {
+                            kind: string;
+                            id: string;
+                        }[];
+                        transport?: {
+                            contractId: string;
+                            contractVersionId: string;
+                        };
+                        attachment?: {
+                            filename: string;
+                            bytesBase64: string;
+                        };
+                        command: {
+                            subject?: {
+                                /** @enum {string} */
+                                owner?: "organization-master";
+                                id?: string;
+                            };
+                            campus?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                            };
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string | null;
+                            validFrom?: string;
+                            validTo?: (string) | null;
+                            /** @enum {string} */
+                            action?: "VERIFY_SCOPE";
+                            facts?: {
+                                license?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/license";
+                                    id?: string;
+                                    version?: string;
+                                    versionId?: string;
+                                };
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                licenseScopeText?: string;
+                            };
+                        } | {
+                            subject?: {
+                                /** @enum {string} */
+                                owner?: "organization-master";
+                                id?: string;
+                            };
+                            campus?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                            };
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string | null;
+                            validFrom?: string;
+                            validTo?: (string) | null;
+                            /** @enum {string} */
+                            action?: "REVISE_SCOPE";
+                            target?: {
+                                /** @enum {unknown} */
+                                owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            facts?: {
+                                license?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/license";
+                                    id?: string;
+                                    version?: string;
+                                    versionId?: string;
+                                };
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                licenseScopeText?: string;
+                            };
+                        } | {
+                            subject?: {
+                                /** @enum {string} */
+                                owner?: "organization-master";
+                                id?: string;
+                            };
+                            campus?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                            };
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string | null;
+                            validFrom?: string;
+                            validTo?: (string) | null;
+                            /** @enum {string} */
+                            action?: "REVOKE_SCOPE";
+                            target?: {
+                                /** @enum {unknown} */
+                                owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                        } | {
+                            subject?: {
+                                /** @enum {string} */
+                                owner?: "organization-master";
+                                id?: string;
+                            };
+                            campus?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                            };
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string | null;
+                            validFrom?: string;
+                            validTo?: (string) | null;
+                            /** @enum {string} */
+                            action?: "ESTABLISH";
+                            facts?: {
+                                /** @enum {unknown} */
+                                role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText?: string;
+                                /** @enum {unknown} */
+                                primary?: "Y" | "N";
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                licenseScopeText?: string | null;
+                                scopeTargets?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/license-scope";
+                                    id?: string;
+                                    version?: string;
+                                    versionId?: string;
+                                }[];
+                            };
+                        } | {
+                            subject?: {
+                                /** @enum {string} */
+                                owner?: "organization-master";
+                                id?: string;
+                            };
+                            campus?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                            };
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string | null;
+                            validFrom?: string;
+                            validTo?: (string) | null;
+                            /** @enum {unknown} */
+                            action?: "REVISE_RELATION" | "REVALIDATE";
+                            target?: {
+                                /** @enum {unknown} */
+                                owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            facts?: {
+                                /** @enum {unknown} */
+                                role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                relationTypeText?: string;
+                                /** @enum {unknown} */
+                                primary?: "Y" | "N";
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                licenseScopeText?: string | null;
+                                scopeTargets?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/license-scope";
+                                    id?: string;
+                                    version?: string;
+                                    versionId?: string;
+                                }[];
+                            };
+                        } | {
+                            subject?: {
+                                /** @enum {string} */
+                                owner?: "organization-master";
+                                id?: string;
+                            };
+                            campus?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                            };
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string | null;
+                            validFrom?: string;
+                            validTo?: (string) | null;
+                            /** @enum {string} */
+                            action?: "CLOSE";
+                            target?: {
+                                /** @enum {unknown} */
+                                owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        domain: "BUNDLE";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        metadata: {
+                            requestId?: string;
+                            job?: {
+                                /** @enum {string} */
+                                action?: "CREATE";
+                            } | {
+                                /** @enum {string} */
+                                action?: "REVISE";
+                                jobId?: string;
+                                expectedCurrentRevision?: string;
+                            };
+                            /** @enum {unknown} */
+                            campus?: "NORTH" | "SOUTH";
+                            retentionSeconds?: number;
+                            contracts?: {
+                                /** @enum {unknown} */
+                                dataset?: "ORG01" | "ORG02" | "ORG03";
+                                contractId?: string;
+                                contractVersionId?: string;
+                            }[];
+                            manifest?: {
+                                /** @enum {string} */
+                                policy?: "ORG_BUNDLE_V1";
+                                rows?: ({
+                                    row?: number;
+                                    /** @enum {unknown} */
+                                    intent?: "CREATE" | "REVISE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    governanceScope?: "NORTH" | "SOUTH";
+                                    sourceVersionId?: string;
+                                    /** @enum {string} */
+                                    dataset?: "ORG01";
+                                    creditNamespace?: string;
+                                    institutionNamespace?: string;
+                                    license?: {
+                                        /** @enum {unknown} */
+                                        intent?: "CREATE" | "REVISE";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/license";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        };
+                                        namespace?: string;
+                                        authority?: string;
+                                        evidence?: string;
+                                        /** @enum {unknown} */
+                                        endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                    };
+                                    registration?: {
+                                        /** @enum {unknown} */
+                                        creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                                        evidence?: string;
+                                    };
+                                } | {
+                                    row?: number;
+                                    /** @enum {unknown} */
+                                    intent?: "CREATE" | "REVISE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    governanceScope?: "NORTH" | "SOUTH";
+                                    sourceVersionId?: string;
+                                    /** @enum {string} */
+                                    dataset?: "ORG02";
+                                    /** @enum {string} */
+                                    nodeKind?: "PHYSICAL";
+                                    evidence?: string;
+                                    adminDivision?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        codeSystem?: string;
+                                        version?: string;
+                                        code?: string;
+                                        sourceVersionId?: string;
+                                    } | null;
+                                } | {
+                                    row?: number;
+                                    /** @enum {unknown} */
+                                    intent?: "CREATE" | "REVISE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    governanceScope?: "NORTH" | "SOUTH";
+                                    sourceVersionId?: string;
+                                    /** @enum {string} */
+                                    dataset?: "ORG03";
+                                    subject?: {
+                                        /** @enum {string} */
+                                        kind?: "JOB_ALIAS";
+                                        /** @enum {unknown} */
+                                        dataset?: "ORG01" | "ORG02" | "ORG03";
+                                        alias?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PLATFORM_REF";
+                                        /** @enum {unknown} */
+                                        dataset?: "ORG01" | "ORG02" | "ORG03";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    campus?: {
+                                        /** @enum {string} */
+                                        kind?: "JOB_ALIAS";
+                                        /** @enum {unknown} */
+                                        dataset?: "ORG01" | "ORG02" | "ORG03";
+                                        alias?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PLATFORM_REF";
+                                        /** @enum {unknown} */
+                                        dataset?: "ORG01" | "ORG02" | "ORG03";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                    catalog?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        /** @enum {string} */
+                                        codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                        version?: string;
+                                        sourceVersionId?: string;
+                                    };
+                                    services?: string[];
+                                    scopes?: ({
+                                        /** @enum {string} */
+                                        kind?: "EXISTING_SCOPE";
+                                        reference?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/license-scope";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "VERIFY_SCOPE";
+                                        license?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/license";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "ROW_LICENSE";
+                                            subject?: {
+                                                /** @enum {string} */
+                                                kind?: "JOB_ALIAS";
+                                                /** @enum {unknown} */
+                                                dataset?: "ORG01" | "ORG02" | "ORG03";
+                                                alias?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PLATFORM_REF";
+                                                /** @enum {unknown} */
+                                                dataset?: "ORG01" | "ORG02" | "ORG03";
+                                                id?: string;
+                                                expectedVersion?: string;
+                                            };
+                                        };
+                                        evidence?: string;
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                        services?: string[];
+                                    })[];
+                                })[];
+                            };
+                        };
+                        bytesBase64?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    preflightOrganizationApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    domain: "ORG01" | "ORG02" | "ORG03";
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "ELIGIBLE_FOR_CANDIDATE" | "BLOCKED";
+                        codes: string[];
+                        observedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationCandidateMaterials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    domain: "ORG01" | "ORG02" | "ORG03";
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        materials: {
+                            artifactId: string;
+                            bytesBase64: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listOrganizationApplications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        /** @enum {unknown} */
+                        domain: "ORG01" | "ORG02" | "ORG03";
+                        kind: ("RELATION" | "SCOPE") | null;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        maker: string;
+                        /** @enum {unknown} */
+                        state: "STAGED" | "CANDIDATE" | "APPROVED" | "COMMITTED" | "WITHDRAWN";
+                        requestId: string | null;
+                        candidateId: string | null;
+                        approvedBy: string | null;
+                        recordedAt: string;
+                        access: {
+                            canRead: boolean;
+                            canWrite: boolean;
+                            canReview: boolean;
+                            canPlan: boolean;
+                        };
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    organizationApplicationAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        canRead: boolean;
+                        canWrite: boolean;
+                        canReview: boolean;
+                        canPlan: boolean;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    previewOrganizationWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    domain: "ORG01";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CREATE";
+                        facts?: {
+                            legalName?: string;
+                            entityNature?: string;
+                            authority?: string | null;
+                            legalAddress?: string | null;
+                            registrationEvidence?: string;
+                        };
+                        identifiers?: {
+                            kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace?: string;
+                            value?: string;
+                        }[];
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        facts?: {
+                            legalName?: string;
+                            entityNature?: string;
+                            authority?: string | null;
+                            legalAddress?: string | null;
+                            registrationEvidence?: string;
+                        };
+                        identifiers?: {
+                            kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace?: string;
+                            value?: string;
+                        }[];
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "ADD_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        license?: {
+                            namespace?: string;
+                            number?: string;
+                            authority?: string;
+                            evidence?: string;
+                            validFrom?: string;
+                            validTo?: string | null;
+                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTarget?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        license?: {
+                            namespace?: string;
+                            number?: string;
+                            authority?: string;
+                            evidence?: string;
+                            validFrom?: string;
+                            validTo?: string | null;
+                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "VERIFY_REGISTRATION";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTargets?: {
+                            id?: string;
+                            version?: string;
+                        }[];
+                        creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                        evidence?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVOKE_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTarget?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        reason?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    domain: "ORG02";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        /** @enum {unknown} */
+                        kind: "CAMPUS_OPERATION" | "LOCATION";
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CREATE";
+                        facts?: {
+                            campusCode?: string;
+                            campusName?: string;
+                            /** @enum {unknown} */
+                            nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind?: "PHYSICAL";
+                            campusAddress?: string | null;
+                            adminDivision?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                codeSystem?: string;
+                                version?: string;
+                                code?: string;
+                                sourceVersionId?: string;
+                            } | null;
+                            publicPhone?: string | null;
+                            openingDate?: string | null;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            campusCode?: string;
+                            campusName?: string;
+                            /** @enum {unknown} */
+                            nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind?: "PHYSICAL";
+                            campusAddress?: string | null;
+                            adminDivision?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                codeSystem?: string;
+                                version?: string;
+                                code?: string;
+                                sourceVersionId?: string;
+                            } | null;
+                            publicPhone?: string | null;
+                            openingDate?: string | null;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "SCHEDULE_OPENING";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        plannedOpeningAt?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CANCEL_OPENING";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "ACTIVATE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        /** @enum {unknown} */
+                        state?: "TRIAL_RUNNING" | "RUNNING";
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "SUSPEND";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    domain: "ORG03";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: string;
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "VERIFY_SCOPE";
+                        facts?: {
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            };
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string;
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "REVISE_SCOPE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            };
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string;
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "REVOKE_SCOPE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "ESTABLISH";
+                        facts?: {
+                            /** @enum {unknown} */
+                            role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText?: string;
+                            /** @enum {unknown} */
+                            primary?: "Y" | "N";
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string | null;
+                            scopeTargets?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license-scope";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            }[];
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {unknown} */
+                        action?: "REVISE_RELATION" | "REVALIDATE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            /** @enum {unknown} */
+                            role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText?: string;
+                            /** @enum {unknown} */
+                            primary?: "Y" | "N";
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string | null;
+                            scopeTargets?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license-scope";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            }[];
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "CLOSE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    domain: "BUNDLE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    metadata: {
+                        requestId?: string;
+                        job?: {
+                            /** @enum {string} */
+                            action?: "CREATE";
+                        } | {
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            jobId?: string;
+                            expectedCurrentRevision?: string;
+                        };
+                        /** @enum {unknown} */
+                        campus?: "NORTH" | "SOUTH";
+                        retentionSeconds?: number;
+                        contracts?: {
+                            /** @enum {unknown} */
+                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                            contractId?: string;
+                            contractVersionId?: string;
+                        }[];
+                        manifest?: {
+                            /** @enum {string} */
+                            policy?: "ORG_BUNDLE_V1";
+                            rows?: ({
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG01";
+                                creditNamespace?: string;
+                                institutionNamespace?: string;
+                                license?: {
+                                    /** @enum {unknown} */
+                                    intent?: "CREATE" | "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                    namespace?: string;
+                                    authority?: string;
+                                    evidence?: string;
+                                    /** @enum {unknown} */
+                                    endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                };
+                                registration?: {
+                                    /** @enum {unknown} */
+                                    creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                                    evidence?: string;
+                                };
+                            } | {
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG02";
+                                /** @enum {string} */
+                                nodeKind?: "PHYSICAL";
+                                evidence?: string;
+                                adminDivision?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    codeSystem?: string;
+                                    version?: string;
+                                    code?: string;
+                                    sourceVersionId?: string;
+                                } | null;
+                            } | {
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG03";
+                                subject?: {
+                                    /** @enum {string} */
+                                    kind?: "JOB_ALIAS";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    alias?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PLATFORM_REF";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    kind?: "JOB_ALIAS";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    alias?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PLATFORM_REF";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                scopes?: ({
+                                    /** @enum {string} */
+                                    kind?: "EXISTING_SCOPE";
+                                    reference?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license-scope";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "VERIFY_SCOPE";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "ROW_LICENSE";
+                                        subject?: {
+                                            /** @enum {string} */
+                                            kind?: "JOB_ALIAS";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            alias?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PLATFORM_REF";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                    };
+                                    evidence?: string;
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    services?: string[];
+                                })[];
+                            })[];
+                        };
+                    };
+                    bytesBase64?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        policy: "STRICT_ORG_BUNDLE_V1";
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        /** @enum {string} */
+                        qualification: "NOT_EVALUATED";
+                        /** @enum {boolean} */
+                        readOnly: true;
+                        fields: {
+                            dataset: string;
+                            fields: {
+                                code: string;
+                                type: string;
+                            }[];
+                        }[];
+                        issues: {
+                            code: string;
+                            row: number;
+                            column: number;
+                            sheet: string | null;
+                        }[];
+                        cells: {
+                            sheet: string;
+                            row: number;
+                            column: number;
+                            field: string;
+                            value: string;
+                            sourceType: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    submitOrganizationDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        draftId: string;
+                        requestId: string;
+                        expectedVersion: string;
+                        /** @enum {unknown} */
+                        domain: "ORG01" | "ORG02" | "ORG03" | "BUNDLE";
+                        inputId: string;
+                        revisionId: string;
+                        jobId: string;
+                        jobRevisionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    organizationWorkspaceCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    domain: "ORG01";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CREATE";
+                        facts?: {
+                            legalName?: string;
+                            entityNature?: string;
+                            authority?: string | null;
+                            legalAddress?: string | null;
+                            registrationEvidence?: string;
+                        };
+                        identifiers?: {
+                            kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace?: string;
+                            value?: string;
+                        }[];
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        facts?: {
+                            legalName?: string;
+                            entityNature?: string;
+                            authority?: string | null;
+                            legalAddress?: string | null;
+                            registrationEvidence?: string;
+                        };
+                        identifiers?: {
+                            kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace?: string;
+                            value?: string;
+                        }[];
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "ADD_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        license?: {
+                            namespace?: string;
+                            number?: string;
+                            authority?: string;
+                            evidence?: string;
+                            validFrom?: string;
+                            validTo?: string | null;
+                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTarget?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        license?: {
+                            namespace?: string;
+                            number?: string;
+                            authority?: string;
+                            evidence?: string;
+                            validFrom?: string;
+                            validTo?: string | null;
+                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "VERIFY_REGISTRATION";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTargets?: {
+                            id?: string;
+                            version?: string;
+                        }[];
+                        creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                        evidence?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVOKE_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTarget?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        reason?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    domain: "ORG02";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        /** @enum {unknown} */
+                        kind: "CAMPUS_OPERATION" | "LOCATION";
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CREATE";
+                        facts?: {
+                            campusCode?: string;
+                            campusName?: string;
+                            /** @enum {unknown} */
+                            nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind?: "PHYSICAL";
+                            campusAddress?: string | null;
+                            adminDivision?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                codeSystem?: string;
+                                version?: string;
+                                code?: string;
+                                sourceVersionId?: string;
+                            } | null;
+                            publicPhone?: string | null;
+                            openingDate?: string | null;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            campusCode?: string;
+                            campusName?: string;
+                            /** @enum {unknown} */
+                            nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind?: "PHYSICAL";
+                            campusAddress?: string | null;
+                            adminDivision?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                codeSystem?: string;
+                                version?: string;
+                                code?: string;
+                                sourceVersionId?: string;
+                            } | null;
+                            publicPhone?: string | null;
+                            openingDate?: string | null;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "SCHEDULE_OPENING";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        plannedOpeningAt?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CANCEL_OPENING";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "ACTIVATE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        /** @enum {unknown} */
+                        state?: "TRIAL_RUNNING" | "RUNNING";
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "SUSPEND";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    domain: "ORG03";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: string;
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "VERIFY_SCOPE";
+                        facts?: {
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            };
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string;
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "REVISE_SCOPE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            };
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string;
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "REVOKE_SCOPE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "ESTABLISH";
+                        facts?: {
+                            /** @enum {unknown} */
+                            role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText?: string;
+                            /** @enum {unknown} */
+                            primary?: "Y" | "N";
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string | null;
+                            scopeTargets?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license-scope";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            }[];
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {unknown} */
+                        action?: "REVISE_RELATION" | "REVALIDATE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            /** @enum {unknown} */
+                            role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText?: string;
+                            /** @enum {unknown} */
+                            primary?: "Y" | "N";
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string | null;
+                            scopeTargets?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license-scope";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            }[];
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "CLOSE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    };
+                } | {
+                    /** @enum {string} */
+                    domain: "BUNDLE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    metadata: {
+                        requestId?: string;
+                        job?: {
+                            /** @enum {string} */
+                            action?: "CREATE";
+                        } | {
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            jobId?: string;
+                            expectedCurrentRevision?: string;
+                        };
+                        /** @enum {unknown} */
+                        campus?: "NORTH" | "SOUTH";
+                        retentionSeconds?: number;
+                        contracts?: {
+                            /** @enum {unknown} */
+                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                            contractId?: string;
+                            contractVersionId?: string;
+                        }[];
+                        manifest?: {
+                            /** @enum {string} */
+                            policy?: "ORG_BUNDLE_V1";
+                            rows?: ({
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG01";
+                                creditNamespace?: string;
+                                institutionNamespace?: string;
+                                license?: {
+                                    /** @enum {unknown} */
+                                    intent?: "CREATE" | "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                    namespace?: string;
+                                    authority?: string;
+                                    evidence?: string;
+                                    /** @enum {unknown} */
+                                    endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                };
+                                registration?: {
+                                    /** @enum {unknown} */
+                                    creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                                    evidence?: string;
+                                };
+                            } | {
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG02";
+                                /** @enum {string} */
+                                nodeKind?: "PHYSICAL";
+                                evidence?: string;
+                                adminDivision?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    codeSystem?: string;
+                                    version?: string;
+                                    code?: string;
+                                    sourceVersionId?: string;
+                                } | null;
+                            } | {
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG03";
+                                subject?: {
+                                    /** @enum {string} */
+                                    kind?: "JOB_ALIAS";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    alias?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PLATFORM_REF";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    kind?: "JOB_ALIAS";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    alias?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PLATFORM_REF";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                scopes?: ({
+                                    /** @enum {string} */
+                                    kind?: "EXISTING_SCOPE";
+                                    reference?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license-scope";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "VERIFY_SCOPE";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "ROW_LICENSE";
+                                        subject?: {
+                                            /** @enum {string} */
+                                            kind?: "JOB_ALIAS";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            alias?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PLATFORM_REF";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                    };
+                                    evidence?: string;
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    services?: string[];
+                                })[];
+                            })[];
+                        };
+                    };
+                    bytesBase64?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        canRead: boolean;
+                        canWrite: boolean;
+                        canReview: boolean;
+                        observedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    saveOrganizationDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    domain: "ORG01";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CREATE";
+                        facts?: {
+                            legalName?: string;
+                            entityNature?: string;
+                            authority?: string | null;
+                            legalAddress?: string | null;
+                            registrationEvidence?: string;
+                        };
+                        identifiers?: {
+                            kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace?: string;
+                            value?: string;
+                        }[];
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        facts?: {
+                            legalName?: string;
+                            entityNature?: string;
+                            authority?: string | null;
+                            legalAddress?: string | null;
+                            registrationEvidence?: string;
+                        };
+                        identifiers?: {
+                            kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                            namespace?: string;
+                            value?: string;
+                        }[];
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "ADD_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        license?: {
+                            namespace?: string;
+                            number?: string;
+                            authority?: string;
+                            evidence?: string;
+                            validFrom?: string;
+                            validTo?: string | null;
+                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTarget?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        license?: {
+                            namespace?: string;
+                            number?: string;
+                            authority?: string;
+                            evidence?: string;
+                            validFrom?: string;
+                            validTo?: string | null;
+                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "VERIFY_REGISTRATION";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTargets?: {
+                            id?: string;
+                            version?: string;
+                        }[];
+                        creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                        evidence?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVOKE_LICENSE";
+                        target?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        licenseTarget?: {
+                            id?: string;
+                            version?: string;
+                        };
+                        reason?: string;
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    domain: "ORG02";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        /** @enum {unknown} */
+                        kind: "CAMPUS_OPERATION" | "LOCATION";
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CREATE";
+                        facts?: {
+                            campusCode?: string;
+                            campusName?: string;
+                            /** @enum {unknown} */
+                            nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind?: "PHYSICAL";
+                            campusAddress?: string | null;
+                            adminDivision?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                codeSystem?: string;
+                                version?: string;
+                                code?: string;
+                                sourceVersionId?: string;
+                            } | null;
+                            publicPhone?: string | null;
+                            openingDate?: string | null;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "REVISE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            campusCode?: string;
+                            campusName?: string;
+                            /** @enum {unknown} */
+                            nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                            /** @enum {string} */
+                            nodeKind?: "PHYSICAL";
+                            campusAddress?: string | null;
+                            adminDivision?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                codeSystem?: string;
+                                version?: string;
+                                code?: string;
+                                sourceVersionId?: string;
+                            } | null;
+                            publicPhone?: string | null;
+                            openingDate?: string | null;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "SCHEDULE_OPENING";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        plannedOpeningAt?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "CANCEL_OPENING";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "ACTIVATE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        /** @enum {unknown} */
+                        state?: "TRIAL_RUNNING" | "RUNNING";
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "SUSPEND";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    domain: "ORG03";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        kind: string;
+                        id: string;
+                    }[];
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    attachment?: {
+                        filename: string;
+                        bytesBase64: string;
+                    };
+                    command: {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "VERIFY_SCOPE";
+                        facts?: {
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            };
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string;
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "REVISE_SCOPE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            };
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string;
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "REVOKE_SCOPE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "ESTABLISH";
+                        facts?: {
+                            /** @enum {unknown} */
+                            role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText?: string;
+                            /** @enum {unknown} */
+                            primary?: "Y" | "N";
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string | null;
+                            scopeTargets?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license-scope";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            }[];
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {unknown} */
+                        action?: "REVISE_RELATION" | "REVALIDATE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        facts?: {
+                            /** @enum {unknown} */
+                            role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                            relationTypeText?: string;
+                            /** @enum {unknown} */
+                            primary?: "Y" | "N";
+                            catalog?: {
+                                contractId?: string;
+                                contractVersionId?: string;
+                                /** @enum {string} */
+                                codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                version?: string;
+                                sourceVersionId?: string;
+                            };
+                            services?: string[];
+                            licenseScopeText?: string | null;
+                            scopeTargets?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license-scope";
+                                id?: string;
+                                version?: string;
+                                versionId?: string;
+                            }[];
+                        };
+                    } | {
+                        subject?: {
+                            /** @enum {string} */
+                            owner?: "organization-master";
+                            id?: string;
+                        };
+                        campus?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                        };
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string | null;
+                        validFrom?: string;
+                        validTo?: (string) | null;
+                        /** @enum {string} */
+                        action?: "CLOSE";
+                        target?: {
+                            /** @enum {unknown} */
+                            owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    domain: "BUNDLE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    metadata: {
+                        requestId?: string;
+                        job?: {
+                            /** @enum {string} */
+                            action?: "CREATE";
+                        } | {
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            jobId?: string;
+                            expectedCurrentRevision?: string;
+                        };
+                        /** @enum {unknown} */
+                        campus?: "NORTH" | "SOUTH";
+                        retentionSeconds?: number;
+                        contracts?: {
+                            /** @enum {unknown} */
+                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                            contractId?: string;
+                            contractVersionId?: string;
+                        }[];
+                        manifest?: {
+                            /** @enum {string} */
+                            policy?: "ORG_BUNDLE_V1";
+                            rows?: ({
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG01";
+                                creditNamespace?: string;
+                                institutionNamespace?: string;
+                                license?: {
+                                    /** @enum {unknown} */
+                                    intent?: "CREATE" | "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                    namespace?: string;
+                                    authority?: string;
+                                    evidence?: string;
+                                    /** @enum {unknown} */
+                                    endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                };
+                                registration?: {
+                                    /** @enum {unknown} */
+                                    creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                                    evidence?: string;
+                                };
+                            } | {
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG02";
+                                /** @enum {string} */
+                                nodeKind?: "PHYSICAL";
+                                evidence?: string;
+                                adminDivision?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    codeSystem?: string;
+                                    version?: string;
+                                    code?: string;
+                                    sourceVersionId?: string;
+                                } | null;
+                            } | {
+                                row?: number;
+                                /** @enum {unknown} */
+                                intent?: "CREATE" | "REVISE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                governanceScope?: "NORTH" | "SOUTH";
+                                sourceVersionId?: string;
+                                /** @enum {string} */
+                                dataset?: "ORG03";
+                                subject?: {
+                                    /** @enum {string} */
+                                    kind?: "JOB_ALIAS";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    alias?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PLATFORM_REF";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    kind?: "JOB_ALIAS";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    alias?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PLATFORM_REF";
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                catalog?: {
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    /** @enum {string} */
+                                    codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                    version?: string;
+                                    sourceVersionId?: string;
+                                };
+                                services?: string[];
+                                scopes?: ({
+                                    /** @enum {string} */
+                                    kind?: "EXISTING_SCOPE";
+                                    reference?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license-scope";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "VERIFY_SCOPE";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "ROW_LICENSE";
+                                        subject?: {
+                                            /** @enum {string} */
+                                            kind?: "JOB_ALIAS";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            alias?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PLATFORM_REF";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                    };
+                                    evidence?: string;
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    services?: string[];
+                                })[];
+                            })[];
+                        };
+                    };
+                    bytesBase64?: string;
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readOrganizationDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        content: {
+                            /** @enum {string} */
+                            domain: "ORG01";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile?: "CORE" | "FULL";
+                            dependencies?: {
+                                kind: "CAMPUS_OPERATION" | "CLINICAL_PERMISSION";
+                                id: string;
+                            }[];
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            attachment?: {
+                                filename: string;
+                                bytesBase64: string;
+                            };
+                            command: {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "CREATE";
+                                facts?: {
+                                    legalName?: string;
+                                    entityNature?: string;
+                                    authority?: string | null;
+                                    legalAddress?: string | null;
+                                    registrationEvidence?: string;
+                                };
+                                identifiers?: {
+                                    kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                    namespace?: string;
+                                    value?: string;
+                                }[];
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "REVISE";
+                                target?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                facts?: {
+                                    legalName?: string;
+                                    entityNature?: string;
+                                    authority?: string | null;
+                                    legalAddress?: string | null;
+                                    registrationEvidence?: string;
+                                };
+                                identifiers?: {
+                                    kind?: "UNIFIED_CREDIT_CODE" | "INSTITUTION_CODE";
+                                    namespace?: string;
+                                    value?: string;
+                                }[];
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "ADD_LICENSE";
+                                target?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                license?: {
+                                    namespace?: string;
+                                    number?: string;
+                                    authority?: string;
+                                    evidence?: string;
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                };
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "REVISE_LICENSE";
+                                target?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                licenseTarget?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                license?: {
+                                    namespace?: string;
+                                    number?: string;
+                                    authority?: string;
+                                    evidence?: string;
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                };
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "VERIFY_REGISTRATION";
+                                target?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                licenseTargets?: {
+                                    id?: string;
+                                    version?: string;
+                                }[];
+                                creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                                evidence?: string;
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "REVOKE_LICENSE";
+                                target?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                licenseTarget?: {
+                                    id?: string;
+                                    version?: string;
+                                };
+                                reason?: string;
+                            };
+                            requestId: string;
+                            id?: string;
+                            expectedVersion?: string;
+                        } | {
+                            /** @enum {string} */
+                            domain: "ORG02";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile?: "CORE" | "FULL";
+                            dependencies?: {
+                                /** @enum {unknown} */
+                                kind: "CAMPUS_OPERATION" | "LOCATION";
+                                id: string;
+                            }[];
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            attachment?: {
+                                filename: string;
+                                bytesBase64: string;
+                            };
+                            command: {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "CREATE";
+                                facts?: {
+                                    campusCode?: string;
+                                    campusName?: string;
+                                    /** @enum {unknown} */
+                                    nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                    /** @enum {string} */
+                                    nodeKind?: "PHYSICAL";
+                                    campusAddress?: string | null;
+                                    adminDivision?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        codeSystem?: string;
+                                        version?: string;
+                                        code?: string;
+                                        sourceVersionId?: string;
+                                    } | null;
+                                    publicPhone?: string | null;
+                                    openingDate?: string | null;
+                                };
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "REVISE";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                facts?: {
+                                    campusCode?: string;
+                                    campusName?: string;
+                                    /** @enum {unknown} */
+                                    nodeRole?: "HEADQUARTERS" | "HIGH_TECH" | "CITY_CENTER";
+                                    /** @enum {string} */
+                                    nodeKind?: "PHYSICAL";
+                                    campusAddress?: string | null;
+                                    adminDivision?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        codeSystem?: string;
+                                        version?: string;
+                                        code?: string;
+                                        sourceVersionId?: string;
+                                    } | null;
+                                    publicPhone?: string | null;
+                                    openingDate?: string | null;
+                                };
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "SCHEDULE_OPENING";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                plannedOpeningAt?: string;
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "CANCEL_OPENING";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "ACTIVATE";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                /** @enum {unknown} */
+                                state?: "TRIAL_RUNNING" | "RUNNING";
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "SUSPEND";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                            };
+                            requestId: string;
+                            id?: string;
+                            expectedVersion?: string;
+                        } | {
+                            /** @enum {string} */
+                            domain: "ORG03";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile?: "CORE" | "FULL";
+                            dependencies?: {
+                                kind: string;
+                                id: string;
+                            }[];
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            attachment?: {
+                                filename: string;
+                                bytesBase64: string;
+                            };
+                            command: {
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string | null;
+                                validFrom?: string;
+                                validTo?: (string) | null;
+                                /** @enum {string} */
+                                action?: "VERIFY_SCOPE";
+                                facts?: {
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                    catalog?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        /** @enum {string} */
+                                        codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                        version?: string;
+                                        sourceVersionId?: string;
+                                    };
+                                    services?: string[];
+                                    licenseScopeText?: string;
+                                };
+                            } | {
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string | null;
+                                validFrom?: string;
+                                validTo?: (string) | null;
+                                /** @enum {string} */
+                                action?: "REVISE_SCOPE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                facts?: {
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    };
+                                    catalog?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        /** @enum {string} */
+                                        codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                        version?: string;
+                                        sourceVersionId?: string;
+                                    };
+                                    services?: string[];
+                                    licenseScopeText?: string;
+                                };
+                            } | {
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string | null;
+                                validFrom?: string;
+                                validTo?: (string) | null;
+                                /** @enum {string} */
+                                action?: "REVOKE_SCOPE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                            } | {
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string | null;
+                                validFrom?: string;
+                                validTo?: (string) | null;
+                                /** @enum {string} */
+                                action?: "ESTABLISH";
+                                facts?: {
+                                    /** @enum {unknown} */
+                                    role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                    relationTypeText?: string;
+                                    /** @enum {unknown} */
+                                    primary?: "Y" | "N";
+                                    catalog?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        /** @enum {string} */
+                                        codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                        version?: string;
+                                        sourceVersionId?: string;
+                                    };
+                                    services?: string[];
+                                    licenseScopeText?: string | null;
+                                    scopeTargets?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license-scope";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    }[];
+                                };
+                            } | {
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string | null;
+                                validFrom?: string;
+                                validTo?: (string) | null;
+                                /** @enum {unknown} */
+                                action?: "REVISE_RELATION" | "REVALIDATE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                facts?: {
+                                    /** @enum {unknown} */
+                                    role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                    relationTypeText?: string;
+                                    /** @enum {unknown} */
+                                    primary?: "Y" | "N";
+                                    catalog?: {
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        /** @enum {string} */
+                                        codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                        version?: string;
+                                        sourceVersionId?: string;
+                                    };
+                                    services?: string[];
+                                    licenseScopeText?: string | null;
+                                    scopeTargets?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license-scope";
+                                        id?: string;
+                                        version?: string;
+                                        versionId?: string;
+                                    }[];
+                                };
+                            } | {
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string | null;
+                                validFrom?: string;
+                                validTo?: (string) | null;
+                                /** @enum {string} */
+                                action?: "CLOSE";
+                                target?: {
+                                    /** @enum {unknown} */
+                                    owner?: "organization-master/operating-relation" | "organization-master/license-scope";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                            };
+                            requestId: string;
+                            id?: string;
+                            expectedVersion?: string;
+                        } | {
+                            /** @enum {string} */
+                            domain: "BUNDLE";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            metadata: {
+                                requestId?: string;
+                                job?: {
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                retentionSeconds?: number;
+                                contracts?: {
+                                    /** @enum {unknown} */
+                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                }[];
+                                manifest?: {
+                                    /** @enum {string} */
+                                    policy?: "ORG_BUNDLE_V1";
+                                    rows?: ({
+                                        row?: number;
+                                        /** @enum {unknown} */
+                                        intent?: "CREATE" | "REVISE";
+                                        target?: {
+                                            /** @enum {unknown} */
+                                            owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        governanceScope?: "NORTH" | "SOUTH";
+                                        sourceVersionId?: string;
+                                        /** @enum {string} */
+                                        dataset?: "ORG01";
+                                        creditNamespace?: string;
+                                        institutionNamespace?: string;
+                                        license?: {
+                                            /** @enum {unknown} */
+                                            intent?: "CREATE" | "REVISE";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/license";
+                                                id?: string;
+                                                version?: string;
+                                                versionId?: string;
+                                            };
+                                            namespace?: string;
+                                            authority?: string;
+                                            evidence?: string;
+                                            /** @enum {unknown} */
+                                            endKind?: "FINITE" | "VERIFIED_UNBOUNDED" | "UNKNOWN";
+                                        };
+                                        registration?: {
+                                            /** @enum {unknown} */
+                                            creditCodeStatus?: "HELD" | "NOT_APPLICABLE";
+                                            evidence?: string;
+                                        };
+                                    } | {
+                                        row?: number;
+                                        /** @enum {unknown} */
+                                        intent?: "CREATE" | "REVISE";
+                                        target?: {
+                                            /** @enum {unknown} */
+                                            owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        governanceScope?: "NORTH" | "SOUTH";
+                                        sourceVersionId?: string;
+                                        /** @enum {string} */
+                                        dataset?: "ORG02";
+                                        /** @enum {string} */
+                                        nodeKind?: "PHYSICAL";
+                                        evidence?: string;
+                                        adminDivision?: {
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            codeSystem?: string;
+                                            version?: string;
+                                            code?: string;
+                                            sourceVersionId?: string;
+                                        } | null;
+                                    } | {
+                                        row?: number;
+                                        /** @enum {unknown} */
+                                        intent?: "CREATE" | "REVISE";
+                                        target?: {
+                                            /** @enum {unknown} */
+                                            owner?: "organization-master" | "organization-master/campus" | "organization-master/operating-relation";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        governanceScope?: "NORTH" | "SOUTH";
+                                        sourceVersionId?: string;
+                                        /** @enum {string} */
+                                        dataset?: "ORG03";
+                                        subject?: {
+                                            /** @enum {string} */
+                                            kind?: "JOB_ALIAS";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            alias?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PLATFORM_REF";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            kind?: "JOB_ALIAS";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            alias?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PLATFORM_REF";
+                                            /** @enum {unknown} */
+                                            dataset?: "ORG01" | "ORG02" | "ORG03";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        role?: "OPERATOR" | "REGISTRANT" | "MANAGER" | "BILLING" | "OTHER";
+                                        catalog?: {
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            /** @enum {string} */
+                                            codeSystem?: "SYNTHETIC_OPERATING_SERVICE";
+                                            version?: string;
+                                            sourceVersionId?: string;
+                                        };
+                                        services?: string[];
+                                        scopes?: ({
+                                            /** @enum {string} */
+                                            kind?: "EXISTING_SCOPE";
+                                            reference?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/license-scope";
+                                                id?: string;
+                                                version?: string;
+                                                versionId?: string;
+                                            };
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "VERIFY_SCOPE";
+                                            license?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/license";
+                                                id?: string;
+                                                version?: string;
+                                                versionId?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "ROW_LICENSE";
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    kind?: "JOB_ALIAS";
+                                                    /** @enum {unknown} */
+                                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                                    alias?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind?: "PLATFORM_REF";
+                                                    /** @enum {unknown} */
+                                                    dataset?: "ORG01" | "ORG02" | "ORG03";
+                                                    id?: string;
+                                                    expectedVersion?: string;
+                                                };
+                                            };
+                                            evidence?: string;
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                            services?: string[];
+                                        })[];
+                                    })[];
+                                };
+                            };
+                            bytesBase64?: string;
+                            requestId: string;
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        submission: {
+                            draftId: string;
+                            requestId: string;
+                            expectedVersion: string;
+                            /** @enum {unknown} */
+                            domain: "ORG01" | "ORG02" | "ORG03" | "BUNDLE";
+                            inputId: string;
+                            revisionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listOrganizationDrafts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        domain: string;
+                        campus: string;
+                        action: string | null;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    discardOrganizationDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                    };
                 };
             };
             /** @description Default Response */

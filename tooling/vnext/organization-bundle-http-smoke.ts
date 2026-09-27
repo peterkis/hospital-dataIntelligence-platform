@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
+import type {Catalog} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {createOrganizationBundleClient} from '../../packages/generated-api-client/src/vnext-client.js';
 import type {openOrganizationImport} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import type {organizationBundleFixture} from './organization-bundle-fixture.js';
-export async function organizationBundleHttpSmoke(owner:ReturnType<typeof openOrganizationImport>,fixture:Awaited<ReturnType<typeof organizationBundleFixture>>,record:(event:unknown)=>void=()=>{}){
- const app=await buildCatalogServer(undefined,'CONTROL_PLANE',undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+export async function organizationBundleHttpSmoke(owner:ReturnType<typeof openOrganizationImport>,fixture:Awaited<ReturnType<typeof organizationBundleFixture>>,record:(event:unknown)=>void=()=>{},catalog?:Catalog){
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
  let loseNextAck=false;
  app.addHook('onSend',async(request,reply,payload)=>{if(loseNextAck&&request.url.endsWith('/apply')&&reply.statusCode===200){loseNextAck=false;reply.raw.destroy();}return payload;});
  try{
@@ -16,6 +17,10 @@ export async function organizationBundleHttpSmoke(owner:ReturnType<typeof openOr
   assert.equal((await createOrganizationBundleClient(base,'outsider').revision(ref)).response.status,403);
   const extra=await fetch(base+'/api/vnext/import/organization-bundles/revision',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({...ref,actor:'reviewer'})});assert.equal(extra.status,400);
   const validate=await writer.validate({...ref,requestId:randomUUID()});assert.equal(validate.response.status,200,JSON.stringify(validate.error));assert.equal(validate.data!.decision,'BLOCKED');
+  if(catalog){
+   const preview=await catalog.buildDryRun('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',...ref,runId:validate.data!.runId!,commands:[{row:1,intent:'CREATE',dependencies:[]}]});
+   assert.ok(preview.analysisAvailable);assert.ok(preview.blockers.includes('INTENT_MAPPING_UNAVAILABLE'));record({dryRun:'BLOCKED_DIAGNOSTIC_PASS',method:'OWNER_FROM_HTTP_VALIDATION'});
+  }
   const preauth=await admin.preauthorize({...ref,requestId:randomUUID(),grants:[2,3,4].flatMap(row=>['maker','reviewer'].map(actor=>({row,actor,permissions:['READ','CREATE','REVIEW'] as const})))});assert.equal(preauth.response.status,200,JSON.stringify(preauth.error));
   const legal=await reviewer.legalReview(ref);assert.equal(legal.response.status,200,JSON.stringify(legal.error));assert.ok(legal.data!.cells.length>0);
   const verify=await reviewer.verify({...ref,requestId:randomUUID(),digest:legal.data!.digest});assert.equal(verify.response.status,200,JSON.stringify(verify.error));

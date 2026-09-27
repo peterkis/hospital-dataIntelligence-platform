@@ -17,6 +17,13 @@ export function authenticateRegistrationEvidence(value:{binding:unknown[];envelo
  if(!provider)throw new Error('KEY_UNAVAILABLE');
  try{const e=value.envelope,d=createDecipheriv('aes-256-gcm',provider.payload(e.keyId),Buffer.from(e.nonce,'hex'));d.setAAD(Buffer.from(JSON.stringify(value.binding)));d.setAuthTag(Buffer.from(e.tag,'hex'));return Buffer.concat([d.update(Buffer.from(e.ciphertext,'hex')),d.final()]);}catch{throw new Error('PAYLOAD_UNAVAILABLE');}
 }
+export function sealProtectedPayload(raw:Uint8Array,binding:unknown[],provider?:KeyProviderPort){
+ if(!provider)throw new Error('KEY_UNAVAILABLE');
+ const {id,key}=provider.current(),nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,nonce);
+ cipher.setAAD(Buffer.from(JSON.stringify(binding)));
+ const ciphertext=Buffer.concat([cipher.update(raw),cipher.final()]);
+ return {keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:ciphertext.toString('hex')};
+}
 export class LocalSyntheticKeyProvider implements KeyProviderPort {
   private readonly keys = new Map<string, KeyObject>();
   private active = '';
@@ -64,16 +71,13 @@ export function protectedArtifacts(db: Kysely<DB>|CatalogTransactionScope, provi
       input={...input};
       const raw = Buffer.from(bytes);
       try {
-        const keys = keyProvider(); const {id, key} = keys.current();
-        const binding = JSON.stringify([input.jobId,input.revisionId,input.kind,input.campus,input.purpose,input.requestId]);
-        const nonce = randomBytes(12); const cipher = createCipheriv('aes-256-gcm',key,nonce);
-        cipher.setAAD(Buffer.from(binding));
-        const ciphertext = Buffer.concat([cipher.update(raw),cipher.final()]);
+        const keys = keyProvider();
+        const binding = [input.jobId,input.revisionId,input.kind,input.campus,input.purpose,input.requestId];
         // Domain-separated keyed digest; raw/low-entropy SHA never enters outcome or audit.
         const digest = createHmac('sha256',keys.lookup()).update('PROTECTED_STORE_V1\0').update(JSON.stringify([
           input.scope,input.campus,input.purpose,input.requestId,input.jobId,input.revisionId,input.kind,input.retentionSeconds,
         ])).update(raw).digest('hex');
-        const envelope={keyId:id,nonce:nonce.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:ciphertext.toString('hex')};
+        const envelope=sealProtectedPayload(raw,binding,keys);
         const result=await transaction(async trx=>{
           const result=(await sql<{result:Result}>`select governance_catalog.protected_command(${actor},'STORE',${JSON.stringify(input)}::jsonb,${JSON.stringify(envelope)}::jsonb,${digest}) as result`.execute(trx)).rows[0]!.result;
           // A normal SQL denial must commit its minimal audit before the caller receives the error.

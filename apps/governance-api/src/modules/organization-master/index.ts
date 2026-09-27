@@ -128,10 +128,11 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
     return {status:[...perLicense.values()].some(spans=>covered(spans,from,to))?'LICENSED_REGISTRATION' as const:'NOT_ESTABLISHED' as const,organizationId:input.id,validFrom:from,validTo:to,operatingPermission:'NOT_EVALUABLE' as const};
    });}catch(error){throw safe(error);}
   },
-  async historyDetails(actor:string,id:string){
-   check(Id,id);try{return await root(async scope=>{
+  async historyDetails(actor:string,id:string,asOf?:string){
+   check(Id,id);const at=asOf===undefined?null:localTime(asOf);try{return await root(async scope=>{
     const s=(await sql<{r:Snapshot}>`select organization_master.qualification_snapshot(${actor},${id}::uuid) r`.execute(scope)).rows[0]!.r;
-    return {organizationId:id,licenses:s.licenses.map(l=>({id:l.license_id,version:String(l.number),versionId:l.id,authority:l.authority,validFrom:stamp(l.valid_from),validTo:l.valid_to&&stamp(l.valid_to),endKind:l.end_kind,revoked:l.revoked,recordedAt:stamp(l.recorded_at)})),verifications:s.verifications.map(v=>({id:v.id,subjectVersionId:v.subject_version,licenseVersionIds:v.licenses,validFrom:stamp(v.valid_from),validTo:v.valid_to&&stamp(v.valid_to),recordedAt:stamp(v.recorded_at)}))};
+    if(at!==null&&!s.versions.some(v=>stamp(v.recorded_at)<=at))throw new Error('NOT_FOUND');
+    return {organizationId:id,licenses:s.licenses.filter(l=>at===null||stamp(l.recorded_at)<=at).map(l=>({id:l.license_id,version:String(l.number),versionId:l.id,authority:l.authority,validFrom:stamp(l.valid_from),validTo:l.valid_to&&stamp(l.valid_to),endKind:l.end_kind,revoked:l.revoked,recordedAt:stamp(l.recorded_at)})),verifications:s.verifications.filter(v=>at===null||stamp(v.recorded_at)<=at).map(v=>({id:v.id,subjectVersionId:v.subject_version,licenseVersionIds:v.licenses,validFrom:stamp(v.valid_from),validTo:v.valid_to&&stamp(v.valid_to),recordedAt:stamp(v.recorded_at)}))};
    });}catch(error){throw safe(error);}
   },
   async readRestrictedInput(actor:string,id:string){check(Id,id);try{const r=await root(scope=>record(scope,actor,id,'READ_RESTRICTED'));return unseal(r);}catch(error){throw safe(error);}},
@@ -180,3 +181,6 @@ export * from './operating/contracts.js';
 
 export {openOrganizationImport} from './import/index.js';
 export * from './import/contracts.js';
+
+export {openOrganizationWorkspace} from './workspace/index.js';
+export {ApplicationListSchema,BundleListSchema,type ApplicationList,type BundleList,DraftSaveSchema,DraftContentSchema,DraftActionSchema,SubmissionSchema,WorkspaceBundleSchema,ApplicationSchema,ApplicationAccessSchema,MaterialReviewSchema,PreflightSchema,ObjectContextInputSchema,ObjectContextSchema,PrepareRevisionSchema,type ObjectContextInput,type PrepareRevision,type PreflightInput,type MaterialReview,type DraftAction,type DraftSave,type DraftContent} from './workspace/index.js';

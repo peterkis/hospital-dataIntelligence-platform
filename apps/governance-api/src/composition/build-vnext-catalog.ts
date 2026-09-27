@@ -1,3 +1,4 @@
+import {registerOrganizationWorkspaceRoutes,type OrganizationWorkspaceHttpContext} from '../platform/fastify/vnext-organization-workspace-routes.js';
 import {registerOperatingRoutes,type OperatingHttpContext} from '../platform/fastify/vnext-operating-routes.js';
 import {registerOrganizationImportRoutes,type OrganizationImportHttpContext} from '../platform/fastify/vnext-organization-import-routes.js';
 import {registerCampusRoutes,type CampusHttpContext} from '../platform/fastify/vnext-campus-routes.js';
@@ -11,10 +12,10 @@ import { registerWorkbenchRoutes } from '../platform/fastify/vnext-workbench-rou
 import { validCatalogLocalTime, catalogClockTime } from '../platform/fastify/vnext-local-time.js';
 import {registerOrganizationRoutes,type OrganizationHttpContext} from '../platform/fastify/vnext-organization-routes.js';
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext) {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
-  app.addHook('onRequest',async request=>{if(request.method==='GET')started.set(request,performance.now());});
+  app.addHook('onRequest',async(request,reply)=>{if(request.url.startsWith('/api/vnext/'))reply.header('Cache-Control','no-store');if(request.method==='GET')started.set(request,performance.now());});
   app.addHook('onResponse',async(request,reply)=>{
     const route=request.routeOptions.url;
     if(request.method==='GET'&&route?.startsWith('/api/vnext/'))process.stdout.write(JSON.stringify({event:'VNEXT_REFERENCE_READ',requestId:request.id,route,status:reply.statusCode,completedAt:catalogClockTime(),elapsedMs:Math.max(0,Math.round(performance.now()-(started.get(request)??performance.now())))})+'\n');
@@ -36,6 +37,7 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
     const messages:Record<string,string>={LOCAL_TIME_REQUIRED:'请输入真实有效的本地日历日期和时间，不附加时区。',SOURCE_REFERENCE_INVALID:'来源证据必须是首次合成根标记或有效的来源 UUID。',BOOTSTRAP_ROOT_IMMUTABLE:'首次合成根必须保留根来源标记。',SOURCE_REFERENCE_CYCLE:'来源证据不能形成循环依赖。',OWNER_PERIOD_CONFLICT:'责任期间与已有权威 Owner 冲突，请核对覆盖范围。',SELF_REVIEW_FORBIDDEN:'提交人与复核人必须是不同身份。',STALE_HEAD:'目录已变更，请刷新后重新核对。',SOURCE_NOT_READY:'来源尚未批准、已废止或不在有效期间。',ACCESS_DENIED:'当前身份没有此范围的权限。'};
     messages['INVALID_BUSINESS_PERIOD']='业务结束时间必须晚于业务起始时间；不设结束请留空。';messages['IMPACT_REVIEW_MISMATCH']='来源引用影响已变化或尚未核对，请重新载入变更影响摘要。';
     messages['CATALOG_CODE_CONFLICT']='此范围和类型中的技术码已存在，请使用原对象或选择其他技术码。';
+    Object.assign(messages,{STALE_HEAD:'对象或草稿已出现新版本，本次内容未覆盖服务器数据。请重新读取并核对。',MAKER_CHECKER_REQUIRED:'提交人与独立核验、审批人不能是同一身份，包括同人别名。',OPERATING_CLOSED:'关系或许可范围已终态关闭，不能通过修订恢复。',CLOSED_INPUT_REQUIRED:'申请结构尚不完整或存在不支持的字段，请核对表单。',APPROVAL_REQUIRED:'尚未满足准确核验或独立审批要求。',BLOCKED_DEPENDENCY:'必要条件、准确引用或相应能力尚未就绪，不能降级继续。'});
     Object.assign(messages,{CONTRACT_VALIDATION_BLOCKED:'条件、标准采纳或来源期间仍有阻断项，请先校验契约。',CONTRACT_IMPACT_REVIEW_MISMATCH:'影响义务已变化或尚未审签，请重新查看影响并批准。',IMMUTABLE_RULE_VERSION:'已有规则版本不可覆盖，请使用新的规则版本。',PARAMETER_NOT_APPROVED:'参数定义尚未批准或引用摘要不一致。',PARAMETER_PERIOD_NOT_COVERED:'参数定义及其来源不能覆盖契约的完整期间。',PARAMETER_SCOPE_REQUIRED:'参数范围必须明确，并与固定来源 owner 的范围一致。',REFERENCE_INVALID:'引用定义与该数据集的原字段约束不一致。'});
     const field=code==='CATALOG_CODE_CONFLICT'?'code':code==='SOURCE_REFERENCE_INVALID'?'sourceEvidence':code==='INVALID_BUSINESS_PERIOD'?'validTo':code==='LOCAL_TIME_REQUIRED'&&typeof error==='object'&&error!==null&&'field' in error&&typeof error.field==='string'&&['validFrom','validTo','asOf','businessAt'].includes(error.field)?error.field:undefined;
     const contractFields:Record<string,string>={UNKNOWN_FIELD:'definition.fields[].code',INVALID_FIELD_ENUM:'definition.fields[]',CODESET_AUTHORITY_INVALID:'definition.codeSets[]',CODESET_REQUIRED:'definition.codeSets[]',REFERENCE_INVALID:'definition.references[]',REFERENCE_REQUIRED:'definition.references[]',PARAMETER_NOT_APPROVED:'definition.references[].parameterVersionId',PARAMETER_PERIOD_NOT_COVERED:'definition.references[].parameterVersionId',PARAMETER_SCOPE_REQUIRED:'campus',IMMUTABLE_RULE_VERSION:'definition.ruleVersion'};
@@ -49,5 +51,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerCampusRoutes(app,campus);
   registerOperatingRoutes(app,operating);
   registerOrganizationImportRoutes(app,organizationImport);
+  registerOrganizationWorkspaceRoutes(app,workspace);
   return app;
 }

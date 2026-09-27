@@ -236,12 +236,10 @@ export function openOrganizationImport(connection:string,provider?:KeyProviderPo
   async beforeCommit(scope,actor,unit,approval,facts){await setContext(scope,actor,{...approval,jobId:unit.input.jobId,revisionId:unit.input.revisionId,legalReviewId:unit.basis['legalReviewId'],phase:'COMMIT',facts});},
   async exactRead(scope,actor,input,fact){const facts=(await sql<{r:OwnerFact[]|null}>`select organization_master.bundle_committed_facts(${actor},${input.jobId}::uuid,${input.revisionId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r;return facts?.find(f=>f.owner===fact.owner&&f.id===fact.id&&f.version===fact.version)??null;},
  };
- const coordinator=applyCoordinator(db,provider,ownerPort);
- return {
-  async receive(actor:string,input:ReceiveOrganizationBundleInput,bytes:Uint8Array){
+ const receive=async(actor:string,input:ReceiveOrganizationBundleInput,bytes:Uint8Array,execute:typeof root)=>{
    check(ReceiveOrganizationBundleSchema,input);input=structuredClone(input);bytes=Uint8Array.from(bytes);if(!provider)throw new Error('KEY_UNAVAILABLE');
    const bindings=[...input.contracts].sort((a,b)=>a.dataset.localeCompare(b.dataset)),manifestDigest=planBinding(provider,'ORG_BUNDLE_MANIFEST_V1',input.manifest),contractsDigest=planBinding(provider,'ORG_BUNDLE_CONTRACTS_V1',bindings);
-   return root(async scope=>{
+   return execute(async scope=>{
     const definitions=await contracts(scope,actor,bindings);
     const fields=Object.fromEntries(definitions.map(c=>[c.dataset,c.definition.fields.map(f=>({code:f.code,type:f.type}))])) as Record<OrganizationSheet,ParserField[]>;
     const parsed=await parseOrganizationWorkbookBounded(bytes,fields);
@@ -258,7 +256,11 @@ export function openOrganizationImport(connection:string,provider?:KeyProviderPo
      return (await sql<{r:{jobId:string;revisionId:string;rawArtifactId:string;manifestArtifactId:string}}>`select organization_master.bundle_register(${actor},${JSON.stringify(registration)}::jsonb) r`.execute(scope)).rows[0]!.r;
     }finally{content.fill(0);}
    });
-  },
+ };
+ const coordinator=applyCoordinator(db,provider,ownerPort);
+ return {
+  receive:(actor:string,input:ReceiveOrganizationBundleInput,bytes:Uint8Array)=>receive(actor,input,bytes,root),
+  receiveInTransaction:(scope:Scope,actor:string,input:ReceiveOrganizationBundleInput,bytes:Uint8Array)=>receive(actor,input,bytes,work=>work(scope)),
   async readRevision(actor:string,input:BundleRevisionInput){check(BundleRevisionSchema,input);input=structuredClone(input);return root(async scope=>{const result=await readInTransaction(scope,actor,input);return {jobId:input.jobId,revisionId:input.revisionId,currentRevisionId:result.record.currentRevisionId,manifest:result.manifest,contracts:result.record.bindings};});},
   async preauthorize(actor:string,input:BundlePreauthorizeInput){check(BundlePreauthorizeSchema,input);input=structuredClone(input);return root(async scope=>{
    const data=await readInTransaction(scope,actor,input),grants=input.grants.flatMap(g=>{const row=data.manifest.rows.find(r=>r.dataset==='ORG03'&&r.row===g.row);if(!row||row.dataset!=='ORG03')throw new Error('ROW_REFERENCE_INVALID');return g.permissions.map(permission=>({resource:resource(input,row),grantee:g.actor,permission,allowed:g.allowed??true}));});

@@ -1,0 +1,29 @@
+import {ApplicationListSchema,BundleListSchema,type ApplicationList,type BundleList} from '../../modules/organization-master/index.js';
+import {Type} from 'typebox';
+import type {FastifyInstance,FastifyRequest} from 'fastify';
+import {DraftSaveSchema,DraftContentSchema,DraftActionSchema,SubmissionSchema,WorkspaceBundleSchema,ApplicationSchema,ApplicationAccessSchema,MaterialReviewSchema,PreflightSchema,ObjectContextInputSchema,ObjectContextSchema,PrepareRevisionSchema,type ObjectContextInput,type PrepareRevision,type PreflightInput,type MaterialReview,Id,type DraftAction,type DraftSave,type DraftContent,type openOrganizationWorkspace} from '../../modules/organization-master/index.js';
+const closed={additionalProperties:false} as const;
+const Text=Type.String();
+const Saved=Type.Object({id:Id,version:Text,state:Type.Enum(['EDITING','DISCARDED','SUBMITTED']),recordedAt:Text},closed);
+const ErrorSchema=Type.Object({code:Text,message:Text,field:Type.Optional(Text)},closed);
+const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,413:ErrorSchema,500:ErrorSchema,503:ErrorSchema};
+export interface OrganizationWorkspaceHttpContext {owner:ReturnType<typeof openOrganizationWorkspace>;actor:(request:FastifyRequest)=>string}
+export function registerOrganizationWorkspaceRoutes(app:FastifyInstance,context?:OrganizationWorkspaceHttpContext){
+ const owner=()=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return context.owner;};
+ const actor=(r:FastifyRequest)=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return context.actor(r);};
+ const base='/api/vnext/organization-workspace';
+ app.post<{Body:BundleList}>(base+'/bundles/list',{schema:{operationId:'listWorkspaceOrganizationBundles',body:BundleListSchema,response:{200:Type.Array(WorkspaceBundleSchema),...errors}}},r=>owner().listBundles(actor(r),r.body));
+ app.post<{Body:ObjectContextInput}>(base+'/references/context',{schema:{operationId:'organizationObjectContext',body:ObjectContextInputSchema,response:{200:ObjectContextSchema,...errors}}},r=>owner().objectContext(actor(r),r.body));
+ app.post<{Body:PrepareRevision}>(base+'/references/revision-source',{schema:{operationId:'prepareOrganizationRevision',body:PrepareRevisionSchema,response:{200:DraftContentSchema,...errors}}},r=>owner().prepareRevision(actor(r),r.body));
+ app.post<{Body:PreflightInput}>(base+'/applications/preflight',{schema:{operationId:'preflightOrganizationApplication',body:PreflightSchema,response:{200:Type.Object({status:Type.Enum(['ELIGIBLE_FOR_CANDIDATE','BLOCKED']),codes:Type.Array(Text),observedAt:Text},closed),...errors}}},r=>owner().preflight(actor(r),r.body));
+ app.post<{Body:MaterialReview}>(base+'/applications/materials',{schema:{operationId:'readOrganizationCandidateMaterials',body:MaterialReviewSchema,response:{200:Type.Object({candidateId:Id,digest:Text,materials:Type.Array(Type.Object({artifactId:Id,bytesBase64:Text},closed))},closed),...errors}}},r=>owner().reviewMaterials(actor(r),r.body));
+ app.post<{Body:ApplicationList}>(base+'/applications/list',{schema:{operationId:'listOrganizationApplications',body:ApplicationListSchema,response:{200:Type.Array(ApplicationSchema),...errors}}},r=>owner().listApplications(actor(r),r.body));
+ app.post<{Body:{inputId:string}}>(base+'/applications/access',{schema:{operationId:'organizationApplicationAccess',body:Type.Object({inputId:Id},closed),response:{200:ApplicationAccessSchema,...errors}}},r=>owner().applicationCapabilities(actor(r),r.body.inputId));
+ app.post<{Body:DraftContent}>(base+'/workbook/preview',{bodyLimit:2000000,schema:{operationId:'previewOrganizationWorkbook',body:DraftContentSchema,response:{200:Type.Object({policy:Type.Literal('STRICT_ORG_BUNDLE_V1'),structuralStatus:Type.Enum(['PARSED','REJECTED']),qualification:Type.Literal('NOT_EVALUATED'),readOnly:Type.Literal(true),fields:Type.Array(Type.Object({dataset:Text,fields:Type.Array(Type.Object({code:Text,type:Text},closed))},closed)),issues:Type.Array(Type.Object({code:Text,row:Type.Integer(),column:Type.Integer(),sheet:Type.Union([Text,Type.Null()])},closed)),cells:Type.Array(Type.Object({sheet:Text,row:Type.Integer(),column:Type.Integer(),field:Text,value:Text,sourceType:Text},closed))},closed),...errors}}},r=>owner().previewWorkbook(actor(r),r.body));
+ app.post<{Body:DraftAction}>(base+'/drafts/submit',{schema:{operationId:'submitOrganizationDraft',body:DraftActionSchema,response:{200:SubmissionSchema,...errors}}},r=>owner().submitDraft(actor(r),r.body));
+ app.post<{Body:DraftContent}>(base+'/capabilities',{bodyLimit:2000000,schema:{operationId:'organizationWorkspaceCapabilities',body:DraftContentSchema,response:{200:Type.Object({canRead:Type.Boolean(),canWrite:Type.Boolean(),canReview:Type.Boolean(),observedAt:Text},closed),...errors}}},r=>owner().capabilities(actor(r),r.body));
+ app.post<{Body:DraftSave}>(base+'/drafts/save',{bodyLimit:2000000,schema:{operationId:'saveOrganizationDraft',body:DraftSaveSchema,response:{200:Saved,...errors}}},r=>owner().saveDraft(actor(r),r.body));
+ app.post<{Body:{id:string}}>(base+'/drafts/read',{schema:{operationId:'readOrganizationDraft',body:Type.Object({id:Id},closed),response:{200:Type.Object({...Saved.properties,content:DraftSaveSchema,submission:Type.Union([SubmissionSchema,Type.Null()])},closed),...errors}}},r=>owner().readDraft(actor(r),r.body.id));
+ app.post(base+'/drafts/list',{schema:{operationId:'listOrganizationDrafts',body:Type.Object({},closed),response:{200:Type.Array(Type.Object({...Saved.properties,domain:Text,campus:Text,action:Type.Union([Text,Type.Null()])},closed)),...errors}}},r=>owner().listDrafts(actor(r)));
+ app.post<{Body:{id:string;expectedVersion:string;requestId:string}}>(base+'/drafts/discard',{schema:{operationId:'discardOrganizationDraft',body:Type.Object({id:Id,expectedVersion:Type.String({pattern:'^[1-9][0-9]*$'}),requestId:Id},closed),response:{200:Saved,...errors}}},r=>owner().discardDraft(actor(r),r.body));
+}

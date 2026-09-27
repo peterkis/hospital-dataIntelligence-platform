@@ -6,12 +6,13 @@ import {operatingScenario} from './operating-scenario.js';
 import {organizationImportContracts} from './organization-import-contract-fixture.js';
 import {organizationWorkbook} from './organization-workbook-fixture.js';
 import {peer,quote} from './lineage.mjs';
-export async function organizationBundleFixture(receipt:{name:string},connection:string,provider:KeyProviderPort,catalog:Catalog,reusePublishedServiceCatalog=false){
- const x=await operatingScenario(receipt,connection,provider,catalog,reusePublishedServiceCatalog),contracts=await organizationImportContracts(catalog,x.source.versionId);
+export async function organizationBundleFixture(receipt:{name:string},connection:string,provider:KeyProviderPort,catalog:Catalog,reusePublishedServiceCatalog=false,reusePublishedFileContracts=false){
+ const x=await operatingScenario(receipt,connection,provider,catalog,reusePublishedServiceCatalog),contracts=await organizationImportContracts(catalog,x.source.versionId,reusePublishedFileContracts);
  provisionBundleAuthority(receipt,provider);
  const datasets=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.filter(i=>['ORG01','ORG02','ORG03'].includes(i.code)&&i.kind==='DATASET');
  for(const dataset of datasets)peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING`);
  peer(receipt.name,`INSERT INTO vnext_control.actor VALUES('bundle-admin','SYNTHETIC_BUNDLE_ADMIN',true) ON CONFLICT DO NOTHING;
+ DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM vnext_control.actor WHERE code='bundle-admin' AND identity_code='SYNTHETIC_BUNDLE_ADMIN' AND active) THEN RAISE EXCEPTION 'SYNTHETIC_ACTOR_IDENTITY_MISMATCH';END IF;END $$;
  INSERT INTO vnext_control.actor_grant SELECT 'bundle-admin','SYNTHETIC',p FROM unnest(ARRAY['READ','WRITE']) p ON CONFLICT DO NOTHING;
  INSERT INTO organization_master.bundle_administrator VALUES('bundle-admin') ON CONFLICT DO NOTHING;
  INSERT INTO organization_master.access SELECT 'bundle-admin','00000000-0000-0000-0000-000000000000'::uuid,s,'READ' FROM unnest(ARRAY['NORTH','SOUTH']) s ON CONFLICT DO NOTHING;

@@ -30,7 +30,7 @@ import { buildCatalogServer } from "../../apps/governance-api/src/composition/bu
 import { fixture } from "./protected-fixture.ts";
 import { fileOwner } from "./workbench-owner.ts";
 import {organizationKeys} from './organization-keys.mjs';
-import {openOrganization,openCampus,openOperatingRelations,openOrganizationImport} from '../../apps/governance-api/src/modules/organization-master/index.ts';
+import {openOrganization,openCampus,openOperatingRelations,openOrganizationImport,openOrganizationWorkspace} from '../../apps/governance-api/src/modules/organization-master/index.ts';
 import {actor as syntheticActor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
 
 export async function startWorkbench({
@@ -41,13 +41,14 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace;
   const close = async () => {
     await app?.close();
     await organization?.close();
     await campus?.close();
     await operating?.close();
     await organizationImport?.close();
+    await organizationWorkspace?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -89,6 +90,7 @@ export async function startWorkbench({
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
     if(persistent&&(await inspect(receipt)).ledger.length>=69)organizationImport=openOrganizationImport(connection,provider);
+    if(persistent&&(await inspect(receipt)).ledger.length>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -143,6 +145,7 @@ export async function startWorkbench({
       campus?{owner:campus,references:campus.references,actor:r=>syntheticActor(r.headers)}:undefined,
       operating?{owner:operating,actor:r=>syntheticActor(r.headers)}:undefined,
       organizationImport?{owner:organizationImport,actor:r=>syntheticActor(r.headers)}:undefined,
+      organizationWorkspace?{owner:organizationWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),
@@ -153,6 +156,7 @@ export async function startWorkbench({
       "contracts",
       "parameter-definitions",
       "imports",
+      "organizations",
     ])
       app.get("/admin/vnext/" + path, (_req, reply) =>
         reply.sendFile("vnext.html"),
