@@ -26,8 +26,7 @@ async function post(path:string,payload:unknown,who='maker'){
  return {status:r.status,body:await r.json() as Record<string,any>};
 }
 async function read(id:string,who='maker'){
- const r=await fetch(base+'/api/vnext/organization-workspace/drafts/'+id,{headers:{'x-catalog-actor':who}});
- return {status:r.status,body:await r.json() as Record<string,any>};
+ return post('drafts/read',{id},who);
 }
 const snapshot=(id:string)=>peer(receipt.name,`SELECT jsonb_build_object(
  'drafts',(SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY number),'[]') FROM organization_master.workspace_draft_revision r WHERE id=${quote(id)}::uuid),
@@ -101,7 +100,7 @@ for(const action of ['ESTABLISH','VERIFY_SCOPE'] as const)test(`${action}: compl
  x.grantPair(c.subject.id,c.node.id);const license=await x.addLicense(c.subject);
  const facts=action==='VERIFY_SCOPE'?{license,catalog:x.codeSet.reference,services:['DEMO_MEDICAL_A'],licenseScopeText:'DEMO verified scope'}:{role:'OPERATOR',relationTypeText:'DEMO operator',primary:'N',catalog:x.codeSet.reference,services:['DEMO_MEDICAL_A'],scopeTargets:[await x.verifyScope(c.subject,c.node,license)],licenseScopeText:'DEMO verified scope'};
  // Choose the governed existing artifact explicitly instead of mixing two evidence selections.
- const complete:Manual={domain:'ORG03',campus:'NORTH',transport:c.content.transport,command:{...x.common,...command,evidence:x.artifact.artifactId,facts}};
+ const complete:Manual={domain:'ORG03',campus:'NORTH',transport:{contractId:x.codeSet.published.id,contractVersionId:x.codeSet.published.versionId},command:{...x.common,...command,evidence:x.artifact.artifactId,facts}};
  const saved=await workspace.saveDraft('maker',{...complete,id:c.saved.id,expectedVersion:c.saved.version,requestId:randomUUID()});
  const request={id:saved.id,expectedVersion:saved.version,requestId:randomUUID()},submission=await workspace.submitDraft('maker',request);
  expect(await workspace.submitDraft('maker',request)).toEqual(submission);
@@ -112,7 +111,9 @@ for(const action of ['ESTABLISH','VERIFY_SCOPE'] as const)test(`${action}: compl
 });
 test('empty editing drafts remain allowed, but nonexistent and wrong-kind selected endpoints do not become NIL',async()=>{
  const content:Manual={domain:'ORG03',campus:'NORTH',command:{action:'ESTABLISH'}};
- const saved=await workspace.saveDraft('maker',{...content,requestId:randomUUID()});expect((await workspace.readDraft('maker',saved.id)).content.command).toEqual(content.command);
+ const saved=await workspace.saveDraft('maker',{...content,requestId:randomUUID()}),restored=await workspace.readDraft('maker',saved.id);
+ expect(restored.content.domain).toBe('ORG03');if(restored.content.domain!=='ORG03')throw new Error('ORG03_REQUIRED');
+ expect(restored.content.command).toEqual(content.command);
  const c=cases[0]!;
  for(const [key,id] of [['subject',randomUUID()],['campus',randomUUID()],['subject',c.node.id],['campus',c.subject.id]] as const){
   const ref={owner:key==='subject'?'organization-master':'organization-master/campus',id};
