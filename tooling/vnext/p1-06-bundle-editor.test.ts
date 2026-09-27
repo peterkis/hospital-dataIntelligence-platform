@@ -79,7 +79,7 @@ test('license REVISE to CREATE removes its own target and does not disturb the p
  controls(node,'select')[0]!.onChange!({target:{value:'CREATE'}});
  const next=wire({...revision,...onChange.mock.calls[0]![0]});
  expect(next).toHaveProperty('target',target);expect(next['license']).toMatchObject({intent:'CREATE',namespace:'DEMO',endKind:'FINITE'});expect(next['license']).not.toHaveProperty('target');
- expect(wire(bundleLicenseIntentPatch(revision,'')).license).not.toHaveProperty('target');
+ expect(wire(bundleLicenseIntentPatch(revision,''))['license']).not.toHaveProperty('target');
 });
 test('a new subject cannot choose revision of an existing license',()=>{
  const onChange=vi.fn(),node=BundleLicenseIntentField({current:{intent:'CREATE'},disabled:false,onChange});
