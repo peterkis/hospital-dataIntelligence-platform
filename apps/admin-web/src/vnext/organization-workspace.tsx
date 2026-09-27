@@ -93,19 +93,25 @@ export function OrganizationWorkspaceApp(){
  async function attach(file:File|undefined){if(!file||draft.domain==='BUNDLE')return;const e=epoch.current;setBusy(true);try{const bytesBase64=await encodeWorkbenchFile(file);if(e!==epoch.current)return;setDraft(current=>current.domain==='BUNDLE'?current:{...current,attachment:{filename:file.name,bytesBase64}});setDirty(true);pendingSave.current=null;pendingSubmit.current=null;setMessage('附件尚在编辑中。保存草稿后仍私有，提交申请时才登记受控引用。');}catch{if(e===epoch.current)setMessage('附件须为非空文件，且不超过 1 MiB。');}finally{if(e===epoch.current)setBusy(false);}}
  async function discard(){if(!saved||dirty)return;const e=epoch.current;setBusy(true);if(pendingDiscard.current?.id!==saved.id||pendingDiscard.current.expectedVersion!==saved.version)pendingDiscard.current={id:saved.id,expectedVersion:saved.version,requestId:crypto.randomUUID()};try{const r=await client().discardDraft(pendingDiscard.current);if(e!==epoch.current)return;if(r.error){setMessage(r.error.message);return;}const restored=await restore(saved.id);if(restored!==epoch.current)return;await refresh();if(restored!==epoch.current)return;setMessage('草稿已标记放弃，历史记录保留。');}catch{if(e===epoch.current)setMessage('放弃结果尚未确认；重试沿用原请求。');}finally{if(e===epoch.current)setBusy(false);}}
  function replaceEvidence(){if(draft.domain==='BUNDLE')return;const action=textField(command,'action');if(draft.domain==='ORG01'&&['CREATE','REVISE'].includes(action)){const {registrationEvidence:removed,...facts}=objectField(command,'facts');changeCommand({facts});}else if(draft.domain==='ORG01'&&['ADD_LICENSE','REVISE_LICENSE'].includes(action)){const {evidence:removed,...license}=objectField(command,'license');changeCommand({license});}else changeCommand({evidence:undefined});setMessage('已明确移除底稿旧证据引用，请选择本次新附件后保存。');}
+ async function reportSubmitFailure(token:number,text:string){
+  if(token!==epoch.current)return;
+  // Submit invalidates earlier list reads. Refill navigation even after failure,
+  // without altering the selected draft or its uncertain idempotency request.
+  await refresh();if(token===epoch.current)setMessage(text);
+ }
  async function submit(){
   if(!saved||dirty||busy||renderEpoch!==epoch.current||actorRef.current!==actor)return;
   const request=workspaceSubmitRequest(pendingSubmit.current,saved);if(!request)return;
   pendingSubmit.current=request;const e=++epoch.current;setBusy(true);
   try{
    const result=await client().submitDraft(request);if(e!==epoch.current)return;
-   if(result.error){setMessage(result.error.message+' ['+result.error.code+']');return;}
-   if(result.data.draftId!==request.id||result.data.expectedVersion!==request.expectedVersion||result.data.requestId!==request.requestId){setMessage('提交响应与当前草稿请求不一致，未切换申请；请重新读取草稿。');return;}
+   if(result.error){await reportSubmitFailure(e,result.error.message+' ['+result.error.code+']');return;}
+   if(result.data.draftId!==request.id||result.data.expectedVersion!==request.expectedVersion||result.data.requestId!==request.requestId){await reportSubmitFailure(e,'提交响应与当前草稿请求不一致，未切换申请；请重新读取草稿。');return;}
    // Keep the acknowledged request until restore succeeds: a failed re-read must
    // not turn recovery into a new request against an already submitted draft.
    setSubmission(result.data);const restored=await restore(request.id);if(restored!==epoch.current)return;
    const url=new URL(location.href);url.searchParams.delete('draft');url.searchParams.set(result.data.domain==='BUNDLE'?'bundle':'input',result.data.domain==='BUNDLE'?result.data.jobId:result.data.inputId);if(result.data.domain==='BUNDLE')url.searchParams.set('bundleRevision',result.data.revisionId);history.replaceState(null,'',url.pathname+url.search);setMessage('申请已暂存。仍须生成候选、独立审批和应用，不代表发布。');await refresh();
-  }catch{if(e===epoch.current)setMessage('提交结果尚未确认，再次提交将恢复原请求。');}
+  }catch{await reportSubmitFailure(e,'提交结果尚未确认，再次提交将恢复原请求。');}
   finally{if(e===epoch.current)setBusy(false);}
  }
  const editable=!busy&&(!saved||saved.state==='EDITING');const canSave=editable&&!!capabilities?.canWrite&&capabilities.identity===actor&&capabilities.inputKey===authorizationKey;
