@@ -21,7 +21,7 @@ async function submit(draft:DraftContent){
  const saved=await post('/api/vnext/organization-workspace/drafts/save',{...draft,requestId:randomUUID()});expect(saved.statusCode,saved.body).toBe(200);
  const {id,version}=saved.json<{id:string;version:string}>(),requestId=randomUUID();
  const submitted=await post('/api/vnext/organization-workspace/drafts/submit',{id,expectedVersion:version,requestId});expect(submitted.statusCode,submitted.body).toBe(200);
- const replay=await post('/api/vnext/organization-workspace/drafts/submit',{id,expectedVersion:version,requestId});expect(replay.json()).toEqual(submitted.json());
+ const replay=await post('/api/vnext/organization-workspace/drafts/submit',{id,expectedVersion:version,requestId});expect(replay.statusCode,replay.body).toBe(200);expect(replay.json()).toEqual(submitted.json());
  return submitted.json<{inputId:string}>();
 }
 async function commit(draft:DraftContent):Promise<OwnerFact>{
@@ -30,8 +30,9 @@ async function commit(draft:DraftContent):Promise<OwnerFact>{
  const requestId=randomUUID(),candidate=await organization.plan('maker',{inputId:submitted.inputId,requestId});
  await organization.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await organization.approveApplyUnit('reviewer',candidate);
  const result=await organization.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');
+ if(result.status!=='COMMITTED')throw new Error('NOT_COMMITTED');
  expect(await organization.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).toEqual(result);
- const fact=result.facts?.[0];if(!fact)throw new Error('COMMITTED_LICENSE_FACT_REQUIRED');return fact;
+ const fact=result.facts[0];if(!fact)throw new Error('COMMITTED_LICENSE_FACT_REQUIRED');return fact;
 }
 async function createLicensedSubject(){
  const subject=await commit(content({action:'CREATE',facts:{legalName:'DEMO license action subject',entityNature:'DEMO',authority:null,legalAddress:null,registrationEvidence:evidence},identifiers:[{kind:'INSTITUTION_CODE',namespace:'DEMO_LICENSE_ACTIONS',value:randomUUID()}]}));
@@ -69,7 +70,8 @@ test('license add, historical revision and current-head revocation complete inde
  const current=await workspace.objectContext('maker',{kind:'LICENSE',id:license.id});
  expect(licenseRevocationDraft(first,subject.id,current)).toBeNull();
  const draft=licenseRevocationDraft(head,subject.id,current);if(!draft||draft.domain!=='ORG01')throw new Error('CURRENT_REVOCATION_REQUIRED');
- await commit(content(draft.command));
+ // Complete the user-entered fields; opening an editor is not a complete command.
+ await commit(content({...draft.command,reason:'DEMO_LICENSE_WITHDRAWAL'}));
  const after=(await organization.historyDetails('maker',subject.id)).licenses;
  expect(after.slice(0,before.length)).toEqual(before);expect(after.at(-1)).toMatchObject({id:license.id,version:'4',revoked:true});
  expect(after.map(row=>licenseVersionActions(row,after,true).canRevoke)).toEqual([false,false,false,false]);
@@ -81,7 +83,7 @@ test('license add, historical revision and current-head revocation complete inde
 test('a stale revocation bypassing the UI is still rejected by Owner validation with no new license fact',async()=>{
  const {subject,license}=await createLicensedSubject();await commit(await revisedDraft(license.id,license.version));
  const before=(await organization.historyDetails('maker',subject.id)).licenses;
- const submitted=await submit(content({action:'REVOKE_LICENSE',target:{id:subject.id,version:subject.version},licenseTarget:{id:license.id,version:license.version}}));
+ const submitted=await submit(content({action:'REVOKE_LICENSE',reason:'DEMO_STALE_REVOCATION',target:{id:subject.id,version:subject.version},licenseTarget:{id:license.id,version:license.version}}));
  expect(await workspace.preflight('maker',{domain:'ORG01',inputId:submitted.inputId})).toMatchObject({status:'BLOCKED',codes:['STALE_VALIDATION']});
  await expect(organization.plan('maker',{inputId:submitted.inputId,requestId:randomUUID()})).rejects.toThrow('STALE_VALIDATION');
  expect((await organization.historyDetails('maker',subject.id)).licenses).toEqual(before);
