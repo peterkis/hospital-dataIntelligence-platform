@@ -4,6 +4,7 @@ import {WorkspaceEndpointFields} from './workspace-reference-fields.js';
 import {useEffect,useRef,useState} from 'react';
 import {createVNextCatalogClient,createOrganizationWorkspaceClient,type VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
 import {ReviewValues} from './workspace-application.js';
+import {readAllWorkspacePages} from './workspace-pagination.js';
 import {Field,textField,objectField} from './workspace-fields.js';
 export type EntityKind='ORGANIZATION'|'CAMPUS'|'RELATION'|'SCOPE';
 type DraftContent=Operations['prepareOrganizationRevision']['responses'][200]['content']['application/json'];
@@ -22,8 +23,8 @@ export function WorkspaceEntities({actor,kind,onDraft,serviceCodes}:{actor:strin
  async function current(){const e=++epoch.current;setBusy(true);try{const clock=await workspace().capabilities({domain:'ORG01',campus:'NORTH',command:{action:'CREATE'}});if(e!==epoch.current)return;if(clock.error){setMessage(clock.error.message);return;}const value=clock.data.observedAt;setBusinessAt(value);setAsOf(value);await load({businessAt:value,asOf:value,current:true},e);}catch{if(e===epoch.current)setMessage('服务不可用，未使用旧缓存。');}finally{if(e===epoch.current)setBusy(false);}}
  async function load(filter:{businessAt:string;asOf:string;current:boolean},token=++epoch.current){setBusy(true);setRows([]);setSelected(null);setDetail(null);setVersions([]);setLicenses([]);setContext(null);setDiff(null);setActive(filter);
   try{
-   if(kind==='ORGANIZATION'){const r=await api().POST('/api/vnext/organizations/query',{body:{mode:'LIST',businessAt:filter.businessAt,asOf:filter.asOf,limit:100}});if(token!==epoch.current)return;if(r.error){setMessage(r.error.message+' ['+r.error.code+']');return;}setRows(r.data.map(value=>({id:value.id,name:value.legalName,version:value.version,value})));}
-   else if(kind==='CAMPUS'){const r=await api().POST('/api/vnext/campuses/list',{body:{businessAt:filter.businessAt,asOf:filter.asOf,limit:100}});if(token!==epoch.current)return;if(r.error){setMessage(r.error.message+' ['+r.error.code+']');return;}setRows(r.data.map(value=>({id:value.id,name:value.facts?.campusName??'资料期间空档',version:value.head,value})));}
+   if(kind==='ORGANIZATION'){const r=await readAllWorkspacePages(after=>api().POST('/api/vnext/organizations/query',{body:{mode:'LIST',businessAt:filter.businessAt,asOf:filter.asOf,limit:100,...(after?{after}: {})}}));if(token!==epoch.current)return;if(r.error||!r.data){setMessage('组织列表读取失败；未截断为前 100 项。');return;}setRows(r.data.map(value=>({id:value.id,name:value.legalName,version:value.version,value})));}
+   else if(kind==='CAMPUS'){const r=await readAllWorkspacePages(after=>api().POST('/api/vnext/campuses/list',{body:{businessAt:filter.businessAt,asOf:filter.asOf,limit:100,...(after?{after}: {})}}));if(token!==epoch.current)return;if(r.error||!r.data){setMessage('院区列表读取失败；未截断为前 100 项。');return;}setRows(r.data.map(value=>({id:value.id,name:value.facts?.campusName??'资料期间空档',version:value.head,value})));}
    else{if(!subjectId||!campusId){setMessage('先选择准确主体与院区，再读取关系。');return;}const r=await api().POST(kind==='RELATION'?'/api/vnext/operating-relations/query':'/api/vnext/license-scope-evidence/query',{body:{kind,subjectId,campusId,mode:'LIST',businessAt:filter.businessAt,asOf:filter.asOf}});if(token!==epoch.current)return;if(r.error){setMessage(r.error.message+' ['+r.error.code+']');return;}setRows(r.data.map(value=>({id:value.id,name:kind==='RELATION'?textField(value.facts,'role')||'关系关闭断言':'许可范围',version:value.version,value})));}
    setMessage(filter.current?'已读取当前可见对象。':'历史观察：所有详情沿用指定 B/R。');
   }catch{if(token===epoch.current)setMessage('读取失败，未保留旧结果作为当前事实。');}finally{if(token===epoch.current)setBusy(false);}
