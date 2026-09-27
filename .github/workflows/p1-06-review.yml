@@ -59,7 +59,7 @@ jobs:
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts
-      - name: Real browser submission retries
+      - name: Real browser submission and upload races
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_BROWSER_EXECUTABLE: google-chrome
@@ -73,3 +73,9 @@ jobs:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_UPGRADE: '1'
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-review-db.test.ts
+      - name: Populated 0072 to 0073 exact-license upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_LICENSE_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-exact-transport-db.test.ts
