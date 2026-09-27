@@ -54,8 +54,8 @@ test('source-scoped CREATE rows remove stale targets and complete saved workbook
  expect(Check(BundleManifest,metadata.manifest)).toBe(true);
  const compiled=compileOrganizationBundle(parsed,metadata.manifest,contracts);expect(compiled.issues).toEqual([]);expect(compiled.steps).toHaveLength(12);
  for(const step of compiled.steps)expect(step.command['source']).toMatchObject({systemId:fixture.x.source.id,versionId:bundleRowSourceVersions(step.dataset,metadata.contracts,contracts)[0]});
- const saved=await save({...draft(metadata),bytesBase64:bytesBefore});
- const restored=await workspace.readDraft('maker',saved.id);expect(restored.content).toEqual(draft(metadata));
+ const content={...draft(metadata),bytesBase64:bytesBefore},saved=await save(content);
+ const restored=await workspace.readDraft('maker',saved.id);expect(restored.content).toEqual(content);
  const request={id:saved.id,expectedVersion:saved.version,requestId:randomUUID()};
  const response=await post('/api/vnext/organization-workspace/drafts/submit',request);expect(response.statusCode,response.body).toBe(200);
  const submitted=response.json<{jobId:string;revisionId:string}>(),ref={jobId:submitted.jobId,revisionId:submitted.revisionId};
@@ -97,7 +97,10 @@ test('a persisted incomplete license revision restores its exact target and can 
  const updated=await save({...restored,metadata:nextMetadata},saved),read=await workspace.readDraft('maker',updated.id);
  expect(read.state).toBe('EDITING');expect((read.content as BundleDraft).metadata).toEqual(nextMetadata);
  const before=await fixture.x.org.historyDetails('maker',subject.id);
- const submitted=await post('/api/vnext/organization-workspace/drafts/submit',{id:updated.id,expectedVersion:updated.version,requestId:randomUUID()});expect(submitted.statusCode).not.toBe(200);
+ const submitted=await post('/api/vnext/organization-workspace/drafts/submit',{id:updated.id,expectedVersion:updated.version,requestId:randomUUID()});expect(submitted.statusCode,submitted.body).toBe(200);
+ const ref=submitted.json<{jobId:string;revisionId:string}>(),validated=await createOrganizationBundleClient(base,'maker').validate({jobId:ref.jobId,revisionId:ref.revisionId,requestId:randomUUID()});
+ expect(validated.response.status,JSON.stringify(validated.error)).toBe(200);expect(validated.data!.decision).toBe('BLOCKED');
+ expect(validated.data!.issues).toContainEqual(expect.objectContaining({dataset:'ORG01',code:'EXPLICIT_TARGET_REQUIRED'}));
  expect(await fixture.x.org.historyDetails('maker',subject.id)).toEqual(before);
 });
 test('switching a license sub-operation to CREATE removes the nested target accepted by the strict compiler',async()=>{
