@@ -15,7 +15,7 @@ const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,provider=new LocalSy
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
 let catalog:Awaited<ReturnType<typeof openCatalog>>,workspace:ReturnType<typeof openOrganizationWorkspace>,bundle:ReturnType<typeof openOrganizationImport>,fixture:Awaited<ReturnType<typeof organizationBundleFixture>>,app:Awaited<ReturnType<typeof buildCatalogServer>>,pool:Pool;
 let facts:OwnerFact[],campus:OwnerFact;
-const steward='review-import-steward';
+const steward='workspace-steward';
 const counts=()=>peer(receipt.name,"SELECT jsonb_build_array((SELECT count(*) FROM governance_catalog.import_job),(SELECT count(*) FROM governance_catalog.protected_artifact),(SELECT count(*) FROM organization_master.input),(SELECT count(*) FROM organization_master.workspace_draft_revision WHERE state='SUBMITTED'))::text");
 const post=(who:string,url:string,payload:unknown)=>app.inject({method:'POST',url,headers:{'x-catalog-actor':who},payload:payload as Record<string,unknown>});
 const save=(who:string,content:DraftContent)=>workspace.saveDraft(who,{...content,requestId:randomUUID()});
@@ -28,6 +28,12 @@ beforeAll(async()=>{
  await workspaceManualFixture(catalog);await campusCodeSet(catalog,fixture.x.source.versionId);
  const result=await organizationBundleHttpSmoke(bundle,fixture,()=>{},catalog);facts=result.facts!;
  campus=facts.find(f=>f.owner==='organization-master/campus')!;expect(campus).toBeDefined();
+ // Import preauthorization grants CREATE, not ongoing REVISE. Provision only
+ // the actual imported pairs for this maintenance scenario, not a Cartesian set.
+ for(const relation of facts.filter(f=>f.owner==='organization-master/operating-relation')){
+  const [row]=await fixture.x.operating.read('maker',{kind:'RELATION',mode:'EXACT',id:relation.id,version:relation.version});
+  if(!row)throw new Error('IMPORTED_PAIR_REQUIRED');fixture.x.grantPair(row.subject.id,row.campus.id);
+ }
  peer(receipt.name,`INSERT INTO vnext_control.actor VALUES('${steward}','SYNTHETIC_IMPORTED_CAMPUS_STEWARD',true);
  INSERT INTO vnext_control.actor_grant SELECT '${steward}','SYNTHETIC',p FROM unnest(ARRAY['READ','WRITE']) p;
  INSERT INTO organization_master.access SELECT '${steward}',${quote(campus.id)}::uuid,'NORTH',p FROM unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p;
@@ -94,7 +100,7 @@ test('private draft identity, expected revision, scope and internal transport bi
 test('a same-domain published non-manual template is not an execution transport',async()=>{
  const current=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.dataset==='ORG01'&&c.definition.templateVersion==='ORG01_MANUAL_CORE_V1')!;
  const command=<A extends string>(action:A,extra:Record<string,unknown>)=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'DEMO_WRONG_TEMPLATE',...extra});
- const draft=await catalog.contractCommand('maker',command('REVISE',{target:current.id,expectedHead:current.head,datasetVersionId:current.datasetVersionId,definition:{...current.definition,templateVersion:'ORG01_OTHER_CORE_V1'},validFrom:'2026-01-01T00:00:00',validTo:null}));
+ const draft=await catalog.contractCommand('maker',command('REVISE',{target:current.id,expectedHead:current.head,datasetVersionId:current.datasetVersionId,definition:{...current.definition,ruleVersion:'ORG01_OTHER_'+randomUUID().replaceAll('-','').toUpperCase(),templateVersion:'ORG01_OTHER_CORE_V1'},validFrom:'2026-01-01T00:00:00',validTo:null}));
  const approved=await catalog.contractCommand('reviewer',command('APPROVE',{target:draft.id,expectedHead:draft.head,reviewDigest:draft.reviewDigest}));
  const impact=await catalog.contractImpact('reviewer','SYNTHETIC',draft.id,'PUBLISH');
  const published=await catalog.contractCommand('reviewer',command('PUBLISH',{target:draft.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest,impactDigest:impact.impactDigest}));
