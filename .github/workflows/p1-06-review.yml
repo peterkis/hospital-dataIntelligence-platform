@@ -1,0 +1,38 @@
+name: P1-06 review regression
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/p1-06-review.yml'
+      - 'apps/admin-web/src/vnext/**'
+      - 'apps/governance-api/**'
+      - 'db/vnext/**'
+      - 'tooling/vnext/**'
+      - 'packages/**'
+      - 'package*.json'
+permissions:
+  contents: read
+concurrency:
+  group: p1-06-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  workspace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - run: npm install --global npm@11.9.0
+      - run: npm ci
+      - name: Record exact candidate
+        run: git rev-parse HEAD
+      - name: Workspace unit regressions
+        run: npm run vnext:p1-06:unit
+      - name: Workspace typecheck
+        run: npm run vnext:p1-06:typecheck
