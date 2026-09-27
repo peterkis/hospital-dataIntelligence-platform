@@ -65,7 +65,9 @@ beforeAll(async()=>{
   console.log(JSON.stringify({check:'0073_PARTIAL_ENDPOINT_DEFECT_REPRODUCED',httpReads:4,sqlReads:4,httpResaves:4}));
   const {upgradePartialEndpoint}=await import('./review-ci-database.mjs');await upgradePartialEndpoint(receipt);
  }
- const current=await inspect(receipt);expect(workspaceStartupPrefix(migrationFiles(),current.ledger)).toBe(migrationFiles().length);expect(workspaceDeploymentPrefix(migrationFiles(),current.ledger,true)).toBe(current.ledger.length);
+ const current=await inspect(receipt);
+ if(upgrade){expect(current.ledger).toHaveLength(74);expect(()=>workspaceStartupPrefix(migrationFiles(),current.ledger)).toThrow('WORKSPACE_MIGRATION_REQUIRED');}
+ else{expect(workspaceStartupPrefix(migrationFiles(),current.ledger)).toBe(migrationFiles().length);expect(workspaceDeploymentPrefix(migrationFiles(),current.ledger,true)).toBe(current.ledger.length);}
 });
 afterAll(async()=>{await app?.close();await workspace?.close();await x?.close();await catalog?.close();await pool.end();});
 

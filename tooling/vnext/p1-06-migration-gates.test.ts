@@ -70,7 +70,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;
 });
 
-for(const prefix of [71,72,73])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -86,25 +86,25 @@ for(const defect of ['checksum','hole','reordered','extra'] as const)test(`start
  if(defect==='checksum')state.ledger[72]={...state.ledger[72]!,sha256:'0'.repeat(64)};
  if(defect==='hole')state.ledger.splice(70,1);
  if(defect==='reordered')[state.ledger[71],state.ledger[72]]=[state.ledger[72]!,state.ledger[71]!];
- if(defect==='extra')state.ledger.push({id:'0075_unknown',sha256:'0'.repeat(64)});
+ if(defect==='extra')state.ledger.push({id:'0076_unknown',sha256:'0'.repeat(64)});
  await expect(startWorkbench({persistent:true})).rejects.toThrow('LINEAGE_MISMATCH');expect(state.events).toEqual(['inspect']);
 });
 test('a release missing the security migration cannot enable the workspace',async()=>{
- state.files=files.slice(0,-1);state.ledger=ledger(73);
+ state.files=files.slice(0,-1);state.ledger=ledger(files.length-1);
  await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');expect(state.events).toEqual(['inspect']);
 });
 test('unexpected future migration requires an explicit shared release-boundary update',()=>{
- expect(()=>workspaceReleaseFiles([...files,{id:'0075_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
+ expect(()=>workspaceReleaseFiles([...files,{id:'0076_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
 });
 
-for(const prefix of [70,71,72,73,74])test(`deployment upgrades supported prefix ${prefix} to the entire release`,async()=>{
+for(const prefix of [70,71,72,73,74,75])test(`deployment upgrades supported prefix ${prefix} to the entire release`,async()=>{
  state.ledger=ledger(prefix);const deployment=await prepareWorkspaceDeployment();await deployment.complete();
  expect(migrate).toHaveBeenCalledWith(state.receipt,files);expect(state.ledger).toEqual(ledger());
  const report=state.writes.find(v=>v.path.endsWith('.migration.json'))!;expect(JSON.parse(report.content)).toMatchObject({status:'PASS',previousPrefix:prefix,currentPrefix:files.length});
  expect(state.events.indexOf('migrate')).toBeLessThan(state.events.indexOf('connection'));
  expect(state.sql.some(sql=>sql.includes('GRANT EXECUTE ON FUNCTION organization_master.workspace_save'))).toBe(true);
 });
-for(const prefix of [70,71,72,73])test(`reuse-existing refuses prefix ${prefix} without attempting migration or grants`,async()=>{
+for(const prefix of [70,71,72,73,74])test(`reuse-existing refuses prefix ${prefix} without attempting migration or grants`,async()=>{
  state.ledger=ledger(prefix);await expect(prepareWorkspaceDeployment({reuseExisting:true})).rejects.toThrow('WORKSPACE_ALREADY_DEPLOYED_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.writes).toEqual([]);expect(state.sql).toEqual([]);
 });
@@ -118,7 +118,7 @@ test('deployment refuses a stale checksum before evidence, keys or migration',as
  await expect(prepareWorkspaceDeployment()).rejects.toThrow('LINEAGE_MISMATCH');expect(state.events).toEqual(['inspect']);expect(state.writes).toEqual([]);
 });
 test('an incomplete migration result cannot grant workspace functions or report PASS',async()=>{
- state.ledger=ledger(70);state.stopAt=73;
+ state.ledger=ledger(70);state.stopAt=files.length-1;
  await expect(prepareWorkspaceDeployment()).rejects.toThrow('WORKSPACE_ALREADY_DEPLOYED_REQUIRED');
  expect(state.events).toEqual(['inspect','migrate']);expect(state.sql.every(sql=>!sql.includes('GRANT'))).toBe(true);expect(state.writes.every(v=>v.path.endsWith('.before.json'))).toBe(true);
 });
@@ -133,5 +133,5 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 });
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
- expect(files.at(-1)?.id).toBe('0074_workspace_partial_endpoint_authorization');
+ expect(files.at(-1)?.id).toBe('0075_workspace_previous_draft_access');
 });
