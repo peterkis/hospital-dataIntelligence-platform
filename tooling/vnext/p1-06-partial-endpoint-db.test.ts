@@ -105,9 +105,9 @@ for(const action of ['ESTABLISH','VERIFY_SCOPE'] as const)test(`${action}: compl
  const request={id:saved.id,expectedVersion:saved.version,requestId:randomUUID()},submission=await workspace.submitDraft('maker',request);
  expect(await workspace.submitDraft('maker',request)).toEqual(submission);
  expect(await workspace.preflight('maker',{domain:'ORG03',inputId:submission.inputId})).toMatchObject({status:'ELIGIBLE_FOR_CANDIDATE'});
- const candidate=await x.operating.plan('maker',{inputId:submission.inputId,requestId:randomUUID()});
+ const applyRequestId=randomUUID(),candidate=await x.operating.plan('maker',{inputId:submission.inputId,requestId:applyRequestId});
  await x.operating.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await x.operating.approveApplyUnit('reviewer',candidate);
- const apply={candidateId:candidate.candidateId,requestId:randomUUID()},result=await x.operating.applyUnit('maker',apply);expect(result.status).toBe('COMMITTED');expect(await x.operating.applyUnit('maker',apply)).toEqual(result);
+ const apply={candidateId:candidate.candidateId,requestId:applyRequestId},result=await x.operating.applyUnit('maker',apply);expect(result.status).toBe('COMMITTED');expect(await x.operating.applyUnit('maker',apply)).toEqual(result);
 });
 test('empty editing drafts remain allowed, but nonexistent and wrong-kind selected endpoints do not become NIL',async()=>{
  const content:Manual={domain:'ORG03',campus:'NORTH',command:{action:'ESTABLISH'}};
@@ -122,7 +122,18 @@ test('empty editing drafts remain allowed, but nonexistent and wrong-kind select
  }
 });
 test('partial campus checks use its real scope, not a permitted NIL grant in the declared draft scope',async()=>{
- const node=await x.createCampus('DEMO other scope','CITY_CENTER','SOUTH');
+ // Provision a real SOUTH fixture through normal review/Apply, then remove only
+ // the creation-policy grants added here. The partial draft retains NORTH's
+ // creation grant and SOUTH's exact endpoint grant, not a SOUTH NIL bypass.
+ const added=JSON.parse(peer(receipt.name,`WITH added AS (
+  INSERT INTO organization_master.access
+  SELECT actor,subject_id,'SOUTH',permission FROM organization_master.access
+  WHERE subject_id='00000000-0000-0000-0000-000000000000'::uuid AND campus='NORTH' AND actor IN ('maker','reviewer')
+  ON CONFLICT DO NOTHING RETURNING actor,permission
+ ) SELECT coalesce(jsonb_agg(to_jsonb(added)),'[]')::text FROM added`)) as Array<{actor:string;permission:string}>;
+ let node:Fact;
+ try{node=await x.createCampus('DEMO other scope','CITY_CENTER','SOUTH');}
+ finally{for(const grant of added)peer(receipt.name,`DELETE FROM organization_master.access WHERE actor=${quote(grant.actor)} AND subject_id='00000000-0000-0000-0000-000000000000'::uuid AND campus='SOUTH' AND permission=${quote(grant.permission)}`);}
  const content:Manual={domain:'ORG03',campus:'NORTH',command:{action:'VERIFY_SCOPE',campus:{owner:'organization-master/campus',id:node.id}}};
  const saved=await workspace.saveDraft('maker',{...content,requestId:randomUUID()});const original=await workspace.readDraft('maker',saved.id);revoke(node.id);
  try{
