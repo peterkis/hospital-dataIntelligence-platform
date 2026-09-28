@@ -34,9 +34,20 @@ export function migrationFiles(directory = migrationsPath) {
     return { id: name.slice(0, -4), sha256: createHash('sha256').update(bytes).digest('hex'), sql: bytes.toString('utf8') };
   });
 }
+// These are the two approved historical bytes installed in the repaired
+// persistent database before the source chain was restored to its shipped
+// 0079/0083 definitions. They remain accepted as immutable ledger evidence;
+// no migration is rewritten in place.
+export const historicalMigrationDigests = Object.freeze({
+  '0079_campus_retirement_disposition': 'e4d7a7d333ed0830f5db6e93a242c5613adcc3768a62d91a7674ee469392b229',
+  '0083_campus_retirement_history_repair': '1def3e683f80d4763f8e79622e20121932603b7464152248ddee7504ac969f97',
+});
+export function migrationDigestMatches(file, digest) {
+  return file.sha256 === digest || historicalMigrationDigests[file.id] === digest;
+}
 export function checkPrefix(files, ledger) {
   files.forEach((file, i) => { if (!new RegExp(`^${String(i + 1).padStart(4, '0')}_[a-z0-9_]+$`).test(file.id)) throw new Error('MIGRATION_ORDER'); });
-  if (ledger.length > files.length || ledger.some((entry, i) => entry.id !== files[i]?.id || entry.sha256 !== files[i]?.sha256)) throw new Error('LINEAGE_MISMATCH');
+  if (ledger.length > files.length || ledger.some((entry, i) => entry.id !== files[i]?.id || !migrationDigestMatches(files[i], entry.sha256))) throw new Error('LINEAGE_MISMATCH');
   return ledger.length;
 }
 export function peer(name, sql, {sensitive=false}={}) {
@@ -94,7 +105,7 @@ export async function migrate(receipt, files = migrationFiles()) {
   let sql = `SELECT pg_advisory_lock(901001);\n${identitySQL(receipt)}\n`;
   sql += `CREATE TEMP TABLE expected_migration(id text primary key,sha256 text);\n`;
   for (const file of files) sql += `INSERT INTO expected_migration VALUES (${quote(file.id)},${quote(file.sha256)});\n`;
-  sql += `DO $prefix$ BEGIN IF to_regclass('vnext_control.migration') IS NOT NULL THEN IF EXISTS (SELECT 1 FROM vnext_control.migration m LEFT JOIN expected_migration e USING(id) WHERE e.id IS NULL OR e.sha256<>m.sha256 OR m.lineage<>'HDIP-MC-VNEXT') THEN RAISE EXCEPTION 'LINEAGE_MISMATCH'; END IF; ELSIF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public','information_schema') AND left(nspname,3)<>'pg_') OR EXISTS(SELECT 1 FROM pg_class WHERE relnamespace='public'::regnamespace) THEN RAISE EXCEPTION 'UNKNOWN_LINEAGE'; END IF; END $prefix$;\n`;
+  sql += `DO $prefix$ BEGIN IF to_regclass('vnext_control.migration') IS NOT NULL THEN IF EXISTS (SELECT 1 FROM vnext_control.migration m LEFT JOIN expected_migration e USING(id) WHERE e.id IS NULL OR (e.sha256<>m.sha256 AND NOT ((m.id='0079_campus_retirement_disposition' AND m.sha256='e4d7a7d333ed0830f5db6e93a242c5613adcc3768a62d91a7674ee469392b229') OR (m.id='0083_campus_retirement_history_repair' AND m.sha256='1def3e683f80d4763f8e79622e20121932603b7464152248ddee7504ac969f97'))) OR m.lineage<>'HDIP-MC-VNEXT') THEN RAISE EXCEPTION 'LINEAGE_MISMATCH'; END IF; ELSIF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public','information_schema') AND left(nspname,3)<>'pg_') OR EXISTS(SELECT 1 FROM pg_class WHERE relnamespace='public'::regnamespace) THEN RAISE EXCEPTION 'UNKNOWN_LINEAGE'; END IF; END $prefix$;\n`;
   for (const file of files) {
     let tag='$apply$';while(file.sql.includes(tag))tag=tag.slice(0,-1)+'x$';
     sql += `BEGIN;\nDO ${tag} BEGIN IF to_regclass('vnext_control.migration') IS NULL THEN EXECUTE ${quote(file.sql)}; INSERT INTO vnext_control.migration(lineage,id,sha256,runner_version) VALUES ('HDIP-MC-VNEXT',${quote(file.id)},${quote(file.sha256)},'P0-01'); ELSIF NOT EXISTS(SELECT 1 FROM vnext_control.migration WHERE id=${quote(file.id)}) THEN EXECUTE ${quote(file.sql)}; INSERT INTO vnext_control.migration(lineage,id,sha256,runner_version) VALUES ('HDIP-MC-VNEXT',${quote(file.id)},${quote(file.sha256)},'P0-01'); END IF; END ${tag};\nCOMMIT;\n`;

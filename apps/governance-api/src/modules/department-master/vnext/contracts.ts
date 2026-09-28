@@ -18,7 +18,7 @@ export const ORG04_FIELDS=Object.keys(RowSchema.properties) as Array<keyof ORG04
 export const ReferenceSchema=Type.Object({owner:Type.Literal('department-master'),id:Id,expectedVersion:Type.String({pattern:'^[1-9][0-9]*$'})},closed);
 export const EntrySchema=Type.Object({
  row:RowSchema,intent:Type.Enum(['CREATE','REVISE']),target:Type.Union([ReferenceSchema,Type.Null()]),
- origin:Type.Enum(['NEW','HISTORICAL']),evidenceId:Id,
+ origin:Type.Enum(['NEW','HISTORICAL']),evidenceId:Id,sourceRow:Type.Optional(Type.Integer({minimum:1,maximum:1048576})),
 },closed);
 export const StageSchema=Type.Object({
  requestId:Id,jobId:Id,revisionId:Id,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),

@@ -88547,6 +88547,11 @@
                         "evidenceId": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                        },
+                        "sourceRow": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1048576
                         }
                       },
                       "additionalProperties": false
@@ -89027,6 +89032,11 @@
                           "evidenceId": {
                             "type": "string",
                             "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                          },
+                          "sourceRow": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1048576
                           }
                         },
                         "additionalProperties": false
@@ -89444,6 +89454,11 @@
                           "evidenceId": {
                             "type": "string",
                             "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                          },
+                          "sourceRow": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1048576
                           }
                         },
                         "additionalProperties": false
@@ -91015,6 +91030,11 @@
                           "evidenceId": {
                             "type": "string",
                             "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                          },
+                          "sourceRow": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1048576
                           }
                         },
                         "additionalProperties": false
@@ -94422,6 +94442,11 @@
                             "evidenceId": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                            },
+                            "sourceRow": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1048576
                             }
                           }
                         },

@@ -23,6 +23,7 @@ vi.mock('./lineage.mjs',async importOriginal=>{
 });
 vi.mock('./owner-service.mjs',()=>({ownerServiceConnection:vi.fn(async()=>{state.events.push('connection');return 'postgresql://'+state.role+':unit-only@127.0.0.1:55434/'+state.receipt.name;})}));
 vi.mock('./organization-keys.mjs',()=>({organizationKeys:vi.fn(()=>{state.events.push('keys');return {};})}));
+vi.mock('./department-provisioning.mjs',()=>({assertDepartmentProvisioned:vi.fn(async()=>{state.events.push('department-provisioned');})}));
 vi.mock('./p1-02-preservation.mjs',()=>({predecessorTables:(tables:string[])=>tables,predecessorDigest:()=> 'unit-row-digest'}));
 vi.mock('node:fs',async importOriginal=>{
  const real=await importOriginal<typeof import('node:fs')>();
@@ -94,7 +95,7 @@ test('a release missing the security migration cannot enable the workspace',asyn
  await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');expect(state.events).toEqual(['inspect']);
 });
 test('unexpected future migration requires an explicit shared release-boundary update',()=>{
-  expect(()=>workspaceReleaseFiles([...files,{id:'0085_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
+  expect(()=>workspaceReleaseFiles([...files,{id:'0087_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
 });
 
 for(const prefix of [70,71,72,73,74,75,76,77,78,79,80,81])test(`deployment upgrades supported prefix ${prefix} to the entire release`,async()=>{
@@ -133,7 +134,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 });
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
-  expect(files.at(-1)?.id).toBe('0084_department_core');
+ expect(files.at(-1)?.id).toBe('0086_department_physical_row_range');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{

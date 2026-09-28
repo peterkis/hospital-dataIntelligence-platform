@@ -32,8 +32,10 @@ import { buildCatalogServer } from "../../apps/governance-api/src/composition/bu
 import { fixture } from "./protected-fixture.ts";
 import { fileOwner } from "./workbench-owner.ts";
 import {organizationKeys} from './organization-keys.mjs';
+import {assertDepartmentProvisioned} from './department-provisioning.mjs';
 import {openOrganization,openCampus,openOperatingRelations,openOrganizationImport,openOrganizationWorkspace} from '../../apps/governance-api/src/modules/organization-master/index.ts';
 import {actor as syntheticActor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
+
 
 export async function startWorkbench({
   persistent = false,
@@ -99,7 +101,7 @@ export async function startWorkbench({
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
-    if(persistent&&persistentPrefix>=84)department=openDepartment(connection,provider);
+    if(persistent&&persistentPrefix>=86){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {

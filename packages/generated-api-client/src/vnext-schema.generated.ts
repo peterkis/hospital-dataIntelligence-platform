@@ -26627,6 +26627,7 @@ export interface operations {
                         /** @enum {unknown} */
                         origin: "NEW" | "HISTORICAL";
                         evidenceId: string;
+                        sourceRow?: number;
                     }[];
                     sourceArtifactId?: string;
                 };
@@ -26804,6 +26805,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
+                            sourceRow?: number;
                         }[];
                         sourceArtifactId?: string;
                     };
@@ -26958,6 +26960,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
+                            sourceRow?: number;
                         }[];
                         heads: {
                             id: string;
@@ -27556,6 +27559,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
+                            sourceRow?: number;
                         }[];
                         issues: {
                             row: number;
@@ -28936,6 +28940,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
+                            sourceRow?: number;
                         }[];
                     };
                     bytesBase64: string;

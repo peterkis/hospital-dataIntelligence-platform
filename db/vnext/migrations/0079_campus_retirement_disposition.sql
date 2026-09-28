@@ -36,8 +36,9 @@ DECLARE s jsonb;
 BEGIN
  PERFORM pg_advisory_xact_lock(901002);s:=organization_master.campus_snapshot(p_actor,p_id);
  IF EXISTS(SELECT 1 FROM organization_master.campus_event WHERE campus_id=p_id AND action='RETIRE' AND (valid_from<=timezone('Asia/Shanghai',clock_timestamp()) OR tsrange(valid_from,valid_to,'[)') && tsrange(p_from,p_to,'[)'))) THEN RAISE EXCEPTION 'CAMPUS_RETIRED';END IF;
+ -- Only operational-state events can supersede a suspension; profile REVISE must not end it.
  IF EXISTS(SELECT 1 FROM organization_master.campus_event e JOIN organization_master.campus_operation o ON o.event_id=e.id WHERE e.campus_id=p_id AND o.state='SUSPENDED' AND
-  (tsmultirange(tsrange(e.valid_from,e.valid_to,'[)'))-coalesce((SELECT range_agg(tsrange(n.valid_from,n.valid_to,'[)')) FROM organization_master.campus_event n JOIN organization_master.campus_operation no2 ON no2.event_id=n.id WHERE n.campus_id=p_id AND n.number>e.number),'{}'::tsmultirange)) && tsrange(p_from,p_to,'[)')) THEN RAISE EXCEPTION 'CAMPUS_SUSPENDED';END IF;
+  (tsmultirange(tsrange(e.valid_from,e.valid_to,'[)'))-coalesce((SELECT range_agg(tsrange(n.valid_from,n.valid_to,'[)')) FROM organization_master.campus_operation no2 JOIN organization_master.campus_event n ON n.id=no2.event_id WHERE n.campus_id=p_id AND n.number>e.number AND n.action IN ('CREATE','ACTIVATE','SUSPEND','RESUME','RETIRE')),'{}'::tsmultirange)) && tsrange(p_from,p_to,'[)')) THEN RAISE EXCEPTION 'CAMPUS_SUSPENDED';END IF;
 END $$;
 REVOKE ALL ON FUNCTION organization_master.campus_impact(text,uuid,timestamp,timestamp,timestamp),organization_master.campus_admission(text,uuid,timestamp,timestamp) FROM PUBLIC,hdi_prototype;
 
