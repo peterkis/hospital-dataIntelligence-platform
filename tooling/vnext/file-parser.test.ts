@@ -44,6 +44,17 @@ test('P2-01: department XLSX keeps later rows when a data row has an interior co
  const result=parseBytes(zipText(files),'XLSX',departmentFields,'STRICT_DEPARTMENT_V1');
  assert.equal(result.structuralStatus,'PARSED');assert.equal(result.rows.length,2);assert.deepEqual({...result.rows[0]},{first:'0012',middle:'',last:'DEMO'});assert.deepEqual({...result.rows[1]},{first:'0013',middle:'OK',last:'NEXT'});assert.deepEqual(result.issues[0],{code:'COLUMN_GAP',row:2,column:2});
 });
+test('P2-01: department XLSX keeps later rows when a data row has an invalid shared-string reference',()=>{
+ const departmentFields=[{code:'first',type:'text'},{code:'middle',type:'text'},{code:'last',type:'text'}];
+ const files=Object.fromEntries(unzip(textWorkbook([['first','middle','last'],['0012','BROKEN','DEMO'],['0013','OK','NEXT']])));
+ files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('name="Data"','name="ORG04"');
+ files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>');
+ files['xl/_rels/workbook.xml.rels']=files['xl/_rels/workbook.xml.rels']!.replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace(/<c r="B2"[^>]*>.*?<\/c>/u,'<c r="B2" t="s"><v>9</v></c>');
+ files['xl/sharedStrings.xml']='<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="1"><si><t>unused</t></si></sst>';
+ const result=parseBytes(zipText(files),'XLSX',departmentFields,'STRICT_DEPARTMENT_V1');
+ assert.equal(result.structuralStatus,'PARSED');assert.equal(result.rows.length,2);assert.deepEqual({...result.rows[1]},{first:'0013',middle:'OK',last:'NEXT'});assert.ok(result.issues.some(issue=>issue.code==='SHARED_STRING'&&issue.row===2&&issue.column===2));
+});
 test('PR6 round24: rejected JSON scalars retain source lexemes in protected reports',()=>{
  for(const lexeme of ['12','-12.30e+2','null','true','false']){
   const result=parseBytes(Buffer.from('[{"code":'+lexeme+',"label":"safe"}]'),'JSON',fields);
