@@ -200,6 +200,13 @@ test('current full-hospital review authority cannot be synthesized from a campus
  const request=await prepare([f.entry()]);peer(receipt.name,"DELETE FROM department_master.access WHERE actor='reviewer' AND permission='REVIEW'; INSERT INTO department_master.access VALUES('reviewer','NORTH','REVIEW');");
  try{await expect(owner.applyUnit('maker',request)).rejects.toThrow('ACCESS_DENIED');}finally{peer(receipt.name,"DELETE FROM department_master.access WHERE actor='reviewer' AND permission='REVIEW'; INSERT INTO department_master.access VALUES('reviewer','HOSPITAL','REVIEW');");}
 });
+test('semantic verification is rejected after the reviewer identity is rebound',async()=>{
+ const staged=await owner.stage('maker',await f.input());
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO identity binding',evidenceId:f.artifact.artifactId}]});
+ peer(receipt.name,"UPDATE vnext_control.actor SET identity_code='SYNTHETIC_REVIEWER_REBOUND' WHERE code='reviewer';");
+ try{await expect(owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow('ACCESS_DENIED');}
+ finally{peer(receipt.name,"UPDATE vnext_control.actor SET identity_code='SYNTHETIC_REVIEWER' WHERE code='reviewer';");}
+});
 test('unknown virtual meaning, view groups, lifecycle inputs and FULL cannot silently become core departments',async()=>{
  for(const disposition of ['UNKNOWN','VIEW_GROUP'] as const){const input=await f.input(),s=await owner.stage('maker',input);await owner.verify('reviewer',{requestId:randomUUID(),inputId:s.inputId,inputDigest:s.digest,rows:[{row:1,disposition,historicalException:false,reason:'DEMO pending classification',evidenceId:f.artifact.artifactId}]});expect((await owner.validate('maker',{inputId:s.inputId})).issues).toContainEqual({row:1,field:'is_virtual',code:'LEGAL_REVIEW_REQUIRED',status:'BLOCKED'});}
  const lifecycle=f.entry();lifecycle.row.abolished_on='2026-12-01';await expect(prepare([lifecycle])).rejects.toThrow('BLOCKED_DEPENDENCY');

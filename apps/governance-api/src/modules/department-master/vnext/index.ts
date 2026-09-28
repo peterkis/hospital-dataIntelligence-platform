@@ -63,7 +63,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   const issues:DepartmentIssue[]=[],commands:PreparedDepartmentCommand[]=[],heads:DepartmentHistory[]=[],materials:unknown[]=[],completedRows=new Set<number>(),ignoredRows=new Set<number>(),commandDigests=new Map<number,string>();
   const issue=(row:number,field:string,code:string,status:DepartmentIssue['status']='BLOCKED')=>issues.push({row,field,code,status});
   const businessContent=(e:ReturnType<typeof normalizeEntry>)=>{const {sourceRow:_,...content}=e;return canonicalPlan(content);};
-  if(verification){await authorize(s,r.verification!.actor,'HOSPITAL','VERIFY');if(verification.inputDigest!==r.digest)throw new Error('STALE_VALIDATION');}
+  if(verification){const verificationIdentity=await authorize(s,r.verification!.actor,'HOSPITAL','VERIFY');if(verificationIdentity!==r.verification!.identity_code)throw new Error('ACCESS_DENIED');if(verification.inputDigest!==r.digest)throw new Error('STALE_VALIDATION');}
   const normalizedByRow=new Map<number,ReturnType<typeof normalizeEntry>>();
   for(const [index,entry] of input.entries.entries())try{normalizedByRow.set(index+1,normalizeEntry(entry,input.timePolicy));}catch(error){issue(index+1,'',error instanceof Error?error.message:'CLOSED_INPUT_REQUIRED','FAIL');}
   const firstNormalized=[...normalizedByRow.entries()][0];
