@@ -135,3 +135,9 @@ test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.at(-1)?.id).toBe('0080_campus_effective_activation');
 });
+
+test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{
+ const installed=files.find(file=>file.id==='0061_campus_terminal_suspension')!.sql.match(/replacement:=\$after\$([\s\S]*?)\$after\$;/u)?.[1];
+ expect(installed).toBeDefined();
+ expect(files.find(file=>file.id==='0080_campus_effective_activation')!.sql).toContain('needle:=$old$'+installed+'$old$;');
+});
