@@ -75,7 +75,7 @@ BEGIN
  body:=pg_get_functiondef('organization_master.workspace_object_context(text,text,uuid)'::regprocedure);
  IF position($n$op.state='SUSPENDED'$n$ IN body)=0 THEN RAISE EXCEPTION 'WORKSPACE_LIFECYCLE_BASELINE_MISMATCH';END IF;
  body:=replace(body,$n$op.state='SUSPENDED'$n$,$n$op.state='RETIRED' AND e.valid_from<=timezone('Asia/Shanghai',clock_timestamp())$n$);
- body:=replace(body,$n$'canActivate',p_kind='CAMPUS' AND can_write AND NOT terminal$n$,$n$'canActivate',p_kid='CAMPUS' AND can_write AND NOT terminal AND NOT EXISTS(SELECT 1 FROM organization_master.campus_event ce WHERE ce.campus_id=node_id AND ce.action='SUSPEND')$n$);
+ body:=replace(body,$n$'canActivate',p_kind='CAMPUS' AND can_write AND NOT terminal$n$,$n$'canActivate',p_kind='CAMPUS' AND can_write AND NOT terminal AND NOT EXISTS(SELECT 1 FROM organization_master.campus_event ce WHERE ce.campus_id=node_id AND ce.action='SUSPEND')$n$);
  EXECUTE body;
 END $workspace$;
 
