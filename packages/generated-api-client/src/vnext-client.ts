@@ -123,3 +123,27 @@ export function createOrganizationWorkspaceClient(baseUrl:string,actor:string){
   discardDraft:(body:operations['discardOrganizationDraft']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/drafts/discard',{body}),
  };
 }
+
+export type DepartmentInput=operations['stageDepartment']['requestBody']['content']['application/json'];
+export function createDepartmentClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  preview:(body:operations['previewDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/preview',{body}),
+  stage:(body:operations['stageDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/inputs',{body}),
+  readInput:(body:operations['readDepartmentInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/inputs/read',{body}),
+  validate:(body:operations['validateDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/validate',{body}),
+  verify:(body:operations['verifyDepartmentEvidence']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/verify',{body}),
+  plan:(body:operations['planDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/plan',{body}),
+  review:(body:operations['reviewDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/review',{body}),
+  approve:(body:operations['approveDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/approve',{body}),
+  apply:(body:operations['applyDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/apply',{body}),
+  resume:(body:operations['resumeDepartment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/resume',{body}),
+  list:(body:operations['listDepartments']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/list',{body}),
+  read:(body:operations['getDepartmentAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/query',{body}),
+  history:(body:operations['getDepartmentVersionHistory']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/history',{body}),
+  exact:(body:operations['getExactDepartmentReference']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/references/exact',{body}),
+  coverage:(body:operations['getDepartmentCoverage']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/references/coverage',{body}),
+  diff:(body:operations['compareDepartmentVersions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/diff',{body}),
+  receiveFile:(body:operations['receiveDepartmentFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/departments/files',{body}),
+ };
+}

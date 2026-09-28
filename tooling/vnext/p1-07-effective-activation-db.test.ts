@@ -21,7 +21,7 @@ beforeAll(async()=>{
   await expect(scenario.campusApply(activate(trial))).rejects.toThrow('BLOCKED_DEPENDENCY');
   expect((await scenario.campus.references.read('maker',{id:trial.id})).head).toBe(trial.version);
   const {upgradeEffectiveActivation}=await import('./review-ci-database.mjs');await upgradeEffectiveActivation(receipt);
-  const after=await inspect(receipt);expect(workspaceStartupPrefix(migrationFiles(),after.ledger)).toBe(82);
+  const after=await inspect(receipt);expect(workspaceStartupPrefix(migrationFiles(),after.ledger)).toBe(87);
  }
 });
 afterAll(async()=>{await workspace?.close();await scenario?.close();await catalog?.close();});

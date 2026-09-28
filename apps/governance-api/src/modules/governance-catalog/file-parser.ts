@@ -12,7 +12,7 @@ export interface ParserIssue { code: string; row: number; column: number; sheet?
 export type CanonicalRow = Record<string,string>;
 export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:'CSV'|'JSON'|XlsxCellType}
 export interface ParserResult {
-  policy: 'STRICT_V1' | 'STRICT_V2'; structuralStatus: 'PARSED' | 'REJECTED';
+  policy: 'STRICT_V1' | 'STRICT_V2' | 'STRICT_DEPARTMENT_V1'; structuralStatus: 'PARSED' | 'REJECTED';
   manifest: { bomDetected: boolean; bomMembers:string[]; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
   rows: CanonicalRow[];
   cells: RawCellProvenance[];
@@ -248,11 +248,11 @@ function decodeXlsxText(value:string,row=0,column=0):string {
   const decoded=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
   assertTextSafety(decoded,row,column);return decoded;
 }
-interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][]}
-function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], organization=false): Map<string,XlsxTable> {
-  const files = unzip(bytes,organization);
+interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][];physicalRows:number[];issues:ParserIssue[]}
+function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'DEPARTMENT'='GENERIC'): Map<string,XlsxTable> {
+  const files = unzip(bytes,mode!=='GENERIC');
   const worksheetParts=[...files.keys()].filter(name=>/^xl\/worksheets\//u.test(name));
-  if(worksheetParts.length!==(organization?3:1))fail('SHEET_CONTRACT');
+  if(worksheetParts.length!==(mode==='ORGANIZATION'?3:1))fail('SHEET_CONTRACT');
   manifest.bomMembers=[...files].filter(([,value])=>value.startsWith('\uFEFF')).map(([name])=>name);
   manifest.bomDetected=manifest.bomMembers.length>0;
   const docs = new Map([...files].map(([name, value]) => [name, xml(value)]));
@@ -320,7 +320,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], organ
   for(const entry of sheets.children)only(entry,[]);
   for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
-  const expected=organization?['ORG01','ORG02','ORG03']:['Data'];
+  const expected=mode==='DEPARTMENT'?['ORG04']:mode==='ORGANIZATION'?['ORG01','ORG02','ORG03']:['Data'];
   if(sheets.children.length!==expected.length||new Set(sheets.children.map(s=>s.attrs['name'])).size!==expected.length||sheets.children.some(s=>!expected.includes(s.attrs['name']??'')))fail('SHEET_CONTRACT',1,1,sheets.children.find(s=>!expected.includes(s.attrs['name']??''))?.attrs['name']??'workbook');
   const ids=new Set<number>();for(const sheet of sheets.children){const id=unsignedAttribute(sheet.attrs['sheetId'],true);if(ids.has(id))fail('SHEET_CONTRACT');ids.add(id);}
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
@@ -338,6 +338,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], organ
   const tables=new Map<string,XlsxTable>();
   for(const [sheetName,target] of targets){
   try{
+  const tableIssues:ParserIssue[]=[];
   const worksheet = get('xl/'+target,'worksheet'); only(worksheet,['sheetFormatPr','cols','sheetData']);
   let previousWorksheetChild = -1;
   for(const child of worksheet.children){
@@ -356,57 +357,90 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], organ
     if(min>max||max>16384)fail('COLUMN_RANGE');
     if (booleanAttribute(col,'hidden')) manifest.hiddenColumns.push(`${min}:${max}`);
   } }
-  const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];const sourceTypes:XlsxCellType[][]=[];
+  const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];const sourceTypes:XlsxCellType[][]=[];const physicalRows:number[]=[];
   if(manifest.defaultRowsHidden){
     manifest.hiddenRows=data.children.filter(r=>booleanAttribute(r,'hidden')!==false).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
     fail('HIDDEN_UNDECLARED');
   }
+  let previousPhysicalRow=0;
   for (const r of data.children) {
-    const rowNum = rows.length + 1; const declaredRow=r.attrs['r'];
-    if (declaredRow !== String(rowNum)) fail('ROW_GAP',declaredRow&&/^[1-9][0-9]*$/.test(declaredRow)&&Number(declaredRow)<=1048576?Number(declaredRow):rowNum); only(r,['c']);
+    const expectedPhysicalRow=previousPhysicalRow+1; const declaredRow=r.attrs['r'];
+    const parsedDeclaredRow=/^[1-9][0-9]*$/u.test(declaredRow??'')?Number(declaredRow):0;
+    const declaredPhysicalRow=Number.isSafeInteger(parsedDeclaredRow)&&parsedDeclaredRow<=1048576?parsedDeclaredRow:0;
+    if (declaredRow !== String(expectedPhysicalRow)) {
+      if(mode!=='DEPARTMENT'||previousPhysicalRow===0||declaredRow!==String(declaredPhysicalRow)||declaredPhysicalRow<expectedPhysicalRow) fail('ROW_GAP',declaredPhysicalRow||expectedPhysicalRow);
+      tableIssues.push({code:'ROW_GAP',row:expectedPhysicalRow,column:0});
+    }
+    const rowNum=declaredPhysicalRow||expectedPhysicalRow;
+    only(r,['c']);
     if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
     const values: string[] = [];const rowTypes:XlsxCellType[]=[];
     for (const c of r.children) {
-      const col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
-      if (c.attrs['r'] !== `${letters}${rowNum}`) fail('COLUMN_GAP',rowNum,col);
-      only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
-      if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
-      else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
-      else return fail('TEXT_CELL_REQUIRED',rowNum,col);
-      values.push(value);rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
+      const valuesBeforeCell=values.length;
+      let col=values.length+1;
+      try {
+        let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
+        if (c.attrs['r'] !== `${letters}${rowNum}`) {
+          const address=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(c.attrs['r'] ?? '');
+          const actualRow=address ? Number(address[2]) : 0;
+          const actualColumn=address ? [...address[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0) : 0;
+          if(mode!=='DEPARTMENT'||rowNum===1||actualRow!==rowNum||actualColumn<=col||actualColumn>100)fail('COLUMN_GAP',rowNum,col);
+          tableIssues.push({code:'COLUMN_GAP',row:rowNum,column:col});
+          while(values.length<actualColumn-1){values.push('');rowTypes.push('inlineStr');}
+          col=actualColumn;
+        }
+        only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
+        if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
+        else if (cellType === 's') { sharedReferences++; only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING',rowNum,col); value = strings[Number(index)]!; }
+        else if(mode==='DEPARTMENT'){tableIssues.push({code:'TEXT_CELL_REQUIRED',row:rowNum,column:col});value='';rowTypes.push('inlineStr');}
+        else return fail('TEXT_CELL_REQUIRED',rowNum,col);
+        values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
+      } catch(error) {
+        const addressableStructure=error instanceof ParseFailure&&error.code==='XLSX_STRUCTURE'&&error.row===0&&error.column===0;
+        const rowLocal=mode==='DEPARTMENT'&&rowNum>1&&error instanceof ParseFailure&&((error.row===rowNum&&['COLUMN_GAP','CELL_LIMIT','BOM_NOT_PREFIX','TEXT_CONTROL','SHARED_STRING'].includes(error.code))||addressableStructure);
+        if(!rowLocal)throw error;
+        tableIssues.push({code:error.code,row:error.row||rowNum,column:error.column||col});
+        if(values.length===valuesBeforeCell){values.push('');rowTypes.push(c.attrs['t']==='s'?'s':'inlineStr');}
+      }
     }
-    rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
+    rows.push(values);sourceTypes.push(rowTypes);physicalRows.push(rowNum);previousPhysicalRow=rowNum; if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
-  tables.set(sheetName,{rows,sourceTypes});
-  }catch(error){if(organization&&error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheetName);throw error;}
+  tables.set(sheetName,{rows,sourceTypes,physicalRows,issues:tableIssues});
+  }catch(error){if(mode!=='GENERIC'&&error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheetName);throw error;}
   }
   if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
   return tables;
 }
 
-function appendObjects(result:Pick<ParserResult,'rows'|'cells'>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false){
+function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<ParserResult,'issues'>>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false,rowIndependent=false){
     for (const [index, source] of objects.entries()) {
       const obj=source.values;
       const row: Record<string,string> = Object.create(null); const rowNum = index + 1, sourceRow = physicalRows[index] ?? rowNum;
-      if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',sourceRow);
+      const rowIssues:ParseFailure[]=[];
+      const rowCheck=(operation:()=>void)=>{try{operation();}catch(error){if(!rowIndependent)throw error;if(error instanceof ParseFailure)rowIssues.push(error);else throw error;}};
+      rowCheck(()=>{if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',sourceRow);});
       for (const f of fields) {
         const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code];
         const text = typeof value==='string'?value:value?.lexeme??'';
-        result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
-        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
-        assertTextSafety(text,sourceRow,column);
-        if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
-        if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
+        result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]?.[column-1] ?? 'inlineStr' : format});
+        rowCheck(()=>{
+          if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
+          assertTextSafety(text,sourceRow,column);
+          if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
+          if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
+        });
         row[f.code] = text;
       }
-      if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow); result.rows.push(row);
+      rowCheck(()=>{if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow);});
+      if(rowIssues.length&&result.issues)for(const issue of rowIssues)result.issues.push({code:issue.code,row:issue.row,column:issue.column,...(issue.sheet?{sheet:issue.sheet}:{})});
+      result.rows.push(row);
     }
 }
 
 export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[], policy: ParserResult['policy']='STRICT_V1'): ParserResult {
-  if(policy!=='STRICT_V1' && policy!=='STRICT_V2')throw new Error('PARSER_POLICY_REQUIRED');
+  if(policy!=='STRICT_V1' && policy!=='STRICT_V2' && policy!=='STRICT_DEPARTMENT_V1')throw new Error('PARSER_POLICY_REQUIRED');
   const result: ParserResult = { policy, structuralStatus:'REJECTED', manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
   try {
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
@@ -414,7 +448,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
     let objects: SourceObject[];
     let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
-      const table = xlsxTables(bytes,result.manifest).get('Data')!; objects = tableObjects(table.rows,fields);physicalRows=table.rows.slice(1).map((_,i)=>i+2);sourceTypes=table.sourceTypes.slice(1);
+      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':'Data')!; physicalRows=table.physicalRows.slice(1);objects = tableObjects(table.rows,fields,[1,...physicalRows],policy==='STRICT_DEPARTMENT_V1',table.issues);sourceTypes=table.sourceTypes.slice(1);result.issues.push(...table.issues);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
@@ -423,7 +457,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy==='STRICT_V2');
+    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',false,policy==='STRICT_DEPARTMENT_V1');
     result.structuralStatus = 'PARSED';
   } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
@@ -439,11 +473,11 @@ export function parseOrganizationWorkbook(bytes:Uint8Array,fields:Record<Organiz
  const result:OrganizationWorkbookResult={policy:'STRICT_ORG_BUNDLE_V1',structuralStatus:'REJECTED',manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},sheets:{ORG01:{rows:[],cells:[]},ORG02:{rows:[],cells:[]},ORG03:{rows:[],cells:[]}},issues:[]};
  try{
   if(!bytes.length)fail('EMPTY_FILE');if(bytes.length>1048576)fail('FILE_LIMIT');
-  const tables=xlsxTables(bytes,result.manifest,true);let count=0;
+  const tables=xlsxTables(bytes,result.manifest,'ORGANIZATION');let count=0;
   for(const sheet of organizationSheets){try{
    const fs=fields[sheet];if(!fs?.length||fs.length>100||new Set(fs.map(f=>f.code)).size!==fs.length)fail('FIELD_CONTRACT');
    const table=tables.get(sheet)!;const objects=tableObjects(table.rows,fs);count+=objects.length;if(count>1000)fail('ROW_LIMIT');
-   const parsed:Pick<ParserResult,'rows'|'cells'>={rows:[],cells:[]};appendObjects(parsed,objects,fs,table.rows.slice(1).map((_,i)=>i+2),table.sourceTypes.slice(1),'XLSX',true,true);
+   const parsed:Pick<ParserResult,'rows'|'cells'>={rows:[],cells:[]};appendObjects(parsed,objects,fs,table.physicalRows.slice(1),table.sourceTypes.slice(1),'XLSX',true,true);
    result.sheets[sheet]={rows:parsed.rows,cells:parsed.cells.map(cell=>({...cell,sheet}))};
   }catch(error){if(error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheet);throw error;}}
   if(!count)fail('NO_DATA');result.structuralStatus='PARSED';
@@ -452,14 +486,14 @@ export function parseOrganizationWorkbook(bytes:Uint8Array,fields:Record<Organiz
  return result;
 }
 
-function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): SourceObject[] {
+function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[],rowIndependent=false,issues?:ParserIssue[]): SourceObject[] {
   const header = table[0]; if (!header) return fail('NO_DATA');
   header.forEach((key,column)=>assertTextSafety(key,1,column+1));
   const duplicateColumn=header.findIndex((key,index)=>header.indexOf(key)!==index);
   if (duplicateColumn>=0) fail('DUPLICATE_FIELD',1,duplicateColumn+1);
   const unknownColumn=header.findIndex(h=>!fields.some(f=>f.code===h));
   if (header.length !== fields.length || unknownColumn>=0) fail('FIELD_CONTRACT',1,unknownColumn>=0?unknownColumn+1:header.length+1);
-  return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });
+  return table.slice(1).map((row,index)=> { const sourceRow=physicalRows?.[index+1]??index+2; if (row.length !== header.length) {if(!rowIndependent)fail('FIELD_CONTRACT',sourceRow);issues?.push({code:'FIELD_CONTRACT',row:sourceRow,column:0});row=row.slice(0,header.length);while(row.length<header.length)row.push('');} return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });
 }
 
 if (!isMainThread && parentPort) {

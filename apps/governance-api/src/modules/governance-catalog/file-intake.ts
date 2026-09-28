@@ -37,7 +37,7 @@ async function runParser<T>(workerData:unknown):Promise<T> {
   } finally { activeWorkers--; }
 }
 
-const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'])=>runParser<ParserResult>({bytes,format,fields,policy});
+export const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'])=>runParser<ParserResult>({bytes,format,fields,policy});
 export const parseOrganizationWorkbookBounded=(bytes:Uint8Array,organizationFields:Record<OrganizationSheet,ParserField[]>)=>runParser<OrganizationWorkbookResult>({bytes,organizationFields,policy:'STRICT_ORG_BUNDLE_V1'});
 
 /** Internal root-transaction seam used when a file receive must be linked to another Owner write. */

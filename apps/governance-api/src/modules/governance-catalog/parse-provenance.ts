@@ -14,13 +14,13 @@ const ManifestSchema=Type.Object({bomDetected:Type.Boolean(),bomMembers:Type.Arr
 const RowSchema=Type.Record(Type.String(),Text);
 const IssueSchema=Type.Object({code:Type.String({pattern:'^[A-Z_]{1,64}$'}),row:IssueRow,column:Int,sheet:Type.Optional(Text)},{additionalProperties:false});
 const ResultSchema=Type.Object({
- policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
+ policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2'),Type.Literal('STRICT_DEPARTMENT_V1')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
  manifest:ManifestSchema,rows:Type.Array(RowSchema,{maxItems:1000}),
- cells:Type.Array(Type.Object({row:Int,sourceRow:Int,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
+ cells:Type.Array(Type.Object({row:Int,sourceRow:IssueRow,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
  issues:Type.Array(IssueSchema,{maxItems:100000}),
 },{additionalProperties:false});
 const PayloadSchema=Type.Object({sourceArtifactId:Type.String(),result:ResultSchema},{additionalProperties:false});
-const BundleCellSchema=Type.Object({row:Int,sourceRow:Int,column:Int,field:Text,value:Text,sourceType:Type.Union([Type.Literal('inlineStr'),Type.Literal('s')]),sheet:Sheet},{additionalProperties:false});
+const BundleCellSchema=Type.Object({row:Int,sourceRow:IssueRow,column:Int,field:Text,value:Text,sourceType:Type.Union([Type.Literal('inlineStr'),Type.Literal('s')]),sheet:Sheet},{additionalProperties:false});
 const BundleSheetSchema=Type.Object({rows:Type.Array(RowSchema,{maxItems:1000}),cells:Type.Array(BundleCellSchema,{maxItems:100000})},{additionalProperties:false});
 const BundleResultSchema=Type.Object({
  policy:Type.Literal('STRICT_ORG_BUNDLE_V1'),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),manifest:ManifestSchema,
@@ -45,7 +45,14 @@ export function verifyParsedPayload(bytes:Uint8Array,expected:{sourceArtifactId:
   if(result.rows.length!==0||result.issues.length===0)throw new Error('PARSER_RESULT_REQUIRED');
   return result;
  }
- if(!result.rows.length||result.issues.length||result.cells.length!==result.rows.length*fields.length||result.manifest.defaultRowsHidden||result.manifest.hiddenSheets.length||result.manifest.hiddenRows.length||result.manifest.hiddenColumns.length)throw new Error('PARSER_RESULT_REQUIRED');
+  const departmentSourceRows=new Set(result.cells.map(cell=>cell.sourceRow));
+  const departmentMaxSourceRow=Math.max(...departmentSourceRows,0);
+  const rowLocalDepartmentIssues=result.policy==='STRICT_DEPARTMENT_V1'&&result.issues.length>0&&result.issues.every(issue=>{
+   if(issue.row<1)return false;
+   if(issue.code==='ROW_GAP')return issue.column===0&&issue.row>1&&issue.row<departmentMaxSourceRow&&!departmentSourceRows.has(issue.row);
+   return departmentSourceRows.has(issue.row);
+  });
+  if(!result.rows.length||result.issues.length&&!rowLocalDepartmentIssues||result.cells.length!==result.rows.length*fields.length||result.manifest.defaultRowsHidden||result.manifest.hiddenSheets.length||result.manifest.hiddenRows.length||result.manifest.hiddenColumns.length)throw new Error('PARSER_RESULT_REQUIRED');
  const names=fields.map(f=>f.code).sort();const positions=new Set<string>();
  for(const row of result.rows)if(JSON.stringify(Object.keys(row).sort())!==JSON.stringify(names))throw new Error('PARSER_RESULT_REQUIRED');
  for(const cell of result.cells){

@@ -9,7 +9,7 @@ import {saveExclusiveReceipt,localReceiptTime} from './receipt.mjs';
 /** Temporary test facility. No provider key or database password enters receipts. */
 export async function createValidationOwnerSession(receipt,{failAfterRoleCreation=false}={}){
  const base=resolveTarget(receipt);
- if(receipt.purpose!=='TEMPORARY_VALIDATION'||!['P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07'].includes(receipt.taskId))throw new Error('TEMPORARY_VALIDATION_REQUIRED');
+ if(receipt.purpose!=='TEMPORARY_VALIDATION'||!['P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01'].includes(receipt.taskId))throw new Error('TEMPORARY_VALIDATION_REQUIRED');
  peer(receipt.name,identitySQL(receipt));
  const role='hdi_validation_'+randomUUID().replaceAll('-','').slice(0,16);
  const path=resolve(root,'.runtime/vnext/fresh',role+'.json');
@@ -54,7 +54,7 @@ export async function createValidationOwnerSession(receipt,{failAfterRoleCreatio
  */
 export function dropValidationOwnerRole(session){
  const r=session.receipt;
- if(r.purpose!=='TEMPORARY_VALIDATION_OWNER'||!['P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07'].includes(r.taskId)||!/^hdi_mc_vnext_[a-f0-9]{16}$/.test(r.database)||!/^hdi_validation_[a-f0-9]{16}$/.test(r.role)||!/^\d+$/.test(r.roleOid))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
+ if(r.purpose!=='TEMPORARY_VALIDATION_OWNER'||!['P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01'].includes(r.taskId)||!/^hdi_mc_vnext_[a-f0-9]{16}$/.test(r.database)||!/^hdi_validation_[a-f0-9]{16}$/.test(r.role)||!/^\d+$/.test(r.roleOid))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
  if(resolve(session.receiptPath)!==resolve(root,'.runtime/vnext/fresh',r.role+'.json'))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
  const disposed=JSON.parse(readFileSync(resolve(root,'.runtime/vnext/fresh',r.database+'.disposed.json'),'utf8'));
  if(disposed.name!==r.database||disposed.oid!==r.databaseOid||disposed.disposed!==true)throw new Error('OWNER_DATABASE_NOT_DISPOSED');
