@@ -248,7 +248,7 @@ function decodeXlsxText(value:string,row=0,column=0):string {
   const decoded=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
   assertTextSafety(decoded,row,column);return decoded;
 }
-interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][];issues:ParserIssue[]}
+interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][];physicalRows:number[];issues:ParserIssue[]}
 function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'DEPARTMENT'='GENERIC'): Map<string,XlsxTable> {
   const files = unzip(bytes,mode!=='GENERIC');
   const worksheetParts=[...files.keys()].filter(name=>/^xl\/worksheets\//u.test(name));
@@ -357,18 +357,27 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
     if(min>max||max>16384)fail('COLUMN_RANGE');
     if (booleanAttribute(col,'hidden')) manifest.hiddenColumns.push(`${min}:${max}`);
   } }
-  const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];const sourceTypes:XlsxCellType[][]=[];
+  const data = one(worksheet,'sheetData'); only(data,['row']); const rows: string[][] = [];const sourceTypes:XlsxCellType[][]=[];const physicalRows:number[]=[];
   if(manifest.defaultRowsHidden){
     manifest.hiddenRows=data.children.filter(r=>booleanAttribute(r,'hidden')!==false).map(r=>Number(r.attrs['r'])).filter(r=>Number.isInteger(r)&&r>0);
     fail('HIDDEN_UNDECLARED');
   }
+  let previousPhysicalRow=0;
   for (const r of data.children) {
-    const rowNum = rows.length + 1; const declaredRow=r.attrs['r'];
-    if (declaredRow !== String(rowNum)) fail('ROW_GAP',declaredRow&&/^[1-9][0-9]*$/.test(declaredRow)&&Number(declaredRow)<=1048576?Number(declaredRow):rowNum); only(r,['c']);
+    const expectedPhysicalRow=previousPhysicalRow+1; const declaredRow=r.attrs['r'];
+    const parsedDeclaredRow=/^[1-9][0-9]*$/u.test(declaredRow??'')?Number(declaredRow):0;
+    const declaredPhysicalRow=Number.isSafeInteger(parsedDeclaredRow)&&parsedDeclaredRow<=1048576?parsedDeclaredRow:0;
+    if (declaredRow !== String(expectedPhysicalRow)) {
+      if(mode!=='DEPARTMENT'||previousPhysicalRow===0||declaredRow!==String(declaredPhysicalRow)||declaredPhysicalRow<expectedPhysicalRow) fail('ROW_GAP',declaredPhysicalRow||expectedPhysicalRow);
+      tableIssues.push({code:'ROW_GAP',row:expectedPhysicalRow,column:0});
+    }
+    const rowNum=declaredPhysicalRow||expectedPhysicalRow;
+    only(r,['c']);
     if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
     const values: string[] = [];const rowTypes:XlsxCellType[]=[];
-    try {
-      for (const c of r.children) {
+    for (const c of r.children) {
+      const valuesBeforeCell=values.length;
+      try {
         let col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
         if (c.attrs['r'] !== `${letters}${rowNum}`) {
           const address=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(c.attrs['r'] ?? '');
@@ -385,16 +394,17 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
         else if(mode==='DEPARTMENT'){tableIssues.push({code:'TEXT_CELL_REQUIRED',row:rowNum,column:col});value='';rowTypes.push('inlineStr');}
         else return fail('TEXT_CELL_REQUIRED',rowNum,col);
         values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
+      } catch(error) {
+        const rowLocal=mode==='DEPARTMENT'&&rowNum>1&&error instanceof ParseFailure&&error.row===rowNum&&['COLUMN_GAP','CELL_LIMIT','BOM_NOT_PREFIX','TEXT_CONTROL','SHARED_STRING'].includes(error.code);
+        if(!rowLocal)throw error;
+        tableIssues.push({code:error.code,row:error.row,column:error.column});
+        if(values.length===valuesBeforeCell){values.push('');rowTypes.push(c.attrs['t']==='s'?'s':'inlineStr');}
       }
-    } catch(error) {
-      const rowLocal=mode==='DEPARTMENT'&&rowNum>1&&error instanceof ParseFailure&&error.row===rowNum&&['COLUMN_GAP','CELL_LIMIT','BOM_NOT_PREFIX','TEXT_CONTROL','SHARED_STRING'].includes(error.code);
-      if(!rowLocal)throw error;
-      tableIssues.push({code:error.code,row:error.row,column:error.column});
     }
-    rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
+    rows.push(values);sourceTypes.push(rowTypes);physicalRows.push(rowNum);previousPhysicalRow=rowNum; if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
-  tables.set(sheetName,{rows,sourceTypes,issues:tableIssues});
+  tables.set(sheetName,{rows,sourceTypes,physicalRows,issues:tableIssues});
   }catch(error){if(mode!=='GENERIC'&&error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheetName);throw error;}
   }
   if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
@@ -436,7 +446,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
     let objects: SourceObject[];
     let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
-      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':'Data')!; physicalRows=table.rows.slice(1).map((_,i)=>i+2);objects = tableObjects(table.rows,fields,[1,...physicalRows],policy==='STRICT_DEPARTMENT_V1',table.issues);sourceTypes=table.sourceTypes.slice(1);result.issues.push(...table.issues);
+      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':'Data')!; physicalRows=table.physicalRows.slice(1);objects = tableObjects(table.rows,fields,[1,...physicalRows],policy==='STRICT_DEPARTMENT_V1',table.issues);sourceTypes=table.sourceTypes.slice(1);result.issues.push(...table.issues);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
@@ -465,7 +475,7 @@ export function parseOrganizationWorkbook(bytes:Uint8Array,fields:Record<Organiz
   for(const sheet of organizationSheets){try{
    const fs=fields[sheet];if(!fs?.length||fs.length>100||new Set(fs.map(f=>f.code)).size!==fs.length)fail('FIELD_CONTRACT');
    const table=tables.get(sheet)!;const objects=tableObjects(table.rows,fs);count+=objects.length;if(count>1000)fail('ROW_LIMIT');
-   const parsed:Pick<ParserResult,'rows'|'cells'>={rows:[],cells:[]};appendObjects(parsed,objects,fs,table.rows.slice(1).map((_,i)=>i+2),table.sourceTypes.slice(1),'XLSX',true,true);
+   const parsed:Pick<ParserResult,'rows'|'cells'>={rows:[],cells:[]};appendObjects(parsed,objects,fs,table.physicalRows.slice(1),table.sourceTypes.slice(1),'XLSX',true,true);
    result.sheets[sheet]={rows:parsed.rows,cells:parsed.cells.map(cell=>({...cell,sheet}))};
   }catch(error){if(error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheet);throw error;}}
   if(!count)fail('NO_DATA');result.structuralStatus='PARSED';

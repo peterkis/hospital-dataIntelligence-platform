@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {departmentFixture} from './p2-01-fixture.js';
 import {organizationWorkbook} from './organization-workbook-fixture.js';
+import {unzip} from '../../apps/governance-api/src/modules/governance-catalog/file-parser.js';
+import {zipText} from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.js';
 import {ORG04_FIELDS} from '../../apps/governance-api/src/modules/department-master/index.js';
 import type {DepartmentStageInput as StageInput} from '../../apps/governance-api/src/modules/department-master/index.js';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
@@ -92,6 +94,18 @@ test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=
  const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(1);expect(read.entries[0]!.sourceRow).toBe(3);expect(read.entries[0]!.row).toEqual(retained.row);
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:result.input!.inputId,inputDigest:result.input!.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retained physical row',evidenceId:f.artifact.artifactId}]});
  expect((await owner.validate('maker',{inputId:result.input!.inputId})).issues).toContainEqual({row:1,field:'record_status',code:'APPROVAL_REQUIRED',status:'BLOCKED'});
+});
+
+test('ORG04 XLSX keeps valid entries across an omitted physical worksheet row',async()=>{
+ const first=f.entry(),gap=f.entry(),second=f.entry();
+ const files=Object.fromEntries(unzip(organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>first.row[k]),ORG04_FIELDS.map(k=>gap.row[k]),ORG04_FIELDS.map(k=>second.row[k])]}),true));
+ files['xl/worksheets/sheet9.xml']=files['xl/worksheets/sheet9.xml']!.replace(/<row r="3">.*?<\/row>/u,'');
+ const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_ROW_GAP',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[
+  {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
+  {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
+ ]},zipText(files));
+ expect(result.input).not.toBeNull();expect(result.issues).toContainEqual({code:'ROW_GAP',row:3,column:0});
+ const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(2);expect(read.entries.map(entry=>entry.sourceRow)).toEqual([2,4]);
 });
 
 test('metadata staging derives source rows instead of accepting caller provenance',async()=>{

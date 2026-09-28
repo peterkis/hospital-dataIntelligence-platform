@@ -140,8 +140,8 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
      const parserIssuesByRow=new Map<number,DepartmentIssue[]>();
      for(const parsedIssue of parsed.issues){
       const cell=parsed.cells.find(candidate=>candidate.sourceRow===parsedIssue.row&&(!parsedIssue.column||candidate.column===parsedIssue.column));
-      const failure:DepartmentIssue={row:cell?.row??0,field:cell?.field??'',code:parsedIssue.code,status:'FAIL'};
-      if(failure.row===0)failures.push(failure);else parserIssuesByRow.set(failure.row,[...(parserIssuesByRow.get(failure.row)??[]),failure]);
+      const failure:DepartmentIssue={row:cell?.row??(parsedIssue.code==='ROW_GAP'?parsedIssue.row:0),field:cell?.field??'',code:parsedIssue.code,status:'FAIL'};
+      if(failure.row===0||parsedIssue.code==='ROW_GAP'&&!cell)failures.push(failure);else parserIssuesByRow.set(failure.row,[...(parserIssuesByRow.get(failure.row)??[]),failure]);
      }
      if(parsed.rows.length!==input.entries.length)failures.push({row:0,field:'',code:'MANIFEST_ROW_MISMATCH',status:'FAIL'});
      const validEntries:StoredStageInput['entries'] = [];
