@@ -98,6 +98,12 @@ jobs:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_PREVIOUS_UPGRADE: '1'
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-previous-access-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0074.json
+      - name: Populated 0079 to 0080 effective activation upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_ACTIVATION_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-07-effective-activation-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0079.json
       - name: Retain exact-head regression evidence
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         uses: actions/upload-artifact@v4
