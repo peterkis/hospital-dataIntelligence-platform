@@ -21,12 +21,13 @@ async function inspectCampus(input:{id:string;retired:boolean|null;click?:string
  const tab=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.workspace-tabs button')).find(b=>b.textContent==='院区'&&!b.disabled),'campus tab');tab.click();
  const row=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace .draft-item')).find(b=>b.textContent?.includes(input.id.slice(-8))&&!b.disabled),'exact campus row');row.click();
  await wait(()=>document.querySelector('.entity-workspace article.history')&&Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button')).some(b=>b.textContent==='读取当前资料'&&!b.disabled),'campus inspection complete');
- const buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button'));
+  let buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button'));
  let labels=buttons.map(b=>b.textContent);
  if(input.retired!==null&&labels.includes('申请永久退出'))throw new Error('DUPLICATE_RETIRE_VISIBLE');
  if(input.retired&&labels.includes('以此资料版本修订'))throw new Error('TERMINAL_REVISE_VISIBLE');
  if(input.retired===false&&(!labels.includes('以此资料版本修订')||!labels.includes('制定开业计划')||!document.body.innerText.includes('已登记永久退出，生效时间')))throw new Error('PRE_EXIT_MAINTENANCE_HIDDEN');
  if(input.completed){await wait(()=>document.body.innerText.includes('处置状态：已结案（合成范围）'),'completed disposition report');labels=Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button')).map(b=>b.textContent);if(labels.includes('登记处置证据')||labels.includes('申请处置结案'))throw new Error('COMPLETED_DISPOSITION_ACTION_VISIBLE');}
+ if(input.click==='登记处置证据'||input.click==='申请处置结案'){await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button')).some(b=>b.textContent===input.click&&!b.disabled),'disposition action');buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button'));labels=buttons.map(b=>b.textContent);}
  if(input.click){const action=buttons.find(b=>b.textContent===input.click&&!b.disabled);if(!action)throw new Error('ACTION_UNAVAILABLE: '+input.click);action.click();}return labels;
 }
 beforeAll(async()=>{
