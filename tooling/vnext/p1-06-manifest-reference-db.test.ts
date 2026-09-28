@@ -136,7 +136,12 @@ for(const {kind,permission} of matrix)test(`${kind}: current ${permission} is re
 test('cross-scope ORG03 endpoints use their real scopes rather than the receiving scope',async()=>{
  peer(receipt.name,"INSERT INTO vnext_control.protected_grant SELECT actor_code,dataset_id,'SOUTH',purpose,permission FROM vnext_control.protected_grant WHERE campus='NORTH' ON CONFLICT DO NOTHING; INSERT INTO organization_master.access SELECT a,'00000000-0000-0000-0000-000000000000'::uuid,'SOUTH',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED','REVIEW']) p ON CONFLICT DO NOTHING;");
  const south=await fixture.x.createCampus('DEMO south','HEADQUARTERS','SOUTH');fixture.x.grantPair(subject.id,south.id);
- const draft=draftFor('PAIR'),row=draft.metadata.manifest!.rows![0]!;if(row.dataset!=='ORG03')throw new Error('ORG03_REQUIRED');row.governanceScope='SOUTH';row.campus={kind:'PLATFORM_REF',dataset:'ORG02',id:south.id,expectedVersion:south.version};
+ const metadata=clone(fixture.input),row=metadata.manifest.rows.find(row=>row.dataset==='ORG03');
+ if(!row||row.dataset!=='ORG03')throw new Error('ORG03_REQUIRED');
+ metadata.manifest.rows=[row];row.intent='CREATE';delete row.target;
+ row.subject={kind:'PLATFORM_REF',dataset:'ORG01',id:subject.id,expectedVersion:subject.version};
+ row.governanceScope='SOUTH';row.campus={kind:'PLATFORM_REF',dataset:'ORG02',id:south.id,expectedVersion:south.version};
+ const draft=content(metadata);
  const saved=await workspace.saveDraft('maker',{...draft,requestId:randomUUID()});expect((await workspace.readDraft('maker',saved.id)).content).toMatchObject(draft);
  const restore=revoke('SUBJECT_ONLY','READ');try{await expect(workspace.readDraft('maker',saved.id)).rejects.toThrow('ACCESS_DENIED');}finally{restore();}
 });
@@ -150,7 +155,9 @@ test('authorized workbook still completes independent approval and idempotent Ap
  const draft=content(clone(fixture.input)),saved=await workspace.saveDraft('maker',{...draft,requestId:randomUUID()}),request={id:saved.id,expectedVersion:saved.version,requestId:randomUUID()};
  const submitted=await workspace.submitDraft('maker',request);expect(await workspace.submitDraft('maker',request)).toEqual(submitted);
  const ref={jobId:submitted.jobId,revisionId:submitted.revisionId},writer=createOrganizationBundleClient(base,'maker'),reviewer=createOrganizationBundleClient(base,'reviewer'),admin=createOrganizationBundleClient(base,'bundle-admin');
- const preauth=await admin.preauthorize({...ref,requestId:randomUUID(),grants:[2,3,4].flatMap(row=>['maker','reviewer'].map(actor=>({row,actor,permissions:['READ','CREATE','REVIEW'] as const})))});expect(preauth.response.status,JSON.stringify(preauth.error)).toBe(200);
+ const permissions:Array<'READ'|'CREATE'|'REVIEW'>=['READ','CREATE','REVIEW'];
+ const grants=[2,3,4].flatMap(row=>['maker','reviewer'].map(actor=>({row,actor,permissions:[...permissions]})));
+ const preauth=await admin.preauthorize({...ref,requestId:randomUUID(),grants});expect(preauth.response.status,JSON.stringify(preauth.error)).toBe(200);
  const legal=await reviewer.legalReview(ref);expect(legal.response.status,JSON.stringify(legal.error)).toBe(200);
  const verified=await reviewer.verify({...ref,requestId:randomUUID(),digest:legal.data!.digest});expect(verified.response.status,JSON.stringify(verified.error)).toBe(200);
  const requestId=randomUUID(),plan=await writer.plan({...ref,requestId});expect(plan.response.status,JSON.stringify(plan.error)).toBe(200);
