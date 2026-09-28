@@ -7,6 +7,7 @@ on:
       - 'apps/governance-api/src/modules/organization-master/workspace/**'
       - 'db/vnext/migrations/0077_workspace_manifest_reference_access.sql'
       - 'tooling/vnext/p1-06-manifest-reference*.ts'
+      - 'tooling/vnext/review-ci-database.mjs'
       - 'tooling/vnext/review-ci-manifest-*.ts'
       - 'tooling/vnext/review-ci-manifest-*.mjs'
       - 'tooling/vnext/workspace-migrations.mjs'
@@ -43,10 +44,24 @@ jobs:
           cache: npm
       - run: npm install --global npm@11.9.0
       - run: npm ci
+      - name: Record exact candidate
+        run: |
+          mkdir -p .runtime/vnext/manifest-review-results
+          git rev-parse HEAD | tee .runtime/vnext/manifest-review-results/commit.txt
+          git archive --format=tar HEAD | gzip > .runtime/vnext/manifest-review-results/source.tar.gz
       - name: PostgreSQL client
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
       - name: Populated 0076 to 0077 exact-manifest reference access upgrade
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_MANIFEST_UPGRADE: '1'
-        run: npx vitest run --config tooling/vnext/vitest.p1-06-manifest-upgrade.config.ts
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-manifest-upgrade.config.ts --reporter=json --outputFile=.runtime/vnext/manifest-review-results/upgrade-0076.json
+      - name: Retain exact-head upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-06-manifest-upgrade-${{ github.event.pull_request.head.sha }}
+          path: .runtime/vnext/manifest-review-results/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
