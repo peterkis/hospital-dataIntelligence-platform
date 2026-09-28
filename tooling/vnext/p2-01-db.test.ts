@@ -135,16 +135,14 @@ test('intra-batch duplicate aliases, codes, and targets block every member',asyn
  const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.issues.filter(issue=>issue.code==='BATCH_CONFLICT').map(issue=>issue.row)).toEqual([1,2]);
 });
 
-test('intra-batch exact duplicates keep the first row and ignore later copies',async()=>{
+test('intra-batch duplicate org_id rows fail even when exact',async()=>{
  const first=f.entry(),second=structuredClone(first);
  const staged=await owner.stage('maker',await f.input([first,second]));
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[
   {row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO exact duplicate first',evidenceId:f.artifact.artifactId},
   {row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO exact duplicate later',evidenceId:f.artifact.artifactId},
  ]});
- const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.decision).toBe('PASS');
- const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
- expect(review.unit.commands.map(command=>command.row)).toEqual([1]);
+ const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.decision).toBe('FAIL');expect(validation.issues.filter(issue=>issue.code==='BATCH_CONFLICT').map(issue=>issue.row)).toEqual([1,2]);
 });
 
 test('same-job retry omits a row whose matching facts were already committed',async()=>{

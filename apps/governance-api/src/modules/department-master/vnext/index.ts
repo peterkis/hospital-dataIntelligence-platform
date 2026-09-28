@@ -100,8 +100,8 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
    else if(!e.target&&(await sql<{r:boolean}>`select department_master.code_conflict(${actor},${e.row.org_code},NULL) r`.execute(s)).rows[0]!.r)issue(row,'org_code','IDENTIFIER_CONFLICT');
   }
   const conflictRows=new Set<number>();
-  const markConflicts=(groups:Map<string,number[]>,field:string)=>{for(const rows of groups.values())if(rows.length>1){const first=preparedByRow.get(rows[0]!);const exact=first!==undefined&&rows.slice(1).every(row=>{const candidate=preparedByRow.get(row);return candidate!==undefined&&businessContent(candidate.entry)===businessContent(first.entry);});if(exact)for(const row of rows.slice(1))ignoredRows.add(row);else{for(const row of rows){conflictRows.add(row);if(!issues.some(existing=>existing.row===row&&existing.field===field&&existing.code==='BATCH_CONFLICT'))issue(row,field,'BATCH_CONFLICT','FAIL');}}}};
-  markConflicts(aliases,'org_id');markConflicts(codes,'org_code');markConflicts(targets,'target');
+  const markConflicts=(groups:Map<string,number[]>,field:string,ignoreExact=true)=>{for(const rows of groups.values())if(rows.length>1){const first=preparedByRow.get(rows[0]!);const exact=first!==undefined&&rows.slice(1).every(row=>{const candidate=preparedByRow.get(row);return candidate!==undefined&&businessContent(candidate.entry)===businessContent(first.entry);});if(exact&&ignoreExact)for(const row of rows.slice(1))ignoredRows.add(row);else{for(const row of rows){conflictRows.add(row);if(!issues.some(existing=>existing.row===row&&existing.field===field&&existing.code==='BATCH_CONFLICT'))issue(row,field,'BATCH_CONFLICT','FAIL');}}}};
+  markConflicts(aliases,'org_id',false);markConflicts(codes,'org_code');markConflicts(targets,'target');
   for(const row of conflictRows)ignoredRows.delete(row);
   for(let index=issues.length-1;index>=0;index--)if(ignoredRows.has(issues[index]!.row))issues.splice(index,1);
   return {r,input,contract:c,verification,commands,heads,materials,issues,completedRows,ignoredRows,commandDigests};
