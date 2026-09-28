@@ -16,7 +16,7 @@ function content():Extract<DraftContent,{domain:'BUNDLE'}>{return {domain:'BUNDL
  {dataset:'ORG03',row:3,intent:'REVISE',governanceScope:'NORTH',sourceVersionId:ids.version3,target:{owner:'organization-master/operating-relation',id:ids.relation,expectedVersion:'4'},subject:{kind:'PLATFORM_REF',dataset:'ORG01',id:ids.subject,expectedVersion:'7'},campus:{kind:'PLATFORM_REF',dataset:'ORG02',id:ids.campus,expectedVersion:'9'}},
  ]}}};}
 
-test('current V3 authenticates exact workbook targets and ORG03 platform endpoints',()=>{
+test('current V4 authenticates exact workbook targets and ORG03 platform endpoints',()=>{
  const metadata=draftMetadata(content());
  expect(metadata.manifestProtected).toBe(true);
  expect(metadata.manifestReferences).toEqual([
@@ -53,4 +53,16 @@ test('an incomplete ORG03 platform endpoint id is protected before kind is selec
  expect(draftMetadata(value).manifestReferences).toEqual([
   {row:2,dataset:'ORG03',scope:'NORTH',intent:null,target:null,subject:{id:ids.subject,version:'7'},campus:null},
  ]);
+});
+
+for(const format of ['V1','V2','V3'] as const)test(`${format} projection stays byte-for-byte compatible with the original format`,async()=>{
+ const {draftMetadata:original}=await import('../../apps/governance-api/src/modules/organization-master/workspace/contracts-core.js');
+ expect(JSON.stringify(draftMetadata(content(),format))).toBe(JSON.stringify(original(content(),format)));
+ expect(draftMetadata(content(),format)).not.toHaveProperty('manifestReferences');
+});
+
+test('removing workbook bytes retains exact references and does not mutate the source draft',()=>{
+ const value=content(),before=structuredClone(value),without=draftMetadata(value),withBytes=draftMetadata({...value,bytesBase64:'ZGVtbw=='});
+ expect(without.manifestReferences).toEqual(withBytes.manifestReferences);expect(without.bindings).toEqual(contracts);
+ expect(without.manifestProtected).toBe(true);expect(without.hasPayload).toBe(false);expect(value).toEqual(before);
 });
