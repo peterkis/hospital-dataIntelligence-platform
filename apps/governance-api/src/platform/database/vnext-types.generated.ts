@@ -383,6 +383,7 @@ export interface OrganizationMasterCampusEvent {
   campus_id: string;
   id: Generated<string>;
   input_id: string;
+  lifecycle: Json | null;
   number: Int8;
   recorded_at: Generated<string>;
   valid_from: string;

@@ -4,7 +4,7 @@ import {localTime,subtract,intersect} from '../time.js';
 import {CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,Id,type CampusCommand,type CampusFacts} from './contracts.js';
 import {CampusCoverageSchema,type CampusCoverageInput,CampusPinSchema,type CampusPinInput,CampusResolveSchema,type CampusResolveInput} from './reference-contracts.js';
 import {check,type Scope} from './input.js';
-export interface CampusEvent {id:string;number:number;action:CampusCommand['action'];valid_from:string;valid_to:string|null;recorded_at:string;input_id:string;facts:CampusFacts|null;state:'PLANNING'|'TRIAL_RUNNING'|'RUNNING'|'SUSPENDED'|null;planned_opening_at:string|null}
+export interface CampusEvent {id:string;number:number;action:CampusCommand['action'];valid_from:string;valid_to:string|null;recorded_at:string;input_id:string;facts:CampusFacts|null;state:'PLANNING'|'TRIAL_RUNNING'|'RUNNING'|'SUSPENDED'|'RETIRED'|null;planned_opening_at:string|null}
 export interface CampusSnapshot {id:string;scope:string;events:CampusEvent[]}
 type Root=<T>(work:(scope:Scope)=>Promise<T>)=>Promise<T>;
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
@@ -12,10 +12,11 @@ const reference=(id:string)=>({owner:'organization-master/campus' as const,id});
 const publicEvent=(e:CampusEvent)=>({version:String(e.number),versionId:e.id,action:e.action,validFrom:stamp(e.valid_from),validTo:e.valid_to&&stamp(e.valid_to),recordedAt:stamp(e.recorded_at)});
 const versionReference=(id:string,e:CampusEvent)=>({...reference(id),version:String(e.number),versionId:e.id});
 function unique(references:readonly {id:string}[]){if(new Set(references.map(r=>r.id)).size!==references.length)throw new Error('CAMPUS_REFERENCE_CONFLICT');}
+export function campusOperationAt(events:CampusEvent[],at:string){const active=events.filter(e=>e.state!==null&&stamp(e.valid_from)<=at&&(e.valid_to===null||at<stamp(e.valid_to)));return active.find(e=>e.state==='RETIRED')??active.at(-1);}
 function project(s:CampusSnapshot,businessAt:string,asOf:string){
  const known=s.events.filter(e=>stamp(e.recorded_at)<=asOf);
  const effective=(rows:CampusEvent[])=>rows.filter(e=>stamp(e.valid_from)<=businessAt&&(e.valid_to===null||businessAt<stamp(e.valid_to))).at(-1);
- const v=effective(known.filter(e=>e.facts!==null)),p=effective(known.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action))),o=effective(known.filter(e=>e.state!==null));
+ const v=effective(known.filter(e=>e.facts!==null)),p=effective(known.filter(e=>['SCHEDULE_OPENING','CANCEL_OPENING'].includes(e.action))),o=campusOperationAt(known,businessAt);
  return {view:{id:s.id,head:String(known.at(-1)?.number??0),facts:v?.facts??null,operationStatus:o?.state??'NOT_ESTABLISHED' as const,plannedOpeningAt:p?.planned_opening_at?stamp(p.planned_opening_at):null,operatingPermission:'NOT_EVALUABLE' as const},version:v};
 }
 /** One Owner projection shared by both legacy-shaped reads and typed references. */

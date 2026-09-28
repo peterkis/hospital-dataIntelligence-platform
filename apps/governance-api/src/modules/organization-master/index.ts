@@ -169,7 +169,7 @@ export function openOrganization(connectionString:string,provider?:KeyProviderPo
 }
 export type OrganizationOwner=ReturnType<typeof openOrganization>;
 
-export {openCampus,type CampusOwner,type CampusCommand,CampusStageSchema,CampusCommandSchema,CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,Facts as CampusFactsSchema} from './campus/index.js';
+export {openCampus,type CampusOwner,type CampusCommand,CampusStageSchema,CampusCommandSchema,CampusImpactSchema,CampusImpactResultSchema,type CampusImpact,CampusReadSchema,CampusListSchema,CampusVersionSchema,CampusDiffSchema,Facts as CampusFactsSchema} from './campus/index.js';
 
 export * from './campus/reference-contracts.js';
 export type {CampusReferencePort} from './campus/reader.js';
@@ -183,4 +183,4 @@ export {openOrganizationImport} from './import/index.js';
 export * from './import/contracts.js';
 
 export {openOrganizationWorkspace} from './workspace/index.js';
-export {ApplicationListSchema,BundleListSchema,type ApplicationList,type BundleList,DraftSaveSchema,DraftContentSchema,DraftActionSchema,SubmissionSchema,WorkspaceBundleSchema,ApplicationSchema,ApplicationAccessSchema,MaterialReviewSchema,PreflightSchema,ObjectContextInputSchema,ObjectContextSchema,PrepareRevisionSchema,type ObjectContextInput,type PrepareRevision,type PreflightInput,type MaterialReview,type DraftAction,type DraftSave,type DraftContent} from './workspace/index.js';
+export {ApplicationListSchema,BundleListSchema,type ApplicationList,type BundleList,DraftSaveSchema,DraftContentSchema,DraftActionSchema,SubmissionSchema,WorkspaceBundleSchema,ApplicationSchema,ApplicationAccessSchema,MaterialReviewSchema,PreflightSchema,ObjectContextInputSchema,ObjectContextSchema,PrepareRevisionSchema,PrepareCampusLifecycleSchema,type PrepareCampusLifecycle,type ObjectContextInput,type PrepareRevision,type PreflightInput,type MaterialReview,type DraftAction,type DraftSave,type DraftContent} from './workspace/index.js';

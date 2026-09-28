@@ -12,3 +12,5 @@ afterAll(async()=>{await database.close();});
 const {seed}=await import('./catalog-seed.mjs');
 await seed(database.receipt);
 peer(database.receipt.name,"INSERT INTO organization_master.access SELECT a,'00000000-0000-0000-0000-000000000000'::uuid,'NORTH',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','REVIEW','READ_RESTRICTED']) p ON CONFLICT DO NOTHING;");
+const {installHistoricalCampusAdmission}=await import('./review-ci-campus-lifecycle-compat.js');
+installHistoricalCampusAdmission(peer,database.receipt);

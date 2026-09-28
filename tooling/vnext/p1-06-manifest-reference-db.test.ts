@@ -92,7 +92,9 @@ beforeAll(async()=>{
   console.log(JSON.stringify({check:'0076_EXACT_MANIFEST_REPRODUCED',httpReads:legacy.length,sqlReads:legacy.length,sqlResaves:legacy.length}));
   const {upgradeManifestReferenceAccess}=await import('./review-ci-manifest-database.mjs');await upgradeManifestReferenceAccess(receipt);
  }
- expect(workspaceStartupPrefix(migrationFiles(),(await inspect(receipt)).ledger)).toBe(migrationFiles().length);
+ const current=await inspect(receipt);
+ if(upgrade){expect(current.ledger).toHaveLength(77);expect(()=>workspaceStartupPrefix(migrationFiles(),current.ledger)).toThrow('WORKSPACE_MIGRATION_REQUIRED');}
+ else expect(workspaceStartupPrefix(migrationFiles(),current.ledger)).toBe(migrationFiles().length);
 });
 afterAll(async()=>{await app?.close();await workspace?.close();await bundle?.close();await fixture?.close();await catalog?.close();});
 

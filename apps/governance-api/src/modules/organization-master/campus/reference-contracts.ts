@@ -8,7 +8,7 @@ export const CampusResolveSchema=Type.Object({references:Type.Array(CampusStable
 export type CampusStableReference=Static<typeof CampusStableReferenceSchema>;
 export type CampusResolveInput=Static<typeof CampusResolveSchema>;
 export const CampusReferenceVersionSchema=CampusPinnedReferenceSchema;
-export const CampusReferenceItemSchema=Type.Object({id:Id,reference:CampusStableReferenceSchema,head:Type.String(),facts:Type.Union([Facts,Type.Null()]),profileVersion:Type.Union([CampusReferenceVersionSchema,Type.Null()]),operationStatus:Type.Enum(['PLANNING','TRIAL_RUNNING','RUNNING','SUSPENDED','NOT_ESTABLISHED']),plannedOpeningAt:Type.Union([Time,Type.Null()]),operatingPermission:Type.Literal('NOT_EVALUABLE')},closed);
+export const CampusReferenceItemSchema=Type.Object({id:Id,reference:CampusStableReferenceSchema,head:Type.String(),facts:Type.Union([Facts,Type.Null()]),profileVersion:Type.Union([CampusReferenceVersionSchema,Type.Null()]),operationStatus:Type.Enum(['PLANNING','TRIAL_RUNNING','RUNNING','SUSPENDED','RETIRED','NOT_ESTABLISHED']),plannedOpeningAt:Type.Union([Time,Type.Null()]),operatingPermission:Type.Literal('NOT_EVALUABLE')},closed);
 export const CampusResolveResultSchema=Type.Object({observedAt:Time,businessAt:Time,asOf:Time,items:Type.Array(CampusReferenceItemSchema)},closed);
 
 export const CampusPinSchema=Type.Object({references:Type.Array(CampusPinnedReferenceSchema,{maxItems:100}),asOf:Type.Optional(Time)},closed);

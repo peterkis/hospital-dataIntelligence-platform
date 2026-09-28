@@ -32,6 +32,7 @@ export type CampusInput=operations['stageCampusCommand']['requestBody']['content
 export function createCampusClient(baseUrl:string,actor:string){
  const client=createVNextCatalogClient(baseUrl,actor);
  return {
+  assessImpact:(body:operations['assessCampusImpact']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/impact',{body}),
   stage:(body:CampusInput)=>client.POST('/api/vnext/campuses/inputs',{body}),
   plan:(body:operations['planCampusCommand']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/plan',{body}),
   review:(candidateId:string)=>client.POST('/api/vnext/campuses/review',{body:{candidateId}}),
@@ -108,6 +109,7 @@ export function createOrganizationWorkspaceClient(baseUrl:string,actor:string){
   listBundles:(body:operations['listWorkspaceOrganizationBundles']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/organization-workspace/bundles/list',{body}),
   preflight:(body:operations['preflightOrganizationApplication']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/applications/preflight',{body}),
   objectContext:(body:operations['organizationObjectContext']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/context',{body}),
+  prepareCampusLifecycle:(body:operations['prepareCampusLifecycleSource']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/campus-lifecycle-source',{body}),
   prepareRevision:(body:operations['prepareOrganizationRevision']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/revision-source',{body}),
   reviewMaterials:(body:operations['readOrganizationCandidateMaterials']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/applications/materials',{body}),
   listApplications:(body:operations['listOrganizationApplications']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/organization-workspace/applications/list',{body}),

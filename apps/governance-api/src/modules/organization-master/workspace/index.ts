@@ -10,7 +10,7 @@ import {sql} from 'kysely';
 import {campusInput,check} from '../campus/input.js';
 import {Id} from '../contracts.js';
 import {canonicalPlan,planBinding,sealProtectedPayload,authenticateRegistrationEvidence,protectedArtifacts,type KeyProviderPort,type ImportContractItem,parseOrganizationWorkbookBounded,type OrganizationSheet,type ParserField} from '../../governance-catalog/index.js';
-import {DraftSaveSchema,DraftContentSchema,draftMetadata,type DraftSave,type DraftContent,DraftActionSchema,type DraftAction,type Submission,type ApplicationAccess,type ApplicationSummary,type WorkspaceBundle,MaterialReviewSchema,type MaterialReview,PreflightSchema,type PreflightInput,ObjectContextInputSchema,PrepareRevisionSchema,type ObjectContextInput,type ObjectContext,type PrepareRevision} from './contracts.js';
+import {DraftSaveSchema,DraftContentSchema,draftMetadata,type DraftSave,type DraftContent,DraftActionSchema,type DraftAction,type Submission,type ApplicationAccess,type ApplicationSummary,type WorkspaceBundle,MaterialReviewSchema,type MaterialReview,PreflightSchema,type PreflightInput,ObjectContextInputSchema,PrepareRevisionSchema,type ObjectContextInput,type ObjectContext,type PrepareRevision,PrepareCampusLifecycleSchema,type PrepareCampusLifecycle} from './contracts.js';
 export * from './contracts.js';
 interface Saved {id:string;version:string;state:'EDITING'|'DISCARDED'|'SUBMITTED';recordedAt:string}
 interface Stored extends Saved {submission:Submission|null;digest:string;metadata:ReturnType<typeof draftMetadata>;envelope:ReturnType<typeof sealProtectedPayload>}
@@ -35,11 +35,13 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
   }finally{bytes.fill(0);}
  };
  const part=(requestId:string,label:string)=>{const bytes=createHash('sha256').update('WORKSPACE_REQUEST_V1\0'+requestId+'\0'+label).digest().subarray(0,16);bytes[6]=(bytes[6]!&15)|80;bytes[8]=(bytes[8]!&63)|128;const h=bytes.toString('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;};
+ const sourceContext=(actor:string,input:PrepareRevision)=>root(async scope=>(await sql<{r:ObjectContext&{inputId:string;transport:{contractId:string;contractVersionId:string}|null}}>`select organization_master.workspace_version_source(${actor},${input.kind},${input.id}::uuid,${input.version}) r`.execute(scope)).rows[0]!.r);
  const service={
   async listBundles(actor:string,filter:BundleList={}){check(BundleListSchema,filter);return root(async scope=>(await sql<{r:WorkspaceBundle[]}>`select organization_master.workspace_bundles(${actor},${filter.jobId??null}::uuid,${filter.revisionId??null}::uuid) r`.execute(scope)).rows[0]!.r);},
   async objectContext(actor:string,input:ObjectContextInput){check(ObjectContextInputSchema,input);return root(async scope=>(await sql<{r:ObjectContext}>`select organization_master.workspace_object_context(${actor},${input.kind},${input.id}::uuid) r`.execute(scope)).rows[0]!.r);},
   async prepareRevision(actor:string,input:PrepareRevision):Promise<DraftContent>{check(PrepareRevisionSchema,input);
-   const context=await root(async scope=>(await sql<{r:ObjectContext&{inputId:string;transport:{contractId:string;contractVersionId:string}|null}}>`select organization_master.workspace_version_source(${actor},${input.kind},${input.id}::uuid,${input.version}) r`.execute(scope)).rows[0]!.r);
+   const context=await sourceContext(actor,input);
+   if(input.kind==='CAMPUS'&&context.terminal)throw new Error('CAMPUS_RETIRED');
    const owner=input.kind==='ORGANIZATION'||input.kind==='LICENSE'?organization:input.kind==='CAMPUS'?campus:operating;
    const original=await owner.readRestrictedInput(actor,context.inputId),command:Record<string,unknown>=structuredClone(original.command);
    delete command['validFrom'];command['validTo']=null;
@@ -48,6 +50,23 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
    else if(input.kind==='CAMPUS'){command['action']='REVISE';command['target']={owner:'organization-master/campus',id:input.id,expectedVersion:context.head};delete command['sourceOperationStatus'];}
    else{command['action']=input.kind==='RELATION'?'REVISE_RELATION':'REVISE_SCOPE';command['target']={owner:input.kind==='RELATION'?'organization-master/operating-relation':'organization-master/license-scope',id:input.id,expectedVersion:context.head};}
    const content:DraftContent={domain:input.kind==='ORGANIZATION'||input.kind==='LICENSE'?'ORG01':input.kind==='CAMPUS'?'ORG02':'ORG03',campus:context.campus,...(context.transport?{transport:context.transport}:{}),command};check(DraftContentSchema,content);return content;
+  },
+  async prepareCampusLifecycle(actor:string,input:PrepareCampusLifecycle):Promise<DraftContent>{
+   check(PrepareCampusLifecycleSchema,input);
+   const context=await sourceContext(actor,input);
+   const disposition=input.action==='RECORD_DISPOSITION'||input.action==='COMPLETE_DISPOSITION';
+   if(context.terminal&&!disposition&&input.action!=='CANCEL_OPENING')throw new Error('CAMPUS_RETIRED');
+   const history=await campus.references.history(actor,input.id);
+   if(history.head!==context.head)throw new Error('STALE_HEAD');
+   const retirement=history.operations.find(event=>event.action==='RETIRE');
+   if(input.action==='RETIRE'&&retirement)throw new Error('CAMPUS_RETIRED');
+   if(disposition&&!retirement)throw new Error('BLOCKED_DEPENDENCY');
+   if(disposition&&retirement&&(await campus.assessCampusImpact(actor,{id:input.id,validFrom:retirement.validFrom,validTo:null})).completed)throw new Error('DISPOSITION_ALREADY_COMPLETE');
+   const original=await campus.readRestrictedInput(actor,context.inputId);
+   const command:Record<string,unknown>={action:input.action,validTo:null,target:{owner:'organization-master/campus',id:input.id,expectedVersion:context.head},source:structuredClone(original.command.source),evidence:original.command.evidence};
+   if(disposition){command['validFrom']=retirement!.validFrom;command['sourceOperationStatus']='RETIRED';}
+   const content:DraftContent={domain:'ORG02',campus:context.campus,...(context.transport?{transport:context.transport}:{}),command};
+   check(DraftContentSchema,content);return content;
   },
   async preflight(actor:string,input:PreflightInput){check(PreflightSchema,input);let observedAt:string|null=null;
    try{return await root(async scope=>{
@@ -59,7 +78,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
     await port.authorize(scope,actor,reference,'READ');const unit=await port.observe(scope,actor,reference);await port.validate(scope,actor,unit);
     return {status:'ELIGIBLE_FOR_CANDIDATE' as const,codes:[] as string[],observedAt};
    });}catch(error){const code=error instanceof Error?error.message:'';
-    if(!observedAt||!['STALE_VALIDATION','STALE_HEAD','BLOCKED_DEPENDENCY','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','APPROVAL_REQUIRED','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','UNSUPPORTED_STATE_TRANSITION','UNSUPPORTED_SERVICE','PARENT_PERIOD_NOT_COVERED','INVALID_BUSINESS_PERIOD','CLOSED_INPUT_REQUIRED'].includes(code))throw error;
+    if(!observedAt||!['STALE_VALIDATION','STALE_HEAD','BLOCKED_DEPENDENCY','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','APPROVAL_REQUIRED','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','CAMPUS_RETIRED','CAMPUS_SUSPENDED','DISPOSITION_INCOMPLETE','DISPOSITION_ALREADY_COMPLETE','UNSUPPORTED_STATE_TRANSITION','UNSUPPORTED_SERVICE','PARENT_PERIOD_NOT_COVERED','INVALID_BUSINESS_PERIOD','CLOSED_INPUT_REQUIRED'].includes(code))throw error;
     return {status:'BLOCKED' as const,codes:[code],observedAt};
    }
   },

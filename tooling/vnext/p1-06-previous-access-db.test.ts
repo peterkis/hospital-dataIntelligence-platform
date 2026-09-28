@@ -80,7 +80,9 @@ beforeAll(async()=>{
   console.log(JSON.stringify({check:'0074_RESTRICTED_RETARGET_REPRODUCED',httpResaves:8,alreadyBlockedControls:2}));
   const {upgradePreviousDraftAccess}=await import('./review-ci-database.mjs');await upgradePreviousDraftAccess(receipt);
  }
- expect(workspaceStartupPrefix(migrationFiles(),(await inspect(receipt)).ledger)).toBe(migrationFiles().length);
+ const current=await inspect(receipt);
+ if(upgrade){expect(current.ledger).toHaveLength(77);expect(()=>workspaceStartupPrefix(migrationFiles(),current.ledger)).toThrow('WORKSPACE_MIGRATION_REQUIRED');}
+ else expect(workspaceStartupPrefix(migrationFiles(),current.ledger)).toBe(migrationFiles().length);
 });
 afterAll(async()=>{await app?.close();await workspace?.close();await x?.close();await catalog?.close();});
 for(const {kind,permission} of scenarios)test(`${kind}: retained content cannot escape revoked previous ${permission} through a permitted replacement`,async()=>{

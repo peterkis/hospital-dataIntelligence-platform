@@ -73,6 +73,8 @@ export const ObjectContextSchema=Type.Object({kind:ObjectKindSchema,id:Id,campus
 export type ObjectContext=Static<typeof ObjectContextSchema>;
 export type ObjectContextInput=Static<typeof ObjectContextInputSchema>;
 export type PrepareRevision=Static<typeof PrepareRevisionSchema>;
+export const PrepareCampusLifecycleSchema=Type.Object({...PrepareRevisionSchema.properties,kind:Type.Literal('CAMPUS'),action:Type.Enum(['SCHEDULE_OPENING','CANCEL_OPENING','ACTIVATE','SUSPEND','RESUME','RETIRE','RECORD_DISPOSITION','COMPLETE_DISPOSITION'])},closed);
+export type PrepareCampusLifecycle=Static<typeof PrepareCampusLifecycleSchema>;
 
 export const ApplicationListSchema=Type.Object({inputId:Type.Optional(Id)},closed);
 export const BundleListSchema=Type.Object({jobId:Type.Optional(Id),revisionId:Type.Optional(Id)},closed);
