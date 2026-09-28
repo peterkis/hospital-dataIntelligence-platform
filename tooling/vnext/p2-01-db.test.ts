@@ -50,6 +50,10 @@ test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 th
  expect(result.structuralStatus).toBe('PARSED');expect(result.input).not.toBeNull();
  const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries[0]!.row).toEqual(entry.row);
  expect((await owner.validate('maker',{inputId:result.input!.inputId})).validationRunId).toMatch(/^[a-f0-9-]{36}$/);
+ const staged=await owner.stage('maker',{...await f.input(),requestId:randomUUID(),timePolicy:'SOURCE_OFFSET_08',entries:[{...f.entry(),row:{...entry.row,valid_from:'2026-01-01T00:00:00+08:00',recorded_at:'2026-01-02T00:00:00+08:00'}}]});
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO offset normalization',evidenceId:f.artifact.artifactId}]});
+ const applyRequestId=randomUUID(),normalized=await owner.plan('maker',{inputId:staged.inputId,requestId:applyRequestId});await owner.readApplyCandidate('reviewer',{candidateId:normalized.candidateId});await owner.approveApplyUnit('reviewer',normalized);const applied=await owner.applyUnit('maker',{candidateId:normalized.candidateId,requestId:applyRequestId});expect(applied.status).toBe('COMMITTED');if(applied.status!=='COMMITTED')throw new Error();
+ expect((await owner.read('maker',{id:applied.facts[0]!.id,businessAt:'2026-02-01T00:00:00'})).version?.facts.sourceRecordedAt).toBe('2026-01-02T00:00:00.000000');
 });
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{
  const a=f.entry(),b=f.entry();const [one,two]=await apply([a,b]);expect(one!.id).not.toBe(two!.id);

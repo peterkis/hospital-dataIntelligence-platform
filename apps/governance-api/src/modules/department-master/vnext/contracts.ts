@@ -45,10 +45,9 @@ export function sourceTime(value:string,policy:StageInput['timePolicy']):string{
  return localTime(value);
 }
 export function normalizeEntry(entry:StageInput['entries'][number],policy:StageInput['timePolicy']){
- const row=validateORG04(entry.row),validFrom=sourceTime(row.valid_from,policy),validTo=row.valid_to?sourceTime(row.valid_to,policy):null;
- sourceTime(row.recorded_at,policy);
+ const row=validateORG04(entry.row),validFrom=sourceTime(row.valid_from,policy),validTo=row.valid_to?sourceTime(row.valid_to,policy):null,recordedAt=sourceTime(row.recorded_at,policy);
  if(validTo!==null&&validTo<=validFrom)throw new Error('INVALID_BUSINESS_PERIOD');
  for(const date of [row.established_on,row.abolished_on])if(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('CLOSED_INPUT_REQUIRED');localTime(date+'T00:00:00');}
  if((entry.intent==='CREATE')!==(entry.target===null))throw new Error('CLOSED_INPUT_REQUIRED');
- return {...entry,row,validFrom,validTo};
+ return {...entry,row,validFrom,validTo,recordedAt};
 }
