@@ -49,9 +49,8 @@ export const ReadSchema=Type.Object({id:Id,businessAt:required(26),recordAsOf:Ty
 export const CoverageSchema=Type.Object({id:Id,validFrom:required(26),validTo:Type.Union([required(26),Type.Null()]),recordAsOf:Type.Optional(required(26))},closed);
 export function check(schema:unknown,input:unknown):void{if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 export function validateORG04(value:unknown):ORG04Row{check(RowSchema,value);const row=structuredClone(value) as ORG04Row;if(Object.values(row).some(v=>v!==v.trim())||BigInt(row.version_no)>2147483647n)throw new Error('CLOSED_INPUT_REQUIRED');return row;}
-export function sourceTime(value:string,policy:StageInput['timePolicy']):string{
+export function sourceTime(value:string,_policy:StageInput['timePolicy']):string{
  if(!value.includes('T'))throw new Error('LOCAL_TIME_REQUIRED');
- if(policy==='SOURCE_OFFSET_08'){if(!value.endsWith('+08:00'))throw new Error('LOCAL_TIME_REQUIRED');return localTime(value.slice(0,-6));}
  return localTime(value);
 }
 export function normalizeEntry(entry:StageInput['entries'][number]|StoredStageInput['entries'][number],policy:StageInput['timePolicy']){

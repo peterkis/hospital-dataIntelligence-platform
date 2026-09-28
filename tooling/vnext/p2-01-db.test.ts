@@ -59,9 +59,11 @@ test('ORG04 policy adoption and independently approved creation return one datab
   expect((await owner.list('maker',{limit:100})).some(id=>id===result.facts[0]!.id)).toBe(true);
  });
 
-test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 through the shared Owner',async()=>{
- const entry=f.entry();for(const key of ['valid_from','recorded_at'] as const)entry.row[key]+='+08:00';
- const bytes=organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>entry.row[k])]});
+test('ORG04 XLSX rejects offsets and preserves local source fields through the shared Owner',async()=>{
+ const offset=f.entry();for(const key of ['valid_from','recorded_at'] as const)offset.row[key]+='+08:00';
+ const offsetResult=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_OFFSET_REJECT',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[{intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId}]},organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>offset.row[k])]}));
+ expect(offsetResult.input).toBeNull();expect(offsetResult.issues).toContainEqual(expect.objectContaining({code:'LOCAL_TIME_REQUIRED',row:2}));
+ const entry=f.entry(),bytes=organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>entry.row[k])]});
  await expect(owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'JSON',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[{intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId}]},Buffer.from('[]'))).rejects.toThrow('CLOSED_INPUT_REQUIRED');
  const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[{intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId}]},bytes);
  expect(result.structuralStatus).toBe('PARSED');expect(result.input).not.toBeNull();
@@ -70,14 +72,14 @@ test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 th
  const fileVerification=await owner.verify('reviewer',{requestId:randomUUID(),inputId:result.input!.inputId,inputDigest:result.input!.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO physical worksheet row',evidenceId:f.artifact.artifactId}]});expect(fileVerification.verificationId).toMatch(/^[a-f0-9-]{36}$/);
  const fileRequestId=randomUUID(),fileCandidate=await owner.plan('maker',{inputId:result.input!.inputId,requestId:fileRequestId});await owner.readApplyCandidate('reviewer',{candidateId:fileCandidate.candidateId});await owner.approveApplyUnit('reviewer',fileCandidate);const fileApplied=await owner.applyUnit('maker',{candidateId:fileCandidate.candidateId,requestId:fileRequestId});expect(fileApplied.status).toBe('COMMITTED');if(fileApplied.status!=='COMMITTED')throw new Error();
  const fileHistory=await owner.history('maker',fileApplied.facts[0]!.id);expect(fileHistory.versions[0]!.source_row).toBe(2);
- const staged=await owner.stage('maker',{...await f.input(),requestId:randomUUID(),timePolicy:'SOURCE_OFFSET_08',entries:[{...f.entry(),row:{...entry.row,org_code:entry.row.org_code+'_MANUAL',valid_from:'2026-01-01T00:00:00+08:00',recorded_at:'2026-01-02T00:00:00+08:00'}}]});
- await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO offset normalization',evidenceId:f.artifact.artifactId}]});
+ const staged=await owner.stage('maker',{...await f.input(),requestId:randomUUID(),timePolicy:'LOCAL',entries:[{...f.entry(),row:{...entry.row,org_code:entry.row.org_code+'_MANUAL',valid_from:'2026-01-01T00:00:00',recorded_at:'2026-01-02T00:00:00'}}]});
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO local timestamp',evidenceId:f.artifact.artifactId}]});
  const applyRequestId=randomUUID(),normalized=await owner.plan('maker',{inputId:staged.inputId,requestId:applyRequestId});await owner.readApplyCandidate('reviewer',{candidateId:normalized.candidateId});await owner.approveApplyUnit('reviewer',normalized);const applied=await owner.applyUnit('maker',{candidateId:normalized.candidateId,requestId:applyRequestId});expect(applied.status).toBe('COMMITTED');if(applied.status!=='COMMITTED')throw new Error();
  expect((await owner.read('maker',{id:applied.facts[0]!.id,businessAt:'2026-02-01T00:00:00'})).version?.facts.sourceRecordedAt).toBe('2026-01-02T00:00:00.000000');
 });
 
 test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=>{
- const good=f.entry();for(const key of ['valid_from','recorded_at'] as const)good.row[key]+='+08:00';
+ const good=f.entry();
  const invalid=structuredClone(good);invalid.row.org_name=' invalid whitespace ';
  const retained=structuredClone(good);retained.row.record_status='REVIEW';
  const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_MIXED_ROWS',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[

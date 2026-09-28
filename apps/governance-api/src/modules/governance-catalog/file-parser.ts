@@ -431,7 +431,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',policy==='STRICT_DEPARTMENT_V1',policy==='STRICT_DEPARTMENT_V1');
+    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',false,policy==='STRICT_DEPARTMENT_V1');
     result.structuralStatus = 'PARSED';
   } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};

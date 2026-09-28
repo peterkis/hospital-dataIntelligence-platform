@@ -34,15 +34,12 @@ export function migrationFiles(directory = migrationsPath) {
     return { id: name.slice(0, -4), sha256: createHash('sha256').update(bytes).digest('hex'), sql: bytes.toString('utf8') };
   });
 }
-// These are approved historical bytes installed in the persistent database
-// before forward repairs restored shipped sources or tightened the Department
-// module boundary. They remain accepted as immutable ledger evidence; no
-// migration is rewritten in place.
+// These are the only approved historical bytes installed in the persistent
+// database before the forward P1-07 repair. Department migrations remain
+// canonical and are never accepted under alternate digests.
 export const historicalMigrationDigests = Object.freeze({
   '0079_campus_retirement_disposition': 'e4d7a7d333ed0830f5db6e93a242c5613adcc3768a62d91a7674ee469392b229',
   '0083_campus_retirement_history_repair': '1def3e683f80d4763f8e79622e20121932603b7464152248ddee7504ac969f97',
-  '0084_department_core': '8ad330aae9cbe13ff887b53ebcf7f32dff74d8afcc74e4a4c8ee3917552c157b',
-  '0085_department_physical_row': 'bead791dd7f661525c153d307458dc6a43547f78da4bd98567cf127538d82a17',
 });
 export function migrationDigestMatches(file, digest) {
   return file.sha256 === digest || historicalMigrationDigests[file.id] === digest;
