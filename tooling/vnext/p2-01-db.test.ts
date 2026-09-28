@@ -137,7 +137,7 @@ test('same-job retry omits a row whose matching facts were already committed',as
  const firstRequest=randomUUID(),firstCandidate=await owner.plan('maker',{inputId:staged.inputId,requestId:firstRequest});await owner.readApplyCandidate('reviewer',{candidateId:firstCandidate.candidateId});await owner.approveApplyUnit('reviewer',firstCandidate);const first=await owner.applyUnit('maker',{candidateId:firstCandidate.candidateId,requestId:firstRequest});expect(first.status).toBe('COMMITTED');
  const revision=await catalog.importJobCommand('maker',{scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_RETRY',action:'REVISE',jobId:input.jobId,expectedCurrentRevision:input.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'b'.repeat(64)}});
  const retryInput={...input,requestId:randomUUID(),revisionId:revision.revisionId};const retry=await owner.stage('maker',retryInput);
- await owner.verify('reviewer',{requestId:randomUUID(),inputId:retry.inputId,inputDigest:retry.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry completed row',evidenceId:f.artifact.artifactId}]});
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:retry.inputId,inputDigest:retry.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry first commit',evidenceId:f.artifact.artifactId}]});
  const retryCandidate=await owner.plan('maker',{inputId:retry.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:retryCandidate.candidateId});
  expect(review.unit.commands).toHaveLength(0);expect(review.unit.basis['completedRows']).toEqual([1]);
  await expect(owner.approveApplyUnit('reviewer',retryCandidate)).rejects.toThrow('BATCH_REJECTED');
@@ -145,6 +145,16 @@ test('same-job retry omits a row whose matching facts were already committed',as
  const correctedInput={...input,requestId:randomUUID(),revisionId:correctedRevision.revisionId,entries:[{...input.entries[0]!,row:{...input.entries[0]!.row,source_record_id:'DEMO_FILE/ORG04/CORRECTED',approval_ref:'DEMO_APPROVAL_CORRECTED'}}]};const corrected=await owner.stage('maker',correctedInput);
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:corrected.inputId,inputDigest:corrected.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry correction',evidenceId:f.artifact.artifactId}]});
  await expect(owner.plan('maker',{inputId:corrected.inputId,requestId:randomUUID()})).rejects.toThrow('IDENTIFIER_CONFLICT');
+});
+
+test('verification reason participates in retry identity',async()=>{
+ const input=await f.input(),staged=await owner.stage('maker',input),reason='DEMO retry rationale original';
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason,evidenceId:f.artifact.artifactId}]});
+ const firstRequest=randomUUID(),firstCandidate=await owner.plan('maker',{inputId:staged.inputId,requestId:firstRequest});await owner.readApplyCandidate('reviewer',{candidateId:firstCandidate.candidateId});await owner.approveApplyUnit('reviewer',firstCandidate);const first=await owner.applyUnit('maker',{candidateId:firstCandidate.candidateId,requestId:firstRequest});expect(first.status).toBe('COMMITTED');
+ const revision=await catalog.importJobCommand('maker',{scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_RETRY_REASON',action:'REVISE',jobId:input.jobId,expectedCurrentRevision:input.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'d'.repeat(64)}});
+ const retry=await owner.stage('maker',{...input,requestId:randomUUID(),revisionId:revision.revisionId});
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:retry.inputId,inputDigest:retry.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:reason+' corrected',evidenceId:f.artifact.artifactId}]});
+ await expect(owner.plan('maker',{inputId:retry.inputId,requestId:randomUUID()})).rejects.toThrow('IDENTIFIER_CONFLICT');
 });
 
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{
