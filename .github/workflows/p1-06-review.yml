@@ -52,7 +52,7 @@ jobs:
         run: npm run vnext:p1-06:unit -- --reporter=json --outputFile=.runtime/vnext/review-results/unit.json
       - name: Workspace typecheck
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm run vnext:p1-06:typecheck
+        run: npm run vnext:p1-06:typecheck && npm run vnext:p1-07:typecheck
       - name: Admin web typecheck and build
         id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

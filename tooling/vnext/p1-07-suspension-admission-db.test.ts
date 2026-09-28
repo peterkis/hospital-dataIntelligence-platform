@@ -17,7 +17,7 @@ const formalCount=(campusId:string)=>Number(peer(receipt.name,`SELECT count(*)::
 
 test('profile revision cannot end suspension for planning or final operating admission',async()=>{
  const subject=await scenario.createSubject();
- const campus=await scenario.createCampus('DEMO suspended profile revision');
+ const campus=await scenario.activateCampus(await scenario.createCampus('DEMO suspended profile revision'));
  scenario.grantPair(subject.id,campus.id);
  const relation:OperatingCommand={
   ...scenario.common,
@@ -41,4 +41,8 @@ test('profile revision cannot end suspension for planning or final operating adm
  expect(await scenario.operating.resumeOutcome('maker',approvedBeforeSuspension)).toBeNull();
  await expect(prepare(scenario.operating,scenario.operatingInput(relation))).rejects.toThrow('CAMPUS_SUSPENDED');
  expect(formalCount(campus.id)).toBe(before);
+ const head=await scenario.campus.references.read('maker',{id:campus.id});
+ await scenario.campusApply({...scenario.common,validFrom:'2026-02-01T00:00:00',action:'RESUME',target:{owner:'organization-master/campus',id:campus.id,expectedVersion:head.head},evidence:scenario.artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING'});
+ await scenario.operatingApply(relation);
+ expect(formalCount(campus.id)).toBe(before+1);
 });

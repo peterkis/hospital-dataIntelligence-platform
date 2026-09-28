@@ -109,6 +109,7 @@ export function createOrganizationWorkspaceClient(baseUrl:string,actor:string){
   listBundles:(body:operations['listWorkspaceOrganizationBundles']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/organization-workspace/bundles/list',{body}),
   preflight:(body:operations['preflightOrganizationApplication']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/applications/preflight',{body}),
   objectContext:(body:operations['organizationObjectContext']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/context',{body}),
+  prepareCampusLifecycle:(body:operations['prepareCampusLifecycleSource']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/campus-lifecycle-source',{body}),
   prepareRevision:(body:operations['prepareOrganizationRevision']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/revision-source',{body}),
   reviewMaterials:(body:operations['readOrganizationCandidateMaterials']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/applications/materials',{body}),
   listApplications:(body:operations['listOrganizationApplications']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/organization-workspace/applications/list',{body}),

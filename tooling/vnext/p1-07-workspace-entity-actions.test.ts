@@ -1,5 +1,5 @@
 import {describe,expect,test} from 'vitest';
-import {canReviseWorkspaceEntity} from '../../apps/admin-web/src/vnext/workspace-entity-actions.js';
+import {canReviseWorkspaceEntity,canRetireWorkspaceCampus,isCampusWorkspaceAction} from '../../apps/admin-web/src/vnext/workspace-entity-actions.js';
 import {shouldInvalidateCampusImpact,type CampusImpactBinding} from '../../apps/admin-web/src/vnext/workspace-campus-impact.js';
 
 describe('workspace entity revision actions',()=>{
@@ -30,5 +30,20 @@ describe('campus impact digest binding',()=>{
   expect(shouldInvalidateCampusImpact(base,{...base})).toBe(false);
   expect(shouldInvalidateCampusImpact(base,{...base,from:'2026-11-01T00:00:00.000000',digest:'b'.repeat(64)})).toBe(false);
   expect(shouldInvalidateCampusImpact({...base,digest:''},{...base,from:'2026-11-01T00:00:00.000000',digest:''})).toBe(false);
+ });
+});
+
+describe('scheduled campus retirement actions',()=>{
+ test('only the duplicate retirement is suppressed before its future effective time',()=>{
+  const context={canWrite:true,terminal:false};
+  expect(canRetireWorkspaceCampus(context,'2099-01-01T00:00:00')).toBe(false);
+  expect(canReviseWorkspaceEntity('CAMPUS',context)).toBe(true);
+  expect(canRetireWorkspaceCampus(context,null)).toBe(true);
+ });
+ test('unwritable, unavailable and terminal contexts never offer retirement',()=>{
+  for(const context of [null,undefined,{canWrite:false,terminal:false},{canWrite:true,terminal:true}])expect(canRetireWorkspaceCampus(context,null)).toBe(false);
+ });
+ test('lifecycle source cannot be requested as a profile revision',()=>{
+  expect(isCampusWorkspaceAction('REVISE')).toBe(false);expect(isCampusWorkspaceAction('RECORD_DISPOSITION')).toBe(true);expect(isCampusWorkspaceAction('RETIRE')).toBe(true);
  });
 });
