@@ -9,22 +9,32 @@ import {ownerServiceConnection} from './owner-service.mjs';
 import {organizationKeys} from './organization-keys.mjs';
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
-export async function prepareWorkspaceDeployment({reuseExisting=false}={}) {
+export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
+ if(!['p1-06','p1-07'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
  const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();
  const prefix=workspaceDeploymentPrefix(files,before.ledger,reuseExisting);
- mkdirSync('.runtime/vnext/p1-06',{recursive:true});const evidence='.runtime/vnext/p1-06/deployment-'+Date.now();
- const tables=predecessorTables(before.tables),digest=predecessorDigest(receipt,tables);
+ if(evidenceTask==='p1-07'&&prefix<71)throw new Error('P1_06_MERGED_DEPLOYMENT_REQUIRED');
+ mkdirSync('.runtime/vnext/'+evidenceTask,{recursive:true});const evidence='.runtime/vnext/'+evidenceTask+'/deployment-'+Date.now();
+ const tables=predecessorTables(before.tables),digest=predecessorDigest(receipt,tables,addedColumns);
  const keyDigest=()=>createHash('sha256').update(readFileSync('.runtime/vnext/p1-01/keys.secret.json')).digest('hex'),keysBefore=keyDigest();
- const rowHashes=()=>Object.fromEntries(tables.map(table=>[table,JSON.parse(peer(receipt.name,`SELECT coalesce(jsonb_agg(encode(sha256(convert_to(to_jsonb(o)::text,'UTF8')),'hex')),'[]')::text FROM ${table} o`))]));
+ const preservedRow=table=>{let expression='to_jsonb(o)';for(const column of addedColumns[table]??[]){if(!/^[a-z_][a-z0-9_]*$/.test(column))throw new Error('PRESERVATION_COLUMN_INVALID');expression+="-'"+column+"'";}return expression;};
+ const rowHashes=()=>Object.fromEntries(tables.map(table=>[table,JSON.parse(peer(receipt.name,`SELECT coalesce(jsonb_agg(encode(sha256(convert_to((${preservedRow(table)})::text,'UTF8')),'hex')),'[]')::text FROM ${table} o`))]));
  const rowsBefore=rowHashes();writeFileSync(evidence+'.before.json',JSON.stringify({identity:before.identity,ledger:before.ledger,dataDigest:digest,keyDigest:keysBefore,rowHashes:rowsBefore},null,2),{flag:'wx'});
+ if(evidenceTask==='p1-07'&&!reuseExisting&&prefix<77){
+  const inherited=await migrate(receipt,files.slice(0,77));
+  assert.equal(inherited.identity.oid,before.identity.oid);assert.deepEqual(inherited.ledger.slice(0,prefix),before.ledger);
+  assert.equal(predecessorDigest(receipt,tables,addedColumns),digest);assert.equal(keyDigest(),keysBefore);
+  writeFileSync(evidence+'.p1-06-prefix.json',JSON.stringify({status:'PASS',base:'ee15ef7ee738e2f204a915c9d41bb2367ff2a5bd',previousPrefix:prefix,currentPrefix:77,oid:inherited.identity.oid,priorRowsAndKeysPreserved:true},null,2),{flag:'wx'});
+ }
  const after=reuseExisting?before:await migrate(receipt,files);
  // Verify the complete ordered/checksummed result before granting routes or
  // writing PASS evidence. A migrator that stops early is not a deployment.
  workspaceDeploymentPrefix(files,after.ledger,true);
- assert.equal(after.identity.oid,before.identity.oid);assert.deepEqual(after.ledger.slice(0,prefix),before.ledger);assert.equal(predecessorDigest(receipt,tables),digest);assert.equal(keyDigest(),keysBefore);
+ assert.equal(after.identity.oid,before.identity.oid);assert.deepEqual(after.ledger.slice(0,prefix),before.ledger);assert.equal(predecessorDigest(receipt,tables,addedColumns),digest);assert.equal(keyDigest(),keysBefore);
  const connection=await ownerServiceConnection(),ownership=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));
  assert.match(ownership.role,/^hdi_owner_[a-f0-9]{16}$/);assert.match(String(ownership.roleOid),/^[0-9]+$/);assert.equal(new URL(connection).username,ownership.role);assert.equal(ownership.database,receipt.name);assert.equal(ownership.databaseOid,receipt.oid);assert.equal(ownership.databaseRequestId,receipt.requestId);
  const functions=['workspace_save(text,jsonb,text,jsonb)','workspace_read(text,uuid)','workspace_list(text)','workspace_capabilities(text,jsonb)','workspace_application_access(text,uuid)','workspace_applications(text,uuid)','workspace_object_context(text,text,uuid)','workspace_version_source(text,text,uuid,text)','workspace_bundles(text,uuid,uuid)','workspace_preview_access(text,jsonb,text)'];
+ if(after.ledger.length>=79)functions.push('campus_impact(text,uuid,timestamp,timestamp,timestamp)','campus_admission(text,uuid,timestamp,timestamp)');
  if(!reuseExisting)peer(receipt.name,identitySQL(receipt)+` BEGIN; DO $$ BEGIN IF (SELECT oid::text FROM pg_roles WHERE rolname='${ownership.role}') IS DISTINCT FROM '${ownership.roleOid}' THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH';END IF;END $$; GRANT EXECUTE ON FUNCTION ${functions.map(name=>'organization_master.'+name).join(',')} TO ${ownership.role}; COMMIT;`);
  const types=spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-verify','.runtime/vnext/creation.json'],{cwd:root,env:process.env,stdio:'inherit',windowsHide:true});assert.equal(types.status,0);
  writeFileSync(evidence+'.migration.json',JSON.stringify({status:'PASS',mode:reuseExisting?'VERIFY_EXISTING':'FORWARD_UPGRADE',oid:after.identity.oid,previousPrefix:prefix,currentPrefix:after.ledger.length,priorRowsAndKeysPreserved:true},null,2),{flag:'wx'});

@@ -32,6 +32,7 @@ export type CampusInput=operations['stageCampusCommand']['requestBody']['content
 export function createCampusClient(baseUrl:string,actor:string){
  const client=createVNextCatalogClient(baseUrl,actor);
  return {
+  assessImpact:(body:operations['assessCampusImpact']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/impact',{body}),
   stage:(body:CampusInput)=>client.POST('/api/vnext/campuses/inputs',{body}),
   plan:(body:operations['planCampusCommand']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/plan',{body}),
   review:(candidateId:string)=>client.POST('/api/vnext/campuses/review',{body:{candidateId}}),

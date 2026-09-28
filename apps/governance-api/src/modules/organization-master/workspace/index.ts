@@ -59,7 +59,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
     await port.authorize(scope,actor,reference,'READ');const unit=await port.observe(scope,actor,reference);await port.validate(scope,actor,unit);
     return {status:'ELIGIBLE_FOR_CANDIDATE' as const,codes:[] as string[],observedAt};
    });}catch(error){const code=error instanceof Error?error.message:'';
-    if(!observedAt||!['STALE_VALIDATION','STALE_HEAD','BLOCKED_DEPENDENCY','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','APPROVAL_REQUIRED','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','UNSUPPORTED_STATE_TRANSITION','UNSUPPORTED_SERVICE','PARENT_PERIOD_NOT_COVERED','INVALID_BUSINESS_PERIOD','CLOSED_INPUT_REQUIRED'].includes(code))throw error;
+    if(!observedAt||!['STALE_VALIDATION','STALE_HEAD','BLOCKED_DEPENDENCY','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','APPROVAL_REQUIRED','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','CAMPUS_RETIRED','CAMPUS_SUSPENDED','DISPOSITION_INCOMPLETE','DISPOSITION_ALREADY_COMPLETE','UNSUPPORTED_STATE_TRANSITION','UNSUPPORTED_SERVICE','PARENT_PERIOD_NOT_COVERED','INVALID_BUSINESS_PERIOD','CLOSED_INPUT_REQUIRED'].includes(code))throw error;
     return {status:'BLOCKED' as const,codes:[code],observedAt};
    }
   },

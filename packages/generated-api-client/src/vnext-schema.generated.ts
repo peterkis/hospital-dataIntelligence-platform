@@ -820,6 +820,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/campuses/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assessCampusImpact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/campuses/review": {
         parameters: {
             query?: never;
@@ -9270,7 +9286,7 @@ export interface operations {
                         };
                         evidence: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom: string;
                         validTo: string | null;
                         /** @enum {string} */
@@ -9307,7 +9323,7 @@ export interface operations {
                         };
                         evidence: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom: string;
                         validTo: string | null;
                         /** @enum {string} */
@@ -9350,7 +9366,7 @@ export interface operations {
                         };
                         evidence: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom: string;
                         validTo: string | null;
                         /** @enum {string} */
@@ -9375,7 +9391,7 @@ export interface operations {
                         };
                         evidence: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom: string;
                         validTo: string | null;
                         /** @enum {string} */
@@ -9400,11 +9416,11 @@ export interface operations {
                         };
                         evidence: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom: string;
                         validTo: string | null;
-                        /** @enum {string} */
-                        action: "ACTIVATE";
+                        /** @enum {unknown} */
+                        action: "ACTIVATE" | "RESUME";
                         target: {
                             /** @enum {string} */
                             owner: "organization-master/campus";
@@ -9426,7 +9442,7 @@ export interface operations {
                         };
                         evidence: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom: string;
                         validTo: string | null;
                         /** @enum {string} */
@@ -9438,6 +9454,97 @@ export interface operations {
                             expectedVersion: string;
                         };
                         reason: string;
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "RETIRE";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                        assessmentDigest: string;
+                        plan: {
+                            responsibleOwner: string;
+                            dueAt: string;
+                            actions: string;
+                        };
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "RECORD_DISPOSITION";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                        assessmentDigest: string;
+                        resolution: {
+                            /** @enum {unknown} */
+                            owner: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            /** @enum {unknown} */
+                            status: "UNKNOWN" | "CLEAR";
+                            /** @enum {string} */
+                            scope: "SYNTHETIC";
+                        };
+                    } | {
+                        source: {
+                            systemId: string;
+                            versionId: string;
+                            alias: string;
+                            versionNo: number;
+                            recordLocator: string;
+                            recordedAt: string;
+                            recordStatus: "DRAFT" | "PUBLISHED";
+                            approvalRef: string | null;
+                        };
+                        evidence: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** @enum {string} */
+                        action: "COMPLETE_DISPOSITION";
+                        target: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        reason: string;
+                        assessmentDigest: string;
                     };
                 };
             };
@@ -9752,6 +9859,139 @@ export interface operations {
             };
         };
     };
+    assessCampusImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    asOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        campusId: string;
+                        campusHead: string;
+                        validFrom: string;
+                        validTo: string | null;
+                        dependencies: {
+                            /** @enum {unknown} */
+                            owner: "RELATION" | "SCOPE";
+                            id: string;
+                            version: string;
+                            active: boolean;
+                            outstanding: boolean;
+                        }[];
+                        unavailable: ("BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION")[];
+                        dispositions: {
+                            eventId: string;
+                            inputId: string;
+                            /** @enum {unknown} */
+                            owner: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            /** @enum {unknown} */
+                            status: "UNKNOWN" | "CLEAR";
+                            dependencyDigest: string;
+                        }[];
+                        completed: boolean;
+                        digest: string;
+                        dependencyDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
     readCampusCandidate: {
         parameters: {
             query?: never;
@@ -9790,7 +10030,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -9827,7 +10067,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -9870,7 +10110,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -9895,7 +10135,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -9920,11 +10160,11 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
-                            /** @enum {string} */
-                            action: "ACTIVATE";
+                            /** @enum {unknown} */
+                            action: "ACTIVATE" | "RESUME";
                             target: {
                                 /** @enum {string} */
                                 owner: "organization-master/campus";
@@ -9946,7 +10186,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -9958,6 +10198,97 @@ export interface operations {
                                 expectedVersion: string;
                             };
                             reason: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "RETIRE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            assessmentDigest: string;
+                            plan: {
+                                responsibleOwner: string;
+                                dueAt: string;
+                                actions: string;
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "RECORD_DISPOSITION";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            assessmentDigest: string;
+                            resolution: {
+                                /** @enum {unknown} */
+                                owner: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                /** @enum {unknown} */
+                                status: "UNKNOWN" | "CLEAR";
+                                /** @enum {string} */
+                                scope: "SYNTHETIC";
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "COMPLETE_DISPOSITION";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            assessmentDigest: string;
                         };
                         blockingIssues: "IDENTIFIER_CONFLICT"[];
                     };
@@ -10455,7 +10786,7 @@ export interface operations {
                                 versionId: string;
                             } | null;
                             /** @enum {unknown} */
-                            operationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "NOT_ESTABLISHED";
+                            operationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED" | "NOT_ESTABLISHED";
                             plannedOpeningAt: string | null;
                             /** @enum {string} */
                             operatingPermission: "NOT_EVALUABLE";
@@ -10875,7 +11206,7 @@ export interface operations {
                             publicPhone: string | null;
                             openingDate: string | null;
                         } | null;
-                        operationStatus: ("PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED") | "NOT_ESTABLISHED";
+                        operationStatus: ("PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED") | "NOT_ESTABLISHED";
                         plannedOpeningAt: string | null;
                         /** @enum {string} */
                         operatingPermission: "NOT_EVALUABLE";
@@ -11008,7 +11339,7 @@ export interface operations {
                             publicPhone: string | null;
                             openingDate: string | null;
                         } | null;
-                        operationStatus: ("PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED") | "NOT_ESTABLISHED";
+                        operationStatus: ("PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED") | "NOT_ESTABLISHED";
                         plannedOpeningAt: string | null;
                         /** @enum {string} */
                         operatingPermission: "NOT_EVALUABLE";
@@ -11121,7 +11452,7 @@ export interface operations {
                         version: string;
                         versionId: string;
                         /** @enum {unknown} */
-                        action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                        action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "RESUME" | "SUSPEND" | "RETIRE" | "RECORD_DISPOSITION" | "COMPLETE_DISPOSITION";
                         validFrom: string;
                         validTo: string | null;
                         recordedAt: string;
@@ -11256,7 +11587,7 @@ export interface operations {
                             version: string;
                             versionId: string;
                             /** @enum {unknown} */
-                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "RESUME" | "SUSPEND" | "RETIRE" | "RECORD_DISPOSITION" | "COMPLETE_DISPOSITION";
                             validFrom: string;
                             validTo: string | null;
                             recordedAt: string;
@@ -11284,7 +11615,7 @@ export interface operations {
                             version: string;
                             versionId: string;
                             /** @enum {unknown} */
-                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "RESUME" | "SUSPEND" | "RETIRE" | "RECORD_DISPOSITION" | "COMPLETE_DISPOSITION";
                             validFrom: string;
                             validTo: string | null;
                             recordedAt: string;
@@ -11294,12 +11625,12 @@ export interface operations {
                             version: string;
                             versionId: string;
                             /** @enum {unknown} */
-                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "SUSPEND";
+                            action: "CREATE" | "REVISE" | "SCHEDULE_OPENING" | "CANCEL_OPENING" | "ACTIVATE" | "RESUME" | "SUSPEND" | "RETIRE" | "RECORD_DISPOSITION" | "COMPLETE_DISPOSITION";
                             validFrom: string;
                             validTo: string | null;
                             recordedAt: string;
                             /** @enum {unknown} */
-                            state: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            state: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         }[];
                     };
                 };
@@ -11548,7 +11879,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -11585,7 +11916,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -11628,7 +11959,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -11653,7 +11984,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -11678,11 +12009,11 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
-                            /** @enum {string} */
-                            action: "ACTIVATE";
+                            /** @enum {unknown} */
+                            action: "ACTIVATE" | "RESUME";
                             target: {
                                 /** @enum {string} */
                                 owner: "organization-master/campus";
@@ -11704,7 +12035,7 @@ export interface operations {
                             };
                             evidence: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom: string;
                             validTo: string | null;
                             /** @enum {string} */
@@ -11716,6 +12047,97 @@ export interface operations {
                                 expectedVersion: string;
                             };
                             reason: string;
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "RETIRE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            assessmentDigest: string;
+                            plan: {
+                                responsibleOwner: string;
+                                dueAt: string;
+                                actions: string;
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "RECORD_DISPOSITION";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            assessmentDigest: string;
+                            resolution: {
+                                /** @enum {unknown} */
+                                owner: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                /** @enum {unknown} */
+                                status: "UNKNOWN" | "CLEAR";
+                                /** @enum {string} */
+                                scope: "SYNTHETIC";
+                            };
+                        } | {
+                            source: {
+                                systemId: string;
+                                versionId: string;
+                                alias: string;
+                                versionNo: number;
+                                recordLocator: string;
+                                recordedAt: string;
+                                recordStatus: "DRAFT" | "PUBLISHED";
+                                approvalRef: string | null;
+                            };
+                            evidence: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {string} */
+                            action: "COMPLETE_DISPOSITION";
+                            target: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            assessmentDigest: string;
                         };
                     };
                 };
@@ -18649,7 +19071,7 @@ export interface operations {
                             };
                             evidence?: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom?: string;
                             validTo?: string | null;
                             /** @enum {string} */
@@ -18686,7 +19108,7 @@ export interface operations {
                             };
                             evidence?: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom?: string;
                             validTo?: string | null;
                             /** @enum {string} */
@@ -18729,7 +19151,7 @@ export interface operations {
                             };
                             evidence?: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom?: string;
                             validTo?: string | null;
                             /** @enum {string} */
@@ -18754,7 +19176,7 @@ export interface operations {
                             };
                             evidence?: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom?: string;
                             validTo?: string | null;
                             /** @enum {string} */
@@ -18779,11 +19201,11 @@ export interface operations {
                             };
                             evidence?: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom?: string;
                             validTo?: string | null;
-                            /** @enum {string} */
-                            action?: "ACTIVATE";
+                            /** @enum {unknown} */
+                            action?: "ACTIVATE" | "RESUME";
                             target?: {
                                 /** @enum {string} */
                                 owner?: "organization-master/campus";
@@ -18805,7 +19227,7 @@ export interface operations {
                             };
                             evidence?: string;
                             /** @enum {unknown} */
-                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                             validFrom?: string;
                             validTo?: string | null;
                             /** @enum {string} */
@@ -18817,6 +19239,97 @@ export interface operations {
                                 expectedVersion?: string;
                             };
                             reason?: string;
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "RETIRE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                            assessmentDigest?: string;
+                            plan?: {
+                                responsibleOwner?: string;
+                                dueAt?: string;
+                                actions?: string;
+                            };
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "RECORD_DISPOSITION";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                            assessmentDigest?: string;
+                            resolution?: {
+                                /** @enum {unknown} */
+                                owner?: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                /** @enum {unknown} */
+                                status?: "UNKNOWN" | "CLEAR";
+                                /** @enum {string} */
+                                scope?: "SYNTHETIC";
+                            };
+                        } | {
+                            source?: {
+                                systemId?: string;
+                                versionId?: string;
+                                alias?: string;
+                                versionNo?: number;
+                                recordLocator?: string;
+                                recordedAt?: string;
+                                recordStatus?: "DRAFT" | "PUBLISHED";
+                                approvalRef?: string | null;
+                            };
+                            evidence?: string;
+                            /** @enum {unknown} */
+                            sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                            validFrom?: string;
+                            validTo?: string | null;
+                            /** @enum {string} */
+                            action?: "COMPLETE_DISPOSITION";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/campus";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            reason?: string;
+                            assessmentDigest?: string;
                         };
                     } | {
                         /** @enum {string} */
@@ -20132,7 +20645,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -20169,7 +20682,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -20212,7 +20725,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -20237,7 +20750,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -20262,11 +20775,11 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
-                        /** @enum {string} */
-                        action?: "ACTIVATE";
+                        /** @enum {unknown} */
+                        action?: "ACTIVATE" | "RESUME";
                         target?: {
                             /** @enum {string} */
                             owner?: "organization-master/campus";
@@ -20288,7 +20801,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -20300,6 +20813,97 @@ export interface operations {
                             expectedVersion?: string;
                         };
                         reason?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "RETIRE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
+                        plan?: {
+                            responsibleOwner?: string;
+                            dueAt?: string;
+                            actions?: string;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "RECORD_DISPOSITION";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
+                        resolution?: {
+                            /** @enum {unknown} */
+                            owner?: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            /** @enum {unknown} */
+                            status?: "UNKNOWN" | "CLEAR";
+                            /** @enum {string} */
+                            scope?: "SYNTHETIC";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "COMPLETE_DISPOSITION";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
                     };
                 } | {
                     /** @enum {string} */
@@ -21275,7 +21879,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -21312,7 +21916,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -21355,7 +21959,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -21380,7 +21984,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -21405,11 +22009,11 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
-                        /** @enum {string} */
-                        action?: "ACTIVATE";
+                        /** @enum {unknown} */
+                        action?: "ACTIVATE" | "RESUME";
                         target?: {
                             /** @enum {string} */
                             owner?: "organization-master/campus";
@@ -21431,7 +22035,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -21443,6 +22047,97 @@ export interface operations {
                             expectedVersion?: string;
                         };
                         reason?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "RETIRE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
+                        plan?: {
+                            responsibleOwner?: string;
+                            dueAt?: string;
+                            actions?: string;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "RECORD_DISPOSITION";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
+                        resolution?: {
+                            /** @enum {unknown} */
+                            owner?: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            /** @enum {unknown} */
+                            status?: "UNKNOWN" | "CLEAR";
+                            /** @enum {string} */
+                            scope?: "SYNTHETIC";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "COMPLETE_DISPOSITION";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
                     };
                 } | {
                     /** @enum {string} */
@@ -22267,7 +22962,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -22304,7 +22999,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -22347,7 +23042,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -22372,7 +23067,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -22397,11 +23092,11 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
-                        /** @enum {string} */
-                        action?: "ACTIVATE";
+                        /** @enum {unknown} */
+                        action?: "ACTIVATE" | "RESUME";
                         target?: {
                             /** @enum {string} */
                             owner?: "organization-master/campus";
@@ -22423,7 +23118,7 @@ export interface operations {
                         };
                         evidence?: string;
                         /** @enum {unknown} */
-                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                         validFrom?: string;
                         validTo?: string | null;
                         /** @enum {string} */
@@ -22435,6 +23130,97 @@ export interface operations {
                             expectedVersion?: string;
                         };
                         reason?: string;
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "RETIRE";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
+                        plan?: {
+                            responsibleOwner?: string;
+                            dueAt?: string;
+                            actions?: string;
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "RECORD_DISPOSITION";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
+                        resolution?: {
+                            /** @enum {unknown} */
+                            owner?: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            /** @enum {unknown} */
+                            status?: "UNKNOWN" | "CLEAR";
+                            /** @enum {string} */
+                            scope?: "SYNTHETIC";
+                        };
+                    } | {
+                        source?: {
+                            systemId?: string;
+                            versionId?: string;
+                            alias?: string;
+                            versionNo?: number;
+                            recordLocator?: string;
+                            recordedAt?: string;
+                            recordStatus?: "DRAFT" | "PUBLISHED";
+                            approvalRef?: string | null;
+                        };
+                        evidence?: string;
+                        /** @enum {unknown} */
+                        sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                        validFrom?: string;
+                        validTo?: string | null;
+                        /** @enum {string} */
+                        action?: "COMPLETE_DISPOSITION";
+                        target?: {
+                            /** @enum {string} */
+                            owner?: "organization-master/campus";
+                            id?: string;
+                            expectedVersion?: string;
+                        };
+                        reason?: string;
+                        assessmentDigest?: string;
                     };
                     requestId: string;
                     id?: string;
@@ -23287,7 +24073,7 @@ export interface operations {
                                 };
                                 evidence?: string;
                                 /** @enum {unknown} */
-                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                                 validFrom?: string;
                                 validTo?: string | null;
                                 /** @enum {string} */
@@ -23324,7 +24110,7 @@ export interface operations {
                                 };
                                 evidence?: string;
                                 /** @enum {unknown} */
-                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                                 validFrom?: string;
                                 validTo?: string | null;
                                 /** @enum {string} */
@@ -23367,7 +24153,7 @@ export interface operations {
                                 };
                                 evidence?: string;
                                 /** @enum {unknown} */
-                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                                 validFrom?: string;
                                 validTo?: string | null;
                                 /** @enum {string} */
@@ -23392,7 +24178,7 @@ export interface operations {
                                 };
                                 evidence?: string;
                                 /** @enum {unknown} */
-                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                                 validFrom?: string;
                                 validTo?: string | null;
                                 /** @enum {string} */
@@ -23417,11 +24203,11 @@ export interface operations {
                                 };
                                 evidence?: string;
                                 /** @enum {unknown} */
-                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                                 validFrom?: string;
                                 validTo?: string | null;
-                                /** @enum {string} */
-                                action?: "ACTIVATE";
+                                /** @enum {unknown} */
+                                action?: "ACTIVATE" | "RESUME";
                                 target?: {
                                     /** @enum {string} */
                                     owner?: "organization-master/campus";
@@ -23443,7 +24229,7 @@ export interface operations {
                                 };
                                 evidence?: string;
                                 /** @enum {unknown} */
-                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED";
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
                                 validFrom?: string;
                                 validTo?: string | null;
                                 /** @enum {string} */
@@ -23455,6 +24241,97 @@ export interface operations {
                                     expectedVersion?: string;
                                 };
                                 reason?: string;
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "RETIRE";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                                assessmentDigest?: string;
+                                plan?: {
+                                    responsibleOwner?: string;
+                                    dueAt?: string;
+                                    actions?: string;
+                                };
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "RECORD_DISPOSITION";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                                assessmentDigest?: string;
+                                resolution?: {
+                                    /** @enum {unknown} */
+                                    owner?: "BUSINESS_UNIT" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                    /** @enum {unknown} */
+                                    status?: "UNKNOWN" | "CLEAR";
+                                    /** @enum {string} */
+                                    scope?: "SYNTHETIC";
+                                };
+                            } | {
+                                source?: {
+                                    systemId?: string;
+                                    versionId?: string;
+                                    alias?: string;
+                                    versionNo?: number;
+                                    recordLocator?: string;
+                                    recordedAt?: string;
+                                    recordStatus?: "DRAFT" | "PUBLISHED";
+                                    approvalRef?: string | null;
+                                };
+                                evidence?: string;
+                                /** @enum {unknown} */
+                                sourceOperationStatus?: "PLANNING" | "TRIAL_RUNNING" | "RUNNING" | "SUSPENDED" | "RETIRED";
+                                validFrom?: string;
+                                validTo?: string | null;
+                                /** @enum {string} */
+                                action?: "COMPLETE_DISPOSITION";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                    expectedVersion?: string;
+                                };
+                                reason?: string;
+                                assessmentDigest?: string;
                             };
                             requestId: string;
                             id?: string;

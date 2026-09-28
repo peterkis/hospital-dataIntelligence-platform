@@ -1,3 +1,4 @@
+import {CampusImpactSchema,CampusImpactResultSchema} from '../../modules/organization-master/index.js';
 import {CampusResolveSchema,CampusResolveResultSchema,CampusPinSchema,CampusPinResultSchema,CampusCoverageSchema,CampusCoverageResultSchema,type CampusReferencePort} from '../../modules/organization-master/index.js';
 import {Type,type Static} from 'typebox';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
@@ -8,8 +9,8 @@ const ErrorSchema=Type.Object({code:Text,message:Text,field:Type.Optional(Text)}
 const Target=Type.Object({id:Id},closed);
 const Ref=Type.Object({owner:Type.Literal('organization-master/campus'),id:Id,version:Text},closed);
 const Outcome=Type.Object({status:Type.Enum(['COMMITTED','COMMIT_UNKNOWN']),candidateId:Id,requestId:Id,facts:Type.Optional(Type.Array(Ref)),recordedAt:Type.Optional(Time),responseStatus:Type.Optional(Type.Enum(['DELIVERED','POST_COMMIT_FAILED']))},closed);
-const State=Type.Enum(['PLANNING','TRIAL_RUNNING','RUNNING','SUSPENDED']);
-const Event={version:Text,versionId:Id,action:Type.Enum(['CREATE','REVISE','SCHEDULE_OPENING','CANCEL_OPENING','ACTIVATE','SUSPEND']),validFrom:Time,validTo:Type.Union([Time,Type.Null()]),recordedAt:Time};
+const State=Type.Enum(['PLANNING','TRIAL_RUNNING','RUNNING','SUSPENDED','RETIRED']);
+const Event={version:Text,versionId:Id,action:Type.Enum(['CREATE','REVISE','SCHEDULE_OPENING','CANCEL_OPENING','ACTIVATE','RESUME','SUSPEND','RETIRE','RECORD_DISPOSITION','COMPLETE_DISPOSITION']),validFrom:Time,validTo:Type.Union([Time,Type.Null()]),recordedAt:Time};
 const Version=Type.Object({...Event,facts:CampusFactsSchema},closed);
 const View=Type.Object({id:Id,head:Text,facts:Type.Union([CampusFactsSchema,Type.Null()]),operationStatus:Type.Union([State,Type.Literal('NOT_ESTABLISHED')]),plannedOpeningAt:Type.Union([Time,Type.Null()]),operatingPermission:Type.Literal('NOT_EVALUABLE')},closed);
 export interface CampusHttpContext {owner?:CampusOwner;references?:CampusReferencePort;actor:(r:FastifyRequest)=>string}
@@ -19,6 +20,7 @@ export function registerCampusRoutes(app:FastifyInstance,context?:CampusHttpCont
  app.post<{Body:Static<typeof CampusStageSchema>}>('/api/vnext/campuses/inputs',{schema:{operationId:'stageCampusCommand',body:CampusStageSchema,response:{200:Type.Object({inputId:Id,revisionId:Id},closed),...errors}}},r=>owner().stage(actor(r),r.body));
  app.post<{Body:Static<typeof InputSchema>}>('/api/vnext/campuses/plan',{schema:{operationId:'planCampusCommand',body:InputSchema,response:{200:Type.Object({candidateId:Id,digest:Text},closed),...errors}}},r=>owner().plan(actor(r),r.body));
  app.post<{Body:Static<typeof InputSchema>}>('/api/vnext/campuses/withdraw',{schema:{operationId:'withdrawCampusInput',body:InputSchema,response:{200:Type.Object({inputId:Id,status:Type.Literal('WITHDRAWN')},closed),...errors}}},r=>owner().withdraw(actor(r),r.body));
+ app.post<{Body:Static<typeof CampusImpactSchema>}>('/api/vnext/campuses/impact',{schema:{operationId:'assessCampusImpact',body:CampusImpactSchema,response:{200:CampusImpactResultSchema,...errors}}},r=>owner().assessCampusImpact(actor(r),r.body));
  const Candidate=Type.Object({candidateId:Id},closed);
  app.post<{Body:Static<typeof Candidate>}>('/api/vnext/campuses/review',{schema:{operationId:'readCampusCandidate',body:Candidate,response:{200:Type.Object({candidateId:Id,digest:Text,approvedBy:Nullable,command:CampusCommandSchema,blockingIssues:Type.Array(Type.Literal('IDENTIFIER_CONFLICT'))},closed),...errors}}},async r=>{const c=await owner().readApplyCandidate(actor(r),r.body);return {candidateId:c.candidateId,digest:c.digest,approvedBy:c.approvedBy,command:JSON.parse(c.unit.commands[0]!.value['original']!),blockingIssues:c.unit.basis['blockingIssues']??[]};});
  app.post<{Body:Static<typeof ApproveApplyUnitSchema>}>('/api/vnext/campuses/approve',{schema:{operationId:'approveCampusCommand',body:ApproveApplyUnitSchema,response:{200:Type.Object({candidateId:Id,approvedBy:Text},closed),...errors}}},r=>owner().approveApplyUnit(actor(r),r.body));

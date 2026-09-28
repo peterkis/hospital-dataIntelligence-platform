@@ -54,7 +54,7 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
  };
  const admission=async(scope:Scope,actor:string,c:OperatingCommand,current:Snapshot|null,asOf:string)=>{
   const basis:Basis={scopeDependencies:[]},blockers:string[]=[];if(isClosing(c))return {basis,blockers};
-  const p={from:c.validFrom,to:c.validTo};const reg=await registration.inTransaction(scope).read(actor,{id:c.subject.id,asOf});
+  const p={from:c.validFrom,to:c.validTo};await sql`select organization_master.campus_admission(${actor},${c.campus.id}::uuid,${p.from}::timestamp,${p.to}::timestamp)`.execute(scope);const reg=await registration.inTransaction(scope).read(actor,{id:c.subject.id,asOf});
   const campus=await campuses.inTransaction(scope).readCampusReferenceCoverage(actor,{references:[c.campus],validFrom:p.from,validTo:p.to,asOf});
   if(!covered(reg.profiles,p.from,p.to)||campus.items[0]?.coverage!=='COVERED')throw new Error('BLOCKED_DEPENDENCY');
   basis.parents={subjectProfiles:reg.profiles,campusProfiles:campus.items[0].segments};
