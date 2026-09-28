@@ -4,6 +4,10 @@ import {localTime} from '../../organization-master/index.js';
 import {ImportJobCommandSchema} from '../../governance-catalog/index.js';
 
 const closed={additionalProperties:false} as const;
+// The committed-row matcher advances a REVISE version by one in PostgreSQL.
+// Leave one value below bigint max so an accepted boundary can never overflow
+// that comparison, even before the SQL-side defensive check is reached.
+export const MAX_EXPECTED_VERSION=9223372036854775806n;
 export const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
 const text=(maxLength=2000)=>Type.String({maxLength});
 const required=(maxLength=2000)=>Type.String({minLength:1,maxLength,pattern:'\\S'});
@@ -58,6 +62,6 @@ export function normalizeEntry(entry:StageInput['entries'][number]|StoredStageIn
  if(validTo!==null&&validTo<=validFrom)throw new Error('INVALID_BUSINESS_PERIOD');
  for(const date of [row.established_on,row.abolished_on])if(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('CLOSED_INPUT_REQUIRED');localTime(date+'T00:00:00');}
  if((entry.intent==='CREATE')!==(entry.target===null))throw new Error('CLOSED_INPUT_REQUIRED');
-  if(entry.target&&(!/^[1-9][0-9]{0,18}$/.test(entry.target.expectedVersion)||BigInt(entry.target.expectedVersion)>9223372036854775807n))throw new Error('CLOSED_INPUT_REQUIRED');
+  if(entry.target&&(!/^[1-9][0-9]{0,18}$/.test(entry.target.expectedVersion)||BigInt(entry.target.expectedVersion)>MAX_EXPECTED_VERSION))throw new Error('CLOSED_INPUT_REQUIRED');
  return {...entry,row,validFrom,validTo,recordedAt,sourceRow:'sourceRow' in entry?entry.sourceRow:undefined};
 }

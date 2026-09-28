@@ -101,7 +101,7 @@ BEGIN
     AND v.facts->>'commandDigest'=p_facts->>'commandDigest'
     AND (v.facts-'verificationId'-'commandDigest')=(p_facts-'verificationId'-'commandDigest')
     AND ((p_intent='CREATE' AND p_expected_version IS NULL AND v.number=1)
-      OR (p_intent='REVISE' AND p_expected_version IS NOT NULL AND v.department_id=p_target_id AND v.number=p_expected_version+1))
+      OR (p_intent='REVISE' AND p_expected_version IS NOT NULL AND v.department_id=p_target_id AND v.number-1=p_expected_version))
  );
 END $$;
 REVOKE ALL ON FUNCTION department_master.committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb) FROM PUBLIC,hdi_prototype;

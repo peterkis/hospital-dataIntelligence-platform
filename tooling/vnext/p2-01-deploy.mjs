@@ -10,6 +10,7 @@ import {buildCatalogServer} from '../../apps/governance-api/src/composition/buil
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
 import {createDepartmentClient} from '../../packages/generated-api-client/src/index.ts';
 import {departmentFixture} from './p2-01-fixture.ts';
+import {DEPARTMENT_FUNCTIONS} from './department-provisioning.mjs';
 
 if(process.argv.length!==2)throw new Error('CLOSED_COMMAND_REQUIRED');
 const deployment=await prepareWorkspaceDeployment({evidenceTask:'p2-01'});
@@ -17,11 +18,10 @@ const {receipt,connection,provider,evidence}=deployment;
 const service=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));
 // The shared deployment preparation verifies receipt/OID/role identity and retains keys.
 // Only this synthetic development environment's named actors receive explicit grants.
-const functions=['authorize(text,text,text)','input_read(text,uuid,text)','snapshot(text,uuid)','job_read(text,uuid)','list(text,uuid,integer,timestamp)','code_conflict(text,text,uuid)','evidence(text,uuid,uuid,uuid,text,timestamp,timestamp)','mutate(text,text)','committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb)'];
 peer(receipt.name,identitySQL(receipt)+` BEGIN; SELECT pg_advisory_xact_lock(901002);
  DO $$ BEGIN IF (SELECT oid::text FROM pg_roles WHERE rolname=${quote(service.role)}) IS DISTINCT FROM ${quote(service.roleOid)} THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH'; END IF; END $$;
  GRANT USAGE ON SCHEMA department_master TO ${service.role};
- GRANT EXECUTE ON FUNCTION ${functions.map(f=>'department_master.'+f).join(',')} TO ${service.role};
+ GRANT EXECUTE ON FUNCTION ${DEPARTMENT_FUNCTIONS.map(f=>'department_master.'+f).join(',')} TO ${service.role};
  GRANT EXECUTE ON FUNCTION governance_catalog.apply_record(text,text,jsonb),governance_catalog.registration_evidence(text,uuid,uuid,text) TO ${service.role};
  INSERT INTO department_master.access SELECT a,'NORTH',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p ON CONFLICT DO NOTHING;
  INSERT INTO department_master.access SELECT a,'HOSPITAL','READ' FROM unnest(ARRAY['maker','reviewer']) a ON CONFLICT DO NOTHING;

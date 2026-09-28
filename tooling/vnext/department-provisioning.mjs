@@ -2,6 +2,28 @@ import {createHmac} from 'node:crypto';
 import {Pool} from 'pg';
 import {canonicalPlan,planBinding} from '../../apps/governance-api/src/modules/governance-catalog/plan-binding.ts';
 
+// Keep this list identical to the controlled GRANT surface in p2-01-deploy.mjs.
+// Startup must prove every Department entry point is executable before routes
+// are exposed; checking only mutate/authorize lets a partial provisioning fail
+// later, after the server is already listening.
+export const DEPARTMENT_FUNCTIONS=Object.freeze([
+ 'authorize(text,text,text)',
+ 'input_read(text,uuid,text)',
+ 'snapshot(text,uuid)',
+ 'job_read(text,uuid)',
+ 'list(text,uuid,integer,timestamp)',
+ 'code_conflict(text,text,uuid)',
+ 'evidence(text,uuid,uuid,uuid,text,timestamp,timestamp)',
+ 'mutate(text,text)',
+ 'committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb)',
+]);
+export const DEPARTMENT_ACCESS=Object.freeze([
+ ['maker','NORTH','READ'],['maker','NORTH','WRITE'],['maker','NORTH','READ_RESTRICTED'],
+ ['reviewer','NORTH','READ'],['reviewer','NORTH','WRITE'],['reviewer','NORTH','READ_RESTRICTED'],
+ ['maker','HOSPITAL','READ'],['reviewer','HOSPITAL','READ'],
+ ['reviewer','HOSPITAL','REVIEW'],['reviewer','HOSPITAL','VERIFY'],
+]);
+
 /**
  * Proves the persistent service can reach the Department Owner's controlled
  * surface without granting it direct table or signing-key access.
@@ -10,9 +32,9 @@ export async function assertDepartmentProvisioned(connection,provider){
  const pool=new Pool({connectionString:connection,max:1});
  const client=await pool.connect();let transactionOpen=false;
  try{
-  const privilege=(await client.query("SELECT has_schema_privilege(current_user,'department_master','USAGE') AS schema_ready,has_function_privilege(current_user,'department_master.authorize(text,text,text)','EXECUTE') AS authorize_ready,has_function_privilege(current_user,'department_master.mutate(text,text)','EXECUTE') AS mutate_ready,has_function_privilege(current_user,'governance_catalog.apply_record(text,text,jsonb)','EXECUTE') AS apply_ready")).rows[0];
-  if(!privilege?.schema_ready||!privilege.authorize_ready||!privilege.mutate_ready||!privilege.apply_ready)throw new Error('DEPARTMENT_PROVISIONING_REQUIRED');
-  await client.query("SELECT department_master.authorize('maker','NORTH','READ')");
+  const privilege=(await client.query("SELECT has_schema_privilege(current_user,'department_master','USAGE') AS schema_ready,coalesce((SELECT bool_and(has_function_privilege(current_user,signature,'EXECUTE')) FROM unnest($1::text[]) required(signature)),false) AS functions_ready,has_function_privilege(current_user,'governance_catalog.apply_record(text,text,jsonb)','EXECUTE') AS apply_ready,has_function_privilege(current_user,'governance_catalog.registration_evidence(text,uuid,uuid,text)','EXECUTE') AS evidence_ready",[DEPARTMENT_FUNCTIONS.map(signature=>'department_master.'+signature)])).rows[0];
+  if(!privilege?.schema_ready||!privilege.functions_ready||!privilege.apply_ready||!privilege.evidence_ready)throw new Error('DEPARTMENT_PROVISIONING_REQUIRED');
+  for(const access of DEPARTMENT_ACCESS)await client.query('SELECT department_master.authorize($1,$2,$3)',access);
   await client.query('BEGIN');transactionOpen=true;
   const transaction=(await client.query('SELECT pg_current_xact_id()::text AS id')).rows[0].id;
   const ticket=canonicalPlan({actor:'maker',operation:'PROVISIONING_PROBE',transaction});

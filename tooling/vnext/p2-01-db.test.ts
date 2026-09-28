@@ -12,6 +12,7 @@ import {createDepartmentClient} from '../../packages/generated-api-client/src/vn
 import {peer,quote} from './lineage.mjs';
 import {Pool} from 'pg';
 import {openDepartment} from '../../apps/governance-api/src/modules/department-master/index.js';
+import {assertDepartmentProvisioned} from './department-provisioning.mjs';
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
 const provider=new LocalSyntheticKeyProvider(),connection=process.env['VNEXT_VALIDATION_OWNER_URL']!;
 const owner=openDepartment(connection,provider),catalog=await openCatalog(connection,provider);
@@ -30,6 +31,7 @@ test('ORG04 policy adoption and independently approved creation return one datab
  const recovered=await departmentFixture(receipt,catalog,provider,{persistentSmoke:true,requestId:nextId,freezeCommand});
  expect(recovered.contract).toEqual(f.contract);expect(recovered.artifact).toEqual(f.artifact);
  expect(await recovered.input()).toEqual(adopted);
+ await assertDepartmentProvisioned(connection,provider);
  const input=await f.input(),staged=await owner.stage('maker',input);
  expect((await owner.validate('maker',{inputId:staged.inputId})).decision).toBe('BLOCKED');
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO verified',evidenceId:f.artifact.artifactId}]});
@@ -206,6 +208,10 @@ test('semantic verification is rejected after the reviewer identity is rebound',
  peer(receipt.name,"UPDATE vnext_control.actor SET identity_code='SYNTHETIC_REVIEWER_REBOUND' WHERE code='reviewer';");
  try{await expect(owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow('ACCESS_DENIED');}
  finally{peer(receipt.name,"UPDATE vnext_control.actor SET identity_code='SYNTHETIC_REVIEWER' WHERE code='reviewer';");}
+});
+test('committed-row matcher treats bigint maximum as a false match without overflow',()=>{
+ const result=peer(receipt.name,`SELECT department_master.committed_row('maker',${quote(randomUUID())}::uuid,1,'REVISE',${quote(randomUUID())}::uuid,9223372036854775807,'DEMO_BIGINT_BOUNDARY','2026-01-01T00:00:00'::timestamp,NULL,'{"commandDigest":"${'a'.repeat(64)}"}'::jsonb);`);
+ expect(result).toBe('f');
 });
 test('unknown virtual meaning, view groups, lifecycle inputs and FULL cannot silently become core departments',async()=>{
  for(const disposition of ['UNKNOWN','VIEW_GROUP'] as const){const input=await f.input(),s=await owner.stage('maker',input);await owner.verify('reviewer',{requestId:randomUUID(),inputId:s.inputId,inputDigest:s.digest,rows:[{row:1,disposition,historicalException:false,reason:'DEMO pending classification',evidenceId:f.artifact.artifactId}]});expect((await owner.validate('maker',{inputId:s.inputId})).issues).toContainEqual({row:1,field:'is_virtual',code:'LEGAL_REVIEW_REQUIRED',status:'BLOCKED'});}
