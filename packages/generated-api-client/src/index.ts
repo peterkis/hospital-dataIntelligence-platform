@@ -29,3 +29,5 @@ export {createCampusClient,type CampusInput} from './vnext-client.js';
 
 export {createOperatingRelationClient,createLicenseScopeClient} from './vnext-client.js';
 export {createOrganizationClient,createOrganizationBundleClient,createOrganizationWorkspaceClient} from './vnext-client.js';
+
+export {createDepartmentClient,type DepartmentInput} from './vnext-client.js';

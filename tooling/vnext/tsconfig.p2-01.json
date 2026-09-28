@@ -1,0 +1,1 @@
+{"extends":"../../tsconfig.base.json","compilerOptions":{"noEmit":true,"allowJs":true,"checkJs":false,"types":["node"],"lib":["ES2024","DOM","DOM.Iterable"]},"include":["p2-01*.ts","../../apps/governance-api/src/modules/department-master/vnext/**/*.ts"]}

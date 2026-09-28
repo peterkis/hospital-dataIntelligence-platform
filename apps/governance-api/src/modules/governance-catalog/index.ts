@@ -156,3 +156,5 @@ export type {ImportContractItem} from './contract-schema.js';
 
 export {evaluateRuleSet} from './validation-rules.js';
 export {recordOwnerFileValidation} from './validation.js';
+
+export {fileIntake,boundedParse} from './file-intake.js';

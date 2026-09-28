@@ -2,7 +2,7 @@ import {checkPrefix,migrationFiles} from './lineage.mjs';
 
 // One release boundary for the runtime and the receipt-owned deployment runner.
 // Advancing SQL without advancing this boundary must fail closed, not run old SQL.
-export const workspaceMigration = '0082_campus_opening_retirement_boundary';
+export const workspaceMigration = '0083_department_core';
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
  if(files.at(-1)?.id!==workspaceMigration)throw new Error('WORKSPACE_RELEASE_MANIFEST_MISMATCH');

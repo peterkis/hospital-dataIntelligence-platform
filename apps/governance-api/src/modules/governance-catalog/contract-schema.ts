@@ -14,6 +14,7 @@ export const ContractDefinitionSchema=Type.Object({
   codeSets:Type.Array(Type.Object({field:Type.String(),codeSystem:Token,version:Token,status:values('CANDIDATE','SYNTHETIC_ADOPTED'),codes:Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,uniqueItems:true}),validFrom:Time,validTo:End,sourceVersionId:Id},{additionalProperties:false})),
   rules:Type.Array(Type.Object({id:Token,field:Type.String(),text:Type.String({minLength:1,maxLength:2000}),status:values('UNRESOLVED','MACHINE','MANUAL_EVIDENCE'),version:Token},{additionalProperties:false}),{maxItems:100}),
   references:Type.Array(Type.Union([
+    Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('DEPARTMENT_CORE')},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('ORG_BUNDLE')},{additionalProperties:false}),
     Type.Object({field:Type.Literal('is_primary_operator'),target:Type.Literal('enum:yes_no'),status:Type.Literal('ADOPTED_CODESET')},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('BLOCKED_DEPENDENCY')},{additionalProperties:false}),

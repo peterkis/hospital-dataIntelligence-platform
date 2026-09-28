@@ -1,10 +1,14 @@
 {
   "dialect": "postgres",
-  "defaultSchemas": ["__qualified_schema_only__"],
-  "includePattern": "{vnext_control,governance_catalog,organization_master}.*",
+  "defaultSchemas": [
+    "__qualified_schema_only__"
+  ],
+  "includePattern": "{vnext_control,governance_catalog,organization_master,department_master}.*",
   "dateParser": "string",
   "numericParser": "string",
-  "typeMapping": { "timestamp": "string" },
+  "typeMapping": {
+    "timestamp": "string"
+  },
   "outFile": "../../apps/governance-api/src/platform/database/vnext-types.generated.ts",
   "typeOnlyImports": true
 }

@@ -1,8 +1,8 @@
 /** Capability selection is separate from authorizing an exact bound workbook revision. */
 export interface AdapterRequest {dataset:string;profile:'CORE'|'FULL';contractVersion:number;templateVersion?:string;parserPolicy?:string}
 export interface AdapterDescriptor {
- readonly dataset:string;readonly profile:'CORE'|'FULL';readonly owner:null|'organization-master';
- readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE')[];
+ readonly dataset:string;readonly profile:'CORE'|'FULL';readonly owner:null|'organization-master'|'department-master';
+ readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE')[];
  readonly capability:'NOT_READY'|'READY';
 }
 const datasets:ReadonlySet<string>=new Set([
@@ -14,6 +14,7 @@ const datasets:ReadonlySet<string>=new Set([
 export function selectImportAdapter(request:AdapterRequest):AdapterDescriptor {
  if(!datasets.has(request.dataset))throw new Error('UNKNOWN_ADAPTER');
  if(!['CORE','FULL'].includes(request.profile)||!Number.isSafeInteger(request.contractVersion)||request.contractVersion<1)throw new Error('INVALID_ADAPTER_REQUEST');
+ if(request.dataset==='ORG04'&&request.profile==='CORE'&&request.templateVersion==='ORG04_CORE_V1'&&request.parserPolicy==='STRICT_DEPARTMENT_V1')return Object.freeze({dataset:request.dataset,profile:request.profile,owner:'department-master',supportedContractRange:'ORG04_CORE_V1',allowedIntents:['CREATE','REVISE'] as const,capability:'READY'});
  if(['ORG01','ORG02','ORG03'].includes(request.dataset)&&request.profile==='CORE'&&request.templateVersion===request.dataset+'_BUNDLE_CORE_V1'&&request.parserPolicy==='STRICT_ORG_BUNDLE_V1')return Object.freeze({dataset:request.dataset,profile:request.profile,owner:'organization-master',supportedContractRange:'ORG_BUNDLE_CORE_V1',allowedIntents:['CREATE','REVISE'] as const,capability:'READY'});
  return Object.freeze({dataset:request.dataset,profile:request.profile,owner:null,supportedContractRange:null,allowedIntents:[] as const,capability:'NOT_READY'});
 }

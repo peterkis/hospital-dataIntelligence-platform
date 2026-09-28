@@ -23,6 +23,56 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export interface DepartmentMasterAccess {
+  actor: string;
+  permission: string;
+  scope: string;
+}
+
+export interface DepartmentMasterDepartment {
+  code: string;
+  id: Generated<string>;
+}
+
+export interface DepartmentMasterInput {
+  campus: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+}
+
+export interface DepartmentMasterVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface DepartmentMasterVersion {
+  content_digest: string;
+  department_id: string;
+  facts: Json;
+  id: Generated<string>;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  source_row: number;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface GovernanceCatalogApplyApproval {
   actor_code: string;
   candidate_id: string;
@@ -602,6 +652,11 @@ export interface VnextControlCreationPolicy {
   recipient_actor: string;
 }
 
+export interface VnextControlDepartmentWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlMigration {
   applied_at: Generated<string>;
   id: string;
@@ -655,6 +710,11 @@ export interface VnextControlRequestIdentity {
 }
 
 export interface DB {
+  "department_master.access": DepartmentMasterAccess;
+  "department_master.department": DepartmentMasterDepartment;
+  "department_master.input": DepartmentMasterInput;
+  "department_master.verification": DepartmentMasterVerification;
+  "department_master.version": DepartmentMasterVersion;
   "governance_catalog.apply_approval": GovernanceCatalogApplyApproval;
   "governance_catalog.apply_candidate": GovernanceCatalogApplyCandidate;
   "governance_catalog.apply_commit": GovernanceCatalogApplyCommit;
@@ -713,6 +773,7 @@ export interface DB {
   "vnext_control.bundle_write_authority": VnextControlBundleWriteAuthority;
   "vnext_control.campus_write_authority": VnextControlCampusWriteAuthority;
   "vnext_control.creation_policy": VnextControlCreationPolicy;
+  "vnext_control.department_write_authority": VnextControlDepartmentWriteAuthority;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.object_grant": VnextControlObjectGrant;
   "vnext_control.operating_write_authority": VnextControlOperatingWriteAuthority;

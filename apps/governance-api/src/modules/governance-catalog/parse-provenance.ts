@@ -14,7 +14,7 @@ const ManifestSchema=Type.Object({bomDetected:Type.Boolean(),bomMembers:Type.Arr
 const RowSchema=Type.Record(Type.String(),Text);
 const IssueSchema=Type.Object({code:Type.String({pattern:'^[A-Z_]{1,64}$'}),row:IssueRow,column:Int,sheet:Type.Optional(Text)},{additionalProperties:false});
 const ResultSchema=Type.Object({
- policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
+ policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2'),Type.Literal('STRICT_DEPARTMENT_V1')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
  manifest:ManifestSchema,rows:Type.Array(RowSchema,{maxItems:1000}),
  cells:Type.Array(Type.Object({row:Int,sourceRow:Int,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
  issues:Type.Array(IssueSchema,{maxItems:100000}),

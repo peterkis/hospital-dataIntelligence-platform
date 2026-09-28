@@ -422,3 +422,7 @@ export * from './application.js';
 export * from './department-contracts.js';
 export * from './read-model.js';
 export * from './placement-reference.js';
+
+// Current vNext Department Owner; the legacy assembly is not mounted in vNext.
+export {openDepartment} from './vnext/index.js';
+export {StageSchema as DepartmentStageSchema,VerifySchema as DepartmentVerifySchema,PlanSchema as DepartmentPlanSchema,ReadSchema as DepartmentReadSchema,CoverageSchema as DepartmentCoverageSchema,ReceiveSchema as DepartmentReceiveSchema,EntrySchema as DepartmentEntrySchema,Id as DepartmentId,ORG04_FIELDS,validateORG04,type StageInput as DepartmentStageInput} from './vnext/contracts.js';

@@ -1,3 +1,4 @@
+import {openDepartment} from '../../apps/governance-api/src/modules/department-master/index.ts';
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -42,7 +43,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -50,6 +51,7 @@ export async function startWorkbench({
     await operating?.close();
     await organizationImport?.close();
     await organizationWorkspace?.close();
+    await department?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -97,6 +99,7 @@ export async function startWorkbench({
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
+    if(persistent&&persistentPrefix>=83)department=openDepartment(connection,provider);
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -152,6 +155,7 @@ export async function startWorkbench({
       operating?{owner:operating,actor:r=>syntheticActor(r.headers)}:undefined,
       organizationImport?{owner:organizationImport,actor:r=>syntheticActor(r.headers)}:undefined,
       organizationWorkspace?{owner:organizationWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
+      department?{owner:department,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

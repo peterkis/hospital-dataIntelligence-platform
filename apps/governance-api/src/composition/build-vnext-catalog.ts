@@ -1,3 +1,4 @@
+import {registerDepartmentRoutes,type DepartmentHttpContext} from '../platform/fastify/vnext-department-routes.js';
 import {registerOrganizationWorkspaceRoutes,type OrganizationWorkspaceHttpContext} from '../platform/fastify/vnext-organization-workspace-routes.js';
 import {registerOperatingRoutes,type OperatingHttpContext} from '../platform/fastify/vnext-operating-routes.js';
 import {registerOrganizationImportRoutes,type OrganizationImportHttpContext} from '../platform/fastify/vnext-organization-import-routes.js';
@@ -12,7 +13,7 @@ import { registerWorkbenchRoutes } from '../platform/fastify/vnext-workbench-rou
 import { validCatalogLocalTime, catalogClockTime } from '../platform/fastify/vnext-local-time.js';
 import {registerOrganizationRoutes,type OrganizationHttpContext} from '../platform/fastify/vnext-organization-routes.js';
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext) {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
   app.addHook('onRequest',async(request,reply)=>{if(request.url.startsWith('/api/vnext/'))reply.header('Cache-Control','no-store');if(request.method==='GET')started.set(request,performance.now());});
@@ -52,5 +53,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerOperatingRoutes(app,operating);
   registerOrganizationImportRoutes(app,organizationImport);
   registerOrganizationWorkspaceRoutes(app,workspace);
+  registerDepartmentRoutes(app,department);
   return app;
 }
