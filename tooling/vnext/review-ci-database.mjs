@@ -40,7 +40,7 @@ export async function inspect(receipt){
   if(identity.name!==receipt.name||identity.oid!==receipt.oid||identity.owner!=='hdi_prototype')throw new Error('REVIEW_CI_IDENTITY_MISMATCH');
   const present=(await pool.query("select to_regclass('vnext_control.migration') is not null present")).rows[0].present;
   const ledger=present?(await pool.query('select id,sha256 from vnext_control.migration order by id')).rows:[];
-  const tables=(await pool.query("select schemaname||'.'||tablename name from pg_tables where schemaname in ('vnext_control','governance_catalog','organization_master') order by 1")).rows.map(r=>r.name);
+  const tables=(await pool.query("select schemaname||'.'||tablename name from pg_tables where schemaname in ('vnext_control','governance_catalog','organization_master','department_master') order by 1")).rows.map(r=>r.name);
   return {identity,ledger,tables};
  }finally{await pool.end();}
 }
@@ -83,6 +83,14 @@ export async function upgradeEffectiveActivation(receipt){
  await upgradeOne(receipt,79,'0080_campus_effective_activation.sql','POPULATED_0079_TO_0080');
  await upgradeOne(receipt,80,'0081_campus_explicit_resume_basis.sql','POPULATED_0080_TO_0081');
  await upgradeOne(receipt,81,'0082_campus_opening_retirement_boundary.sql','POPULATED_0081_TO_0082');
+ await upgradeOne(receipt,82,'0083_campus_retirement_history_repair.sql','POPULATED_0082_TO_0083');
+ const before=await inspect(receipt),files=migrationFiles();assert.equal(before.ledger.length,83);assert.equal(files[83],'0084_department_core.sql');
+ const oldTables=before.tables.filter(t=>!t.startsWith('department_master.'));
+ const hash=()=>Object.fromEntries(oldTables.map(t=>[t,peer(receipt.name,`SELECT encode(sha256(convert_to(coalesce(string_agg(to_jsonb(r)::text,E'\n' ORDER BY to_jsonb(r)::text),''),'UTF8')),'hex') FROM ${t} r`)]));
+ const rowsBefore=hash();applyMigration(receipt.name,'0084_department_core.sql');const after=await inspect(receipt);
+ assert.deepEqual(after.identity,before.identity);assert.deepEqual(after.ledger.slice(0,83),before.ledger);assert.equal(after.ledger.length,84);assert.deepEqual(hash(),rowsBefore);
+ for(const table of ['department_master.access','department_master.input','department_master.verification','department_master.department','department_master.version','vnext_control.department_write_authority'])assert.ok(after.tables.includes(table),`MISSING_RELEASE_TABLE:${table}`);
+ console.log(JSON.stringify({status:'PASS',check:'POPULATED_0083_TO_0084',oid:after.identity.oid,oldLedgerEntriesPreserved:83,oldTableHashesPreserved:oldTables.length,newDepartmentTables:6}));
 }
 export async function provision(){
  const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');
