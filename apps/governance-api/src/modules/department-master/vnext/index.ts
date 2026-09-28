@@ -101,7 +101,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   stage,
   async receiveFile(actor:string,raw:ReceiveInput,bytes:Uint8Array){
    check(ReceiveSchema,raw);const input=structuredClone(raw);
-   if(input.job.input.kind!=='FILE'||!['XLSX','JSON'].includes(input.job.input.format)||input.job.input.parserPolicy!=='STRICT_DEPARTMENT_V1')throw new Error('CLOSED_INPUT_REQUIRED');
+   if(input.job.input.kind!=='FILE'||input.job.input.format!=='XLSX'||input.job.input.parserPolicy!=='STRICT_DEPARTMENT_V1')throw new Error('CLOSED_INPUT_REQUIRED');
    const format=input.job.input.format;
    await root(s=>authorize(s,actor,input.campus,'WRITE'));
    const received=await files.receiveFile(actor,{job:input.job,fileRequestId:input.fileRequestId,extension:format==='XLSX'?'.xlsx':'.json',campus:input.campus,purpose:'IDENTITY_VERIFY',retentionSeconds:input.retentionSeconds},bytes);
