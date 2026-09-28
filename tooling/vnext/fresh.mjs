@@ -18,17 +18,18 @@ export function createTemporary(taskId='P0-01') {
   saveExclusiveReceipt(receiptPath, receipt);
   return { receipt, receiptPath };
 }
-export function dropTemporary(receipt) {
-  resolveTarget(receipt);
+export function dropTemporary(receipt,transport={}) {
+  const resolveReceipt=transport.resolveTarget??resolveTarget,execute=transport.peer??peer;
+  resolveReceipt(receipt);
   if (!['P0-01','P0-02','P0-03','P0-04','P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P0-11'].includes(receipt.taskId) || receipt.purpose!=='TEMPORARY_VALIDATION' || !/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name)) throw new Error('DISPOSAL_NOT_AUTHORIZED');
   const path=resolve(root,'.runtime/vnext/fresh',receipt.name+'.json');
   const persisted=JSON.parse(readFileSync(path,'utf8'));
   const intent=JSON.parse(readFileSync(path+'.intent','utf8'));
   if(JSON.stringify(persisted)!==JSON.stringify(receipt)||intent.requestId!==receipt.requestId||intent.name!==receipt.name||intent.owner!==receipt.owner)throw new Error('DISPOSAL_NOT_AUTHORIZED');
-  peer(receipt.name, identitySQL(receipt));
-  const sessions = peer('postgres', `SELECT count(*) FROM pg_stat_activity WHERE datname=${quote(receipt.name)};`);
+  execute(receipt.name, identitySQL(receipt));
+  const sessions = execute('postgres', `SELECT count(*) FROM pg_stat_activity WHERE datname=${quote(receipt.name)};`);
   if (sessions !== '0') throw new Error('UNRELATED_SESSIONS_PRESENT');
-  peer('postgres', `DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_database WHERE datname=${quote(receipt.name)} AND oid::text=${quote(receipt.oid)} AND pg_get_userbyid(datdba)=${quote(receipt.owner)}) THEN RAISE EXCEPTION 'RECEIPT_IDENTITY_MISMATCH'; END IF; END $$;\nDROP DATABASE ${receipt.name};`);
+  execute('postgres', `DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_database WHERE datname=${quote(receipt.name)} AND oid::text=${quote(receipt.oid)} AND pg_get_userbyid(datdba)=${quote(receipt.owner)}) THEN RAISE EXCEPTION 'RECEIPT_IDENTITY_MISMATCH'; END IF; END $$;\nDROP DATABASE ${receipt.name};`);
   saveExclusiveReceipt(resolve(root, '.runtime/vnext/fresh', receipt.name + '.disposed.json'), { name:receipt.name, oid:receipt.oid, disposed:true, time:localReceiptTime() });
 }
 export async function freshValidation(prefix = false) {

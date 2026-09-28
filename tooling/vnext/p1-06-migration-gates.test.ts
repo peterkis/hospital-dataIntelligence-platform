@@ -141,3 +141,10 @@ test('0080 replaces the installed 0061 suspension guard rather than the obsolete
  expect(installed).toBeDefined();
  expect(files.find(file=>file.id==='0080_campus_effective_activation')!.sql).toContain('needle:=$old$'+installed+'$old$;');
 });
+
+test('0081 does not shadow the workspace operating-object record with a SQL alias',()=>{
+ const migration=files.find(file=>file.id==='0081_campus_explicit_resume_basis')!.sql;
+ expect(migration).toContain('campus_operation suspended_operation ON suspended_operation.event_id=e.id');
+ expect(migration.match(/campus_operation resume_operation ON resume_operation\.event_id=e\.id/gu)).toHaveLength(2);
+ expect(migration).not.toMatch(/campus_operation o ON o\.event_id=e\.id/u);
+});

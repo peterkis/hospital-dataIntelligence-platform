@@ -1,6 +1,6 @@
 import {spawnSync} from 'node:child_process';
 import {randomBytes,randomUUID} from 'node:crypto';
-import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs';
+import {readFileSync,readdirSync,mkdirSync,writeFileSync,existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -13,13 +13,26 @@ if(process.env.GITHUB_ACTIONS!=='true'||base.hostname!=='127.0.0.1'||base.port!=
 const root=resolve(import.meta.dirname,'../..');
 const allowed=new Set(['postgres']);
 const quote=value=>"'"+String(value).replaceAll("'","''")+"'";
+const temporaryCreate=/^CREATE DATABASE (hdi_mc_vnext_[a-f0-9]{16}) OWNER hdi_prototype TEMPLATE template0;$/u;
+const temporaryDrop=/\bDROP DATABASE (hdi_mc_vnext_[a-f0-9]{16})(?: WITH \(FORCE\))?;/u;
+function authorizeTemporary(receipt){
+ if(!receipt||receipt.taskId!=='P1-02'||receipt.purpose!=='TEMPORARY_VALIDATION'||receipt.lineage!=='HDIP-MC-VNEXT'||receipt.owner!=='hdi_prototype'||receipt.distro!=='Anolis-8.9-HDI-POC'||receipt.port!==55434||!/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name)||!/^\d+$/u.test(receipt.oid)||!/^[-a-f0-9]{36}$/u.test(receipt.requestId))throw new Error('REVIEW_CI_TARGET_DENIED');
+ const path=resolve(root,'.runtime/vnext/fresh',receipt.name+'.json'),intentPath=path+'.intent';
+ if(!existsSync(path)||!existsSync(intentPath))throw new Error('REVIEW_CI_TARGET_DENIED');
+ const persisted=JSON.parse(readFileSync(path,'utf8')),intent=JSON.parse(readFileSync(intentPath,'utf8'));
+ if(JSON.stringify(persisted)!==JSON.stringify(receipt)||intent.taskId!==receipt.taskId||intent.purpose!==receipt.purpose||intent.lineage!==receipt.lineage||intent.name!==receipt.name||intent.owner!==receipt.owner||intent.distro!==receipt.distro||intent.port!==receipt.port||intent.requestId!==receipt.requestId||intent.recordedAt!==receipt.recordedAt)throw new Error('REVIEW_CI_TARGET_DENIED');
+ const present=peer('postgres',`SELECT count(*) FROM pg_database WHERE datname=${quote(receipt.name)} AND oid::text=${quote(receipt.oid)} AND pg_get_userbyid(datdba)=${quote(receipt.owner)};`);
+ if(present!=='1')throw new Error('REVIEW_CI_TARGET_DENIED');allowed.add(receipt.name);
+}
 export function peer(name,sql){
  if(!allowed.has(name))throw new Error('REVIEW_CI_TARGET_DENIED');
+ const created=name==='postgres'?temporaryCreate.exec(sql)?.[1]:undefined,dropped=name==='postgres'?temporaryDrop.exec(sql)?.[1]:undefined;
  const url=new URL(base);url.pathname='/'+name;
  const result=spawnSync('psql',['-X','-q','-v','ON_ERROR_STOP=1','-h',url.hostname,'-p',url.port,'-U',url.username,'-d',name,'-At'],{input:sql,encoding:'utf8',env:{...process.env,PGPASSWORD:decodeURIComponent(url.password)},maxBuffer:32*1024*1024});
- if(result.status!==0)throw new Error(result.stderr||'REVIEW_CI_SQL_FAILED');return result.stdout.trim();
+ if(result.status!==0)throw new Error(result.stderr||'REVIEW_CI_SQL_FAILED');
+ if(created)allowed.add(created);if(dropped)allowed.delete(dropped);return result.stdout.trim();
 }
-export function resolveTarget(receipt){if(!allowed.has(receipt.name))throw new Error('REVIEW_CI_TARGET_DENIED');const url=new URL(base);url.pathname='/'+receipt.name;return url.href;}
+export function resolveTarget(receipt){if(!allowed.has(receipt.name))authorizeTemporary(receipt);const url=new URL(base);url.pathname='/'+receipt.name;return url.href;}
 export async function inspect(receipt){
  const pool=new pg.Pool({connectionString:resolveTarget(receipt)});
  try{
