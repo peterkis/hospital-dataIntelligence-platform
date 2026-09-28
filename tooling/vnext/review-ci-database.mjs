@@ -85,7 +85,7 @@ export async function upgradeEffectiveActivation(receipt){
  await upgradeOne(receipt,81,'0082_campus_opening_retirement_boundary.sql','POPULATED_0081_TO_0082');
  await upgradeOne(receipt,82,'0083_campus_retirement_history_repair.sql','POPULATED_0082_TO_0083');
  const before=await inspect(receipt),files=migrationFiles();assert.equal(before.ledger.length,83);assert.equal(files[83],'0084_department_core.sql');
- const oldTables=before.tables.filter(t=>!t.startsWith('department_master.'));
+ const oldTables=before.tables.filter(t=>t!=='vnext_control.migration'&&!t.startsWith('department_master.'));
  const hash=()=>Object.fromEntries(oldTables.map(t=>[t,peer(receipt.name,`SELECT encode(sha256(convert_to(coalesce(string_agg(to_jsonb(r)::text,E'\n' ORDER BY to_jsonb(r)::text),''),'UTF8')),'hex') FROM ${t} r`)]));
  const rowsBefore=hash();applyMigration(receipt.name,'0084_department_core.sql');const after=await inspect(receipt);
  assert.deepEqual(after.identity,before.identity);assert.deepEqual(after.ledger.slice(0,83),before.ledger);assert.equal(after.ledger.length,84);assert.deepEqual(hash(),rowsBefore);
