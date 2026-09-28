@@ -97,7 +97,7 @@ BEGIN
   FROM department_master.version v
   JOIN department_master.input i ON i.id=v.input_id
   JOIN department_master.department d ON d.id=v.department_id
-  WHERE i.job_id=p_job_id AND v.source_row=p_source_row AND d.code=p_org_code AND v.valid_from=p_valid_from AND v.valid_to IS NOT DISTINCT FROM p_valid_to
+  WHERE i.job_id=p_job_id AND d.code=p_org_code AND v.valid_from=p_valid_from AND v.valid_to IS NOT DISTINCT FROM p_valid_to
     AND v.facts->>'commandDigest'=p_facts->>'commandDigest'
     AND (v.facts-'verificationId'-'commandDigest')=(p_facts-'verificationId'-'commandDigest')
     AND ((p_intent='CREATE' AND p_expected_version IS NULL AND v.number=1)

@@ -71,6 +71,19 @@ test('P2-01: department XLSX keeps later rows when a cell is structurally malfor
  const result=parseBytes(zipText(files),'XLSX',departmentFields,'STRICT_DEPARTMENT_V1');
  assert.equal(result.structuralStatus,'PARSED');assert.equal(result.rows.length,2);assert.deepEqual({...result.rows[1]},{first:'0013',middle:'OK',last:'NEXT'});assert.deepEqual(result.issues.find(issue=>issue.code==='XLSX_STRUCTURE'),{code:'XLSX_STRUCTURE',row:2,column:2});
 });
+test('P2-01: malformed shared-string cells retain row-local recovery and reference counts',()=>{
+ const departmentFields=[{code:'first',type:'text'},{code:'middle',type:'text'},{code:'last',type:'text'}];
+ for(const malformed of ['<c r="B2" t="s"></c>','<c r="B2" t="s"><v>0</v><v>0</v></c>']){
+  const files=Object.fromEntries(unzip(textWorkbook([['first','middle','last'],['0012','BROKEN','DEMO'],['0013','OK','NEXT']])));
+  files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('name="Data"','name="ORG04"');
+  files['[Content_Types].xml']=files['[Content_Types].xml']!.replace('</Types>','<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>');
+  files['xl/_rels/workbook.xml.rels']=files['xl/_rels/workbook.xml.rels']!.replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+  files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace(/<c r="B2"[^>]*>.*?<\/c>/u,malformed);
+  files['xl/sharedStrings.xml']='<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="1"><si><t>BROKEN</t></si></sst>';
+  const result=parseBytes(zipText(files),'XLSX',departmentFields,'STRICT_DEPARTMENT_V1');
+  assert.equal(result.structuralStatus,'PARSED');assert.equal(result.rows.length,2);assert.deepEqual({...result.rows[1]},{first:'0013',middle:'OK',last:'NEXT'});assert.deepEqual(result.issues.find(issue=>issue.code==='XLSX_STRUCTURE'),{code:'XLSX_STRUCTURE',row:2,column:2});
+ }
+});
 test('PR6 round24: rejected JSON scalars retain source lexemes in protected reports',()=>{
  for(const lexeme of ['12','-12.30e+2','null','true','false']){
   const result=parseBytes(Buffer.from('[{"code":'+lexeme+',"label":"safe"}]'),'JSON',fields);

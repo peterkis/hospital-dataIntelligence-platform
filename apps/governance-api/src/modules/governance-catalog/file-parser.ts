@@ -391,7 +391,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
         }
         only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
         if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
-        else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); sharedReferences++; if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING',rowNum,col); value = strings[Number(index)]!; }
+        else if (cellType === 's') { sharedReferences++; only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING',rowNum,col); value = strings[Number(index)]!; }
         else if(mode==='DEPARTMENT'){tableIssues.push({code:'TEXT_CELL_REQUIRED',row:rowNum,column:col});value='';rowTypes.push('inlineStr');}
         else return fail('TEXT_CELL_REQUIRED',rowNum,col);
         values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
