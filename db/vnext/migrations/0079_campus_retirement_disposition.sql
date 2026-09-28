@@ -36,8 +36,9 @@ DECLARE s jsonb;
 BEGIN
  PERFORM pg_advisory_xact_lock(901002);s:=organization_master.campus_snapshot(p_actor,p_id);
  IF EXISTS(SELECT 1 FROM organization_master.campus_event WHERE campus_id=p_id AND action='RETIRE' AND (valid_from<=timezone('Asia/Shanghai',clock_timestamp()) OR tsrange(valid_from,valid_to,'[)') && tsrange(p_from,p_to,'[)'))) THEN RAISE EXCEPTION 'CAMPUS_RETIRED';END IF;
+ -- Only operational-state events can supersede a suspension; profile REVISE must not end it.
  IF EXISTS(SELECT 1 FROM organization_master.campus_event e JOIN organization_master.campus_operation o ON o.event_id=e.id WHERE e.campus_id=p_id AND o.state='SUSPENDED' AND
-  (tsmultirange(tsrange(e.valid_from,e.valid_to,'[)'))-coalesce((SELECT range_agg(tsrange(n.valid_from,n.valid_to,'[)')) FROM organization_master.campus_event n JOIN organization_master.campus_operation no2 ON no2.event_id=n.id WHERE n.campus_id=p_id AND n.number>e.number),'{}'::tsmultirange)) && tsrange(p_from,p_to,'[)')) THEN RAISE EXCEPTION 'CAMPUS_SUSPENDED';END IF;
+  (tsmultirange(tsrange(e.valid_from,e.valid_to,'[)'))-coalesce((SELECT range_agg(tsrange(n.valid_from,n.valid_to,'[)')) FROM organization_master.campus_operation no2 JOIN organization_master.campus_event n ON n.id=no2.event_id WHERE n.campus_id=p_id AND n.number>e.number AND n.action IN ('CREATE','ACTIVATE','SUSPEND','RESUME','RETIRE')),'{}'::tsmultirange)) && tsrange(p_from,p_to,'[)')) THEN RAISE EXCEPTION 'CAMPUS_SUSPENDED';END IF;
 END $$;
 REVOKE ALL ON FUNCTION organization_master.campus_impact(text,uuid,timestamp,timestamp,timestamp),organization_master.campus_admission(text,uuid,timestamp,timestamp) FROM PUBLIC,hdi_prototype;
 
@@ -74,7 +75,7 @@ BEGIN
  body:=pg_get_functiondef('organization_master.workspace_object_context(text,text,uuid)'::regprocedure);
  IF position($n$op.state='SUSPENDED'$n$ IN body)=0 THEN RAISE EXCEPTION 'WORKSPACE_LIFECYCLE_BASELINE_MISMATCH';END IF;
  body:=replace(body,$n$op.state='SUSPENDED'$n$,$n$op.state='RETIRED' AND e.valid_from<=timezone('Asia/Shanghai',clock_timestamp())$n$);
- body:=replace(body,$n$'canActivate',p_kind='CAMPUS' AND can_write AND NOT terminal$n$,$n$'canActivate',p_kind='CAMPUS' AND can_write AND NOT terminal AND NOT EXISTS(SELECT 1 FROM organization_master.campus_event ce WHERE ce.campus_id=node_id AND ce.action='SUSPEND')$n$);
+ body:=replace(body,$n$'canActivate',p_kind='CAMPUS' AND can_write AND NOT terminal$n$,$n$'canActivate',p_kid='CAMPUS' AND can_write AND NOT terminal AND NOT EXISTS(SELECT 1 FROM organization_master.campus_event ce WHERE ce.campus_id=node_id AND ce.action='SUSPEND')$n$);
  EXECUTE body;
 END $workspace$;
 
