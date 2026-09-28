@@ -15,7 +15,7 @@ export const RowSchema=Type.Object({
 },closed);
 export type ORG04Row=Static<typeof RowSchema>;
 export const ORG04_FIELDS=Object.keys(RowSchema.properties) as Array<keyof ORG04Row>;
-export const ReferenceSchema=Type.Object({owner:Type.Literal('department-master'),id:Id,expectedVersion:Type.String({pattern:'^[1-9][0-9]*$'})},closed);
+export const ReferenceSchema=Type.Object({owner:Type.Literal('department-master'),id:Id,expectedVersion:Type.String({maxLength:19,pattern:'^[1-9][0-9]{0,18}$'})},closed);
 // `sourceRow` is parser-owned provenance. It is deliberately absent from the
 // public metadata stage entry so callers cannot choose the committed row.
 const EntryFields={
@@ -58,6 +58,6 @@ export function normalizeEntry(entry:StageInput['entries'][number]|StoredStageIn
  if(validTo!==null&&validTo<=validFrom)throw new Error('INVALID_BUSINESS_PERIOD');
  for(const date of [row.established_on,row.abolished_on])if(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('CLOSED_INPUT_REQUIRED');localTime(date+'T00:00:00');}
  if((entry.intent==='CREATE')!==(entry.target===null))throw new Error('CLOSED_INPUT_REQUIRED');
-  if(entry.target&&BigInt(entry.target.expectedVersion)>9223372036854775807n)throw new Error('CLOSED_INPUT_REQUIRED');
+  if(entry.target&&(!/^[1-9][0-9]{0,18}$/.test(entry.target.expectedVersion)||BigInt(entry.target.expectedVersion)>9223372036854775807n))throw new Error('CLOSED_INPUT_REQUIRED');
  return {...entry,row,validFrom,validTo,recordedAt,sourceRow:'sourceRow' in entry?entry.sourceRow:undefined};
 }
