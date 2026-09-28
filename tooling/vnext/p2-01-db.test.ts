@@ -78,18 +78,28 @@ test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 th
 
 test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=>{
  const good=f.entry();for(const key of ['valid_from','recorded_at'] as const)good.row[key]+='+08:00';
- const invalid=structuredClone(good);invalid.row.org_name='';
+ const invalid=structuredClone(good);invalid.row.org_name=' invalid whitespace ';
  const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_MIXED_ROWS',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[
   {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
   {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
  ]},organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>good.row[k]),ORG04_FIELDS.map(k=>invalid.row[k])]}));
- expect(result.input).not.toBeNull();expect(result.issues).toContainEqual(expect.objectContaining({code:'FIELD_INVALID',row:3}));
+ expect(result.input).not.toBeNull();expect(result.issues).toContainEqual(expect.objectContaining({code:'WHITESPACE_REJECTED',row:3}));
  const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(1);expect(read.entries[0]!.sourceRow).toBe(2);expect(read.entries[0]!.row).toEqual(good.row);
 });
 
 test('metadata staging derives source rows instead of accepting caller provenance',async()=>{
  const input=await f.input();
  await expect(owner.stage('maker',{...input,entries:[{...f.entry(),sourceRow:999}]} as never)).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+});
+
+test('verification skips rows that cannot be normalized and keeps valid rows reviewable',async()=>{
+ const good=f.entry(),invalid=f.entry();invalid.row.valid_to=invalid.row.valid_from;
+ const staged=await owner.stage('maker',await f.input([good,invalid]));
+ const verification=await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO normalize independent',evidenceId:f.artifact.artifactId}]});
+ expect(verification.verificationId).toMatch(/^[a-f0-9-]{36}$/);
+ const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.issues).toContainEqual({row:2,field:'',code:'INVALID_BUSINESS_PERIOD',status:'FAIL'});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(review.unit.commands.map(command=>command.row)).toEqual([1]);
 });
 
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{

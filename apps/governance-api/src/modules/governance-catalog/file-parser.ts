@@ -385,23 +385,29 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
   return tables;
 }
 
-function appendObjects(result:Pick<ParserResult,'rows'|'cells'>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false){
+function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<ParserResult,'issues'>>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false,rowIndependent=false){
     for (const [index, source] of objects.entries()) {
       const obj=source.values;
       const row: Record<string,string> = Object.create(null); const rowNum = index + 1, sourceRow = physicalRows[index] ?? rowNum;
-      if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',sourceRow);
+      const rowIssues:ParseFailure[]=[];
+      const rowCheck=(operation:()=>void)=>{try{operation();}catch(error){if(!rowIndependent)throw error;if(error instanceof ParseFailure)rowIssues.push(error);else throw error;}};
+      rowCheck(()=>{if (Object.keys(obj).length !== fields.length || Object.keys(obj).some(key=>!fields.some(f=>f.code===key))) fail('FIELD_CONTRACT',sourceRow);});
       for (const f of fields) {
         const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code];
         const text = typeof value==='string'?value:value?.lexeme??'';
         result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
-        if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
-        assertTextSafety(text,sourceRow,column);
-        if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
-        if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
+        rowCheck(()=>{
+          if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
+          assertTextSafety(text,sourceRow,column);
+          if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
+          if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
+        });
         row[f.code] = text;
       }
-      if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow); result.rows.push(row);
+      rowCheck(()=>{if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow);});
+      if(rowIssues.length&&result.issues)for(const issue of rowIssues)result.issues.push({code:issue.code,row:issue.row,column:issue.column,...(issue.sheet?{sheet:issue.sheet}:{})});
+      result.rows.push(row);
     }
 }
 
@@ -423,7 +429,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',policy==='STRICT_DEPARTMENT_V1');
+    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',policy==='STRICT_DEPARTMENT_V1',policy==='STRICT_DEPARTMENT_V1');
     result.structuralStatus = 'PARSED';
   } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
