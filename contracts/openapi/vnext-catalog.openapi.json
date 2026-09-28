@@ -88528,7 +88528,8 @@
                                 },
                                 "expectedVersion": {
                                   "type": "string",
-                                  "pattern": "^[1-9][0-9]*$"
+                                  "maxLength": 19,
+                                  "pattern": "^[1-9][0-9]{0,18}$"
                                 }
                               },
                               "additionalProperties": false
@@ -88547,11 +88548,6 @@
                         "evidenceId": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
-                        },
-                        "sourceRow": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 1048576
                         }
                       },
                       "additionalProperties": false
@@ -88863,7 +88859,8 @@
                           "intent",
                           "target",
                           "origin",
-                          "evidenceId"
+                          "evidenceId",
+                          "sourceRow"
                         ],
                         "properties": {
                           "row": {
@@ -89013,7 +89010,8 @@
                                   },
                                   "expectedVersion": {
                                     "type": "string",
-                                    "pattern": "^[1-9][0-9]*$"
+                                    "maxLength": 19,
+                                    "pattern": "^[1-9][0-9]{0,18}$"
                                   }
                                 },
                                 "additionalProperties": false
@@ -89285,7 +89283,8 @@
                           "intent",
                           "target",
                           "origin",
-                          "evidenceId"
+                          "evidenceId",
+                          "sourceRow"
                         ],
                         "properties": {
                           "row": {
@@ -89435,7 +89434,8 @@
                                   },
                                   "expectedVersion": {
                                     "type": "string",
-                                    "pattern": "^[1-9][0-9]*$"
+                                    "maxLength": 19,
+                                    "pattern": "^[1-9][0-9]{0,18}$"
                                   }
                                 },
                                 "additionalProperties": false
@@ -89541,7 +89541,8 @@
                                     "sourceRecordedAt",
                                     "sourceSystemId",
                                     "policyVersionId",
-                                    "verificationId"
+                                    "verificationId",
+                                    "commandDigest"
                                   ],
                                   "properties": {
                                     "name": {
@@ -89603,6 +89604,10 @@
                                     "verificationId": {
                                       "type": "string",
                                       "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                    },
+                                    "commandDigest": {
+                                      "type": "string",
+                                      "pattern": "^[a-f0-9]{64}$"
                                     }
                                   },
                                   "additionalProperties": false
@@ -90861,7 +90866,8 @@
                           "intent",
                           "target",
                           "origin",
-                          "evidenceId"
+                          "evidenceId",
+                          "sourceRow"
                         ],
                         "properties": {
                           "row": {
@@ -91011,7 +91017,8 @@
                                   },
                                   "expectedVersion": {
                                     "type": "string",
-                                    "pattern": "^[1-9][0-9]*$"
+                                    "maxLength": 19,
+                                    "pattern": "^[1-9][0-9]{0,18}$"
                                   }
                                 },
                                 "additionalProperties": false
@@ -92465,7 +92472,8 @@
                                 "sourceRecordedAt",
                                 "sourceSystemId",
                                 "policyVersionId",
-                                "verificationId"
+                                "verificationId",
+                                "commandDigest"
                               ],
                               "properties": {
                                 "name": {
@@ -92527,6 +92535,10 @@
                                 "verificationId": {
                                   "type": "string",
                                   "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                },
+                                "commandDigest": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
                                 }
                               },
                               "additionalProperties": false
@@ -92840,7 +92852,8 @@
                               "sourceRecordedAt",
                               "sourceSystemId",
                               "policyVersionId",
-                              "verificationId"
+                              "verificationId",
+                              "commandDigest"
                             ],
                             "properties": {
                               "name": {
@@ -92902,6 +92915,10 @@
                               "verificationId": {
                                 "type": "string",
                                 "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                              },
+                              "commandDigest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
                               }
                             },
                             "additionalProperties": false
@@ -94423,7 +94440,8 @@
                                     },
                                     "expectedVersion": {
                                       "type": "string",
-                                      "pattern": "^[1-9][0-9]*$"
+                                      "maxLength": 19,
+                                      "pattern": "^[1-9][0-9]{0,18}$"
                                     }
                                   },
                                   "additionalProperties": false
@@ -94442,11 +94460,6 @@
                             "evidenceId": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
-                            },
-                            "sourceRow": {
-                              "type": "integer",
-                              "minimum": 1,
-                              "maximum": 1048576
                             }
                           }
                         },

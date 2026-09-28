@@ -368,8 +368,16 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
     if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
     const values: string[] = [];const rowTypes:XlsxCellType[]=[];
     for (const c of r.children) {
-      const col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
-      if (c.attrs['r'] !== `${letters}${rowNum}`) fail('COLUMN_GAP',rowNum,col);
+      let col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
+      if (c.attrs['r'] !== `${letters}${rowNum}`) {
+        const address=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(c.attrs['r'] ?? '');
+        const actualRow=address ? Number(address[2]) : 0;
+        const actualColumn=address ? [...address[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0) : 0;
+        if(mode!=='DEPARTMENT'||rowNum===1||actualRow!==rowNum||actualColumn<=col||actualColumn>100)fail('COLUMN_GAP',rowNum,col);
+        tableIssues.push({code:'COLUMN_GAP',row:rowNum,column:col});
+        while(values.length<actualColumn-1){values.push('');rowTypes.push('inlineStr');}
+        col=actualColumn;
+      }
       only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
       if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
       else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }

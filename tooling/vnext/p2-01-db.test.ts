@@ -139,9 +139,9 @@ test('same-job retry omits a row whose matching facts were already committed',as
  const retryCandidate=await owner.plan('maker',{inputId:retry.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:retryCandidate.candidateId});
  expect(review.unit.commands).toHaveLength(0);expect(review.unit.basis['completedRows']).toEqual([1]);
  const correctedRevision=await catalog.importJobCommand('maker',{scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_CORRECTION',action:'REVISE',jobId:input.jobId,expectedCurrentRevision:revision.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'c'.repeat(64)}});
- const correctedInput={...input,requestId:randomUUID(),revisionId:correctedRevision.revisionId,entries:[{...input.entries[0]!,row:{...input.entries[0]!.row,valid_from:'2026-02-01T00:00:00'}}]};const corrected=await owner.stage('maker',correctedInput);
+ const correctedInput={...input,requestId:randomUUID(),revisionId:correctedRevision.revisionId,entries:[{...input.entries[0]!,row:{...input.entries[0]!.row,source_record_id:'DEMO_FILE/ORG04/CORRECTED',approval_ref:'DEMO_APPROVAL_CORRECTED'}}]};const corrected=await owner.stage('maker',correctedInput);
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:corrected.inputId,inputDigest:corrected.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry correction',evidenceId:f.artifact.artifactId}]});
- expect((await owner.validate('maker',{inputId:corrected.inputId})).issues).toContainEqual({row:1,field:'org_code',code:'IDENTIFIER_CONFLICT',status:'BLOCKED'});
+ await expect(owner.plan('maker',{inputId:corrected.inputId,requestId:randomUUID()})).rejects.toThrow('IDENTIFIER_CONFLICT');
 });
 
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{

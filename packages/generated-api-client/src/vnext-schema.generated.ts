@@ -26627,7 +26627,6 @@ export interface operations {
                         /** @enum {unknown} */
                         origin: "NEW" | "HISTORICAL";
                         evidenceId: string;
-                        sourceRow?: number;
                     }[];
                     sourceArtifactId?: string;
                 };
@@ -26805,7 +26804,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
-                            sourceRow?: number;
+                            sourceRow: number;
                         }[];
                         sourceArtifactId?: string;
                     };
@@ -26960,7 +26959,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
-                            sourceRow?: number;
+                            sourceRow: number;
                         }[];
                         heads: {
                             id: string;
@@ -26986,6 +26985,7 @@ export interface operations {
                                     sourceSystemId: string;
                                     policyVersionId: string;
                                     verificationId: string;
+                                    commandDigest: string;
                                 };
                                 content_digest: string;
                             }[];
@@ -27559,7 +27559,7 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
-                            sourceRow?: number;
+                            sourceRow: number;
                         }[];
                         issues: {
                             row: number;
@@ -28227,6 +28227,7 @@ export interface operations {
                                 sourceSystemId: string;
                                 policyVersionId: string;
                                 verificationId: string;
+                                commandDigest: string;
                             };
                             content_digest: string;
                         } | null;
@@ -28372,6 +28373,7 @@ export interface operations {
                                 sourceSystemId: string;
                                 policyVersionId: string;
                                 verificationId: string;
+                                commandDigest: string;
                             };
                             content_digest: string;
                         }[];
@@ -28940,7 +28942,6 @@ export interface operations {
                             /** @enum {unknown} */
                             origin: "NEW" | "HISTORICAL";
                             evidenceId: string;
-                            sourceRow?: number;
                         }[];
                     };
                     bytesBase64: string;

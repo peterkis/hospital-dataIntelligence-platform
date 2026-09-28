@@ -36,6 +36,14 @@ test('PR6 round25: ZIP needed versions are supported by the compression method',
 test('PR6 round24: row gaps identify valid declared worksheet rows',()=>{
  assert.deepEqual(parseBytes(edit('xl/worksheets/sheet1.xml','<row r="1">','<row r="5">'),'XLSX',fields).issues[0],{code:'ROW_GAP',row:5,column:0});
 });
+test('P2-01: department XLSX keeps later rows when a data row has an interior column gap',()=>{
+ const departmentFields=[{code:'first',type:'text'},{code:'middle',type:'text'},{code:'last',type:'text'}];
+ const files=Object.fromEntries(unzip(textWorkbook([['first','middle','last'],['0012','MISSING','DEMO'],['0013','OK','NEXT']])));
+ files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('name="Data"','name="ORG04"');
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace(/<c r="B2"[^>]*>.*?<\/c>/u,'');
+ const result=parseBytes(zipText(files),'XLSX',departmentFields,'STRICT_DEPARTMENT_V1');
+ assert.equal(result.structuralStatus,'PARSED');assert.equal(result.rows.length,2);assert.deepEqual({...result.rows[0]},{first:'0012',middle:'',last:'DEMO'});assert.deepEqual({...result.rows[1]},{first:'0013',middle:'OK',last:'NEXT'});assert.deepEqual(result.issues[0],{code:'COLUMN_GAP',row:2,column:2});
+});
 test('PR6 round24: rejected JSON scalars retain source lexemes in protected reports',()=>{
  for(const lexeme of ['12','-12.30e+2','null','true','false']){
   const result=parseBytes(Buffer.from('[{"code":'+lexeme+',"label":"safe"}]'),'JSON',fields);

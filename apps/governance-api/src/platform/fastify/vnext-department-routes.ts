@@ -10,7 +10,7 @@ const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,41
 const Input=Type.Object({inputId:Id},closed),Staged=Type.Object({inputId:Id,revisionId:Id,digest:Text},closed);
 const Candidate=Type.Object({candidateId:Id},closed),Planned=Type.Object({candidateId:Id,digest:Text},closed);
 const Issue=Type.Object({row:Type.Integer(),field:Text,code:Text,status:Type.Enum(['FAIL','BLOCKED'])},closed);
-const Facts=Type.Object({name:Text,shortName:Nullable,orgType:Text,establishedOn:Nullable,description:Nullable,virtual:Type.Boolean(),historicalException:Type.Boolean(),sourceVersion:Text,sourceRecordedAt:Text,sourceSystemId:Id,policyVersionId:Id,verificationId:Id},closed);
+const Facts=Type.Object({name:Text,shortName:Nullable,orgType:Text,establishedOn:Nullable,description:Nullable,virtual:Type.Boolean(),historicalException:Type.Boolean(),sourceVersion:Text,sourceRecordedAt:Text,sourceSystemId:Id,policyVersionId:Id,verificationId:Id,commandDigest:Type.String({pattern:'^[a-f0-9]{64}$'})},closed);
 const Version=Type.Object({id:Id,department_id:Id,number:Text,valid_from:Text,valid_to:Nullable,recorded_at:Text,source_row:Type.Integer(),facts:Facts,content_digest:Text},closed);
 const History=Type.Object({id:Id,code:Text,versions:Type.Array(Version)},closed);
 const Outcome=Type.Object({status:Type.Enum(['COMMITTED','COMMIT_UNKNOWN']),candidateId:Id,requestId:Id,facts:Type.Optional(Type.Array(Type.Object({owner:Type.Literal('department-master'),id:Id,version:Text,source:Type.Object({dataset:Type.Literal('ORG04'),row:Type.Integer(),step:Text},closed)},closed))),recordedAt:Type.Optional(Time),responseStatus:Type.Optional(Type.Enum(['DELIVERED','POST_COMMIT_FAILED']))},closed);
