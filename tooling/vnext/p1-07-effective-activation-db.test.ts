@@ -21,7 +21,7 @@ beforeAll(async()=>{
   await expect(scenario.campusApply(activate(trial))).rejects.toThrow('BLOCKED_DEPENDENCY');
   expect((await scenario.campus.references.read('maker',{id:trial.id})).head).toBe(trial.version);
   const {upgradeEffectiveActivation}=await import('./review-ci-database.mjs');await upgradeEffectiveActivation(receipt);
-  const after=await inspect(receipt);expect(workspaceStartupPrefix(migrationFiles(),after.ledger)).toBe(80);
+  const after=await inspect(receipt);expect(workspaceStartupPrefix(migrationFiles(),after.ledger)).toBe(81);
  }
 });
 afterAll(async()=>{await workspace?.close();await scenario?.close();await catalog?.close();});
@@ -51,4 +51,20 @@ test('a later suspension blocks activation again while retaining the half-open p
  await expect(scenario.campusApply(activate(stopped,'2026-07-01T00:00:00'))).rejects.toThrow('BLOCKED_DEPENDENCY');
  const bounded=await scenario.campusApply(activate(stopped,'2026-04-01T00:00:00','2026-06-01T00:00:00'));expect(bounded.id).toBe(node.id);
  expect(await scenario.campus.references.read('maker',{id:node.id,businessAt:'2026-06-01T00:00:00'})).toMatchObject({operationStatus:'SUSPENDED'});
+});
+
+test('approved RUNNING resumption remains supported without inventing a mandatory trial stage',async()=>{
+ const stopped=await paused();
+ const running=await scenario.campusApply({...scenario.common,validFrom:'2026-03-01T00:00:00',action:'RESUME',target:target(stopped),evidence:scenario.artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING'});
+ expect(running.id).toBe(stopped.id);
+ expect(await scenario.campus.references.read('maker',{id:running.id})).toMatchObject({operationStatus:'RUNNING'});
+ expect(await workspace.objectContext('maker',{kind:'CAMPUS',id:running.id})).toMatchObject({canActivate:true});
+});
+
+test('a future suspension without explicit resumption still forbids a backdated activation source capability',async()=>{
+ const node=await scenario.activateCampus(await scenario.createCampus());
+ const stopped=await scenario.campusApply({...scenario.common,validFrom:'2099-01-01T00:00:00',action:'SUSPEND',target:target(node),evidence:scenario.artifact.artifactId,sourceOperationStatus:'SUSPENDED',reason:'DEMO_FUTURE_PAUSE'});
+ expect(await workspace.objectContext('maker',{kind:'CAMPUS',id:node.id})).toMatchObject({canActivate:false});
+ await expect(scenario.campusApply(activate(stopped,'2026-04-01T00:00:00','2099-01-01T00:00:00'))).rejects.toThrow('BLOCKED_DEPENDENCY');
+ expect((await scenario.campus.references.read('maker',{id:node.id})).head).toBe(stopped.version);
 });

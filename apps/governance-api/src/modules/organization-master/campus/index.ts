@@ -61,7 +61,9 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
   }
   if(c.action==='ACTIVATE'||c.action==='SCHEDULE_OPENING'){
    const operations=s!.events.filter(e=>e.state!==null);
-   if(operations.some(e=>e.state==='SUSPENDED'&&effectiveSpans(e,operations).some(p=>intersect(p,period).length)))throw new Error('BLOCKED_DEPENDENCY');
+   const suspended=operations.filter(e=>e.state==='SUSPENDED');
+   if(c.action==='ACTIVATE'&&suspended.length&&!covered(operations.filter(e=>e.action==='RESUME').map(span),c.validFrom,c.validTo))throw new Error('BLOCKED_DEPENDENCY');
+   if(suspended.some(e=>effectiveSpans(e,operations).some(p=>intersect(p,period).length)))throw new Error('BLOCKED_DEPENDENCY');
   }
   if(c.action==='RESUME'){
    const operations=s!.events.filter(e=>e.state!==null);

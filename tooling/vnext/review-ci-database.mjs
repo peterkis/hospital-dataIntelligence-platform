@@ -68,6 +68,7 @@ export async function upgradeManifestReferenceAccess(receipt){
 export async function upgradeEffectiveActivation(receipt){
  if(process.env.HDIP_REVIEW_CI_ACTIVATION_UPGRADE!=='1')throw new Error('REVIEW_ACTIVATION_UPGRADE_MODE_REQUIRED');
  await upgradeOne(receipt,79,'0080_campus_effective_activation.sql','POPULATED_0079_TO_0080');
+ await upgradeOne(receipt,80,'0081_campus_explicit_resume_basis.sql','POPULATED_0080_TO_0081');
 }
 export async function provision(){
  const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');
