@@ -1,4 +1,35 @@
 SELECT pg_advisory_xact_lock(901002);
+
+-- Repair the already-installed Department functions without reading Catalog tables
+-- from the Department module. Catalog ownership stays behind its public routines.
+CREATE FUNCTION governance_catalog.import_job_context(p_actor text,p_input jsonb) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,governance_catalog,vnext_control AS $$
+DECLARE job governance_catalog.import_job;revisions jsonb;identity text;
+BEGIN
+ PERFORM pg_advisory_xact_lock(901002);
+ identity:=vnext_control.authorize(p_actor,p_input->>'scope','READ');
+ IF jsonb_typeof(p_input) IS DISTINCT FROM 'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_input) k WHERE k NOT IN ('scope','jobId')) OR coalesce(p_input->>'jobId','') !~ '^[a-f0-9-]{36}$' THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
+ SELECT * INTO job FROM governance_catalog.import_job WHERE id=(p_input->>'jobId')::uuid AND scope=p_input->>'scope';
+ IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND';END IF;
+ IF identity IS DISTINCT FROM job.submitter_identity THEN PERFORM vnext_control.authorize(p_actor,job.scope,'REVIEW');END IF;
+ PERFORM governance_catalog.contract_require_access(p_actor,job.scope,job.contract_version_id,'READ');
+ SELECT jsonb_agg(jsonb_build_object('id',id,'number',number::text,'previousRevisionId',previous_revision_id,
+  'recordedAt',to_char(recorded_at,'YYYY-MM-DD"T"HH24:MI:SS.US'),'input',metadata,'metadataDigest',metadata_digest,
+  'digestStatus',digest_status,'requestIdentity',request_identity,'requestId',request_id) ORDER BY number) INTO revisions
+ FROM governance_catalog.import_input_revision WHERE job_id=job.id;
+ RETURN jsonb_build_object('id',job.id,'scope',job.scope,'submitterIdentity',job.submitter_identity,
+  'contract',job.contract_snapshot,'profile',job.profile,'status',job.status,'adapterReadiness','NOT_READY',
+  'currentRevisionId',job.current_revision_id,'revisions',revisions);
+END $$;
+GRANT EXECUTE ON FUNCTION governance_catalog.import_job_context(text,jsonb) TO hdi_prototype;
+
+CREATE OR REPLACE FUNCTION department_master.job_read(p_actor text,p_input uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE r jsonb;j jsonb;BEGIN
+ r:=department_master.input_read(p_actor,p_input,'READ_RESTRICTED');
+ j:=governance_catalog.import_job_context(p_actor,jsonb_build_object('scope','SYNTHETIC','jobId',r->>'job_id'));
+ RETURN jsonb_build_object('id',j->>'id','contract',j->'contract','profile',j->>'profile','status',j->>'status','currentRevisionId',j->>'currentRevisionId');
+END $$;
+
 CREATE OR REPLACE FUNCTION department_master.mutate(p_ticket text,p_signature text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64),'hex');opad bytea:=decode(repeat('5c',64),'hex');i integer;
  actor text:=t->>'actor';op text:=t->>'operation';identity text;r department_master.input;v department_master.verification;j jsonb;
@@ -12,7 +43,7 @@ DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64)
   identity:=department_master.authorize(actor,t->>'campus','WRITE');PERFORM department_master.authorize(actor,t->>'campus','READ_RESTRICTED');
   SELECT * INTO r FROM department_master.input WHERE identity_code=identity AND request_id=(t->>'requestId')::uuid;
   IF FOUND THEN IF r.digest IS DISTINCT FROM t->>'digest' THEN RAISE EXCEPTION 'REQUEST_CONFLICT';END IF;RETURN jsonb_build_object('inputId',r.id,'revisionId',r.revision,'digest',r.digest);END IF;
-  j:=governance_catalog.import_job_read(actor,jsonb_build_object('scope','SYNTHETIC','jobId',t->>'jobId'));
+  j:=governance_catalog.import_job_context(actor,jsonb_build_object('scope','SYNTHETIC','jobId',t->>'jobId'));
   IF j->>'submitterIdentity' IS DISTINCT FROM identity OR j->>'currentRevisionId' IS DISTINCT FROM t->>'revisionId' THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
   IF EXISTS(SELECT 1 FROM department_master.input WHERE job_id=(j->>'id')::uuid AND job_revision=(j->>'currentRevisionId')::uuid) THEN RAISE EXCEPTION 'REQUEST_CONFLICT';END IF;
   INSERT INTO department_master.input(job_id,job_revision,maker,identity_code,request_id,digest,campus,envelope) VALUES((j->>'id')::uuid,(j->>'currentRevisionId')::uuid,actor,identity,(t->>'requestId')::uuid,t->>'digest',t->>'campus',t->'envelope') RETURNING * INTO r;
@@ -20,7 +51,7 @@ DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64)
   RETURN jsonb_build_object('inputId',r.id,'revisionId',r.revision,'digest',r.digest);
  END IF;
  SELECT * INTO r FROM department_master.input WHERE id=(t->>'inputId')::uuid;IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND';END IF;
- j:=governance_catalog.import_job_read(actor,jsonb_build_object('scope','SYNTHETIC','jobId',r.job_id));
+ j:=governance_catalog.import_job_context(actor,jsonb_build_object('scope','SYNTHETIC','jobId',r.job_id));
  IF r.job_revision IS DISTINCT FROM (j->>'currentRevisionId')::uuid THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
  IF op='VERIFY' THEN
   identity:=department_master.authorize(actor,'HOSPITAL','VERIFY');PERFORM department_master.authorize(actor,r.campus,'READ_RESTRICTED');

@@ -92,11 +92,16 @@ export async function upgradeEffectiveActivation(receipt){
  for(const table of ['department_master.access','department_master.input','department_master.verification','department_master.department','department_master.version','vnext_control.department_write_authority'])assert.ok(after.tables.includes(table),`MISSING_RELEASE_TABLE:${table}`);
  assert.equal(files[84],'0085_department_physical_row.sql');applyMigration(receipt.name,'0085_department_physical_row.sql');const afterPhysicalRow=await inspect(receipt);
  assert.deepEqual(afterPhysicalRow.identity,before.identity);assert.deepEqual(afterPhysicalRow.ledger.slice(0,84),after.ledger);assert.equal(afterPhysicalRow.ledger.length,85);assert.deepEqual(hash(),rowsBefore);
- assert.equal(files[85],'0086_department_physical_row_range.sql');applyMigration(receipt.name,'0086_department_physical_row_range.sql');const current=await inspect(receipt);
- assert.deepEqual(current.identity,before.identity);assert.deepEqual(current.ledger.slice(0,85),afterPhysicalRow.ledger);assert.equal(current.ledger.length,86);assert.deepEqual(hash(),rowsBefore);
- assert.match(peer(receipt.name,"SELECT pg_get_functiondef('department_master.mutate(text,text)'::regprocedure)"),/sourceRow/);
+ assert.equal(files[85],'0086_department_physical_row_range.sql');applyMigration(receipt.name,'0086_department_physical_row_range.sql');const afterPhysicalRange=await inspect(receipt);
+ assert.deepEqual(afterPhysicalRange.identity,before.identity);assert.deepEqual(afterPhysicalRange.ledger.slice(0,85),afterPhysicalRow.ledger);assert.equal(afterPhysicalRange.ledger.length,86);assert.deepEqual(hash(),rowsBefore);
+ assert.equal(files[86],'0087_department_catalog_interfaces.sql');applyMigration(receipt.name,'0087_department_catalog_interfaces.sql');const current=await inspect(receipt);
+ assert.deepEqual(current.identity,before.identity);assert.deepEqual(current.ledger.slice(0,86),afterPhysicalRange.ledger);assert.equal(current.ledger.length,87);assert.deepEqual(hash(),rowsBefore);
+ const mutateDefinition=peer(receipt.name,"SELECT pg_get_functiondef('department_master.mutate(text,text)'::regprocedure)");
+ const jobDefinition=peer(receipt.name,"SELECT pg_get_functiondef('department_master.job_read(text,uuid)'::regprocedure)");
+ assert.match(mutateDefinition,/sourceRow/);assert.match(mutateDefinition,/governance_catalog\.apply_record/);assert.doesNotMatch(mutateDefinition,/governance_catalog\.import_job(?!_(?:read|context))|governance_catalog\.apply_candidate|governance_catalog\.apply_approval/);
+ assert.match(jobDefinition,/governance_catalog\.import_job_context/);assert.doesNotMatch(jobDefinition,/governance_catalog\.import_job(?!_(?:read|context))/);
  assert.match(peer(receipt.name,"SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='department_master.version'::regclass AND conname='version_source_row_check'"),/1048576/);
- console.log(JSON.stringify({status:'PASS',check:'POPULATED_0083_TO_0086',oid:current.identity.oid,oldLedgerEntriesPreserved:83,oldTableHashesPreserved:oldTables.length,newDepartmentTables:6,physicalRowForwardPatch:true,physicalRowRangeForwardPatch:true}));
+ console.log(JSON.stringify({status:'PASS',check:'POPULATED_0083_TO_0087',oid:current.identity.oid,oldLedgerEntriesPreserved:83,oldTableHashesPreserved:oldTables.length,newDepartmentTables:6,physicalRowForwardPatch:true,physicalRowRangeForwardPatch:true,catalogInterfaceForwardPatch:true}));
 }
 export async function provision(){
  const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');

@@ -43,6 +43,22 @@ test('ORG04 policy adoption and independently approved creation return one datab
  expect((await owner.read('maker',{id:fact.id,businessAt:'2026-03-01T00:00:00'})).version?.facts).toMatchObject({name:'DEMO 同名科室',sourceVersion:'9'});
 });
 
+ test('row validation outcomes are independent and a valid row can commit beside a blocked row',async()=>{
+  const good=f.entry(),blocked=f.entry();blocked.row.record_status='REVIEW';
+  const staged=await owner.stage('maker',await f.input([good,blocked]));
+  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[
+   {row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO valid row',evidenceId:f.artifact.artifactId},
+   {row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO blocked row',evidenceId:f.artifact.artifactId},
+  ]});
+  const validation=await owner.validate('maker',{inputId:staged.inputId});
+  expect(validation.decision).toBe('BLOCKED');expect(validation.issues).toContainEqual({row:2,field:'record_status',code:'APPROVAL_REQUIRED',status:'BLOCKED'});
+  const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+  expect(review.unit.atomicRule).toBe('ORG04_ROW_INDEPENDENT_V1');expect(review.unit.commands.map(command=>command.row)).toEqual([1]);
+  await owner.approveApplyUnit('reviewer',candidate);const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});
+  expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error();expect(result.facts).toHaveLength(1);expect(result.facts[0]!.source?.row).toBe(1);
+  expect((await owner.list('maker',{limit:100})).some(id=>id===result.facts[0]!.id)).toBe(true);
+ });
+
 test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 through the shared Owner',async()=>{
  const entry=f.entry();for(const key of ['valid_from','recorded_at'] as const)entry.row[key]+='+08:00';
  const bytes=organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>entry.row[k])]});
@@ -62,6 +78,7 @@ test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 th
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{
  const a=f.entry(),b=f.entry();const [one,two]=await apply([a,b]);expect(one!.id).not.toBe(two!.id);
  const original=await owner.exact('maker',{id:one!.id,version:'1'});
+  await expect(owner.history('maker',one!.id,'2020-01-01T00:00:00')).rejects.toThrow('NOT_FOUND');
  const revision={...a,intent:'REVISE' as const,target:{owner:'department-master' as const,id:one!.id,expectedVersion:'1'},row:{...a.row,org_name:'DEMO 更名',valid_from:'2026-07-01T00:00:00.000001'}};
  const [updated]=await apply([revision]);expect(updated!.id).toBe(one!.id);
  expect((await owner.read('maker',{id:one!.id,businessAt:'2026-07-01T00:00:00.000000'})).version?.facts.name).toBe(a.row.org_name);
