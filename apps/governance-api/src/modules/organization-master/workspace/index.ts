@@ -22,7 +22,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
   try{const content:DraftSave=JSON.parse(bytes.toString());check(DraftSaveSchema,content);
    // Verify old envelopes against their original projection. Missing licenseTarget
    // stays missing in SQL and never gains the 0073 maintenance exception on read.
-   const format=Object.hasOwn(r.metadata,'manifestProtected')?'V3':Object.hasOwn(r.metadata,'licenseTarget')?'V2':'V1';
+   const format=Object.hasOwn(r.metadata,'manifestReferences')?'V4':Object.hasOwn(r.metadata,'manifestProtected')?'V3':Object.hasOwn(r.metadata,'licenseTarget')?'V2':'V1';
    const metadata=draftMetadata(content,format);
    if(planBinding(provider,'WORKSPACE_DRAFT_V1',{state:r.state,input:content})!==r.digest||canonicalPlan(metadata)!==canonicalPlan(r.metadata))throw new Error('PAYLOAD_UNAVAILABLE');
    // Historical payload-free bundle metadata could not prove whether its
@@ -30,7 +30,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
    // the immutable legacy draft remains as an audit record and must be replaced.
    const legacyManifest=content.domain==='BUNDLE'?content.metadata['manifest']:null;
    const legacyRows=legacyManifest&&typeof legacyManifest==='object'?Reflect.get(legacyManifest,'rows'):null;
-   if(format!=='V3'&&content.domain==='BUNDLE'&&!content.bytesBase64&&Array.isArray(legacyRows)&&legacyRows.length)throw new Error('BLOCKED_DEPENDENCY');
+   if(format!=='V3'&&format!=='V4'&&content.domain==='BUNDLE'&&!content.bytesBase64&&Array.isArray(legacyRows)&&legacyRows.length)throw new Error('BLOCKED_DEPENDENCY');
    return content;
   }finally{bytes.fill(0);}
  };
