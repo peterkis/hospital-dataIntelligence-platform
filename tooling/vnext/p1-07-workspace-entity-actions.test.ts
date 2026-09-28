@@ -1,5 +1,5 @@
 import {describe,expect,test} from 'vitest';
-import {canReviseWorkspaceEntity,canRetireWorkspaceCampus,isCampusWorkspaceAction} from '../../apps/admin-web/src/vnext/workspace-entity-actions.js';
+import {canCompleteCampusDisposition,canRecordCampusDisposition,canReviseWorkspaceEntity,canRetireWorkspaceCampus,isCampusWorkspaceAction} from '../../apps/admin-web/src/vnext/workspace-entity-actions.js';
 import {shouldInvalidateCampusImpact,type CampusImpactBinding} from '../../apps/admin-web/src/vnext/workspace-campus-impact.js';
 
 describe('workspace entity revision actions',()=>{
@@ -42,6 +42,21 @@ describe('scheduled campus retirement actions',()=>{
  });
  test('unwritable, unavailable and terminal contexts never offer retirement',()=>{
   for(const context of [null,undefined,{canWrite:false,terminal:false},{canWrite:true,terminal:true}])expect(canRetireWorkspaceCampus(context,null)).toBe(false);
+ });
+ test('scheduled retirement opens evidence collection but not premature completion',()=>{
+  const retiredFrom='2099-01-01T00:00:00';
+  expect(canRecordCampusDisposition({canWrite:true,terminal:false},retiredFrom)).toBe(true);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:false},retiredFrom)).toBe(false);
+  expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom)).toBe(true);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom)).toBe(true);
+ });
+ test('disposition actions require write permission and an established retirement boundary',()=>{
+  for(const context of [null,undefined,{canWrite:false,terminal:false},{canWrite:false,terminal:true}]){
+   expect(canRecordCampusDisposition(context,'2099-01-01T00:00:00')).toBe(false);
+   expect(canCompleteCampusDisposition(context,'2099-01-01T00:00:00')).toBe(false);
+  }
+  expect(canRecordCampusDisposition({canWrite:true,terminal:false},null)).toBe(false);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},null)).toBe(false);
  });
  test('lifecycle source cannot be requested as a profile revision',()=>{
   expect(isCampusWorkspaceAction('REVISE')).toBe(false);expect(isCampusWorkspaceAction('RECORD_DISPOSITION')).toBe(true);expect(isCampusWorkspaceAction('RETIRE')).toBe(true);
