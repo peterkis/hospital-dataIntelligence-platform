@@ -4,7 +4,9 @@ type Receipt = {name: string};
 // Historical upgrade regressions deliberately execute current TypeScript Owners
 // against an older migration prefix. This identifies only those synthetic
 // scenarios; it must never replace the current 0079 runtime/deployment release
-// manifest or make an old database appear ready for the current service.
+// manifest or make an old database appear ready for the current service. The
+// numeric result only selects the synthetic compatibility path; migrationFiles
+// and the current release gate remain unchanged.
 export function historicalWorkspaceBoundary(env: NodeJS.ProcessEnv = process.env): number | null {
  if (env['HDIP_REVIEW_CI_UPGRADE'] === '1') return 72;
  if (env['HDIP_REVIEW_CI_LICENSE_UPGRADE'] === '1') return 73;
