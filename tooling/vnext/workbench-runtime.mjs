@@ -99,7 +99,7 @@ export async function startWorkbench({
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
-    if(persistent&&persistentPrefix>=83)department=openDepartment(connection,provider);
+    if(persistent&&persistentPrefix>=84)department=openDepartment(connection,provider);
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {

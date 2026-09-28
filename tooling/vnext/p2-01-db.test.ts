@@ -22,7 +22,14 @@ test('Department Owner rejects unauthorised reading at its public boundary',asyn
  try{await expect(owner.list('outsider',{})).rejects.toThrow('ACCESS_DENIED');}finally{await owner.close();}
 });
 test('ORG04 policy adoption and independently approved creation return one database identity',async()=>{
- f=await departmentFixture(receipt,catalog,provider);
+ const ids:string[]=[];let sequence=0;
+ const nextId=()=>ids[sequence++]??(ids.push(randomUUID()),ids.at(-1)!);
+ const commands=new Map<string,Record<string,unknown>>();const freezeCommand=(name:string,input:Record<string,unknown>)=>{if(!commands.has(name))commands.set(name,input);return commands.get(name)!;};
+ f=await departmentFixture(receipt,catalog,provider,{requestId:nextId,freezeCommand});
+ const adopted=await f.input();sequence=0;
+ const recovered=await departmentFixture(receipt,catalog,provider,{persistentSmoke:true,requestId:nextId,freezeCommand});
+ expect(recovered.contract).toEqual(f.contract);expect(recovered.artifact).toEqual(f.artifact);
+ expect(await recovered.input()).toEqual(adopted);
  const input=await f.input(),staged=await owner.stage('maker',input);
  expect((await owner.validate('maker',{inputId:staged.inputId})).decision).toBe('BLOCKED');
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO verified',evidenceId:f.artifact.artifactId}]});
