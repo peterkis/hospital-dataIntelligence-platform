@@ -377,8 +377,9 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
     const values: string[] = [];const rowTypes:XlsxCellType[]=[];
     for (const c of r.children) {
       const valuesBeforeCell=values.length;
+      let col=values.length+1;
       try {
-        let col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
+        let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
         if (c.attrs['r'] !== `${letters}${rowNum}`) {
           const address=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(c.attrs['r'] ?? '');
           const actualRow=address ? Number(address[2]) : 0;
@@ -395,9 +396,10 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
         else return fail('TEXT_CELL_REQUIRED',rowNum,col);
         values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
       } catch(error) {
-        const rowLocal=mode==='DEPARTMENT'&&rowNum>1&&error instanceof ParseFailure&&error.row===rowNum&&['COLUMN_GAP','CELL_LIMIT','BOM_NOT_PREFIX','TEXT_CONTROL','SHARED_STRING'].includes(error.code);
+        const addressableStructure=error instanceof ParseFailure&&error.code==='XLSX_STRUCTURE'&&error.row===0&&error.column===0;
+        const rowLocal=mode==='DEPARTMENT'&&rowNum>1&&error instanceof ParseFailure&&((error.row===rowNum&&['COLUMN_GAP','CELL_LIMIT','BOM_NOT_PREFIX','TEXT_CONTROL','SHARED_STRING'].includes(error.code))||addressableStructure);
         if(!rowLocal)throw error;
-        tableIssues.push({code:error.code,row:error.row,column:error.column});
+        tableIssues.push({code:error.code,row:error.row||rowNum,column:error.column||col});
         if(values.length===valuesBeforeCell){values.push('');rowTypes.push(c.attrs['t']==='s'?'s':'inlineStr');}
       }
     }

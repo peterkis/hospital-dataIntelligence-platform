@@ -163,6 +163,19 @@ test('same-job retry omits a row whose matching facts were already committed',as
  await expect(owner.plan('maker',{inputId:corrected.inputId,requestId:randomUUID()})).rejects.toThrow('IDENTIFIER_CONFLICT');
 });
 
+test('same-job file retry keeps unchanged rows completed when the raw workbook is replaced',async()=>{
+ const first=f.entry(),blocked=f.entry();blocked.row.record_status='REVIEW';const corrected=structuredClone(blocked);corrected.row.record_status='ACTIVE';
+ const metadata=()=>({intent:'CREATE' as const,target:null,origin:'NEW' as const,evidenceId:f.artifact.artifactId});
+ const workbook=(rows:ReturnType<typeof f.entry>['row'][])=>organizationWorkbook({ORG04:[ORG04_FIELDS,...rows.map(row=>ORG04_FIELDS.map(field=>row[field]))]});
+ const initial=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_FILE_RETRY',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[metadata(),metadata()]},workbook([first.row,blocked.row]));
+ expect(initial.input).not.toBeNull();const firstInput=await owner.readInput('maker',{inputId:initial.input!.inputId});expect(firstInput.entries).toHaveLength(2);
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:initial.input!.inputId,inputDigest:initial.input!.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO file retry row1',evidenceId:f.artifact.artifactId},{row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO file retry row2',evidenceId:f.artifact.artifactId}]});
+ const firstRequest=randomUUID(),firstCandidate=await owner.plan('maker',{inputId:initial.input!.inputId,requestId:firstRequest}),firstReview=await owner.readApplyCandidate('reviewer',{candidateId:firstCandidate.candidateId});expect(firstReview.unit.commands.map(command=>command.row)).toEqual([1]);await owner.approveApplyUnit('reviewer',firstCandidate);const firstApplied=await owner.applyUnit('maker',{candidateId:firstCandidate.candidateId,requestId:firstRequest});expect(firstApplied.status).toBe('COMMITTED');
+ const retry=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'REVISE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_FILE_RETRY_CORRECTION',jobId:initial.jobId,expectedCurrentRevision:initial.revisionId,input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[metadata(),metadata()]},workbook([first.row,corrected.row]));
+ expect(retry.input).not.toBeNull();await owner.verify('reviewer',{requestId:randomUUID(),inputId:retry.input!.inputId,inputDigest:retry.input!.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO file retry row1',evidenceId:f.artifact.artifactId},{row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO file retry row2',evidenceId:f.artifact.artifactId}]});
+ const candidate=await owner.plan('maker',{inputId:retry.input!.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});expect(review.unit.basis['completedRows']).toEqual([1]);expect(review.unit.commands.map(command=>command.row)).toEqual([2]);
+});
+
 test('verification reason participates in retry identity',async()=>{
  const input=await f.input(),staged=await owner.stage('maker',input),reason='DEMO retry rationale original';
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason,evidenceId:f.artifact.artifactId}]});
