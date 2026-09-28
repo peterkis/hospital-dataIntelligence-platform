@@ -61,6 +61,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
    const retirement=history.operations.find(event=>event.action==='RETIRE');
    if(input.action==='RETIRE'&&retirement)throw new Error('CAMPUS_RETIRED');
    if(disposition&&!retirement)throw new Error('BLOCKED_DEPENDENCY');
+   if(disposition&&retirement&&(await campus.assessCampusImpact(actor,{id:input.id,validFrom:retirement.validFrom,validTo:null})).completed)throw new Error('DISPOSITION_ALREADY_COMPLETE');
    const original=await campus.readRestrictedInput(actor,context.inputId);
    const command:Record<string,unknown>={action:input.action,validTo:null,target:{owner:'organization-master/campus',id:input.id,expectedVersion:context.head},source:structuredClone(original.command.source),evidence:original.command.evidence};
    if(disposition){command['validFrom']=retirement!.validFrom;command['sourceOperationStatus']='RETIRED';}

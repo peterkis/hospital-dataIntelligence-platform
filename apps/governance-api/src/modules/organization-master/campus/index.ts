@@ -21,7 +21,8 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
   const retired=s?.events.find(e=>e.action==='RETIRE');
   if(retired&&!['RECORD_DISPOSITION','COMPLETE_DISPOSITION','CANCEL_OPENING'].includes(c.action)){
    const now=(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(scope)).rows[0]!.v;
-   if(!(c.action==='SUSPEND'&&c.validFrom<stamp(retired.valid_from)&&now<stamp(retired.valid_from))&&(c.action==='RETIRE'||stamp(retired.valid_from)<=now||intersect(span(retired),period).length))throw new Error('CAMPUS_RETIRED');
+   const openingAfterRetirement=c.action==='SCHEDULE_OPENING'&&c.plannedOpeningAt>=stamp(retired.valid_from);
+   if(!(c.action==='SUSPEND'&&c.validFrom<stamp(retired.valid_from)&&now<stamp(retired.valid_from))&&(openingAfterRetirement||c.action==='RETIRE'||stamp(retired.valid_from)<=now||intersect(span(retired),period).length))throw new Error('CAMPUS_RETIRED');
   }
   if('assessmentDigest' in c){
    const report=await assessImpact(scope,actor,{id:c.target.id,validFrom:c.validFrom,validTo:c.validTo});

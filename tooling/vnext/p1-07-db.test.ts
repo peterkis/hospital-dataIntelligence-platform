@@ -149,6 +149,13 @@ test('future retirement permits bounded pre-exit admission and blocks overlap',a
  const pool=new Pool({connectionString:connection});try{await expect(pool.query('select organization_master.campus_admission($1,$2::uuid,$3::timestamp,$4::timestamp)',['maker',a.id,'2026-10-01','2026-11-01'])).resolves.toBeDefined();await expect(pool.query('select organization_master.campus_admission($1,$2::uuid,$3::timestamp,$4::timestamp)',['maker',a.id,'2026-10-01','2027-02-01'])).rejects.toThrow('CAMPUS_RETIRED');}finally{await pool.end();}
 });
 
+test('future retirement rejects an opening planned at or after the retirement boundary',async()=>{
+ const a=await apply(create()),from='2027-01-01T00:00:00';
+ const retired=await apply({...common,validFrom:from,action:'RETIRE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO',assessmentDigest:(await org.assessCampusImpact('maker',{id:a.id,validFrom:from,validTo:null})).digest,plan:{responsibleOwner:'DEMO',dueAt:'2028-01-01T00:00:00',actions:'DEMO'}});
+ await expect(prepare({...common,validFrom:'2026-10-01T00:00:00',validTo:from,action:'SCHEDULE_OPENING',target:target(retired),evidence:artifact.artifactId,sourceOperationStatus:'PLANNING',plannedOpeningAt:'2026-12-01T00:00:00'})).resolves.toBeDefined();
+ await expect(prepare({...common,validFrom:'2026-10-01T00:00:00',validTo:from,action:'SCHEDULE_OPENING',target:target(retired),evidence:artifact.artifactId,sourceOperationStatus:'PLANNING',plannedOpeningAt:from})).rejects.toThrow('CAMPUS_RETIRED');
+});
+
 test('real HTTP serializes retirement/impact and current grants forbid unauthorized creation and replay',async()=>{
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
  try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const base=`http://127.0.0.1:${address.port}`,client=createCampusClient(base,'maker');

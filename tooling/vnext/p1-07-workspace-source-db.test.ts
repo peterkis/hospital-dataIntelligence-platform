@@ -62,6 +62,12 @@ test('effective retirement keeps a surviving opening plan cancellable',async()=>
  const response=await post('campus-lifecycle-source',{...source(node),action:'CANCEL_OPENING'});
  expect(response.statusCode).toBe(200);expect(response.json().command).toMatchObject({action:'CANCEL_OPENING',target:target(retired)});
 });
+test('completed disposition rejects further disposition sources',async()=>{
+ const node=await scenario.createCampus();let current=await retire(node);
+ for(const owner of ['BUSINESS_UNIT','LOCATION','ASSIGNMENT','CONSUMPTION'] as const){const report=await scenario.campus.assessCampusImpact('maker',{id:current.id,validFrom:scenario.common.validFrom,validTo:null});current=await scenario.campusApply({...scenario.common,action:'RECORD_DISPOSITION',target:target(current),sourceOperationStatus:'RETIRED',evidence:scenario.artifact.artifactId,reason:'DEMO_CLEAR',assessmentDigest:report.digest,resolution:{owner,status:'CLEAR',scope:'SYNTHETIC'}});}
+ const report=await scenario.campus.assessCampusImpact('maker',{id:current.id,validFrom:scenario.common.validFrom,validTo:null});await scenario.campusApply({...scenario.common,action:'COMPLETE_DISPOSITION',target:target(current),sourceOperationStatus:'RETIRED',evidence:scenario.artifact.artifactId,reason:'DEMO_COMPLETE',assessmentDigest:report.digest});
+ const before=counts();for(const action of ['RECORD_DISPOSITION','COMPLETE_DISPOSITION'] as const){const response=await post('campus-lifecycle-source',{...source(node),action});expect(response.statusCode).toBe(409);expect(response.json().code).toBe('DISPOSITION_ALREADY_COMPLETE');}expect(counts()).toBe(before);
+});
 test('lifecycle source is a closed action-specific route, not a revision bypass',async()=>{
  const node=await scenario.createCampus();const before=counts();
  for(const extra of [{action:'REVISE'},{action:'RETIRE',kind:'ORGANIZATION'},{action:'RETIRE',terminal:false}]){
