@@ -59,6 +59,11 @@ export async function upgradePreviousDraftAccess(receipt){
  if(process.env.HDIP_REVIEW_CI_PREVIOUS_UPGRADE!=='1')throw new Error('REVIEW_PREVIOUS_UPGRADE_MODE_REQUIRED');
  await upgradeOne(receipt,74,'0075_workspace_previous_draft_access.sql','POPULATED_0074_TO_0075');
  await upgradeOne(receipt,75,'0076_workspace_retained_manifest_access.sql','POPULATED_0075_TO_0076');
+ await upgradeOne(receipt,76,'0077_workspace_manifest_reference_access.sql','POPULATED_0076_TO_0077');
+}
+export async function upgradeManifestReferenceAccess(receipt){
+ if(process.env.HDIP_REVIEW_CI_MANIFEST_UPGRADE!=='1')throw new Error('REVIEW_MANIFEST_UPGRADE_MODE_REQUIRED');
+ await upgradeOne(receipt,76,'0077_workspace_manifest_reference_access.sql','POPULATED_0076_TO_0077');
 }
 export async function provision(){
  const name='hdi_mc_vnext_'+randomBytes(8).toString('hex'),role='hdi_validation_'+randomBytes(8).toString('hex'),password=randomBytes(24).toString('hex');
@@ -68,7 +73,7 @@ export async function provision(){
  const receipt={name,oid:peer(name,'SELECT oid::text FROM pg_database WHERE datname=current_database()'),owner:'hdi_prototype',port:55434,purpose:'GITHUB_ACTIONS_SYNTHETIC_REVIEW',requestId:randomUUID()};
  const path=resolve(root,'.runtime/vnext/review-ci-'+name+'.json');mkdirSync(resolve(root,'.runtime/vnext'),{recursive:true});writeFileSync(path,JSON.stringify(receipt));
  const all=migrationFiles();
- const count=process.env.HDIP_REVIEW_CI_UPGRADE==='1'?71:process.env.HDIP_REVIEW_CI_LICENSE_UPGRADE==='1'?72:process.env.HDIP_REVIEW_CI_ENDPOINT_UPGRADE==='1'?73:process.env.HDIP_REVIEW_CI_PREVIOUS_UPGRADE==='1'?74:all.length;
+ const count=process.env.HDIP_REVIEW_CI_UPGRADE==='1'?71:process.env.HDIP_REVIEW_CI_LICENSE_UPGRADE==='1'?72:process.env.HDIP_REVIEW_CI_ENDPOINT_UPGRADE==='1'?73:process.env.HDIP_REVIEW_CI_PREVIOUS_UPGRADE==='1'?74:process.env.HDIP_REVIEW_CI_MANIFEST_UPGRADE==='1'?76:all.length;
  const files=all.slice(0,count);assert.equal(files.length,count);
  for(const file of files)applyMigration(name,file);
  peer(name,`GRANT CONNECT ON DATABASE ${name} TO ${role};GRANT USAGE ON SCHEMA governance_catalog,vnext_control,organization_master TO ${role};
