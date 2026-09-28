@@ -55,6 +55,13 @@ test('scheduled retirement blocks duplicate RETIRE but keeps bounded pre-exit pr
  const maintained=await scenario.campusApply({...profile.command,validFrom:'2026-02-01T00:00:00',validTo:from,sourceOperationStatus:'PLANNING'} as CampusCommand);expect(maintained.id).toBe(node.id);
  const stop=await post('campus-lifecycle-source',{...source(node),action:'SUSPEND'});expect(stop.statusCode).toBe(200);expect(stop.json().command.target.expectedVersion).toBe(maintained.version);
 });
+test('effective retirement keeps a surviving opening plan cancellable',async()=>{
+ const node=await scenario.createCampus();
+ const planned=await scenario.campusApply({...scenario.common,action:'SCHEDULE_OPENING',target:target(node),evidence:scenario.artifact.artifactId,sourceOperationStatus:'PLANNING',plannedOpeningAt:'2099-12-01T00:00:00'});
+ const retired=await retire(planned);
+ const response=await post('campus-lifecycle-source',{...source(retired),action:'CANCEL_OPENING'});
+ expect(response.statusCode).toBe(200);expect(response.json().command).toMatchObject({action:'CANCEL_OPENING',target:target(retired)});
+});
 test('lifecycle source is a closed action-specific route, not a revision bypass',async()=>{
  const node=await scenario.createCampus();const before=counts();
  for(const extra of [{action:'REVISE'},{action:'RETIRE',kind:'ORGANIZATION'},{action:'RETIRE',terminal:false}]){

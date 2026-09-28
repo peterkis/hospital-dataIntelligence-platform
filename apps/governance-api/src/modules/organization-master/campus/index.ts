@@ -81,7 +81,7 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    const raw=unseal(r);if(raw.profile==='FULL'||raw.dependencies?.length)throw new Error('BLOCKED_DEPENDENCY');const c=normalize(raw.command);
    const heads=r.target?await snapshot(scope,actor,r.target):null;
    let source=null;
-   if(c.action!=='SUSPEND'&&c.action!=='RETIRE'&&c.action!=='CANCEL_OPENING'){
+   if(c.action!=='SUSPEND'&&c.action!=='CANCEL_OPENING'){
     const proof=(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select organization_master.evidence(${actor},${c.evidence}::uuid,${c.source.systemId}::uuid,${c.source.versionId}::uuid,${r.campus},${c.validFrom}::timestamp,${c.validTo}::timestamp) r`.execute(scope)).rows[0]!.r;
     const bytes=authenticateRegistrationEvidence(proof,provider);try{source={artifactId:c.evidence,contentDigest:planBinding(provider,'CAMPUS_EVIDENCE_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}
    }

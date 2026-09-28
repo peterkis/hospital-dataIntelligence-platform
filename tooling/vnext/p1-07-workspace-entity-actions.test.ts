@@ -1,5 +1,5 @@
 import {describe,expect,test} from 'vitest';
-import {canCompleteCampusDisposition,canRecordCampusDisposition,canReviseWorkspaceEntity,canRetireWorkspaceCampus,isCampusWorkspaceAction} from '../../apps/admin-web/src/vnext/workspace-entity-actions.js';
+import {canCancelCampusOpening,canCompleteCampusDisposition,canRecordCampusDisposition,canReviseWorkspaceEntity,canRetireWorkspaceCampus,isCampusWorkspaceAction} from '../../apps/admin-web/src/vnext/workspace-entity-actions.js';
 import {shouldInvalidateCampusImpact,type CampusImpactBinding} from '../../apps/admin-web/src/vnext/workspace-campus-impact.js';
 
 describe('workspace entity revision actions',()=>{
@@ -49,6 +49,16 @@ describe('scheduled campus retirement actions',()=>{
   expect(canCompleteCampusDisposition({canWrite:true,terminal:false},retiredFrom)).toBe(false);
   expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom)).toBe(true);
   expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom)).toBe(true);
+ });
+ test('completed disposition hides both disposition actions',()=>{
+  const retiredFrom='2026-01-01T00:00:00';
+  expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom,true)).toBe(false);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom,true)).toBe(false);
+ });
+ test('terminal campuses expose cancellation only when a plan remains',()=>{
+  expect(canCancelCampusOpening({canWrite:true,terminal:true},'2099-01-01T00:00:00')).toBe(true);
+  expect(canCancelCampusOpening({canWrite:true,terminal:true},null)).toBe(false);
+  expect(canCancelCampusOpening({canWrite:true,terminal:false},'2099-01-01T00:00:00')).toBe(false);
  });
  test('disposition actions require write permission and an established retirement boundary',()=>{
   for(const context of [null,undefined,{canWrite:false,terminal:false},{canWrite:false,terminal:true}]){

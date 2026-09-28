@@ -57,6 +57,13 @@ test('P1-07 retirement preserves identity and unknown dependencies prevent dispo
  expect((await org.references.history('maker',a.id)).versions).toHaveLength(1);
 });
 
+test('retirement evidence is authenticated before a candidate is planned',async()=>{
+ const a=await apply(create());
+ const assessment=await org.assessCampusImpact('maker',{id:a.id,validFrom:common.validFrom,validTo:null});
+ await expect(prepare({...common,action:'RETIRE',target:target(a),evidence:randomUUID(),sourceOperationStatus:'RETIRED',reason:'DEMO_FORGED_EVIDENCE',assessmentDigest:assessment.digest,plan:{responsibleOwner:'DEMO_OFFICE',dueAt:'2027-01-01T00:00:00',actions:'DEMO'}})).rejects.toThrow();
+ expect(await org.references.read('maker',{id:a.id})).toMatchObject({head:'1',operationStatus:'PLANNING'});
+});
+
 const impact=(id:string)=>org.assessCampusImpact('maker',{id,validFrom:common.validFrom,validTo:null});
 async function retireNode(){const a=await apply(create());return apply({...common,action:'RETIRE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO_EXIT',assessmentDigest:(await impact(a.id)).digest,plan:{responsibleOwner:'DEMO_OFFICE',dueAt:'2027-01-01T00:00:00',actions:'分Owner人工核查'}});}
 
@@ -95,7 +102,7 @@ test('future retirement preserves B/R history and overrides old future activatio
  const a=await apply(c),b=await apply({...common,action:'ACTIVATE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RUNNING',state:'RUNNING',validFrom:'2028-01-01T00:00:00'});
  const history=await org.references.history('maker',a.id),from='2027-01-01T00:00:00.000001';
  const assessment=await org.assessCampusImpact('maker',{id:a.id,validFrom:from,validTo:null});
- await apply({...common,validFrom:from,action:'RETIRE',target:target(b),evidence:randomUUID(),sourceOperationStatus:'RETIRED',reason:'DEMO_EXIT',assessmentDigest:assessment.digest,plan:{responsibleOwner:'DEMO',dueAt:'2029-01-01T00:00:00',actions:'DEMO'}});
+ await apply({...common,validFrom:from,action:'RETIRE',target:target(b),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO_EXIT',assessmentDigest:assessment.digest,plan:{responsibleOwner:'DEMO',dueAt:'2029-01-01T00:00:00',actions:'DEMO'}});
  expect(await org.references.read('maker',{id:a.id,businessAt:'2027-01-01T00:00:00'})).toMatchObject({operationStatus:'PLANNING'});
  expect(await org.references.read('maker',{id:a.id,businessAt:'2028-01-01T00:00:00'})).toMatchObject({operationStatus:'RETIRED'});
  expect(await org.references.read('maker',{id:a.id,businessAt:'2028-01-01T00:00:00',asOf:history.operations.at(-1)!.recordedAt})).toMatchObject({operationStatus:'RUNNING'});

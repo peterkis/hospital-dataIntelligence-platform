@@ -46,15 +46,15 @@ export function WorkspaceCandidateImpact({actor,command,onReady}:{actor:string;c
  return <section aria-label="候选影响报告"><h4>候选影响报告</h4><p role="status">{message}</p>{report&&<CampusImpactDetails report={report}/>}</section>;
 }
 
-export function WorkspaceCampusDisposition({actor,id,from,asOf}:{actor:string;id:string;from:string;asOf:string}){
+export function WorkspaceCampusDisposition({actor,id,from,asOf,onStatus}:{actor:string;id:string;from:string;asOf:string;onStatus:(completed:boolean)=>void}){
  const [report,setReport]=useState<Report|null>(null),[message,setMessage]=useState('正在读取退出处置状态…');
  useEffect(()=>{
   let active=true;setReport(null);
   void createCampusClient(location.origin,actor).assessImpact({id,validFrom:from,validTo:null,asOf}).then(result=>{
    if(!active)return;if(result.error){setMessage('处置报告不可读取，不能按无依赖或已完成处理。');return;}
-   setReport(result.data);setMessage('沿用当前详情的记录时点；历史证据继续保留。');
+   setReport(result.data);onStatus(result.data.completed);setMessage('沿用当前详情的记录时点；历史证据继续保留。');
   }).catch(()=>{if(active)setMessage('处置报告读取失败。');});
   return()=>{active=false;};
- },[actor,id,from,asOf]);
+ },[actor,id,from,asOf,onStatus]);
  return <section aria-label="退出处置状态"><h3>退出处置状态</h3><p role="status">{message}</p>{report&&<CampusImpactDetails report={report}/>}</section>;
 }

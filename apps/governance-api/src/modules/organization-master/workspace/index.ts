@@ -55,7 +55,7 @@ export function openOrganizationWorkspace(connection:string,provider?:KeyProvide
    check(PrepareCampusLifecycleSchema,input);
    const context=await sourceContext(actor,input);
    const disposition=input.action==='RECORD_DISPOSITION'||input.action==='COMPLETE_DISPOSITION';
-   if(context.terminal&&!disposition)throw new Error('CAMPUS_RETIRED');
+   if(context.terminal&&!disposition&&input.action!=='CANCEL_OPENING')throw new Error('CAMPUS_RETIRED');
    const history=await campus.references.history(actor,input.id);
    if(history.head!==context.head)throw new Error('STALE_HEAD');
    const retirement=history.operations.find(event=>event.action==='RETIRE');
