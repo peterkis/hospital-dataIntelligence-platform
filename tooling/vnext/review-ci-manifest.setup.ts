@@ -2,13 +2,7 @@ import {vi,afterAll} from 'vitest';
 vi.mock('./lineage.mjs',async importOriginal=>{
  const original=await importOriginal<typeof import('./lineage.mjs')>();
  const ci=await import('./review-ci-manifest-database.mjs');
- const compat=await import('./review-ci-campus-lifecycle-compat.js');
- const migrationFiles=(directory?:string)=>{
-  const files=directory===undefined?original.migrationFiles():original.migrationFiles(directory);
-  const boundary=compat.historicalWorkspaceBoundary();
-  return boundary===null?files:files.slice(0,boundary);
- };
- return {...original,migrationFiles,peer:ci.peer,inspect:ci.inspect,resolveTarget:ci.resolveTarget};
+ return {...original,peer:ci.peer,inspect:ci.inspect,resolveTarget:ci.resolveTarget};
 });
 const {provisionAt0076,peer}=await import('./review-ci-manifest-database.mjs');
 const database=await provisionAt0076();afterAll(async()=>{await database.close();});
