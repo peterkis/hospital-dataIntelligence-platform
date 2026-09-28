@@ -27,11 +27,11 @@ function exactManifestReferences(rows:unknown[]):DraftManifestReference[]{
  }
  return result;
 }
-// V1/V2 preserve the original authenticated projections. Current V3 additionally
+// V1/V2/V3 preserve their original authenticated projections. V4 additionally
 // binds every exact manifest target and ORG03 platform endpoint into draft metadata.
-export function draftMetadata(content:DraftContent,format:'V1'|'V2'|'V3'='V3'):DraftMetadata{
- const metadata=coreDraftMetadata(content,format);
- if(format!=='V3'||content.domain!=='BUNDLE')return metadata;
+export function draftMetadata(content:DraftContent,format:'V1'|'V2'|'V3'|'V4'='V4'):DraftMetadata{
+ const metadata=coreDraftMetadata(content,format==='V4'?'V3':format);
+ if(format!=='V4'||content.domain!=='BUNDLE')return metadata;
  const manifest=content.metadata['manifest'];
  const rows=manifest&&typeof manifest==='object'&&'rows' in manifest&&Array.isArray(manifest.rows)?manifest.rows:[];
  return {...metadata,manifestReferences:exactManifestReferences(rows)};
