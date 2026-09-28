@@ -64,9 +64,17 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   const issue=(row:number,field:string,code:string,status:DepartmentIssue['status']='BLOCKED')=>issues.push({row,field,code,status});
   const businessContent=(e:ReturnType<typeof normalizeEntry>)=>{const {sourceRow:_,...content}=e;return canonicalPlan(content);};
   if(verification){await authorize(s,r.verification!.actor,'HOSPITAL','VERIFY');if(verification.inputDigest!==r.digest)throw new Error('STALE_VALIDATION');}
+  const normalizedByRow=new Map<number,ReturnType<typeof normalizeEntry>>();
+  for(const [index,entry] of input.entries.entries())try{normalizedByRow.set(index+1,normalizeEntry(entry,input.timePolicy));}catch(error){issue(index+1,'',error instanceof Error?error.message:'CLOSED_INPUT_REQUIRED','FAIL');}
+  const firstNormalized=[...normalizedByRow.entries()][0];
+  if(input.sourceArtifactId&&firstNormalized){
+   const [sourceArtifactRow,sourceArtifactEntry]=firstNormalized;
+   try{materials.push(await evidence(s,actor,input.sourceArtifactId,sourceArtifactEntry,c,input.campus));}
+   catch(error){if(error instanceof Error&&error.message==='KEY_UNAVAILABLE')throw error;issue(sourceArtifactRow,'source_artifact_id','BLOCKED_DEPENDENCY');}
+  }
   const aliases=new Map<string,number[]>(),codes=new Map<string,number[]>(),targets=new Map<string,number[]>(),preparedByRow=new Map<number,PreparedDepartmentCommand>();
-  for(const [index,entry] of input.entries.entries()){
-   const row=index+1;let e:ReturnType<typeof normalizeEntry>;try{e=normalizeEntry(entry,input.timePolicy);}catch(error){issue(row,'',error instanceof Error?error.message:'CLOSED_INPUT_REQUIRED','FAIL');continue;}commands.push({row,entry:e});
+  for(const [index] of input.entries.entries()){
+   const row=index+1,e=normalizedByRow.get(row);if(!e)continue;commands.push({row,entry:e});
    preparedByRow.set(row,{row,entry:e});
    aliases.set(e.row.org_id,[...(aliases.get(e.row.org_id)??[]),row]);codes.set(e.row.org_code,[...(codes.get(e.row.org_code)??[]),row]);if(e.target)targets.set(e.target.id,[...(targets.get(e.target.id)??[]),row]);
    if(e.row.abolished_on||['SUSPENDED','RETIRED'].includes(e.row.record_status))issue(row,'record_status','BLOCKED_DEPENDENCY');
@@ -79,12 +87,12 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
    const missing=!e.row.established_on||!e.row.establishment_doc.trim();
    if(missing&&(e.origin!=='HISTORICAL'||!review?.historicalException))issue(row,!e.row.established_on?'established_on':'establishment_doc','LEGAL_REVIEW_REQUIRED');
    if(review?.historicalException&&(!missing||e.origin!=='HISTORICAL'))issue(row,'established_on','CLOSED_INPUT_REQUIRED','FAIL');
-   if(e.target){const h=await snapshot(s,actor,e.target.id);heads.push(h);if(String(h.versions.at(-1)?.number)!==e.target.expectedVersion)issue(row,'target','STALE_VALIDATION');if(h.code!==e.row.org_code)issue(row,'org_code','BLOCKED_DEPENDENCY');}
+   if(e.target){try{const h=await snapshot(s,actor,e.target.id);heads.push(h);if(String(h.versions.at(-1)?.number)!==e.target.expectedVersion)issue(row,'target','STALE_VALIDATION');if(h.code!==e.row.org_code)issue(row,'org_code','BLOCKED_DEPENDENCY');}catch(error){if(error instanceof Error&&error.message==='NOT_FOUND')issue(row,'target','BLOCKED_DEPENDENCY');else throw error;}}
    const facts=factsFor(e,c,r,review);
    const completed=(await sql<{r:boolean}>`select department_master.committed_row(${actor},${r.job_id}::uuid,${Number(e.sourceRow??row)},${e.intent},${e.target?.id??null}::uuid,${e.target?.expectedVersion??null}::bigint,${e.row.org_code},${e.validFrom}::timestamp,${e.validTo}::timestamp,${JSON.stringify(facts)}::jsonb) r`.execute(s)).rows[0]!.r;
    if(completed)completedRows.add(row);
    else if(!e.target&&(await sql<{r:boolean}>`select department_master.code_conflict(${actor},${e.row.org_code},NULL) r`.execute(s)).rows[0]!.r)issue(row,'org_code','IDENTIFIER_CONFLICT');
-   try{materials.push(await evidence(s,actor,e.evidenceId,e,c,input.campus));if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,input.campus));await evidence(s,r.verification!.actor,review.evidenceId,e,c,input.campus);}if(index===0&&input.sourceArtifactId)materials.push(await evidence(s,actor,input.sourceArtifactId,e,c,input.campus));}catch(error){if(error instanceof Error&&['ACCESS_DENIED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE'].includes(error.message))throw error;issue(row,'source_system_id','BLOCKED_DEPENDENCY');}
+   try{materials.push(await evidence(s,actor,e.evidenceId,e,c,input.campus));if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,input.campus));await evidence(s,r.verification!.actor,review.evidenceId,e,c,input.campus);}}catch(error){if(error instanceof Error&&error.message==='KEY_UNAVAILABLE')throw error;issue(row,'source_system_id','BLOCKED_DEPENDENCY');}
   }
   const conflictRows=new Set<number>();
   const markConflicts=(groups:Map<string,number[]>,field:string)=>{for(const rows of groups.values())if(rows.length>1){const first=preparedByRow.get(rows[0]!);const exact=first!==undefined&&rows.slice(1).every(row=>{const candidate=preparedByRow.get(row);return candidate!==undefined&&businessContent(candidate.entry)===businessContent(first.entry);});if(exact)for(const row of rows.slice(1))ignoredRows.add(row);else{for(const row of rows){conflictRows.add(row);if(!issues.some(existing=>existing.row===row&&existing.field===field&&existing.code==='BATCH_CONFLICT'))issue(row,field,'BATCH_CONFLICT','FAIL');}}}};
@@ -159,7 +167,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
     try{
      const meta=j.revisions.at(-1)!.input;if(meta.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
      const parsed=await boundedParse(bytes,meta.format,v.contract.definition.fields,'STRICT_DEPARTMENT_V1');
-     const parserIssues:DepartmentIssue[]=parsed.issues.map(parsedIssue=>{const cell=parsed.cells.find(candidate=>candidate.sourceRow===parsedIssue.row&&(!parsedIssue.column||candidate.column===parsedIssue.column));return {row:cell?.row??parsedIssue.row,field:cell?.field??'',code:parsedIssue.code,status:'FAIL',sourceRow:parsedIssue.row};});
+      const parserIssues:DepartmentIssue[]=parsed.issues.map(parsedIssue=>{const cell=parsed.cells.find(candidate=>candidate.sourceRow===parsedIssue.row&&(!parsedIssue.column||candidate.column===parsedIssue.column));return {row:parsedIssue.row,field:cell?.field??'',code:parsedIssue.code,status:'FAIL',sourceRow:parsedIssue.row};});
      validationIssues=[...v.issues,...parserIssues];
      validationRunId=(await saveValidation(s,actor,j,v.r.campus,v.input.sourceArtifactId,parsed,validationIssues,new Map(v.input.entries.map((entry,index)=>[index+1,entry.sourceRow])))).run.runId;
     }finally{bytes.fill(0);}

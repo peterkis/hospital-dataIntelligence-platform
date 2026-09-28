@@ -58,5 +58,6 @@ export function normalizeEntry(entry:StageInput['entries'][number]|StoredStageIn
  if(validTo!==null&&validTo<=validFrom)throw new Error('INVALID_BUSINESS_PERIOD');
  for(const date of [row.established_on,row.abolished_on])if(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('CLOSED_INPUT_REQUIRED');localTime(date+'T00:00:00');}
  if((entry.intent==='CREATE')!==(entry.target===null))throw new Error('CLOSED_INPUT_REQUIRED');
+  if(entry.target&&BigInt(entry.target.expectedVersion)>9223372036854775807n)throw new Error('CLOSED_INPUT_REQUIRED');
  return {...entry,row,validFrom,validTo,recordedAt,sourceRow:'sourceRow' in entry?entry.sourceRow:undefined};
 }
