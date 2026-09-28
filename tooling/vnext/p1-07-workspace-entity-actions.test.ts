@@ -45,15 +45,20 @@ describe('scheduled campus retirement actions',()=>{
  });
  test('scheduled retirement opens evidence collection but not premature completion',()=>{
   const retiredFrom='2099-01-01T00:00:00';
-  expect(canRecordCampusDisposition({canWrite:true,terminal:false},retiredFrom)).toBe(true);
-  expect(canCompleteCampusDisposition({canWrite:true,terminal:false},retiredFrom)).toBe(false);
-  expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom)).toBe(true);
-  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom)).toBe(true);
+  expect(canRecordCampusDisposition({canWrite:true,terminal:false},retiredFrom,false)).toBe(true);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:false},retiredFrom,false)).toBe(false);
+  expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom,false)).toBe(true);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom,false)).toBe(true);
  });
  test('completed disposition hides both disposition actions',()=>{
   const retiredFrom='2026-01-01T00:00:00';
   expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom,true)).toBe(false);
   expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom,true)).toBe(false);
+ });
+ test('unknown disposition status hides both actions until assessment succeeds',()=>{
+  const retiredFrom='2026-01-01T00:00:00';
+  expect(canRecordCampusDisposition({canWrite:true,terminal:true},retiredFrom,null)).toBe(false);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},retiredFrom,null)).toBe(false);
  });
  test('terminal campuses expose cancellation only when a plan remains',()=>{
   expect(canCancelCampusOpening({canWrite:true,terminal:true},'2099-01-01T00:00:00')).toBe(true);
@@ -62,11 +67,11 @@ describe('scheduled campus retirement actions',()=>{
  });
  test('disposition actions require write permission and an established retirement boundary',()=>{
   for(const context of [null,undefined,{canWrite:false,terminal:false},{canWrite:false,terminal:true}]){
-   expect(canRecordCampusDisposition(context,'2099-01-01T00:00:00')).toBe(false);
-   expect(canCompleteCampusDisposition(context,'2099-01-01T00:00:00')).toBe(false);
+    expect(canRecordCampusDisposition(context,'2099-01-01T00:00:00',false)).toBe(false);
+    expect(canCompleteCampusDisposition(context,'2099-01-01T00:00:00',false)).toBe(false);
   }
-  expect(canRecordCampusDisposition({canWrite:true,terminal:false},null)).toBe(false);
-  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},null)).toBe(false);
+  expect(canRecordCampusDisposition({canWrite:true,terminal:false},null,false)).toBe(false);
+  expect(canCompleteCampusDisposition({canWrite:true,terminal:true},null,false)).toBe(false);
  });
  test('lifecycle source cannot be requested as a profile revision',()=>{
   expect(isCampusWorkspaceAction('REVISE')).toBe(false);expect(isCampusWorkspaceAction('RECORD_DISPOSITION')).toBe(true);expect(isCampusWorkspaceAction('RETIRE')).toBe(true);
