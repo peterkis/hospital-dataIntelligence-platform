@@ -17,7 +17,7 @@ const {receipt,connection,provider,evidence}=deployment;
 const service=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));
 // The shared deployment preparation verifies receipt/OID/role identity and retains keys.
 // Only this synthetic development environment's named actors receive explicit grants.
-const functions=['authorize(text,text,text)','input_read(text,uuid,text)','snapshot(text,uuid)','job_read(text,uuid)','list(text,uuid,integer,timestamp)','code_conflict(text,text,uuid)','evidence(text,uuid,uuid,uuid,text,timestamp,timestamp)','mutate(text,text)','committed_row(text,uuid,integer,jsonb)'];
+const functions=['authorize(text,text,text)','input_read(text,uuid,text)','snapshot(text,uuid)','job_read(text,uuid)','list(text,uuid,integer,timestamp)','code_conflict(text,text,uuid)','evidence(text,uuid,uuid,uuid,text,timestamp,timestamp)','mutate(text,text)','committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb)'];
 peer(receipt.name,identitySQL(receipt)+` BEGIN; SELECT pg_advisory_xact_lock(901002);
  DO $$ BEGIN IF (SELECT oid::text FROM pg_roles WHERE rolname=${quote(service.role)}) IS DISTINCT FROM ${quote(service.roleOid)} THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH'; END IF; END $$;
  GRANT USAGE ON SCHEMA department_master TO ${service.role};
