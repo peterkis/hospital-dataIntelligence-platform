@@ -79,12 +79,15 @@ test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 th
 test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=>{
  const good=f.entry();for(const key of ['valid_from','recorded_at'] as const)good.row[key]+='+08:00';
  const invalid=structuredClone(good);invalid.row.org_name=' invalid whitespace ';
+ const retained=structuredClone(good);retained.row.record_status='REVIEW';
  const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_MIXED_ROWS',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[
   {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
   {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
- ]},organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>good.row[k]),ORG04_FIELDS.map(k=>invalid.row[k])]}));
- expect(result.input).not.toBeNull();expect(result.issues).toContainEqual(expect.objectContaining({code:'WHITESPACE_REJECTED',row:3}));
- const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(1);expect(read.entries[0]!.sourceRow).toBe(2);expect(read.entries[0]!.row).toEqual(good.row);
+ ]},organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>invalid.row[k]),ORG04_FIELDS.map(k=>retained.row[k])]}));
+ expect(result.input).not.toBeNull();expect(result.issues).toContainEqual(expect.objectContaining({code:'WHITESPACE_REJECTED',row:2}));
+ const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(1);expect(read.entries[0]!.sourceRow).toBe(3);expect(read.entries[0]!.row).toEqual(retained.row);
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:result.input!.inputId,inputDigest:result.input!.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retained physical row',evidenceId:f.artifact.artifactId}]});
+ expect((await owner.validate('maker',{inputId:result.input!.inputId})).issues).toContainEqual({row:1,field:'record_status',code:'APPROVAL_REQUIRED',status:'BLOCKED'});
 });
 
 test('metadata staging derives source rows instead of accepting caller provenance',async()=>{
@@ -100,6 +103,16 @@ test('verification skips rows that cannot be normalized and keeps valid rows rev
  const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.issues).toContainEqual({row:2,field:'',code:'INVALID_BUSINESS_PERIOD',status:'FAIL'});
  const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
  expect(review.unit.commands.map(command=>command.row)).toEqual([1]);
+});
+
+test('intra-batch duplicate aliases, codes, and targets block every member',async()=>{
+ const first=f.entry(),second=f.entry();second.row.org_code=first.row.org_code;
+ const staged=await owner.stage('maker',await f.input([first,second]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[
+  {row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO duplicate first',evidenceId:f.artifact.artifactId},
+  {row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO duplicate second',evidenceId:f.artifact.artifactId},
+ ]});
+ const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.issues.filter(issue=>issue.code==='BATCH_CONFLICT').map(issue=>issue.row)).toEqual([1,2]);
 });
 
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{

@@ -248,7 +248,7 @@ function decodeXlsxText(value:string,row=0,column=0):string {
   const decoded=value.replace(/_x([0-9a-f]{4})_/gi,(_,hex:string)=>String.fromCharCode(parseInt(hex,16)));
   assertTextSafety(decoded,row,column);return decoded;
 }
-interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][]}
+interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][];issues:ParserIssue[]}
 function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'DEPARTMENT'='GENERIC'): Map<string,XlsxTable> {
   const files = unzip(bytes,mode!=='GENERIC');
   const worksheetParts=[...files.keys()].filter(name=>/^xl\/worksheets\//u.test(name));
@@ -338,6 +338,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
   const tables=new Map<string,XlsxTable>();
   for(const [sheetName,target] of targets){
   try{
+  const tableIssues:ParserIssue[]=[];
   const worksheet = get('xl/'+target,'worksheet'); only(worksheet,['sheetFormatPr','cols','sheetData']);
   let previousWorksheetChild = -1;
   for(const child of worksheet.children){
@@ -372,13 +373,14 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
       only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
       if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
       else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
+      else if(mode==='DEPARTMENT'){tableIssues.push({code:'TEXT_CELL_REQUIRED',row:rowNum,column:col});value='';rowTypes.push('inlineStr');}
       else return fail('TEXT_CELL_REQUIRED',rowNum,col);
-      values.push(value);rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
+      values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
     }
     rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
   }
   if (manifest.hiddenSheets.length || manifest.hiddenRows.length || manifest.hiddenColumns.length) fail('HIDDEN_UNDECLARED');
-  tables.set(sheetName,{rows,sourceTypes});
+  tables.set(sheetName,{rows,sourceTypes,issues:tableIssues});
   }catch(error){if(mode!=='GENERIC'&&error instanceof ParseFailure&&!error.sheet)throw new ParseFailure(error.code,error.row,error.column,sheetName);throw error;}
   }
   if(declaredCount!==undefined&&declaredCount!==sharedReferences)fail('SHARED_STRING_COUNT');
@@ -396,7 +398,7 @@ function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<P
         const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code];
         const text = typeof value==='string'?value:value?.lexeme??'';
-        result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]![column-1]! : format});
+        result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]?.[column-1] ?? 'inlineStr' : format});
         rowCheck(()=>{
           if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
           assertTextSafety(text,sourceRow,column);
@@ -420,7 +422,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
     let objects: SourceObject[];
     let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
-      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':'Data')!; objects = tableObjects(table.rows,fields);physicalRows=table.rows.slice(1).map((_,i)=>i+2);sourceTypes=table.sourceTypes.slice(1);
+      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':'Data')!; physicalRows=table.rows.slice(1).map((_,i)=>i+2);objects = tableObjects(table.rows,fields,[1,...physicalRows],policy==='STRICT_DEPARTMENT_V1',table.issues);sourceTypes=table.sourceTypes.slice(1);result.issues.push(...table.issues);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
@@ -458,14 +460,14 @@ export function parseOrganizationWorkbook(bytes:Uint8Array,fields:Record<Organiz
  return result;
 }
 
-function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[]): SourceObject[] {
+function tableObjects(table: string[][], fields: ParserField[], physicalRows?:number[],rowIndependent=false,issues?:ParserIssue[]): SourceObject[] {
   const header = table[0]; if (!header) return fail('NO_DATA');
   header.forEach((key,column)=>assertTextSafety(key,1,column+1));
   const duplicateColumn=header.findIndex((key,index)=>header.indexOf(key)!==index);
   if (duplicateColumn>=0) fail('DUPLICATE_FIELD',1,duplicateColumn+1);
   const unknownColumn=header.findIndex(h=>!fields.some(f=>f.code===h));
   if (header.length !== fields.length || unknownColumn>=0) fail('FIELD_CONTRACT',1,unknownColumn>=0?unknownColumn+1:header.length+1);
-  return table.slice(1).map((row,index)=> { if (row.length !== header.length) fail('FIELD_CONTRACT',physicalRows?.[index+1]??index+2); return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });
+  return table.slice(1).map((row,index)=> { const sourceRow=physicalRows?.[index+1]??index+2; if (row.length !== header.length) {if(!rowIndependent)fail('FIELD_CONTRACT',sourceRow);issues?.push({code:'FIELD_CONTRACT',row:sourceRow,column:0});row=row.slice(0,header.length);while(row.length<header.length)row.push('');} return {values:Object.fromEntries(header.map((key,col)=>[key,row[col]!])),columns:header}; });
 }
 
 if (!isMainThread && parentPort) {
