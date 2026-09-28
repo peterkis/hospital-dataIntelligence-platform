@@ -86,3 +86,18 @@ DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64)
  INSERT INTO department_master.version(department_id,number,valid_from,valid_to,input_id,source_row,facts,content_digest) VALUES(target,n,(command->>'validFrom')::timestamp,(command->>'validTo')::timestamp,r.id,(coalesce(t->>'sourceRow',t->>'row'))::integer,t->'facts',t->>'contentDigest') RETURNING id INTO vid;
  RETURN jsonb_build_object('owner','department-master','id',target,'version',n::text,'source',jsonb_build_object('dataset','ORG04','row',(coalesce(t->>'sourceRow',t->>'row'))::integer,'step','DEPARTMENT'));
 END $$;
+
+CREATE FUNCTION department_master.committed_row(p_actor text,p_job_id uuid,p_source_row integer,p_facts jsonb) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ PERFORM department_master.authorize(p_actor,'HOSPITAL','READ');
+ IF p_source_row NOT BETWEEN 1 AND 100 OR jsonb_typeof(p_facts) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
+ RETURN EXISTS(
+  SELECT 1
+  FROM department_master.version v
+  JOIN department_master.input i ON i.id=v.input_id
+  WHERE i.job_id=p_job_id AND v.source_row=p_source_row AND (v.facts-'verificationId')=(p_facts-'verificationId')
+ );
+END $$;
+REVOKE ALL ON FUNCTION department_master.committed_row(text,uuid,integer,jsonb) FROM PUBLIC,hdi_prototype;
+GRANT EXECUTE ON FUNCTION department_master.committed_row(text,uuid,integer,jsonb) TO hdi_prototype;

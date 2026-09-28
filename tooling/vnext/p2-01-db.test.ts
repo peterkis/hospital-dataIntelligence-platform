@@ -108,13 +108,36 @@ test('verification skips rows that cannot be normalized and keeps valid rows rev
 });
 
 test('intra-batch duplicate aliases, codes, and targets block every member',async()=>{
- const first=f.entry(),second=f.entry();second.row.org_code=first.row.org_code;
+ const first=f.entry(),second=f.entry();second.row.org_code=first.row.org_code;second.row.org_name='DEMO conflicting duplicate';
  const staged=await owner.stage('maker',await f.input([first,second]));
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[
   {row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO duplicate first',evidenceId:f.artifact.artifactId},
   {row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO duplicate second',evidenceId:f.artifact.artifactId},
  ]});
  const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.issues.filter(issue=>issue.code==='BATCH_CONFLICT').map(issue=>issue.row)).toEqual([1,2]);
+});
+
+test('intra-batch exact duplicates keep the first row and ignore later copies',async()=>{
+ const first=f.entry(),second=structuredClone(first);
+ const staged=await owner.stage('maker',await f.input([first,second]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[
+  {row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO exact duplicate first',evidenceId:f.artifact.artifactId},
+  {row:2,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO exact duplicate later',evidenceId:f.artifact.artifactId},
+ ]});
+ const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.decision).toBe('PASS');
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(review.unit.commands.map(command=>command.row)).toEqual([1]);
+});
+
+test('same-job retry omits a row whose matching facts were already committed',async()=>{
+ const input=await f.input(),staged=await owner.stage('maker',input);
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry first commit',evidenceId:f.artifact.artifactId}]});
+ const firstRequest=randomUUID(),firstCandidate=await owner.plan('maker',{inputId:staged.inputId,requestId:firstRequest});await owner.readApplyCandidate('reviewer',{candidateId:firstCandidate.candidateId});await owner.approveApplyUnit('reviewer',firstCandidate);const first=await owner.applyUnit('maker',{candidateId:firstCandidate.candidateId,requestId:firstRequest});expect(first.status).toBe('COMMITTED');
+ const revision=await catalog.importJobCommand('maker',{scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_RETRY',action:'REVISE',jobId:input.jobId,expectedCurrentRevision:input.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'b'.repeat(64)}});
+ const retryInput={...input,requestId:randomUUID(),revisionId:revision.revisionId};const retry=await owner.stage('maker',retryInput);
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:retry.inputId,inputDigest:retry.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry completed row',evidenceId:f.artifact.artifactId}]});
+ const retryCandidate=await owner.plan('maker',{inputId:retry.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:retryCandidate.candidateId});
+ expect(review.unit.commands).toHaveLength(0);expect(review.unit.basis['completedRows']).toEqual([1]);
 });
 
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{
