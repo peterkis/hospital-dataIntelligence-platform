@@ -134,8 +134,8 @@ for(const {kind,permission} of matrix)test(`${kind}: current ${permission} is re
 });
 
 test('cross-scope ORG03 endpoints use their real scopes rather than the receiving scope',async()=>{
- const south=await fixture.x.createCampus('DEMO south','HEADQUARTERS','SOUTH');fixture.x.grantPair(subject.id,south.id);
  peer(receipt.name,"INSERT INTO vnext_control.protected_grant SELECT actor_code,dataset_id,'SOUTH',purpose,permission FROM vnext_control.protected_grant WHERE campus='NORTH' ON CONFLICT DO NOTHING; INSERT INTO organization_master.access SELECT a,'00000000-0000-0000-0000-000000000000'::uuid,'SOUTH',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED','REVIEW']) p ON CONFLICT DO NOTHING;");
+ const south=await fixture.x.createCampus('DEMO south','HEADQUARTERS','SOUTH');fixture.x.grantPair(subject.id,south.id);
  const draft=draftFor('PAIR'),row=draft.metadata.manifest!.rows![0]!;if(row.dataset!=='ORG03')throw new Error('ORG03_REQUIRED');row.governanceScope='SOUTH';row.campus={kind:'PLATFORM_REF',dataset:'ORG02',id:south.id,expectedVersion:south.version};
  const saved=await workspace.saveDraft('maker',{...draft,requestId:randomUUID()});expect((await workspace.readDraft('maker',saved.id)).content).toMatchObject(draft);
  const restore=revoke('SUBJECT_ONLY','READ');try{await expect(workspace.readDraft('maker',saved.id)).rejects.toThrow('ACCESS_DENIED');}finally{restore();}
