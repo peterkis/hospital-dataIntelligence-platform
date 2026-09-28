@@ -91,14 +91,15 @@ CREATE FUNCTION department_master.committed_row(p_actor text,p_job_id uuid,p_sou
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 BEGIN
  PERFORM department_master.authorize(p_actor,'HOSPITAL','READ');
- IF p_source_row NOT BETWEEN 1 AND 1048576 OR p_intent NOT IN ('CREATE','REVISE') OR p_intent='CREATE' AND p_target_id IS NOT NULL OR p_intent='REVISE' AND p_target_id IS NULL OR jsonb_typeof(p_facts) IS DISTINCT FROM 'object' OR nullif(btrim(p_org_code),'') IS NULL OR p_valid_from IS NULL THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
+ IF p_source_row NOT BETWEEN 1 AND 1048576 OR p_intent NOT IN ('CREATE','REVISE') OR p_intent='CREATE' AND p_target_id IS NOT NULL OR p_intent='REVISE' AND p_target_id IS NULL OR jsonb_typeof(p_facts) IS DISTINCT FROM 'object' OR p_facts->>'commandDigest' !~ '^[a-f0-9]{64}$' OR nullif(btrim(p_org_code),'') IS NULL OR p_valid_from IS NULL THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
  RETURN EXISTS(
   SELECT 1
   FROM department_master.version v
   JOIN department_master.input i ON i.id=v.input_id
   JOIN department_master.department d ON d.id=v.department_id
   WHERE i.job_id=p_job_id AND v.source_row=p_source_row AND d.code=p_org_code AND v.valid_from=p_valid_from AND v.valid_to IS NOT DISTINCT FROM p_valid_to
-    AND (v.facts-'verificationId')=(p_facts-'verificationId')
+    AND v.facts->>'commandDigest'=p_facts->>'commandDigest'
+    AND (v.facts-'verificationId'-'commandDigest')=(p_facts-'verificationId'-'commandDigest')
     AND ((p_intent='CREATE' AND p_expected_version IS NULL AND v.number=1)
       OR (p_intent='REVISE' AND p_expected_version IS NOT NULL AND v.department_id=p_target_id AND v.number=p_expected_version+1))
  );

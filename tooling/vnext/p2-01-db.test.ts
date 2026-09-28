@@ -138,6 +138,7 @@ test('same-job retry omits a row whose matching facts were already committed',as
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:retry.inputId,inputDigest:retry.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry completed row',evidenceId:f.artifact.artifactId}]});
  const retryCandidate=await owner.plan('maker',{inputId:retry.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:retryCandidate.candidateId});
  expect(review.unit.commands).toHaveLength(0);expect(review.unit.basis['completedRows']).toEqual([1]);
+ await expect(owner.approveApplyUnit('reviewer',retryCandidate)).rejects.toThrow('BATCH_REJECTED');
  const correctedRevision=await catalog.importJobCommand('maker',{scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_CORRECTION',action:'REVISE',jobId:input.jobId,expectedCurrentRevision:revision.revisionId,input:{kind:'METADATA_ONLY',declaredSha256:'c'.repeat(64)}});
  const correctedInput={...input,requestId:randomUUID(),revisionId:correctedRevision.revisionId,entries:[{...input.entries[0]!,row:{...input.entries[0]!.row,source_record_id:'DEMO_FILE/ORG04/CORRECTED',approval_ref:'DEMO_APPROVAL_CORRECTED'}}]};const corrected=await owner.stage('maker',correctedInput);
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:corrected.inputId,inputDigest:corrected.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO retry correction',evidenceId:f.artifact.artifactId}]});

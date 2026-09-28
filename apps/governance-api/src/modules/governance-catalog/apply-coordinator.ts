@@ -157,7 +157,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
    try{return await root(async scope=>{
     const c=await candidate(scope,actor,input.candidateId,'REVIEW');
     if(!equalBinding(c.digest,input.digest))throw new Error('STALE_VALIDATION');
-    unseal(c);await recheck(scope,actor,c);
+    const approvedUnit=unseal(c);await recheck(scope,actor,c);if(approvedUnit.commands.length===0)throw new Error('BATCH_REJECTED');
     return record<{candidateId:string;approvedBy:string}>(scope,actor,'APPROVE',input);
    });}catch(error){throw failure(error);}
   },
@@ -177,7 +177,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     // Admission belongs to approval/apply, never to reading immutable history.
     // Recheck the approver's source/material permissions in this same write root.
     await recheck(scope,c.approvedBy,c);
-    const unit=unseal(c);await recheck(scope,actor,c);
+    const unit=unseal(c);await recheck(scope,actor,c);if(unit.commands.length===0)throw new Error('BATCH_REJECTED');
     const resolved=new Map<number,OwnerFact>();
     for(const command of unit.commands){
      const result=await port().apply(scope,actor,command,resolved,{candidateId:c.id,digest:c.digest});

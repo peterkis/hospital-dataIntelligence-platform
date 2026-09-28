@@ -367,23 +367,29 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
     if (declaredRow !== String(rowNum)) fail('ROW_GAP',declaredRow&&/^[1-9][0-9]*$/.test(declaredRow)&&Number(declaredRow)<=1048576?Number(declaredRow):rowNum); only(r,['c']);
     if (booleanAttribute(r,'hidden')) manifest.hiddenRows.push(rowNum);
     const values: string[] = [];const rowTypes:XlsxCellType[]=[];
-    for (const c of r.children) {
-      let col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
-      if (c.attrs['r'] !== `${letters}${rowNum}`) {
-        const address=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(c.attrs['r'] ?? '');
-        const actualRow=address ? Number(address[2]) : 0;
-        const actualColumn=address ? [...address[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0) : 0;
-        if(mode!=='DEPARTMENT'||rowNum===1||actualRow!==rowNum||actualColumn<=col||actualColumn>100)fail('COLUMN_GAP',rowNum,col);
-        tableIssues.push({code:'COLUMN_GAP',row:rowNum,column:col});
-        while(values.length<actualColumn-1){values.push('');rowTypes.push('inlineStr');}
-        col=actualColumn;
+    try {
+      for (const c of r.children) {
+        let col = values.length + 1; let n = col, letters = ''; while (n) { n--; letters = String.fromCharCode(65 + n % 26) + letters; n = Math.floor(n / 26); }
+        if (c.attrs['r'] !== `${letters}${rowNum}`) {
+          const address=/^([A-Z]{1,3})([1-9][0-9]{0,6})$/u.exec(c.attrs['r'] ?? '');
+          const actualRow=address ? Number(address[2]) : 0;
+          const actualColumn=address ? [...address[1]!].reduce((value,letter)=>value*26+letter.charCodeAt(0)-64,0) : 0;
+          if(mode!=='DEPARTMENT'||rowNum===1||actualRow!==rowNum||actualColumn<=col||actualColumn>100)fail('COLUMN_GAP',rowNum,col);
+          tableIssues.push({code:'COLUMN_GAP',row:rowNum,column:col});
+          while(values.length<actualColumn-1){values.push('');rowTypes.push('inlineStr');}
+          col=actualColumn;
+        }
+        only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
+        if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
+        else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
+        else if(mode==='DEPARTMENT'){tableIssues.push({code:'TEXT_CELL_REQUIRED',row:rowNum,column:col});value='';rowTypes.push('inlineStr');}
+        else return fail('TEXT_CELL_REQUIRED',rowNum,col);
+        values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
       }
-      only(c,['v','is']); let value: string;const cellType=c.attrs['t'];
-      if (cellType === 'inlineStr') { only(c,['is']); const inline = one(c,'is'); only(inline,['t']); value = decodeXlsxText(leaf(one(inline,'t')),rowNum,col); }
-      else if (cellType === 's') { only(c,['v']); const index = leaf(one(c,'v')); if (!/^(0|[1-9]\d*)$/.test(index) || strings[Number(index)] === undefined) fail('SHARED_STRING'); value = strings[Number(index)]!; sharedReferences++; }
-      else if(mode==='DEPARTMENT'){tableIssues.push({code:'TEXT_CELL_REQUIRED',row:rowNum,column:col});value='';rowTypes.push('inlineStr');}
-      else return fail('TEXT_CELL_REQUIRED',rowNum,col);
-      values.push(value);if(cellType==='inlineStr'||cellType==='s')rowTypes.push(cellType); if (values.length > 100) fail('COLUMN_LIMIT',rowNum,col);
+    } catch(error) {
+      const rowLocal=mode==='DEPARTMENT'&&rowNum>1&&error instanceof ParseFailure&&error.row===rowNum&&['COLUMN_GAP','CELL_LIMIT','BOM_NOT_PREFIX','TEXT_CONTROL'].includes(error.code);
+      if(!rowLocal)throw error;
+      tableIssues.push({code:error.code,row:error.row,column:error.column});
     }
     rows.push(values);sourceTypes.push(rowTypes); if (rows.length > 1001) fail('ROW_LIMIT',rowNum);
   }
