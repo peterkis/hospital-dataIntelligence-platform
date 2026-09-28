@@ -1,0 +1,52 @@
+name: P1-06 manifest reference upgrade regression
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/p1-06-manifest-upgrade-review.yml'
+      - 'apps/governance-api/src/modules/organization-master/workspace/**'
+      - 'db/vnext/migrations/0077_workspace_manifest_reference_access.sql'
+      - 'tooling/vnext/p1-06-manifest-reference*.ts'
+      - 'tooling/vnext/review-ci-manifest-*.ts'
+      - 'tooling/vnext/review-ci-manifest-*.mjs'
+      - 'tooling/vnext/workspace-migrations.mjs'
+      - 'tooling/vnext/vitest.p1-06-*.config.ts'
+permissions:
+  contents: read
+concurrency:
+  group: p1-06-manifest-upgrade-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: synthetic-review-only
+        ports:
+          - 127.0.0.1:55434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - run: npm install --global npm@11.9.0
+      - run: npm ci
+      - name: PostgreSQL client
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Populated 0076 to 0077 exact-manifest reference access upgrade
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_MANIFEST_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-manifest-upgrade.config.ts

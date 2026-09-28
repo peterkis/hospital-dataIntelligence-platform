@@ -1,80 +1,38 @@
-import {Type,type Static,type TSchema} from 'typebox';
-import {Check} from 'typebox/value';
-import {Id,OrganizationCommandSchema,StageSchema} from '../contracts.js';
-import {CampusCommandSchema,CampusStageSchema} from '../campus/contracts.js';
-import {OperatingCommandSchema,OperatingStageSchema} from '../operating/contracts.js';
-import {ReceiveOrganizationBundleSchema} from '../import/contracts.js';
-const closed={additionalProperties:false} as const;
-// Editing has the same finite fields as a command, but may omit incomplete fields at every depth.
-function incomplete(value:unknown):unknown{
- if(Array.isArray(value))return value.map(incomplete);
- if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>key!=='required'&&key!=='minItems').map(([key,v])=>[key,incomplete(v)]));
- return value;
+export * from './contracts-core.js';
+import {draftMetadata as coreDraftMetadata,type DraftContent,type DraftMetadata as CoreDraftMetadata} from './contracts-core.js';
+
+type ManifestTargetOwner='organization-master'|'organization-master/campus'|'organization-master/operating-relation';
+export interface DraftManifestReference {
+ row:number|null;dataset:'ORG01'|'ORG02'|'ORG03';scope:'NORTH'|'SOUTH'|null;intent:'CREATE'|'REVISE'|null;
+ target:{owner:ManifestTargetOwner;id:string;version:string|null}|null;
+ subject:{id:string;version:string|null}|null;campus:{id:string;version:string|null}|null;
 }
-const partial=(value:unknown)=>Type.Unsafe<Record<string,unknown>>(incomplete(value) as TSchema);
-const Campus=Type.Enum(['NORTH','SOUTH']);
-const Attachment=Type.Object({filename:Type.String({minLength:1,maxLength:160}),bytesBase64:Type.String({minLength:4,maxLength:1398104,pattern:'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'})},closed);
-export const TransportSchema=Type.Object({contractId:Id,contractVersionId:Id},closed);
-export const DraftActionSchema=Type.Object({id:Id,expectedVersion:Type.String({pattern:'^[1-9][0-9]*$'}),requestId:Id},closed);
-export type DraftAction=Static<typeof DraftActionSchema>;
-export const SubmissionSchema=Type.Object({draftId:Id,requestId:Id,expectedVersion:Type.String(),domain:Type.Enum(['ORG01','ORG02','ORG03','BUNDLE']),inputId:Id,revisionId:Id,jobId:Id,jobRevisionId:Id},closed);
-export type Submission=Static<typeof SubmissionSchema>;
-export const DraftContentSchema=Type.Union([
- Type.Object({domain:Type.Literal('ORG01'),campus:Campus,profile:Type.Optional(Type.Enum(['CORE','FULL'])),dependencies:StageSchema.properties.dependencies,transport:Type.Optional(TransportSchema),attachment:Type.Optional(Attachment),command:partial(OrganizationCommandSchema)},closed),
- Type.Object({domain:Type.Literal('ORG02'),campus:Campus,profile:Type.Optional(Type.Enum(['CORE','FULL'])),dependencies:CampusStageSchema.properties.dependencies,transport:Type.Optional(TransportSchema),attachment:Type.Optional(Attachment),command:partial(CampusCommandSchema)},closed),
- Type.Object({domain:Type.Literal('ORG03'),campus:Campus,profile:Type.Optional(Type.Enum(['CORE','FULL'])),dependencies:OperatingStageSchema.properties.dependencies,transport:Type.Optional(TransportSchema),attachment:Type.Optional(Attachment),command:partial(OperatingCommandSchema)},closed),
- Type.Object({domain:Type.Literal('BUNDLE'),campus:Campus,metadata:partial(ReceiveOrganizationBundleSchema),bytesBase64:Type.Optional(Type.String({maxLength:1398104,pattern:'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'}))},closed)
-]);
-export type DraftContent=Static<typeof DraftContentSchema>;
-// Flatten the union so closed members include the request envelope explicitly.
-export const DraftSaveSchema=Type.Union(DraftContentSchema.anyOf.map(member=>Type.Object({...member.properties,requestId:Id,id:Type.Optional(Id),expectedVersion:Type.Optional(Type.String({pattern:'^[1-9][0-9]*$'}))},closed)));
-export type DraftSave=DraftContent & {requestId:string;id?:string;expectedVersion?:string};
-export interface DraftMetadata {transport:{contractId:string;contractVersionId:string}|null;domain:string;campus:string;target:string|null;subject:string|null;campusId:string|null;action:string|null;hasPayload:boolean;bindings:Array<{dataset:string;contractId:string;contractVersionId:string}>;scopes:string[];licenseTarget?:{id:string;version:string}|null;manifestProtected?:boolean}
-const ExactLicenseTarget=Type.Object({id:Id,version:Type.String({pattern:'^[1-9][0-9]*$'})},closed);
-// V1/V2 authenticate historical envelopes. V3 binds payload-free manifests so
-// their exact contracts and governance dimensions cannot disappear from auth.
+export interface DraftMetadata extends CoreDraftMetadata {manifestReferences?:DraftManifestReference[]}
+const record=(value:unknown):Record<string,unknown>|null=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;
+const version=(value:unknown)=>typeof value==='string'?value:null;
+const platform=(value:unknown)=>{const item=record(value);return item&&item['kind']!=='JOB_ALIAS'&&typeof item['id']==='string'?{id:item['id'],version:version(item['expectedVersion'])}:null;};
+function exactManifestReferences(rows:unknown[]):DraftManifestReference[]{
+ const result:DraftManifestReference[]=[];
+ for(const value of rows){
+  const row=record(value);if(!row)continue;
+  const dataset=['ORG01','ORG02','ORG03'].includes(String(row['dataset']))?row['dataset'] as DraftManifestReference['dataset']:null;
+  const rawTarget=record(row['target']),subject=platform(row['subject']),campus=platform(row['campus']);
+  if(!dataset&&(rawTarget?.['id']||subject||campus))throw new Error('BLOCKED_DEPENDENCY');
+  if(!dataset)continue;
+  const fallback:Record<DraftManifestReference['dataset'],ManifestTargetOwner>={ORG01:'organization-master',ORG02:'organization-master/campus',ORG03:'organization-master/operating-relation'};
+  const owner=['organization-master','organization-master/campus','organization-master/operating-relation'].includes(String(rawTarget?.['owner']))?rawTarget!['owner'] as ManifestTargetOwner:fallback[dataset];
+  const target=rawTarget&&typeof rawTarget['id']==='string'?{owner,id:rawTarget['id'],version:version(rawTarget['expectedVersion'])}:null;
+  if(!target&&!subject&&!campus)continue;
+  result.push({row:Number.isInteger(row['row'])?row['row'] as number:null,dataset,scope:['NORTH','SOUTH'].includes(String(row['governanceScope']))?row['governanceScope'] as 'NORTH'|'SOUTH':null,intent:['CREATE','REVISE'].includes(String(row['intent']))?row['intent'] as 'CREATE'|'REVISE':null,target,subject,campus});
+ }
+ return result;
+}
+// V1/V2 preserve the original authenticated projections. Current V3 additionally
+// binds every exact manifest target and ORG03 platform endpoint into draft metadata.
 export function draftMetadata(content:DraftContent,format:'V1'|'V2'|'V3'='V3'):DraftMetadata{
- const command='command' in content?content.command:{};
- const ref=(key:string)=>{const r=command[key];return r&&typeof r==='object'&&'id' in r&&typeof r.id==='string'?r.id:null;};
- const metadata=content.domain==='BUNDLE'?content.metadata:{};
- const hasPayload=content.domain==='BUNDLE'&&!!content.bytesBase64;
- const manifest=metadata['manifest'];
- const manifestRows=manifest&&typeof manifest==='object'&&'rows' in manifest&&Array.isArray(manifest.rows)?manifest.rows:[];
- // A manifest remains protected even while its workbook bytes are absent. This
- // prevents contract changes or direct API calls from turning exact targets and
- // evidence references into a generic-scope draft.
- const protectedBundle=content.domain==='BUNDLE'&&(hasPayload||(format==='V3'&&manifestRows.length>0));
- const candidates=metadata['contracts'];
- if(protectedBundle&&!Check(ReceiveOrganizationBundleSchema.properties.contracts,candidates))throw new Error('BLOCKED_DEPENDENCY');
- const bindings=protectedBundle?candidates as DraftMetadata['bindings']:[];
- const scopes=new Set<string>([content.campus]);
- for(const row of manifestRows)if(row&&typeof row==='object'&&['NORTH','SOUTH'].includes(row.governanceScope))scopes.add(row.governanceScope);
- const licenseTarget=content.domain==='ORG01'&&Check(ExactLicenseTarget,command['licenseTarget'])?{id:command['licenseTarget'].id,version:command['licenseTarget'].version}:null;
- return {transport:'transport' in content?content.transport??null:null,hasPayload,bindings,scopes:[...scopes].sort(),domain:content.domain,campus:content.campus,target:ref('target'),subject:ref('subject'),campusId:ref('campus'),action:typeof command['action']==='string'?command['action']:null,...(format!=='V1'?{licenseTarget}:{}),...(format==='V3'&&content.domain==='BUNDLE'?{manifestProtected:manifestRows.length>0}:{})};
+ const metadata=coreDraftMetadata(content,format);
+ if(format!=='V3'||content.domain!=='BUNDLE')return metadata;
+ const manifest=content.metadata['manifest'];
+ const rows=manifest&&typeof manifest==='object'&&'rows' in manifest&&Array.isArray(manifest.rows)?manifest.rows:[];
+ return {...metadata,manifestReferences:exactManifestReferences(rows)};
 }
-
-export const ApplicationAccessSchema=Type.Object({canRead:Type.Boolean(),canWrite:Type.Boolean(),canReview:Type.Boolean(),canPlan:Type.Boolean()},closed);
-export type ApplicationAccess=Static<typeof ApplicationAccessSchema>;
-export const ApplicationSchema=Type.Object({inputId:Id,domain:Type.Enum(['ORG01','ORG02','ORG03']),kind:Type.Union([Type.Enum(['RELATION','SCOPE']),Type.Null()]),campus:Campus,maker:Type.String(),state:Type.Enum(['STAGED','CANDIDATE','APPROVED','COMMITTED','WITHDRAWN']),requestId:Type.Union([Id,Type.Null()]),candidateId:Type.Union([Id,Type.Null()]),approvedBy:Type.Union([Type.String(),Type.Null()]),recordedAt:Type.String(),access:ApplicationAccessSchema},closed);
-export type ApplicationSummary=Static<typeof ApplicationSchema>;
-export const WorkspaceBundleSchema=Type.Object({jobId:Id,revisionId:Id,currentRevision:Type.Boolean(),maker:Type.String(),campus:Campus,state:Type.Enum(['STAGED','VERIFIED','CANDIDATE','APPROVED','COMMITTED']),requestId:Type.Union([Id,Type.Null()]),candidateId:Type.Union([Id,Type.Null()]),approvedBy:Type.Union([Type.String(),Type.Null()]),access:Type.Object({...ApplicationAccessSchema.properties,canPreauthorize:Type.Boolean()},closed)},closed);
-export type WorkspaceBundle=Static<typeof WorkspaceBundleSchema>;
-
-export const MaterialReviewSchema=Type.Object({domain:Type.Enum(['ORG01','ORG02','ORG03']),candidateId:Id},closed);
-export type MaterialReview=Static<typeof MaterialReviewSchema>;
-
-export const PreflightSchema=Type.Object({domain:Type.Enum(['ORG01','ORG02','ORG03']),inputId:Id},closed);
-export type PreflightInput=Static<typeof PreflightSchema>;
-
-export const ObjectKindSchema=Type.Enum(['ORGANIZATION','LICENSE','CAMPUS','RELATION','SCOPE']);
-export const ObjectContextInputSchema=Type.Object({kind:ObjectKindSchema,id:Id},closed);
-export const PrepareRevisionSchema=Type.Object({...ObjectContextInputSchema.properties,version:Type.String({pattern:'^[1-9][0-9]*$'})},closed);
-export const ObjectContextSchema=Type.Object({kind:ObjectKindSchema,id:Id,campus:Campus,head:Type.String(),subjectId:Type.Union([Id,Type.Null()]),campusId:Type.Union([Id,Type.Null()]),subjectHead:Type.Union([Type.String(),Type.Null()]),canWrite:Type.Boolean(),canClose:Type.Boolean(),canActivate:Type.Boolean(),terminal:Type.Boolean()},closed);
-export type ObjectContext=Static<typeof ObjectContextSchema>;
-export type ObjectContextInput=Static<typeof ObjectContextInputSchema>;
-export type PrepareRevision=Static<typeof PrepareRevisionSchema>;
-
-export const ApplicationListSchema=Type.Object({inputId:Type.Optional(Id)},closed);
-export const BundleListSchema=Type.Object({jobId:Type.Optional(Id),revisionId:Type.Optional(Id)},closed);
-export type ApplicationList=Static<typeof ApplicationListSchema>;
-export type BundleList=Static<typeof BundleListSchema>;
