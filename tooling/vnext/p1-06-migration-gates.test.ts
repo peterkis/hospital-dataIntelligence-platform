@@ -94,7 +94,7 @@ test('a release missing the security migration cannot enable the workspace',asyn
  await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');expect(state.events).toEqual(['inspect']);
 });
 test('unexpected future migration requires an explicit shared release-boundary update',()=>{
- expect(()=>workspaceReleaseFiles([...files,{id:'0083_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
+  expect(()=>workspaceReleaseFiles([...files,{id:'0085_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
 });
 
 for(const prefix of [70,71,72,73,74,75,76,77,78,79,80,81])test(`deployment upgrades supported prefix ${prefix} to the entire release`,async()=>{
@@ -133,7 +133,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 });
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
- expect(files.at(-1)?.id).toBe('0082_campus_opening_retirement_boundary');
+  expect(files.at(-1)?.id).toBe('0084_department_core');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{
@@ -153,4 +153,10 @@ test('0082 binds planned opening time to the scheduled retirement boundary',()=>
  const migration=files.find(file=>file.id==='0082_campus_opening_retirement_boundary')!.sql;
  expect(migration).toContain("p_command->>'plannedOpeningAt'");
  expect(migration).toContain('>=ce.valid_from');
+});
+
+test('0083 repairs the immutable 0079 suspension subtraction before department release',()=>{
+ const migration=files.find(file=>file.id==='0083_campus_retirement_history_repair')!.sql;
+ expect(migration).toContain('CAMPUS_HISTORY_REPAIR_BASELINE_MISMATCH');
+ expect(migration).toContain("n.action IN ('CREATE','ACTIVATE','SUSPEND','RESUME','RETIRE')");
 });
