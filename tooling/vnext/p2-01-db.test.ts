@@ -97,15 +97,17 @@ test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=
 });
 
 test('ORG04 XLSX keeps valid entries across an omitted physical worksheet row',async()=>{
- const first=f.entry(),gap=f.entry(),second=f.entry();
- const files=Object.fromEntries(unzip(organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>first.row[k]),ORG04_FIELDS.map(k=>gap.row[k]),ORG04_FIELDS.map(k=>second.row[k])]}),true));
+ const first=f.entry(),gap=f.entry(),second=f.entry(),third=f.entry();
+ const files=Object.fromEntries(unzip(organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>first.row[k]),ORG04_FIELDS.map(k=>gap.row[k]),ORG04_FIELDS.map(k=>second.row[k]),ORG04_FIELDS.map(k=>third.row[k])]}),true));
  files['xl/worksheets/sheet9.xml']=files['xl/worksheets/sheet9.xml']!.replace(/<row r="3">.*?<\/row>/u,'');
  const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_ROW_GAP',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[
   {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
   {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
+  {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
  ]},zipText(files));
  expect(result.input).not.toBeNull();expect(result.issues).toContainEqual({code:'ROW_GAP',row:3,column:0});
- const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(2);expect(read.entries.map(entry=>entry.sourceRow)).toEqual([2,4]);
+ const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(3);expect(read.entries.map(entry=>entry.sourceRow)).toEqual([2,4,5]);
+ expect((await owner.validate('maker',{inputId:result.input!.inputId})).issues).toContainEqual({row:3,field:'',code:'ROW_GAP',status:'FAIL'});
 });
 
 test('metadata staging derives source rows instead of accepting caller provenance',async()=>{

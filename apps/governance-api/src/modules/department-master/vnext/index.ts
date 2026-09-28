@@ -140,7 +140,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
      const parserIssuesByRow=new Map<number,DepartmentIssue[]>();
      for(const parsedIssue of parsed.issues){
       const cell=parsed.cells.find(candidate=>candidate.sourceRow===parsedIssue.row&&(!parsedIssue.column||candidate.column===parsedIssue.column));
-      const failure:DepartmentIssue={row:cell?.row??(parsedIssue.code==='ROW_GAP'?parsedIssue.row:0),field:cell?.field??'',code:parsedIssue.code,status:'FAIL'};
+      const failure:DepartmentIssue={row:cell?.row??(parsedIssue.code==='ROW_GAP'?parsedIssue.row:0),field:cell?.field??'',code:parsedIssue.code,status:'FAIL',sourceRow:parsedIssue.row};
       if(failure.row===0||parsedIssue.code==='ROW_GAP'&&!cell)failures.push(failure);else parserIssuesByRow.set(failure.row,[...(parserIssuesByRow.get(failure.row)??[]),failure]);
      }
      if(parsed.rows.length!==input.entries.length)failures.push({row:0,field:'',code:'MANIFEST_ROW_MISMATCH',status:'FAIL'});
@@ -156,10 +156,10 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
       }
      }
      if(failures.length)await saveValidation(s,actor,j,input.campus,received.artifact.artifactId,parsed,failures);
-     if(validEntries.length===0||failures.some(f=>f.row===0))return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:cell?.sourceRow??f.row,column:cell?.column??0};}),input:null};
+     if(validEntries.length===0||failures.some(f=>f.row===0))return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:f.sourceRow??cell?.sourceRow??f.row,column:f.code==='ROW_GAP'?0:cell?.column??0};}),input:null};
      const staged:StoredStageInput={requestId:input.requestId,jobId:j.id,revisionId:received.job.revisionId,campus:input.campus,profile:j.profile,timePolicy:'LOCAL',entries:validEntries,sourceArtifactId:received.artifact.artifactId};
      const result=await mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...staged,...seal('DEPARTMENT_INPUT_V1',staged)});
-     return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:cell?.sourceRow??f.row,column:cell?.column??0};}),input:result};
+     return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:f.sourceRow??cell?.sourceRow??f.row,column:f.code==='ROW_GAP'?0:cell?.column??0};}),input:result};
     }finally{content.fill(0);}
    });
   },
