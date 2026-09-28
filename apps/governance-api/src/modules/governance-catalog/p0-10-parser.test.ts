@@ -20,6 +20,20 @@ test('high XLSX rejection coordinates survive protected parser provenance verifi
     expect(verified.issues[0]).toEqual(result.issues[0]);
   }
 });
+test('Department protected parser provenance accepts an in-range physical row gap',()=>{
+ const fields=[{code:'first',type:'text'},{code:'middle',type:'text'},{code:'last',type:'text'}];
+ const files=Object.fromEntries(unzip(textWorkbook([['first','middle','last'],['0012','ROW2','DEMO'],['0013','ROW3','MISSING'],['0014','ROW4','NEXT']])));
+ files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('name="Data"','name="ORG04"');
+ files['xl/worksheets/sheet1.xml']=files['xl/worksheets/sheet1.xml']!.replace(/<row r="3">.*?<\/row>/u,'');
+ const result=parseBytes(zipText(files),'XLSX',fields,'STRICT_DEPARTMENT_V1');
+ assert.equal(result.structuralStatus,'PARSED');
+ assert.deepEqual(result.issues.find(issue=>issue.code==='ROW_GAP'),{code:'ROW_GAP',row:3,column:0});
+ const verified=verifyParsedPayload(Buffer.from(JSON.stringify({sourceArtifactId:'DEMO',result})),{sourceArtifactId:'DEMO',policy:'STRICT_DEPARTMENT_V1',format:'XLSX',status:'PARSED'},fields);
+ assert.deepEqual(verified.rows.map(row=>({...row})),result.rows.map(row=>({...row})));
+ const outside=JSON.parse(JSON.stringify(result));
+ outside.issues=outside.issues.map((issue:{code:string;row:number;column:number})=>issue.code==='ROW_GAP'?{...issue,row:5}:issue);
+ assert.throws(()=>verifyParsedPayload(Buffer.from(JSON.stringify({sourceArtifactId:'DEMO',result:outside})),{sourceArtifactId:'DEMO',policy:'STRICT_DEPARTMENT_V1',format:'XLSX',status:'PARSED'},fields),/PARSER_RESULT_REQUIRED/);
+});
 test('an extra worksheet is identified instead of blaming the valid Data sheet',()=>{
   const files=Object.fromEntries(unzip(textWorkbook([['code'],['DEMO']])));
   files['xl/workbook.xml']=files['xl/workbook.xml']!.replace('</sheets>','<sheet name="Secret" sheetId="2" r:id="rId2"/></sheets>');
