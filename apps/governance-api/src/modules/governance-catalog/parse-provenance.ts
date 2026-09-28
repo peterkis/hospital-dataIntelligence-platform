@@ -16,11 +16,11 @@ const IssueSchema=Type.Object({code:Type.String({pattern:'^[A-Z_]{1,64}$'}),row:
 const ResultSchema=Type.Object({
  policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2'),Type.Literal('STRICT_DEPARTMENT_V1')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
  manifest:ManifestSchema,rows:Type.Array(RowSchema,{maxItems:1000}),
- cells:Type.Array(Type.Object({row:Int,sourceRow:Int,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
+ cells:Type.Array(Type.Object({row:Int,sourceRow:IssueRow,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
  issues:Type.Array(IssueSchema,{maxItems:100000}),
 },{additionalProperties:false});
 const PayloadSchema=Type.Object({sourceArtifactId:Type.String(),result:ResultSchema},{additionalProperties:false});
-const BundleCellSchema=Type.Object({row:Int,sourceRow:Int,column:Int,field:Text,value:Text,sourceType:Type.Union([Type.Literal('inlineStr'),Type.Literal('s')]),sheet:Sheet},{additionalProperties:false});
+const BundleCellSchema=Type.Object({row:Int,sourceRow:IssueRow,column:Int,field:Text,value:Text,sourceType:Type.Union([Type.Literal('inlineStr'),Type.Literal('s')]),sheet:Sheet},{additionalProperties:false});
 const BundleSheetSchema=Type.Object({rows:Type.Array(RowSchema,{maxItems:1000}),cells:Type.Array(BundleCellSchema,{maxItems:100000})},{additionalProperties:false});
 const BundleResultSchema=Type.Object({
  policy:Type.Literal('STRICT_ORG_BUNDLE_V1'),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),manifest:ManifestSchema,
