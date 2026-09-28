@@ -289,7 +289,11 @@
     "vnext:p1-05:deploy": "node --import tsx tooling/vnext/p1-05-deploy.mjs",
     "vnext:p1-05:unit": "vitest run --config tooling/vnext/vitest.p1-05-unit.config.ts",
     "vnext:p1-05:typecheck": "tsc -p tooling/vnext/tsconfig.p1-05.json",
-    "vnext:p1-05:validate": "node --import tsx tooling/vnext/p1-05-validate.mjs"
+    "vnext:p1-05:validate": "node --import tsx tooling/vnext/p1-05-validate.mjs",
+    "vnext:p1-06:validate": "node --import tsx tooling/vnext/p1-06-validate.mjs",
+    "vnext:p1-06:unit": "vitest run --config tooling/vnext/vitest.p1-06-unit.config.ts",
+    "vnext:p1-06:typecheck": "tsc -p tooling/vnext/tsconfig.p1-06.json",
+    "vnext:p1-06:browser": "node --import tsx tooling/vnext/p1-06-browser.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

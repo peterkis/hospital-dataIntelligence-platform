@@ -1,0 +1,109 @@
+name: P1-06 review regression
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/p1-06-review.yml'
+      - 'apps/admin-web/src/vnext/**'
+      - 'apps/governance-api/**'
+      - 'db/vnext/**'
+      - 'tooling/vnext/**'
+      - 'packages/**'
+      - 'package*.json'
+permissions:
+  contents: read
+concurrency:
+  group: p1-06-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  workspace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: synthetic-review-only
+        ports:
+          - 127.0.0.1:55434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - run: npm install --global npm@11.9.0
+      - id: install
+        run: npm ci
+      - name: Record exact candidate
+        run: |
+          mkdir -p .runtime/vnext/review-results
+          git rev-parse HEAD | tee .runtime/vnext/review-results/commit.txt
+          git archive --format=tar HEAD | gzip > .runtime/vnext/review-results/source.tar.gz
+      - name: Workspace unit regressions
+        run: npm run vnext:p1-06:unit -- --reporter=json --outputFile=.runtime/vnext/review-results/unit.json
+      - name: Workspace typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run vnext:p1-06:typecheck
+      - name: Admin web typecheck and build
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm --workspace packages/generated-api-client run build && npm --workspace apps/admin-web run typecheck && npm --workspace apps/admin-web run build:vnext
+      - name: PostgreSQL client
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Fresh PostgreSQL Owner and HTTP regressions
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts --reporter=json --outputFile=.runtime/vnext/review-results/fresh.json
+      - name: Real browser submission and upload races
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_BROWSER_EXECUTABLE: google-chrome
+        run: |
+          command -v google-chrome
+          google-chrome --version
+          npx vitest run --config tooling/vnext/vitest.p1-06-browser-ci.config.ts --reporter=json --outputFile=.runtime/vnext/review-results/browser.json
+      - name: Populated 0071 to 0072 upgrade and regression
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-review-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0071.json
+      - name: Populated 0072 to 0073 exact-license upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_LICENSE_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-exact-transport-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0072.json
+      - name: Populated 0073 to 0074 partial-endpoint authorization upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_ENDPOINT_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-partial-endpoint-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0073.json
+      - name: Populated 0074 to 0076 previous-draft and retained-manifest access upgrades
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+          HDIP_REVIEW_CI_PREVIOUS_UPGRADE: '1'
+        run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-previous-access-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0074.json
+      - name: Retain exact-head regression evidence
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-06-review-${{ github.event.pull_request.head.sha }}
+          path: .runtime/vnext/review-results/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error

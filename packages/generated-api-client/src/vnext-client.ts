@@ -45,7 +45,7 @@ export function createCampusClient(baseUrl:string,actor:string){
   getCampusAsOf:(body:operations['getCampusAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/query',{body}),
   list:(body:operations['listCampuses']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/list',{body}),
   version:(body:operations['getCampusVersion']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/versions/query',{body}),
-  history:(id:string)=>client.POST('/api/vnext/campuses/history',{body:{id}}),
+  history:(id:string,asOf?:string)=>client.POST('/api/vnext/campuses/history',{body:{id,...(asOf?{asOf}:{})}}),
   diff:(body:operations['compareCampusVersions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/campuses/diff',{body}),
   restrictedInput:(id:string)=>client.POST('/api/vnext/campuses/restricted-input',{body:{id}}),
  };
@@ -99,5 +99,25 @@ export function createOrganizationBundleClient(baseUrl:string,actor:string){
   approve:(body:operations['approveOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/approve',{body}),
   apply:(body:operations['applyOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/apply',{body}),
   resume:(body:operations['resumeOrganizationBundle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/import/organization-bundles/resume',{body}),
+ };
+}
+
+export function createOrganizationWorkspaceClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  listBundles:(body:operations['listWorkspaceOrganizationBundles']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/organization-workspace/bundles/list',{body}),
+  preflight:(body:operations['preflightOrganizationApplication']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/applications/preflight',{body}),
+  objectContext:(body:operations['organizationObjectContext']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/context',{body}),
+  prepareRevision:(body:operations['prepareOrganizationRevision']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/references/revision-source',{body}),
+  reviewMaterials:(body:operations['readOrganizationCandidateMaterials']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/applications/materials',{body}),
+  listApplications:(body:operations['listOrganizationApplications']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/organization-workspace/applications/list',{body}),
+  applicationCapabilities:(inputId:string)=>client.POST('/api/vnext/organization-workspace/applications/access',{body:{inputId}}),
+  submitDraft:(body:operations['submitOrganizationDraft']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/drafts/submit',{body}),
+  previewWorkbook:(body:operations['previewOrganizationWorkbook']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/workbook/preview',{body}),
+  capabilities:(body:operations['organizationWorkspaceCapabilities']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/capabilities',{body}),
+  saveDraft:(body:operations['saveOrganizationDraft']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/drafts/save',{body}),
+  readDraft:(id:string)=>client.POST('/api/vnext/organization-workspace/drafts/read',{body:{id}}),
+  listDrafts:()=>client.POST('/api/vnext/organization-workspace/drafts/list',{body:{}}),
+  discardDraft:(body:operations['discardOrganizationDraft']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-workspace/drafts/discard',{body}),
  };
 }

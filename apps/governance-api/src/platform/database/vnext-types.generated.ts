@@ -529,6 +529,20 @@ export interface OrganizationMasterWithdrawal {
   request_id: string;
 }
 
+export interface OrganizationMasterWorkspaceDraftRevision {
+  digest: string;
+  envelope: Json;
+  id: string;
+  identity_code: string;
+  maker: string;
+  metadata: Json;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+  state: string;
+  submission: Json | null;
+}
+
 export interface VnextControlActor {
   active: boolean;
   code: string;
@@ -689,6 +703,7 @@ export interface DB {
   "organization_master.verification": OrganizationMasterVerification;
   "organization_master.version": OrganizationMasterVersion;
   "organization_master.withdrawal": OrganizationMasterWithdrawal;
+  "organization_master.workspace_draft_revision": OrganizationMasterWorkspaceDraftRevision;
   "vnext_control.actor": VnextControlActor;
   "vnext_control.actor_grant": VnextControlActorGrant;
   "vnext_control.audit": VnextControlAudit;

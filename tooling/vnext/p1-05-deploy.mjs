@@ -12,7 +12,7 @@ import {organizationBundleFixture} from './organization-bundle-fixture.ts';
 import {organizationBundleHttpSmoke,rejectThirdRelationOverHttp} from './organization-bundle-http-smoke.ts';
 
 if(process.argv.length!==2)throw new Error('CLOSED_COMMAND_REQUIRED');
-const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();assert.equal(files.length,69);const prefix=checkPrefix(files,before.ledger);assert.ok(prefix>=64&&prefix<=69);
+const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();assert.equal(files.length,70);const prefix=checkPrefix(files,before.ledger);assert.ok(prefix>=64&&prefix<=70);
 const directory='.runtime/vnext/p1-05';mkdirSync(directory,{recursive:true});const run=directory+'/deployment-'+Date.now();
 const tables=predecessorTables(before.tables),addedColumns=prefix<65?{'governance_catalog.import_contract':['bundle_org']}:{},digest=predecessorDigest(receipt,tables,addedColumns);
 const keyDigest=()=>createHash('sha256').update(readFileSync('.runtime/vnext/p1-01/keys.secret.json')).digest('hex'),originalKeyDigest=keyDigest();
@@ -30,7 +30,7 @@ const counts=()=>JSON.parse(peer(receipt.name,`SELECT jsonb_build_array(${domain
 try{
  // Reuse the already adopted P1-04 service catalog so prior relations do not become stale as a fixture side effect.
  fixture=await organizationBundleFixture(receipt,connection,provider,catalog,true);
- const countBefore=counts(),smoke=await organizationBundleHttpSmoke(owner,fixture,event=>appendFileSync(run+'.events.jsonl',JSON.stringify(event)+'\n'));
+ const countBefore=counts(),smoke=await organizationBundleHttpSmoke(owner,fixture,event=>appendFileSync(run+'.events.jsonl',JSON.stringify(event)+'\n'),catalog);
  const countAfter=counts();assert.equal(countAfter[0],countBefore[0]+1);assert.equal(countAfter[6],countBefore[6]+3);
  const rejected=await rejectThirdRelationOverHttp(owner,fixture);assert.deepEqual(counts(),countAfter);appendFileSync(run+'.events.jsonl',JSON.stringify({rejected,domainAndConvertedGrantCountsUnchanged:true})+'\n');
  const retained=rowHashes();for(const table of tables){const existing=new Set(retained[table]);assert.ok(oldRows[table].every(hash=>existing.has(hash)),'Previous rows changed: '+table);}

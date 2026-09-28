@@ -7,12 +7,12 @@ import {createValidationOwnerSession,dropValidationOwnerSession} from './validat
 import {migrate,migrationFiles,inspect,root,resolveTarget,peer} from './lineage.mjs';
 import {seed} from './catalog-seed.mjs';
 import {grantOrganization} from './p1-02-validate.mjs';
-const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
-const prefix=64,addedColumns={'governance_catalog.import_contract':['bundle_org']};
+const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade','--upgrade-69'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
+const prefix=args.includes('--upgrade-69')?69:64,addedColumns=prefix<65?{'governance_catalog.import_contract':['bundle_org']}:{};
 const owned=createTemporary('P1-05');let owner;
 try{
  let before,tables,digest;
- if(args.includes('--upgrade')){
+ if(args.includes('--upgrade')||args.includes('--upgrade-69')){
   await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
   owner??=await createValidationOwnerSession(owned.receipt);grantOrganization(owned.receipt,owner.receipt.role);
   const seeded=spawnSync(process.execPath,['--import','tsx','tooling/vnext/p1-02-prefix.ts'],{cwd:root,env:{...process.env,VNEXT_VALIDATION_OWNER_URL:owner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_UPGRADE_PREFIX:String(prefix)},stdio:'inherit',windowsHide:true});assert.equal(seeded.status,0);
