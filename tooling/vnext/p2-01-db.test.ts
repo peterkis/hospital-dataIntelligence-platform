@@ -75,6 +75,23 @@ test('ORG04 XLSX preserves all source fields and explicitly normalizes +08:00 th
  const applyRequestId=randomUUID(),normalized=await owner.plan('maker',{inputId:staged.inputId,requestId:applyRequestId});await owner.readApplyCandidate('reviewer',{candidateId:normalized.candidateId});await owner.approveApplyUnit('reviewer',normalized);const applied=await owner.applyUnit('maker',{candidateId:normalized.candidateId,requestId:applyRequestId});expect(applied.status).toBe('COMMITTED');if(applied.status!=='COMMITTED')throw new Error();
  expect((await owner.read('maker',{id:applied.facts[0]!.id,businessAt:'2026-02-01T00:00:00'})).version?.facts.sourceRecordedAt).toBe('2026-01-02T00:00:00.000000');
 });
+
+test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=>{
+ const good=f.entry();for(const key of ['valid_from','recorded_at'] as const)good.row[key]+='+08:00';
+ const invalid=structuredClone(good);invalid.row.org_name='';
+ const result=await owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),campus:'NORTH',retentionSeconds:3600,job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_DEPARTMENT_MIXED_ROWS',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_DEPARTMENT_V1'}},entries:[
+  {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
+  {intent:'CREATE',target:null,origin:'NEW',evidenceId:f.artifact.artifactId},
+ ]},organizationWorkbook({ORG04:[ORG04_FIELDS,ORG04_FIELDS.map(k=>good.row[k]),ORG04_FIELDS.map(k=>invalid.row[k])]}));
+ expect(result.input).not.toBeNull();expect(result.issues).toContainEqual(expect.objectContaining({code:'FIELD_INVALID',row:3}));
+ const read=await owner.readInput('maker',{inputId:result.input!.inputId});expect(read.entries).toHaveLength(1);expect(read.entries[0]!.sourceRow).toBe(2);expect(read.entries[0]!.row).toEqual(good.row);
+});
+
+test('metadata staging derives source rows instead of accepting caller provenance',async()=>{
+ const input=await f.input();
+ await expect(owner.stage('maker',{...input,entries:[{...f.entry(),sourceRow:999}]} as never)).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+});
+
 test('AC01/02/05 same-name departments remain distinct and rename preserves identity and microsecond B/R history',async()=>{
  const a=f.entry(),b=f.entry();const [one,two]=await apply([a,b]);expect(one!.id).not.toBe(two!.id);
  const original=await owner.exact('maker',{id:one!.id,version:'1'});

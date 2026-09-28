@@ -1,6 +1,6 @@
 import {Type,type Static,type TSchema} from 'typebox';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
-import {DepartmentStageSchema as StageSchema,DepartmentVerifySchema as VerifySchema,DepartmentPlanSchema as PlanSchema,DepartmentReadSchema as ReadSchema,DepartmentCoverageSchema as CoverageSchema,DepartmentReceiveSchema as ReceiveSchema,DepartmentEntrySchema as EntrySchema,DepartmentId as Id,type openDepartment} from '../../modules/department-master/index.js';
+import {DepartmentStageSchema as StageSchema,DepartmentStoredStageSchema as StoredStageSchema,DepartmentVerifySchema as VerifySchema,DepartmentPlanSchema as PlanSchema,DepartmentReadSchema as ReadSchema,DepartmentCoverageSchema as CoverageSchema,DepartmentReceiveSchema as ReceiveSchema,DepartmentEntrySchema as EntrySchema,DepartmentId as Id,type openDepartment} from '../../modules/department-master/index.js';
 import {ApplyUnitSchema,ApproveApplyUnitSchema} from '../../modules/governance-catalog/index.js';
 
 const closed={additionalProperties:false} as const,Text=Type.String(),Nullable=Type.Union([Text,Type.Null()]);
@@ -21,7 +21,7 @@ export function registerDepartmentRoutes(app:FastifyInstance,context?:Department
   app.post<{Body:Static<S>}>('/api/vnext/departments/'+path,{schema:{operationId,body,response:{200:response,...errors}},...(path==='files'?{bodyLimit:1500000}:{})},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handler(context.owner,context.actor(r),r.body as Static<S>);});
  };
  route('inputs','stageDepartment',StageSchema,Staged,(o,a,b)=>o.stage(a,b));
- route('inputs/read','readDepartmentInput',Input,StageSchema,(o,a,b)=>o.readInput(a,b));
+ route('inputs/read','readDepartmentInput',Input,StoredStageSchema,(o,a,b)=>o.readInput(a,b));
  route('preview','previewDepartment',Input,Type.Object({entries:Type.Array(EntrySchema),heads:Type.Array(History),verification:Type.Union([VerifySchema,Type.Null()]),issues:Type.Array(Issue)},closed),(o,a,b)=>o.preview(a,b));
  route('validate','validateDepartment',Input,Type.Object({inputId:Id,digest:Text,validationRunId:Type.Union([Id,Type.Null()]),commandCount:Type.Integer(),decision:Type.Enum(['PASS','FAIL','BLOCKED']),issues:Type.Array(Issue)},closed),(o,a,b)=>o.validate(a,b));
  route('verify','verifyDepartmentEvidence',VerifySchema,Type.Object({verificationId:Id},closed),(o,a,b)=>o.verify(a,b));

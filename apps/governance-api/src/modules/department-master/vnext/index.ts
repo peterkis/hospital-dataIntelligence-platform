@@ -5,7 +5,7 @@ import type {DB} from '../../../platform/database/vnext-types.generated.js';
 import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,type ApplyOwnerPort,type OwnerFact,type KeyProviderPort,type ImportContractItem} from '../../governance-catalog/index.js';
 import type {ImportJob} from '../../governance-catalog/index.js';
 import {localTime,covered,subtract} from '../../organization-master/index.js';
-import {StageSchema,VerifySchema,PlanSchema,ReadSchema,CoverageSchema,ReceiveSchema,RowSchema,Id,check,normalizeEntry,validateORG04,ORG04_FIELDS,type StageInput,type VerifyInput,type ReceiveInput} from './contracts.js';
+import {StageSchema,StoredStageSchema,VerifySchema,PlanSchema,ReadSchema,CoverageSchema,ReceiveSchema,RowSchema,Id,check,normalizeEntry,validateORG04,ORG04_FIELDS,type StageInput,type StoredStageInput,type VerifyInput,type ReceiveInput} from './contracts.js';
 import {fileIntake,boundedParse} from '../../governance-catalog/index.js';
 import {protectedArtifacts} from '../../governance-catalog/index.js';
 import {recordOwnerFileValidation} from '../../governance-catalog/index.js';
@@ -56,7 +56,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   return c;
  };
  const inspectInput=async(s:Scope,actor:string,id:string)=>{
-  const r=await record(s,actor,id),input=unseal<StageInput>('DEPARTMENT_INPUT_V1',r,StageSchema),j=await inputJob(s,actor,id);
+  const r=await record(s,actor,id),input=unseal<StoredStageInput>('DEPARTMENT_INPUT_V1',r,StoredStageSchema),j=await inputJob(s,actor,id);
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');
   const c=await policy(s,actor,input,j),verification=r.verification?unseal<VerifyInput>('DEPARTMENT_VERIFICATION_V1',r.verification,VerifySchema):null;
   const issues:DepartmentIssue[]=[],commands:PreparedDepartmentCommand[]=[],heads:DepartmentHistory[]=[],materials:unknown[]=[];
@@ -96,7 +96,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   const evaluation:ValidationEvaluation={decision,issues:issues.map(i=>({rule:'ORG04_'+i.code,layer:2,row:parsed.cells.find(c=>c.row===i.row)?.sourceRow??i.row,field:i.field,status:i.status==='FAIL'?'FAIL':'UNKNOWN',code:i.code})),layers:[{layer:1,status:parsed.structuralStatus==='PARSED'?'PASS':'FAIL'},{layer:2,status:decision==='PASS'?'PASS':decision==='FAIL'?'FAIL':'UNKNOWN'}],evidenceRequirements:[],dependencies:[],interpretationPolicy:'EXACT_TEXT_V1'};
   return recordOwnerFileValidation(s,provider,actor,{jobId:j.id,revisionId:j.currentRevisionId,sourceArtifactId,campus,requestId,parseRequestId:randomUUID(),outputRequestId:randomUUID(),contractVersionId:j.contract.versionId,ruleVersion:j.contract.definition.ruleVersion,parserPolicy:'STRICT_DEPARTMENT_V1',structuralStatus:parsed.structuralStatus,parsed:{sourceArtifactId,result:parsed},evaluation});
  };
- const stage=async(actor:string,raw:StageInput)=>{check(StageSchema,raw);const input=structuredClone(raw);return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(input.sourceArtifactId||j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('DEPARTMENT_INPUT_V1',input)});});};
+ const stage=async(actor:string,raw:StageInput)=>{check(StageSchema,raw);const input:StoredStageInput={...structuredClone(raw),entries:raw.entries.map((entry,index)=>({...entry,sourceRow:index+1}))};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(input.sourceArtifactId||j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('DEPARTMENT_INPUT_V1',input)});});};
  const history=async(actor:string,id:string,recordAsOf?:string)=>{check(Id,id);const at=recordAsOf===undefined?null:localTime(recordAsOf);return root(async s=>{const h=await snapshot(s,actor,id),versions=h.versions.filter(v=>at===null||stamp(v.recorded_at)<=at);if(versions.length===0)throw new Error('NOT_FOUND');return {...h,versions};});};
  return {
   stage,
@@ -114,22 +114,29 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
      if(parsed.structuralStatus==='REJECTED'){await saveValidation(s,actor,j,input.campus,received.artifact.artifactId,parsed,parsed.issues.map(i=>({row:i.row,field:'',code:i.code,status:'FAIL'})));return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:parsed.issues,input:null};}
      const failures:DepartmentIssue[]=[];
      if(parsed.rows.length!==input.entries.length)failures.push({row:0,field:'',code:'MANIFEST_ROW_MISMATCH',status:'FAIL'});
+     const validEntries:StoredStageInput['entries'] = [];
      for(const [i,row] of parsed.rows.entries()){
-      for(const field of ORG04_FIELDS){try{check(RowSchema.properties[field],row[field]);}catch{failures.push({row:i+1,field,code:'FIELD_INVALID',status:'FAIL'});}}
-      try{validateORG04(row);}catch{if(!failures.some(f=>f.row===i+1))failures.push({row:i+1,field:'',code:'CLOSED_INPUT_REQUIRED',status:'FAIL'});}
+      const logicalRow=i+1,rowFailures:DepartmentIssue[]=[];
+      for(const field of ORG04_FIELDS){try{check(RowSchema.properties[field],row[field]);}catch{rowFailures.push({row:logicalRow,field,code:'FIELD_INVALID',status:'FAIL'});}}
+      try{validateORG04(row);}catch{if(rowFailures.length===0)rowFailures.push({row:logicalRow,field:'',code:'CLOSED_INPUT_REQUIRED',status:'FAIL'});}
+      failures.push(...rowFailures);
+      if(rowFailures.length===0){
+       const meta=input.entries[i];
+       if(meta)validEntries.push({...meta,sourceRow:parsed.cells.find(cell=>cell.row===logicalRow)?.sourceRow??logicalRow,row:validateORG04(row)});
+      }
      }
-     if(failures.length){await saveValidation(s,actor,j,input.campus,received.artifact.artifactId,parsed,failures);return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:cell?.sourceRow??f.row,column:cell?.column??0};}),input:null};}
-     const entries=input.entries.map((meta,index)=>({...meta,sourceRow:parsed.cells.find(cell=>cell.row===index+1)?.sourceRow??index+1,row:validateORG04(parsed.rows[index])}));
-     const staged:StageInput={requestId:input.requestId,jobId:j.id,revisionId:received.job.revisionId,campus:input.campus,profile:j.profile,timePolicy:'SOURCE_OFFSET_08',entries,sourceArtifactId:received.artifact.artifactId};
+     if(failures.length)await saveValidation(s,actor,j,input.campus,received.artifact.artifactId,parsed,failures);
+     if(validEntries.length===0||failures.some(f=>f.row===0))return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:cell?.sourceRow??f.row,column:cell?.column??0};}),input:null};
+     const staged:StoredStageInput={requestId:input.requestId,jobId:j.id,revisionId:received.job.revisionId,campus:input.campus,profile:j.profile,timePolicy:'SOURCE_OFFSET_08',entries:validEntries,sourceArtifactId:received.artifact.artifactId};
      const result=await mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...staged,...seal('DEPARTMENT_INPUT_V1',staged)});
-     return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:parsed.issues,input:result};
+     return {jobId:j.id,revisionId:received.job.revisionId,sourceArtifactId:received.artifact.artifactId,structuralStatus:parsed.structuralStatus,issues:failures.map(f=>{const cell=parsed.cells.find(c=>c.row===f.row&&(!f.field||c.field===f.field));return {code:f.code,row:cell?.sourceRow??f.row,column:cell?.column??0};}),input:result};
     }finally{content.fill(0);}
    });
   },
-  async readInput(actor:string,input:{inputId:string}){check(Id,input.inputId);return root(async s=>unseal<StageInput>('DEPARTMENT_INPUT_V1',await record(s,actor,input.inputId),StageSchema));},
+  async readInput(actor:string,input:{inputId:string}){check(Id,input.inputId);return root(async s=>unseal<StoredStageInput>('DEPARTMENT_INPUT_V1',await record(s,actor,input.inputId),StoredStageSchema));},
   async preview(actor:string,input:{inputId:string}){check(Id,input.inputId);return root(async s=>{const v=await inspectInput(s,actor,input.inputId);return {entries:v.input.entries,heads:v.heads,verification:v.verification,issues:v.issues};});},
   async validate(actor:string,input:{inputId:string}){check(Id,input.inputId);return root(async s=>{const v=await inspectInput(s,actor,input.inputId);let validationRunId:string|null=null;if(v.input.sourceArtifactId&&await authorize(s,actor,v.r.campus,'READ')===v.r.identity_code){const j=await job(s,actor,v.r.job_id),store=protectedArtifacts(s,provider);const bytes=await store.authorizeSensitiveRead(actor,{scope:'SYNTHETIC',campus:v.r.campus,purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:v.input.sourceArtifactId},{jobId:j.id,revisionId:v.r.job_revision,kind:'RAW_FILE'});try{const meta=j.revisions.at(-1)!.input;if(meta.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');const parsed=await boundedParse(bytes,meta.format,v.contract.definition.fields,'STRICT_DEPARTMENT_V1');validationRunId=(await saveValidation(s,actor,j,v.r.campus,v.input.sourceArtifactId,parsed,v.issues)).run.runId;}finally{bytes.fill(0);}}return {inputId:v.r.id,digest:v.r.digest,validationRunId,commandCount:v.commands.length,decision:v.issues.some(i=>i.status==='FAIL')?'FAIL' as const:v.issues.length?'BLOCKED' as const:'PASS' as const,issues:v.issues};});},
-  async verify(actor:string,input:VerifyInput){check(VerifySchema,input);return root(async s=>{const r=await record(s,actor,input.inputId,'VERIFY'),raw=unseal<StageInput>('DEPARTMENT_INPUT_V1',r,StageSchema),j=await inputJob(s,actor,r.id);if(input.rows.length!==raw.entries.length||new Set(input.rows.map(x=>x.row)).size!==input.rows.length||input.rows.some(x=>x.row>raw.entries.length))throw new Error('CLOSED_INPUT_REQUIRED');for(const row of input.rows){const e=normalizeEntry(raw.entries[row.row-1]!,raw.timePolicy);if(row.historicalException&&(e.origin!=='HISTORICAL'||e.row.established_on&&e.row.establishment_doc.trim()))throw new Error('CLOSED_INPUT_REQUIRED');await evidence(s,actor,row.evidenceId,e,j.contract,r.campus);}return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...seal('DEPARTMENT_VERIFICATION_V1',input)});});},
+  async verify(actor:string,input:VerifyInput){check(VerifySchema,input);return root(async s=>{const r=await record(s,actor,input.inputId,'VERIFY'),raw=unseal<StoredStageInput>('DEPARTMENT_INPUT_V1',r,StoredStageSchema),j=await inputJob(s,actor,r.id);if(input.rows.length!==raw.entries.length||new Set(input.rows.map(x=>x.row)).size!==input.rows.length||input.rows.some(x=>x.row>raw.entries.length))throw new Error('CLOSED_INPUT_REQUIRED');for(const row of input.rows){const e=normalizeEntry(raw.entries[row.row-1]!,raw.timePolicy);if(row.historicalException&&(e.origin!=='HISTORICAL'||e.row.established_on&&e.row.establishment_doc.trim()))throw new Error('CLOSED_INPUT_REQUIRED');await evidence(s,actor,row.evidenceId,e,j.contract,r.campus);}return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...seal('DEPARTMENT_VERIFICATION_V1',input)});});},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(PlanSchema,input);const r=await root(async s=>{const r=await record(s,actor,input.inputId,'WRITE');if(await authorize(s,actor,r.campus,'WRITE')!==r.identity_code)throw new Error('ACCESS_DENIED');return r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
   history,
