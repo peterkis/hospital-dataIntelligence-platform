@@ -154,6 +154,22 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(rejected).toMatchObject({ candidateId: null, decision: 'FAIL', issues: [expect.objectContaining({ code: 'DEPARTMENT_DUPLICATE' })] });
   });
 
+  it('rejects an approved candidate whose code differs from the stable view', async () => {
+    const before = await hierarchy.readHierarchySnapshot('maker', { viewId });
+    const candidate: HierarchyCandidateInput = {
+      requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'WRONG', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
+      parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId,
+      sourceRecordId: 'ORG06:wrong-code', sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: null,
+      recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
+      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+    };
+    const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
+    if (!staged.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
+    await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: staged.candidateId, digest: staged.digest });
+    await expect(hierarchy.publishHierarchySnapshot('maker', { candidateId: staged.candidateId, requestId: candidate.requestId, digest: staged.digest })).rejects.toThrow('VIEW_CODE_MISMATCH');
+    expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
+  });
+
   it('serves the typed snapshot read through the registered HTTP owner route', async () => {
     const app = await buildCatalogServer(undefined, 'CONTROL_PLANE', undefined, undefined, undefined, undefined, undefined, undefined, {
       owner: hierarchy,
