@@ -29301,6 +29301,18 @@ export interface operations {
                     recordStatus: "ACTIVE";
                     approvalRef: string;
                     nodes: ({
+                        sourceEvidence: {
+                            sourceClientKey: string;
+                            sourceVersion: string;
+                            sourceSystemId: string;
+                            sourceRecordId: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            /** @enum {string} */
+                            recordStatus: "ACTIVE";
+                            approvalRef: string;
+                        };
                         nodeKey: string;
                         parentNodeKey: string | null;
                         /** @enum {string} */
@@ -29312,6 +29324,18 @@ export interface operations {
                         sortOrder: number;
                         isPrimaryPath: boolean;
                     } | {
+                        sourceEvidence: {
+                            sourceClientKey: string;
+                            sourceVersion: string;
+                            sourceSystemId: string;
+                            sourceRecordId: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            /** @enum {string} */
+                            recordStatus: "ACTIVE";
+                            approvalRef: string;
+                        };
                         nodeKey: string;
                         parentNodeKey: string | null;
                         /** @enum {string} */
@@ -29586,6 +29610,19 @@ export interface operations {
                         recordedAt: string;
                         recordedFrom: string;
                         nodes: {
+                            sourceEvidence: {
+                                sourceClientKey: string;
+                                sourceVersion: string;
+                                sourceSystemId: string;
+                                sourceRecordId: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                /** @enum {string} */
+                                recordStatus: "ACTIVE";
+                                approvalRef: string;
+                            } | null;
+                            sourceDefinitionVersionId: string | null;
                             groupCode?: string;
                             nodeKey: string;
                             parentNodeKey: string | null;
@@ -29736,6 +29773,19 @@ export interface operations {
                         recordedAt: string;
                         recordedFrom: string;
                         nodes: {
+                            sourceEvidence: {
+                                sourceClientKey: string;
+                                sourceVersion: string;
+                                sourceSystemId: string;
+                                sourceRecordId: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                /** @enum {string} */
+                                recordStatus: "ACTIVE";
+                                approvalRef: string;
+                            } | null;
+                            sourceDefinitionVersionId: string | null;
                             groupCode?: string;
                             nodeKey: string;
                             parentNodeKey: string | null;

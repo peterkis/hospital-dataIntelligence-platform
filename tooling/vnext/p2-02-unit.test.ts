@@ -9,12 +9,22 @@ const base = (viewCode: string, nodes: HierarchyCandidateInput['nodes']): Hierar
   validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000',
   recordStatus: 'ACTIVE', approvalRef: 'synthetic-approval', nodes,
 });
+const evidence = (key: string) => ({ sourceClientKey: key, sourceVersion: '7', sourceSystemId: id('02'), sourceRecordId: `sheet:${key}`, validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.123456', recordStatus: 'ACTIVE' as const, approvalRef: 'EDGE_APPROVAL' });
 const department = (nodeKey: string, parentNodeKey: string | null, departmentId: string, displayName = '同名科室') => ({
-  nodeKey, parentNodeKey, nodeKind: 'DEPARTMENT' as const, departmentId, departmentVersionId: id(departmentId.slice(-1)),
+  sourceEvidence: evidence(nodeKey), nodeKey, parentNodeKey, nodeKind: 'DEPARTMENT' as const, departmentId, departmentVersionId: id(departmentId.slice(-1)),
   displayName, relationName: '行政隶属', sortOrder: 1, isPrimaryPath: true,
 });
 
 describe('P2-02 strict hierarchy domain', () => {
+  it('rejects mixed ORG06 source periods before storing a complete snapshot', () => {
+    const candidate = base('ADMIN', [department('root', null, id('10'))]);
+    const input = { ...candidate, nodes: candidate.nodes.map(node => ({ ...node, sourceEvidence: {
+      sourceClientKey: 'edge-1', sourceVersion: '7', sourceSystemId: id('02'), sourceRecordId: 'sheet:row:7',
+      validFrom: '2026-10-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.123456',
+      recordStatus: 'ACTIVE', approvalRef: 'EDGE_APPROVAL',
+    } })) };
+    expect(() => validateHierarchyForest(input)).toThrowError('MIXED_EDGE_PERIOD');
+  });
   it('P2-02-AC-01 allows the same department in two independent views', () => {
     const dept = id('10');
     expect(() => validateHierarchyForest(base('ADMIN', [department('root', null, dept)]))).not.toThrow();
@@ -36,7 +46,7 @@ describe('P2-02 strict hierarchy domain', () => {
 
   it('keeps a GROUP out of department identity references and derives depth', () => {
     const result = validateHierarchyForest(base('ADMIN', [
-      { nodeKey: 'group', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
+      { sourceEvidence: evidence('group'), nodeKey: 'group', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
       department('child', 'group', id('11')),
     ]));
     expect(result.nodes.map(node => node.depth)).toEqual([0, 1]);
@@ -47,7 +57,7 @@ describe('P2-02 strict hierarchy domain', () => {
     const invalid: unknown = {
       ...base('ADMIN', []),
       nodes: [{
-      nodeKey: 'group', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null,
+      sourceEvidence: evidence('group'), nodeKey: 'group', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null,
       departmentId: id('11'), displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true,
       }],
     };

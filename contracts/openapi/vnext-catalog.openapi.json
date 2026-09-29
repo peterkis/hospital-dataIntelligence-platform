@@ -95282,6 +95282,7 @@
                         {
                           "type": "object",
                           "required": [
+                            "sourceEvidence",
                             "nodeKey",
                             "parentNodeKey",
                             "nodeKind",
@@ -95293,6 +95294,76 @@
                             "isPrimaryPath"
                           ],
                           "properties": {
+                            "sourceEvidence": {
+                              "type": "object",
+                              "required": [
+                                "sourceClientKey",
+                                "sourceVersion",
+                                "sourceSystemId",
+                                "sourceRecordId",
+                                "validFrom",
+                                "validTo",
+                                "recordedAt",
+                                "recordStatus",
+                                "approvalRef"
+                              ],
+                              "properties": {
+                                "sourceClientKey": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128,
+                                  "pattern": "\\S"
+                                },
+                                "sourceVersion": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 64,
+                                  "pattern": "\\S"
+                                },
+                                "sourceSystemId": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                },
+                                "sourceRecordId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "\\S"
+                                },
+                                "validFrom": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                },
+                                "validTo": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "recordedAt": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                },
+                                "recordStatus": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ACTIVE"
+                                  ]
+                                },
+                                "approvalRef": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "\\S"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
                             "nodeKey": {
                               "type": "string",
                               "minLength": 1,
@@ -95350,6 +95421,7 @@
                         {
                           "type": "object",
                           "required": [
+                            "sourceEvidence",
                             "nodeKey",
                             "parentNodeKey",
                             "nodeKind",
@@ -95362,6 +95434,76 @@
                             "isPrimaryPath"
                           ],
                           "properties": {
+                            "sourceEvidence": {
+                              "type": "object",
+                              "required": [
+                                "sourceClientKey",
+                                "sourceVersion",
+                                "sourceSystemId",
+                                "sourceRecordId",
+                                "validFrom",
+                                "validTo",
+                                "recordedAt",
+                                "recordStatus",
+                                "approvalRef"
+                              ],
+                              "properties": {
+                                "sourceClientKey": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128,
+                                  "pattern": "\\S"
+                                },
+                                "sourceVersion": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 64,
+                                  "pattern": "\\S"
+                                },
+                                "sourceSystemId": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                },
+                                "sourceRecordId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "\\S"
+                                },
+                                "validFrom": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                },
+                                "validTo": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "recordedAt": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                },
+                                "recordStatus": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ACTIVE"
+                                  ]
+                                },
+                                "approvalRef": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "\\S"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
                             "nodeKey": {
                               "type": "string",
                               "minLength": 1,
@@ -96076,6 +96218,8 @@
                       "items": {
                         "type": "object",
                         "required": [
+                          "sourceEvidence",
+                          "sourceDefinitionVersionId",
                           "nodeKey",
                           "parentNodeKey",
                           "nodeKind",
@@ -96091,6 +96235,94 @@
                           "groupVersionId"
                         ],
                         "properties": {
+                          "sourceEvidence": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "sourceClientKey",
+                                  "sourceVersion",
+                                  "sourceSystemId",
+                                  "sourceRecordId",
+                                  "validFrom",
+                                  "validTo",
+                                  "recordedAt",
+                                  "recordStatus",
+                                  "approvalRef"
+                                ],
+                                "properties": {
+                                  "sourceClientKey": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128,
+                                    "pattern": "\\S"
+                                  },
+                                  "sourceVersion": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64,
+                                    "pattern": "\\S"
+                                  },
+                                  "sourceSystemId": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                  },
+                                  "sourceRecordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "\\S"
+                                  },
+                                  "validFrom": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                  },
+                                  "validTo": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "recordedAt": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                  },
+                                  "recordStatus": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ACTIVE"
+                                    ]
+                                  },
+                                  "approvalRef": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "\\S"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sourceDefinitionVersionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "groupCode": {
                             "type": "string"
                           },
@@ -96543,6 +96775,8 @@
                           "items": {
                             "type": "object",
                             "required": [
+                              "sourceEvidence",
+                              "sourceDefinitionVersionId",
                               "nodeKey",
                               "parentNodeKey",
                               "nodeKind",
@@ -96558,6 +96792,94 @@
                               "groupVersionId"
                             ],
                             "properties": {
+                              "sourceEvidence": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "sourceClientKey",
+                                      "sourceVersion",
+                                      "sourceSystemId",
+                                      "sourceRecordId",
+                                      "validFrom",
+                                      "validTo",
+                                      "recordedAt",
+                                      "recordStatus",
+                                      "approvalRef"
+                                    ],
+                                    "properties": {
+                                      "sourceClientKey": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128,
+                                        "pattern": "\\S"
+                                      },
+                                      "sourceVersion": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64,
+                                        "pattern": "\\S"
+                                      },
+                                      "sourceSystemId": {
+                                        "type": "string",
+                                        "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                      },
+                                      "sourceRecordId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "\\S"
+                                      },
+                                      "validFrom": {
+                                        "type": "string",
+                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                      },
+                                      "validTo": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "recordedAt": {
+                                        "type": "string",
+                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$"
+                                      },
+                                      "recordStatus": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE"
+                                        ]
+                                      },
+                                      "approvalRef": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "\\S"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "sourceDefinitionVersionId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "groupCode": {
                                 "type": "string"
                               },

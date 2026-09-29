@@ -24,6 +24,8 @@ let sourceDefinitionVersionId: string;
 let finiteDepartmentId: string;
 let finiteDepartmentVersionId: string;
 
+const edgeEvidence = (key: string, validFrom = '2026-09-01T00:00:00.000000', validTo: string | null = null) => ({ sourceClientKey: key, sourceVersion: '7', sourceSystemId, sourceRecordId: `ORG06:sheet:${key}`, validFrom, validTo, recordedAt: '2026-09-01T01:00:00.123456', recordStatus: 'ACTIVE' as const, approvalRef: 'EDGE_APPROVAL' });
+
 describe('P2-02 vNext hierarchy owner', () => {
   let viewId: string;
   let secondViewId: string;
@@ -71,7 +73,10 @@ describe('P2-02 vNext hierarchy owner', () => {
       requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG06:1', sourceVersion: '1',
       validFrom: '2026-09-01T00:00:00.123456', validTo: null, recordedAt: '2026-09-01T01:00:00.654321', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
-      nodes: [{ nodeKey: 'clinical', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+      nodes: [
+        { sourceEvidence: edgeEvidence('clinical', '2026-09-01T00:00:00.123456'), nodeKey: 'clinical', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
+        { sourceEvidence: { ...edgeEvidence('child', '2026-09-01T00:00:00.123456'), sourceVersion: '9', approvalRef: 'CHILD_APPROVAL' }, nodeKey: 'child', parentNodeKey: 'clinical', nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
+      ],
     };
     const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
     expect(staged.decision).toBe('PASS');
@@ -87,12 +92,15 @@ describe('P2-02 vNext hierarchy owner', () => {
       await pool.end();
     }
     const published = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
-    expect(published.nodes).toHaveLength(1);
+    expect(published.nodes).toHaveLength(2);
     expect(published.view).toHaveProperty('ownerDepartmentVersionId', departmentVersionId);
     expect(published.view).toHaveProperty('sourceDefinitionVersionId', sourceDefinitionVersionId);
     expect(published.validFrom).toBe('2026-09-01T00:00:00.123456');
     expect(published.sourceRecordedAt).toBe('2026-09-01T01:00:00.654321');
     expect(published.nodes[0]?.nodeKind).toBe('GROUP');
+    expect(published.nodes[0]?.sourceEvidence).toEqual(candidate.nodes[0]!.sourceEvidence);
+    expect(published.nodes[1]?.sourceEvidence).toEqual(candidate.nodes[1]!.sourceEvidence);
+    expect(published.nodes[0]?.sourceDefinitionVersionId).toBe(sourceDefinitionVersionId);
     expect(published.nodes[0]).toHaveProperty('groupCode', 'CLINICAL');
     expect(published.nodes[0]?.groupId).toMatch(/^[a-f0-9-]{36}$/);
     if (!published.nodes[0]?.groupId || !published.nodes[0]?.groupVersionId) throw new Error('P2_02_GROUP_REFERENCE_REQUIRED');
@@ -104,7 +112,7 @@ describe('P2-02 vNext hierarchy owner', () => {
       requestId: id(), sourceRecordId: 'ORG06:2', sourceVersion: '2', viewName: '行政视图改名',
       validFrom: '2027-09-01T00:00:00.000000', recordedAt: '2027-09-01T01:00:00.000000',
       nodes: [{
-        nodeKey: 'clinical', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL',
+        sourceEvidence: edgeEvidence('clinical', '2027-09-01T00:00:00.000000'), nodeKey: 'clinical', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL',
         groupId: published.nodes[0]!.groupId, groupVersionId: published.nodes[0]!.groupVersionId,
         displayName: '临床组改名', relationName: '组织', sortOrder: 1, isPrimaryPath: true,
       }],
@@ -140,8 +148,8 @@ describe('P2-02 vNext hierarchy owner', () => {
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG06:invalid', sourceVersion: 'invalid',
       validFrom: '2028-09-01T00:00:00.000000', validTo: null, recordedAt: '2028-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
       nodes: [
-        { nodeKey: 'a', parentNodeKey: 'b', nodeKind: 'GROUP', groupCode: 'A', groupId: null, groupVersionId: null, displayName: 'A', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
-        { nodeKey: 'b', parentNodeKey: 'a', nodeKind: 'GROUP', groupCode: 'B', groupId: null, groupVersionId: null, displayName: 'B', relationName: '组织', sortOrder: 2, isPrimaryPath: true },
+        { sourceEvidence: edgeEvidence('a', '2028-09-01T00:00:00.000000'), nodeKey: 'a', parentNodeKey: 'b', nodeKind: 'GROUP', groupCode: 'A', groupId: null, groupVersionId: null, displayName: 'A', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
+        { sourceEvidence: edgeEvidence('b', '2028-09-01T00:00:00.000000'), nodeKey: 'b', parentNodeKey: 'a', nodeKind: 'GROUP', groupCode: 'B', groupId: null, groupVersionId: null, displayName: 'B', relationName: '组织', sortOrder: 2, isPrimaryPath: true },
       ],
     };
     const rejected = await hierarchy.importHierarchyCandidate('maker', invalid);
@@ -157,7 +165,7 @@ describe('P2-02 vNext hierarchy owner', () => {
       viewCode: view === viewId ? 'ADMIN' : 'MEDICAL', viewName: view === viewId ? '行政视图' : '病案视图',
       viewType: view === viewId ? 'ADMINISTRATIVE' : 'MEDICAL_RECORD', parentCardinality: 'STRICT_TREE', purpose: '独立视角', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId,
       sourceRecordId, sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
-      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+      nodes: [{ sourceEvidence: edgeEvidence('department'), nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
     });
     const publish = async (value: HierarchyCandidateInput) => {
       const staged = await hierarchy.importHierarchyCandidate('maker', value);
@@ -175,7 +183,7 @@ describe('P2-02 vNext hierarchy owner', () => {
       ...duplicateBase,
       nodes: [
         { ...duplicateBase.nodes[0]!, nodeKey: 'a' },
-        { ...duplicateBase.nodes[0]!, nodeKey: 'b', displayName: '同名科室 2' },
+        { ...duplicateBase.nodes[0]!, nodeKey: 'b', sourceEvidence: edgeEvidence('department-b'), displayName: '同名科室 2' },
       ],
     };
     const rejected = await hierarchy.importHierarchyCandidate('maker', duplicate);
@@ -189,7 +197,7 @@ describe('P2-02 vNext hierarchy owner', () => {
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId,
       sourceRecordId: 'ORG06:wrong-code', sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: null,
       recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
-      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+      nodes: [{ sourceEvidence: edgeEvidence('department'), nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
     };
     const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
     if (!staged.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
@@ -205,14 +213,14 @@ describe('P2-02 vNext hierarchy owner', () => {
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId: dependency === 'owner' ? finiteDepartmentId : ownerDepartmentId, sourceSystemId,
       sourceRecordId: 'ORG06:finite', sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: null,
       recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
-      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId: dependency === 'node' ? finiteDepartmentId : departmentId, departmentVersionId: dependency === 'node' ? finiteDepartmentVersionId : departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+      nodes: [{ sourceEvidence: edgeEvidence('department'), nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId: dependency === 'node' ? finiteDepartmentId : departmentId, departmentVersionId: dependency === 'node' ? finiteDepartmentVersionId : departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
     };
     const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
     if (!staged.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: staged.candidateId, digest: staged.digest });
     await expect(hierarchy.publishHierarchySnapshot('maker', { candidateId: staged.candidateId, requestId: candidate.requestId, digest: staged.digest })).rejects.toThrow('BLOCKED_DEPENDENCY');
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
-    const bounded = { ...candidate, requestId: id(), validTo: '2027-01-01T00:00:00.000000' };
+    const bounded = { ...candidate, requestId: id(), validTo: '2027-01-01T00:00:00.000000', nodes: candidate.nodes.map(node => ({ ...node, sourceEvidence: { ...node.sourceEvidence, validTo: '2027-01-01T00:00:00.000000' } })) };
     const boundedStage = await hierarchy.importHierarchyCandidate('maker', bounded);
     if (!boundedStage.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: boundedStage.candidateId, digest: boundedStage.digest });
@@ -234,7 +242,7 @@ describe('P2-02 vNext hierarchy owner', () => {
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId: source.id,
       sourceRecordId: 'ORG06:historical-source', sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: '2027-01-01T00:00:00.000000',
       recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
-      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+      nodes: [{ sourceEvidence: { ...edgeEvidence('department', '2026-09-01T00:00:00.000000', '2027-01-01T00:00:00.000000'), sourceSystemId: source.id }, nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
     };
     const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
     if (!staged.candidateId) throw new Error('CANDIDATE_REQUIRED');

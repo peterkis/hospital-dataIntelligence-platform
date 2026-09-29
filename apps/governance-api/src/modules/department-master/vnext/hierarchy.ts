@@ -15,7 +15,14 @@ const nullableText = (maxLength = 2000) => Type.Union([Type.String({ maxLength }
 export const HierarchyLocalTime = Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$' });
 export const HierarchyNullableLocalTime = Type.Union([HierarchyLocalTime, Type.Null()]);
 
+export const HierarchyEdgeEvidenceSchema = Type.Object({
+  sourceClientKey: text(128), sourceVersion: text(64), sourceSystemId: HierarchyId,
+  sourceRecordId: text(256), validFrom: HierarchyLocalTime, validTo: HierarchyNullableLocalTime,
+  recordedAt: HierarchyLocalTime, recordStatus: Type.Literal('ACTIVE'), approvalRef: text(256),
+}, closed);
+
 const DepartmentNode = Type.Object({
+  sourceEvidence: HierarchyEdgeEvidenceSchema,
   nodeKey: text(128),
   parentNodeKey: nullableText(128),
   nodeKind: Type.Literal('DEPARTMENT'),
@@ -28,6 +35,7 @@ const DepartmentNode = Type.Object({
 }, closed);
 
 const GroupNode = Type.Object({
+  sourceEvidence: HierarchyEdgeEvidenceSchema,
   nodeKey: text(128),
   parentNodeKey: nullableText(128),
   nodeKind: Type.Literal('GROUP'),
@@ -104,7 +112,7 @@ export interface HierarchySnapshot {
   readonly sourceRecordedAt: string; readonly recordedAt: string;
   /** Platform record time assigned by the hierarchy version row. */
   readonly recordedFrom: string;
-  readonly nodes: readonly (ValidatedHierarchyNode & { readonly nodeId: string; readonly departmentId: string | null; readonly departmentVersionId: string | null; readonly groupId: string | null; readonly groupVersionId: string | null })[];
+  readonly nodes: readonly SnapshotNode[];
   readonly contentDigest: string;
 }
 
@@ -135,7 +143,14 @@ export function validateHierarchyForest(value: unknown): ForestValidation {
   const byKey = new Map<string, HierarchyNodeInput>();
   const departments = new Set<string>();
   const groups = new Set<string>();
+  const sourceEdges = new Set<string>();
   for (const node of value.nodes) {
+    const evidence = node.sourceEvidence;
+    if (normalizeTime(evidence.validFrom) !== from || (evidence.validTo === null ? null : normalizeTime(evidence.validTo)) !== to) issue('MIXED_EDGE_PERIOD', node.nodeKey, 'sourceEvidence');
+    normalizeTime(evidence.recordedAt);
+    const sourceKey = canonicalPlan([evidence.sourceSystemId, evidence.sourceClientKey]);
+    if (sourceEdges.has(sourceKey)) issue('DUPLICATE_EDGE_SOURCE', node.nodeKey, 'sourceEvidence');
+    sourceEdges.add(sourceKey);
     if (byKey.has(node.nodeKey)) issue('DUPLICATE_NODE_KEY', node.nodeKey);
     byKey.set(node.nodeKey, node);
     if (node.parentNodeKey === node.nodeKey) issue('SELF_PARENT', node.nodeKey, 'parentNodeKey');
@@ -172,7 +187,7 @@ export function validateHierarchyForest(value: unknown): ForestValidation {
 }
 
 interface Envelope { keyId: string; nonce: string; tag: string; ciphertext: string }
-interface StoredCandidate { id: string; digest: string; maker: string; makerIdentity: string; requestId: string; status: string; envelope: Envelope; approvedBy: string | null; payload: HierarchyCandidateInput }
+interface StoredCandidate { id: string; digest: string; maker: string; makerIdentity: string; requestId: string; status: string; envelope: Envelope; approvedBy: string | null; payload: HierarchyCandidateInput & { validationDigest: string } }
 
 function seal(value: unknown, provider?: KeyProviderPort): { digest: string; envelope: Envelope } {
   if (!provider) throw new Error('KEY_UNAVAILABLE');
@@ -205,6 +220,8 @@ function unseal<T>(candidate: StoredCandidate, provider: KeyProviderPort | undef
 
 function mapNode(row: Record<string, unknown>): SnapshotNode {
   return {
+    sourceEvidence: row['source_evidence'] as Static<typeof HierarchyEdgeEvidenceSchema> | null,
+    sourceDefinitionVersionId: row['source_definition_version_id'] === null ? null : String(row['source_definition_version_id']),
     ...(row['node_kind'] === 'GROUP' ? { groupCode: String(row['group_code']) } : {}),
     nodeKey: String(row['node_key']), parentNodeKey: row['parent_node_key'] === null ? null : String(row['parent_node_key']),
     nodeKind: row['node_kind'] as 'DEPARTMENT' | 'GROUP', displayName: String(row['display_name']),
@@ -214,7 +231,7 @@ function mapNode(row: Record<string, unknown>): SnapshotNode {
     groupId: row['group_id'] === null ? null : String(row['group_id']), groupVersionId: row['group_version_id'] === null ? null : String(row['group_version_id']),
   } as SnapshotNode;
 }
-type SnapshotNode = ValidatedHierarchyNode & { nodeId: string; departmentId: string | null; departmentVersionId: string | null; groupId: string | null; groupVersionId: string | null };
+type SnapshotNode = Omit<ValidatedHierarchyNode, 'sourceEvidence'> & { groupCode?: string; sourceEvidence: Static<typeof HierarchyEdgeEvidenceSchema> | null; sourceDefinitionVersionId: string | null; nodeId: string; departmentId: string | null; departmentVersionId: string | null; groupId: string | null; groupVersionId: string | null };
 
 function formatLocalDbTime(value: unknown): string {
   if (typeof value !== 'string') throw new Error('LOCAL_TIME_REQUIRED');
@@ -236,7 +253,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
     await authorize(trx, actor, 'READ');
     const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.owner_department_version_id,v.source_definition_version_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
     if (!v) return null;
-    const rows = (await sql<Record<string, unknown>>`select node_id,node_key,parent_node_key,node_kind,group_code,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth from department_master.hierarchy_node where view_version_id=${String(v['id'])}::uuid order by depth,sort_order,node_key`.execute(trx)).rows;
+    const rows = (await sql<Record<string, unknown>>`select node_id,node_key,parent_node_key,node_kind,group_code,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,source_evidence,source_definition_version_id from department_master.hierarchy_node where view_version_id=${String(v['id'])}::uuid order by depth,sort_order,node_key`.execute(trx)).rows;
     const sourceRecordedAt = formatLocalDbTime(v['recorded_at']);
     return {
       view: {
@@ -308,13 +325,16 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
         const candidate = await readCandidate(trx, actor, input.candidateId); if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
         if (candidate.status === 'APPLIED') {
           const value = unseal<HierarchyCandidateInput>(candidate, provider);
-          const checked = validateHierarchyForest(value);
+          // The committed validation belongs to the original schema version.
+          // Replaying history must not require fields introduced after publication.
+          const committedDigest = candidate.payload.validationDigest;
+          if (!/^[a-f0-9]{64}$/.test(committedDigest)) throw new Error('STALE_VALIDATION');
           const versions = (await sql<{ viewId: string; version: string }>`
             select v.view_id as "viewId", v.version_no::text as version
             from department_master.hierarchy_view_version v
             join department_master.hierarchy_view h on h.id=v.view_id
             where h.source_client_key=${value.sourceClientKey}
-              and v.content_digest=${checked.digest} and v.status='PUBLISHED'
+              and v.content_digest=${committedDigest} and v.status='PUBLISHED'
           `.execute(trx)).rows;
           if (versions.length !== 1) throw new Error('STALE_VALIDATION');
           const published = versions[0]!;

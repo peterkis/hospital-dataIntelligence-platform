@@ -68,6 +68,8 @@ export interface DepartmentMasterHierarchyNode {
   parent_node_key: string | null;
   relation_name: string;
   sort_order: number;
+  source_definition_version_id: string | null;
+  source_evidence: Json | null;
   view_version_id: string;
 }
 

@@ -13,6 +13,9 @@ P2-02 在当前 vNext Department Owner 内治理 ORG05 视图定义和 ORG06 完
 - 发布时每个 Department 版本必须覆盖候选的完整业务区间；版本边界跨越候选期间时要求拆分候选。
 - 快照保存展示名称、引用版本、深度、排序和内容摘要；后续改名不会改变已发布快照。
 - typed 快照读取保留责任组织、来源记录、来源版本、审批证据和状态，并把来源 `sourceRecordedAt` 与平台 `recordedFrom` 分开；责任 Department、来源 SOURCE 或节点 Department 版本无法覆盖完整业务期间时，数据库发布边界返回 `BLOCKED_DEPENDENCY`。
+- PR #21 修复追加未部署的 0093：冻结责任 Department 与 SOURCE 的确切版本；SOURCE 通过公共时间解析函数选择覆盖版本。无界候选必须由无界依赖覆盖。GROUP 代码和所属视图/版本绑定进入快照，历史版本与节点禁止 UPDATE/DELETE。
+- 每条 ORG06 节点边必须携带独立的 `sourceEvidence`（来源 alias、源版本、SOURCE、行定位、业务期间、来源记录时间、ACTIVE 意图及审批证据），参与审批摘要并逐条保存；所有边期间必须等于完整快照期间，混合期间拒绝。数据库再次检查边来源的权限和完整期间覆盖，并冻结 SOURCE 版本。迁移前未记录的逐边证据和依赖版本返回 null，不根据 ORG05 头部编造。
+- `parentNodeKey` 是同一完整候选内的精确关系引用，发布时指向已校验的 DEPARTMENT/GROUP 节点及其版本，不按名称解析。GROUP 关系不伪装成 ORG04 科室外键；FULL 来源字段与码表采纳仍需独立合同门禁。
 
 2026-09-29 的持久研发库修复通过 0088 层级迁移、0089 Department 前向修复、0090 完整载荷绑定、0091 数据库发布不变量重验和 0092 空白字段收紧完成；不重写 0084、0085、0087 历史账本。receipt 绑定数据库 OID 206108 的账本由 87 追加到 92，既有业务行与密钥摘要保持不变，wrapper readiness、`vnext:db:verify`、P2-02 fresh 和 0087→current 升级均通过。
 

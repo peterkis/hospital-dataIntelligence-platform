@@ -10,6 +10,11 @@ ALTER TABLE department_master.hierarchy_view_version
  ADD COLUMN source_definition_version_id uuid;
 
 ALTER TABLE department_master.hierarchy_node ADD COLUMN group_code text;
+-- Pre-upgrade snapshots have no per-edge source evidence; never synthesize it
+-- from the unrelated ORG05 header.
+ALTER TABLE department_master.hierarchy_node
+ ADD COLUMN source_evidence jsonb,
+ ADD COLUMN source_definition_version_id uuid;
 -- Recover only from the approved candidate matching this exact snapshot digest.
 UPDATE department_master.hierarchy_node n SET group_code=(
   SELECT item->>'groupCode'
@@ -47,6 +52,8 @@ DECLARE
  source_id uuid;
  owner_version_id uuid;
  source_version_id uuid;
+ edge_evidence jsonb;
+ edge_source_version_id uuid;
 BEGIN
   PERFORM pg_advisory_xact_lock(901002);
   identity:=department_master.authorize(p_actor,'HOSPITAL','WRITE');
@@ -122,6 +129,28 @@ BEGIN
        OR coalesce(n->>'depth','') !~ '^[0-9]+$'
        OR jsonb_typeof(n->'isPrimaryPath') IS DISTINCT FROM 'boolean'
   ) THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED'; END IF;
+  FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'nodes') LOOP
+    edge_evidence:=item->'sourceEvidence';
+    IF jsonb_typeof(edge_evidence) IS DISTINCT FROM 'object'
+       OR NOT (edge_evidence ?& ARRAY['sourceClientKey','sourceVersion','sourceSystemId','sourceRecordId','validFrom','validTo','recordedAt','recordStatus','approvalRef'])
+       OR EXISTS (SELECT 1 FROM jsonb_object_keys(edge_evidence) k WHERE k NOT IN ('sourceClientKey','sourceVersion','sourceSystemId','sourceRecordId','validFrom','validTo','recordedAt','recordStatus','approvalRef'))
+       OR EXISTS (SELECT 1 FROM unnest(ARRAY['sourceClientKey','sourceVersion','sourceRecordId','approvalRef']) k WHERE jsonb_typeof(edge_evidence->k) IS DISTINCT FROM 'string' OR coalesce(edge_evidence->>k,'') !~ '\S')
+       OR coalesce(edge_evidence->>'sourceSystemId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+       OR edge_evidence->>'recordStatus' IS DISTINCT FROM 'ACTIVE'
+       OR coalesce(edge_evidence->>'validFrom','') !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?$'
+       OR (edge_evidence->>'validTo' IS NOT NULL AND edge_evidence->>'validTo' !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?$')
+       OR coalesce(edge_evidence->>'recordedAt','') !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?$'
+    THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED'; END IF;
+    IF (edge_evidence->>'validFrom')::timestamp IS DISTINCT FROM p_valid_from
+       OR (edge_evidence->>'validTo')::timestamp IS DISTINCT FROM p_valid_to THEN RAISE EXCEPTION 'MIXED_EDGE_PERIOD'; END IF;
+    -- Force calendar validation as well as the local-time lexical contract.
+    PERFORM (edge_evidence->>'recordedAt')::timestamp;
+    edge_source_version_id:=governance_catalog.source_covering_version((edge_evidence->>'sourceSystemId')::uuid,tsrange(p_valid_from,p_valid_to,'[)'));
+    IF edge_source_version_id IS NULL THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
+    PERFORM vnext_control.require_source_access(p_actor,'SYNTHETIC',(edge_evidence->>'sourceSystemId')::uuid,edge_source_version_id);
+    PERFORM governance_catalog.assert_source_period_chain(target_view_id,(edge_evidence->>'sourceSystemId')::uuid,'SYNTHETIC',tsrange(p_valid_from,p_valid_to,'[)'),edge_source_version_id);
+  END LOOP;
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_payload->'nodes') n GROUP BY n->'sourceEvidence'->>'sourceSystemId',n->'sourceEvidence'->>'sourceClientKey' HAVING count(*)>1) THEN RAISE EXCEPTION 'DUPLICATE_EDGE_SOURCE'; END IF;
   IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'nodes') n GROUP BY n->>'nodeKey' HAVING count(*)>1) THEN RAISE EXCEPTION 'DUPLICATE_NODE_KEY'; END IF;
   IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'nodes') n WHERE n->>'parentNodeKey' IS NOT NULL AND btrim(n->>'parentNodeKey')='') THEN RAISE EXCEPTION 'PARENT_NOT_FOUND'; END IF;
   IF EXISTS(
@@ -202,8 +231,10 @@ BEGIN
         group_version_id:=CASE WHEN prior_group.display_name IS NOT DISTINCT FROM item->>'displayName' THEN prior_group.group_version_id ELSE uuidv7() END;
       END IF;
     END IF;
-    INSERT INTO department_master.hierarchy_node(node_id,view_version_id,node_key,parent_node_key,node_kind,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,group_code)
-    VALUES(node_id,version_id,item->>'nodeKey',NULLIF(item->>'parentNodeKey',''),item->>'nodeKind',NULLIF(item->>'departmentId','')::uuid,NULLIF(item->>'departmentVersionId','')::uuid,group_id,group_version_id,item->>'displayName',item->>'relationName',(item->>'sortOrder')::integer,(item->>'isPrimaryPath')::boolean,(item->>'depth')::integer,CASE WHEN item->>'nodeKind'='GROUP' THEN item->>'groupCode' END);
+    edge_evidence:=item->'sourceEvidence';
+    edge_source_version_id:=governance_catalog.source_covering_version((edge_evidence->>'sourceSystemId')::uuid,tsrange(p_valid_from,p_valid_to,'[)'));
+    INSERT INTO department_master.hierarchy_node(node_id,view_version_id,node_key,parent_node_key,node_kind,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,group_code,source_evidence,source_definition_version_id)
+    VALUES(node_id,version_id,item->>'nodeKey',NULLIF(item->>'parentNodeKey',''),item->>'nodeKind',NULLIF(item->>'departmentId','')::uuid,NULLIF(item->>'departmentVersionId','')::uuid,group_id,group_version_id,item->>'displayName',item->>'relationName',(item->>'sortOrder')::integer,(item->>'isPrimaryPath')::boolean,(item->>'depth')::integer,CASE WHEN item->>'nodeKind'='GROUP' THEN item->>'groupCode' END,edge_evidence,edge_source_version_id);
   END LOOP;
   UPDATE department_master.hierarchy_candidate SET status='APPLIED',applied_at=timezone('Asia/Shanghai',clock_timestamp()) WHERE id=p_candidate_id;
   INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES(p_actor,version_id,'HIERARCHY_PUBLISHED','ORG05_ORG06',p_payload->>'validationDigest');
