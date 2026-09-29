@@ -125,6 +125,17 @@ export function createOrganizationWorkspaceClient(baseUrl:string,actor:string){
 }
 
 export type DepartmentInput=operations['stageDepartment']['requestBody']['content']['application/json'];
+export type HierarchyInput=operations['importHierarchyCandidate']['requestBody']['content']['application/json'];
+export function createHierarchyClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  createView:(body:operations['createHierarchyView']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/views',{body}),
+  importCandidate:(body:HierarchyInput)=>client.POST('/api/vnext/hierarchy/candidates',{body}),
+  approve:(body:operations['approveHierarchyCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/candidates/approve',{body}),
+  publish:(body:operations['publishHierarchySnapshot']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/candidates/publish',{body}),
+  read:(body:operations['readHierarchySnapshot']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/snapshots/read',{body}),
+ };
+}
 export function createDepartmentClient(baseUrl:string,actor:string){
  const client=createVNextCatalogClient(baseUrl,actor);
  return {

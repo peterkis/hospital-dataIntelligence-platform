@@ -1,5 +1,6 @@
 import { Type, type Static, type TSchema } from 'typebox';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { TypeBoxValidatorCompiler } from '@fastify/type-provider-typebox';
 import {
   CreateHierarchyViewSchema,
   HierarchyCandidateSchema,
@@ -51,6 +52,7 @@ export interface HierarchyHttpContext {
 export function registerHierarchyRoutes(app: FastifyInstance, context?: HierarchyHttpContext): void {
   const route = <S extends TSchema>(path: string, operationId: string, body: S, response: TSchema, handler: (owner: HierarchyHttpContext['owner'], actor: string, input: Static<S>) => Promise<unknown>) => {
     app.post<{ Body: Static<S> }>(`/api/vnext/hierarchy/${path}`, {
+      validatorCompiler: TypeBoxValidatorCompiler,
       schema: { operationId, body, response: { 200: response, ...errors } },
     }, request => {
       if (!context) throw new Error('BLOCKED_DEPENDENCY');

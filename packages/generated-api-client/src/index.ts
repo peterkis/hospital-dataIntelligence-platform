@@ -31,3 +31,4 @@ export {createOperatingRelationClient,createLicenseScopeClient} from './vnext-cl
 export {createOrganizationClient,createOrganizationBundleClient,createOrganizationWorkspaceClient} from './vnext-client.js';
 
 export {createDepartmentClient,type DepartmentInput} from './vnext-client.js';
+export {createHierarchyClient,type HierarchyInput} from './vnext-client.js';

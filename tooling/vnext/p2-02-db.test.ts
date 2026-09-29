@@ -7,6 +7,7 @@ import { departmentFixture } from './p2-01-fixture.js';
 import { openDepartment, openHierarchy, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/index.js';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import { peer } from './lineage.mjs';
+import { createHierarchyClient } from '../../packages/generated-api-client/src/index.js';
 
 const connection = process.env['VNEXT_VALIDATION_OWNER_URL'];
 if (!connection) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
@@ -268,18 +269,46 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
   });
 
-  it('serves the typed snapshot read through the registered HTTP owner route', async () => {
+  it('publishes and reads frozen edge evidence over real HTTP with the generated client', async () => {
     const app = await buildCatalogServer(undefined, 'CONTROL_PLANE', undefined, undefined, undefined, undefined, undefined, undefined, {
       owner: hierarchy,
-      actor: request => String(request.headers['x-actor'] ?? ''),
+      actor: request => String(request.headers['x-catalog-actor'] ?? ''),
     });
     try {
-      const response = await app.inject({ method: 'POST', url: '/api/vnext/hierarchy/snapshots/read', headers: { 'x-actor': 'maker' }, payload: { viewId } });
-      expect(response.statusCode).toBe(200);
-      expect(response.json().view.viewCode).toBe('ADMIN');
-      const historical = await app.inject({ method: 'POST', url: '/api/vnext/hierarchy/snapshots/read', headers: { 'x-actor': 'maker' }, payload: { viewId, version: '2' } });
-      expect(historical.statusCode).toBe(200);
-      expect(historical.json().nodes[0].groupCode).toBe('CLINICAL');
+      const address = await app.listen({ host: '127.0.0.1', port: 0 });
+      const maker = createHierarchyClient(address, 'maker');
+      const reviewer = createHierarchyClient(address, 'reviewer');
+      const response = await maker.read({ viewId });
+      expect(response.response.status).toBe(200);
+      expect(response.data?.view.viewCode).toBe('ADMIN');
+      const historical = await maker.read({ viewId, version: '2' });
+      expect(historical.response.status).toBe(200);
+      expect(historical.data?.nodes[0]?.groupCode).toBe('CLINICAL');
+      expect(historical.data?.nodes[1]?.sourceEvidence?.approvalRef).toBe('CHILD_APPROVAL');
+      const header = { requestId: id(), sourceClientKey: 'HTTP_VIEW', viewCode: 'HTTP', viewName: 'HTTP view', viewType: 'ADMINISTRATIVE' as const,
+        purpose: 'API regression', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG05:HTTP', sourceVersion: '1',
+        validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000', approvalRef: 'HTTP_APPROVAL' };
+      const view = await maker.createView(header);
+      expect(view.response.status).toBe(200);
+      if (!view.data) throw new Error('HTTP_VIEW_REQUIRED');
+      const candidate = { ...header, requestId: id(), viewId: view.data.viewId, parentCardinality: 'STRICT_TREE' as const, recordStatus: 'ACTIVE' as const,
+        nodes: [{ sourceEvidence: edgeEvidence('http'), nodeKey: 'http', parentNodeKey: null, nodeKind: 'DEPARTMENT' as const, departmentId, departmentVersionId, displayName: 'HTTP department', relationName: '组织', sortOrder: 1, isPrimaryPath: true }] };
+      const invalid = await maker.importCandidate({ ...candidate, requestId: id(), nodes: [{ ...candidate.nodes[0]!, parentNodeKey: '' }] });
+      expect(invalid.data?.decision).toBe('FAIL');
+      expect(invalid.data?.issues[0]?.code).toBe('PARENT_NOT_FOUND');
+      const staged = await maker.importCandidate(candidate);
+      expect(staged.response.status).toBe(200);
+      expect(staged.data?.issues).toEqual([]);
+      expect(staged.data?.decision).toBe('PASS');
+      if (!staged.data?.candidateId) throw new Error('HTTP_CANDIDATE_REQUIRED');
+      const approval = { candidateId: staged.data.candidateId, digest: staged.data.digest };
+      expect((await maker.approve(approval)).response.status).not.toBe(200);
+      expect((await reviewer.approve(approval)).response.status).toBe(200);
+      const published = await maker.publish({ ...approval, requestId: candidate.requestId });
+      expect(published.response.status).toBe(200);
+      expect(published.data?.nodes[0]?.sourceEvidence).toEqual(candidate.nodes[0]!.sourceEvidence);
+      const read = await maker.read({ viewId: view.data.viewId, version: published.data!.view.version });
+      expect(read.data).toEqual(published.data);
     } finally {
       await app.close();
     }

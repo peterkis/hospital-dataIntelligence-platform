@@ -25,6 +25,8 @@ P2-02 在当前 vNext Department Owner 内治理 ORG05 视图定义和 ORG06 完
 
 HTTP 路由位于 `/api/vnext/hierarchy/`：视图创建、候选导入、候选审批、快照发布和快照读取。维护页面不在本票范围，交由 P2-07 接入通用工作台。
 
+`createHierarchyClient` 使用生成的 OpenAPI operations 类型访问上述五个路由。层级请求采用 TypeBox 无损 body 校验，保留根节点 `parentNodeKey: null`，避免 AJV coercion 将其改成空字符串。真实 loopback HTTP 测试覆盖完整发布、同人审批拒绝、历史读取以及空字符串父节点拒绝；这属于本地合成 API 集成证据，不替代正式验收。
+
 ## 来源字段与范围
 
 ORG05 的 16 个字段和 ORG06 的 15 个字段仍以
