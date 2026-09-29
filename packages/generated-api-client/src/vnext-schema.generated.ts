@@ -29649,6 +29649,7 @@ export interface operations {
                             approvalRef: string;
                             /** @enum {string} */
                             status: "PUBLISHED";
+                            sourceRecordStatus: "ACTIVE" | null;
                             version: string;
                             contentDigest: string;
                         };
@@ -29812,6 +29813,7 @@ export interface operations {
                             approvalRef: string;
                             /** @enum {string} */
                             status: "PUBLISHED";
+                            sourceRecordStatus: "ACTIVE" | null;
                             version: string;
                             contentDigest: string;
                         };

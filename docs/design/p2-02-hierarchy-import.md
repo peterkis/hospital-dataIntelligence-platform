@@ -84,3 +84,11 @@ ORG05 的 16 个字段和 ORG06 的 15 个字段仍以
 注册和候选命令现可显式选择 `profile: CORE | FULL`；省略时兼容原 CORE 契约，不自动切换。可选 `dependencies` 使用 `{dataset: ORG05 | ORG06, contractId, contractVersionId}` 的准确引用。FULL 适配与来源政策尚未采纳，因此 FULL 或任何非空 dependencies 在 Owner/HTTP 和 SQL 边界返回 BLOCKED_DEPENDENCY；拒绝发生在写入之前，不静默丢弃引用。独立 CORE 的注册、审批、发布及历史读取照常工作。原已批准 FULL 候选也在发布边界被阻断。该门禁不宣称完成正式 FULL 适配、Q08/A014/A015 采纳或院方验收。
 
 0105 将 GROUP 代码及非空稳定身份的唯一性检查前移到候选入库；领域 validator 同步拒绝同一 GROUP 身份在两个代码下出现。0106 对注册 SQL 执行完整 closed 字段、类型、长度、UUID 和枚举检查，防止 scalar 转字符串或丢弃未知字段后写入。
+
+## 第七轮审查修复（2026-09-30）
+
+0107 为新注册保存不可变的 requestId 与完整规范化命令绑定；原命令重试返回原 viewId，变更内容重用同一请求返回 REQUEST_CONFLICT。内部 key binding 摘要不属于规范化业务命令，不因换钥改写原结果；重放仍复核当前 READ/WRITE 权限及原身份。没有保存请求信息的旧注册保持未知，不补造请求绑定。
+
+0108 在关闭候选入库前校验完整字段、JSON 类型、UUID、动作枚举、版本字符串和原因长度；未应用的旧候选在产生终态事件前再校验。已应用事件保留原历史重放。
+
+0109 将 ORG05 的 sourceRecordStatus 单独持久化并通过 typed snapshot/HTTP 返回，治理 status 仍为 PUBLISHED。历史只从同一 view、同一 validationDigest 的唯一 APPLIED 候选恢复 ACTIVE；缺失或歧义证据保留 null。迁移只回填新增列，在单个迁移事务与 DDL 锁内临时暂停对应 immutable trigger，随后恢复。`vnext:p2-02:history` 在独立 receipt-owned 库中验证 108 升级、准确恢复、未知保留、其余历史逐字段一致、触发器生效以及升级后的新发布。

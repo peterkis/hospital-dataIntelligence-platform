@@ -24,6 +24,9 @@ const postWorkspaceMigrations = [
  '0104_hierarchy_core_full_admission',
  '0105_hierarchy_group_staging',
  '0106_hierarchy_registration_shape',
+ '0107_hierarchy_registration_replay',
+ '0108_hierarchy_closure_shape',
+ '0109_hierarchy_source_record_status',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

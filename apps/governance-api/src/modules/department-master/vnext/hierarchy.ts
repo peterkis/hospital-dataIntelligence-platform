@@ -123,6 +123,7 @@ export interface HierarchyViewRecord {
   readonly viewType: HierarchyCandidateInput['viewType']; readonly purpose: string; readonly aggregationRule: string;
   readonly ownerDepartmentId: string | null; readonly sourceSystemId: string; readonly sourceRecordId: string;
   readonly sourceVersion: string; readonly approvalRef: string; readonly status: 'PUBLISHED';
+  readonly sourceRecordStatus: 'ACTIVE' | null;
   readonly version: string; readonly contentDigest: string;
 }
 export interface HierarchySnapshot {
@@ -293,6 +294,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
         viewType: v['view_type'] as HierarchyCandidateInput['viewType'], purpose: String(v['purpose']), aggregationRule: String(v['aggregation_rule']),
         ownerDepartmentId: v['owner_department_id'] === null ? null : String(v['owner_department_id']), sourceSystemId: String(v['source_system_id']),
         sourceRecordId: String(v['source_record_id']), sourceVersion: String(v['source_version']), approvalRef: String(v['approval_ref']),
+        sourceRecordStatus: v['source_record_status'] === 'ACTIVE' ? 'ACTIVE' : null,
         status: v['status'] as 'PUBLISHED', version: String(v['version_no']), contentDigest: String(v['content_digest']),
       },
       validFrom: formatLocalDbTime(v['valid_from']), validTo: v['valid_to'] === null ? null : formatLocalDbTime(v['valid_to']),

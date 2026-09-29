@@ -92,6 +92,8 @@ export interface DepartmentMasterHierarchyNode {
 export interface DepartmentMasterHierarchyView {
   created_at: Generated<string>;
   id: Generated<string>;
+  registration_payload: Json | null;
+  registration_request_id: string | null;
   source_client_key: string;
   view_code: string;
 }
@@ -113,6 +115,7 @@ export interface DepartmentMasterHierarchyViewVersion {
   recorded_at: string;
   source_definition_version_id: string | null;
   source_record_id: string;
+  source_record_status: string | null;
   source_system_id: string;
   source_version: string;
   status: string;

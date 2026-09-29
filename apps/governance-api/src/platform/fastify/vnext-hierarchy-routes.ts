@@ -39,6 +39,7 @@ const SnapshotResponse = Type.Object({
     viewType: Type.Enum(['ADMINISTRATIVE', 'OPERATIONAL', 'MEDICAL_RECORD', 'FINANCE', 'STATISTICAL']),
     purpose: Text, aggregationRule: Text, ownerDepartmentId: Type.Union([HierarchyId, Type.Null()]),
     sourceSystemId: HierarchyId, sourceRecordId: Text, sourceVersion: Text, approvalRef: Text, status: Type.Literal('PUBLISHED'),
+    sourceRecordStatus: Type.Union([Type.Literal('ACTIVE'),Type.Null()]),
     version: Type.String({ pattern: '^[1-9][0-9]*$' }), contentDigest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
   }, closed),
   validFrom: HierarchyLocalTime, validTo: HierarchyNullableLocalTime, sourceRecordedAt: HierarchyLocalTime, recordedAt: HierarchyLocalTime, recordedFrom: HierarchyLocalTime,

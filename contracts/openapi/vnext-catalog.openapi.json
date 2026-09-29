@@ -96161,6 +96161,7 @@
                         "sourceVersion",
                         "approvalRef",
                         "status",
+                        "sourceRecordStatus",
                         "version",
                         "contentDigest"
                       ],
@@ -96243,6 +96244,19 @@
                           "type": "string",
                           "enum": [
                             "PUBLISHED"
+                          ]
+                        },
+                        "sourceRecordStatus": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "ACTIVE"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
                           ]
                         },
                         "version": {
@@ -96719,6 +96733,7 @@
                             "sourceVersion",
                             "approvalRef",
                             "status",
+                            "sourceRecordStatus",
                             "version",
                             "contentDigest"
                           ],
@@ -96801,6 +96816,19 @@
                               "type": "string",
                               "enum": [
                                 "PUBLISHED"
+                              ]
+                            },
+                            "sourceRecordStatus": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "ACTIVE"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
                               ]
                             },
                             "version": {

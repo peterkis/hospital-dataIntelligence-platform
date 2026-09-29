@@ -132,6 +132,31 @@ describe('P2-02 vNext hierarchy owner', () => {
     }finally{await direct.end();}
   });
 
+  it('replays view registration by request identity and rejects changed-payload reuse', async () => {
+    const input={requestId:id(),sourceClientKey:`REPLAY_${id()}`,viewCode:`REPLAY_${id()}`,viewName:'Registration replay',viewType:'ADMINISTRATIVE' as const,purpose:'Lost response regression',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'REPLAY',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',approvalRef:'REPLAY'};
+    const original=await hierarchy.createHierarchyView('maker',input);
+    expect(await hierarchy.createHierarchyView('maker',input)).toEqual(original);
+    await expect(hierarchy.createHierarchyView('maker',{...input,sourceClientKey:`CHANGED_${id()}`,viewCode:`CHANGED_${id()}`})).rejects.toThrow('REQUEST_CONFLICT');
+    await expect(hierarchy.createHierarchyView('maker',{...input,viewName:'Changed name'})).rejects.toThrow('REQUEST_CONFLICT');
+    await withoutViewPermission('maker',original.viewId,'WRITE',async()=>{
+      await expect(hierarchy.createHierarchyView('maker',input)).rejects.toThrow('ACCESS_DENIED');
+    });
+    await withoutViewPermission('maker',original.viewId,'READ',async()=>{
+      await expect(hierarchy.createHierarchyView('maker',input)).rejects.toThrow('ACCESS_DENIED');
+    });
+    const server=await buildCatalogServer(undefined,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,{owner:hierarchy,actor:()=> 'maker'});
+    const direct=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      const address=await server.listen({host:'127.0.0.1',port:0});
+      const replay=await createHierarchyClient(address,'maker').createView(input);
+      expect(replay.response.status).toBe(200);
+      expect(replay.data).toEqual(original);
+      // Internal key rotation may change the envelope digest, not the authored command.
+      const sqlReplay=await direct.query<{r:{viewId:string}}>('select department_master.hierarchy_create_view($1,$2::jsonb) r',['maker',JSON.stringify({...input,viewDigest:'f'.repeat(64)})]);
+      expect(sqlReplay.rows[0]?.r.viewId).toBe(original.viewId);
+    }finally{await direct.end();await server.close();}
+  });
+
   it('the application role cannot bypass view authorization with raw table reads', async () => {
     const app = new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
     try {
@@ -278,6 +303,21 @@ describe('P2-02 vNext hierarchy owner', () => {
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: foreignStage.candidateId, digest: foreignStage.digest });
     await expect(hierarchy.publishHierarchySnapshot('maker', { candidateId: foreignStage.candidateId, requestId: foreign.requestId, digest: foreignStage.digest })).rejects.toThrow('GROUP_REFERENCE_INVALID');
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId: secondViewId })).toBeNull();
+  });
+
+  it('retains source record status separately from governance status through SQL and HTTP reads', async () => {
+    const snapshot=await hierarchy.readHierarchySnapshot('maker',{viewId});
+    expect(snapshot?.view).toMatchObject({sourceRecordStatus:'ACTIVE',status:'PUBLISHED'});
+    const direct=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    const server=await buildCatalogServer(undefined,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,{owner:hierarchy,actor:()=> 'maker'});
+    try {
+      const stored=await direct.query<{r:unknown}>('select department_master.hierarchy_read($1,$2,$3::jsonb) r',['maker','SNAPSHOT',JSON.stringify({viewId})]);
+      expect(stored.rows[0]?.r).toHaveProperty('version.source_record_status','ACTIVE');
+      const address=await server.listen({host:'127.0.0.1',port:0});
+      const response=await createHierarchyClient(address,'maker').read({viewId});
+      expect(response.response.status).toBe(200);
+      expect(response.data?.view).toMatchObject({sourceRecordStatus:'ACTIVE',status:'PUBLISHED'});
+    }finally{await direct.end();await server.close();}
   });
 
   it.each(['extra-field','duplicate-group','header-extra','numeric-name','numeric-key','numeric-evidence-version','legacy-header-extra','legacy-full','legacy-numeric-name','invalid-clock','legacy-invalid-clock','invalid-second','edge-invalid-clock'] as const)('SQL publication rejects %s without changing history', async scenario => {
@@ -436,6 +476,28 @@ describe('P2-02 vNext hierarchy owner', () => {
     const snapshot = await hierarchy.publishHierarchySnapshot('maker', { candidateId: staged.candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(snapshot.view.sourceDefinitionVersionId).toBe(historicalVersion);
     expect(snapshot.view.sourceDefinitionVersionId).not.toBe(source.versionId);
+  });
+
+  it.each(['numeric-reason','numeric-version','long-reason','legacy-numeric-reason','legacy-numeric-version','legacy-long-reason'] as const)('rejects closure payload defect %s without a terminal event', async scenario => {
+    const before=await hierarchy.readHierarchySnapshot('maker',{viewId});
+    if(!before)throw new Error('SNAPSHOT_REQUIRED');
+    const defect=scenario.replace('legacy-','');
+    const payload={requestId:id(),viewId,expectedVersion:defect==='numeric-version'?Number(before.view.version):before.view.version,action:'CLOSE',reason:defect==='numeric-reason'?123:defect==='long-reason'?'x'.repeat(2001):'Closure shape regression'};
+    const digest=id().replaceAll('-','')+id().replaceAll('-','');
+    const pool=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    const client=await pool.connect();
+    try {
+      await client.query('BEGIN');
+      if(scenario.startsWith('legacy-')){
+        const candidateId=id();
+        peer(receipt.name,`INSERT INTO department_master.hierarchy_candidate(id,request_id,view_id,source_client_key,maker,maker_identity,digest,payload_digest,payload,envelope,status) VALUES('${candidateId}','${payload.requestId}','${viewId}','ORG05-SYNTHETIC-ADMIN','maker',department_master.authorize('maker','HOSPITAL','WRITE'),'${digest}','${digest}',${quote(JSON.stringify(payload))}::jsonb,'{}','VALIDATED');`);
+        await client.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',candidateId,digest]);
+        await expect(client.query('select department_master.hierarchy_lifecycle($1,$2,$3::jsonb)',['maker','APPLY',JSON.stringify({candidateId,requestId:payload.requestId,digest})])).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+      }else{
+        await expect(client.query('select department_master.hierarchy_lifecycle($1,$2,$3::jsonb)',['maker','PREPARE',JSON.stringify({payload,digest,payloadDigest:digest,envelope:{}})])).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+      }
+    }finally{await client.query('ROLLBACK');client.release();await pool.end();}
+    expect(await hierarchy.readHierarchySnapshot('maker',{viewId})).toEqual(before);
   });
 
   it('rejects privileged mutation of published snapshot versions and nodes', async () => {
