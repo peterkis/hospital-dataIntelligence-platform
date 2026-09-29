@@ -4,16 +4,16 @@ import { Pool } from 'pg';
 import { Type, type Static } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../../platform/database/vnext-types.generated.js';
-import { localTime } from '../../organization-master/time.js';
-import { canonicalPlan, planBinding } from '../../governance-catalog/plan-binding.js';
-import type { KeyProviderPort } from '../../governance-catalog/protected-artifact.js';
+import { localTime } from '../../organization-master/index.js';
+import { canonicalPlan, planBinding, type KeyProviderPort } from '../../governance-catalog/index.js';
 
 const closed = { additionalProperties: false } as const;
 export const HierarchyId = Type.String({ pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' });
 const text = (maxLength = 2000) => Type.String({ minLength: 1, maxLength, pattern: '\\S' });
 const nullableId = Type.Union([HierarchyId, Type.Null()]);
 const nullableText = (maxLength = 2000) => Type.Union([Type.String({ maxLength }), Type.Null()]);
-const local = Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$' });
+export const HierarchyLocalTime = Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$' });
+export const HierarchyNullableLocalTime = Type.Union([HierarchyLocalTime, Type.Null()]);
 
 const DepartmentNode = Type.Object({
   nodeKey: text(128),
@@ -60,9 +60,9 @@ export const HierarchyCandidateSchema = Type.Object({
   sourceSystemId: HierarchyId,
   sourceRecordId: text(256),
   sourceVersion: text(64),
-  validFrom: local,
-  validTo: nullableText(40),
-  recordedAt: local,
+  validFrom: HierarchyLocalTime,
+  validTo: HierarchyNullableLocalTime,
+  recordedAt: HierarchyLocalTime,
   recordStatus: Type.Literal('ACTIVE'),
   approvalRef: text(256),
   nodes: Type.Array(HierarchyNodeSchema, { minItems: 1, maxItems: 100 }),
@@ -75,7 +75,7 @@ export const CreateHierarchyViewSchema = Type.Object({
   viewType: HierarchyCandidateSchema.properties.viewType,
   purpose: text(2000), aggregationRule: text(2000), ownerDepartmentId: nullableId,
   sourceSystemId: HierarchyId, sourceRecordId: text(256), sourceVersion: text(64),
-  validFrom: local, validTo: nullableText(40), recordedAt: local,
+  validFrom: HierarchyLocalTime, validTo: HierarchyNullableLocalTime, recordedAt: HierarchyLocalTime,
   approvalRef: text(256),
 }, closed);
 export type CreateHierarchyViewInput = Static<typeof CreateHierarchyViewSchema>;
@@ -90,8 +90,22 @@ export type HierarchyPublishInput = Static<typeof HierarchyPublishSchema>;
 export type ValidatedHierarchyNode = HierarchyNodeInput & { readonly depth: number };
 export interface ForestValidation { readonly nodes: readonly ValidatedHierarchyNode[]; readonly digest: string }
 export interface HierarchyIssue { readonly code: string; readonly nodeKey?: string; readonly field?: string }
-export interface HierarchyViewRecord { readonly id: string; readonly sourceClientKey: string; readonly viewCode: string; readonly viewName: string; readonly viewType: HierarchyCandidateInput['viewType']; readonly version: string; readonly contentDigest: string }
-export interface HierarchySnapshot { readonly view: HierarchyViewRecord; readonly validFrom: string; readonly validTo: string | null; readonly recordedAt: string; readonly nodes: readonly (ValidatedHierarchyNode & { readonly nodeId: string; readonly departmentId: string | null; readonly departmentVersionId: string | null; readonly groupId: string | null; readonly groupVersionId: string | null })[]; readonly contentDigest: string }
+export interface HierarchyViewRecord {
+  readonly id: string; readonly sourceClientKey: string; readonly viewCode: string; readonly viewName: string;
+  readonly viewType: HierarchyCandidateInput['viewType']; readonly purpose: string; readonly aggregationRule: string;
+  readonly ownerDepartmentId: string | null; readonly sourceSystemId: string; readonly sourceRecordId: string;
+  readonly sourceVersion: string; readonly approvalRef: string; readonly status: 'PUBLISHED';
+  readonly version: string; readonly contentDigest: string;
+}
+export interface HierarchySnapshot {
+  readonly view: HierarchyViewRecord; readonly validFrom: string; readonly validTo: string | null;
+  /** Source `recorded_at`, retained as the compatibility alias `recordedAt`. */
+  readonly sourceRecordedAt: string; readonly recordedAt: string;
+  /** Platform record time assigned by the hierarchy version row. */
+  readonly recordedFrom: string;
+  readonly nodes: readonly (ValidatedHierarchyNode & { readonly nodeId: string; readonly departmentId: string | null; readonly departmentVersionId: string | null; readonly groupId: string | null; readonly groupVersionId: string | null })[];
+  readonly contentDigest: string;
+}
 
 function assertCandidate(value: unknown): asserts value is HierarchyCandidateInput {
   if (!Check(HierarchyCandidateSchema, value)) throw new Error('CLOSED_INPUT_REQUIRED');
@@ -200,6 +214,14 @@ function mapNode(row: Record<string, unknown>): SnapshotNode {
 }
 type SnapshotNode = ValidatedHierarchyNode & { nodeId: string; departmentId: string | null; departmentVersionId: string | null; groupId: string | null; groupVersionId: string | null };
 
+function formatLocalDbTime(value: unknown): string {
+  if (value instanceof Date) {
+    const pad = (part: number, width = 2) => String(part).padStart(width, '0');
+    return localTime(`${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}.${pad(value.getMilliseconds(), 3)}`);
+  }
+  return localTime(String(value).replace(' ', 'T'));
+}
+
 /** vNext database owner for ORG05/ORG06. All writes use complete candidates. */
 export function openHierarchy(connection: string, provider?: KeyProviderPort) {
   const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: connection, max: 4, options: '-c timezone=Asia/Shanghai' }) }) });
@@ -213,10 +235,22 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
   };
   const snapshot = async (trx: Kysely<DB>, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
     await authorize(trx, actor, 'READ');
-    const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.valid_from,v.valid_to,v.recorded_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
+    const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
     if (!v) return null;
     const rows = (await sql<Record<string, unknown>>`select node_id,node_key,parent_node_key,node_kind,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth from department_master.hierarchy_node where view_version_id=${String(v['id'])}::uuid order by depth,sort_order,node_key`.execute(trx)).rows;
-    return { view: { id: String(v['view_id']), sourceClientKey: String(v['source_client_key']), viewCode: String(v['view_code']), viewName: String(v['view_name']), viewType: v['view_type'] as HierarchyCandidateInput['viewType'], version: String(v['version_no']), contentDigest: String(v['content_digest']) }, validFrom: String(v['valid_from']).replace(' ', 'T'), validTo: v['valid_to'] === null ? null : String(v['valid_to']).replace(' ', 'T'), recordedAt: String(v['recorded_at']).replace(' ', 'T'), nodes: rows.map(mapNode), contentDigest: String(v['content_digest']) };
+    const sourceRecordedAt = formatLocalDbTime(v['recorded_at']);
+    return {
+      view: {
+        id: String(v['view_id']), sourceClientKey: String(v['source_client_key']), viewCode: String(v['view_code']), viewName: String(v['view_name']),
+        viewType: v['view_type'] as HierarchyCandidateInput['viewType'], purpose: String(v['purpose']), aggregationRule: String(v['aggregation_rule']),
+        ownerDepartmentId: v['owner_department_id'] === null ? null : String(v['owner_department_id']), sourceSystemId: String(v['source_system_id']),
+        sourceRecordId: String(v['source_record_id']), sourceVersion: String(v['source_version']), approvalRef: String(v['approval_ref']),
+        status: v['status'] as 'PUBLISHED', version: String(v['version_no']), contentDigest: String(v['content_digest']),
+      },
+      validFrom: formatLocalDbTime(v['valid_from']), validTo: v['valid_to'] === null ? null : formatLocalDbTime(v['valid_to']),
+      sourceRecordedAt, recordedAt: sourceRecordedAt, recordedFrom: formatLocalDbTime(v['created_at']),
+      nodes: rows.map(mapNode), contentDigest: String(v['content_digest']),
+    };
   };
   return {
     async validateForest(value: unknown) { return validateHierarchyForest(value); },
@@ -229,10 +263,21 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
         return { viewId: result.viewId, sourceClientKey: input.sourceClientKey, viewCode: input.viewCode };
       });
     },
-    async importHierarchyCandidate(actor: string, value: HierarchyCandidateInput): Promise<{ candidateId: string; digest: string; decision: 'PASS' | 'FAIL'; issues: readonly HierarchyIssue[] }> {
+    async importHierarchyCandidate(actor: string, value: HierarchyCandidateInput): Promise<{ candidateId: string | null; digest: string; decision: 'PASS' | 'FAIL'; issues: readonly HierarchyIssue[] }> {
       assertCandidate(value);
-      const validated = validateHierarchyForest(value);
       const sealed = seal(value, provider);
+      let validated: ForestValidation;
+      try {
+        validated = validateHierarchyForest(value);
+      } catch (error) {
+        const detail = error as Error & { nodeKey?: string; field?: string };
+        return {
+          candidateId: null,
+          digest: sealed.digest,
+          decision: 'FAIL',
+          issues: [{ code: detail.message, ...(detail.nodeKey ? { nodeKey: detail.nodeKey } : {}), ...(detail.field ? { field: detail.field } : {}) }],
+        };
+      }
       return root(async trx => {
         const makerIdentity = await authorize(trx, actor, 'WRITE');
         if (value.viewId === null) {

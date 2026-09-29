@@ -2084,6 +2084,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/hierarchy/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createHierarchyView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/hierarchy/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importHierarchyCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/hierarchy/candidates/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveHierarchyCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/hierarchy/candidates/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["publishHierarchySnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/hierarchy/snapshots/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readHierarchySnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -29029,6 +29109,688 @@ export interface operations {
             };
             /** @description Default Response */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    createHierarchyView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    sourceClientKey: string;
+                    viewCode: string;
+                    viewName: string;
+                    viewType: "ADMINISTRATIVE" | "OPERATIONAL" | "MEDICAL_RECORD" | "FINANCE" | "STATISTICAL";
+                    purpose: string;
+                    aggregationRule: string;
+                    ownerDepartmentId: string | null;
+                    sourceSystemId: string;
+                    sourceRecordId: string;
+                    sourceVersion: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    recordedAt: string;
+                    approvalRef: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        viewId: string;
+                        sourceClientKey: string;
+                        viewCode: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    importHierarchyCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    viewId: string | null;
+                    sourceClientKey: string;
+                    viewCode: string;
+                    viewName: string;
+                    viewType: "ADMINISTRATIVE" | "OPERATIONAL" | "MEDICAL_RECORD" | "FINANCE" | "STATISTICAL";
+                    /** @enum {string} */
+                    parentCardinality: "STRICT_TREE";
+                    purpose: string;
+                    aggregationRule: string;
+                    ownerDepartmentId: string | null;
+                    sourceSystemId: string;
+                    sourceRecordId: string;
+                    sourceVersion: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    recordedAt: string;
+                    /** @enum {string} */
+                    recordStatus: "ACTIVE";
+                    approvalRef: string;
+                    nodes: ({
+                        nodeKey: string;
+                        parentNodeKey: string | null;
+                        /** @enum {string} */
+                        nodeKind: "DEPARTMENT";
+                        departmentId: string;
+                        departmentVersionId: string;
+                        displayName: string;
+                        relationName: string;
+                        sortOrder: number;
+                        isPrimaryPath: boolean;
+                    } | {
+                        nodeKey: string;
+                        parentNodeKey: string | null;
+                        /** @enum {string} */
+                        nodeKind: "GROUP";
+                        groupCode: string;
+                        groupId: string | null;
+                        groupVersionId: string | null;
+                        displayName: string;
+                        relationName: string;
+                        sortOrder: number;
+                        isPrimaryPath: boolean;
+                    })[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string | null;
+                        digest: string;
+                        /** @enum {unknown} */
+                        decision: "PASS" | "FAIL";
+                        issues: {
+                            code: string;
+                            nodeKey?: string;
+                            field?: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveHierarchyCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    publishHierarchySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        view: {
+                            id: string;
+                            sourceClientKey: string;
+                            viewCode: string;
+                            viewName: string;
+                            /** @enum {unknown} */
+                            viewType: "ADMINISTRATIVE" | "OPERATIONAL" | "MEDICAL_RECORD" | "FINANCE" | "STATISTICAL";
+                            purpose: string;
+                            aggregationRule: string;
+                            ownerDepartmentId: string | null;
+                            sourceSystemId: string;
+                            sourceRecordId: string;
+                            sourceVersion: string;
+                            approvalRef: string;
+                            /** @enum {string} */
+                            status: "PUBLISHED";
+                            version: string;
+                            contentDigest: string;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        sourceRecordedAt: string;
+                        recordedAt: string;
+                        recordedFrom: string;
+                        nodes: {
+                            nodeKey: string;
+                            parentNodeKey: string | null;
+                            /** @enum {unknown} */
+                            nodeKind: "DEPARTMENT" | "GROUP";
+                            displayName: string;
+                            relationName: string;
+                            sortOrder: number;
+                            isPrimaryPath: boolean;
+                            depth: number;
+                            nodeId: string;
+                            departmentId: string | null;
+                            departmentVersionId: string | null;
+                            groupId: string | null;
+                            groupVersionId: string | null;
+                        }[];
+                        contentDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readHierarchySnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    viewId: string;
+                    version?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        view: {
+                            id: string;
+                            sourceClientKey: string;
+                            viewCode: string;
+                            viewName: string;
+                            /** @enum {unknown} */
+                            viewType: "ADMINISTRATIVE" | "OPERATIONAL" | "MEDICAL_RECORD" | "FINANCE" | "STATISTICAL";
+                            purpose: string;
+                            aggregationRule: string;
+                            ownerDepartmentId: string | null;
+                            sourceSystemId: string;
+                            sourceRecordId: string;
+                            sourceVersion: string;
+                            approvalRef: string;
+                            /** @enum {string} */
+                            status: "PUBLISHED";
+                            version: string;
+                            contentDigest: string;
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                        sourceRecordedAt: string;
+                        recordedAt: string;
+                        recordedFrom: string;
+                        nodes: {
+                            nodeKey: string;
+                            parentNodeKey: string | null;
+                            /** @enum {unknown} */
+                            nodeKind: "DEPARTMENT" | "GROUP";
+                            displayName: string;
+                            relationName: string;
+                            sortOrder: number;
+                            isPrimaryPath: boolean;
+                            depth: number;
+                            nodeId: string;
+                            departmentId: string | null;
+                            departmentVersionId: string | null;
+                            groupId: string | null;
+                            groupVersionId: string | null;
+                        }[];
+                        contentDigest: string;
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

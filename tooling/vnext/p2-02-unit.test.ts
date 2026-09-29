@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateHierarchyForest, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/vnext/hierarchy.js';
+import { validateHierarchyForest, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/index.js';
 
 const id = (last: string) => `00000000-0000-7000-8000-${last.padStart(12, '0')}`;
 const base = (viewCode: string, nodes: HierarchyCandidateInput['nodes']): HierarchyCandidateInput => ({
@@ -15,20 +15,20 @@ const department = (nodeKey: string, parentNodeKey: string | null, departmentId:
 });
 
 describe('P2-02 strict hierarchy domain', () => {
-  it('allows the same department in two independent views', () => {
+  it('P2-02-AC-01 allows the same department in two independent views', () => {
     const dept = id('10');
     expect(() => validateHierarchyForest(base('ADMIN', [department('root', null, dept)]))).not.toThrow();
     expect(() => validateHierarchyForest(base('MEDICAL', [department('root', null, dept)]))).not.toThrow();
   });
 
-  it('rejects two parents or duplicate placement in one view', () => {
+  it('P2-02-AC-01 rejects two parents or duplicate placement in one view', () => {
     const dept = id('10');
     expect(() => validateHierarchyForest(base('ADMIN', [
       department('a', null, id('11')), department('b', null, id('12')), department('child', 'a', dept), department('child-2', 'b', dept),
     ]))).toThrowError('DEPARTMENT_DUPLICATE');
   });
 
-  it('rejects a cycle even when the final row closes it', () => {
+  it('P2-02-AC-02 rejects a cycle even when the final row closes it', () => {
     expect(() => validateHierarchyForest(base('ADMIN', [
       department('a', 'b', id('11')), department('b', 'c', id('12')), department('c', 'a', id('13')),
     ]))).toThrowError('HIERARCHY_CYCLE');
@@ -43,7 +43,7 @@ describe('P2-02 strict hierarchy domain', () => {
     expect(result.nodes[0]?.nodeKind).toBe('GROUP');
   });
 
-  it('rejects a GROUP carrying a department foreign-key shape', () => {
+  it('P2-02-AC-03 rejects a GROUP carrying a department foreign-key shape', () => {
     const invalid: unknown = {
       ...base('ADMIN', []),
       nodes: [{
@@ -54,9 +54,22 @@ describe('P2-02 strict hierarchy domain', () => {
     expect(() => validateHierarchyForest(invalid)).toThrowError('CLOSED_INPUT_REQUIRED');
   });
 
-  it('distinguishes same-name nodes by their stable node keys', () => {
+  it('P2-02-AC-04 distinguishes same-name nodes by their stable IDs', () => {
     const result = validateHierarchyForest(base('ADMIN', [department('a', null, id('11')), department('b', null, id('12'))]));
     expect(result.nodes.map(node => node.nodeKey)).toEqual(['a', 'b']);
+    expect(result.nodes.map(node => node.displayName)).toEqual(['同名科室', '同名科室']);
+    expect(result.nodes.map(node => node.nodeKind === 'DEPARTMENT' ? node.departmentId : null)).toEqual([id('11'), id('12')]);
+  });
+
+  it('rejects source multi-parent policy instead of relaxing strict tree', () => {
+    const invalid: unknown = { ...base('ADMIN', [department('a', null, id('11'))]), single_parent: false };
+    expect(() => validateHierarchyForest(invalid)).toThrowError('CLOSED_INPUT_REQUIRED');
+  });
+
+  it('rejects registration-only view types from candidate import', () => {
+    for (const viewType of ['FINANCE', 'STATISTICAL'] as const) {
+      expect(() => validateHierarchyForest({ ...base(viewType, [department('a', null, id('11'))]), viewType })).toThrowError('VIEW_TYPE_NOT_OPERATIONAL');
+    }
   });
 
   it('rejects offset-bearing source times and mixed periods', () => {

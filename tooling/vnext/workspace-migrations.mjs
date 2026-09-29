@@ -7,6 +7,9 @@ export const workspaceMigration = '0087_department_catalog_interfaces';
 const postWorkspaceMigrations = [
  '0088_hierarchy_views',
  '0089_department_committed_row_repair',
+ '0090_hierarchy_publish_binding',
+ '0091_hierarchy_publish_invariants',
+ '0092_hierarchy_publish_whitespace_guard',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

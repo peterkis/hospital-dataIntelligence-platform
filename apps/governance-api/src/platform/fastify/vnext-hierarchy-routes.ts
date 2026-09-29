@@ -5,6 +5,8 @@ import {
   HierarchyCandidateSchema,
   HierarchyPublishSchema,
   HierarchyId,
+  HierarchyLocalTime,
+  HierarchyNullableLocalTime,
   type openHierarchy,
 } from '../../modules/department-master/index.js';
 
@@ -13,7 +15,7 @@ const Text = Type.String();
 const ErrorSchema = Type.Object({ code: Text, message: Text, field: Type.Optional(Text) }, closed);
 const errors = { 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema, 409: ErrorSchema, 500: ErrorSchema, 503: ErrorSchema };
 const CandidateResult = Type.Object({
-  candidateId: HierarchyId, digest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
+  candidateId: Type.Union([HierarchyId, Type.Null()]), digest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
   decision: Type.Enum(['PASS', 'FAIL']), issues: Type.Array(Type.Object({ code: Text, nodeKey: Type.Optional(Text), field: Type.Optional(Text) }, closed)),
 }, closed);
 const ApprovalResult = Type.Object({ candidateId: HierarchyId, approvedBy: Text }, closed);
@@ -28,9 +30,11 @@ const SnapshotResponse = Type.Object({
   view: Type.Object({
     id: HierarchyId, sourceClientKey: Text, viewCode: Text, viewName: Text,
     viewType: Type.Enum(['ADMINISTRATIVE', 'OPERATIONAL', 'MEDICAL_RECORD', 'FINANCE', 'STATISTICAL']),
+    purpose: Text, aggregationRule: Text, ownerDepartmentId: Type.Union([HierarchyId, Type.Null()]),
+    sourceSystemId: HierarchyId, sourceRecordId: Text, sourceVersion: Text, approvalRef: Text, status: Type.Literal('PUBLISHED'),
     version: Type.String({ pattern: '^[1-9][0-9]*$' }), contentDigest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
   }, closed),
-  validFrom: Text, validTo: Type.Union([Text, Type.Null()]), recordedAt: Text,
+  validFrom: HierarchyLocalTime, validTo: HierarchyNullableLocalTime, sourceRecordedAt: HierarchyLocalTime, recordedAt: HierarchyLocalTime, recordedFrom: HierarchyLocalTime,
   nodes: Type.Array(SnapshotNodeResponse), contentDigest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
 }, closed);
 
