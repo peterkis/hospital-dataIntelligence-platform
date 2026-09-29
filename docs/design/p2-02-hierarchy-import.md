@@ -21,6 +21,8 @@ P2-02 在当前 vNext Department Owner 内治理 ORG05 视图定义和 ORG06 完
 
 ## 写入边界
 
+0095 在数据库发布边界按 DEPARTMENT/GROUP 分别验证节点完整键集合，拒绝未知字段和混用字段；同时检查 GROUP code 与非空 GROUP ID 的单快照唯一性。回归直接经过受控 store/approve/publish 函数，证明不能绕过 TypeBox Owner 静默丢弃已审批字段或重复放置同一 GROUP。
+
 `hierarchy_create_view`、`hierarchy_store_candidate`、`hierarchy_approve` 和 `hierarchy_publish` 是 SECURITY DEFINER 入口。应用角色只有读取新表和执行受控函数的权限，不能直接插入正式层级事实。发布函数锁定视图、重新检查 Department 版本覆盖，并在一笔事务中写完整版本、节点、审计和候选状态。
 
 HTTP 路由位于 `/api/vnext/hierarchy/`：视图创建、候选导入、候选审批、快照发布和快照读取。维护页面不在本票范围，交由 P2-07 接入通用工作台。
