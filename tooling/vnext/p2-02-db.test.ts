@@ -53,7 +53,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     const candidate: HierarchyCandidateInput = {
       requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG06:1', sourceVersion: '1',
-      validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
+      validFrom: '2026-09-01T00:00:00.123456', validTo: null, recordedAt: '2026-09-01T01:00:00.654321', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
       nodes: [{ nodeKey: 'clinical', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
     };
     const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
@@ -71,6 +71,8 @@ describe('P2-02 vNext hierarchy owner', () => {
     }
     const published = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(published.nodes).toHaveLength(1);
+    expect(published.validFrom).toBe('2026-09-01T00:00:00.123456');
+    expect(published.sourceRecordedAt).toBe('2026-09-01T01:00:00.654321');
     expect(published.nodes[0]?.nodeKind).toBe('GROUP');
     expect(published.nodes[0]?.groupId).toMatch(/^[a-f0-9-]{36}$/);
     if (!published.nodes[0]?.groupId || !published.nodes[0]?.groupVersionId) throw new Error('P2_02_GROUP_REFERENCE_REQUIRED');

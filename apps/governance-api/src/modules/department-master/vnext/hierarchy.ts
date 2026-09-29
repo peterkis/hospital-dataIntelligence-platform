@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
 import { Kysely, PostgresDialect, sql } from 'kysely';
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
 import { Type, type Static } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../../platform/database/vnext-types.generated.js';
@@ -215,16 +215,13 @@ function mapNode(row: Record<string, unknown>): SnapshotNode {
 type SnapshotNode = ValidatedHierarchyNode & { nodeId: string; departmentId: string | null; departmentVersionId: string | null; groupId: string | null; groupVersionId: string | null };
 
 function formatLocalDbTime(value: unknown): string {
-  if (value instanceof Date) {
-    const pad = (part: number, width = 2) => String(part).padStart(width, '0');
-    return localTime(`${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}.${pad(value.getMilliseconds(), 3)}`);
-  }
-  return localTime(String(value).replace(' ', 'T'));
+  if (typeof value !== 'string') throw new Error('LOCAL_TIME_REQUIRED');
+  return localTime(value.replace(' ', 'T'));
 }
 
 /** vNext database owner for ORG05/ORG06. All writes use complete candidates. */
 export function openHierarchy(connection: string, provider?: KeyProviderPort) {
-  const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: connection, max: 4, options: '-c timezone=Asia/Shanghai' }) }) });
+  const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: connection, max: 4, options: '-c timezone=Asia/Shanghai', types: { getTypeParser: (oid, format) => oid === 1114 ? (value: string) => value : types.getTypeParser(oid, format) } }) }) });
   const root = <T>(work: (trx: Kysely<DB>) => Promise<T>) => db.transaction().execute(async trx => { await sql`select pg_advisory_xact_lock(901002)`.execute(trx); return work(trx); });
   const authorize = async (trx: Kysely<DB>, actor: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.authorize(${actor},'HOSPITAL',${permission}) r`.execute(trx)).rows[0]!.r;
   const readCandidate = async (trx: Kysely<DB>, actor: string, id: string): Promise<StoredCandidate> => {
