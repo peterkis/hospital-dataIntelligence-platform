@@ -6,7 +6,7 @@ import { LocalSyntheticKeyProvider, openCatalog, type Outcome } from '../../apps
 import { departmentFixture } from './p2-01-fixture.js';
 import { openDepartment, openHierarchy, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/index.js';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
-import { peer } from './lineage.mjs';
+import { peer, quote } from './lineage.mjs';
 import { createHierarchyClient } from '../../packages/generated-api-client/src/index.js';
 
 const connection = process.env['VNEXT_VALIDATION_OWNER_URL'];
@@ -203,21 +203,32 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId: secondViewId })).toBeNull();
   });
 
-  it.each(['extra-field','duplicate-group'] as const)('SQL publication rejects %s without changing history', async defect => {
+  it.each(['extra-field','duplicate-group','header-extra','numeric-name','numeric-key','numeric-evidence-version','legacy-header-extra','legacy-numeric-name'] as const)('SQL publication rejects %s without changing history', async scenario => {
+    const defect = scenario.replace('legacy-','');
     const before = await hierarchy.readHierarchySnapshot('maker',{viewId});
     const group = before?.nodes[0];
     if (!group?.groupId || !group.groupVersionId) throw new Error('GROUP_REQUIRED');
     const node = {sourceEvidence:edgeEvidence('g1'),nodeKey:'g1',parentNodeKey:null,nodeKind:'GROUP',groupId:group.groupId,groupVersionId:group.groupVersionId,groupCode:'CLINICAL',displayName:group.displayName,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth:0};
-    const payload = {requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'SQL boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'SQL regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SQL',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'SQL_APPROVAL',validationDigest:'a'.repeat(64),nodes:defect==='extra-field'?[{...node,unknownApprovedField:'must not disappear'}]:[node,{...node,nodeKey:'g2',sourceEvidence:edgeEvidence('g2')}]};
+    const payload = {requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'SQL boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'SQL regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SQL',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'SQL_APPROVAL',validationDigest:'a'.repeat(64),...(defect==='header-extra'?{unknownApprovedHeader:'must not disappear'}:{}),nodes:defect==='extra-field'?[{...node,unknownApprovedField:'must not disappear'}]:defect==='duplicate-group'?[node,{...node,nodeKey:'g2',sourceEvidence:edgeEvidence('g2')}]:defect==='numeric-name'?[{...node,displayName:123}]:defect==='numeric-key'?[{...node,nodeKey:123}]:defect==='numeric-evidence-version'?[{...node,sourceEvidence:{...node.sourceEvidence,sourceVersion:123}}]:[node]};
     const digest = id().replaceAll('-','')+id().replaceAll('-','');
     const pool = new Pool({connectionString:connection});
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const stored = await client.query<{r:{candidateId:string}}>('select department_master.hierarchy_store_candidate($1,$2::jsonb) r',['maker',JSON.stringify({...payload,digest,payloadDigest:digest,envelope:{}})]);
-      const candidateId = stored.rows[0]!.r.candidateId;
-      await client.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',candidateId,digest]);
-      await expect(client.query('select department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',candidateId,digest,JSON.stringify(payload)])).rejects.toThrow(defect==='extra-field'?'CLOSED_INPUT_REQUIRED':'GROUP_DUPLICATE');
+      const publish = async () => {
+        let candidateId: string;
+        if (scenario.startsWith('legacy-')) {
+          candidateId = id();
+          // Receipt-owned fixture representing input accepted before 0098.
+          peer(receipt.name,`INSERT INTO department_master.hierarchy_candidate(id,request_id,view_id,source_client_key,maker,maker_identity,digest,payload_digest,payload,envelope,status) VALUES('${candidateId}','${payload.requestId}','${viewId}','ORG05-SYNTHETIC-ADMIN','maker',department_master.authorize('maker','HOSPITAL','WRITE'),'${digest}','${digest}',${quote(JSON.stringify(payload))}::jsonb,'{}','VALIDATED');`);
+        } else {
+          const stored = await client.query<{r:{candidateId:string}}>('select department_master.hierarchy_store_candidate($1,$2::jsonb) r',['maker',JSON.stringify({...payload,digest,payloadDigest:digest,envelope:{}})]);
+          candidateId = stored.rows[0]!.r.candidateId;
+        }
+        await client.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',candidateId,digest]);
+        return client.query('select department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',candidateId,digest,JSON.stringify(payload)]);
+      };
+      await expect(publish()).rejects.toThrow(defect==='duplicate-group'?'GROUP_DUPLICATE':'CLOSED_INPUT_REQUIRED');
     } finally { await client.query('ROLLBACK'); client.release(); await pool.end(); }
     expect(await hierarchy.readHierarchySnapshot('maker',{viewId})).toEqual(before);
   });
