@@ -99,6 +99,8 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(renamedPublished.view.viewName).toBe('行政视图改名');
     expect(renamedPublished.nodes[0]?.displayName).toBe('临床组改名');
     expect(renamedPublished.contentDigest).not.toBe(published.contentDigest);
+    const replayAfterRename = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
+    expect(replayAfterRename).toEqual(published);
   });
 
   it('P2-02-AC-02 does not persist an invalid cycle candidate as a partial snapshot', async () => {

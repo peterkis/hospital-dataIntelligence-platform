@@ -305,7 +305,22 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       if (!Check(HierarchyPublishSchema, input)) throw new Error('CLOSED_INPUT_REQUIRED');
       return root(async trx => {
         const candidate = await readCandidate(trx, actor, input.candidateId); if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
-        if (candidate.status === 'APPLIED') { const value = unseal<HierarchyCandidateInput>(candidate, provider); const view = await sql<{ id: string }>`select id from department_master.hierarchy_view where source_client_key=${value.sourceClientKey}`.execute(trx); const existing = await snapshot(trx, actor, view.rows[0]!.id); if (!existing) throw new Error('NOT_FOUND'); return existing; }
+        if (candidate.status === 'APPLIED') {
+          const value = unseal<HierarchyCandidateInput>(candidate, provider);
+          const checked = validateHierarchyForest(value);
+          const versions = (await sql<{ viewId: string; version: string }>`
+            select v.view_id as "viewId", v.version_no::text as version
+            from department_master.hierarchy_view_version v
+            join department_master.hierarchy_view h on h.id=v.view_id
+            where h.source_client_key=${value.sourceClientKey}
+              and v.content_digest=${checked.digest} and v.status='PUBLISHED'
+          `.execute(trx)).rows;
+          if (versions.length !== 1) throw new Error('STALE_VALIDATION');
+          const published = versions[0]!;
+          const existing = await snapshot(trx, actor, published.viewId, published.version);
+          if (!existing) throw new Error('NOT_FOUND');
+          return existing;
+        }
         if (candidate.status !== 'APPROVED' || candidate.approvedBy === null) throw new Error('APPROVAL_REQUIRED');
         const approverIdentity = await authorize(trx, candidate.approvedBy, 'REVIEW'); if (approverIdentity === candidate.makerIdentity) throw new Error('MAKER_CHECKER_REQUIRED');
         const value = unseal<HierarchyCandidateInput>(candidate, provider); const checked = validateHierarchyForest(value);
