@@ -53,6 +53,16 @@ export interface DepartmentMasterHierarchyCandidate {
   view_id: string | null;
 }
 
+export interface DepartmentMasterHierarchyClosure {
+  candidate_id: string;
+  id: Generated<string>;
+  reason: string;
+  recorded_at: Generated<string>;
+  status: string;
+  version_no: Int8;
+  view_id: string;
+}
+
 export interface DepartmentMasterHierarchyNode {
   department_id: string | null;
   department_version_id: string | null;
@@ -788,6 +798,7 @@ export interface DB {
   "department_master.access": DepartmentMasterAccess;
   "department_master.department": DepartmentMasterDepartment;
   "department_master.hierarchy_candidate": DepartmentMasterHierarchyCandidate;
+  "department_master.hierarchy_closure": DepartmentMasterHierarchyClosure;
   "department_master.hierarchy_node": DepartmentMasterHierarchyNode;
   "department_master.hierarchy_view": DepartmentMasterHierarchyView;
   "department_master.hierarchy_view_version": DepartmentMasterHierarchyViewVersion;

@@ -27,6 +27,12 @@ HTTP 路由位于 `/api/vnext/hierarchy/`：视图创建、候选导入、候选
 
 `createHierarchyClient` 使用生成的 OpenAPI operations 类型访问上述五个路由。层级请求采用 TypeBox 无损 body 校验，保留根节点 `parentNodeKey: null`，避免 AJV coercion 将其改成空字符串。真实 loopback HTTP 测试覆盖完整发布、同人审批拒绝、历史读取以及空字符串父节点拒绝；这属于本地合成 API 集成证据，不替代正式验收。
 
+### 非扩张生命周期
+
+0094 增加 `prepareHierarchyClosure`（`CLOSE`/`REVOKE`）、复用独立 `approveHierarchyCandidate`，再由 `closeHierarchyView` 原子追加不可变终态事件。候选绑定 viewId、expectedVersion、requestId、动作和原因；执行时重查当前写权限、审批人身份/复核权限及准确发布版本。它不重新要求 SOURCE、Department 或来源合同处于准入状态，因此上游停用不阻断收尾。动作对整个视图立即终态生效，不提供隐式重开或未来计划关闭。
+
+关闭后不再返回当前有效快照，明确指定历史版本仍返回原快照；后续发布被 `HIERARCHY_CLOSED` 拒绝。重放关闭命令返回原终态事件，错误 requestId 拒绝；原视图版本、节点及来源证据不被改写。两个新命令均有生成客户端与 HTTP 路由，业务验证覆盖 SOURCE 在审批后退役、关闭/撤销、历史读取、错误重放及终态阻断。
+
 ## 来源字段与范围
 
 ORG05 的 16 个字段和 ORG06 的 15 个字段仍以

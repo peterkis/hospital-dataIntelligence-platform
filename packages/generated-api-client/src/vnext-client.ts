@@ -134,6 +134,8 @@ export function createHierarchyClient(baseUrl:string,actor:string){
   approve:(body:operations['approveHierarchyCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/candidates/approve',{body}),
   publish:(body:operations['publishHierarchySnapshot']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/candidates/publish',{body}),
   read:(body:operations['readHierarchySnapshot']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/snapshots/read',{body}),
+  prepareClosure:(body:operations['prepareHierarchyClosure']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/closures',{body}),
+  close:(body:operations['closeHierarchyView']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/closures/apply',{body}),
  };
 }
 export function createDepartmentClient(baseUrl:string,actor:string){

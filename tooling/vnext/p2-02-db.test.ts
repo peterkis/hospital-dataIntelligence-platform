@@ -2,7 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { Pool } from 'pg';
-import { LocalSyntheticKeyProvider, openCatalog } from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import { LocalSyntheticKeyProvider, openCatalog, type Outcome } from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import { departmentFixture } from './p2-01-fixture.js';
 import { openDepartment, openHierarchy, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/index.js';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
@@ -24,6 +24,7 @@ let sourceSystemId: string;
 let sourceDefinitionVersionId: string;
 let finiteDepartmentId: string;
 let finiteDepartmentVersionId: string;
+let temporalSource: Outcome;
 
 const edgeEvidence = (key: string, validFrom = '2026-09-01T00:00:00.000000', validTo: string | null = null) => ({ sourceClientKey: key, sourceVersion: '7', sourceSystemId, sourceRecordId: `ORG06:sheet:${key}`, validFrom, validTo, recordedAt: '2026-09-01T01:00:00.123456', recordStatus: 'ACTIVE' as const, approvalRef: 'EDGE_APPROVAL' });
 
@@ -238,6 +239,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     source = await catalog.command('maker', { ...common(), action: 'REVISE', target: source.id, expectedHead: source.head, values: { name: 'Future source revision' }, validFrom: '2027-01-01T00:00:00', validTo: null });
     source = await catalog.command('maker', { ...common(), action: 'SUBMIT', target: source.id, expectedHead: source.head });
     source = await catalog.command('reviewer', { ...common(), action: 'PUBLISH', target: source.id, expectedHead: source.head, reviewDigest: source.reviewDigest, impactDigest: (await catalog.sourceImpact('reviewer', 'SYNTHETIC', source.id, 'PUBLISH')).impactDigest });
+    temporalSource = source;
     const candidate: HierarchyCandidateInput = {
       requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId: source.id,
@@ -309,9 +311,50 @@ describe('P2-02 vNext hierarchy owner', () => {
       expect(published.data?.nodes[0]?.sourceEvidence).toEqual(candidate.nodes[0]!.sourceEvidence);
       const read = await maker.read({ viewId: view.data.viewId, version: published.data!.view.version });
       expect(read.data).toEqual(published.data);
+      const closureRequest = id();
+      const closure = await maker.prepareClosure({requestId:closureRequest,viewId:view.data.viewId,expectedVersion:published.data!.view.version,action:'REVOKE',reason:'HTTP_REVOKE'});
+      expect(closure.response.status).toBe(200);
+      if (!closure.data) throw new Error('HTTP_CLOSURE_REQUIRED');
+      expect((await reviewer.approve(closure.data)).response.status).toBe(200);
+      const revoked = await maker.close({...closure.data,requestId:closureRequest});
+      expect(revoked.response.status).toBe(200);
+      expect(revoked.data?.status).toBe('REVOKED');
+      expect((await maker.read({viewId:view.data.viewId})).data).toBeNull();
     } finally {
       await app.close();
     }
+  });
+
+  it.each(['CLOSE','REVOKE'] as const)('%s remains non-expanding and preserves exact historical reads', async action => {
+    const targetView = action === 'CLOSE' ? viewId : secondViewId;
+    const before = await hierarchy.readHierarchySnapshot('maker', { viewId: targetView });
+    if (!before) throw new Error('SNAPSHOT_REQUIRED');
+    const input = { requestId: id(), viewId: targetView, expectedVersion: before.view.version, action, reason: 'SYNTHETIC_CLOSURE' };
+    await expect(hierarchy.prepareHierarchyClosure('maker',{...input,expectedVersion:'999999'})).rejects.toThrow('STALE_VALIDATION');
+    const staged = await hierarchy.prepareHierarchyClosure('maker', input);
+    await expect(hierarchy.approveHierarchyCandidate('maker', staged)).rejects.toThrow('ACCESS_DENIED');
+    await hierarchy.approveHierarchyCandidate('reviewer', staged);
+    if (action === 'CLOSE') {
+      await catalog.command('reviewer', { action:'RETIRE', scope:'SYNTHETIC', requestId:id(), reason:'CLOSURE_UPSTREAM_REGRESSION', target:temporalSource.id, expectedHead:temporalSource.head, reviewDigest:temporalSource.reviewDigest, impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',temporalSource.id,'RETIRE')).impactDigest });
+      await expect(catalog.resolveSource('maker','SYNTHETIC',temporalSource.id,'2026-09-01T00:00:00')).rejects.toThrow('SOURCE_NOT_READY');
+    }
+    const closed = await hierarchy.closeHierarchyView('maker', { ...staged, requestId: input.requestId });
+    expect(closed.status).toBe(action === 'CLOSE' ? 'CLOSED' : 'REVOKED');
+    expect(await hierarchy.readHierarchySnapshot('maker', { viewId: targetView })).toBeNull();
+    expect(await hierarchy.readHierarchySnapshot('maker', { viewId: targetView, version: before.view.version })).toEqual(before);
+    expect(await hierarchy.closeHierarchyView('maker', { ...staged, requestId: input.requestId })).toEqual(closed);
+    await expect(hierarchy.closeHierarchyView('maker',{...staged,requestId:id()})).rejects.toThrow('REQUEST_CONFLICT');
+    await expect(hierarchy.prepareHierarchyClosure('maker',{...input,requestId:id()})).rejects.toThrow('HIERARCHY_CLOSED');
+    const candidate: HierarchyCandidateInput = {
+      requestId:id(),viewId:targetView,sourceClientKey:before.view.sourceClientKey,viewCode:before.view.viewCode,viewName:before.view.viewName,viewType:before.view.viewType,
+      parentCardinality:'STRICT_TREE',purpose:'Lifecycle test',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'REOPEN',sourceVersion:'1',
+      validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'REOPEN',
+      nodes:[{sourceEvidence:edgeEvidence('reopen'),nodeKey:'reopen',parentNodeKey:null,nodeKind:'DEPARTMENT',departmentId,departmentVersionId,displayName:'Reopen',relationName:'组织',sortOrder:1,isPrimaryPath:true}],
+    };
+    const expansion = await hierarchy.importHierarchyCandidate('maker',candidate);
+    if (!expansion.candidateId) throw new Error('CANDIDATE_REQUIRED');
+    await hierarchy.approveHierarchyCandidate('reviewer',{candidateId:expansion.candidateId,digest:expansion.digest});
+    await expect(hierarchy.publishHierarchySnapshot('maker',{candidateId:expansion.candidateId,digest:expansion.digest,requestId:candidate.requestId})).rejects.toThrow('HIERARCHY_CLOSED');
   });
 
   afterAll(async () => { await hierarchy.close(); await department.close(); await catalog.close(); });

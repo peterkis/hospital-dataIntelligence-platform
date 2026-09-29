@@ -25,7 +25,7 @@ if (process.argv[1]?.replaceAll('\\', '/').endsWith('/p2-02-validate.mjs')) {
     assert.equal(typesVerify.status, 0);
     owner = await createValidationOwnerSession(owned.receipt);
     grantDepartment(owned.receipt, owner.receipt.role);
-    peer(owned.receipt.name, `INSERT INTO department_master.department(id,code) VALUES ('00000000-0000-7000-8000-000000000099','P2-02-SYNTHETIC-OWNER') ON CONFLICT (id) DO NOTHING; INSERT INTO department_master.access(actor,scope,permission) VALUES ('maker','HOSPITAL','WRITE'),('reviewer','HOSPITAL','READ') ON CONFLICT DO NOTHING; GRANT SELECT ON department_master.hierarchy_view,department_master.hierarchy_view_version,department_master.hierarchy_candidate,department_master.hierarchy_node TO ${owner.receipt.role};`);
+    peer(owned.receipt.name, `INSERT INTO department_master.department(id,code) VALUES ('00000000-0000-7000-8000-000000000099','P2-02-SYNTHETIC-OWNER') ON CONFLICT (id) DO NOTHING; INSERT INTO department_master.access(actor,scope,permission) VALUES ('maker','HOSPITAL','WRITE'),('reviewer','HOSPITAL','READ') ON CONFLICT DO NOTHING; GRANT SELECT ON department_master.hierarchy_view,department_master.hierarchy_view_version,department_master.hierarchy_candidate,department_master.hierarchy_node,department_master.hierarchy_closure TO ${owner.receipt.role};`);
     const typecheck = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc', '--noEmit', '-p', 'tooling/vnext/tsconfig.p2-02.json'], { stdio: 'inherit', windowsHide: true });
     assert.equal(typecheck.status, 0);
     const unit = spawnSync(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', '--config', 'tooling/vnext/vitest.p2-02-unit.config.ts'], { stdio: 'inherit', windowsHide: true });

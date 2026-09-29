@@ -5,6 +5,7 @@ import {
   CreateHierarchyViewSchema,
   HierarchyCandidateSchema,
   HierarchyEdgeEvidenceSchema,
+  HierarchyClosureSchema,
   HierarchyPublishSchema,
   HierarchyId,
   HierarchyLocalTime,
@@ -64,4 +65,6 @@ export function registerHierarchyRoutes(app: FastifyInstance, context?: Hierarch
   route('candidates/approve', 'approveHierarchyCandidate', Type.Object({ candidateId: HierarchyId, digest: Type.String({ pattern: '^[a-f0-9]{64}$' }) }, closed), ApprovalResult, (owner, actor, input) => owner.approveHierarchyCandidate(actor, input));
   route('candidates/publish', 'publishHierarchySnapshot', HierarchyPublishSchema, SnapshotResponse, (owner, actor, input) => owner.publishHierarchySnapshot(actor, input));
   route('snapshots/read', 'readHierarchySnapshot', SnapshotInput, Type.Union([SnapshotResponse, Type.Null()]), (owner, actor, input) => owner.readHierarchySnapshot(actor, input));
+  route('closures', 'prepareHierarchyClosure', HierarchyClosureSchema, Type.Object({candidateId:HierarchyId,digest:Text},closed), (owner,actor,input)=>owner.prepareHierarchyClosure(actor,input));
+  route('closures/apply', 'closeHierarchyView', HierarchyPublishSchema, Type.Object({closureId:HierarchyId,viewId:HierarchyId,version:Text,status:Type.Enum(['CLOSED','REVOKED']),recordedAt:HierarchyLocalTime},closed), (owner,actor,input)=>owner.closeHierarchyView(actor,input));
 }

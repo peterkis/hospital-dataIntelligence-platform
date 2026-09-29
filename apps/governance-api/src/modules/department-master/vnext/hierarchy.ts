@@ -94,6 +94,12 @@ export const HierarchyPublishSchema = Type.Object({
   digest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
 }, closed);
 export type HierarchyPublishInput = Static<typeof HierarchyPublishSchema>;
+export const HierarchyClosureSchema = Type.Object({
+  requestId: HierarchyId, viewId: HierarchyId, expectedVersion: Type.String({ pattern: '^[1-9][0-9]*$' }),
+  action: Type.Enum(['CLOSE','REVOKE']), reason: text(2000),
+}, closed);
+type ClosureInput = Static<typeof HierarchyClosureSchema>;
+interface ClosureResult { closureId: string; viewId: string; version: string; status: 'CLOSED'|'REVOKED'; recordedAt: string }
 
 export type ValidatedHierarchyNode = HierarchyNodeInput & { readonly depth: number };
 export interface ForestValidation { readonly nodes: readonly ValidatedHierarchyNode[]; readonly digest: string }
@@ -251,6 +257,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
   };
   const snapshot = async (trx: Kysely<DB>, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
     await authorize(trx, actor, 'READ');
+    if (version === undefined && (await sql`select 1 from department_master.hierarchy_closure where view_id=${viewId}::uuid`.execute(trx)).rows.length) return null;
     const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.owner_department_version_id,v.source_definition_version_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
     if (!v) return null;
     const rows = (await sql<Record<string, unknown>>`select node_id,node_key,parent_node_key,node_kind,group_code,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,source_evidence,source_definition_version_id from department_master.hierarchy_node where view_version_id=${String(v['id'])}::uuid order by depth,sort_order,node_key`.execute(trx)).rows;
@@ -271,6 +278,21 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
     };
   };
   return {
+    async prepareHierarchyClosure(actor: string, input: ClosureInput): Promise<{candidateId:string;digest:string}> {
+      if (!Check(HierarchyClosureSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
+      const sealed = seal(input,provider);
+      return root(async trx => (await sql<{result:{candidateId:string;digest:string}}>`select department_master.hierarchy_lifecycle(${actor},'PREPARE',${JSON.stringify({payload:input,digest:sealed.digest,envelope:sealed.envelope,payloadDigest:createHash('sha256').update(canonicalPlan(input)).digest('hex')})}::jsonb) result`.execute(trx)).rows[0]!.result);
+    },
+    async closeHierarchyView(actor: string, input: HierarchyPublishInput): Promise<ClosureResult> {
+      if (!Check(HierarchyPublishSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
+      return root(async trx => {
+        const candidate = await readCandidate(trx,actor,input.candidateId);
+        if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
+        const value = unseal<ClosureInput>(candidate,provider);
+        if (!Check(HierarchyClosureSchema,value) || canonicalPlan(value) !== canonicalPlan(candidate.payload)) throw new Error('STALE_VALIDATION');
+        return (await sql<{result:ClosureResult}>`select department_master.hierarchy_lifecycle(${actor},'APPLY',${JSON.stringify(input)}::jsonb) result`.execute(trx)).rows[0]!.result;
+      });
+    },
     async validateForest(value: unknown) { return validateHierarchyForest(value); },
     async createHierarchyView(actor: string, input: CreateHierarchyViewInput): Promise<{ viewId: string; sourceClientKey: string; viewCode: string }> {
       if (!Check(CreateHierarchyViewSchema, input)) throw new Error('CLOSED_INPUT_REQUIRED');
