@@ -5,6 +5,7 @@ import {registerOrganizationImportRoutes,type OrganizationImportHttpContext} fro
 import {registerCampusRoutes,type CampusHttpContext} from '../platform/fastify/vnext-campus-routes.js';
 import Fastify from 'fastify';
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
 import swagger from '@fastify/swagger';
 import type { Catalog } from '../modules/governance-catalog/index.js';
 import { registerCatalogRoutes } from '../platform/fastify/vnext-catalog-routes.js';
@@ -13,6 +14,35 @@ import { registerWorkbenchRoutes } from '../platform/fastify/vnext-workbench-rou
 import { validCatalogLocalTime, catalogClockTime } from '../platform/fastify/vnext-local-time.js';
 import {registerOrganizationRoutes,type OrganizationHttpContext} from '../platform/fastify/vnext-organization-routes.js';
 import {registerHierarchyRoutes,type HierarchyHttpContext} from '../platform/fastify/vnext-hierarchy-routes.js';
+
+// Closing with unread upload bytes can reset the socket before the client receives 413.
+// Discard a bounded remainder without buffering; hostile/unfinished uploads still close.
+async function discardRejectedUpload(request:IncomingMessage):Promise<void> {
+  if(request.readableEnded||request.destroyed)return;
+  await new Promise<void>(resolve=>{
+    let bytes=0;
+    let finished=false;
+    const finish=()=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      request.off('data',onData);
+      request.off('end',finish);
+      request.off('error',finish);
+      request.off('aborted',finish);
+      request.pause();
+      resolve();
+    };
+    const onData=(chunk:Buffer)=>{bytes+=chunk.length;if(bytes>=4*1024*1024)finish();};
+    const timer=setTimeout(finish,1000);
+    timer.unref();
+    request.on('data',onData);
+    request.once('end',finish);
+    request.once('error',finish);
+    request.once('aborted',finish);
+    request.resume();
+  });
+}
 
 export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
@@ -31,8 +61,9 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
       if('validFrom' in input&&'validTo' in input&&typeof input.validFrom==='string'&&typeof input.validTo==='string'&&(input.validTo.includes('.')?input.validTo:input.validTo+'.').padEnd(26,'0')<=(input.validFrom.includes('.')?input.validFrom:input.validFrom+'.').padEnd(26,'0'))throw Object.assign(new Error('INVALID_BUSINESS_PERIOD'),{field:'validTo'});
     }
   });
-  app.setErrorHandler((error,_request,reply)=>{
+  app.setErrorHandler(async(error,request,reply)=>{
     const candidate=typeof error==='object'&&error!==null&&'code' in error&&error.code==='FST_ERR_CTP_BODY_TOO_LARGE'?'FST_ERR_CTP_BODY_TOO_LARGE':error instanceof Error?error.message:'';
+    if(candidate==='FST_ERR_CTP_BODY_TOO_LARGE')await discardRejectedUpload(request.raw);
     const invalidSource=typeof error==='object'&&error!==null&&'validation' in error&&Array.isArray(error.validation)&&error.validation.some((v:unknown)=>typeof v==='object'&&v!==null&&'instancePath' in v&&v.instancePath==='/values/sourceEvidence');
     const code=invalidSource?'SOURCE_REFERENCE_INVALID':/^[A-Z][A-Z0-9_]+$/u.test(candidate)?candidate:(typeof error==='object'&&error!==null&&'validation' in error?'CLOSED_INPUT_REQUIRED':'CATALOG_REQUEST_FAILED');
     const status=['ACCESS_DENIED','PAIR_PREAUTHORIZATION_REQUIRED'].includes(code)?403:code==='NOT_FOUND'?404:code==='FST_ERR_CTP_BODY_TOO_LARGE'||code==='FILE_SIZE_OR_ENCODING'?413:['STALE_REVISION','STALE_VALIDATION','STALE_HEAD','REQUEST_CONFLICT','CAMPUS_REFERENCE_CONFLICT','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','CAMPUS_RETIRED','CAMPUS_SUSPENDED','DISPOSITION_INCOMPLETE','DISPOSITION_ALREADY_COMPLETE','TEMPLATE_VERSION_MISMATCH','CATALOG_CODE_CONFLICT'].includes(code)?409:['BLOCKED_DEPENDENCY','BUNDLE_CONTEXT_REQUIRED','LEGAL_REVIEW_REQUIRED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE','TRANSPORT_FAILED'].includes(code)?503:code==='CATALOG_REQUEST_FAILED'?500:400;
@@ -44,7 +75,7 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
     const field=code==='CATALOG_CODE_CONFLICT'?'code':code==='SOURCE_REFERENCE_INVALID'?'sourceEvidence':code==='INVALID_BUSINESS_PERIOD'?'validTo':code==='LOCAL_TIME_REQUIRED'&&typeof error==='object'&&error!==null&&'field' in error&&typeof error.field==='string'&&['validFrom','validTo','asOf','businessAt'].includes(error.field)?error.field:undefined;
     const contractFields:Record<string,string>={UNKNOWN_FIELD:'definition.fields[].code',INVALID_FIELD_ENUM:'definition.fields[]',CODESET_AUTHORITY_INVALID:'definition.codeSets[]',CODESET_REQUIRED:'definition.codeSets[]',REFERENCE_INVALID:'definition.references[]',REFERENCE_REQUIRED:'definition.references[]',PARAMETER_NOT_APPROVED:'definition.references[].parameterVersionId',PARAMETER_PERIOD_NOT_COVERED:'definition.references[].parameterVersionId',PARAMETER_SCOPE_REQUIRED:'campus',IMMUTABLE_RULE_VERSION:'definition.ruleVersion'};
     const safeField=field??contractFields[code];
-    void reply.code(status).send({code,...(safeField?{field:safeField}:{}),message:messages[code]??'请求未被接受，请检查字段、范围、版本和治理状态。'});
+    return reply.code(status).send({code,...(safeField?{field:safeField}:{}),message:messages[code]??'请求未被接受，请检查字段、范围、版本和治理状态。'});
   });
   await registerCatalogRoutes(app,catalog);
   await registerContractRoutes(app,catalog);
