@@ -7,8 +7,13 @@ import {createValidationOwnerSession,dropValidationOwnerSession} from './validat
 import {migrate,migrationFiles,inspect,root,resolveTarget,peer} from './lineage.mjs';
 import {seed} from './catalog-seed.mjs';
 import {grantOrganization} from './p1-02-validate.mjs';
-const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
+import databaseConfig from './vitest.p1-06-db.config.ts';
+const args=process.argv.slice(2),fileArgs=args.filter(a=>a.startsWith('--test-file=')),testFile=fileArgs[0]?.slice('--test-file='.length);
+if(fileArgs.length>1||args.some(a=>!['--generate','--upgrade'].includes(a)&&!fileArgs.includes(a))||(fileArgs.length&&(!testFile||!databaseConfig.test.include.includes(testFile))))throw new Error('CLOSED_COMMAND_REQUIRED');
 const prefix=70,addedColumns={};
+// Each file creates its own provider and authorization fixtures. Sharing one
+// database across files mixes unrelated key receipts and mutable grants.
+async function validateFile(testFile){
 const owned=createTemporary('P1-06');let owner;
 try{
  let before,tables,digest;
@@ -24,6 +29,9 @@ try{
 
  owner??=await createValidationOwnerSession(owned.receipt);grantOrganization(owned.receipt,owner.receipt.role);if(migrationFiles().length>=62)peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION governance_catalog.operating_catalog(text,jsonb,timestamp,timestamp,timestamp) TO ${owner.receipt.role};`);
  const types=spawnSync(process.execPath,['tooling/vnext/managed.mjs',args.includes('--generate')?'types-generate':'types-verify',owned.receiptPath],{cwd:root,env:process.env,stdio:'inherit',windowsHide:true});assert.equal(types.status,0);
- const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.p1-06-db.config.ts'],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_VALIDATION_OWNER_URL:owner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P1-06'},stdio:'inherit',windowsHide:true});
- process.exitCode=run.status??1;console.log(JSON.stringify({gate:'P1-06',exit:run.status,receipt:owned.receiptPath,migrations:(await inspect(owned.receipt)).ledger.length}));
+ const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.p1-06-db.config.ts',...(testFile?[testFile]:[])],{cwd:root,env:{...process.env,VNEXT_DATABASE_URL:resolveTarget(owned.receipt),VNEXT_VALIDATION_OWNER_URL:owner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P1-06'},stdio:'inherit',windowsHide:true});
+ if(run.status!==0)process.exitCode=run.status??1;
+ console.log(JSON.stringify({gate:'P1-06',testFile,exit:run.status,receipt:owned.receiptPath,migrations:(await inspect(owned.receipt)).ledger.length}));
 }catch(error){owner??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(owner)dropValidationOwnerSession(owner);}
+}
+for(const file of testFile?[testFile]:databaseConfig.test.include)await validateFile(file);
