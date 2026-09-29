@@ -27,6 +27,11 @@ let finiteDepartmentVersionId: string;
 let temporalSource: Outcome;
 
 const edgeEvidence = (key: string, validFrom = '2026-09-01T00:00:00.000000', validTo: string | null = null) => ({ sourceClientKey: key, sourceVersion: '7', sourceSystemId, sourceRecordId: `ORG06:sheet:${key}`, validFrom, validTo, recordedAt: '2026-09-01T01:00:00.123456', recordStatus: 'ACTIVE' as const, approvalRef: 'EDGE_APPROVAL' });
+async function withoutViewPermission(actor:'maker'|'reviewer',view:string,permission:'READ'|'WRITE'|'REVIEW',work:()=>Promise<void>) {
+  peer(receipt.name,`DELETE FROM department_master.hierarchy_grant WHERE actor_code='${actor}' AND object_id='${view}'::uuid AND permission='${permission}';`);
+  try { await work(); }
+  finally { peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) VALUES('${actor}','${view}'::uuid,'${permission}');`); }
+}
 
 describe('P2-02 vNext hierarchy owner', () => {
   let viewId: string;
@@ -68,6 +73,17 @@ describe('P2-02 vNext hierarchy owner', () => {
       purpose: '病案归档', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG05:2', sourceVersion: '1',
       validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000', approvalRef: 'SYNTHETIC-APPROVAL',
     })).viewId;
+    peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer',v::uuid,p FROM unnest(ARRAY['${viewId}','${secondViewId}']) v CROSS JOIN unnest(ARRAY['READ','REVIEW']) p;`);
+  });
+
+  it('hospital READ does not grant access to an independently governed view', async () => {
+    const restricted = await hierarchy.createHierarchyView('maker', {
+      requestId:id(),sourceClientKey:'PRIVATE_VIEW',viewCode:'PRIVATE',viewName:'Private view',viewType:'ADMINISTRATIVE',
+      purpose:'View authorization',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'PRIVATE',sourceVersion:'1',
+      validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',approvalRef:'PRIVATE_APPROVAL',
+    });
+    expect(await hierarchy.readHierarchySnapshot('maker',{viewId:restricted.viewId})).toBeNull();
+    await expect(hierarchy.readHierarchySnapshot('reviewer',{viewId:restricted.viewId})).rejects.toThrow('ACCESS_DENIED');
   });
 
   it('P2-02-AC-05 freezes the old snapshot after a renamed publication and replays the same result', async () => {
@@ -84,7 +100,16 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(staged.decision).toBe('PASS');
     if (!staged.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
     const candidateId = staged.candidateId;
+    await withoutViewPermission('reviewer',viewId,'REVIEW',async()=>{
+      await expect(hierarchy.approveHierarchyCandidate('reviewer',{candidateId,digest:staged.digest})).rejects.toThrow('ACCESS_DENIED');
+      const direct = new Pool({connectionString:connection});
+      try { await expect(direct.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',candidateId,staged.digest])).rejects.toThrow('ACCESS_DENIED'); }
+      finally { await direct.end(); }
+    });
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId, digest: staged.digest });
+    await withoutViewPermission('reviewer',viewId,'REVIEW',async()=>{
+      await expect(hierarchy.publishHierarchySnapshot('maker',{candidateId,requestId:candidate.requestId,digest:staged.digest})).rejects.toThrow('ACCESS_DENIED');
+    });
     const checked = await hierarchy.validateForest(candidate);
     const tampered = { ...candidate, viewName: '未授权改写', nodes: checked.nodes, validationDigest: checked.digest };
     const pool = new (await import('pg')).Pool({ connectionString: connection, options: '-c timezone=Asia/Shanghai' });
@@ -108,6 +133,21 @@ describe('P2-02 vNext hierarchy owner', () => {
     if (!published.nodes[0]?.groupId || !published.nodes[0]?.groupVersionId) throw new Error('P2_02_GROUP_REFERENCE_REQUIRED');
     const replay = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(replay.contentDigest).toBe(published.contentDigest);
+    await withoutViewPermission('maker',viewId,'WRITE',async()=>{
+      await expect(hierarchy.importHierarchyCandidate('maker',candidate)).rejects.toThrow('ACCESS_DENIED');
+      await expect(hierarchy.publishHierarchySnapshot('maker',{candidateId,requestId:candidate.requestId,digest:staged.digest})).rejects.toThrow('ACCESS_DENIED');
+      await expect(hierarchy.prepareHierarchyClosure('maker',{requestId:id(),viewId,expectedVersion:published.view.version,action:'CLOSE',reason:'DENIED'})).rejects.toThrow('ACCESS_DENIED');
+      const direct = new Pool({connectionString:connection});
+      try {
+        await expect(direct.query('select department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',candidateId,staged.digest,JSON.stringify({...candidate,nodes:checked.nodes,validationDigest:checked.digest})])).rejects.toThrow('ACCESS_DENIED');
+      } finally { await direct.end(); }
+      expect(await hierarchy.readHierarchySnapshot('maker',{viewId})).toEqual(published);
+    });
+    await withoutViewPermission('maker',viewId,'READ',async()=>{
+      await expect(hierarchy.readHierarchySnapshot('maker',{viewId,version:published.view.version})).rejects.toThrow('ACCESS_DENIED');
+      expect(await hierarchy.readHierarchySnapshot('maker',{viewId:secondViewId})).toBeNull();
+      expect(await hierarchy.readHierarchySnapshot('reviewer',{viewId})).toEqual(published);
+    });
 
     const renamed: HierarchyCandidateInput = {
       ...candidate,
@@ -312,6 +352,7 @@ describe('P2-02 vNext hierarchy owner', () => {
       const view = await maker.createView(header);
       expect(view.response.status).toBe(200);
       if (!view.data) throw new Error('HTTP_VIEW_REQUIRED');
+      peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer','${view.data.viewId}'::uuid,p FROM unnest(ARRAY['READ','REVIEW']) p;`);
       const candidate = { ...header, requestId: id(), viewId: view.data.viewId, parentCardinality: 'STRICT_TREE' as const, recordStatus: 'ACTIVE' as const,
         nodes: [{ sourceEvidence: edgeEvidence('http'), nodeKey: 'http', parentNodeKey: null, nodeKind: 'DEPARTMENT' as const, departmentId, departmentVersionId, displayName: 'HTTP department', relationName: '组织', sortOrder: 1, isPrimaryPath: true }] };
       const invalid = await maker.importCandidate({ ...candidate, requestId: id(), nodes: [{ ...candidate.nodes[0]!, parentNodeKey: '' }] });
@@ -353,6 +394,12 @@ describe('P2-02 vNext hierarchy owner', () => {
     const staged = await hierarchy.prepareHierarchyClosure('maker', input);
     await expect(hierarchy.approveHierarchyCandidate('maker', staged)).rejects.toThrow('ACCESS_DENIED');
     await hierarchy.approveHierarchyCandidate('reviewer', staged);
+    await withoutViewPermission('maker',targetView,'WRITE',async()=>{
+      await expect(hierarchy.closeHierarchyView('maker',{...staged,requestId:input.requestId})).rejects.toThrow('ACCESS_DENIED');
+    });
+    await withoutViewPermission('reviewer',targetView,'REVIEW',async()=>{
+      await expect(hierarchy.closeHierarchyView('maker',{...staged,requestId:input.requestId})).rejects.toThrow('ACCESS_DENIED');
+    });
     if (action === 'CLOSE') {
       await catalog.command('reviewer', { action:'RETIRE', scope:'SYNTHETIC', requestId:id(), reason:'CLOSURE_UPSTREAM_REGRESSION', target:temporalSource.id, expectedHead:temporalSource.head, reviewDigest:temporalSource.reviewDigest, impactDigest:(await catalog.sourceImpact('reviewer','SYNTHETIC',temporalSource.id,'RETIRE')).impactDigest });
       await expect(catalog.resolveSource('maker','SYNTHETIC',temporalSource.id,'2026-09-01T00:00:00')).rejects.toThrow('SOURCE_NOT_READY');

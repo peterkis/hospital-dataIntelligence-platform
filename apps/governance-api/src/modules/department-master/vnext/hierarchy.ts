@@ -193,7 +193,7 @@ export function validateHierarchyForest(value: unknown): ForestValidation {
 }
 
 interface Envelope { keyId: string; nonce: string; tag: string; ciphertext: string }
-interface StoredCandidate { id: string; digest: string; maker: string; makerIdentity: string; requestId: string; status: string; envelope: Envelope; approvedBy: string | null; payload: HierarchyCandidateInput & { validationDigest: string } }
+interface StoredCandidate { id: string; viewId: string; digest: string; maker: string; makerIdentity: string; requestId: string; status: string; envelope: Envelope; approvedBy: string | null; payload: HierarchyCandidateInput & { validationDigest: string } }
 
 function seal(value: unknown, provider?: KeyProviderPort): { digest: string; envelope: Envelope } {
   if (!provider) throw new Error('KEY_UNAVAILABLE');
@@ -249,14 +249,16 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
   const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: connection, max: 4, options: '-c timezone=Asia/Shanghai', types: { getTypeParser: (oid, format) => oid === 1114 ? (value: string) => value : types.getTypeParser(oid, format) } }) }) });
   const root = <T>(work: (trx: Kysely<DB>) => Promise<T>) => db.transaction().execute(async trx => { await sql`select pg_advisory_xact_lock(901002)`.execute(trx); return work(trx); });
   const authorize = async (trx: Kysely<DB>, actor: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.authorize(${actor},'HOSPITAL',${permission}) r`.execute(trx)).rows[0]!.r;
+  const authorizeView = async (trx: Kysely<DB>, actor: string, viewId: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.hierarchy_authorize(${actor},${viewId}::uuid,${permission}) r`.execute(trx)).rows[0]!.r;
   const readCandidate = async (trx: Kysely<DB>, actor: string, id: string): Promise<StoredCandidate> => {
     await authorize(trx, actor, 'READ');
-    const row = (await sql<StoredCandidate>`select id,digest,maker,maker_identity as "makerIdentity",request_id as "requestId",status,envelope,approved_by as "approvedBy",payload from department_master.hierarchy_candidate where id=${id}::uuid`.execute(trx)).rows[0];
+    const row = (await sql<StoredCandidate>`select id,view_id as "viewId",digest,maker,maker_identity as "makerIdentity",request_id as "requestId",status,envelope,approved_by as "approvedBy",payload from department_master.hierarchy_candidate where id=${id}::uuid`.execute(trx)).rows[0];
     if (!row) throw new Error('NOT_FOUND');
+    await authorizeView(trx,actor,row.viewId,'READ');
     return row;
   };
   const snapshot = async (trx: Kysely<DB>, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
-    await authorize(trx, actor, 'READ');
+    await authorizeView(trx, actor, viewId, 'READ');
     if (version === undefined && (await sql`select 1 from department_master.hierarchy_closure where view_id=${viewId}::uuid`.execute(trx)).rows.length) return null;
     const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.owner_department_version_id,v.source_definition_version_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
     if (!v) return null;
@@ -320,10 +322,9 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       }
       return root(async trx => {
         const makerIdentity = await authorize(trx, actor, 'WRITE');
-        if (value.viewId === null) {
-          const row = (await sql<{ id: string }>`select id from department_master.hierarchy_view where source_client_key=${value.sourceClientKey}`.execute(trx)).rows[0];
-          if (!row) throw new Error('BLOCKED_DEPENDENCY');
-        }
+        const view = (await sql<{id:string}>`select id from department_master.hierarchy_view where source_client_key=${value.sourceClientKey}`.execute(trx)).rows[0];
+        if (!view) throw new Error('BLOCKED_DEPENDENCY');
+        await authorizeView(trx,actor,view.id,'WRITE');
         const existing = (await sql<{ id: string; digest: string; status: string }>`select id,digest,status from department_master.hierarchy_candidate where request_id=${value.requestId}::uuid`.execute(trx)).rows[0];
         if (existing) { if (existing.digest !== sealed.digest) throw new Error('REQUEST_CONFLICT'); return { candidateId: existing.id, digest: existing.digest, decision: existing.status === 'REJECTED' ? 'FAIL' : 'PASS', issues: [] }; }
         const stored = (await sql<{ result: { candidateId: string } }>`select department_master.hierarchy_store_candidate(${actor},${JSON.stringify({ ...value, nodes: validated.nodes, validationDigest: validated.digest, digest: sealed.digest, envelope: sealed.envelope, payloadDigest: createHash('sha256').update(canonicalPlan(value)).digest('hex'), makerIdentity })}::jsonb) result`.execute(trx)).rows[0]!.result;
@@ -335,7 +336,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       if (!Check(HierarchyPublishSchema, { candidateId: input.candidateId, requestId: randomUUID(), digest: input.digest })) throw new Error('CLOSED_INPUT_REQUIRED');
       return root(async trx => {
         const candidate = await readCandidate(trx, actor, input.candidateId); if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
-        const identity = await authorize(trx, actor, 'REVIEW'); if (identity === candidate.makerIdentity) throw new Error('MAKER_CHECKER_REQUIRED');
+        const identity = await authorizeView(trx, actor, candidate.viewId, 'REVIEW'); if (identity === candidate.makerIdentity) throw new Error('MAKER_CHECKER_REQUIRED');
         if (candidate.status === 'APPLIED') throw new Error('ALREADY_COMMITTED');
         await sql`select department_master.hierarchy_approve(${actor},${input.candidateId}::uuid,${input.digest})`.execute(trx);
         return { candidateId: input.candidateId, approvedBy: actor };
@@ -345,6 +346,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       if (!Check(HierarchyPublishSchema, input)) throw new Error('CLOSED_INPUT_REQUIRED');
       return root(async trx => {
         const candidate = await readCandidate(trx, actor, input.candidateId); if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
+        await authorizeView(trx,actor,candidate.viewId,'WRITE');
         if (candidate.status === 'APPLIED') {
           const value = unseal<HierarchyCandidateInput>(candidate, provider);
           // The committed validation belongs to the original schema version.
@@ -365,7 +367,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
           return existing;
         }
         if (candidate.status !== 'APPROVED' || candidate.approvedBy === null) throw new Error('APPROVAL_REQUIRED');
-        const approverIdentity = await authorize(trx, candidate.approvedBy, 'REVIEW'); if (approverIdentity === candidate.makerIdentity) throw new Error('MAKER_CHECKER_REQUIRED');
+        const approverIdentity = await authorizeView(trx, candidate.approvedBy, candidate.viewId, 'REVIEW'); if (approverIdentity === candidate.makerIdentity) throw new Error('MAKER_CHECKER_REQUIRED');
         const value = unseal<HierarchyCandidateInput>(candidate, provider); const checked = validateHierarchyForest(value);
         const result = (await sql<{ result: { viewId: string; version: string } }>`select department_master.hierarchy_publish(${actor},${candidate.id}::uuid,${input.digest},${JSON.stringify({ ...value, nodes: checked.nodes, validationDigest: checked.digest })}::jsonb) result`.execute(trx)).rows[0]!.result;
         const published = await snapshot(trx, actor, result.viewId, result.version); if (!published) throw new Error('APPLY_FAILED'); return published;

@@ -21,6 +21,10 @@ P2-02 在当前 vNext Department Owner 内治理 ORG05 视图定义和 ORG06 完
 
 ## 写入边界
 
+0096 将 `department_master.hierarchy_grant` 的逐视图 READ/WRITE/REVIEW 与医院级权限取交集。创建者仅获得本视图 READ/WRITE；复核人与其他访问者必须由受控授权配置显式指定视图。历史视图只恢复其创建者读写权限，不把历史医院级复核权限复制到所有视图。应用数据库角色不能自行修改授权表；授权变更通过既有授权事务锁和审计触发器记录。持久环境需要管理员逐项配置复核人，不应通过全视图批量授予来绕过这个边界。
+
+Owner 查询、候选读取、导入重放、审批、发布、发布重放和关闭/撤销均检查当前视图权限；SQL 受控函数也重验相应 WRITE/REVIEW，避免绕过 TypeScript Owner。发布与关闭执行时再次检查原审批人的视图 REVIEW 权限。撤销一个视图的权限不影响另一视图。
+
 0095 在数据库发布边界按 DEPARTMENT/GROUP 分别验证节点完整键集合，拒绝未知字段和混用字段；同时检查 GROUP code 与非空 GROUP ID 的单快照唯一性。回归直接经过受控 store/approve/publish 函数，证明不能绕过 TypeBox Owner 静默丢弃已审批字段或重复放置同一 GROUP。
 
 `hierarchy_create_view`、`hierarchy_store_candidate`、`hierarchy_approve` 和 `hierarchy_publish` 是 SECURITY DEFINER 入口。应用角色只有读取新表和执行受控函数的权限，不能直接插入正式层级事实。发布函数锁定视图、重新检查 Department 版本覆盖，并在一笔事务中写完整版本、节点、审计和候选状态。

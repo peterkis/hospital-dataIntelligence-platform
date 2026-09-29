@@ -63,6 +63,12 @@ export interface DepartmentMasterHierarchyClosure {
   view_id: string;
 }
 
+export interface DepartmentMasterHierarchyGrant {
+  actor_code: string;
+  object_id: string;
+  permission: string;
+}
+
 export interface DepartmentMasterHierarchyNode {
   department_id: string | null;
   department_version_id: string | null;
@@ -799,6 +805,7 @@ export interface DB {
   "department_master.department": DepartmentMasterDepartment;
   "department_master.hierarchy_candidate": DepartmentMasterHierarchyCandidate;
   "department_master.hierarchy_closure": DepartmentMasterHierarchyClosure;
+  "department_master.hierarchy_grant": DepartmentMasterHierarchyGrant;
   "department_master.hierarchy_node": DepartmentMasterHierarchyNode;
   "department_master.hierarchy_view": DepartmentMasterHierarchyView;
   "department_master.hierarchy_view_version": DepartmentMasterHierarchyViewVersion;
