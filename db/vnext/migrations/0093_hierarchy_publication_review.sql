@@ -35,6 +35,7 @@ DECLARE
  node_id uuid;
  group_id uuid;
  group_version_id uuid;
+ prior_group department_master.hierarchy_node;
  p_valid_from timestamp;
  p_valid_to timestamp;
  owner_id uuid;
@@ -181,7 +182,23 @@ BEGIN
   VALUES(target_view_id,version_no,p_payload->>'viewName',(SELECT view_code FROM department_master.hierarchy_view WHERE id=target_view_id),p_payload->>'viewType','STRICT_TREE',p_payload->>'purpose',p_payload->>'aggregationRule',owner_id,source_id,p_payload->>'sourceRecordId',p_payload->>'sourceVersion',p_valid_from,p_valid_to,(p_payload->>'recordedAt')::timestamp,p_payload->>'approvalRef',c.maker,c.maker_identity,c.approved_by,c.approved_identity,p_payload->>'validationDigest','PUBLISHED') RETURNING id INTO version_id;
   FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'nodes') LOOP
     node_id:=uuidv7(); group_id:=NULL; group_version_id:=NULL;
-    IF item->>'nodeKind'='GROUP' THEN group_id:=coalesce(NULLIF(item->>'groupId','')::uuid,uuidv7()); group_version_id:=coalesce(NULLIF(item->>'groupVersionId','')::uuid,uuidv7()); END IF;
+    IF item->>'nodeKind'='GROUP' THEN
+      IF item->>'groupId' IS NULL THEN
+        IF EXISTS (SELECT 1 FROM department_master.hierarchy_node n JOIN department_master.hierarchy_view_version v ON v.id=n.view_version_id WHERE v.view_id=target_view_id AND n.group_code=item->>'groupCode') THEN
+          RAISE EXCEPTION 'GROUP_REFERENCE_REQUIRED';
+        END IF;
+        group_id:=uuidv7(); group_version_id:=uuidv7();
+      ELSE
+        SELECT n.* INTO prior_group FROM department_master.hierarchy_node n
+          JOIN department_master.hierarchy_view_version v ON v.id=n.view_version_id
+          WHERE v.view_id=target_view_id AND n.node_kind='GROUP'
+            AND n.group_id=(item->>'groupId')::uuid AND n.group_version_id=(item->>'groupVersionId')::uuid
+          ORDER BY v.version_no DESC LIMIT 1;
+        IF NOT FOUND OR prior_group.group_code IS DISTINCT FROM item->>'groupCode' THEN RAISE EXCEPTION 'GROUP_REFERENCE_INVALID'; END IF;
+        group_id:=prior_group.group_id;
+        group_version_id:=CASE WHEN prior_group.display_name IS NOT DISTINCT FROM item->>'displayName' THEN prior_group.group_version_id ELSE uuidv7() END;
+      END IF;
+    END IF;
     INSERT INTO department_master.hierarchy_node(node_id,view_version_id,node_key,parent_node_key,node_kind,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,group_code)
     VALUES(node_id,version_id,item->>'nodeKey',NULLIF(item->>'parentNodeKey',''),item->>'nodeKind',NULLIF(item->>'departmentId','')::uuid,NULLIF(item->>'departmentVersionId','')::uuid,group_id,group_version_id,item->>'displayName',item->>'relationName',(item->>'sortOrder')::integer,(item->>'isPrimaryPath')::boolean,(item->>'depth')::integer,CASE WHEN item->>'nodeKind'='GROUP' THEN item->>'groupCode' END);
   END LOOP;

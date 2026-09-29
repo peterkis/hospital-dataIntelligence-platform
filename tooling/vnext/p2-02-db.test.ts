@@ -116,9 +116,17 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(oldSnapshot?.nodes[0]?.displayName).toBe('临床组');
     expect(renamedPublished.view.viewName).toBe('行政视图改名');
     expect(renamedPublished.nodes[0]?.displayName).toBe('临床组改名');
+    expect(renamedPublished.nodes[0]?.groupId).toBe(published.nodes[0]?.groupId);
+    expect(renamedPublished.nodes[0]?.groupVersionId).not.toBe(published.nodes[0]?.groupVersionId);
     expect(renamedPublished.contentDigest).not.toBe(published.contentDigest);
     const replayAfterRename = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(replayAfterRename).toEqual(published);
+    const foreign: HierarchyCandidateInput = { ...renamed, requestId: id(), viewId: secondViewId, sourceClientKey: 'ORG05-SYNTHETIC-MEDICAL', viewCode: 'MEDICAL', viewType: 'MEDICAL_RECORD' };
+    const foreignStage = await hierarchy.importHierarchyCandidate('maker', foreign);
+    if (!foreignStage.candidateId) throw new Error('CANDIDATE_REQUIRED');
+    await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: foreignStage.candidateId, digest: foreignStage.digest });
+    await expect(hierarchy.publishHierarchySnapshot('maker', { candidateId: foreignStage.candidateId, requestId: foreign.requestId, digest: foreignStage.digest })).rejects.toThrow('GROUP_REFERENCE_INVALID');
+    expect(await hierarchy.readHierarchySnapshot('maker', { viewId: secondViewId })).toBeNull();
   });
 
   it('P2-02-AC-02 does not persist an invalid cycle candidate as a partial snapshot', async () => {
