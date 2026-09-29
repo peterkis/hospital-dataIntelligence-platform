@@ -1,0 +1,65 @@
+import { describe, expect, it } from 'vitest';
+import { validateHierarchyForest, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/vnext/hierarchy.js';
+
+const id = (last: string) => `00000000-0000-7000-8000-${last.padStart(12, '0')}`;
+const base = (viewCode: string, nodes: HierarchyCandidateInput['nodes']): HierarchyCandidateInput => ({
+  requestId: id('01'), viewId: null, sourceClientKey: `view-${viewCode}`, viewCode, viewName: viewCode,
+  viewType: 'ADMINISTRATIVE', parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE',
+  ownerDepartmentId: null, sourceSystemId: id('02'), sourceRecordId: `row-${viewCode}`, sourceVersion: '1',
+  validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000',
+  recordStatus: 'ACTIVE', approvalRef: 'synthetic-approval', nodes,
+});
+const department = (nodeKey: string, parentNodeKey: string | null, departmentId: string, displayName = '同名科室') => ({
+  nodeKey, parentNodeKey, nodeKind: 'DEPARTMENT' as const, departmentId, departmentVersionId: id(departmentId.slice(-1)),
+  displayName, relationName: '行政隶属', sortOrder: 1, isPrimaryPath: true,
+});
+
+describe('P2-02 strict hierarchy domain', () => {
+  it('allows the same department in two independent views', () => {
+    const dept = id('10');
+    expect(() => validateHierarchyForest(base('ADMIN', [department('root', null, dept)]))).not.toThrow();
+    expect(() => validateHierarchyForest(base('MEDICAL', [department('root', null, dept)]))).not.toThrow();
+  });
+
+  it('rejects two parents or duplicate placement in one view', () => {
+    const dept = id('10');
+    expect(() => validateHierarchyForest(base('ADMIN', [
+      department('a', null, id('11')), department('b', null, id('12')), department('child', 'a', dept), department('child-2', 'b', dept),
+    ]))).toThrowError('DEPARTMENT_DUPLICATE');
+  });
+
+  it('rejects a cycle even when the final row closes it', () => {
+    expect(() => validateHierarchyForest(base('ADMIN', [
+      department('a', 'b', id('11')), department('b', 'c', id('12')), department('c', 'a', id('13')),
+    ]))).toThrowError('HIERARCHY_CYCLE');
+  });
+
+  it('keeps a GROUP out of department identity references and derives depth', () => {
+    const result = validateHierarchyForest(base('ADMIN', [
+      { nodeKey: 'group', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
+      department('child', 'group', id('11')),
+    ]));
+    expect(result.nodes.map(node => node.depth)).toEqual([0, 1]);
+    expect(result.nodes[0]?.nodeKind).toBe('GROUP');
+  });
+
+  it('rejects a GROUP carrying a department foreign-key shape', () => {
+    const invalid: unknown = {
+      ...base('ADMIN', []),
+      nodes: [{
+      nodeKey: 'group', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null,
+      departmentId: id('11'), displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true,
+      }],
+    };
+    expect(() => validateHierarchyForest(invalid)).toThrowError('CLOSED_INPUT_REQUIRED');
+  });
+
+  it('distinguishes same-name nodes by their stable node keys', () => {
+    const result = validateHierarchyForest(base('ADMIN', [department('a', null, id('11')), department('b', null, id('12'))]));
+    expect(result.nodes.map(node => node.nodeKey)).toEqual(['a', 'b']);
+  });
+
+  it('rejects offset-bearing source times and mixed periods', () => {
+    expect(() => validateHierarchyForest({ ...base('ADMIN', [department('a', null, id('11'))]), validFrom: '2026-09-01T00:00:00+08:00' })).toThrowError('CLOSED_INPUT_REQUIRED');
+  });
+});

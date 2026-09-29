@@ -34,6 +34,76 @@ export interface DepartmentMasterDepartment {
   id: Generated<string>;
 }
 
+export interface DepartmentMasterHierarchyCandidate {
+  applied_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  approved_identity: string | null;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  maker: string;
+  maker_identity: string;
+  payload: Json;
+  payload_digest: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  source_client_key: string;
+  status: string;
+  view_id: string | null;
+}
+
+export interface DepartmentMasterHierarchyNode {
+  department_id: string | null;
+  department_version_id: string | null;
+  depth: number;
+  display_name: string;
+  group_id: string | null;
+  group_version_id: string | null;
+  is_primary_path: boolean;
+  node_id: Generated<string>;
+  node_key: string;
+  node_kind: string;
+  parent_node_key: string | null;
+  relation_name: string;
+  sort_order: number;
+  view_version_id: string;
+}
+
+export interface DepartmentMasterHierarchyView {
+  created_at: Generated<string>;
+  id: Generated<string>;
+  source_client_key: string;
+  view_code: string;
+}
+
+export interface DepartmentMasterHierarchyViewVersion {
+  aggregation_rule: string;
+  approval_ref: string;
+  approved_by: string | null;
+  approved_identity: string | null;
+  content_digest: string;
+  created_at: Generated<string>;
+  id: Generated<string>;
+  maker: string;
+  maker_identity: string;
+  owner_department_id: string | null;
+  parent_cardinality: string;
+  purpose: string;
+  recorded_at: string;
+  source_record_id: string;
+  source_system_id: string;
+  source_version: string;
+  status: string;
+  valid_from: string;
+  valid_to: string | null;
+  version_no: Int8;
+  view_code: string;
+  view_id: string;
+  view_name: string;
+  view_type: string;
+}
+
 export interface DepartmentMasterInput {
   campus: string;
   digest: string;
@@ -712,6 +782,10 @@ export interface VnextControlRequestIdentity {
 export interface DB {
   "department_master.access": DepartmentMasterAccess;
   "department_master.department": DepartmentMasterDepartment;
+  "department_master.hierarchy_candidate": DepartmentMasterHierarchyCandidate;
+  "department_master.hierarchy_node": DepartmentMasterHierarchyNode;
+  "department_master.hierarchy_view": DepartmentMasterHierarchyView;
+  "department_master.hierarchy_view_version": DepartmentMasterHierarchyViewVersion;
   "department_master.input": DepartmentMasterInput;
   "department_master.verification": DepartmentMasterVerification;
   "department_master.version": DepartmentMasterVersion;
