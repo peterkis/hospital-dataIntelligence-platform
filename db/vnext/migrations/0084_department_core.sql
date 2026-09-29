@@ -30,10 +30,11 @@ DECLARE d department_master.department; BEGIN
  RETURN jsonb_build_object('id',d.id,'code',d.code,'versions',coalesce((SELECT jsonb_agg((to_jsonb(v)-'input_id')||jsonb_build_object('number',v.number::text) ORDER BY number) FROM department_master.version v WHERE department_id=d.id),'[]'));
 END $$;
 CREATE FUNCTION department_master.job_read(p_actor text,p_input uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE r jsonb;j jsonb;BEGIN
+DECLARE r jsonb;j governance_catalog.import_job;BEGIN
  r:=department_master.input_read(p_actor,p_input,'READ_RESTRICTED');
- j:=governance_catalog.import_job_read(p_actor,jsonb_build_object('scope','SYNTHETIC','jobId',r->>'job_id'));
- RETURN jsonb_build_object('id',j->>'id','contract',j->'contract','profile',j->>'profile','status',j->>'status','currentRevisionId',j->>'currentRevisionId');
+ SELECT * INTO j FROM governance_catalog.import_job WHERE id=(r->>'job_id')::uuid;
+ PERFORM governance_catalog.contract_require_access(p_actor,'SYNTHETIC',j.contract_version_id,'READ');
+ RETURN jsonb_build_object('id',j.id,'contract',j.contract_snapshot,'profile',j.profile,'status',j.status,'currentRevisionId',j.current_revision_id);
 END $$;
 CREATE FUNCTION department_master.list(p_actor text,p_after uuid,p_limit integer,p_record_at timestamp) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$ BEGIN
  PERFORM department_master.authorize(p_actor,'HOSPITAL','READ');IF p_limit NOT BETWEEN 1 AND 100 THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
@@ -50,8 +51,8 @@ END $$;
 -- Only the application authority can sign a mutation; service SQL has neither the key nor a signing oracle.
 CREATE FUNCTION department_master.mutate(p_ticket text,p_signature text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64),'hex');opad bytea:=decode(repeat('5c',64),'hex');i integer;
- actor text:=t->>'actor';op text:=t->>'operation';identity text;r department_master.input;v department_master.verification;j jsonb;
- candidate jsonb;approved_by text;command jsonb:=t->'command';target uuid;n bigint;vid uuid;prior text;BEGIN
+ actor text:=t->>'actor';op text:=t->>'operation';identity text;r department_master.input;v department_master.verification;j governance_catalog.import_job;
+ c governance_catalog.apply_candidate;a governance_catalog.apply_approval;command jsonb:=t->'command';target uuid;n bigint;vid uuid;prior text;BEGIN
  PERFORM pg_advisory_xact_lock(901002);
  SELECT decode(key_hex,'hex') INTO secret FROM vnext_control.department_write_authority WHERE singleton;
  IF secret IS NULL OR t->>'transaction' IS DISTINCT FROM pg_current_xact_id()::text THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
@@ -61,16 +62,16 @@ DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64)
   identity:=department_master.authorize(actor,t->>'campus','WRITE');PERFORM department_master.authorize(actor,t->>'campus','READ_RESTRICTED');
   SELECT * INTO r FROM department_master.input WHERE identity_code=identity AND request_id=(t->>'requestId')::uuid;
   IF FOUND THEN IF r.digest IS DISTINCT FROM t->>'digest' THEN RAISE EXCEPTION 'REQUEST_CONFLICT';END IF;RETURN jsonb_build_object('inputId',r.id,'revisionId',r.revision,'digest',r.digest);END IF;
-  j:=governance_catalog.import_job_read(actor,jsonb_build_object('scope','SYNTHETIC','jobId',t->>'jobId'));
-  IF j->>'submitterIdentity' IS DISTINCT FROM identity OR j->>'currentRevisionId' IS DISTINCT FROM t->>'revisionId' THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
-  IF EXISTS(SELECT 1 FROM department_master.input WHERE job_id=(j->>'id')::uuid AND job_revision=(j->>'currentRevisionId')::uuid) THEN RAISE EXCEPTION 'REQUEST_CONFLICT';END IF;
-  INSERT INTO department_master.input(job_id,job_revision,maker,identity_code,request_id,digest,campus,envelope) VALUES((j->>'id')::uuid,(j->>'currentRevisionId')::uuid,actor,identity,(t->>'requestId')::uuid,t->>'digest',t->>'campus',t->'envelope') RETURNING * INTO r;
+  SELECT * INTO j FROM governance_catalog.import_job WHERE id=(t->>'jobId')::uuid;
+  IF j.submitter_identity IS DISTINCT FROM identity OR j.current_revision_id IS DISTINCT FROM (t->>'revisionId')::uuid THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
+  PERFORM governance_catalog.import_job_read(actor,jsonb_build_object('scope','SYNTHETIC','jobId',j.id));
+  IF EXISTS(SELECT 1 FROM department_master.input WHERE job_id=j.id AND job_revision=j.current_revision_id) THEN RAISE EXCEPTION 'REQUEST_CONFLICT';END IF;
+  INSERT INTO department_master.input(job_id,job_revision,maker,identity_code,request_id,digest,campus,envelope) VALUES(j.id,j.current_revision_id,actor,identity,(t->>'requestId')::uuid,t->>'digest',t->>'campus',t->'envelope') RETURNING * INTO r;
   INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES(actor,r.id,'DEPARTMENT_INPUT','ORG04_CORE',r.digest);
   RETURN jsonb_build_object('inputId',r.id,'revisionId',r.revision,'digest',r.digest);
  END IF;
  SELECT * INTO r FROM department_master.input WHERE id=(t->>'inputId')::uuid;IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND';END IF;
- j:=governance_catalog.import_job_read(actor,jsonb_build_object('scope','SYNTHETIC','jobId',r.job_id));
- IF r.job_revision IS DISTINCT FROM (j->>'currentRevisionId')::uuid THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
+ IF r.job_revision IS DISTINCT FROM (SELECT current_revision_id FROM governance_catalog.import_job WHERE id=r.job_id) THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
  IF op='VERIFY' THEN
   identity:=department_master.authorize(actor,'HOSPITAL','VERIFY');PERFORM department_master.authorize(actor,r.campus,'READ_RESTRICTED');
   IF identity=r.identity_code THEN RAISE EXCEPTION 'MAKER_CHECKER_REQUIRED';END IF;
@@ -83,11 +84,11 @@ DECLARE t jsonb:=p_ticket::jsonb;secret bytea;ipad bytea:=decode(repeat('36',64)
   RETURN jsonb_build_object('verificationId',v.id);
  END IF;
  IF op<>'APPLY' THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
- candidate:=governance_catalog.apply_record(actor,'READ_CANDIDATE',jsonb_build_object('candidateId',(t->>'candidateId')::uuid));
- IF candidate->>'digest' IS DISTINCT FROM t->>'digest' OR candidate->'input'->>'jobId' IS DISTINCT FROM r.id::text OR candidate->'input'->>'revisionId' IS DISTINCT FROM r.revision::text OR coalesce(candidate->>'approvedBy','')='' THEN RAISE EXCEPTION 'APPROVAL_REQUIRED';END IF;
- approved_by:=candidate->>'approvedBy';
- PERFORM governance_catalog.apply_record(approved_by,'CHECK_APPROVAL',jsonb_build_object('candidateId',(t->>'candidateId')::uuid));
- PERFORM department_master.authorize(approved_by,'HOSPITAL','REVIEW');PERFORM department_master.authorize(actor,r.campus,'WRITE');
+ SELECT * INTO c FROM governance_catalog.apply_candidate WHERE id=(t->>'candidateId')::uuid;
+ SELECT * INTO a FROM governance_catalog.apply_approval WHERE candidate_id=c.id;
+ IF c.digest IS DISTINCT FROM t->>'digest' OR c.input->>'jobId' IS DISTINCT FROM r.id::text OR c.input->>'revisionId' IS DISTINCT FROM r.revision::text OR a.candidate_id IS NULL THEN RAISE EXCEPTION 'APPROVAL_REQUIRED';END IF;
+ PERFORM governance_catalog.apply_record(a.actor_code,'CHECK_APPROVAL',jsonb_build_object('candidateId',c.id));
+ PERFORM department_master.authorize(a.actor_code,'HOSPITAL','REVIEW');PERFORM department_master.authorize(actor,r.campus,'WRITE');
  IF command->'row'->>'record_status' IS DISTINCT FROM 'ACTIVE' OR nullif(btrim(command->'row'->>'approval_ref'),'') IS NULL THEN RAISE EXCEPTION 'APPROVAL_REQUIRED';END IF;
  IF nullif(command->'row'->>'abolished_on','') IS NOT NULL THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY';END IF;
  target:=(command->'target'->>'id')::uuid;

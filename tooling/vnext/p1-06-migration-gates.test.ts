@@ -62,7 +62,7 @@ vi.mock('../../apps/governance-api/src/composition/build-vnext-catalog.ts',()=>(
 })}));
 
 const {migrationFiles,migrate}=await import('./lineage.mjs');
-const {workspaceReleaseFiles,workspaceStartupPrefix,workspaceDeploymentPrefix}=await import('./workspace-migrations.mjs');
+const {workspaceMigration,workspaceReleaseFiles,workspaceStartupPrefix,workspaceDeploymentPrefix}=await import('./workspace-migrations.mjs');
 const {startWorkbench}=await import('./workbench-runtime.mjs');
 const {prepareWorkspaceDeployment}=await import('./p1-06-deployment.mjs');
 const files=migrationFiles();
@@ -95,7 +95,7 @@ test('a release missing the security migration cannot enable the workspace',asyn
  await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');expect(state.events).toEqual(['inspect']);
 });
 test('unexpected future migration requires an explicit shared release-boundary update',()=>{
-  expect(()=>workspaceReleaseFiles([...files,{id:'0088_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
+  expect(()=>workspaceReleaseFiles([...files,{id:'0090_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
 });
 
 for(const prefix of [70,71,72,73,74,75,76,77,78,79,80,81])test(`deployment upgrades supported prefix ${prefix} to the entire release`,async()=>{
@@ -134,7 +134,8 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 });
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
- expect(files.at(-1)?.id).toBe('0087_department_catalog_interfaces');
+ expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
+ expect(files.at(-1)?.id).toBe('0089_department_committed_row_repair');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{

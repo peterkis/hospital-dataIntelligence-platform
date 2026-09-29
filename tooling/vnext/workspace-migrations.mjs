@@ -1,18 +1,27 @@
 import {checkPrefix,migrationFiles} from './lineage.mjs';
 
-// One release boundary for the runtime and the receipt-owned deployment runner.
-// Advancing SQL without advancing this boundary must fail closed, not run old SQL.
+// The workspace Owner release ends at 0087. Later vNext migrations remain in
+// the same ordered chain, but are accepted only as the complete current tail
+// so historical workspace upgrades can still exercise their 0087 seam.
 export const workspaceMigration = '0087_department_catalog_interfaces';
+const postWorkspaceMigrations = [
+ '0088_hierarchy_views',
+ '0089_department_committed_row_repair',
+];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
- if(files.at(-1)?.id!==workspaceMigration)throw new Error('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
+ const boundary=files.findIndex(file=>file.id===workspaceMigration);
+ if(boundary<0||JSON.stringify(files.slice(boundary+1).map(file=>file.id))!==JSON.stringify(postWorkspaceMigrations))throw new Error('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
  return files;
 }
 export function workspaceStartupPrefix(files,ledger) {
- const prefix=checkPrefix(workspaceReleaseFiles(files),ledger);
+ const releaseFiles=workspaceReleaseFiles(files);
+ const prefix=checkPrefix(releaseFiles,ledger);
  // Pre-workspace installations retain their catalog-only path. Once workspace
- // storage exists, all release repairs are mandatory before opening any Owner.
- if(prefix>=71&&prefix!==files.length)throw new Error('WORKSPACE_MIGRATION_REQUIRED');
+ // storage exists, the workspace release or the complete current vNext tail
+ // is mandatory before opening any Owner.
+ const boundary=releaseFiles.findIndex(file=>file.id===workspaceMigration)+1;
+ if(prefix>=71&&prefix!==boundary&&prefix!==releaseFiles.length)throw new Error('WORKSPACE_MIGRATION_REQUIRED');
  return prefix;
 }
 export function workspaceDeploymentPrefix(files,ledger,reuseExisting=false) {
