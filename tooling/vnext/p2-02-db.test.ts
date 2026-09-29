@@ -19,6 +19,8 @@ let ownerDepartmentId: string;
 let departmentId: string;
 let departmentVersionId: string;
 let sourceSystemId: string;
+let finiteDepartmentId: string;
+let finiteDepartmentVersionId: string;
 
 describe('P2-02 vNext hierarchy owner', () => {
   let viewId: string;
@@ -37,6 +39,18 @@ describe('P2-02 vNext hierarchy owner', () => {
     sourceSystemId = fixture.source.id;
     departmentVersionId = (await department.exact('maker', { id: departmentId, version: '1' })).versionId;
     ownerDepartmentId = departmentId;
+    const finiteEntry = fixture.entry();
+    finiteEntry.row.valid_to = '2027-01-01T00:00:00';
+    const finiteInput = await department.stage('maker', await fixture.input([finiteEntry]));
+    await department.verify('reviewer', { requestId: id(), inputId: finiteInput.inputId, inputDigest: finiteInput.digest, rows: [{ row: 1, disposition: 'DEPARTMENT', historicalException: false, reason: 'Finite dependency regression', evidenceId: fixture.artifact.artifactId }] });
+    const finiteRequest = id();
+    const finitePlan = await department.plan('maker', { inputId: finiteInput.inputId, requestId: finiteRequest });
+    await department.readApplyCandidate('reviewer', { candidateId: finitePlan.candidateId });
+    await department.approveApplyUnit('reviewer', finitePlan);
+    const finiteApplied = await department.applyUnit('maker', { candidateId: finitePlan.candidateId, requestId: finiteRequest });
+    if (finiteApplied.status !== 'COMMITTED') throw new Error('FINITE_FIXTURE_NOT_COMMITTED');
+    finiteDepartmentId = finiteApplied.facts[0]!.id;
+    finiteDepartmentVersionId = (await department.exact('maker', { id: finiteDepartmentId, version: '1' })).versionId;
     viewId = (await hierarchy.createHierarchyView('maker', {
       requestId: id(), sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
       purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG05:1', sourceVersion: '1',
@@ -168,6 +182,28 @@ describe('P2-02 vNext hierarchy owner', () => {
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: staged.candidateId, digest: staged.digest });
     await expect(hierarchy.publishHierarchySnapshot('maker', { candidateId: staged.candidateId, requestId: candidate.requestId, digest: staged.digest })).rejects.toThrow('VIEW_CODE_MISMATCH');
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
+  });
+
+  it.each(['owner', 'node'] as const)('rejects open-ended publication with a finite %s Department dependency', async dependency => {
+    const before = await hierarchy.readHierarchySnapshot('maker', { viewId });
+    const candidate: HierarchyCandidateInput = {
+      requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
+      parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId: dependency === 'owner' ? finiteDepartmentId : ownerDepartmentId, sourceSystemId,
+      sourceRecordId: 'ORG06:finite', sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: null,
+      recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
+      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId: dependency === 'node' ? finiteDepartmentId : departmentId, departmentVersionId: dependency === 'node' ? finiteDepartmentVersionId : departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+    };
+    const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
+    if (!staged.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
+    await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: staged.candidateId, digest: staged.digest });
+    await expect(hierarchy.publishHierarchySnapshot('maker', { candidateId: staged.candidateId, requestId: candidate.requestId, digest: staged.digest })).rejects.toThrow('BLOCKED_DEPENDENCY');
+    expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
+    const bounded = { ...candidate, requestId: id(), validTo: '2027-01-01T00:00:00.000000' };
+    const boundedStage = await hierarchy.importHierarchyCandidate('maker', bounded);
+    if (!boundedStage.candidateId) throw new Error('P2_02_CANDIDATE_ID_REQUIRED');
+    await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: boundedStage.candidateId, digest: boundedStage.digest });
+    const boundedSnapshot = await hierarchy.publishHierarchySnapshot('maker', { candidateId: boundedStage.candidateId, requestId: bounded.requestId, digest: boundedStage.digest });
+    expect(boundedSnapshot.validTo).toBe('2027-01-01T00:00:00.000000');
   });
 
   it('serves the typed snapshot read through the registered HTTP owner route', async () => {

@@ -73,7 +73,7 @@ BEGIN
     SELECT 1 FROM department_master.version v
        WHERE v.department_id=owner_id AND v.valid_from<=p_valid_from
        AND (v.valid_to IS NULL OR v.valid_to>p_valid_from)
-       AND (p_valid_to IS NULL OR v.valid_to IS NULL OR v.valid_to>=p_valid_to)
+       AND (v.valid_to IS NULL OR (p_valid_to IS NOT NULL AND v.valid_to>=p_valid_to))
   ) THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
 
   IF coalesce(p_payload->>'sourceSystemId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
@@ -85,7 +85,7 @@ BEGIN
       JOIN governance_catalog.version sv ON sv.id=e.version_id
      WHERE o.id=source_id AND o.kind='SOURCE' AND o.scope='SYNTHETIC' AND e.status='PUBLISHED'
        AND sv.valid_from<=p_valid_from AND (sv.valid_to IS NULL OR sv.valid_to>p_valid_from)
-       AND (p_valid_to IS NULL OR sv.valid_to IS NULL OR sv.valid_to>=p_valid_to)
+       AND (sv.valid_to IS NULL OR (p_valid_to IS NOT NULL AND sv.valid_to>=p_valid_to))
   ) THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
 
   IF jsonb_typeof(p_payload->'nodes') IS DISTINCT FROM 'array' OR jsonb_array_length(p_payload->'nodes')<1 OR jsonb_array_length(p_payload->'nodes')>100 THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED'; END IF;
@@ -153,7 +153,7 @@ BEGIN
        SELECT 1 FROM department_master.version v
         WHERE v.id=(n->>'departmentVersionId')::uuid AND v.department_id=(n->>'departmentId')::uuid
           AND v.valid_from<=p_valid_from AND (v.valid_to IS NULL OR v.valid_to>p_valid_from)
-          AND (p_valid_to IS NULL OR v.valid_to IS NULL OR v.valid_to>=p_valid_to)
+          AND (v.valid_to IS NULL OR (p_valid_to IS NOT NULL AND v.valid_to>=p_valid_to))
      )
   ) THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
 
