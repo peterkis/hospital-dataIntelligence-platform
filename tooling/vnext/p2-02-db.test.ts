@@ -101,11 +101,32 @@ describe('P2-02 vNext hierarchy owner', () => {
     } finally { await app.end(); }
   });
 
+  it.each(['FINANCE','STATISTICAL'] as const)('cannot publish a registered %s view by claiming an operational type', async viewType => {
+    const header = {requestId:id(),sourceClientKey:`TYPE_${viewType}`,viewCode:`TYPE_${viewType}`,viewName:'Registered type',viewType,
+      purpose:'Registration-only type regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'TYPE',sourceVersion:'1',
+      validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',approvalRef:'TYPE_APPROVAL'};
+    const registered = await hierarchy.createHierarchyView('maker',header);
+    const candidate:HierarchyCandidateInput = {...header,requestId:id(),viewId:registered.viewId,viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',recordStatus:'ACTIVE',
+      nodes:[{sourceEvidence:edgeEvidence('type'),nodeKey:'type',parentNodeKey:null,nodeKind:'DEPARTMENT',departmentId,departmentVersionId,displayName:'Department',relationName:'组织',sortOrder:1,isPrimaryPath:true}]};
+    await expect(hierarchy.importHierarchyCandidate('maker',candidate)).rejects.toThrow('VIEW_TYPE_MISMATCH');
+    // A pre-fix candidate must also fail at publication, after approval.
+    const legacyId=id(),digest=id().replaceAll('-','')+id().replaceAll('-',''),checked=await hierarchy.validateForest(candidate);
+    const payload={...candidate,nodes:checked.nodes,validationDigest:checked.digest};
+    peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer','${registered.viewId}'::uuid,p FROM unnest(ARRAY['READ','REVIEW']) p;
+      INSERT INTO department_master.hierarchy_candidate(id,request_id,view_id,source_client_key,maker,maker_identity,digest,payload_digest,payload,envelope,status) VALUES('${legacyId}','${candidate.requestId}','${registered.viewId}',${quote(candidate.sourceClientKey)},'maker',department_master.authorize('maker','HOSPITAL','WRITE'),'${digest}','${digest}',${quote(JSON.stringify(payload))}::jsonb,'{}','VALIDATED');`);
+    const direct=new Pool({connectionString:connection});
+    try {
+      await direct.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',legacyId,digest]);
+      await expect(direct.query('select department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',legacyId,digest,JSON.stringify(payload)])).rejects.toThrow('VIEW_TYPE_MISMATCH');
+    } finally { await direct.end(); }
+    expect(await hierarchy.readHierarchySnapshot('maker',{viewId:registered.viewId})).toBeNull();
+  });
+
   it('P2-02-AC-05 freezes the old snapshot after a renamed publication and replays the same result', async () => {
     const candidate: HierarchyCandidateInput = {
       requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
       parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId, sourceRecordId: 'ORG06:1', sourceVersion: '1',
-      validFrom: '2026-09-01T00:00:00.123456', validTo: null, recordedAt: '2026-09-01T01:00:00.654321', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
+      validFrom: '2026-09-01T00:00:00.123456', validTo: null, recordedAt: '2026-09-01T23:59:59.999999', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
       nodes: [
         { sourceEvidence: edgeEvidence('clinical', '2026-09-01T00:00:00.123456'), nodeKey: 'clinical', parentNodeKey: null, nodeKind: 'GROUP', groupCode: 'CLINICAL', groupId: null, groupVersionId: null, displayName: '临床组', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
         { sourceEvidence: { ...edgeEvidence('child', '2026-09-01T00:00:00.123456'), sourceVersion: '9', approvalRef: 'CHILD_APPROVAL' }, nodeKey: 'child', parentNodeKey: 'clinical', nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true },
@@ -139,7 +160,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(published.view).toHaveProperty('ownerDepartmentVersionId', departmentVersionId);
     expect(published.view).toHaveProperty('sourceDefinitionVersionId', sourceDefinitionVersionId);
     expect(published.validFrom).toBe('2026-09-01T00:00:00.123456');
-    expect(published.sourceRecordedAt).toBe('2026-09-01T01:00:00.654321');
+    expect(published.sourceRecordedAt).toBe('2026-09-01T23:59:59.999999');
     expect(published.nodes[0]?.nodeKind).toBe('GROUP');
     expect(published.nodes[0]?.sourceEvidence).toEqual(candidate.nodes[0]!.sourceEvidence);
     expect(published.nodes[1]?.sourceEvidence).toEqual(candidate.nodes[1]!.sourceEvidence);
@@ -203,13 +224,13 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId: secondViewId })).toBeNull();
   });
 
-  it.each(['extra-field','duplicate-group','header-extra','numeric-name','numeric-key','numeric-evidence-version','legacy-header-extra','legacy-numeric-name'] as const)('SQL publication rejects %s without changing history', async scenario => {
+  it.each(['extra-field','duplicate-group','header-extra','numeric-name','numeric-key','numeric-evidence-version','legacy-header-extra','legacy-numeric-name','invalid-clock','legacy-invalid-clock','invalid-second','edge-invalid-clock'] as const)('SQL publication rejects %s without changing history', async scenario => {
     const defect = scenario.replace('legacy-','');
     const before = await hierarchy.readHierarchySnapshot('maker',{viewId});
     const group = before?.nodes[0];
     if (!group?.groupId || !group.groupVersionId) throw new Error('GROUP_REQUIRED');
     const node = {sourceEvidence:edgeEvidence('g1'),nodeKey:'g1',parentNodeKey:null,nodeKind:'GROUP',groupId:group.groupId,groupVersionId:group.groupVersionId,groupCode:'CLINICAL',displayName:group.displayName,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth:0};
-    const payload = {requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'SQL boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'SQL regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SQL',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'SQL_APPROVAL',validationDigest:'a'.repeat(64),...(defect==='header-extra'?{unknownApprovedHeader:'must not disappear'}:{}),nodes:defect==='extra-field'?[{...node,unknownApprovedField:'must not disappear'}]:defect==='duplicate-group'?[node,{...node,nodeKey:'g2',sourceEvidence:edgeEvidence('g2')}]:defect==='numeric-name'?[{...node,displayName:123}]:defect==='numeric-key'?[{...node,nodeKey:123}]:defect==='numeric-evidence-version'?[{...node,sourceEvidence:{...node.sourceEvidence,sourceVersion:123}}]:[node]};
+    const payload = {requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'SQL boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'SQL regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SQL',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:defect==='invalid-clock'?'2026-09-01T24:00:00':defect==='invalid-second'?'2026-09-01T23:59:60':'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'SQL_APPROVAL',validationDigest:'a'.repeat(64),...(defect==='header-extra'?{unknownApprovedHeader:'must not disappear'}:{}),nodes:defect==='extra-field'?[{...node,unknownApprovedField:'must not disappear'}]:defect==='duplicate-group'?[node,{...node,nodeKey:'g2',sourceEvidence:edgeEvidence('g2')}]:defect==='numeric-name'?[{...node,displayName:123}]:defect==='numeric-key'?[{...node,nodeKey:123}]:defect==='numeric-evidence-version'?[{...node,sourceEvidence:{...node.sourceEvidence,sourceVersion:123}}]:defect==='edge-invalid-clock'?[{...node,sourceEvidence:{...node.sourceEvidence,recordedAt:'2026-09-01T24:00:00'}}]:[node]};
     const digest = id().replaceAll('-','')+id().replaceAll('-','');
     const pool = new Pool({connectionString:connection});
     const client = await pool.connect();
@@ -228,7 +249,7 @@ describe('P2-02 vNext hierarchy owner', () => {
         await client.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',candidateId,digest]);
         return client.query('select department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',candidateId,digest,JSON.stringify(payload)]);
       };
-      await expect(publish()).rejects.toThrow(defect==='duplicate-group'?'GROUP_DUPLICATE':'CLOSED_INPUT_REQUIRED');
+      await expect(publish()).rejects.toThrow(defect==='duplicate-group'?'GROUP_DUPLICATE':defect.includes('invalid-')?'LOCAL_TIME_REQUIRED':'CLOSED_INPUT_REQUIRED');
     } finally { await client.query('ROLLBACK'); client.release(); await pool.end(); }
     expect(await hierarchy.readHierarchySnapshot('maker',{viewId})).toEqual(before);
   });

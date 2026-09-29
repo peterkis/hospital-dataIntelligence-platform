@@ -16,6 +16,7 @@ const postWorkspaceMigrations = [
  '0096_hierarchy_view_authorization',
  '0097_hierarchy_authorized_reads',
  '0098_hierarchy_candidate_shape',
+ '0099_hierarchy_registration_and_clock',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
