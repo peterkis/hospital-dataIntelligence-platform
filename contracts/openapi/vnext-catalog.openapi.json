@@ -95934,6 +95934,8 @@
                     "view": {
                       "type": "object",
                       "required": [
+                        "ownerDepartmentVersionId",
+                        "sourceDefinitionVersionId",
                         "id",
                         "sourceClientKey",
                         "viewCode",
@@ -95951,6 +95953,28 @@
                         "contentDigest"
                       ],
                       "properties": {
+                        "ownerDepartmentVersionId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "sourceDefinitionVersionId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "id": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
@@ -96377,6 +96401,8 @@
                         "view": {
                           "type": "object",
                           "required": [
+                            "ownerDepartmentVersionId",
+                            "sourceDefinitionVersionId",
                             "id",
                             "sourceClientKey",
                             "viewCode",
@@ -96394,6 +96420,28 @@
                             "contentDigest"
                           ],
                           "properties": {
+                            "ownerDepartmentVersionId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "sourceDefinitionVersionId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "id": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"

@@ -91,6 +91,7 @@ export type ValidatedHierarchyNode = HierarchyNodeInput & { readonly depth: numb
 export interface ForestValidation { readonly nodes: readonly ValidatedHierarchyNode[]; readonly digest: string }
 export interface HierarchyIssue { readonly code: string; readonly nodeKey?: string; readonly field?: string }
 export interface HierarchyViewRecord {
+  readonly ownerDepartmentVersionId: string | null; readonly sourceDefinitionVersionId: string | null;
   readonly id: string; readonly sourceClientKey: string; readonly viewCode: string; readonly viewName: string;
   readonly viewType: HierarchyCandidateInput['viewType']; readonly purpose: string; readonly aggregationRule: string;
   readonly ownerDepartmentId: string | null; readonly sourceSystemId: string; readonly sourceRecordId: string;
@@ -233,12 +234,14 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
   };
   const snapshot = async (trx: Kysely<DB>, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
     await authorize(trx, actor, 'READ');
-    const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
+    const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.owner_department_version_id,v.source_definition_version_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
     if (!v) return null;
     const rows = (await sql<Record<string, unknown>>`select node_id,node_key,parent_node_key,node_kind,group_code,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth from department_master.hierarchy_node where view_version_id=${String(v['id'])}::uuid order by depth,sort_order,node_key`.execute(trx)).rows;
     const sourceRecordedAt = formatLocalDbTime(v['recorded_at']);
     return {
       view: {
+        ownerDepartmentVersionId: v['owner_department_version_id'] === null ? null : String(v['owner_department_version_id']),
+        sourceDefinitionVersionId: v['source_definition_version_id'] === null ? null : String(v['source_definition_version_id']),
         id: String(v['view_id']), sourceClientKey: String(v['source_client_key']), viewCode: String(v['view_code']), viewName: String(v['view_name']),
         viewType: v['view_type'] as HierarchyCandidateInput['viewType'], purpose: String(v['purpose']), aggregationRule: String(v['aggregation_rule']),
         ownerDepartmentId: v['owner_department_id'] === null ? null : String(v['owner_department_id']), sourceSystemId: String(v['source_system_id']),

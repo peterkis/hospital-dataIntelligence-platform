@@ -4,6 +4,11 @@
 -- tree by bypassing the TypeBox owner.
 SELECT pg_advisory_xact_lock(901002);
 
+-- Older snapshots did not record these pins; keep them explicitly unknown.
+ALTER TABLE department_master.hierarchy_view_version
+ ADD COLUMN owner_department_version_id uuid REFERENCES department_master.version(id),
+ ADD COLUMN source_definition_version_id uuid;
+
 ALTER TABLE department_master.hierarchy_node ADD COLUMN group_code text;
 -- Recover only from the approved candidate matching this exact snapshot digest.
 UPDATE department_master.hierarchy_node n SET group_code=(
@@ -40,6 +45,8 @@ DECLARE
  p_valid_to timestamp;
  owner_id uuid;
  source_id uuid;
+ owner_version_id uuid;
+ source_version_id uuid;
 BEGIN
   PERFORM pg_advisory_xact_lock(901002);
   identity:=department_master.authorize(p_actor,'HOSPITAL','WRITE');
@@ -89,24 +96,20 @@ BEGIN
 
   IF coalesce(p_payload->>'ownerDepartmentId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
   owner_id:=(p_payload->>'ownerDepartmentId')::uuid;
-  IF NOT EXISTS(
-    SELECT 1 FROM department_master.version v
+    SELECT v.id INTO owner_version_id FROM department_master.version v
        WHERE v.department_id=owner_id AND v.valid_from<=p_valid_from
        AND (v.valid_to IS NULL OR v.valid_to>p_valid_from)
        AND (v.valid_to IS NULL OR (p_valid_to IS NOT NULL AND v.valid_to>=p_valid_to))
-  ) THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
+       AND NOT EXISTS (SELECT 1 FROM department_master.version later WHERE later.department_id=v.department_id AND later.number>v.number AND tsrange(later.valid_from,later.valid_to,'[)') && tsrange(p_valid_from,p_valid_to,'[)'))
+       ORDER BY v.number DESC LIMIT 1;
+  IF owner_version_id IS NULL THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
 
   IF coalesce(p_payload->>'sourceSystemId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
   source_id:=(p_payload->>'sourceSystemId')::uuid;
-  IF NOT EXISTS(
-    SELECT 1
-      FROM governance_catalog.object o
-      JOIN LATERAL (SELECT e.version_id,e.status FROM governance_catalog.event e WHERE e.object_id=o.id ORDER BY e.head DESC LIMIT 1) e ON true
-      JOIN governance_catalog.version sv ON sv.id=e.version_id
-     WHERE o.id=source_id AND o.kind='SOURCE' AND o.scope='SYNTHETIC' AND e.status='PUBLISHED'
-       AND sv.valid_from<=p_valid_from AND (sv.valid_to IS NULL OR sv.valid_to>p_valid_from)
-       AND (sv.valid_to IS NULL OR (p_valid_to IS NOT NULL AND sv.valid_to>=p_valid_to))
-  ) THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
+  source_version_id:=governance_catalog.source_covering_version(source_id,tsrange(p_valid_from,p_valid_to,'[)'));
+  IF source_version_id IS NULL THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
+  PERFORM vnext_control.require_source_access(p_actor,'SYNTHETIC',source_id,source_version_id);
+  PERFORM governance_catalog.assert_source_period_chain(target_view_id,source_id,'SYNTHETIC',tsrange(p_valid_from,p_valid_to,'[)'),source_version_id);
 
   IF jsonb_typeof(p_payload->'nodes') IS DISTINCT FROM 'array' OR jsonb_array_length(p_payload->'nodes')<1 OR jsonb_array_length(p_payload->'nodes')>100 THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED'; END IF;
   IF EXISTS(
@@ -178,8 +181,8 @@ BEGIN
   ) THEN RAISE EXCEPTION 'BLOCKED_DEPENDENCY'; END IF;
 
   SELECT coalesce(max(v.version_no),0)+1 INTO version_no FROM department_master.hierarchy_view_version v WHERE v.view_id=target_view_id;
-  INSERT INTO department_master.hierarchy_view_version(view_id,version_no,view_name,view_code,view_type,parent_cardinality,purpose,aggregation_rule,owner_department_id,source_system_id,source_record_id,source_version,valid_from,valid_to,recorded_at,approval_ref,maker,maker_identity,approved_by,approved_identity,content_digest,status)
-  VALUES(target_view_id,version_no,p_payload->>'viewName',(SELECT view_code FROM department_master.hierarchy_view WHERE id=target_view_id),p_payload->>'viewType','STRICT_TREE',p_payload->>'purpose',p_payload->>'aggregationRule',owner_id,source_id,p_payload->>'sourceRecordId',p_payload->>'sourceVersion',p_valid_from,p_valid_to,(p_payload->>'recordedAt')::timestamp,p_payload->>'approvalRef',c.maker,c.maker_identity,c.approved_by,c.approved_identity,p_payload->>'validationDigest','PUBLISHED') RETURNING id INTO version_id;
+  INSERT INTO department_master.hierarchy_view_version(view_id,version_no,view_name,view_code,view_type,parent_cardinality,purpose,aggregation_rule,owner_department_id,source_system_id,source_record_id,source_version,valid_from,valid_to,recorded_at,approval_ref,maker,maker_identity,approved_by,approved_identity,content_digest,status,owner_department_version_id,source_definition_version_id)
+  VALUES(target_view_id,version_no,p_payload->>'viewName',(SELECT view_code FROM department_master.hierarchy_view WHERE id=target_view_id),p_payload->>'viewType','STRICT_TREE',p_payload->>'purpose',p_payload->>'aggregationRule',owner_id,source_id,p_payload->>'sourceRecordId',p_payload->>'sourceVersion',p_valid_from,p_valid_to,(p_payload->>'recordedAt')::timestamp,p_payload->>'approvalRef',c.maker,c.maker_identity,c.approved_by,c.approved_identity,p_payload->>'validationDigest','PUBLISHED',owner_version_id,source_version_id) RETURNING id INTO version_id;
   FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'nodes') LOOP
     node_id:=uuidv7(); group_id:=NULL; group_version_id:=NULL;
     IF item->>'nodeKind'='GROUP' THEN

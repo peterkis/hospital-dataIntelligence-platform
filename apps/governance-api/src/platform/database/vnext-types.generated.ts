@@ -89,9 +89,11 @@ export interface DepartmentMasterHierarchyViewVersion {
   maker: string;
   maker_identity: string;
   owner_department_id: string | null;
+  owner_department_version_id: string | null;
   parent_cardinality: string;
   purpose: string;
   recorded_at: string;
+  source_definition_version_id: string | null;
   source_record_id: string;
   source_system_id: string;
   source_version: string;

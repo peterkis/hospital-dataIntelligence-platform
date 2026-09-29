@@ -20,6 +20,7 @@ let ownerDepartmentId: string;
 let departmentId: string;
 let departmentVersionId: string;
 let sourceSystemId: string;
+let sourceDefinitionVersionId: string;
 let finiteDepartmentId: string;
 let finiteDepartmentVersionId: string;
 
@@ -38,6 +39,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     if (applied.status !== 'COMMITTED') throw new Error('P2_02_DEPARTMENT_FIXTURE_NOT_COMMITTED');
     departmentId = applied.facts[0]!.id;
     sourceSystemId = fixture.source.id;
+    sourceDefinitionVersionId = fixture.source.versionId;
     departmentVersionId = (await department.exact('maker', { id: departmentId, version: '1' })).versionId;
     ownerDepartmentId = departmentId;
     const finiteEntry = fixture.entry();
@@ -86,6 +88,8 @@ describe('P2-02 vNext hierarchy owner', () => {
     }
     const published = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(published.nodes).toHaveLength(1);
+    expect(published.view).toHaveProperty('ownerDepartmentVersionId', departmentVersionId);
+    expect(published.view).toHaveProperty('sourceDefinitionVersionId', sourceDefinitionVersionId);
     expect(published.validFrom).toBe('2026-09-01T00:00:00.123456');
     expect(published.sourceRecordedAt).toBe('2026-09-01T01:00:00.654321');
     expect(published.nodes[0]?.nodeKind).toBe('GROUP');
@@ -214,6 +218,30 @@ describe('P2-02 vNext hierarchy owner', () => {
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: boundedStage.candidateId, digest: boundedStage.digest });
     const boundedSnapshot = await hierarchy.publishHierarchySnapshot('maker', { candidateId: boundedStage.candidateId, requestId: bounded.requestId, digest: boundedStage.digest });
     expect(boundedSnapshot.validTo).toBe('2027-01-01T00:00:00.000000');
+  });
+
+  it('resolves and freezes the historical SOURCE version despite a future published revision', async () => {
+    const common = () => ({ scope: 'SYNTHETIC' as const, requestId: id(), reason: 'HIERARCHY_SOURCE_PERIOD' });
+    let source = await catalog.command('maker', { ...common(), action: 'CREATE', kind: 'SOURCE', code: 'HIERARCHY_TEMPORAL_SOURCE', values: { name: 'Synthetic temporal source', environment: 'SYNTHETIC', sourceKind: 'MANUAL', deploymentScope: 'SYNTHETIC_ALL', businessOwnerRole: 'TEST', technicalRole: 'TEST', sourceEvidence: sourceSystemId }, validFrom: '2026-01-01T00:00:00', validTo: '2028-01-01T00:00:00' });
+    source = await catalog.command('maker', { ...common(), action: 'SUBMIT', target: source.id, expectedHead: source.head });
+    source = await catalog.command('reviewer', { ...common(), action: 'PUBLISH', target: source.id, expectedHead: source.head, reviewDigest: source.reviewDigest });
+    const historicalVersion = source.versionId;
+    source = await catalog.command('maker', { ...common(), action: 'REVISE', target: source.id, expectedHead: source.head, values: { name: 'Future source revision' }, validFrom: '2027-01-01T00:00:00', validTo: null });
+    source = await catalog.command('maker', { ...common(), action: 'SUBMIT', target: source.id, expectedHead: source.head });
+    source = await catalog.command('reviewer', { ...common(), action: 'PUBLISH', target: source.id, expectedHead: source.head, reviewDigest: source.reviewDigest, impactDigest: (await catalog.sourceImpact('reviewer', 'SYNTHETIC', source.id, 'PUBLISH')).impactDigest });
+    const candidate: HierarchyCandidateInput = {
+      requestId: id(), viewId, sourceClientKey: 'ORG05-SYNTHETIC-ADMIN', viewCode: 'ADMIN', viewName: '行政视图', viewType: 'ADMINISTRATIVE',
+      parentCardinality: 'STRICT_TREE', purpose: '行政管理', aggregationRule: 'NO_DUPLICATE', ownerDepartmentId, sourceSystemId: source.id,
+      sourceRecordId: 'ORG06:historical-source', sourceVersion: '1', validFrom: '2026-09-01T00:00:00.000000', validTo: '2027-01-01T00:00:00.000000',
+      recordedAt: '2026-09-01T01:00:00.000000', recordStatus: 'ACTIVE', approvalRef: 'SYNTHETIC-APPROVAL',
+      nodes: [{ nodeKey: 'department', parentNodeKey: null, nodeKind: 'DEPARTMENT', departmentId, departmentVersionId, displayName: '同名科室', relationName: '组织', sortOrder: 1, isPrimaryPath: true }],
+    };
+    const staged = await hierarchy.importHierarchyCandidate('maker', candidate);
+    if (!staged.candidateId) throw new Error('CANDIDATE_REQUIRED');
+    await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: staged.candidateId, digest: staged.digest });
+    const snapshot = await hierarchy.publishHierarchySnapshot('maker', { candidateId: staged.candidateId, requestId: candidate.requestId, digest: staged.digest });
+    expect(snapshot.view.sourceDefinitionVersionId).toBe(historicalVersion);
+    expect(snapshot.view.sourceDefinitionVersionId).not.toBe(source.versionId);
   });
 
   it('rejects privileged mutation of published snapshot versions and nodes', async () => {

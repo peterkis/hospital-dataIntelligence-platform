@@ -29560,6 +29560,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         view: {
+                            ownerDepartmentVersionId: string | null;
+                            sourceDefinitionVersionId: string | null;
                             id: string;
                             sourceClientKey: string;
                             viewCode: string;
@@ -29708,6 +29710,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         view: {
+                            ownerDepartmentVersionId: string | null;
+                            sourceDefinitionVersionId: string | null;
                             id: string;
                             sourceClientKey: string;
                             viewCode: string;

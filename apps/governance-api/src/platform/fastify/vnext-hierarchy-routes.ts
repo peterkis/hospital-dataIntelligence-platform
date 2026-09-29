@@ -29,6 +29,7 @@ const SnapshotNodeResponse = Type.Object({
 }, closed);
 const SnapshotResponse = Type.Object({
   view: Type.Object({
+    ownerDepartmentVersionId: Type.Union([HierarchyId, Type.Null()]), sourceDefinitionVersionId: Type.Union([HierarchyId, Type.Null()]),
     id: HierarchyId, sourceClientKey: Text, viewCode: Text, viewName: Text,
     viewType: Type.Enum(['ADMINISTRATIVE', 'OPERATIONAL', 'MEDICAL_RECORD', 'FINANCE', 'STATISTICAL']),
     purpose: Text, aggregationRule: Text, ownerDepartmentId: Type.Union([HierarchyId, Type.Null()]),
