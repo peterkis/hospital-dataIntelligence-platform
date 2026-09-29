@@ -118,6 +118,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     } finally {
       await pool.end();
     }
+    await expect(hierarchy.publishHierarchySnapshot('maker',{candidateId,requestId:id(),digest:staged.digest})).rejects.toThrow('REQUEST_CONFLICT');
     const published = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(published.nodes).toHaveLength(2);
     expect(published.view).toHaveProperty('ownerDepartmentVersionId', departmentVersionId);
@@ -133,6 +134,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     if (!published.nodes[0]?.groupId || !published.nodes[0]?.groupVersionId) throw new Error('P2_02_GROUP_REFERENCE_REQUIRED');
     const replay = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
     expect(replay.contentDigest).toBe(published.contentDigest);
+    await expect(hierarchy.publishHierarchySnapshot('maker',{candidateId,requestId:id(),digest:staged.digest})).rejects.toThrow('REQUEST_CONFLICT');
     await withoutViewPermission('maker',viewId,'WRITE',async()=>{
       await expect(hierarchy.importHierarchyCandidate('maker',candidate)).rejects.toThrow('ACCESS_DENIED');
       await expect(hierarchy.publishHierarchySnapshot('maker',{candidateId,requestId:candidate.requestId,digest:staged.digest})).rejects.toThrow('ACCESS_DENIED');

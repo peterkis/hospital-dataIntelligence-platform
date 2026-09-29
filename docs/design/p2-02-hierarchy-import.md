@@ -12,6 +12,7 @@ P2-02 在当前 vNext Department Owner 内治理 ORG05 视图定义和 ORG06 完
 - `validFrom`、`validTo`、`recordedAt` 使用 `Asia/Shanghai` 本地时间；偏移时间和跨期间候选拒绝。
 - 发布时每个 Department 版本必须覆盖候选的完整业务区间；版本边界跨越候选期间时要求拆分候选。
 - 快照保存展示名称、引用版本、深度、排序和内容摘要；后续改名不会改变已发布快照。
+- 发布命令的 requestId 必须与原候选一致，首次执行和历史重放都拒绝错误 requestId，不能把其他请求记作原请求的成功结果。
 - typed 快照读取保留责任组织、来源记录、来源版本、审批证据和状态，并把来源 `sourceRecordedAt` 与平台 `recordedFrom` 分开；责任 Department、来源 SOURCE 或节点 Department 版本无法覆盖完整业务期间时，数据库发布边界返回 `BLOCKED_DEPENDENCY`。
 - PR #21 修复追加未部署的 0093：冻结责任 Department 与 SOURCE 的确切版本；SOURCE 通过公共时间解析函数选择覆盖版本。无界候选必须由无界依赖覆盖。GROUP 代码和所属视图/版本绑定进入快照，历史版本与节点禁止 UPDATE/DELETE。
 - 每条 ORG06 节点边必须携带独立的 `sourceEvidence`（来源 alias、源版本、SOURCE、行定位、业务期间、来源记录时间、ACTIVE 意图及审批证据），参与审批摘要并逐条保存；所有边期间必须等于完整快照期间，混合期间拒绝。数据库再次检查边来源的权限和完整期间覆盖，并冻结 SOURCE 版本。迁移前未记录的逐边证据和依赖版本返回 null，不根据 ORG05 头部编造。

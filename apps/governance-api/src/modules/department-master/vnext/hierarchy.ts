@@ -347,6 +347,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       return root(async trx => {
         const candidate = await readCandidate(trx, actor, input.candidateId); if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
         await authorizeView(trx,actor,candidate.viewId,'WRITE');
+        if (input.requestId !== candidate.requestId) throw new Error('REQUEST_CONFLICT');
         if (candidate.status === 'APPLIED') {
           const value = unseal<HierarchyCandidateInput>(candidate, provider);
           // The committed validation belongs to the original schema version.
