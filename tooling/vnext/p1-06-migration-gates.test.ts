@@ -95,7 +95,7 @@ test('a release missing the security migration cannot enable the workspace',asyn
  await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');expect(state.events).toEqual(['inspect']);
 });
 test('unexpected future migration requires an explicit shared release-boundary update',()=>{
-  expect(()=>workspaceReleaseFiles([...files,{id:'0104_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
+  expect(()=>workspaceReleaseFiles([...files,{id:'0107_unreviewed',sha256:'0'.repeat(64),sql:''}])).toThrow('WORKSPACE_RELEASE_MANIFEST_MISMATCH');
 });
 
 for(const prefix of [70,71,72,73,74,75,76,77,78,79,80,81])test(`deployment upgrades supported prefix ${prefix} to the entire release`,async()=>{
@@ -135,7 +135,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0103_hierarchy_snapshot_version_bound');
+ expect(files.at(-1)?.id).toBe('0106_hierarchy_registration_shape');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{

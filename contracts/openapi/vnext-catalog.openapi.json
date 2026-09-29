@@ -94787,6 +94787,41 @@
                   "approvalRef"
                 ],
                 "properties": {
+                  "profile": {
+                    "enum": [
+                      "CORE",
+                      "FULL"
+                    ]
+                  },
+                  "dependencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "dataset",
+                        "contractId",
+                        "contractVersionId"
+                      ],
+                      "properties": {
+                        "dataset": {
+                          "enum": [
+                            "ORG05",
+                            "ORG06"
+                          ]
+                        },
+                        "contractId": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                        },
+                        "contractVersionId": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "maxItems": 2
+                  },
                   "requestId": {
                     "type": "string",
                     "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
@@ -95132,6 +95167,41 @@
                   "nodes"
                 ],
                 "properties": {
+                  "profile": {
+                    "enum": [
+                      "CORE",
+                      "FULL"
+                    ]
+                  },
+                  "dependencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "dataset",
+                        "contractId",
+                        "contractVersionId"
+                      ],
+                      "properties": {
+                        "dataset": {
+                          "enum": [
+                            "ORG05",
+                            "ORG06"
+                          ]
+                        },
+                        "contractId": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                        },
+                        "contractVersionId": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "maxItems": 2
+                  },
                   "requestId": {
                     "type": "string",
                     "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"

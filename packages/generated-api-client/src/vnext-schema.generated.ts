@@ -29190,6 +29190,14 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        /** @enum {unknown} */
+                        dataset: "ORG05" | "ORG06";
+                        contractId: string;
+                        contractVersionId: string;
+                    }[];
                     requestId: string;
                     sourceClientKey: string;
                     viewCode: string;
@@ -29312,6 +29320,14 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @enum {unknown} */
+                    profile?: "CORE" | "FULL";
+                    dependencies?: {
+                        /** @enum {unknown} */
+                        dataset: "ORG05" | "ORG06";
+                        contractId: string;
+                        contractVersionId: string;
+                    }[];
                     requestId: string;
                     viewId: string | null;
                     sourceClientKey: string;

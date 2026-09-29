@@ -12,6 +12,14 @@ export const HierarchyId = Type.String({ pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f
 const text = (maxLength = 2000) => Type.String({ minLength: 1, maxLength, pattern: '\\S' });
 const nullableId = Type.Union([HierarchyId, Type.Null()]);
 const nullableText = (maxLength = 2000) => Type.Union([Type.String({ maxLength }), Type.Null()]);
+// Omitted profiles retain the original CORE contract; FULL has no approved adapter yet.
+const profileFields = {
+  profile: Type.Optional(Type.Enum(['CORE','FULL'])),
+  dependencies: Type.Optional(Type.Array(Type.Object({dataset:Type.Enum(['ORG05','ORG06']),contractId:HierarchyId,contractVersionId:HierarchyId},closed),{maxItems:2})),
+};
+function assertCoreProfile(input:{profile?:'CORE'|'FULL';dependencies?:readonly unknown[]}):void {
+  if(input.profile==='FULL'||input.dependencies?.length)throw new Error('BLOCKED_DEPENDENCY');
+}
 export const HierarchyLocalTime = Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?$' });
 export const HierarchyNullableLocalTime = Type.Union([HierarchyLocalTime, Type.Null()]);
 
@@ -52,6 +60,7 @@ export const HierarchyNodeSchema = Type.Union([DepartmentNode, GroupNode]);
 export type HierarchyNodeInput = Static<typeof HierarchyNodeSchema>;
 
 export const HierarchyCandidateSchema = Type.Object({
+  ...profileFields,
   requestId: HierarchyId,
   viewId: nullableId,
   sourceClientKey: text(128),
@@ -78,6 +87,7 @@ export const HierarchyCandidateSchema = Type.Object({
 export type HierarchyCandidateInput = Static<typeof HierarchyCandidateSchema>;
 
 export const CreateHierarchyViewSchema = Type.Object({
+  ...profileFields,
   requestId: HierarchyId,
   sourceClientKey: text(128), viewCode: text(64), viewName: text(256),
   viewType: HierarchyCandidateSchema.properties.viewType,
@@ -127,6 +137,7 @@ export interface HierarchySnapshot {
 
 function assertCandidate(value: unknown): asserts value is HierarchyCandidateInput {
   if (!Check(HierarchyCandidateSchema, value)) throw new Error('CLOSED_INPUT_REQUIRED');
+  assertCoreProfile(value);
 }
 
 function normalizeTime(value: string): string {
@@ -152,6 +163,7 @@ export function validateHierarchyForest(value: unknown): ForestValidation {
   const byKey = new Map<string, HierarchyNodeInput>();
   const departments = new Set<string>();
   const groups = new Set<string>();
+  const groupIdentities = new Set<string>();
   const sourceEdges = new Set<string>();
   for (const node of value.nodes) {
     const evidence = node.sourceEvidence;
@@ -169,6 +181,10 @@ export function validateHierarchyForest(value: unknown): ForestValidation {
     } else {
       if (groups.has(node.groupCode)) issue('GROUP_DUPLICATE', node.nodeKey, 'groupCode');
       groups.add(node.groupCode);
+      if(node.groupId!==null){
+        if(groupIdentities.has(node.groupId))issue('GROUP_DUPLICATE',node.nodeKey,'groupId');
+        groupIdentities.add(node.groupId);
+      }
       if (node.groupId !== null && node.groupVersionId === null) issue('GROUP_VERSION_REQUIRED', node.nodeKey, 'groupVersionId');
       if (node.groupId === null && node.groupVersionId !== null) issue('GROUP_ID_REQUIRED', node.nodeKey, 'groupId');
     }
@@ -303,6 +319,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
     async validateForest(value: unknown) { return validateHierarchyForest(value); },
     async createHierarchyView(actor: string, input: CreateHierarchyViewInput): Promise<{ viewId: string; sourceClientKey: string; viewCode: string }> {
       if (!Check(CreateHierarchyViewSchema, input)) throw new Error('CLOSED_INPUT_REQUIRED');
+      assertCoreProfile(input);
       const validFrom = normalizeTime(input.validFrom); const validTo = input.validTo === null ? null : normalizeTime(input.validTo); normalizeTime(input.recordedAt);
       if (validTo !== null && validTo <= validFrom) throw new Error('INVALID_BUSINESS_PERIOD');
       return root(async trx => {

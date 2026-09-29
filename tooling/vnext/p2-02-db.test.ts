@@ -86,6 +86,52 @@ describe('P2-02 vNext hierarchy owner', () => {
     }finally{await app.end();}
   });
 
+  it.each(['FULL','CORE-with-dependency','implicit-with-dependency'] as const)('blocks unready %s at HTTP and SQL without downgrading the request', async scenario => {
+    const profile=scenario==='FULL'?'FULL' as const:scenario==='CORE-with-dependency'?'CORE' as const:undefined;
+    const admission={...(profile?{profile}:{}),...(scenario==='FULL'?{}:{dependencies:[{dataset:'ORG05' as const,contractId:id(),contractVersionId:id()}]})};
+    const header={requestId:id(),sourceClientKey:`PROFILE_${id()}`,viewCode:`PROFILE_${id()}`,viewName:'Profile boundary',viewType:'ADMINISTRATIVE' as const,purpose:'Profile regression',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'PROFILE',sourceVersion:'1',validFrom:'2026-09-01T00:00:00',validTo:null,recordedAt:'2026-09-01T01:00:00',approvalRef:'PROFILE'};
+    const server=await buildCatalogServer(undefined,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,{owner:hierarchy,actor:()=> 'maker'});
+    const direct=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      const address=await server.listen({host:'127.0.0.1',port:0});
+      const client=createHierarchyClient(address,'maker');
+      const blocked=await client.createView({...header,...admission});
+      expect(blocked.response.status).toBe(503);
+      await expect(direct.query('select department_master.hierarchy_create_view($1,$2::jsonb)',['maker',JSON.stringify({...header,...admission,viewDigest:'a'.repeat(64)})])).rejects.toThrow('BLOCKED_DEPENDENCY');
+      const registered=await hierarchy.createHierarchyView('maker',{...header,profile:'CORE',dependencies:[]});
+      const candidate={...header,requestId:id(),viewId:registered.viewId,parentCardinality:'STRICT_TREE' as const,recordStatus:'ACTIVE' as const,nodes:[{nodeKey:'a',parentNodeKey:null,nodeKind:'DEPARTMENT' as const,departmentId,departmentVersionId,displayName:'Department',relationName:'组织',sortOrder:1,isPrimaryPath:true,sourceEvidence:edgeEvidence('profile')}]};
+      const imported=await client.importCandidate({...candidate,...admission});
+      expect(imported.response.status).toBe(503);
+      const checked=await hierarchy.validateForest(candidate);
+      const payload={...candidate,nodes:checked.nodes,validationDigest:checked.digest,digest:'b'.repeat(64),payloadDigest:'c'.repeat(64),envelope:{}};
+      await expect(direct.query('select department_master.hierarchy_store_candidate($1,$2::jsonb)',['maker',JSON.stringify({...payload,...admission})])).rejects.toThrow('BLOCKED_DEPENDENCY');
+      const accepted=await hierarchy.importHierarchyCandidate('maker',{...candidate,profile:'CORE',dependencies:[]});
+      expect(accepted.decision).toBe('PASS');
+      if(!accepted.candidateId)throw new Error('CORE_CANDIDATE_REQUIRED');
+      peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer','${registered.viewId}'::uuid,p FROM unnest(ARRAY['READ','REVIEW']) p;`);
+      await hierarchy.approveHierarchyCandidate('reviewer',{candidateId:accepted.candidateId,digest:accepted.digest});
+      const snapshot=await hierarchy.publishHierarchySnapshot('maker',{candidateId:accepted.candidateId,requestId:candidate.requestId,digest:accepted.digest});
+      expect(snapshot.view.id).toBe(registered.viewId);
+    }finally{await direct.end();await server.close();}
+  });
+
+  it.each(['numeric-name','missing-request','extra-field','overlong-name','boolean-source-version','invalid-request-id'] as const)('SQL registration rejects closed-shape defect %s before writing', async defect => {
+    const header={requestId:id(),sourceClientKey:`SHAPE_${id()}`,viewCode:`SHAPE_${id()}`,viewName:'Shape boundary',viewType:'ADMINISTRATIVE',purpose:'Shape regression',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SHAPE',sourceVersion:'1',validFrom:'2026-09-01T00:00:00',validTo:null,recordedAt:'2026-09-01T01:00:00',approvalRef:'SHAPE',viewDigest:'a'.repeat(64)};
+    const payload:Record<string,unknown>={...header};
+    if(defect==='numeric-name')payload['viewName']=123;
+    if(defect==='missing-request')delete payload['requestId'];
+    if(defect==='extra-field')payload['unknownField']='must not disappear';
+    if(defect==='overlong-name')payload['viewName']='x'.repeat(257);
+    if(defect==='boolean-source-version')payload['sourceVersion']=true;
+    if(defect==='invalid-request-id')payload['requestId']='not-a-uuid';
+    const direct=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      await expect(direct.query('select department_master.hierarchy_create_view($1,$2::jsonb)',['maker',JSON.stringify(payload)])).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+      const corrected=await direct.query<{r:{viewId:string}}>('select department_master.hierarchy_create_view($1,$2::jsonb) r',['maker',JSON.stringify(header)]);
+      expect(corrected.rows[0]?.r.viewId).toMatch(/^[a-f0-9-]{36}$/u);
+    }finally{await direct.end();}
+  });
+
   it('the application role cannot bypass view authorization with raw table reads', async () => {
     const app = new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
     try {
@@ -234,13 +280,13 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId: secondViewId })).toBeNull();
   });
 
-  it.each(['extra-field','duplicate-group','header-extra','numeric-name','numeric-key','numeric-evidence-version','legacy-header-extra','legacy-numeric-name','invalid-clock','legacy-invalid-clock','invalid-second','edge-invalid-clock'] as const)('SQL publication rejects %s without changing history', async scenario => {
+  it.each(['extra-field','duplicate-group','header-extra','numeric-name','numeric-key','numeric-evidence-version','legacy-header-extra','legacy-full','legacy-numeric-name','invalid-clock','legacy-invalid-clock','invalid-second','edge-invalid-clock'] as const)('SQL publication rejects %s without changing history', async scenario => {
     const defect = scenario.replace('legacy-','');
     const before = await hierarchy.readHierarchySnapshot('maker',{viewId});
     const group = before?.nodes[0];
     if (!group?.groupId || !group.groupVersionId) throw new Error('GROUP_REQUIRED');
     const node = {sourceEvidence:edgeEvidence('g1'),nodeKey:'g1',parentNodeKey:null,nodeKind:'GROUP',groupId:group.groupId,groupVersionId:group.groupVersionId,groupCode:'CLINICAL',displayName:group.displayName,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth:0};
-    const payload = {requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'SQL boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'SQL regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SQL',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:defect==='invalid-clock'?'2026-09-01T24:00:00':defect==='invalid-second'?'2026-09-01T23:59:60':'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'SQL_APPROVAL',validationDigest:'a'.repeat(64),...(defect==='header-extra'?{unknownApprovedHeader:'must not disappear'}:{}),nodes:defect==='extra-field'?[{...node,unknownApprovedField:'must not disappear'}]:defect==='duplicate-group'?[node,{...node,nodeKey:'g2',sourceEvidence:edgeEvidence('g2')}]:defect==='numeric-name'?[{...node,displayName:123}]:defect==='numeric-key'?[{...node,nodeKey:123}]:defect==='numeric-evidence-version'?[{...node,sourceEvidence:{...node.sourceEvidence,sourceVersion:123}}]:defect==='edge-invalid-clock'?[{...node,sourceEvidence:{...node.sourceEvidence,recordedAt:'2026-09-01T24:00:00'}}]:[node]};
+    const payload = {requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'SQL boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'SQL regression',aggregationRule:'NO_DUPLICATE',ownerDepartmentId,sourceSystemId,sourceRecordId:'SQL',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:defect==='invalid-clock'?'2026-09-01T24:00:00':defect==='invalid-second'?'2026-09-01T23:59:60':'2026-09-01T01:00:00.000000',recordStatus:'ACTIVE',approvalRef:'SQL_APPROVAL',validationDigest:'a'.repeat(64),...(defect==='full'?{profile:'FULL'}:{}),...(defect==='header-extra'?{unknownApprovedHeader:'must not disappear'}:{}),nodes:defect==='extra-field'?[{...node,unknownApprovedField:'must not disappear'}]:defect==='duplicate-group'?[node,{...node,nodeKey:'g2',sourceEvidence:edgeEvidence('g2')}]:defect==='numeric-name'?[{...node,displayName:123}]:defect==='numeric-key'?[{...node,nodeKey:123}]:defect==='numeric-evidence-version'?[{...node,sourceEvidence:{...node.sourceEvidence,sourceVersion:123}}]:defect==='edge-invalid-clock'?[{...node,sourceEvidence:{...node.sourceEvidence,recordedAt:'2026-09-01T24:00:00'}}]:[node]};
     const digest = id().replaceAll('-','')+id().replaceAll('-','');
     const pool = new Pool({connectionString:connection});
     const client = await pool.connect();
@@ -259,19 +305,20 @@ describe('P2-02 vNext hierarchy owner', () => {
         await client.query('select department_master.hierarchy_approve($1,$2::uuid,$3)',['reviewer',candidateId,digest]);
         return client.query('select department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',candidateId,digest,JSON.stringify(payload)]);
       };
-      await expect(publish()).rejects.toThrow(defect==='duplicate-group'?'GROUP_DUPLICATE':defect.includes('invalid-')?'LOCAL_TIME_REQUIRED':'CLOSED_INPUT_REQUIRED');
+      await expect(publish()).rejects.toThrow(defect==='full'?'BLOCKED_DEPENDENCY':defect==='duplicate-group'?'GROUP_DUPLICATE':defect.includes('invalid-')?'LOCAL_TIME_REQUIRED':'CLOSED_INPUT_REQUIRED');
     } finally { await client.query('ROLLBACK'); client.release(); await pool.end(); }
     expect(await hierarchy.readHierarchySnapshot('maker',{viewId})).toEqual(before);
   });
 
-  it.each(['cycle','duplicate-department','missing-parent','mixed-period'] as const)('SQL storage rejects %s and permits a corrected retry with the same request', async defect => {
+  it.each(['cycle','duplicate-department','duplicate-group-code','duplicate-group-id','missing-parent','mixed-period'] as const)('SQL storage rejects %s and permits a corrected retry with the same request', async defect => {
     const group=(key:string,parentNodeKey:string|null,depth=0)=>({sourceEvidence:edgeEvidence(key),nodeKey:key,parentNodeKey,nodeKind:'GROUP',groupCode:key,groupId:null,groupVersionId:null,displayName:key,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth});
     const dept=(key:string)=>({sourceEvidence:edgeEvidence(key),nodeKey:key,parentNodeKey:null,nodeKind:'DEPARTMENT',departmentId,departmentVersionId,displayName:key,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth:0});
-    const nodes=defect==='cycle'?[group('a','b'),group('b','a')]:defect==='duplicate-department'?[dept('a'),dept('b')]:defect==='missing-parent'?[group('a','absent')]:[{...group('a',null),sourceEvidence:edgeEvidence('a','2026-09-02T00:00:00')}];
+    const duplicateGroupId=id();
+    const nodes=defect==='cycle'?[group('a','b'),group('b','a')]:defect==='duplicate-department'?[dept('a'),dept('b')]:defect==='duplicate-group-code'?[group('a',null),{...group('b',null),groupCode:'a'}]:defect==='duplicate-group-id'?['a','b'].map(key=>({...group(key,null),groupId:duplicateGroupId,groupVersionId:id()})):defect==='missing-parent'?[group('a','absent')]:[{...group('a',null),sourceEvidence:edgeEvidence('a','2026-09-02T00:00:00')}];
     const payload={requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'Forest boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'Forest regression',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'FOREST',sourceVersion:'1',validFrom:'2026-09-01T00:00:00',validTo:null,recordedAt:'2026-09-01T01:00:00',recordStatus:'ACTIVE',approvalRef:'FOREST',validationDigest:'a'.repeat(64),digest:'b'.repeat(64),payloadDigest:'c'.repeat(64),envelope:{},nodes};
     const app=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
     try {
-      await expect(app.query('select department_master.hierarchy_store_candidate($1,$2::jsonb)',['maker',JSON.stringify(payload)])).rejects.toThrow({'cycle':'HIERARCHY_CYCLE','duplicate-department':'DEPARTMENT_DUPLICATE','missing-parent':'PARENT_NOT_FOUND','mixed-period':'MIXED_EDGE_PERIOD'}[defect]);
+      await expect(app.query('select department_master.hierarchy_store_candidate($1,$2::jsonb)',['maker',JSON.stringify(payload)])).rejects.toThrow({'cycle':'HIERARCHY_CYCLE','duplicate-department':'DEPARTMENT_DUPLICATE','duplicate-group-code':'GROUP_DUPLICATE','duplicate-group-id':'GROUP_DUPLICATE','missing-parent':'PARENT_NOT_FOUND','mixed-period':'MIXED_EDGE_PERIOD'}[defect]);
       const absent=await app.query<{r:unknown}>('select department_master.hierarchy_read($1,$2,$3::jsonb) r',['maker','REQUEST',JSON.stringify({id:payload.requestId})]);
       expect(absent.rows[0]?.r).toBeNull();
       const result=await app.query<{r:{candidateId:string}}>('select department_master.hierarchy_store_candidate($1,$2::jsonb) r',['maker',JSON.stringify({...payload,nodes:[group('a',null)]})]);

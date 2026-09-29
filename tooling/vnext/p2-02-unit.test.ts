@@ -16,6 +16,18 @@ const department = (nodeKey: string, parentNodeKey: string | null, departmentId:
 });
 
 describe('P2-02 strict hierarchy domain', () => {
+  it('rejects one GROUP identity placed under two codes',()=>{
+    const nodes=['a','b'].map(nodeKey=>({sourceEvidence:evidence(nodeKey),nodeKey,parentNodeKey:null,nodeKind:'GROUP' as const,groupCode:nodeKey,groupId:id('30'),groupVersionId:id('31'),displayName:nodeKey,relationName:'组织',sortOrder:1,isPrimaryPath:true}));
+    expect(()=>validateHierarchyForest(base('ADMIN',nodes))).toThrow('GROUP_DUPLICATE');
+  });
+  it('keeps CORE independent and blocks FULL or supplied unready contract references', () => {
+    const input=base('ADMIN',[department('root',null,id('10'))]);
+    const dependencies=[{dataset:'ORG05',contractId:id('20'),contractVersionId:id('21')}];
+    expect(()=>validateHierarchyForest({...input,profile:'FULL'})).toThrow('BLOCKED_DEPENDENCY');
+    expect(()=>validateHierarchyForest({...input,profile:'CORE',dependencies})).toThrow('BLOCKED_DEPENDENCY');
+    expect(()=>validateHierarchyForest({...input,dependencies})).toThrow('BLOCKED_DEPENDENCY');
+    expect(validateHierarchyForest({...input,profile:'CORE',dependencies:[]}).nodes).toHaveLength(1);
+  });
   it('rejects mixed ORG06 source periods before storing a complete snapshot', () => {
     const candidate = base('ADMIN', [department('root', null, id('10'))]);
     const input = { ...candidate, nodes: candidate.nodes.map(node => ({ ...node, sourceEvidence: {
