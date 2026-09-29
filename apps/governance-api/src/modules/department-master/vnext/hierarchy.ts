@@ -94,6 +94,9 @@ export const HierarchyPublishSchema = Type.Object({
   digest: Type.String({ pattern: '^[a-f0-9]{64}$' }),
 }, closed);
 export type HierarchyPublishInput = Static<typeof HierarchyPublishSchema>;
+export const HierarchySnapshotInputSchema = Type.Object({
+  viewId: HierarchyId, version: Type.Optional(Type.String({ pattern: '^[1-9][0-9]*$', maxLength: 19 })),
+}, closed);
 export const HierarchyClosureSchema = Type.Object({
   requestId: HierarchyId, viewId: HierarchyId, expectedVersion: Type.String({ pattern: '^[1-9][0-9]*$' }),
   action: Type.Enum(['CLOSE','REVOKE']), reason: text(2000),
@@ -369,7 +372,10 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
         const published = await snapshot(trx, actor, result.viewId, result.version); if (!published) throw new Error('APPLY_FAILED'); return published;
       });
     },
-    async readHierarchySnapshot(actor: string, input: { viewId: string; version?: string }) { return root(trx => snapshot(trx, actor, input.viewId, input.version)); },
+    async readHierarchySnapshot(actor: string, input: { viewId: string; version?: string }) {
+      if (!Check(HierarchySnapshotInputSchema,input) || (input.version!==undefined && BigInt(input.version)>9223372036854775807n)) throw new Error('CLOSED_INPUT_REQUIRED');
+      return root(trx => snapshot(trx, actor, input.viewId, input.version));
+    },
     async close() { await db.destroy(); },
   };
 }

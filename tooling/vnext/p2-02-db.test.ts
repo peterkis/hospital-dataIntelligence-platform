@@ -76,6 +76,16 @@ describe('P2-02 vNext hierarchy owner', () => {
     peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer',v::uuid,p FROM unnest(ARRAY['${viewId}','${secondViewId}']) v CROSS JOIN unnest(ARRAY['READ','REVIEW']) p;`);
   });
 
+  it.each(['2026-09-01T24:00:00','2026-09-01T23:59:60','2026-02-30T00:00:00','2026-09-01T00:00:00+08:00'])('SQL registration rejects invalid local time %s without reserving identity', async recordedAt => {
+    const payload={requestId:id(),sourceClientKey:`CLOCK_${id()}`,viewCode:`CLOCK_${id()}`,viewName:'Clock boundary',viewType:'ADMINISTRATIVE',purpose:'Clock regression',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'CLOCK',sourceVersion:'1',validFrom:'2026-09-01T00:00:00',validTo:null,recordedAt,approvalRef:'CLOCK',viewDigest:'a'.repeat(64)};
+    const app=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      await expect(app.query('select department_master.hierarchy_create_view($1,$2::jsonb)',['maker',JSON.stringify(payload)])).rejects.toThrow('LOCAL_TIME_REQUIRED');
+      const result=await app.query<{r:{viewId:string}}>('select department_master.hierarchy_create_view($1,$2::jsonb) r',['maker',JSON.stringify({...payload,recordedAt:'2026-09-01T23:59:59.999999'})]);
+      expect(result.rows[0]?.r.viewId).toMatch(/^[a-f0-9-]{36}$/u);
+    }finally{await app.end();}
+  });
+
   it('the application role cannot bypass view authorization with raw table reads', async () => {
     const app = new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
     try {
@@ -254,6 +264,21 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(await hierarchy.readHierarchySnapshot('maker',{viewId})).toEqual(before);
   });
 
+  it.each(['cycle','duplicate-department','missing-parent','mixed-period'] as const)('SQL storage rejects %s and permits a corrected retry with the same request', async defect => {
+    const group=(key:string,parentNodeKey:string|null,depth=0)=>({sourceEvidence:edgeEvidence(key),nodeKey:key,parentNodeKey,nodeKind:'GROUP',groupCode:key,groupId:null,groupVersionId:null,displayName:key,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth});
+    const dept=(key:string)=>({sourceEvidence:edgeEvidence(key),nodeKey:key,parentNodeKey:null,nodeKind:'DEPARTMENT',departmentId,departmentVersionId,displayName:key,relationName:'组织',sortOrder:1,isPrimaryPath:true,depth:0});
+    const nodes=defect==='cycle'?[group('a','b'),group('b','a')]:defect==='duplicate-department'?[dept('a'),dept('b')]:defect==='missing-parent'?[group('a','absent')]:[{...group('a',null),sourceEvidence:edgeEvidence('a','2026-09-02T00:00:00')}];
+    const payload={requestId:id(),viewId,sourceClientKey:'ORG05-SYNTHETIC-ADMIN',viewCode:'ADMIN',viewName:'Forest boundary',viewType:'ADMINISTRATIVE',parentCardinality:'STRICT_TREE',purpose:'Forest regression',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'FOREST',sourceVersion:'1',validFrom:'2026-09-01T00:00:00',validTo:null,recordedAt:'2026-09-01T01:00:00',recordStatus:'ACTIVE',approvalRef:'FOREST',validationDigest:'a'.repeat(64),digest:'b'.repeat(64),payloadDigest:'c'.repeat(64),envelope:{},nodes};
+    const app=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      await expect(app.query('select department_master.hierarchy_store_candidate($1,$2::jsonb)',['maker',JSON.stringify(payload)])).rejects.toThrow({'cycle':'HIERARCHY_CYCLE','duplicate-department':'DEPARTMENT_DUPLICATE','missing-parent':'PARENT_NOT_FOUND','mixed-period':'MIXED_EDGE_PERIOD'}[defect]);
+      const absent=await app.query<{r:unknown}>('select department_master.hierarchy_read($1,$2,$3::jsonb) r',['maker','REQUEST',JSON.stringify({id:payload.requestId})]);
+      expect(absent.rows[0]?.r).toBeNull();
+      const result=await app.query<{r:{candidateId:string}}>('select department_master.hierarchy_store_candidate($1,$2::jsonb) r',['maker',JSON.stringify({...payload,nodes:[group('a',null)]})]);
+      expect(result.rows[0]?.r.candidateId).toMatch(/^[a-f0-9-]{36}$/u);
+    }finally{await app.end();}
+  });
+
   it('P2-02-AC-02 does not persist an invalid cycle candidate as a partial snapshot', async () => {
     const before = await hierarchy.readHierarchySnapshot('maker', { viewId });
     const invalid: HierarchyCandidateInput = {
@@ -372,6 +397,8 @@ describe('P2-02 vNext hierarchy owner', () => {
     const versionWhere = `view_id='${viewId}'::uuid AND version_no=${before.view.version}`;
     const nodeWhere = `node_id='${before.nodes[0]!.nodeId}'::uuid`;
     for (const command of [
+      `UPDATE department_master.hierarchy_view SET source_client_key='tampered' WHERE id='${viewId}'::uuid`,
+      `DELETE FROM department_master.hierarchy_view WHERE id='${viewId}'::uuid`,
       `UPDATE department_master.hierarchy_view_version SET view_name='tampered' WHERE ${versionWhere}`,
       `DELETE FROM department_master.hierarchy_view_version WHERE ${versionWhere}`,
       `UPDATE department_master.hierarchy_node SET display_name='tampered' WHERE ${nodeWhere}`,
@@ -380,6 +407,24 @@ describe('P2-02 vNext hierarchy owner', () => {
       expect(() => peer(receipt.name, `BEGIN; ${command}; ROLLBACK;`)).toThrow('IMMUTABLE');
     }
     expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
+  });
+
+  it('rejects overflowing snapshot versions at HTTP, Owner, and SQL boundaries', async () => {
+    const app=await buildCatalogServer(undefined,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,{owner:hierarchy,actor:()=> 'maker'});
+    const direct=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      const address=await app.listen({host:'127.0.0.1',port:0});
+      const client=createHierarchyClient(address,'maker');
+      for(const version of ['9223372036854775808','9'.repeat(100)]){
+        const result=await client.read({viewId,version});
+        expect(result.response.status).toBe(400);
+        await expect(hierarchy.readHierarchySnapshot('maker',{viewId,version})).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+        await expect(direct.query('select department_master.hierarchy_read($1,$2,$3::jsonb)',['maker','SNAPSHOT',JSON.stringify({viewId,version})])).rejects.toThrow('CLOSED_INPUT_REQUIRED');
+      }
+      const boundary=await client.read({viewId,version:'9223372036854775807'});
+      expect(boundary.response.status).toBe(200);
+      expect(boundary.data).toBeNull();
+    }finally{await direct.end();await app.close();}
   });
 
   it('publishes and reads frozen edge evidence over real HTTP with the generated client', async () => {

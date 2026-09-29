@@ -7,6 +7,7 @@ import {
   HierarchyEdgeEvidenceSchema,
   HierarchyClosureSchema,
   HierarchyPublishSchema,
+  HierarchySnapshotInputSchema,
   HierarchyId,
   HierarchyLocalTime,
   HierarchyNullableLocalTime,
@@ -22,7 +23,6 @@ const CandidateResult = Type.Object({
   decision: Type.Enum(['PASS', 'FAIL']), issues: Type.Array(Type.Object({ code: Text, nodeKey: Type.Optional(Text), field: Type.Optional(Text) }, closed)),
 }, closed);
 const ApprovalResult = Type.Object({ candidateId: HierarchyId, approvedBy: Text }, closed);
-const SnapshotInput = Type.Object({ viewId: HierarchyId, version: Type.Optional(Type.String({ pattern: '^[1-9][0-9]*$' })) }, closed);
 const SnapshotNodeResponse = Type.Object({
   sourceEvidence: Type.Union([HierarchyEdgeEvidenceSchema, Type.Null()]),
   sourceDefinitionVersionId: Type.Union([HierarchyId, Type.Null()]),
@@ -64,7 +64,7 @@ export function registerHierarchyRoutes(app: FastifyInstance, context?: Hierarch
   route('candidates', 'importHierarchyCandidate', HierarchyCandidateSchema, CandidateResult, (owner, actor, input) => owner.importHierarchyCandidate(actor, input));
   route('candidates/approve', 'approveHierarchyCandidate', Type.Object({ candidateId: HierarchyId, digest: Type.String({ pattern: '^[a-f0-9]{64}$' }) }, closed), ApprovalResult, (owner, actor, input) => owner.approveHierarchyCandidate(actor, input));
   route('candidates/publish', 'publishHierarchySnapshot', HierarchyPublishSchema, SnapshotResponse, (owner, actor, input) => owner.publishHierarchySnapshot(actor, input));
-  route('snapshots/read', 'readHierarchySnapshot', SnapshotInput, Type.Union([SnapshotResponse, Type.Null()]), (owner, actor, input) => owner.readHierarchySnapshot(actor, input));
+  route('snapshots/read', 'readHierarchySnapshot', HierarchySnapshotInputSchema, Type.Union([SnapshotResponse, Type.Null()]), (owner, actor, input) => owner.readHierarchySnapshot(actor, input));
   route('closures', 'prepareHierarchyClosure', HierarchyClosureSchema, Type.Object({candidateId:HierarchyId,digest:Text},closed), (owner,actor,input)=>owner.prepareHierarchyClosure(actor,input));
   route('closures/apply', 'closeHierarchyView', HierarchyPublishSchema, Type.Object({closureId:HierarchyId,viewId:HierarchyId,version:Text,status:Type.Enum(['CLOSED','REVOKED']),recordedAt:HierarchyLocalTime},closed), (owner,actor,input)=>owner.closeHierarchyView(actor,input));
 }

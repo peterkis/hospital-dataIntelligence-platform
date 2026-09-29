@@ -72,3 +72,9 @@ ORG05 的 16 个字段和 ORG06 的 15 个字段仍以
 - `npm run vnext:contract:generate` 已重新生成并核对 `contracts/openapi/vnext-catalog.openapi.json` 与 `packages/generated-api-client/src/vnext-schema.generated.ts`，其中包含五个层级路由及其 typed schema。
 - 持久研发库修复后，wrapper readiness、`vnext:db:verify`、P2-02 fresh 和 `87_TO_CURRENT` 均通过；0090 将发布输入绑定到候选完整载荷，0091 在发布函数内重验依赖、节点关系、严格森林和历史版本覆盖。这证明研发库可用，不代表正式院方采纳、生产部署或浏览器验收。
 - Spec/Standards 两轴复核以 `origin/main...HEAD` 为固定基线，结果和最终 tree 记录在 ignored 的 `.runtime/vnext/p2-02-closeout.md`。P0-02 browser、P0-10/生产就绪、Q08/A014/A015 正式来源政策和 P2-07 通用工作台仍是明确后续门禁。
+
+## PR 第五轮边界修复（2026-09-30）
+
+- 0100 在注册函数转换时间前拒绝带时区、非法日期、24 点及闰秒；0101 将纯森林语义检查用于候选入库和发布两个边界。失败候选不写入、不占用请求 ID，正确重试仍可使用原请求。
+- 0102 将基础视图身份纳入不可变保护，历史读取中的 sourceClientKey 不再可被普通特权 UPDATE/DELETE 改写。0103 和 Owner 的输入检查在 bigint 转换前拒绝越界版本号；HTTP 返回 400，最大合法版本查询保留正常空结果。
+- 本轮采用真实应用角色 SQL 与真实 loopback HTTP 回归，先复现四项缺陷，再验证修复。持久库只追加 0100–0103，原 99 条账本保留。完整 P1-06 升级回归为 80/80；FULL 来源准入及正式采纳仍单独跟踪，不能据此宣称完成。
