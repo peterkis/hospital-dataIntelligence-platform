@@ -29584,6 +29584,7 @@ export interface operations {
                         recordedAt: string;
                         recordedFrom: string;
                         nodes: {
+                            groupCode?: string;
                             nodeKey: string;
                             parentNodeKey: string | null;
                             /** @enum {unknown} */
@@ -29731,6 +29732,7 @@ export interface operations {
                         recordedAt: string;
                         recordedFrom: string;
                         nodes: {
+                            groupCode?: string;
                             nodeKey: string;
                             parentNodeKey: string | null;
                             /** @enum {unknown} */

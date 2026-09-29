@@ -58,6 +58,7 @@ export interface DepartmentMasterHierarchyNode {
   department_version_id: string | null;
   depth: number;
   display_name: string;
+  group_code: string | null;
   group_id: string | null;
   group_version_id: string | null;
   is_primary_path: boolean;

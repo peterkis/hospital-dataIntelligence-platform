@@ -4,6 +4,18 @@
 -- tree by bypassing the TypeBox owner.
 SELECT pg_advisory_xact_lock(901002);
 
+ALTER TABLE department_master.hierarchy_node ADD COLUMN group_code text;
+-- Recover only from the approved candidate matching this exact snapshot digest.
+UPDATE department_master.hierarchy_node n SET group_code=(
+  SELECT item->>'groupCode'
+  FROM department_master.hierarchy_view_version v
+  JOIN department_master.hierarchy_candidate c ON c.payload->>'validationDigest'=v.content_digest AND c.view_id=v.view_id
+  CROSS JOIN LATERAL jsonb_array_elements(c.payload->'nodes') item
+  WHERE v.id=n.view_version_id AND item->>'nodeKey'=n.node_key
+) WHERE n.node_kind='GROUP';
+ALTER TABLE department_master.hierarchy_node ADD CONSTRAINT hierarchy_group_code_shape
+ CHECK ((node_kind='GROUP' AND group_code IS NOT NULL AND group_code ~ '\S') OR (node_kind='DEPARTMENT' AND group_code IS NULL));
+
 CREATE TRIGGER hierarchy_version_immutable
   BEFORE UPDATE OR DELETE ON department_master.hierarchy_view_version
   FOR EACH ROW EXECUTE FUNCTION vnext_control.immutable();
@@ -170,8 +182,8 @@ BEGIN
   FOR item IN SELECT value FROM jsonb_array_elements(p_payload->'nodes') LOOP
     node_id:=uuidv7(); group_id:=NULL; group_version_id:=NULL;
     IF item->>'nodeKind'='GROUP' THEN group_id:=coalesce(NULLIF(item->>'groupId','')::uuid,uuidv7()); group_version_id:=coalesce(NULLIF(item->>'groupVersionId','')::uuid,uuidv7()); END IF;
-    INSERT INTO department_master.hierarchy_node(node_id,view_version_id,node_key,parent_node_key,node_kind,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth)
-    VALUES(node_id,version_id,item->>'nodeKey',NULLIF(item->>'parentNodeKey',''),item->>'nodeKind',NULLIF(item->>'departmentId','')::uuid,NULLIF(item->>'departmentVersionId','')::uuid,group_id,group_version_id,item->>'displayName',item->>'relationName',(item->>'sortOrder')::integer,(item->>'isPrimaryPath')::boolean,(item->>'depth')::integer);
+    INSERT INTO department_master.hierarchy_node(node_id,view_version_id,node_key,parent_node_key,node_kind,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,group_code)
+    VALUES(node_id,version_id,item->>'nodeKey',NULLIF(item->>'parentNodeKey',''),item->>'nodeKind',NULLIF(item->>'departmentId','')::uuid,NULLIF(item->>'departmentVersionId','')::uuid,group_id,group_version_id,item->>'displayName',item->>'relationName',(item->>'sortOrder')::integer,(item->>'isPrimaryPath')::boolean,(item->>'depth')::integer,CASE WHEN item->>'nodeKind'='GROUP' THEN item->>'groupCode' END);
   END LOOP;
   UPDATE department_master.hierarchy_candidate SET status='APPLIED',applied_at=timezone('Asia/Shanghai',clock_timestamp()) WHERE id=p_candidate_id;
   INSERT INTO vnext_control.audit(actor_code,object_id,action,reason,content_digest) VALUES(p_actor,version_id,'HIERARCHY_PUBLISHED','ORG05_ORG06',p_payload->>'validationDigest');

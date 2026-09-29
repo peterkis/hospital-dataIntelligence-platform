@@ -89,6 +89,7 @@ describe('P2-02 vNext hierarchy owner', () => {
     expect(published.validFrom).toBe('2026-09-01T00:00:00.123456');
     expect(published.sourceRecordedAt).toBe('2026-09-01T01:00:00.654321');
     expect(published.nodes[0]?.nodeKind).toBe('GROUP');
+    expect(published.nodes[0]).toHaveProperty('groupCode', 'CLINICAL');
     expect(published.nodes[0]?.groupId).toMatch(/^[a-f0-9-]{36}$/);
     if (!published.nodes[0]?.groupId || !published.nodes[0]?.groupVersionId) throw new Error('P2_02_GROUP_REFERENCE_REQUIRED');
     const replay = await hierarchy.publishHierarchySnapshot('maker', { candidateId, requestId: candidate.requestId, digest: staged.digest });
@@ -232,6 +233,9 @@ describe('P2-02 vNext hierarchy owner', () => {
       const response = await app.inject({ method: 'POST', url: '/api/vnext/hierarchy/snapshots/read', headers: { 'x-actor': 'maker' }, payload: { viewId } });
       expect(response.statusCode).toBe(200);
       expect(response.json().view.viewCode).toBe('ADMIN');
+      const historical = await app.inject({ method: 'POST', url: '/api/vnext/hierarchy/snapshots/read', headers: { 'x-actor': 'maker' }, payload: { viewId, version: '2' } });
+      expect(historical.statusCode).toBe(200);
+      expect(historical.json().nodes[0].groupCode).toBe('CLINICAL');
     } finally {
       await app.close();
     }

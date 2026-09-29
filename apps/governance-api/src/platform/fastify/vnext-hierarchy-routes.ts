@@ -21,6 +21,7 @@ const CandidateResult = Type.Object({
 const ApprovalResult = Type.Object({ candidateId: HierarchyId, approvedBy: Text }, closed);
 const SnapshotInput = Type.Object({ viewId: HierarchyId, version: Type.Optional(Type.String({ pattern: '^[1-9][0-9]*$' })) }, closed);
 const SnapshotNodeResponse = Type.Object({
+  groupCode: Type.Optional(Text),
   nodeKey: Text, parentNodeKey: Type.Union([Text, Type.Null()]), nodeKind: Type.Enum(['DEPARTMENT', 'GROUP']),
   displayName: Text, relationName: Text, sortOrder: Type.Integer({ minimum: 0 }), isPrimaryPath: Type.Boolean(), depth: Type.Integer({ minimum: 0 }),
   nodeId: HierarchyId, departmentId: Type.Union([HierarchyId, Type.Null()]), departmentVersionId: Type.Union([HierarchyId, Type.Null()]),

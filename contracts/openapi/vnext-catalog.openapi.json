@@ -96067,6 +96067,9 @@
                           "groupVersionId"
                         ],
                         "properties": {
+                          "groupCode": {
+                            "type": "string"
+                          },
                           "nodeKey": {
                             "type": "string"
                           },
@@ -96507,6 +96510,9 @@
                               "groupVersionId"
                             ],
                             "properties": {
+                              "groupCode": {
+                                "type": "string"
+                              },
                               "nodeKey": {
                                 "type": "string"
                               },
