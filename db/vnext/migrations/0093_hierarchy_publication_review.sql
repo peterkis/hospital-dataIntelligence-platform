@@ -4,6 +4,13 @@
 -- tree by bypassing the TypeBox owner.
 SELECT pg_advisory_xact_lock(901002);
 
+CREATE TRIGGER hierarchy_version_immutable
+  BEFORE UPDATE OR DELETE ON department_master.hierarchy_view_version
+  FOR EACH ROW EXECUTE FUNCTION vnext_control.immutable();
+CREATE TRIGGER hierarchy_node_immutable
+  BEFORE UPDATE OR DELETE ON department_master.hierarchy_node
+  FOR EACH ROW EXECUTE FUNCTION vnext_control.immutable();
+
 CREATE OR REPLACE FUNCTION department_master.hierarchy_publish(p_actor text, p_candidate_id uuid, p_digest text, p_payload jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,department_master,vnext_control AS $$
 DECLARE

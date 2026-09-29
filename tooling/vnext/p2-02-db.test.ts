@@ -6,6 +6,7 @@ import { LocalSyntheticKeyProvider, openCatalog } from '../../apps/governance-ap
 import { departmentFixture } from './p2-01-fixture.js';
 import { openDepartment, openHierarchy, type HierarchyCandidateInput } from '../../apps/governance-api/src/modules/department-master/index.js';
 import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
+import { peer } from './lineage.mjs';
 
 const connection = process.env['VNEXT_VALIDATION_OWNER_URL'];
 if (!connection) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
@@ -204,6 +205,22 @@ describe('P2-02 vNext hierarchy owner', () => {
     await hierarchy.approveHierarchyCandidate('reviewer', { candidateId: boundedStage.candidateId, digest: boundedStage.digest });
     const boundedSnapshot = await hierarchy.publishHierarchySnapshot('maker', { candidateId: boundedStage.candidateId, requestId: bounded.requestId, digest: boundedStage.digest });
     expect(boundedSnapshot.validTo).toBe('2027-01-01T00:00:00.000000');
+  });
+
+  it('rejects privileged mutation of published snapshot versions and nodes', async () => {
+    const before = await hierarchy.readHierarchySnapshot('maker', { viewId });
+    if (!before) throw new Error('SNAPSHOT_REQUIRED');
+    const versionWhere = `view_id='${viewId}'::uuid AND version_no=${before.view.version}`;
+    const nodeWhere = `node_id='${before.nodes[0]!.nodeId}'::uuid`;
+    for (const command of [
+      `UPDATE department_master.hierarchy_view_version SET view_name='tampered' WHERE ${versionWhere}`,
+      `DELETE FROM department_master.hierarchy_view_version WHERE ${versionWhere}`,
+      `UPDATE department_master.hierarchy_node SET display_name='tampered' WHERE ${nodeWhere}`,
+      `DELETE FROM department_master.hierarchy_node WHERE ${nodeWhere}`,
+    ]) {
+      expect(() => peer(receipt.name, `BEGIN; ${command}; ROLLBACK;`)).toThrow('IMMUTABLE');
+    }
+    expect(await hierarchy.readHierarchySnapshot('maker', { viewId })).toEqual(before);
   });
 
   it('serves the typed snapshot read through the registered HTTP owner route', async () => {
