@@ -94,6 +94,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=88) for(const name of ['department_master.hierarchy_create_view','department_master.hierarchy_store_candidate','department_master.hierarchy_approve','department_master.hierarchy_publish']) allowedRoutines.add(name);
     if(ledger.length>=94) allowedRoutines.add('department_master.hierarchy_lifecycle');
     if(ledger.length>=96) allowedRoutines.add('department_master.hierarchy_authorize');
+    if(ledger.length>=97) allowedRoutines.add('department_master.hierarchy_read');
     if(routines.length!==allowedRoutines.size||routines.some(row=>!allowedRoutines.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const extraTypes=(await pool.query("select count(*) as count from pg_type t join pg_namespace n on n.oid=t.typnamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master') and t.typrelid=0 and t.typelem=0")).rows[0].count;
     if(Number(extraTypes))throw new Error('UNKNOWN_SCHEMA_OBJECT');

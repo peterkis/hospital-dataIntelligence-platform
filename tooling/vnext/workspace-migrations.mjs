@@ -14,6 +14,7 @@ const postWorkspaceMigrations = [
  '0094_hierarchy_lifecycle',
  '0095_hierarchy_closed_nodes',
  '0096_hierarchy_view_authorization',
+ '0097_hierarchy_authorized_reads',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

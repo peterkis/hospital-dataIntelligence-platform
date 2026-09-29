@@ -76,6 +76,15 @@ describe('P2-02 vNext hierarchy owner', () => {
     peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer',v::uuid,p FROM unnest(ARRAY['${viewId}','${secondViewId}']) v CROSS JOIN unnest(ARRAY['READ','REVIEW']) p;`);
   });
 
+  it('the application role cannot bypass view authorization with raw table reads', async () => {
+    const app = new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      for (const table of ['hierarchy_view','hierarchy_view_version','hierarchy_candidate','hierarchy_node','hierarchy_closure']) {
+        await expect(app.query(`SELECT 1 FROM department_master.${table} LIMIT 0`)).rejects.toThrow('permission denied');
+      }
+    } finally { await app.end(); }
+  });
+
   it('hospital READ does not grant access to an independently governed view', async () => {
     const restricted = await hierarchy.createHierarchyView('maker', {
       requestId:id(),sourceClientKey:'PRIVATE_VIEW',viewCode:'PRIVATE',viewName:'Private view',viewType:'ADMINISTRATIVE',
@@ -84,6 +93,12 @@ describe('P2-02 vNext hierarchy owner', () => {
     });
     expect(await hierarchy.readHierarchySnapshot('maker',{viewId:restricted.viewId})).toBeNull();
     await expect(hierarchy.readHierarchySnapshot('reviewer',{viewId:restricted.viewId})).rejects.toThrow('ACCESS_DENIED');
+    const app = new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    try {
+      await expect(app.query('select department_master.hierarchy_read($1,$2,$3::jsonb)',['reviewer','SNAPSHOT',JSON.stringify({viewId:restricted.viewId})])).rejects.toThrow('ACCESS_DENIED');
+      const allowed = await app.query<{result:unknown}>('select department_master.hierarchy_read($1,$2,$3::jsonb) result',['maker','SNAPSHOT',JSON.stringify({viewId:restricted.viewId})]);
+      expect(allowed.rows[0]?.result).toBeNull();
+    } finally { await app.end(); }
   });
 
   it('P2-02-AC-05 freezes the old snapshot after a renamed publication and replays the same result', async () => {
@@ -147,6 +162,9 @@ describe('P2-02 vNext hierarchy owner', () => {
     });
     await withoutViewPermission('maker',viewId,'READ',async()=>{
       await expect(hierarchy.readHierarchySnapshot('maker',{viewId,version:published.view.version})).rejects.toThrow('ACCESS_DENIED');
+      const app = new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+      try { await expect(app.query('select department_master.hierarchy_read($1,$2,$3::jsonb)',['maker','CANDIDATE',JSON.stringify({id:candidateId})])).rejects.toThrow('ACCESS_DENIED'); }
+      finally { await app.end(); }
       expect(await hierarchy.readHierarchySnapshot('maker',{viewId:secondViewId})).toBeNull();
       expect(await hierarchy.readHierarchySnapshot('reviewer',{viewId})).toEqual(published);
     });

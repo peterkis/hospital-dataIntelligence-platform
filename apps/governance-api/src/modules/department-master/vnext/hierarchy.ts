@@ -250,19 +250,21 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
   const root = <T>(work: (trx: Kysely<DB>) => Promise<T>) => db.transaction().execute(async trx => { await sql`select pg_advisory_xact_lock(901002)`.execute(trx); return work(trx); });
   const authorize = async (trx: Kysely<DB>, actor: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.authorize(${actor},'HOSPITAL',${permission}) r`.execute(trx)).rows[0]!.r;
   const authorizeView = async (trx: Kysely<DB>, actor: string, viewId: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.hierarchy_authorize(${actor},${viewId}::uuid,${permission}) r`.execute(trx)).rows[0]!.r;
+  const ownerRead = async <T>(trx: Kysely<DB>,actor:string,mode:'VIEW_FOR_WRITE'|'CANDIDATE'|'REQUEST'|'COMMITTED'|'SNAPSHOT',input:Record<string,string>):Promise<T> => (await sql<{result:T}>`select department_master.hierarchy_read(${actor},${mode},${JSON.stringify(input)}::jsonb) result`.execute(trx)).rows[0]!.result;
   const readCandidate = async (trx: Kysely<DB>, actor: string, id: string): Promise<StoredCandidate> => {
     await authorize(trx, actor, 'READ');
-    const row = (await sql<StoredCandidate>`select id,view_id as "viewId",digest,maker,maker_identity as "makerIdentity",request_id as "requestId",status,envelope,approved_by as "approvedBy",payload from department_master.hierarchy_candidate where id=${id}::uuid`.execute(trx)).rows[0];
+    const row = await ownerRead<StoredCandidate|null>(trx,actor,'CANDIDATE',{id});
     if (!row) throw new Error('NOT_FOUND');
     await authorizeView(trx,actor,row.viewId,'READ');
     return row;
   };
   const snapshot = async (trx: Kysely<DB>, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
     await authorizeView(trx, actor, viewId, 'READ');
-    if (version === undefined && (await sql`select 1 from department_master.hierarchy_closure where view_id=${viewId}::uuid`.execute(trx)).rows.length) return null;
-    const v = (await sql<Record<string, unknown>>`select v.id,v.view_id,v.version_no,h.source_client_key,v.view_name,v.view_code,v.view_type,v.purpose,v.aggregation_rule,v.owner_department_id,v.owner_department_version_id,v.source_definition_version_id,v.source_system_id,v.source_record_id,v.source_version,v.valid_from,v.valid_to,v.recorded_at,v.approval_ref,v.status,v.created_at,v.content_digest from department_master.hierarchy_view_version v join department_master.hierarchy_view h on h.id=v.view_id where v.view_id=${viewId}::uuid and v.status='PUBLISHED' and (${version ?? null}::bigint is null or v.version_no=${version ?? null}::bigint) order by v.version_no desc limit 1`.execute(trx)).rows[0];
+    const data = await ownerRead<{version:Record<string,unknown>;nodes:Record<string,unknown>[]} | null>(trx,actor,'SNAPSHOT',{viewId,...(version === undefined ? {} : {version})});
+    if (!data) return null;
+    const v = data.version;
     if (!v) return null;
-    const rows = (await sql<Record<string, unknown>>`select node_id,node_key,parent_node_key,node_kind,group_code,department_id,department_version_id,group_id,group_version_id,display_name,relation_name,sort_order,is_primary_path,depth,source_evidence,source_definition_version_id from department_master.hierarchy_node where view_version_id=${String(v['id'])}::uuid order by depth,sort_order,node_key`.execute(trx)).rows;
+    const rows = data.nodes;
     const sourceRecordedAt = formatLocalDbTime(v['recorded_at']);
     return {
       view: {
@@ -322,10 +324,10 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       }
       return root(async trx => {
         const makerIdentity = await authorize(trx, actor, 'WRITE');
-        const view = (await sql<{id:string}>`select id from department_master.hierarchy_view where source_client_key=${value.sourceClientKey}`.execute(trx)).rows[0];
+        const view = await ownerRead<{id:string}|null>(trx,actor,'VIEW_FOR_WRITE',{sourceClientKey:value.sourceClientKey});
         if (!view) throw new Error('BLOCKED_DEPENDENCY');
         await authorizeView(trx,actor,view.id,'WRITE');
-        const existing = (await sql<{ id: string; digest: string; status: string }>`select id,digest,status from department_master.hierarchy_candidate where request_id=${value.requestId}::uuid`.execute(trx)).rows[0];
+        const existing = await ownerRead<{id:string;digest:string;status:string}|null>(trx,actor,'REQUEST',{id:value.requestId});
         if (existing) { if (existing.digest !== sealed.digest) throw new Error('REQUEST_CONFLICT'); return { candidateId: existing.id, digest: existing.digest, decision: existing.status === 'REJECTED' ? 'FAIL' : 'PASS', issues: [] }; }
         const stored = (await sql<{ result: { candidateId: string } }>`select department_master.hierarchy_store_candidate(${actor},${JSON.stringify({ ...value, nodes: validated.nodes, validationDigest: validated.digest, digest: sealed.digest, envelope: sealed.envelope, payloadDigest: createHash('sha256').update(canonicalPlan(value)).digest('hex'), makerIdentity })}::jsonb) result`.execute(trx)).rows[0]!.result;
         const id = stored.candidateId;
@@ -349,20 +351,13 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
         await authorizeView(trx,actor,candidate.viewId,'WRITE');
         if (input.requestId !== candidate.requestId) throw new Error('REQUEST_CONFLICT');
         if (candidate.status === 'APPLIED') {
-          const value = unseal<HierarchyCandidateInput>(candidate, provider);
+          unseal<HierarchyCandidateInput>(candidate, provider);
           // The committed validation belongs to the original schema version.
           // Replaying history must not require fields introduced after publication.
           const committedDigest = candidate.payload.validationDigest;
           if (!/^[a-f0-9]{64}$/.test(committedDigest)) throw new Error('STALE_VALIDATION');
-          const versions = (await sql<{ viewId: string; version: string }>`
-            select v.view_id as "viewId", v.version_no::text as version
-            from department_master.hierarchy_view_version v
-            join department_master.hierarchy_view h on h.id=v.view_id
-            where h.source_client_key=${value.sourceClientKey}
-              and v.content_digest=${committedDigest} and v.status='PUBLISHED'
-          `.execute(trx)).rows;
-          if (versions.length !== 1) throw new Error('STALE_VALIDATION');
-          const published = versions[0]!;
+          const published = await ownerRead<{viewId:string;version:string}|null>(trx,actor,'COMMITTED',{id:candidate.id});
+          if (!published) throw new Error('STALE_VALIDATION');
           const existing = await snapshot(trx, actor, published.viewId, published.version);
           if (!existing) throw new Error('NOT_FOUND');
           return existing;

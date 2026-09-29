@@ -28,6 +28,8 @@ P2-02 在当前 vNext Department Owner 内治理 ORG05 视图定义和 ORG06 完
 
 Owner 查询、候选读取、导入重放、审批、发布、发布重放和关闭/撤销均检查当前视图权限；SQL 受控函数也重验相应 WRITE/REVIEW，避免绕过 TypeScript Owner。发布与关闭执行时再次检查原审批人的视图 REVIEW 权限。撤销一个视图的权限不影响另一视图。
 
+0097 撤销应用角色对层级视图、版本、候选、节点及终态表的原始表权限。Owner 通过 `hierarchy_read` 的有限命令读取数据，函数在返回候选、快照、请求或已提交版本之前核验当前视图权限；不依赖应用代码自觉加过滤条件。测试使用真实应用角色证明直接 SELECT 拒绝、越权调用读取函数拒绝、正常读取与历史重放保持有效；验证 runner 不再额外授予层级表 SELECT。
+
 0095 在数据库发布边界按 DEPARTMENT/GROUP 分别验证节点完整键集合，拒绝未知字段和混用字段；同时检查 GROUP code 与非空 GROUP ID 的单快照唯一性。回归直接经过受控 store/approve/publish 函数，证明不能绕过 TypeBox Owner 静默丢弃已审批字段或重复放置同一 GROUP。
 
 `hierarchy_create_view`、`hierarchy_store_candidate`、`hierarchy_approve` 和 `hierarchy_publish` 是 SECURITY DEFINER 入口。应用角色只有读取新表和执行受控函数的权限，不能直接插入正式层级事实。发布函数锁定视图、重新检查 Department 版本覆盖，并在一笔事务中写完整版本、节点、审计和候选状态。
