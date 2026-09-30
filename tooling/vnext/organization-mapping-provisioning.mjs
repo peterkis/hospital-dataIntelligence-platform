@@ -6,7 +6,7 @@ import {canonicalPlan,planBinding} from '../../apps/governance-api/src/modules/g
 export const ORGANIZATION_MAPPING_FUNCTIONS=Object.freeze([
  'mapping_list(text,text,uuid,integer,timestamp)','mapping_authorize(text,uuid,text,text,text,text)',
  'mapping_target_authorize(text,text,uuid,text)','mapping_source(text,uuid,timestamp,timestamp,boolean)',
- 'mapping_input_read(text,uuid,text)','mapping_job_read(text,uuid)','mapping_snapshot(text,uuid)',
+ 'mapping_input_read(text,uuid,text)','mapping_job_read(text,uuid)','mapping_snapshot(text,uuid)','mapping_snapshot_optional(text,uuid)',
  'mapping_find(text,uuid,text,text,text,text)','mapping_mutate(text,text)',
  'mapping_resolution_required(text,uuid,text,text,text,text,text,uuid,timestamp,timestamp)',
 ]);

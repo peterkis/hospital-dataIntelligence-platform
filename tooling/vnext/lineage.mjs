@@ -95,6 +95,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=112) for(const name of ['mapping_access','mapping_target_access','mapping_input','mapping_verification','organization_mapping','organization_mapping_version']) allowed.add('department_master.'+name);
     if(ledger.length>=88) for(const name of ['department_master.hierarchy_create_view','department_master.hierarchy_store_candidate','department_master.hierarchy_approve','department_master.hierarchy_publish']) allowedRoutines.add(name);
     if(ledger.length>=112) for(const name of ['mapping_list','mapping_authorize','mapping_target_authorize','mapping_source','mapping_input_read','mapping_job_read','mapping_snapshot','mapping_find','mapping_mutate','mapping_resolution_required']) allowedRoutines.add('department_master.'+name);
+    if(ledger.length>=113) allowedRoutines.add('department_master.mapping_snapshot_optional');
     if(ledger.length>=94) allowedRoutines.add('department_master.hierarchy_lifecycle');
     if(ledger.length>=96) allowedRoutines.add('department_master.hierarchy_authorize');
     if(ledger.length>=97) allowedRoutines.add('department_master.hierarchy_read');

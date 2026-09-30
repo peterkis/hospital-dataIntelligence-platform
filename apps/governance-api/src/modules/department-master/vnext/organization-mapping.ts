@@ -29,6 +29,7 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async transaction=>{await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);return work(CatalogTransactionScope.from(transaction));});
  const record=async(s:Scope,actor:string,id:string,permission='READ_RESTRICTED')=>(await sql<{r:InputRecord}>`select department_master.mapping_input_read(${actor},${id}::uuid,${permission}) r`.execute(s)).rows[0]!.r;
  const snapshot=async(s:Scope,actor:string,id:string)=>(await sql<{r:OrganizationMappingHistory}>`select department_master.mapping_snapshot(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;
+ const optionalSnapshot=async(s:Scope,actor:string,id:string)=>(await sql<{r:OrganizationMappingHistory|null}>`select department_master.mapping_snapshot_optional(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;
  const job=async(s:Scope,actor:string,id:string)=>(await sql<{r:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:id})}::jsonb) r`.execute(s)).rows[0]!.r;
  const inputJob=async(s:Scope,actor:string,id:string)=>(await sql<{r:ImportJob}>`select department_master.mapping_job_read(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;
  const authorize=async(s:Scope,actor:string,row:{from_system_id:string;source_entity_type:string;source_context:string},campus:string,permission:string)=>(await sql<{r:string}>`select department_master.mapping_authorize(${actor},${row.from_system_id}::uuid,${row.source_entity_type},${row.source_context},${campus},${permission}) r`.execute(s)).rows[0]!.r;
@@ -84,11 +85,13 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
    if(aliases.has(e.row.org_map_id)||identities.has(identity)||e.mapping&&mappingIds.has(e.mapping.id))issue(row,'org_map_id','BATCH_CONFLICT','FAIL');
    aliases.add(e.row.org_map_id);identities.add(identity);if(e.mapping)mappingIds.add(e.mapping.id);
    let prior:OrganizationMappingVersion|undefined;
-   try{
-    const h=(await sql<{r:OrganizationMappingHistory|null}>`select department_master.mapping_find(${actor},${e.row.from_system_id}::uuid,${e.row.source_entity_type},${e.row.source_code},${e.row.source_context},${r.campus}) r`.execute(s)).rows[0]!.r;
-    if(e.action==='REGISTER'&&h)issue(row,'org_map_id','MAPPING_ALREADY_REGISTERED','FAIL');
-    if(e.mapping){
-     const actual=await snapshot(s,actor,e.mapping.id);prior=actual.versions.at(-1);
+   const h=(await sql<{r:OrganizationMappingHistory|null}>`select department_master.mapping_find(${actor},${e.row.from_system_id}::uuid,${e.row.source_entity_type},${e.row.source_code},${e.row.source_context},${r.campus}) r`.execute(s)).rows[0]!.r;
+   if(e.action==='REGISTER'&&h)issue(row,'org_map_id','MAPPING_ALREADY_REGISTERED','FAIL');
+   if(e.mapping){
+    const actual=await optionalSnapshot(s,actor,e.mapping.id);
+    if(!actual)issue(row,'mapping','BLOCKED_DEPENDENCY');
+    else{
+     prior=actual.versions.at(-1);
      if(prior)await historyReferenceAccess(s,actor,actual,prior);
      // Immutable older versions cannot change this approval; bind the head without growing the candidate with history.
      heads.push({...actual,versions:prior?[prior]:[]});
@@ -96,7 +99,7 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
      if(prior?.number!==e.mapping.expectedHead)issue(row,'mapping','STALE_VALIDATION');
      if(prior?.action==='RETRACT')issue(row,'mapping','MAPPING_RETRACTED','FAIL');
     }
-   }catch(error){if(error instanceof Error&&error.message==='NOT_FOUND')issue(row,'mapping','BLOCKED_DEPENDENCY');else throw error;}
+   }
    const unchangedTarget=prior?.target_type===e.row.target_type&&prior.target_id===e.row.target_id;
    const unchangedFacts=prior&&(e.row.source_name||null)===prior.facts.sourceName&&(e.row.resolution_rule||null)===prior.facts.resolutionRule&&e.row.source_system_id===prior.facts.sourceSystemId;
    const shrink=e.action==='CORRECT'&&prior&&unchangedTarget&&unchangedFacts&&e.validFrom>=stamp(prior.valid_from)&&(prior.valid_to===null||e.validTo!==null&&e.validTo<=stamp(prior.valid_to));

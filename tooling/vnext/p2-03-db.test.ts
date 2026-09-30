@@ -42,6 +42,33 @@ test('independent approval registers one immutable mapping and resolves its exac
   expect(await owner.resolve('maker',{fromSystemId:entry.row.from_system_id,sourceEntityType:entry.row.source_entity_type,sourceCode:entry.row.source_code,sourceContext:'DEFAULT',campus:'NORTH',businessAt:'2026-03-01T00:00:00'})).toMatchObject({status:'RESOLVED',mappingId:result.facts[0]!.id,target:{owner:'department-master',id:f.targetId}});
 });
 
+test('missing correction mapping reports a blocked row through HTTP preview and validation',async()=>{
+ const entry=f.entry();await apply([entry]);entry.action='CORRECT';entry.mapping={owner:'department-master/organization-mapping',id:randomUUID(),expectedHead:'1'};
+ const staged=await owner.stage('maker',await f.input([entry]));
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),post=(path:string)=>fetch(url+'/api/vnext/organization-mappings/'+path,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({inputId:staged.inputId})});
+  const preview=await post('preview');expect(preview.status).toBe(200);
+  expect(await preview.json()).toMatchObject({issues:expect.arrayContaining([{row:1,field:'mapping',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}])});
+  const validation=await post('validate');expect(validation.status).toBe(200);
+  expect(await validation.json()).toMatchObject({decision:'BLOCKED',issues:expect.arrayContaining([{row:1,field:'mapping',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}])});
+ }finally{await app.close();}
+});
+
+test('a missing first mapping does not prevent validation of the second row',async()=>{
+ const missing=f.entry();missing.action='CORRECT';missing.mapping={owner:'department-master/organization-mapping',id:randomUUID(),expectedHead:'1'};
+ const sibling=f.entry();sibling.row.mapping_relation='RELATED';
+ const staged=await owner.stage('maker',await f.input([missing,sibling]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[1,2].map(row=>({row,reason:'DEMO exact context review',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}))});
+ const result=await owner.validate('maker',{inputId:staged.inputId});
+ expect(result.decision).toBe('BLOCKED');
+ expect(result.issues).toEqual(expect.arrayContaining([
+  {row:1,field:'mapping',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'},
+  {row:2,field:'mapping_relation',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'},
+ ]));
+ expect(result.commandCount).toBe(2);
+});
+
 test('protected mapping input read requires current target reference permission',async()=>{
  const entry=f.entry(),staged=await owner.stage('maker',await f.input([entry]));
  peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
