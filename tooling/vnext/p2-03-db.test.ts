@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {organizationMappingFixture} from './p2-03-fixture.js';
-import {openOrganizationMappings,ORG22_FIELDS} from '../../apps/governance-api/src/modules/department-master/index.js';
+import {openDepartment,openOrganizationMappings,ORG22_FIELDS} from '../../apps/governance-api/src/modules/department-master/index.js';
 import {organizationWorkbook} from './organization-workbook-fixture.js';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
@@ -22,6 +22,28 @@ async function apply(entries:Parameters<typeof f.input>[0]){
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:entries!.map((_,index)=>({row:index+1,reason:'DEMO approved exact context',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}))});
  const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
  const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');return {result,candidate,requestId};
+}
+async function newTarget(){
+ const departmentOwner=openDepartment(connection,provider);
+ try{
+  const entry=f.department.entry(),staged=await departmentOwner.stage('maker',await f.department.input([entry]));
+  await departmentOwner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO separate target',evidenceId:f.department.artifact.artifactId}]});
+  const requestId=randomUUID(),candidate=await departmentOwner.plan('maker',{inputId:staged.inputId,requestId});
+  await departmentOwner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await departmentOwner.approveApplyUnit('reviewer',candidate);
+  const result=await departmentOwner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
+  const id=result.facts[0]!.id;f.grantTarget(id);return {id,entry};
+ }finally{await departmentOwner.close();}
+}
+async function reviseTarget(target:Awaited<ReturnType<typeof newTarget>>,validFrom:string,expectedVersion:string){
+ const departmentOwner=openDepartment(connection,provider);
+ try{
+  const entry={...target.entry,intent:'REVISE' as const,target:{owner:'department-master' as const,id:target.id,expectedVersion},row:{...target.entry.row,org_name:'DEMO future target version '+expectedVersion,version_no:String(Number(expectedVersion)+9),valid_from:validFrom}};
+  const staged=await departmentOwner.stage('maker',await f.department.input([entry]));
+  await departmentOwner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO target period change',evidenceId:f.department.artifact.artifactId}]});
+  const requestId=randomUUID(),candidate=await departmentOwner.plan('maker',{inputId:staged.inputId,requestId});
+  await departmentOwner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await departmentOwner.approveApplyUnit('reviewer',candidate);
+  const result=await departmentOwner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');
+ }finally{await departmentOwner.close();}
 }
 const key=(entry:ReturnType<typeof f.entry>,recordAsOf?:string)=>({fromSystemId:entry.row.from_system_id,sourceEntityType:entry.row.source_entity_type,sourceCode:entry.row.source_code,sourceContext:entry.row.source_context,campus:'NORTH' as const,businessAt:'2026-03-01T00:00:00',...(recordAsOf?{recordAsOf}:{})});
 
@@ -69,6 +91,43 @@ test('a missing first mapping does not prevent validation of the second row',asy
  expect(result.commandCount).toBe(2);
 });
 
+test('missing registration evidence blocks its row without an HTTP transaction failure',async()=>{
+ const entry=f.entry();entry.evidenceId=randomUUID();
+ const staged=await owner.stage('maker',await f.input([entry]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO independent evidence',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),post=(path:string)=>fetch(url+'/api/vnext/organization-mappings/'+path,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({inputId:staged.inputId})});
+  const preview=await post('preview');expect(preview.status).toBe(200);
+  expect(await preview.json()).toMatchObject({issues:expect.arrayContaining([{row:1,field:'evidenceId',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}])});
+  const validation=await post('validate');expect(validation.status).toBe(200);
+  expect(await validation.json()).toMatchObject({decision:'BLOCKED',issues:expect.arrayContaining([{row:1,field:'evidenceId',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}])});
+ }finally{await app.close();}
+});
+
+test('expired registration evidence returns a row-level dependency issue',async()=>{
+ const job=await catalog.importJobCommand('maker',{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_ORGANIZATION_MAPPING',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE',input:{kind:'METADATA_ONLY',declaredSha256:'a'.repeat(64)}});
+ const artifact=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:1},Buffer.from('DEMO expiring evidence'));
+ const entry=f.entry();entry.evidenceId=artifact.artifactId;
+ const staged=await owner.stage('maker',await f.input([entry]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO independent evidence',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ await new Promise(resolve=>setTimeout(resolve,1500));
+ expect((await owner.validate('maker',{inputId:staged.inputId})).issues).toContainEqual({row:1,field:'evidenceId',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'});
+});
+
+test('missing first-row evidence does not prevent validating a second mapping row',async()=>{
+ const missing=f.entry();missing.evidenceId=randomUUID();
+ const sibling=f.entry();sibling.row.mapping_relation='RELATED';
+ const staged=await owner.stage('maker',await f.input([missing,sibling]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[1,2].map(row=>({row,reason:'DEMO independent evidence',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}))});
+ const result=await owner.validate('maker',{inputId:staged.inputId});
+ expect(result.decision).toBe('BLOCKED');
+ expect(result.issues).toEqual(expect.arrayContaining([
+  {row:1,field:'evidenceId',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'},
+  {row:2,field:'mapping_relation',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'},
+ ]));
+});
+
 test('protected mapping input read requires current target reference permission',async()=>{
  const entry=f.entry(),staged=await owner.stage('maker',await f.input([entry]));
  peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
@@ -80,6 +139,34 @@ test('authorized users can read staged rows with invalid business dates for corr
  const entry=f.entry();entry.row.valid_from='INVALID_DATE';
  const staged=await owner.stage('maker',await f.input([entry]));
  expect((await owner.readInput('maker',{inputId:staged.inputId})).entries[0]!.row.valid_from).toBe('INVALID_DATE');
+});
+
+test('invalid dates do not expose staged rows after target tuple access is revoked',async()=>{
+ const entry=f.entry();entry.row.valid_from='INVALID_DATE';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{
+  await expect(owner.readInput('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.preview('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
+  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+  try{
+   const url=await app.listen({host:'127.0.0.1',port:0});
+   for(const path of ['inputs/read','preview']){
+    const response=await fetch(url+'/api/vnext/organization-mappings/'+path,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({inputId:staged.inputId})});
+    expect(response.status).toBe(403);
+   }
+  }finally{await app.close();}
+ }finally{f.grantTarget();}
+});
+
+test('invalid dates do not expose staged rows after target Owner read access is revoked',async()=>{
+ const entry=f.entry();entry.row.valid_from='INVALID_DATE';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ peer(receipt.name,"DELETE FROM department_master.access WHERE actor='maker' AND scope='HOSPITAL' AND permission='READ';");
+ try{
+  await expect(owner.readInput('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.preview('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
+ }finally{peer(receipt.name,"INSERT INTO department_master.access VALUES('maker','HOSPITAL','READ') ON CONFLICT DO NOTHING;");}
 });
 
 test('mapping history and derived reads require current target reference permission',async()=>{
@@ -119,6 +206,28 @@ test('current query checks only the selected mapping version',async()=>{
   await expect(owner.history('maker',id)).rejects.toThrow('ACCESS_DENIED');
   await expect(owner.diff('maker',{id,fromVersion:'1',toVersion:'2'})).rejects.toThrow('ACCESS_DENIED');
  }finally{f.grantTarget();}
+});
+
+test('future target versions do not stale a frozen mapping outside its business period',async()=>{
+ const target=await newTarget(),entry=f.entry();entry.row.target_id=target.id;entry.row.valid_to='2026-02-01T00:00:00';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO exact January target period',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});
+ const review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(JSON.parse(review.unit.commands[0]!.value['facts']!).target.parts).toMatchObject([{from:'2026-01-01T00:00:00.000000',to:'2026-02-01T00:00:00.000000',version:'1'}]);
+ await reviseTarget(target,'2027-01-01T00:00:00','1');
+ await owner.approveApplyUnit('reviewer',candidate);
+ expect((await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).status).toBe('COMMITTED');
+});
+
+test('target version changes inside the requested period stale a frozen mapping',async()=>{
+ const target=await newTarget(),entry=f.entry();entry.row.target_id=target.id;entry.row.valid_to='2026-02-01T00:00:00';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO exact January target period',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()});
+ await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ await reviseTarget(target,'2026-01-15T00:00:00','1');
+ await expect(owner.approveApplyUnit('reviewer',candidate)).rejects.toThrow('STALE_VALIDATION');
 });
 
 test('staged request replay preserves the original input and rejects changed content',async()=>{
@@ -323,6 +432,41 @@ test('an unimplemented target freezes a reviewable but unapprovable candidate',a
  expect(review.unit.basis['issues']).toEqual(expect.arrayContaining([{row:1,field:'target_type',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}]));
  await expect(owner.approveApplyUnit('reviewer',candidate)).rejects.toThrow('BLOCKED_DEPENDENCY');
  await expect(owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).rejects.toThrow('APPROVAL_REQUIRED');
+});
+
+test('HTTP review includes the complete frozen UNIT input without an executable command',async()=>{
+ const entry=f.entry();entry.row.target_type='UNIT';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO recorded unsupported target',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()});
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),reviewer=createOrganizationMappingClient(url,'reviewer'),review=await reviewer.review({candidateId:candidate.candidateId});
+  expect(review.response.status).toBe(200);
+  expect(review.data?.entries).toMatchObject([{sourceRow:1,row:{source_code:entry.row.source_code,target_type:'UNIT',target_id:f.targetId,source_record_id:entry.row.source_record_id,approval_ref:entry.row.approval_ref}}]);
+  expect(review.data?.diff).toMatchObject([{row:1,action:'REGISTER',targetType:'UNIT',targetId:f.targetId}]);
+  expect(review.data?.commandFacts).toEqual([]);
+  expect(review.data?.issues).toContainEqual({row:1,field:'target_type',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'});
+  expect((await reviewer.approve(candidate)).response.status).toBe(503);
+ }finally{await app.close();}
+});
+
+test('HTTP review retains both executable ORG and blocked UNIT rows in a frozen batch',async()=>{
+ const org=f.entry(),unit=f.entry();unit.row.target_type='UNIT';
+ const staged=await owner.stage('maker',await f.input([org,unit]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[1,2].map(row=>({row,reason:'DEMO complete batch review',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}))});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()});
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),reviewer=createOrganizationMappingClient(url,'reviewer'),review=await reviewer.review({candidateId:candidate.candidateId});
+  expect(review.response.status).toBe(200);
+  expect(review.data?.entries.map(e=>e.row.source_code)).toEqual([org.row.source_code,unit.row.source_code]);
+  expect(review.data?.entries[1]).toMatchObject({sourceRow:2,row:{target_type:'UNIT',target_id:f.targetId,approval_ref:unit.row.approval_ref,source_record_id:unit.row.source_record_id}});
+  expect(review.data?.diff).toMatchObject([{row:1,targetType:'ORG'},{row:2,targetType:'UNIT'}]);
+  expect(review.data?.commandFacts.map(c=>c.row)).toEqual([1]);
+  expect(review.data?.issues).toContainEqual({row:2,field:'target_type',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'});
+  expect((await reviewer.approve(candidate)).response.status).toBe(503);
+ }finally{await app.close();}
 });
 
 test('a FULL input freezes its blocked basis without becoming approvable',async()=>{

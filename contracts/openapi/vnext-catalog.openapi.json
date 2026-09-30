@@ -100440,7 +100440,8 @@
                           "mapping",
                           "reason",
                           "evidenceId",
-                          "row"
+                          "row",
+                          "sourceRow"
                         ],
                         "properties": {
                           "action": {
@@ -100617,6 +100618,11 @@
                               }
                             },
                             "additionalProperties": false
+                          },
+                          "sourceRow": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1048576
                           }
                         },
                         "additionalProperties": false
@@ -101728,11 +101734,10 @@
                             ]
                           },
                           "targetType": {
-                            "enum": [
-                              "LEGAL",
-                              "CAMPUS",
-                              "ORG"
-                            ]
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "\\S"
                           },
                           "targetId": {
                             "type": "string",

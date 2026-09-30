@@ -185,4 +185,4 @@ export * from './import/contracts.js';
 export {openOrganizationWorkspace} from './workspace/index.js';
 export {ApplicationListSchema,BundleListSchema,type ApplicationList,type BundleList,DraftSaveSchema,DraftContentSchema,DraftActionSchema,SubmissionSchema,WorkspaceBundleSchema,ApplicationSchema,ApplicationAccessSchema,MaterialReviewSchema,PreflightSchema,ObjectContextInputSchema,ObjectContextSchema,PrepareRevisionSchema,PrepareCampusLifecycleSchema,type PrepareCampusLifecycle,type ObjectContextInput,type PrepareRevision,type PreflightInput,type MaterialReview,type DraftAction,type DraftSave,type DraftContent} from './workspace/index.js';
 
-export {localTime,covered,subtract} from './time.js';
+export {localTime,covered,intersect,subtract} from './time.js';

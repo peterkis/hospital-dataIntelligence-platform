@@ -27,6 +27,11 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
  const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
  const targets=targetPort??createOrganizationMappingTargets(connection,provider);
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async transaction=>{await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);return work(CatalogTransactionScope.from(transaction));});
+ const recoverable=async<T>(s:Scope,work:()=>Promise<T>):Promise<T>=>{
+  await sql`savepoint organization_mapping_dependency`.execute(s);
+  try{const value=await work();await sql`release savepoint organization_mapping_dependency`.execute(s);return value;}
+  catch(error){await sql`rollback to savepoint organization_mapping_dependency`.execute(s);await sql`release savepoint organization_mapping_dependency`.execute(s);throw error;}
+ };
  const record=async(s:Scope,actor:string,id:string,permission='READ_RESTRICTED')=>(await sql<{r:InputRecord}>`select department_master.mapping_input_read(${actor},${id}::uuid,${permission}) r`.execute(s)).rows[0]!.r;
  const snapshot=async(s:Scope,actor:string,id:string)=>(await sql<{r:OrganizationMappingHistory}>`select department_master.mapping_snapshot(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;
  const optionalSnapshot=async(s:Scope,actor:string,id:string)=>(await sql<{r:OrganizationMappingHistory|null}>`select department_master.mapping_snapshot_optional(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;
@@ -69,17 +74,19 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
   const r=await record(s,actor,id),input=unseal<OrganizationMappingStoredStageInput>('ORG_MAPPING_INPUT_V1',r,OrganizationMappingStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract;
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');
   const verification=r.verification?unseal<OrganizationMappingVerifyInput>('ORG_MAPPING_VERIFICATION_V1',r.verification,OrganizationMappingVerifySchema):null;
-  const issues:OrganizationMappingIssue[]=[],heads:OrganizationMappingHistory[]=[],materials:unknown[]=[],commands:Array<{row:number;entry:ReturnType<typeof normalizeMappingEntry>;facts:MappingFacts}>=[];
+  const issues:OrganizationMappingIssue[]=[],heads:OrganizationMappingHistory[]=[],materials:unknown[]=[],diff:unknown[]=[],commands:Array<{row:number;entry:ReturnType<typeof normalizeMappingEntry>;facts:MappingFacts}>=[];
   const issue=(row:number,field:string,code:string,status:OrganizationMappingIssue['status']='BLOCKED')=>issues.push({row,field,code,status});
   if(input.profile!=='CORE'||j.profile!=='CORE'||c.dataset!=='ORG22'||c.status!=='PUBLISHED'||c.definition.templateVersion!=='ORG22_CORE_V1'||c.definition.fields.length!==19||ORG22_FIELDS.some(f=>!c.definition.fields.some(x=>x.code===f)))issue(0,'profile','BLOCKED_DEPENDENCY');
   if(verification){await record(s,r.verification!.actor,id,'VERIFY');if(verification.inputDigest!==r.digest)throw new Error('STALE_VALIDATION');}
+  for(const entry of input.entries)await inputReferenceAccess(s,actor,entry,r.campus);
   const aliases=new Set<string>(),identities=new Set<string>(),mappingIds=new Set<string>();let admission=false;
   const normalized=input.entries.flatMap(raw=>{try{return [normalizeMappingEntry(raw)];}catch{return [];}});
   for(const [index,raw] of input.entries.entries()){
    const row=index+1;let e:ReturnType<typeof normalizeMappingEntry>;
    try{e=normalizeMappingEntry(raw);}catch(error){issue(row,'',error instanceof Error?error.message:'CLOSED_INPUT_REQUIRED','FAIL');continue;}
+   diff.push({row,action:e.action,mapping:e.mapping,targetType:e.row.target_type,targetId:e.row.target_id,validFrom:e.validFrom,validTo:e.validTo});
    await authorize(s,actor,e.row,r.campus,'READ_RESTRICTED');
-   try{await referenceAccess(s,actor,e,r.campus);}catch(error){if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'target_id','BLOCKED_DEPENDENCY');}
+   try{await recoverable(s,()=>referenceAccess(s,actor,e,r.campus));}catch(error){if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'target_id','BLOCKED_DEPENDENCY');}
    if(r.verification&&await authorize(s,r.verification.actor,e.row,r.campus,'VERIFY')!==r.verification.identity_code)throw new Error('ACCESS_DENIED');
    const identity=canonicalPlan([e.row.from_system_id,e.row.source_entity_type,e.row.source_code,e.row.source_context]);
    if(aliases.has(e.row.org_map_id)||identities.has(identity)||e.mapping&&mappingIds.has(e.mapping.id))issue(row,'org_map_id','BATCH_CONFLICT','FAIL');
@@ -118,20 +125,24 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
    if(!closing&&(concurrentTarget||persistedTarget)&&!e.row.resolution_rule)issue(row,'resolution_rule','LEGAL_REVIEW_REQUIRED');
    if(review?.sourceKeyReuse&&(e.action!=='REGISTER'||e.row.source_context==='DEFAULT'||!e.row.resolution_rule))issue(row,'resolution_rule','LEGAL_REVIEW_REQUIRED');
    const sourcePins:unknown[]=closing?structuredClone(prior?.facts.sourcePins??[]):[];let target=prior?.facts.target;
-   if(closing)try{
-    materials.push(await evidence(s,actor,e.evidenceId,e,c,r.campus,'CLOSURE'));
-    if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,r.campus,'CLOSURE'));await evidence(s,r.verification!.actor,review.evidenceId,e,c,r.campus,'CLOSURE');}
-   }catch(error){if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'evidenceId','BLOCKED_DEPENDENCY');}
+   if(closing){
+    const materialCount=materials.length;
+    try{await recoverable(s,async()=>{
+     materials.push(await evidence(s,actor,e.evidenceId,e,c,r.campus,'CLOSURE'));
+     if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,r.campus,'CLOSURE'));await evidence(s,r.verification!.actor,review.evidenceId,e,c,r.campus,'CLOSURE');}
+    });}catch(error){materials.length=materialCount;if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'evidenceId','BLOCKED_DEPENDENCY');}
+   }
    if(!closing&&['LEGAL','CAMPUS','ORG'].includes(e.row.target_type)){
     if(!covered([{from:c.validFrom,to:c.validTo}],e.validFrom,e.validTo))issue(row,'valid_from','BLOCKED_DEPENDENCY');
     for(const field of ['target_type','mapping_relation','record_status'] as const){const codes=c.definition.codeSets.find(v=>v.field===field);if(!codes||codes.status!=='SYNTHETIC_ADOPTED'||!codes.codes.includes(e.row[field])||!covered([{from:codes.validFrom,to:codes.validTo}],e.validFrom,e.validTo))issue(row,field,'BLOCKED_DEPENDENCY');}
-    try{
+    const materialCount=materials.length;
+    try{await recoverable(s,async()=>{
      for(const source of new Set([e.row.from_system_id,e.row.source_system_id])){const pin=(await sql<{r:{sourceId:string;versionId:string|null}}>`select department_master.mapping_source(${actor},${source}::uuid,${e.validFrom}::timestamp,${e.validTo}::timestamp,true) r`.execute(s)).rows[0]!.r;if(!pin.versionId)issue(row,'from_system_id','BLOCKED_DEPENDENCY');else sourcePins.push(pin);}
      materials.push(await evidence(s,actor,e.evidenceId,e,c,r.campus));
      if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,r.campus));await evidence(s,r.verification!.actor,review.evidenceId,e,c,r.campus);}
      await sql`select department_master.mapping_target_authorize(${actor},${e.row.target_type},${e.row.target_id}::uuid,${r.campus})`.execute(s);
      target=await targets.read(s,actor,{type:e.row.target_type,id:e.row.target_id,validFrom:e.validFrom,validTo:e.validTo});
-    }catch(error){if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'target_id','BLOCKED_DEPENDENCY');}
+    });}catch(error){materials.length=materialCount;sourcePins.length=0;target=undefined;if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,error instanceof Error&&error.message==='PAYLOAD_UNAVAILABLE'?'evidenceId':'target_id','BLOCKED_DEPENDENCY');}
    }
    if(!target)continue;
    const {sourceRow:_,...businessEntry}=e;
@@ -140,12 +151,12 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
    commands.push({row,entry:e,facts});
   }
   if(admission){const now=(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(s)).rows[0]!.v;const active=(await sql<{r:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:'SYNTHETIC',mode:'EFFECTIVE',target:c.id,businessAt:now})}::jsonb) r`.execute(s)).rows[0]!.r;if(active[0]?.versionId!==c.versionId)issue(0,'contract','STALE_VALIDATION');}
-  return {r,input,contract:c,verification,issues,heads,materials,commands};
+  return {r,input,contract:c,verification,issues,heads,materials,commands,diff};
  };
  const port:ApplyOwnerPort={
   async authorize(s,actor,input,action){const r=await record(s,actor,input.jobId,action);if(r.revision!==input.revisionId||r.campus!==input.campus||input.purpose!=='IDENTITY_VERIFY')throw new Error('ACCESS_DENIED');await record(s,actor,input.jobId,'READ_RESTRICTED');const raw=unseal<OrganizationMappingStoredStageInput>('ORG_MAPPING_INPUT_V1',r,OrganizationMappingStoredStageSchema);for(const e of raw.entries)await referenceAccess(s,actor,normalizeMappingEntry(e),r.campus);},
   async authorizeFrozen(s,actor,unit){const heads=unit.basis['heads'];if(!Array.isArray(heads))throw new Error('INVALID_PLAN_TOKEN');for(const h of heads as OrganizationMappingHistory[])for(const v of h.versions)await historyReferenceAccess(s,actor,h,v);},
-  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG22_WHOLE_REVISION_V1',basis:{inputDigest:v.r.digest,contract:v.contract,verificationId:v.r.verification?.id??null,verificationDigest:v.r.verification?.digest??null,verification:v.verification,issues:v.issues,heads:v.heads,materials:v.materials},commands:v.commands.map(({row,entry,facts})=>({owner:'department-master/organization-mapping',row,intent:entry.action==='REGISTER'?'CREATE':'REVISE',target:entry.mapping?{owner:entry.mapping.owner,id:entry.mapping.id,version:entry.mapping.expectedHead}:null,aliases:[],value:{inputId:v.r.id,sourceRow:String(entry.sourceRow??row),command:canonicalPlan(entry),facts:canonicalPlan(facts)}})),diff:v.commands.map(({row,entry})=>({row,action:entry.action,mapping:entry.mapping,targetType:entry.row.target_type,targetId:entry.row.target_id,validFrom:entry.validFrom,validTo:entry.validTo}))};},
+  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG22_WHOLE_REVISION_V1',basis:{inputDigest:v.r.digest,entries:v.input.entries,contract:v.contract,verificationId:v.r.verification?.id??null,verificationDigest:v.r.verification?.digest??null,verification:v.verification,issues:v.issues,heads:v.heads,materials:v.materials},commands:v.commands.map(({row,entry,facts})=>({owner:'department-master/organization-mapping',row,intent:entry.action==='REGISTER'?'CREATE':'REVISE',target:entry.mapping?{owner:entry.mapping.owner,id:entry.mapping.id,version:entry.mapping.expectedHead}:null,aliases:[],value:{inputId:v.r.id,sourceRow:String(entry.sourceRow??row),command:canonicalPlan(entry),facts:canonicalPlan(facts)}})),diff:v.diff};},
   async validate(_s,_actor,unit,stage){const issues=unit.basis['issues'] as OrganizationMappingIssue[];const retained=issues.length>0&&issues.every(i=>i.code==='BLOCKED_DEPENDENCY'&&['profile','target_type','mapping_relation'].includes(i.field));if(stage==='FREEZE'&&retained)return;if(issues.length||unit.commands.length===0)throw new Error(issues[0]?.code??'BATCH_REJECTED');},
   async apply(s,actor,command,_resolved,approval){const facts=JSON.parse(command.value['facts']!);return {ok:true,fact:await mutate<OwnerFact>(s,actor,{operation:'APPLY',inputId:command.value['inputId'],sourceRow:Number(command.value['sourceRow']),command:JSON.parse(command.value['command']!),facts,contentDigest:planBinding(provider,'ORG_MAPPING_FACTS_V1',facts),...approval})};},
   async exactRead(s,actor,_input,fact){if(fact.owner!=='department-master/organization-mapping')return null;const h=await snapshot(s,actor,fact.id);return h.versions.some(v=>v.number===fact.version)?fact:null;},

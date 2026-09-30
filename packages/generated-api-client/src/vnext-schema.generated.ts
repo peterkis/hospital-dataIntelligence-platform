@@ -31421,6 +31421,7 @@ export interface operations {
                                 approval_ref: string;
                                 recorded_at: string;
                             };
+                            sourceRow: number;
                         }[];
                         issues: {
                             row: number;
@@ -31640,8 +31641,7 @@ export interface operations {
                                 id: string;
                                 expectedHead: string;
                             } | null;
-                            /** @enum {unknown} */
-                            targetType: "LEGAL" | "CAMPUS" | "ORG";
+                            targetType: string;
                             targetId: string;
                             validFrom: string;
                             validTo: string | null;

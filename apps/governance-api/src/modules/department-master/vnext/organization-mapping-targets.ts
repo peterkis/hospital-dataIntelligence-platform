@@ -1,4 +1,4 @@
-import {openOrganization,openCampus,covered} from '../../organization-master/index.js';
+import {openOrganization,openCampus,covered,intersect} from '../../organization-master/index.js';
 import {openDepartment} from './index.js';
 import type {CatalogTransactionScope,KeyProviderPort} from '../../governance-catalog/index.js';
 
@@ -10,20 +10,21 @@ export interface OrganizationMappingTargetPort {
 }
 export function createOrganizationMappingTargets(connection:string,provider?:KeyProviderPort):OrganizationMappingTargetPort{
  const organization=openOrganization(connection,provider),campus=openCampus(connection,provider),department=openDepartment(connection,provider);
+ const within=(parts:MappingTargetReference['parts'],from:string,to:string|null)=>parts.flatMap(part=>intersect(part,{from,to}).map(span=>({...part,...span})));
  const observe=async(scope:CatalogTransactionScope,actor:string,input:Parameters<OrganizationMappingTargetPort['read']>[2]):Promise<{reference:MappingTargetReference;covered:boolean}>=>{
    if(input.type==='ORG'){
     const {type:_,...coverageInput}=input;
     const result=await department.coverageInTransaction(scope,actor,coverageInput);
-    return {reference:{owner:'department-master',id:input.id,parts:result.parts},covered:result.covered};
+    return {reference:{owner:'department-master',id:input.id,parts:within(result.parts,input.validFrom,input.validTo)},covered:result.covered};
    }
    if(input.type==='LEGAL'){
     const result=await organization.registration.inTransaction(scope).read(actor,{id:input.id,...(input.recordAsOf?{asOf:input.recordAsOf}:{})});
-    return {reference:{owner:'organization-master',id:input.id,parts:result.profiles},covered:covered(result.profiles,input.validFrom,input.validTo)};
+    return {reference:{owner:'organization-master',id:input.id,parts:within(result.profiles,input.validFrom,input.validTo)},covered:covered(result.profiles,input.validFrom,input.validTo)};
    }
    if(input.type==='CAMPUS'){
     const result=await campus.references.inTransaction(scope).readCampusReferenceCoverage(actor,{references:[{owner:'organization-master/campus',id:input.id}],validFrom:input.validFrom,validTo:input.validTo,...(input.recordAsOf?{asOf:input.recordAsOf}:{})});
     const item=result.items[0];
-    return {reference:{owner:'organization-master/campus',id:input.id,parts:item?.segments.map(s=>({from:s.from,to:s.to,versionId:s.profileVersion.versionId,version:s.profileVersion.version}))??[]},covered:item?.coverage==='COVERED'};
+    return {reference:{owner:'organization-master/campus',id:input.id,parts:within(item?.segments.map(s=>({from:s.from,to:s.to,versionId:s.profileVersion.versionId,version:s.profileVersion.version}))??[],input.validFrom,input.validTo)},covered:item?.coverage==='COVERED'};
    }
    throw new Error('BLOCKED_DEPENDENCY');
  };
