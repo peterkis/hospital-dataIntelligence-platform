@@ -43,8 +43,10 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
   const transaction=(await sql<{id:string}>`select pg_current_xact_id()::text id`.execute(s)).rows[0]!.id,ticket=canonicalPlan({...value,actor,transaction}),key=Buffer.from(planBinding(provider,'DEPARTMENT_SQL_AUTHORITY_V1',{}),'hex');
   try{return (await sql<{r:T}>`select department_master.mapping_mutate(${ticket},${createHmac('sha256',key).update(ticket).digest('hex')}) r`.execute(s)).rows[0]!.r;}finally{key.fill(0);}
  };
- const evidence=async(s:Scope,actor:string,id:string,e:ReturnType<typeof normalizeMappingEntry>,c:ImportContractItem,campus:string)=>{
-  const proof=(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select department_master.evidence(${actor},${id}::uuid,${e.row.source_system_id}::uuid,${c.definition.sourceVersionId}::uuid,${campus},${e.validFrom}::timestamp,${e.validTo}::timestamp) r`.execute(s)).rows[0]!.r;
+ const evidence=async(s:Scope,actor:string,id:string,e:ReturnType<typeof normalizeMappingEntry>,c:ImportContractItem,campus:string,mode:'ADMISSION'|'CLOSURE'='ADMISSION')=>{
+  const proof=mode==='CLOSURE'
+   ?(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select governance_catalog.registration_evidence(${actor},${id}::uuid,${c.definition.sourceVersionId}::uuid,${campus}) r`.execute(s)).rows[0]!.r
+   :(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select department_master.evidence(${actor},${id}::uuid,${e.row.source_system_id}::uuid,${c.definition.sourceVersionId}::uuid,${campus},${e.validFrom}::timestamp,${e.validTo}::timestamp) r`.execute(s)).rows[0]!.r;
   const bytes=authenticateRegistrationEvidence(proof,provider);try{return {id,digest:planBinding(provider,'ORG_MAPPING_EVIDENCE_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}
  };
  const currentReferenceAccess=async(s:Scope,actor:string,ref:{fromSystemId:string;sourceSystemId:string;targetType:string;targetId:string;validFrom:string;validTo:string|null},campus:string)=>{
@@ -112,6 +114,10 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
    if(!closing&&(concurrentTarget||persistedTarget)&&!e.row.resolution_rule)issue(row,'resolution_rule','LEGAL_REVIEW_REQUIRED');
    if(review?.sourceKeyReuse&&(e.action!=='REGISTER'||e.row.source_context==='DEFAULT'||!e.row.resolution_rule))issue(row,'resolution_rule','LEGAL_REVIEW_REQUIRED');
    const sourcePins:unknown[]=closing?structuredClone(prior?.facts.sourcePins??[]):[];let target=prior?.facts.target;
+   if(closing)try{
+    materials.push(await evidence(s,actor,e.evidenceId,e,c,r.campus,'CLOSURE'));
+    if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,r.campus,'CLOSURE'));await evidence(s,r.verification!.actor,review.evidenceId,e,c,r.campus,'CLOSURE');}
+   }catch(error){if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'evidenceId','BLOCKED_DEPENDENCY');}
    if(!closing&&['LEGAL','CAMPUS','ORG'].includes(e.row.target_type)){
     if(!covered([{from:c.validFrom,to:c.validTo}],e.validFrom,e.validTo))issue(row,'valid_from','BLOCKED_DEPENDENCY');
     for(const field of ['target_type','mapping_relation','record_status'] as const){const codes=c.definition.codeSets.find(v=>v.field===field);if(!codes||codes.status!=='SYNTHETIC_ADOPTED'||!codes.codes.includes(e.row[field])||!covered([{from:codes.validFrom,to:codes.validTo}],e.validFrom,e.validTo))issue(row,field,'BLOCKED_DEPENDENCY');}

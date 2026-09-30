@@ -142,6 +142,22 @@ test('retraction removes the whole assertion at new R and retains the old assert
  expect(await owner.resolve('maker',key(entry,oldR))).toMatchObject({status:'RESOLVED',version:'1'});
 });
 
+test('retraction cannot approve a nonexistent maker evidence artifact',async()=>{
+ const entry=f.entry(),created=await apply([entry]),id=created.result.facts[0]!.id;
+ const closing={...entry,action:'RETRACT' as const,mapping:{owner:'department-master/organization-mapping' as const,id,expectedHead:'1'},reason:'DEMO independently evidenced withdrawal',evidenceId:randomUUID()};
+ const staged=await owner.stage('maker',await f.input([closing]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO verified withdrawal',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ await expect(owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow('BLOCKED_DEPENDENCY');
+});
+
+test('period reduction cannot approve a nonexistent reviewer evidence artifact',async()=>{
+ const entry=f.entry(),created=await apply([entry]),id=created.result.facts[0]!.id;
+ const shrink={...entry,action:'CORRECT' as const,mapping:{owner:'department-master/organization-mapping' as const,id,expectedHead:'1'},reason:'DEMO independently evidenced reduction',row:{...entry.row,valid_to:'2026-02-01T00:00:00'}};
+ const staged=await owner.stage('maker',await f.input([shrink]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO verified reduction',evidenceId:randomUUID(),contextApproved:true,sourceKeyReuse:false}]});
+ await expect(owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow('BLOCKED_DEPENDENCY');
+});
+
 test('accepted correction history never prevents another correction or withdrawal',async()=>{
  const entry=f.entry();entry.reason='合'.repeat(2000);entry.row.source_name='名'.repeat(2000);entry.row.resolution_rule='规'.repeat(2000);
  const created=await apply([entry]),id=created.result.facts[0]!.id,oldR=(await owner.history('maker',id)).versions[0]!.recorded_at.replace(' ','T');
