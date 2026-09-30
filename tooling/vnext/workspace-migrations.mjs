@@ -29,6 +29,7 @@ const postWorkspaceMigrations = [
  '0109_hierarchy_source_record_status',
  '0110_hierarchy_department_effective_period',
  '0111_hierarchy_reviewer_identity_binding',
+ '0112_organization_source_mapping',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

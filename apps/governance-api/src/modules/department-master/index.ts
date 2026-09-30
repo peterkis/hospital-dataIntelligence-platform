@@ -428,3 +428,5 @@ export {openDepartment} from './vnext/index.js';
 export {StageSchema as DepartmentStageSchema,StoredStageSchema as DepartmentStoredStageSchema,VerifySchema as DepartmentVerifySchema,PlanSchema as DepartmentPlanSchema,ReadSchema as DepartmentReadSchema,CoverageSchema as DepartmentCoverageSchema,ReceiveSchema as DepartmentReceiveSchema,StoredEntrySchema as DepartmentEntrySchema,Id as DepartmentId,ORG04_FIELDS,validateORG04,type StageInput as DepartmentStageInput} from './vnext/contracts.js';
 export {openHierarchy,validateHierarchyForest,HierarchyCandidateSchema,HierarchyNodeSchema,HierarchyEdgeEvidenceSchema,HierarchyClosureSchema,CreateHierarchyViewSchema,HierarchyPublishSchema,HierarchySnapshotInputSchema,HierarchyId,HierarchyLocalTime,HierarchyNullableLocalTime} from './vnext/hierarchy.js';
 export type {HierarchyCandidateInput,CreateHierarchyViewInput,HierarchyPublishInput,HierarchySnapshot,HierarchyIssue,ForestValidation} from './vnext/hierarchy.js';
+export * from './vnext/organization-mapping-contracts.js';
+export {openOrganizationMappings} from './vnext/organization-mapping.js';

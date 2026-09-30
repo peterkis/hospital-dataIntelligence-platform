@@ -32,3 +32,4 @@ export {createOrganizationClient,createOrganizationBundleClient,createOrganizati
 
 export {createDepartmentClient,type DepartmentInput} from './vnext-client.js';
 export {createHierarchyClient,type HierarchyInput} from './vnext-client.js';
+export {createOrganizationMappingClient,type OrganizationMappingInput} from './vnext-client.js';

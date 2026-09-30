@@ -1,4 +1,5 @@
-import {openDepartment,openHierarchy} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {openDepartment,openHierarchy,openOrganizationMappings} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {assertOrganizationMappingsProvisioned} from './organization-mapping-provisioning.mjs';
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -46,7 +47,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -56,6 +57,7 @@ export async function startWorkbench({
     await organizationWorkspace?.close();
     await department?.close();
     await hierarchy?.close();
+    await mapping?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -106,6 +108,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     if(persistent&&persistentPrefix>=87){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
     if(owned||persistentPrefix>=109){await assertHierarchyProvisioned(connection);hierarchy=openHierarchy(connection,provider);}
+    if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -163,6 +166,7 @@ export async function startWorkbench({
       organizationWorkspace?{owner:organizationWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
       department?{owner:department,actor:r=>syntheticActor(r.headers)}:undefined,
       hierarchy?{owner:hierarchy,actor:r=>syntheticActor(r.headers)}:undefined,
+      mapping?{owner:mapping,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),
