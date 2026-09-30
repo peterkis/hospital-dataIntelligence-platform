@@ -308,7 +308,9 @@
     "vnext:p2-02:unit": "vitest run --config tooling/vnext/vitest.p2-02-unit.config.ts",
     "vnext:p2-02:typecheck": "tsc -p tooling/vnext/tsconfig.p2-02.json",
     "vnext:p2-02:validate": "node --import tsx tooling/vnext/p2-02-validate.mjs",
-    "vnext:p2-02:history": "node --import tsx tooling/vnext/p2-02-history-validate.mjs"
+    "vnext:p2-02:history": "node --import tsx tooling/vnext/p2-02-history-validate.mjs",
+    "vnext:p2-02:runtime": "node --import tsx tooling/vnext/p2-02-runtime-validate.mjs",
+    "vnext:p2-02:provisioning": "node --import tsx tooling/vnext/p2-02-provisioning-validate.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

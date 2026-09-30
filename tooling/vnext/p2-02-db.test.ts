@@ -25,6 +25,7 @@ let sourceDefinitionVersionId: string;
 let finiteDepartmentId: string;
 let finiteDepartmentVersionId: string;
 let temporalSource: Outcome;
+let fixture: Awaited<ReturnType<typeof departmentFixture>>;
 
 const edgeEvidence = (key: string, validFrom = '2026-09-01T00:00:00.000000', validTo: string | null = null) => ({ sourceClientKey: key, sourceVersion: '7', sourceSystemId, sourceRecordId: `ORG06:sheet:${key}`, validFrom, validTo, recordedAt: '2026-09-01T01:00:00.123456', recordStatus: 'ACTIVE' as const, approvalRef: 'EDGE_APPROVAL' });
 async function withoutViewPermission(actor:'maker'|'reviewer',view:string,permission:'READ'|'WRITE'|'REVIEW',work:()=>Promise<void>) {
@@ -37,7 +38,7 @@ describe('P2-02 vNext hierarchy owner', () => {
   let viewId: string;
   let secondViewId: string;
   beforeAll(async () => {
-    const fixture = await departmentFixture(receipt, catalog, provider);
+    fixture = await departmentFixture(receipt, catalog, provider);
     const staged = await department.stage('maker', await fixture.input());
     await department.verify('reviewer', { requestId: id(), inputId: staged.inputId, inputDigest: staged.digest, rows: [{ row: 1, disposition: 'DEPARTMENT', historicalException: false, reason: 'P2-02 synthetic department reference', evidenceId: fixture.artifact.artifactId }] });
     const applyRequestId = id();
@@ -74,6 +75,68 @@ describe('P2-02 vNext hierarchy owner', () => {
       validFrom: '2026-09-01T00:00:00.000000', validTo: null, recordedAt: '2026-09-01T01:00:00.000000', approvalRef: 'SYNTHETIC-APPROVAL',
     })).viewId;
     peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer',v::uuid,p FROM unnest(ARRAY['${viewId}','${secondViewId}']) v CROSS JOIN unnest(ARRAY['READ','REVIEW']) p;`);
+  });
+
+  it('rejects a superseded Department node over the new snapshot period while retaining historical snapshots', async () => {
+    const commitDepartment = async (entry: ReturnType<typeof fixture.entry>) => {
+      const input = await department.stage('maker', await fixture.input([entry]));
+      await department.verify('reviewer', {requestId:id(),inputId:input.inputId,inputDigest:input.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'Hierarchy effective-period regression',evidenceId:fixture.artifact.artifactId}]});
+      const requestId=id(),plan=await department.plan('maker',{inputId:input.inputId,requestId});
+      await department.readApplyCandidate('reviewer',{candidateId:plan.candidateId});
+      await department.approveApplyUnit('reviewer',plan);
+      const result=await department.applyUnit('maker',{candidateId:plan.candidateId,requestId});
+      if(result.status!=='COMMITTED'||!result.facts[0])throw new Error('DEPARTMENT_FIXTURE_REQUIRED');
+      return result.facts[0].id;
+    };
+    const entry=fixture.entry(),nodeDepartment=await commitDepartment(entry);
+    const oldVersion=(await department.exact('maker',{id:nodeDepartment,version:'1'})).versionId;
+    const header={requestId:id(),sourceClientKey:`PERIOD_${id()}`,viewCode:`PERIOD_${id()}`,viewName:'Period regression',viewType:'ADMINISTRATIVE' as const,purpose:'Effective node reference',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'PERIOD:1',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:'2026-11-01T00:00:00.000000',recordedAt:'2026-09-01T00:00:00.000000',approvalRef:'SYNTHETIC_PERIOD'};
+    const registered=await hierarchy.createHierarchyView('maker',header);
+    peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer','${registered.viewId}'::uuid,p FROM unnest(ARRAY['READ','REVIEW']) p;`);
+    const candidate:HierarchyCandidateInput={...header,requestId:id(),viewId:registered.viewId,parentCardinality:'STRICT_TREE',recordStatus:'ACTIVE',nodes:[{nodeKey:'root',parentNodeKey:null,nodeKind:'DEPARTMENT',departmentId:nodeDepartment,departmentVersionId:oldVersion,displayName:'Original node name',relationName:'组织',sortOrder:0,isPrimaryPath:true,sourceEvidence:edgeEvidence('period',header.validFrom,header.validTo)}]};
+    const approve=async (input:HierarchyCandidateInput)=>{
+      const staged=await hierarchy.importHierarchyCandidate('maker',input);
+      if(!staged.candidateId)throw new Error('CANDIDATE_REQUIRED');
+      await hierarchy.approveHierarchyCandidate('reviewer',{candidateId:staged.candidateId,digest:staged.digest});
+      return {candidateId:staged.candidateId,digest:staged.digest,requestId:input.requestId};
+    };
+    const historical=await hierarchy.publishHierarchySnapshot('maker',await approve(candidate));
+    await commitDepartment({...entry,intent:'REVISE',target:{owner:'department-master',id:nodeDepartment,expectedVersion:'1'},row:{...entry.row,org_name:'Revised node name',valid_from:'2026-10-01T00:00:00'}});
+    const command=await approve({...candidate,requestId:id()});
+    await expect(hierarchy.publishHierarchySnapshot('maker',command)).rejects.toThrow('BLOCKED_DEPENDENCY');
+    expect(await hierarchy.readHierarchySnapshot('maker',{viewId:registered.viewId})).toEqual(historical);
+    expect(await hierarchy.readHierarchySnapshot('maker',{viewId:registered.viewId,version:historical.view.version})).toEqual(historical);
+    const bounded={...candidate,requestId:id(),validTo:'2026-10-01T00:00:00.000000',nodes:candidate.nodes.map(node=>({...node,sourceEvidence:{...node.sourceEvidence,validTo:'2026-10-01T00:00:00.000000'}}))};
+    expect((await hierarchy.publishHierarchySnapshot('maker',await approve(bounded))).validTo).toBe('2026-10-01T00:00:00.000000');
+  });
+
+  it.each(['Owner','SQL'] as const)('%s publication requires the original reviewer identity or a new independent approval', async boundary => {
+    const direct=new Pool({connectionString:process.env['VNEXT_DATABASE_URL']});
+    let prior:string|undefined;
+    try {
+      const header={requestId:id(),sourceClientKey:`REVIEW_ID_${id()}`,viewCode:`REVIEW_ID_${id()}`,viewName:'Reviewer identity regression',viewType:'ADMINISTRATIVE' as const,purpose:'Review identity binding',aggregationRule:'NONE',ownerDepartmentId,sourceSystemId,sourceRecordId:'IDENTITY:1',sourceVersion:'1',validFrom:'2026-09-01T00:00:00.000000',validTo:null,recordedAt:'2026-09-01T00:00:00.000000',approvalRef:'SYNTHETIC_IDENTITY'};
+      const registered=await hierarchy.createHierarchyView('maker',header);
+      peer(receipt.name,`INSERT INTO department_master.hierarchy_grant(actor_code,object_id,permission) SELECT 'reviewer','${registered.viewId}'::uuid,p FROM unnest(ARRAY['READ','REVIEW']) p;`);
+      prior=(await direct.query<{identity:string}>("SELECT department_master.hierarchy_authorize('reviewer',$1::uuid,'REVIEW') AS identity",[registered.viewId])).rows[0]!.identity;
+      const input:HierarchyCandidateInput={...header,requestId:id(),viewId:registered.viewId,parentCardinality:'STRICT_TREE',recordStatus:'ACTIVE',nodes:[{nodeKey:'root',parentNodeKey:null,nodeKind:'GROUP',groupCode:'REVIEW',groupId:null,groupVersionId:null,displayName:'Review group',relationName:'组织',sortOrder:0,isPrimaryPath:true,sourceEvidence:edgeEvidence('review-identity')}]};
+      const candidate=await hierarchy.importHierarchyCandidate('maker',input);
+      if(!candidate.candidateId)throw new Error('CANDIDATE_REQUIRED');
+      const command={candidateId:candidate.candidateId,digest:candidate.digest,requestId:input.requestId};
+      await hierarchy.approveHierarchyCandidate('reviewer',command);
+      const forest=await hierarchy.validateForest(input);
+      const payload={...input,nodes:forest.nodes,validationDigest:forest.digest};
+      const publish=()=>boundary==='Owner'?hierarchy.publishHierarchySnapshot('maker',command):direct.query('SELECT department_master.hierarchy_publish($1,$2::uuid,$3,$4::jsonb)',['maker',candidate.candidateId,candidate.digest,JSON.stringify(payload)]);
+      // A controlled identity reassignment retains the same actor's grants.
+      peer(receipt.name,"UPDATE vnext_control.actor SET identity_code='P2_02_REASSIGNED_REVIEWER' WHERE code='reviewer';");
+      await expect(publish()).rejects.toThrow('MAKER_CHECKER_REQUIRED');
+      expect(await hierarchy.readHierarchySnapshot('maker',{viewId:registered.viewId})).toBeNull();
+      await hierarchy.approveHierarchyCandidate('reviewer',command);
+      await publish();
+      expect((await hierarchy.readHierarchySnapshot('maker',{viewId:registered.viewId}))?.nodes).toHaveLength(1);
+    } finally {
+      if(prior!==undefined)peer(receipt.name,`UPDATE vnext_control.actor SET identity_code=${quote(prior)} WHERE code='reviewer';`);
+      await direct.end();
+    }
   });
 
   it.each(['2026-09-01T24:00:00','2026-09-01T23:59:60','2026-02-30T00:00:00','2026-09-01T00:00:00+08:00'])('SQL registration rejects invalid local time %s without reserving identity', async recordedAt => {

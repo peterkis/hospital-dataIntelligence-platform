@@ -92,3 +92,25 @@ ORG05 的 16 个字段和 ORG06 的 15 个字段仍以
 0108 在关闭候选入库前校验完整字段、JSON 类型、UUID、动作枚举、版本字符串和原因长度；未应用的旧候选在产生终态事件前再校验。已应用事件保留原历史重放。
 
 0109 将 ORG05 的 sourceRecordStatus 单独持久化并通过 typed snapshot/HTTP 返回，治理 status 仍为 PUBLISHED。历史只从同一 view、同一 validationDigest 的唯一 APPLIED 候选恢复 ACTIVE；缺失或歧义证据保留 null。迁移只回填新增列，在单个迁移事务与 DDL 锁内临时暂停对应 immutable trigger，随后恢复。`vnext:p2-02:history` 在独立 receipt-owned 库中验证 108 升级、准确恢复、未知保留、其余历史逐字段一致、触发器生效以及升级后的新发布。
+
+## 本地审查的 TDD 修复（2026-09-30）
+
+本轮按确认的三个公开边界逐项完成 RED → GREEN：真实 `startWorkbench` 启动后的 HTTP、Owner 发布/历史快照接口，以及应用数据库角色可执行的 SQL 发布函数。未改写 0001–0109 已安装迁移。
+
+- 工作台创建、注入并关闭 Hierarchy Owner。临时启动和现有正常部署准备流程通过 `hierarchy-provisioning.mjs` 授予服务角色所需的八个 SQL 函数执行权限；不授予直接表权限，不自动配置参与者或逐视图授权。新增 `vnext:p2-02:runtime` 经实际 HTTP 验证未授权拒绝、注册、读取、候选导入及独立审批。
+- 0110 在新发布时检查每个 Department 节点引用的实际覆盖期间：同一 Department 后续版本与候选期间相交时，旧版本不能继续覆盖该完整快照。半开区间在新版本生效前结束仍可通过；已有历史快照不改写。
+- 0111 要求审批账号当前身份等于候选记录中的原审批身份，并继续保持提交人与审批人独立。账号改绑后，Owner 与直接 SQL 发布均拒绝旧审批；新身份重新独立审批后才能发布。已提交历史重放仍走原非扩张路径。
+
+fresh 与 87→111 升级均通过 12 项领域单测、59 项数据库测试；108→111 历史验证保留原快照和不可变保护。真实启动 HTTP、全项目 typecheck、模块边界及 54 项迁移门禁通过。数据库运行均使用受管 wrapper 和 receipt-owned 临时库，目标 exit 0、cleanupPassed=true。RED/GREEN 日志与工作区文件摘要索引位于 ignored 的 `.runtime/vnext/p2-02-tdd-closeout.json`。本轮未部署到持久库，未提交、推送或合并；这些本地观察不替代远程审阅及正式来源验收。
+
+## Hierarchy 服务角色就绪检查修复（2026-09-30）
+
+本轮复审发现：持久工作台及 `prepareWorkspaceDeployment({reuseExisting:true})` 仅凭迁移状态继续执行，未检查当前服务角色的 Hierarchy 执行能力。真实临时 PostgreSQL 中撤销 `hierarchy_read` 后，旧启动连续两次成功但读取返回 500，旧复用验证连续两次仍返回成功；恢复该授权即恢复 HTTP 200。根因是缺少检查，非检查使用错误主体或吞掉检查异常。
+
+`assertHierarchyProvisioned` 现使用实际服务连接的 `current_user` 验证 schema USAGE 及与受控授权共用清单的八个函数 EXECUTE。工作台在开启 Hierarchy Owner/监听前检查；部署准备在写入迁移 PASS 证据前检查。缺失能力返回 `HIERARCHY_PROVISIONING_REQUIRED`。启动与 `reuseExisting` 只检查，不补授权；正常前向部署仍先按原流程配置最小函数权限再检查。不增加参与者或逐视图业务授权。
+
+新增 `vnext:p2-02:provisioning` 在 receipt-owned 临时库中通过真实启动 HTTP 和真实部署准备接口验证两条 RED → GREEN：每条均重复缺权拒绝，并验证显式恢复授权后的成功。仅系统文件与子进程的配置路径重定向到独立夹具，Owner、PostgreSQL、HTTP、迁移/保存校验均真实执行；不替换持久配置，不保存服务密码。临时 Owner 角色使用仅限 P2-02 的角色命名选项，仍执行 receipt、OID、会话与清理约束。
+
+两项集成测试、原实际启动 HTTP 流程、54 项迁移门禁、P2-02/全项目类型检查及模块边界检查通过。所有本轮数据库 GREEN 均 target exit 0、cleanupPassed=true，临时库/角色已销毁。首次复用测试因 30 秒时限失败，单独保留为夹具时限问题；增至 120 秒后才取得“VERIFIED 两次”的有效 RED，未将超时当作目标缺陷证据。证据索引为 `.runtime/vnext/p2-02-provisioning-closeout.json`；此前证据索引保持不变。
+
+预防措施是保留这两个公开边界的缺权回归，并让授权与就绪检查使用同一函数清单。本轮没有新增或改写 SQL 迁移，没有部署持久库、提交、推送或合并；此结果仍为本地验证，票据保持 ready-for-human。
