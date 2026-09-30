@@ -11,6 +11,7 @@ import {peer,quote} from './lineage.mjs';
 import {Pool} from 'pg';
 import {openOrganization,openCampus} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import {provisionCampusAuthority} from './campus-authority.mjs';
+import {createOrganizationMappingClient} from '../../packages/generated-api-client/src/index.js';
 
 const provider=new LocalSyntheticKeyProvider(),connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
 const catalog=await openCatalog(connection,provider),owner=openOrganizationMappings(connection,provider);
@@ -89,6 +90,16 @@ test('retraction removes the whole assertion at new R and retains the old assert
  expect(await owner.resolve('maker',key(entry,oldR))).toMatchObject({status:'RESOLVED',version:'1'});
 });
 
+test('accepted correction history never prevents another correction or withdrawal',async()=>{
+ const entry=f.entry();entry.reason='合'.repeat(2000);entry.row.source_name='名'.repeat(2000);entry.row.resolution_rule='规'.repeat(2000);
+ const created=await apply([entry]),id=created.result.facts[0]!.id,oldR=(await owner.history('maker',id)).versions[0]!.recorded_at.replace(' ','T');
+ for(let head=1;head<=30;head++)await apply([{...entry,action:'CORRECT',mapping:{owner:'department-master/organization-mapping',id,expectedHead:String(head)},row:{...entry.row,version_no:String(head+1)}}]);
+ await apply([{...entry,action:'RETRACT',mapping:{owner:'department-master/organization-mapping',id,expectedHead:'31'},reason:'DEMO withdraw after accepted correction history',row:{...entry.row,version_no:'32'}}]);
+ expect(await owner.resolve('maker',key(entry))).toEqual({status:'NOT_FOUND'});
+ expect(await owner.resolve('maker',key(entry,oldR))).toMatchObject({status:'RESOLVED',version:'1'});
+ expect((await owner.history('maker',id)).versions).toHaveLength(32);
+});
+
 test('ORG22 file intake preserves physical provenance and rejects a whole file with an invalid sibling',async()=>{
  const entry=f.entry(),job={action:'CREATE' as const,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'SYNTHETIC_ORGANIZATION_MAPPING',contractId:f.contract.id,contractVersionId:f.contract.versionId,profile:'CORE' as const,input:{kind:'FILE' as const,format:'XLSX' as const,parserPolicy:'STRICT_ORGANIZATION_MAPPING_V1' as const}};
  const meta={requestId:randomUUID(),fileRequestId:randomUUID(),job,campus:'NORTH' as const,retentionSeconds:3600,entries:[{action:entry.action,mapping:entry.mapping,reason:entry.reason,evidenceId:entry.evidenceId}]};
@@ -107,6 +118,31 @@ test('real HTTP exposes mapping history and rejects outsiders and open command s
   const history=await post('history',{id});expect(history.status).toBe(200);expect(await history.json()).toMatchObject({id,versions:[{number:'1',target_id:f.targetId}]});
   expect((await post('list',{campus:'NORTH'},'outsider')).status).toBe(403);
   expect((await post('resolve',{...key(entry),extra:'IGNORED'})).status).toBe(400);
+ }finally{await app.close();}
+});
+
+test('HTTP reviewers receive frozen reuse evidence and the correction before and after',async()=>{
+ const entry=f.entry();entry.row.source_context='DEMO_HTTP_REUSE';entry.row.resolution_rule='DEMO separately approved source key reuse';f.grantNamespace(entry.row.from_system_id,entry.row.source_context);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),reviewer=createOrganizationMappingClient(url,'reviewer'),maker=createOrganizationMappingClient(url,'maker');
+  const staged=await owner.stage('maker',await f.input([entry])),verification={requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO independent reused-context decision',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:true}]};
+  await owner.verify('reviewer',verification);
+  const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId}),review=await reviewer.review({candidateId:candidate.candidateId});
+  expect(review.response.status).toBe(200);
+  expect(review.data).toHaveProperty('basis.verification.rows.0.sourceKeyReuse',true);
+  expect(review.data).toMatchObject({input:{jobId:staged.inputId,revisionId:staged.revisionId},basis:{inputDigest:staged.digest,verification,contract:{versionId:f.contract.versionId}},commandFacts:[{row:1,facts:{contractVersionId:f.contract.versionId,target:{id:f.targetId,parts:[{version:'1'}]},sourcePins:[{sourceId:f.source.id,versionId:f.source.versionId}]}}],diff:[{row:1,action:'REGISTER',mapping:null,targetId:f.targetId}]});
+  expect((await reviewer.approve(candidate)).response.status).toBe(200);
+  const applied=await maker.apply({candidateId:candidate.candidateId,requestId});expect(applied.data?.status).toBe('COMMITTED');
+  const id=applied.data!.facts![0]!.id;
+  const correction={...entry,action:'CORRECT' as const,mapping:{owner:'department-master/organization-mapping' as const,id,expectedHead:'1'},reason:'DEMO explicit period correction',row:{...entry.row,valid_to:'2026-02-01T00:00:00'}};
+  const corrected=await owner.stage('maker',await f.input([correction])),checked={...verification,requestId:randomUUID(),inputId:corrected.inputId,inputDigest:corrected.digest,rows:[{...verification.rows[0]!,reason:'DEMO frozen correction decision',sourceKeyReuse:false}]};
+  await owner.verify('reviewer',checked);
+  const frozen=await owner.plan('maker',{inputId:corrected.inputId,requestId:randomUUID()});
+  await owner.verify('reviewer',{...checked,requestId:randomUUID(),rows:[{...checked.rows[0]!,reason:'DEMO later verification must not replace frozen review'}]});
+  const correctionReview=await reviewer.review({candidateId:frozen.candidateId});expect(correctionReview.response.status).toBe(200);
+  expect(correctionReview.data).toMatchObject({basis:{verification:checked,heads:[{id,versions:[{number:'1',action:'REGISTER',valid_to:null,target_id:f.targetId}]}]},diff:[{row:1,action:'CORRECT',mapping:{id,expectedHead:'1'},targetId:f.targetId,validTo:'2026-02-01T00:00:00.000000'}]});
+  expect((await reviewer.approve(frozen)).response.status).toBe(409);
  }finally{await app.close();}
 });
 

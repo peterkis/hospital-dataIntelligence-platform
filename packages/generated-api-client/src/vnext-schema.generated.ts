@@ -3691,6 +3691,11 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
+                                    status: "ORGANIZATION_MAPPING_CORE";
+                                } | {
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
                                     status: "DEPARTMENT_CORE";
                                 } | {
                                     field: string;
@@ -3887,6 +3892,11 @@ export interface operations {
                                     version: string;
                                 }[];
                                 references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "ORGANIZATION_MAPPING_CORE";
+                                } | {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
@@ -4090,6 +4100,11 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
+                                    status: "ORGANIZATION_MAPPING_CORE";
+                                } | {
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
                                     status: "DEPARTMENT_CORE";
                                 } | {
                                     field: string;
@@ -4265,6 +4280,11 @@ export interface operations {
                             field: string;
                             target: string;
                             /** @enum {string} */
+                            status: "ORGANIZATION_MAPPING_CORE";
+                        } | {
+                            field: string;
+                            target: string;
+                            /** @enum {string} */
                             status: "DEPARTMENT_CORE";
                         } | {
                             field: string;
@@ -4349,6 +4369,11 @@ export interface operations {
                             version: string;
                         }[];
                         references: ({
+                            field: string;
+                            target: string;
+                            /** @enum {string} */
+                            status: "ORGANIZATION_MAPPING_CORE";
+                        } | {
                             field: string;
                             target: string;
                             /** @enum {string} */
@@ -31403,6 +31428,251 @@ export interface operations {
                             code: string;
                             /** @enum {unknown} */
                             status: "FAIL" | "BLOCKED";
+                        }[];
+                        input: {
+                            requestId: string;
+                            jobId: string;
+                            revisionId: string;
+                            /** @enum {string} */
+                            scope: "SYNTHETIC";
+                            campus: "NORTH" | "SOUTH";
+                            purpose: "IDENTITY_VERIFY" | "CONTACT_VERIFY" | "HR_RESTRICTED";
+                        };
+                        /** @enum {string} */
+                        atomicRule: "ORG22_WHOLE_REVISION_V1";
+                        basis: {
+                            inputDigest: string;
+                            contract: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: number;
+                                /** Format: uuid */
+                                datasetVersionId: string;
+                                head: string;
+                                /** @enum {unknown} */
+                                status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                                recordedAt: string;
+                                reviewDigest: string;
+                                /** @enum {string} */
+                                adapterReadiness: "NOT_READY";
+                                dataset: string;
+                                /** @enum {unknown} */
+                                profile: "CORE" | "FULL";
+                                definition: {
+                                    ruleVersion: string;
+                                    templateVersion: string;
+                                    sourceVersionId: string | null;
+                                    fields: {
+                                        code: string;
+                                        /** @enum {unknown} */
+                                        type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                        /** @enum {unknown} */
+                                        required: "R" | "C" | "O";
+                                        /** @enum {unknown} */
+                                        privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                        /** @enum {unknown} */
+                                        condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
+                                        enumValues: string[];
+                                    }[];
+                                    businessKey?: string[];
+                                    codeSets: {
+                                        field: string;
+                                        codeSystem: string;
+                                        version: string;
+                                        /** @enum {unknown} */
+                                        status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                        codes: string[];
+                                        validFrom: string;
+                                        validTo: string | null;
+                                        /** Format: uuid */
+                                        sourceVersionId: string;
+                                    }[];
+                                    rules: {
+                                        id: string;
+                                        field: string;
+                                        text: string;
+                                        /** @enum {unknown} */
+                                        status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
+                                        version: string;
+                                    }[];
+                                    references: ({
+                                        field: string;
+                                        target: string;
+                                        /** @enum {string} */
+                                        status: "ORGANIZATION_MAPPING_CORE";
+                                    } | {
+                                        field: string;
+                                        target: string;
+                                        /** @enum {string} */
+                                        status: "DEPARTMENT_CORE";
+                                    } | {
+                                        field: string;
+                                        target: string;
+                                        /** @enum {string} */
+                                        status: "ORG_BUNDLE";
+                                    } | {
+                                        /** @enum {string} */
+                                        field: "is_primary_operator";
+                                        /** @enum {string} */
+                                        target: "enum:yes_no";
+                                        /** @enum {string} */
+                                        status: "ADOPTED_CODESET";
+                                    } | {
+                                        field: string;
+                                        target: string;
+                                        /** @enum {string} */
+                                        status: "BLOCKED_DEPENDENCY";
+                                    } | {
+                                        field: string;
+                                        /** @enum {string} */
+                                        target: "GOV09.config_id";
+                                        /** @enum {string} */
+                                        status: "DECLARED_PARAMETER";
+                                        /** Format: uuid */
+                                        parameterVersionId: string;
+                                        parameterDigest: string;
+                                    })[];
+                                };
+                                schemas: {
+                                    [key: string]: unknown;
+                                };
+                                semanticsDigest: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                sourceDraftDigest: string;
+                                sourcePolicies: {
+                                    format: {
+                                        [key: string]: unknown;
+                                    };
+                                    time: string;
+                                    identity: string;
+                                    apply: {
+                                        [key: string]: unknown;
+                                    };
+                                };
+                            };
+                            verificationId: string | null;
+                            verificationDigest: string | null;
+                            verification: {
+                                requestId: string;
+                                inputId: string;
+                                inputDigest: string;
+                                rows: {
+                                    row: number;
+                                    reason: string;
+                                    evidenceId: string;
+                                    contextApproved: boolean;
+                                    sourceKeyReuse: boolean;
+                                }[];
+                            } | null;
+                            issues: {
+                                row: number;
+                                field: string;
+                                code: string;
+                                /** @enum {unknown} */
+                                status: "FAIL" | "BLOCKED";
+                            }[];
+                            heads: {
+                                id: string;
+                                from_system_id: string;
+                                entity_type: string;
+                                source_code: string;
+                                context: string;
+                                /** @enum {unknown} */
+                                campus: "NORTH" | "SOUTH";
+                                versions: {
+                                    id: string;
+                                    mapping_id: string;
+                                    number: string;
+                                    predecessor: string | null;
+                                    /** @enum {unknown} */
+                                    action: "REGISTER" | "CORRECT" | "RETRACT";
+                                    /** @enum {unknown} */
+                                    target_type: "LEGAL" | "CAMPUS" | "ORG";
+                                    target_id: string;
+                                    valid_from: string;
+                                    valid_to: string | null;
+                                    recorded_at: string;
+                                    source_row: number;
+                                    reason: string;
+                                    facts: {
+                                        sourceName: string | null;
+                                        sourceVersion: string;
+                                        sourceRecordedAt: string;
+                                        sourceSystemId: string;
+                                        contractVersionId: string;
+                                        verificationId: string;
+                                        target: {
+                                            /** @enum {unknown} */
+                                            owner: "organization-master" | "organization-master/campus" | "department-master";
+                                            id: string;
+                                            parts: {
+                                                from: string;
+                                                to: string | null;
+                                                versionId: string;
+                                                version: string;
+                                            }[];
+                                        };
+                                        sourcePins: {
+                                            sourceId: string;
+                                            versionId: string;
+                                        }[];
+                                        resolutionRule: string | null;
+                                        commandDigest: string;
+                                    };
+                                    content_digest: string;
+                                }[];
+                            }[];
+                            materials: {
+                                id: string;
+                                digest: string;
+                            }[];
+                        };
+                        diff: {
+                            row: number;
+                            /** @enum {unknown} */
+                            action: "REGISTER" | "CORRECT" | "RETRACT";
+                            mapping: {
+                                /** @enum {string} */
+                                owner: "department-master/organization-mapping";
+                                id: string;
+                                expectedHead: string;
+                            } | null;
+                            /** @enum {unknown} */
+                            targetType: "LEGAL" | "CAMPUS" | "ORG";
+                            targetId: string;
+                            validFrom: string;
+                            validTo: string | null;
+                        }[];
+                        commandFacts: {
+                            row: number;
+                            facts: {
+                                sourceName: string | null;
+                                sourceVersion: string;
+                                sourceRecordedAt: string;
+                                sourceSystemId: string;
+                                contractVersionId: string;
+                                verificationId: string;
+                                target: {
+                                    /** @enum {unknown} */
+                                    owner: "organization-master" | "organization-master/campus" | "department-master";
+                                    id: string;
+                                    parts: {
+                                        from: string;
+                                        to: string | null;
+                                        versionId: string;
+                                        version: string;
+                                    }[];
+                                };
+                                sourcePins: {
+                                    sourceId: string;
+                                    versionId: string;
+                                }[];
+                                resolutionRule: string | null;
+                                commandDigest: string;
+                            };
                         }[];
                     };
                 };

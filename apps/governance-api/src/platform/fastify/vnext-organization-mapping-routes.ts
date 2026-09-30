@@ -1,7 +1,7 @@
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import {Type,type Static,type TSchema} from 'typebox';
 import {openOrganizationMappings,OrganizationMappingStageSchema,OrganizationMappingStoredStageSchema,OrganizationMappingEntrySchema,OrganizationMappingStoredEntrySchema,OrganizationMappingVerifySchema,OrganizationMappingResolveSchema,OrganizationMappingReceiveSchema} from '../../modules/department-master/index.js';
-import {ApproveApplyUnitSchema,ApplyUnitSchema} from '../../modules/governance-catalog/index.js';
+import {ApproveApplyUnitSchema,ApplyUnitSchema,PlanOwnerUnitSchema,ContractItemSchema} from '../../modules/governance-catalog/index.js';
 
 const closed={additionalProperties:false} as const,Text=Type.String(),Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'}),Nullable=Type.Union([Text,Type.Null()]);
 const Time=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'});
@@ -13,6 +13,9 @@ const Version=Type.Object({id:Id,mapping_id:Id,number:Text,predecessor:Type.Unio
 const History=Type.Object({id:Id,from_system_id:Id,entity_type:Text,source_code:Text,context:Text,campus:Type.Enum(['NORTH','SOUTH']),versions:Type.Array(Version)},closed);
 const Fact=Type.Object({owner:Type.Literal('department-master/organization-mapping'),id:Id,version:Text,source:Type.Object({dataset:Type.Literal('ORG22'),row:Type.Integer(),step:Type.Enum(['REGISTER','CORRECT','RETRACT'])},closed)},closed);
 const Outcome=Type.Object({status:Type.Enum(['COMMITTED','COMMIT_UNKNOWN']),candidateId:Id,requestId:Id,facts:Type.Optional(Type.Array(Fact)),recordedAt:Type.Optional(Time),responseStatus:Type.Optional(Type.Enum(['DELIVERED','POST_COMMIT_FAILED']))},closed);
+const Basis=Type.Object({inputDigest:Hex,contract:ContractItemSchema,verificationId:Type.Union([Id,Type.Null()]),verificationDigest:Type.Union([Hex,Type.Null()]),verification:Type.Union([OrganizationMappingVerifySchema,Type.Null()]),issues:Type.Array(Issue),heads:Type.Array(History),materials:Type.Array(Type.Object({id:Id,digest:Hex},closed))},closed);
+const Diff=Type.Object({row:Type.Integer(),action:OrganizationMappingEntrySchema.properties.action,mapping:OrganizationMappingEntrySchema.properties.mapping,targetType:Version.properties.target_type,targetId:Id,validFrom:Time,validTo:Type.Union([Time,Type.Null()])},closed);
+const Review=Type.Object({candidateId:Id,digest:Hex,approvedBy:Nullable,entries:Type.Array(OrganizationMappingEntrySchema),issues:Type.Array(Issue),input:PlanOwnerUnitSchema,atomicRule:Type.Literal('ORG22_WHOLE_REVISION_V1'),basis:Basis,diff:Type.Array(Diff),commandFacts:Type.Array(Type.Object({row:Type.Integer(),facts:Facts},closed))},closed);
 const ErrorSchema=Type.Object({code:Text,message:Text,field:Type.Optional(Text)},closed),errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,413:ErrorSchema,500:ErrorSchema,503:ErrorSchema};
 export interface OrganizationMappingHttpContext {owner:ReturnType<typeof openOrganizationMappings>;actor:(request:FastifyRequest)=>string}
 export function registerOrganizationMappingRoutes(app:FastifyInstance,context?:OrganizationMappingHttpContext){
@@ -25,7 +28,7 @@ export function registerOrganizationMappingRoutes(app:FastifyInstance,context?:O
  route('validate','validateOrganizationMappings',Input,Type.Object({inputId:Id,digest:Hex,validationRunId:Type.Union([Id,Type.Null()]),decision:Type.Enum(['PASS','FAIL','BLOCKED']),issues:Type.Array(Issue),commandCount:Type.Integer()},closed),(o,a,b)=>o.validate(a,b));
  route('verify','verifyOrganizationMappingEvidence',OrganizationMappingVerifySchema,Type.Object({verificationId:Id},closed),(o,a,b)=>o.verify(a,b));
  route('plan','planOrganizationMappings',Type.Object({inputId:Id,requestId:Id},closed),Planned,(o,a,b)=>o.plan(a,b));
- route('review','reviewOrganizationMappings',Candidate,Type.Object({candidateId:Id,digest:Hex,approvedBy:Nullable,entries:Type.Array(OrganizationMappingEntrySchema),issues:Type.Array(Issue)},closed),async(o,a,b)=>{const result=await o.readApplyCandidate(a,b);return {candidateId:result.candidateId,digest:result.digest,approvedBy:result.approvedBy,entries:result.unit.commands.map(command=>{const entry=JSON.parse(command.value['command']!);return {action:entry.action,mapping:entry.mapping,reason:entry.reason,evidenceId:entry.evidenceId,row:entry.row};}),issues:result.unit.basis['issues']};});
+ route('review','reviewOrganizationMappings',Candidate,Review,async(o,a,b)=>{const result=await o.readApplyCandidate(a,b);return {candidateId:result.candidateId,digest:result.digest,approvedBy:result.approvedBy,entries:result.unit.commands.map(command=>{const entry=JSON.parse(command.value['command']!);return {action:entry.action,mapping:entry.mapping,reason:entry.reason,evidenceId:entry.evidenceId,row:entry.row};}),issues:result.unit.basis['issues'],input:result.unit.input,atomicRule:result.unit.atomicRule,basis:result.unit.basis,diff:result.unit.diff,commandFacts:result.unit.commands.map(command=>({row:command.row,facts:JSON.parse(command.value['facts']!)}))};});
  route('approve','approveOrganizationMappings',ApproveApplyUnitSchema,Type.Object({candidateId:Id,approvedBy:Text},closed),(o,a,b)=>o.approveApplyUnit(a,b));
  route('apply','applyOrganizationMappings',ApplyUnitSchema,Outcome,(o,a,b)=>o.applyUnit(a,b));
  route('resume','resumeOrganizationMappings',ApplyUnitSchema,Type.Union([Outcome,Type.Null()]),(o,a,b)=>o.resumeOutcome(a,b));

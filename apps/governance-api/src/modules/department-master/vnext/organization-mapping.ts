@@ -78,7 +78,9 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
     const h=(await sql<{r:OrganizationMappingHistory|null}>`select department_master.mapping_find(${actor},${e.row.from_system_id}::uuid,${e.row.source_entity_type},${e.row.source_code},${e.row.source_context},${r.campus}) r`.execute(s)).rows[0]!.r;
     if(e.action==='REGISTER'&&h)issue(row,'org_map_id','MAPPING_ALREADY_REGISTERED','FAIL');
     if(e.mapping){
-     const actual=await snapshot(s,actor,e.mapping.id);heads.push(actual);prior=actual.versions.at(-1);
+     const actual=await snapshot(s,actor,e.mapping.id);prior=actual.versions.at(-1);
+     // Immutable older versions cannot change this approval; bind the head without growing the candidate with history.
+     heads.push({...actual,versions:prior?[prior]:[]});
      if(actual.id!==h?.id||actual.campus!==r.campus)issue(row,'mapping','MAPPING_IDENTITY_IMMUTABLE','FAIL');
      if(prior?.number!==e.mapping.expectedHead)issue(row,'mapping','STALE_VALIDATION');
      if(prior?.action==='RETRACT')issue(row,'mapping','MAPPING_RETRACTED','FAIL');
