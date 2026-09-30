@@ -47,13 +47,21 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
   const proof=(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select department_master.evidence(${actor},${id}::uuid,${e.row.source_system_id}::uuid,${c.definition.sourceVersionId}::uuid,${campus},${e.validFrom}::timestamp,${e.validTo}::timestamp) r`.execute(s)).rows[0]!.r;
   const bytes=authenticateRegistrationEvidence(proof,provider);try{return {id,digest:planBinding(provider,'ORG_MAPPING_EVIDENCE_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}
  };
- const referenceAccess=async(s:Scope,actor:string,e:ReturnType<typeof normalizeMappingEntry>,campus:string)=>{
-  for(const source of new Set([e.row.from_system_id,e.row.source_system_id]))await sql`select department_master.mapping_source(${actor},${source}::uuid,${e.validFrom}::timestamp,${e.validTo}::timestamp,false)`.execute(s);
-  if(['LEGAL','CAMPUS','ORG'].includes(e.row.target_type)){
-   await sql`select department_master.mapping_target_authorize(${actor},${e.row.target_type},${e.row.target_id}::uuid,${campus})`.execute(s);
-   await targets.authorize(s,actor,{type:e.row.target_type,id:e.row.target_id,validFrom:e.validFrom,validTo:e.validTo});
+ const currentReferenceAccess=async(s:Scope,actor:string,ref:{fromSystemId:string;sourceSystemId:string;targetType:string;targetId:string;validFrom:string;validTo:string|null},campus:string)=>{
+  for(const source of new Set([ref.fromSystemId,ref.sourceSystemId]))await sql`select department_master.mapping_source(${actor},${source}::uuid,${ref.validFrom}::timestamp,${ref.validTo}::timestamp,false)`.execute(s);
+  if(['LEGAL','CAMPUS','ORG'].includes(ref.targetType)){
+   await sql`select department_master.mapping_target_authorize(${actor},${ref.targetType},${ref.targetId}::uuid,${campus})`.execute(s);
+   await targets.authorize(s,actor,{type:ref.targetType,id:ref.targetId,validFrom:ref.validFrom,validTo:ref.validTo});
   }
  };
+ const referenceAccess=(s:Scope,actor:string,e:ReturnType<typeof normalizeMappingEntry>,campus:string)=>currentReferenceAccess(s,actor,{fromSystemId:e.row.from_system_id,sourceSystemId:e.row.source_system_id,targetType:e.row.target_type,targetId:e.row.target_id,validFrom:e.validFrom,validTo:e.validTo},campus);
+ const inputReferenceAccess=async(s:Scope,actor:string,entry:OrganizationMappingStoredStageInput['entries'][number],campus:string)=>{
+  // An input may be staged for validation even when its dates are malformed. Current reference authorization does not re-qualify business coverage.
+  let validFrom='2000-01-01T00:00:00',validTo:string|null=null;
+  try{const normalized=normalizeMappingEntry(entry);validFrom=normalized.validFrom;validTo=normalized.validTo;}catch{}
+  await currentReferenceAccess(s,actor,{fromSystemId:entry.row.from_system_id,sourceSystemId:entry.row.source_system_id,targetType:entry.row.target_type,targetId:entry.row.target_id,validFrom,validTo},campus);
+ };
+ const historyReferenceAccess=(s:Scope,actor:string,h:OrganizationMappingHistory,v:OrganizationMappingVersion)=>currentReferenceAccess(s,actor,{fromSystemId:h.from_system_id,sourceSystemId:v.facts.sourceSystemId,targetType:v.target_type,targetId:v.target_id,validFrom:stamp(v.valid_from),validTo:v.valid_to===null?null:stamp(v.valid_to)},h.campus);
  const inspectInput=async(s:Scope,actor:string,id:string)=>{
   const r=await record(s,actor,id),input=unseal<OrganizationMappingStoredStageInput>('ORG_MAPPING_INPUT_V1',r,OrganizationMappingStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract;
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');
@@ -139,7 +147,8 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
   return recordOwnerFileValidation(s,provider,actor,{jobId:j.id,revisionId:j.currentRevisionId,sourceArtifactId,campus,requestId:randomUUID(),parseRequestId:randomUUID(),outputRequestId:randomUUID(),contractVersionId:j.contract.versionId,ruleVersion:j.contract.definition.ruleVersion,parserPolicy:'STRICT_ORGANIZATION_MAPPING_V1',structuralStatus:parsed.structuralStatus,parsed:{sourceArtifactId,result:parsed},evaluation});
  };
  const stageIn=async(s:Scope,actor:string,input:OrganizationMappingStoredStageInput)=>{const namespaces=input.entries.map(e=>({source:e.row.from_system_id,entity:e.row.source_entity_type,context:e.row.source_context}));return mutate<Staged>(s,actor,{operation:'STAGE',...input,namespaces,...seal('ORG_MAPPING_INPUT_V1',input)});};
- const history=async(actor:string,id:string,recordAsOf?:string)=>{mappingCheck(Id,id);const at=recordAsOf?localTime(recordAsOf):null;return root(async s=>{const h=await snapshot(s,actor,id),versions=h.versions.filter(v=>at===null||stamp(v.recorded_at)<=at);if(!versions.length)throw new Error('NOT_FOUND');return {...h,versions};});};
+ const historyInTransaction=async(s:Scope,actor:string,id:string,at:string|null)=>{const h=await snapshot(s,actor,id),versions=h.versions.filter(v=>at===null||stamp(v.recorded_at)<=at);if(!versions.length)throw new Error('NOT_FOUND');return {...h,versions};};
+ const history=async(actor:string,id:string,recordAsOf?:string)=>{mappingCheck(Id,id);const at=recordAsOf?localTime(recordAsOf):null;return root(async s=>{const h=await historyInTransaction(s,actor,id,at);for(const v of h.versions)await historyReferenceAccess(s,actor,h,v);return h;});};
  return {
   async stage(actor:string,raw:OrganizationMappingStageInput){mappingCheck(OrganizationMappingStageSchema,raw);const input:OrganizationMappingStoredStageInput={...structuredClone(raw),entries:raw.entries.map((e,i)=>({...e,sourceRow:i+1}))};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);});},
   async receiveFile(actor:string,raw:OrganizationMappingReceiveInput,bytes:Uint8Array){
@@ -167,14 +176,14 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
     }finally{content.fill(0);}
    });
   },
-  async readInput(actor:string,input:{inputId:string}){mappingCheck(oneInput,input);return root(async s=>unseal<OrganizationMappingStoredStageInput>('ORG_MAPPING_INPUT_V1',await record(s,actor,input.inputId),OrganizationMappingStoredStageSchema));},
+  async readInput(actor:string,input:{inputId:string}){mappingCheck(oneInput,input);return root(async s=>{const r=await record(s,actor,input.inputId),raw=unseal<OrganizationMappingStoredStageInput>('ORG_MAPPING_INPUT_V1',r,OrganizationMappingStoredStageSchema);for(const entry of raw.entries)await inputReferenceAccess(s,actor,entry,r.campus);return raw;});},
   async preview(actor:string,input:{inputId:string}){mappingCheck(oneInput,input);return root(async s=>{const v=await inspectInput(s,actor,input.inputId);return {entries:v.input.entries,verification:v.verification,heads:v.heads,issues:v.issues};});},
   async validate(actor:string,input:{inputId:string}){mappingCheck(oneInput,input);return root(async s=>{const v=await inspectInput(s,actor,input.inputId);let validationRunId:string|null=null;if(v.input.sourceArtifactId){const j=await inputJob(s,actor,input.inputId),content=await protectedArtifacts(s,provider).authorizeSensitiveRead(actor,{scope:'SYNTHETIC',campus:v.r.campus,purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:v.input.sourceArtifactId},{jobId:j.id,revisionId:j.currentRevisionId,kind:'RAW_FILE'});try{const parsed=await boundedParse(content,'XLSX',j.contract.definition.fields,'STRICT_ORGANIZATION_MAPPING_V1');validationRunId=(await saveValidation(s,actor,j,v.r.campus,v.input.sourceArtifactId,parsed,v.issues)).run.runId;}finally{content.fill(0);}}return {inputId:v.r.id,digest:v.r.digest,validationRunId,decision:v.issues.some(i=>i.status==='FAIL')?'FAIL' as const:v.issues.length?'BLOCKED' as const:'PASS' as const,issues:v.issues,commandCount:v.commands.length};});},
   async verify(actor:string,input:OrganizationMappingVerifyInput){mappingCheck(OrganizationMappingVerifySchema,input);return root(async s=>{const r=await record(s,actor,input.inputId,'VERIFY'),raw=unseal<OrganizationMappingStoredStageInput>('ORG_MAPPING_INPUT_V1',r,OrganizationMappingStoredStageSchema);if(input.rows.length!==raw.entries.length||new Set(input.rows.map(x=>x.row)).size!==raw.entries.length||input.rows.some(x=>x.row>raw.entries.length))throw new Error('CLOSED_INPUT_REQUIRED');return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...seal('ORG_MAPPING_VERIFICATION_V1',input)});});},
   async plan(actor:string,input:{inputId:string;requestId:string}){mappingCheck(Type.Object({inputId:Id,requestId:Id},{additionalProperties:false}),input);const r=await root(s=>record(s,actor,input.inputId,'WRITE'));return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
   history,
-  async read(actor:string,input:{id:string;businessAt:string;recordAsOf?:string}){mappingCheck(query,input);const at=localTime(input.businessAt),h=await history(actor,input.id,input.recordAsOf),v=h.versions.at(-1)!;return {id:h.id,version:v.action!=='RETRACT'&&stamp(v.valid_from)<=at&&(v.valid_to===null||at<stamp(v.valid_to))?v:null};},
+  async read(actor:string,input:{id:string;businessAt:string;recordAsOf?:string}){mappingCheck(query,input);const at=localTime(input.businessAt),r=input.recordAsOf?localTime(input.recordAsOf):null;return root(async s=>{const h=await historyInTransaction(s,actor,input.id,r),v=h.versions.at(-1)!,visible=v.action!=='RETRACT'&&stamp(v.valid_from)<=at&&(v.valid_to===null||at<stamp(v.valid_to));if(visible)await historyReferenceAccess(s,actor,h,v);return {id:h.id,version:visible?v:null};});},
   async resolve(actor:string,input:OrganizationMappingResolveInput){
    mappingCheck(OrganizationMappingResolveSchema,input);if([input.sourceEntityType,input.sourceCode,input.sourceContext].some(v=>v!==v.trim()))throw new Error('CLOSED_INPUT_REQUIRED');
    const at=localTime(input.businessAt),r=input.recordAsOf?localTime(input.recordAsOf):null;
@@ -188,7 +197,7 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
     return {status:'RESOLVED' as const,mappingId:h.id,version:v.number,versionId:v.id,target:v.facts.target,assertion:'HISTORICAL_ASSERTION' as const,currentReview:'NOT_EVALUATED' as const};
    });
   },
-  async diff(actor:string,input:{id:string;fromVersion:string;toVersion:string}){mappingCheck(Type.Object({id:Id,fromVersion:Type.String({pattern:'^[1-9][0-9]*$'}),toVersion:Type.String({pattern:'^[1-9][0-9]*$'})},{additionalProperties:false}),input);const h=await history(actor,input.id),a=h.versions.find(v=>v.number===input.fromVersion),b=h.versions.find(v=>v.number===input.toVersion);if(!a||!b)throw new Error('NOT_FOUND');return {before:a,after:b};},
+  async diff(actor:string,input:{id:string;fromVersion:string;toVersion:string}){mappingCheck(Type.Object({id:Id,fromVersion:Type.String({pattern:'^[1-9][0-9]*$'}),toVersion:Type.String({pattern:'^[1-9][0-9]*$'})},{additionalProperties:false}),input);return root(async s=>{const h=await historyInTransaction(s,actor,input.id,null),a=h.versions.find(v=>v.number===input.fromVersion),b=h.versions.find(v=>v.number===input.toVersion);if(!a||!b)throw new Error('NOT_FOUND');await historyReferenceAccess(s,actor,h,a);if(a!==b)await historyReferenceAccess(s,actor,h,b);return {before:a,after:b};});},
   async list(actor:string,input:{campus:'NORTH'|'SOUTH';after?:string;limit?:number;recordAsOf?:string}){mappingCheck(Type.Object({campus:Type.Enum(['NORTH','SOUTH']),after:Type.Optional(Id),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(Type.String())},{additionalProperties:false}),input);return root(async scope=>(await sql<{r:string[]}>`select department_master.mapping_list(${actor},${input.campus},${input.after??null}::uuid,${input.limit??50},${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp) r`.execute(scope)).rows[0]!.r);},
   async close(){await db.destroy();if(!targetPort)await targets.close();},
  };

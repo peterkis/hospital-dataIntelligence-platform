@@ -42,6 +42,58 @@ test('independent approval registers one immutable mapping and resolves its exac
   expect(await owner.resolve('maker',{fromSystemId:entry.row.from_system_id,sourceEntityType:entry.row.source_entity_type,sourceCode:entry.row.source_code,sourceContext:'DEFAULT',campus:'NORTH',businessAt:'2026-03-01T00:00:00'})).toMatchObject({status:'RESOLVED',mappingId:result.facts[0]!.id,target:{owner:'department-master',id:f.targetId}});
 });
 
+test('protected mapping input read requires current target reference permission',async()=>{
+ const entry=f.entry(),staged=await owner.stage('maker',await f.input([entry]));
+ peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{await expect(owner.readInput('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');}
+ finally{f.grantTarget();}
+});
+
+test('authorized users can read staged rows with invalid business dates for correction',async()=>{
+ const entry=f.entry();entry.row.valid_from='INVALID_DATE';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ expect((await owner.readInput('maker',{inputId:staged.inputId})).entries[0]!.row.valid_from).toBe('INVALID_DATE');
+});
+
+test('mapping history and derived reads require current target reference permission',async()=>{
+ const entry=f.entry(),created=await apply([entry]),id=created.result.facts[0]!.id;
+ peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{
+  await expect(owner.history('maker',id)).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.read('maker',{id,businessAt:'2026-03-01T00:00:00'})).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.diff('maker',{id,fromVersion:'1',toVersion:'1'})).rejects.toThrow('ACCESS_DENIED');
+ }finally{f.grantTarget();}
+});
+
+test('mapping input and history reads require current source and target Owner permissions',async()=>{
+ const entry=f.entry(),staged=await owner.stage('maker',await f.input([entry])),created=await apply([entry]),id=created.result.facts[0]!.id;
+ const predicate=`actor_code='maker' AND object_id=${quote(f.source.id)}::uuid AND permission='READ' AND purpose='SYNTHETIC_REFERENCE'`,grants=peer(receipt.name,`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM vnext_control.object_grant g WHERE ${predicate};`);
+ expect(JSON.parse(grants).length).toBeGreaterThan(0);
+ peer(receipt.name,`DELETE FROM vnext_control.object_grant WHERE ${predicate};`);
+ try{
+  await expect(owner.readInput('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.history('maker',id)).rejects.toThrow('ACCESS_DENIED');
+ }finally{peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb) ON CONFLICT DO NOTHING;`);}
+ peer(receipt.name,"DELETE FROM department_master.access WHERE actor='maker' AND scope='HOSPITAL' AND permission='READ';");
+ try{
+  await expect(owner.readInput('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.history('maker',id)).rejects.toThrow('ACCESS_DENIED');
+ }finally{peer(receipt.name,"INSERT INTO department_master.access VALUES('maker','HOSPITAL','READ') ON CONFLICT DO NOTHING;");}
+});
+
+test('current query checks only the selected mapping version',async()=>{
+ const entry=f.entry(),created=await apply([entry]),id=created.result.facts[0]!.id,oldR=(await owner.history('maker',id)).versions[0]!.recorded_at.replace(' ','T');
+ const other=await f.newDepartment();f.grantTarget(other);
+ await apply([{...entry,action:'CORRECT',mapping:{owner:'department-master/organization-mapping',id,expectedHead:'1'},reason:'DEMO corrected target',row:{...entry.row,target_id:other}}]);
+ peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{
+  expect(await owner.read('maker',{id,businessAt:'2026-03-01T00:00:00'})).toMatchObject({version:{number:'2',target_id:other}});
+  await expect(owner.read('maker',{id,businessAt:'2026-03-01T00:00:00',recordAsOf:oldR})).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.history('maker',id)).rejects.toThrow('ACCESS_DENIED');
+  await expect(owner.diff('maker',{id,fromVersion:'1',toVersion:'2'})).rejects.toThrow('ACCESS_DENIED');
+ }finally{f.grantTarget();}
+});
+
 test('staged request replay preserves the original input and rejects changed content',async()=>{
  const input=await f.input(),staged=await owner.stage('maker',input);
  expect(await owner.stage('maker',input)).toEqual(staged);
@@ -118,6 +170,11 @@ test('real HTTP exposes mapping history and rejects outsiders and open command s
   const history=await post('history',{id});expect(history.status).toBe(200);expect(await history.json()).toMatchObject({id,versions:[{number:'1',target_id:f.targetId}]});
   expect((await post('list',{campus:'NORTH'},'outsider')).status).toBe(403);
   expect((await post('resolve',{...key(entry),extra:'IGNORED'})).status).toBe(400);
+  const staged=await owner.stage('maker',await f.input([entry]));
+  peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+  try{
+   for(const [path,body] of [['inputs/read',{inputId:staged.inputId}],['history',{id}],['query',{id,businessAt:'2026-03-01T00:00:00'}],['diff',{id,fromVersion:'1',toVersion:'1'}]] as const)expect((await post(path,body)).status).toBe(403);
+  }finally{f.grantTarget();}
  }finally{await app.close();}
 });
 
