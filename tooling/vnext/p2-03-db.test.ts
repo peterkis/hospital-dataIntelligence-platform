@@ -126,11 +126,14 @@ test('corrected complete periods preserve old R and do not fall back to an old o
  expect((await owner.history('maker',id)).versions.map(v=>({version:v.number,end:v.valid_to}))).toEqual([{version:'1',end:null},{version:'2',end:'2026-02-01T00:00:00'}]);
 });
 
-test('whole revision rejects a blocked sibling without applying the valid row',async()=>{
+test('whole revision freezes a blocked sibling but cannot approve or apply the valid row',async()=>{
  const good=f.entry(),bad=f.entry();bad.row.mapping_relation='RELATED';
  const staged=await owner.stage('maker',await f.input([good,bad]));
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[1,2].map(row=>({row,reason:'DEMO evidence',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}))});
- await expect(owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow('BLOCKED_DEPENDENCY');
+ const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(review.unit.basis['issues']).toEqual(expect.arrayContaining([{row:2,field:'mapping_relation',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}]));
+ await expect(owner.approveApplyUnit('reviewer',candidate)).rejects.toThrow('BLOCKED_DEPENDENCY');
+ await expect(owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).rejects.toThrow('APPROVAL_REQUIRED');
  expect(await owner.resolve('maker',key(good))).toEqual({status:'NOT_FOUND'});
  expect((await owner.readInput('maker',{inputId:staged.inputId})).entries[1]!.row.mapping_relation).toBe('RELATED');
 });
@@ -234,6 +237,26 @@ test('AC02/03: same context cannot have two targets; an explicit correction pres
  expect(await owner.resolve('maker',key(entry,oldR))).toMatchObject({status:'RESOLVED',version:'1',target:{id:f.targetId}});
 });
 
+test('mapping preview does not reveal an unauthorized previous target',async()=>{
+ const entry=f.entry(),created=await apply([entry]),id=created.result.facts[0]!.id,other=await f.newDepartment();f.grantTarget(other);
+ const correction={...entry,action:'CORRECT' as const,mapping:{owner:'department-master/organization-mapping' as const,id,expectedHead:'1'},reason:'DEMO target correction',row:{...entry.row,target_id:other}};
+ const staged=await owner.stage('maker',await f.input([correction]));
+ peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{await expect(owner.preview('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');}
+ finally{f.grantTarget();}
+});
+
+test('frozen correction review does not reveal an unauthorized previous target',async()=>{
+ const entry=f.entry(),created=await apply([entry]),id=created.result.facts[0]!.id,other=await f.newDepartment();f.grantTarget(other);
+ const correction={...entry,action:'CORRECT' as const,mapping:{owner:'department-master/organization-mapping' as const,id,expectedHead:'1'},reason:'DEMO target correction',row:{...entry.row,target_id:other}};
+ const staged=await owner.stage('maker',await f.input([correction]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO verified target correction',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()});
+ peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='reviewer' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{await expect(owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId})).rejects.toThrow('ACCESS_DENIED');}
+ finally{f.grantTarget();}
+});
+
 test('AC04: explicit namespace scope and target tuple grants cannot be enlarged by client context',async()=>{
  const entry=f.entry(),ungranted=await f.newDepartment(),bad={...entry,row:{...entry.row,target_id:ungranted}};
  const staged=await owner.stage('maker',await f.input([bad]));await expect(owner.validate('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');
@@ -263,6 +286,24 @@ test('unimplemented target Owners retain staging and report BLOCKED_DEPENDENCY',
  const entry=f.entry();entry.row.target_type='UNIT';const staged=await owner.stage('maker',await f.input([entry]));
  expect((await owner.readInput('maker',{inputId:staged.inputId})).entries[0]!.row.target_id).toBe(f.targetId);
  expect((await owner.validate('maker',{inputId:staged.inputId})).issues).toContainEqual({row:1,field:'target_type',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'});
+});
+
+test('an unimplemented target freezes a reviewable but unapprovable candidate',async()=>{
+ const entry=f.entry();entry.row.target_type='UNIT';
+ const staged=await owner.stage('maker',await f.input([entry]));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO recorded unsupported target',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(review.unit.basis['issues']).toEqual(expect.arrayContaining([{row:1,field:'target_type',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}]));
+ await expect(owner.approveApplyUnit('reviewer',candidate)).rejects.toThrow('BLOCKED_DEPENDENCY');
+ await expect(owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).rejects.toThrow('APPROVAL_REQUIRED');
+});
+
+test('a FULL input freezes its blocked basis without becoming approvable',async()=>{
+ const entry=f.entry(),input=await f.input([entry]),staged=await owner.stage('maker',{...input,profile:'FULL'});
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO retained FULL input',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect(review.unit.basis['issues']).toEqual(expect.arrayContaining([{row:0,field:'profile',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'}]));
+ await expect(owner.approveApplyUnit('reviewer',candidate)).rejects.toThrow('BLOCKED_DEPENDENCY');
 });
 
 test('unknown target codes fail the adopted field contract while preserving the candidate',async()=>{

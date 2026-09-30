@@ -27,6 +27,7 @@ export interface ObservedOwnerUnit {
 export interface ApplyOwnerPort {
  observe(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<ObservedOwnerUnit>;
  authorize(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,action:'READ'|'WRITE'|'REVIEW'):Promise<void>;
+ authorizeFrozen?(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit):Promise<void>;
  // FREEZE may retain an Owner-declared blocked observation for review. Omitted
  // means full admission; approval and apply never accept a freeze-only decision.
  validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,stage?:'FREEZE'):Promise<void>;
@@ -48,7 +49,8 @@ function failure(error:unknown):Error {
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 function bound(unit:ObservedOwnerUnit):void {
- if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1')||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
+ const blockedOrg22=unit.atomicRule==='ORG22_WHOLE_REVISION_V1'&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
+ if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1'&&!blockedOrg22)||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
  const seen=new Set<number>();
  for(const c of unit.commands){
   // Owner declares the whole unit and an execution order; the Coordinator never splits or infers bundles.
@@ -94,6 +96,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
   const c=await record<Candidate>(scope,actor,'READ_CANDIDATE',{candidateId:id});
   await port().authorize(scope,actor,c.input,'READ');
   if(permission!=='READ')await port().authorize(scope,actor,c.input,permission);
+  if(port().authorizeFrozen)await port().authorizeFrozen!(scope,actor,unseal(c));
   return c;
  };
  const recheck=async(scope:CatalogTransactionScope,actor:string,c:Candidate)=>{
