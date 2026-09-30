@@ -1,4 +1,4 @@
-import {openDepartment} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {openDepartment,openHierarchy} from '../../apps/governance-api/src/modules/department-master/index.ts';
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -33,6 +33,7 @@ import { fixture } from "./protected-fixture.ts";
 import { fileOwner } from "./workbench-owner.ts";
 import {organizationKeys} from './organization-keys.mjs';
 import {assertDepartmentProvisioned} from './department-provisioning.mjs';
+import {grantHierarchyFunctions,assertHierarchyProvisioned} from './hierarchy-provisioning.mjs';
 import {openOrganization,openCampus,openOperatingRelations,openOrganizationImport,openOrganizationWorkspace} from '../../apps/governance-api/src/modules/organization-master/index.ts';
 import {actor as syntheticActor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
 
@@ -45,7 +46,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -54,6 +55,7 @@ export async function startWorkbench({
     await organizationImport?.close();
     await organizationWorkspace?.close();
     await department?.close();
+    await hierarchy?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -85,6 +87,7 @@ export async function startWorkbench({
           before.ledger,
         );
       session = await createValidationOwnerSession(receipt);
+      grantHierarchyFunctions(receipt,session.receipt);
       const types = spawnSync(
         process.execPath,
         ["tooling/vnext/managed.mjs", "types-verify", owned.receiptPath],
@@ -102,6 +105,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     if(persistent&&persistentPrefix>=87){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
+    if(owned||persistentPrefix>=109){await assertHierarchyProvisioned(connection);hierarchy=openHierarchy(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -158,6 +162,7 @@ export async function startWorkbench({
       organizationImport?{owner:organizationImport,actor:r=>syntheticActor(r.headers)}:undefined,
       organizationWorkspace?{owner:organizationWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
       department?{owner:department,actor:r=>syntheticActor(r.headers)}:undefined,
+      hierarchy?{owner:hierarchy,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

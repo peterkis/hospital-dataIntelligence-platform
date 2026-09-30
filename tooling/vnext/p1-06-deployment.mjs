@@ -7,6 +7,7 @@ import {workspaceDeploymentPrefix} from './workspace-migrations.mjs';
 import {predecessorTables,predecessorDigest} from './p1-02-preservation.mjs';
 import {ownerServiceConnection} from './owner-service.mjs';
 import {organizationKeys} from './organization-keys.mjs';
+import {assertHierarchyProvisioned,grantHierarchyFunctions} from './hierarchy-provisioning.mjs';
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
@@ -37,6 +38,8 @@ export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTa
  const functions=['workspace_save(text,jsonb,text,jsonb)','workspace_read(text,uuid)','workspace_list(text)','workspace_capabilities(text,jsonb)','workspace_application_access(text,uuid)','workspace_applications(text,uuid)','workspace_object_context(text,text,uuid)','workspace_version_source(text,text,uuid,text)','workspace_bundles(text,uuid,uuid)','workspace_preview_access(text,jsonb,text)'];
  if(after.ledger.length>=79)functions.push('campus_impact(text,uuid,timestamp,timestamp,timestamp)','campus_admission(text,uuid,timestamp,timestamp)');
  if(!reuseExisting)peer(receipt.name,identitySQL(receipt)+` BEGIN; DO $$ BEGIN IF (SELECT oid::text FROM pg_roles WHERE rolname='${ownership.role}') IS DISTINCT FROM '${ownership.roleOid}' THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH';END IF;END $$; GRANT EXECUTE ON FUNCTION ${functions.map(name=>'organization_master.'+name).join(',')} TO ${ownership.role}; COMMIT;`);
+ if(!reuseExisting&&after.ledger.length>=109)grantHierarchyFunctions(receipt,ownership);
+ if(after.ledger.length>=109)await assertHierarchyProvisioned(connection);
  const types=spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-verify','.runtime/vnext/creation.json'],{cwd:root,env:process.env,stdio:'inherit',windowsHide:true});assert.equal(types.status,0);
  writeFileSync(evidence+'.migration.json',JSON.stringify({status:'PASS',mode:reuseExisting?'VERIFY_EXISTING':'FORWARD_UPGRADE',oid:after.identity.oid,previousPrefix:prefix,currentPrefix:after.ledger.length,priorRowsAndKeysPreserved:true},null,2),{flag:'wx'});
  return {receipt,connection,provider:organizationKeys(receipt),evidence,async complete(){
