@@ -2,7 +2,7 @@
 export interface AdapterRequest {dataset:string;profile:'CORE'|'FULL';contractVersion:number;templateVersion?:string;parserPolicy?:string}
 export interface AdapterDescriptor {
  readonly dataset:string;readonly profile:'CORE'|'FULL';readonly owner:null|'organization-master'|'department-master';
- readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1'|'ORG22_CORE_V1'|'ORG23_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE'|'REGISTER'|'CORRECT'|'RETRACT'|'END'|'CHANGE')[];
+ readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1'|'ORG22_CORE_V1'|'ORG23_CORE_V1'|'ORG_EVOLUTION_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE'|'REGISTER'|'CORRECT'|'RETRACT'|'END'|'CHANGE'|'RENAME'|'SPLIT'|'MERGE')[];
  readonly capability:'NOT_READY'|'READY';
 }
 const datasets:ReadonlySet<string>=new Set([
@@ -14,6 +14,7 @@ const datasets:ReadonlySet<string>=new Set([
 export function selectImportAdapter(request:AdapterRequest):AdapterDescriptor {
  if(!datasets.has(request.dataset))throw new Error('UNKNOWN_ADAPTER');
  if(!['CORE','FULL'].includes(request.profile)||!Number.isSafeInteger(request.contractVersion)||request.contractVersion<1)throw new Error('INVALID_ADAPTER_REQUEST');
+ if(request.profile==='CORE'&&request.parserPolicy==='STRICT_ORGANIZATION_EVOLUTION_V1'&&((request.dataset==='ORG26'&&request.templateVersion==='ORG_EVOLUTION_CORE_V1')||(request.dataset==='ORG27'&&request.templateVersion==='ORG_SUCCESSION_CORE_V1')))return Object.freeze({dataset:request.dataset,profile:request.profile,owner:'department-master',supportedContractRange:'ORG_EVOLUTION_CORE_V1',allowedIntents:['RENAME','SPLIT','MERGE'] as const,capability:'READY'});
  if(request.dataset==='ORG22'&&request.profile==='CORE'&&request.templateVersion==='ORG22_CORE_V1'&&request.parserPolicy==='STRICT_ORGANIZATION_MAPPING_V1')return Object.freeze({dataset:request.dataset,profile:request.profile,owner:'department-master',supportedContractRange:'ORG22_CORE_V1',allowedIntents:['REGISTER','CORRECT','RETRACT'] as const,capability:'READY'});
  if(request.dataset==='ORG23'&&request.profile==='CORE'&&request.templateVersion==='ORG23_CORE_V1'&&request.parserPolicy==='STRICT_ORGANIZATION_IDENTIFIER_V1')return Object.freeze({dataset:request.dataset,profile:request.profile,owner:'department-master',supportedContractRange:'ORG23_CORE_V1',allowedIntents:['REGISTER','CORRECT','RETRACT','END','CHANGE'] as const,capability:'READY'});
  if(request.dataset==='ORG04'&&request.profile==='CORE'&&request.templateVersion==='ORG04_CORE_V1'&&request.parserPolicy==='STRICT_DEPARTMENT_V1')return Object.freeze({dataset:request.dataset,profile:request.profile,owner:'department-master',supportedContractRange:'ORG04_CORE_V1',allowedIntents:['CREATE','REVISE'] as const,capability:'READY'});

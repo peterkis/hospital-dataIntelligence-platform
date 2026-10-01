@@ -207,3 +207,25 @@ export function createOrganizationIdentifierClient(baseUrl:string,actor:string){
   receiveFile:(body:operations['receiveOrganizationIdentifierFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/files',{body}),
  };
 }
+ export type OrganizationEvolutionInput=operations['stageOrganizationEvolution']['requestBody']['content']['application/json'];
+export function createOrganizationEvolutionClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  template:(body:operations['getOrganizationEvolutionTemplate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/template',{body}),
+  receiveFile:(body:operations['receiveOrganizationEvolutionFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/files',{body}),
+  stage:(body:operations['stageOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/inputs',{body}),
+  readInput:(body:operations['readOrganizationEvolutionInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/inputs/read',{body}),
+  preview:(body:operations['previewOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/preview',{body}),
+  validate:(body:operations['validateOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/validate',{body}),
+  verify:(body:operations['verifyOrganizationEvolutionEvidence']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/verify',{body}),
+  plan:(body:operations['planOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/plan',{body}),
+  review:(body:operations['reviewOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/review',{body}),
+  approve:(body:operations['approveOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/approve',{body}),
+  apply:(body:operations['applyOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/apply',{body}),
+  resume:(body:operations['resumeOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/resume',{body}),
+  query:(body:operations['getOrganizationEvolutionAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/query',{body}),
+  graph:(body:operations['getOrganizationEvolutionGraph']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/graph',{body}),
+  history:(body:operations['getDepartmentEvolutionHistory']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/history',{body}),
+  list:(body:operations['listOrganizationEvolutions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/list',{body}),
+ };
+}

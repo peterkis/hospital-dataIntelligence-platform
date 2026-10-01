@@ -16,6 +16,7 @@ export const DEPARTMENT_FUNCTIONS=Object.freeze([
  'evidence(text,uuid,uuid,uuid,text,timestamp,timestamp)',
  'mutate(text,text)',
  'committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb)',
+ 'replacement_read(text,uuid,timestamp)',
 ]);
 export const DEPARTMENT_ACCESS=Object.freeze([
  ['maker','NORTH','READ'],['maker','NORTH','WRITE'],['maker','NORTH','READ_RESTRICTED'],

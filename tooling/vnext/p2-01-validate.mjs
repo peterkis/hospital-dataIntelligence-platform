@@ -9,6 +9,7 @@ import {grantOrganization} from './p1-02-validate.mjs';
 export function grantDepartment(receipt,role){
  if(!/^hdi_(validation|owner)_[a-f0-9]{16}$/.test(role))throw new Error('ROLE_INVALID');
  peer(receipt.name,`GRANT USAGE ON SCHEMA department_master TO ${role}; GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA department_master TO ${role}; GRANT EXECUTE ON FUNCTION governance_catalog.apply_record(text,text,jsonb),governance_catalog.registration_evidence(text,uuid,uuid,text) TO ${role};
+ DO $$ BEGIN IF to_regprocedure('governance_catalog.registration_evidence_access(text,uuid,uuid,text)') IS NOT NULL THEN EXECUTE 'GRANT EXECUTE ON FUNCTION governance_catalog.registration_evidence_access(text,uuid,uuid,text) TO ${role}';END IF;END $$;
  INSERT INTO department_master.access SELECT a,'NORTH',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p ON CONFLICT DO NOTHING;
  INSERT INTO department_master.access SELECT a,'HOSPITAL','READ' FROM unnest(ARRAY['maker','maker-alias','reviewer']) a ON CONFLICT DO NOTHING;
  INSERT INTO department_master.access SELECT 'reviewer','HOSPITAL',p FROM unnest(ARRAY['REVIEW','VERIFY']) p ON CONFLICT DO NOTHING;`);

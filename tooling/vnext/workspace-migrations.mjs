@@ -34,6 +34,8 @@ const postWorkspaceMigrations = [
  '0115_organization_identifiers',
  '0116_org23_contract_and_department_code',
  '0117_organization_identifier_read_authority',
+ '0118_department_evolution',
+ '0119_evolution_reference_admission_repair',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

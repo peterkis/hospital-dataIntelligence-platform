@@ -1,5 +1,5 @@
 import { crc32 } from 'node:zlib';
-import type { ParserResult } from './file-parser.js';
+import {unzip,type ParserResult} from './file-parser.js';
 
 /** ZIP32 stored members: no formulas, macros, URLs or executable workbook parts. */
 export function zipText(files:Record<string,string>):Buffer {
@@ -29,4 +29,23 @@ export function textWorkbook(rows:string[][]):Buffer {
 export function issueWorkbook(result:ParserResult):Buffer {
   if(!['STRICT_V1','STRICT_V2'].includes(result.policy)||!Array.isArray(result.issues)||!Array.isArray(result.cells)||result.issues.length>1000||result.cells.length>100000)throw new Error('PARSER_RESULT_REQUIRED');
   return textWorkbook([['issue','row','column','originalValue'],...result.issues.map(issue=>[issue.code,String(issue.row),String(issue.column),result.cells.find(c=>c.sourceRow===issue.row&&c.column===issue.column)?.value??''])]);
+}
+
+/** Text-only, bounded workbook builder used by the finite multi-sheet Owners. */
+export function textSheetsWorkbook(tables:Record<string,string[][]>):Buffer{
+ const entries=Object.entries(tables);
+ if(!entries.length||entries.length>3||entries.some(([name,rows])=>!/^ORG[0-9]{2}$/.test(name)||!rows.length||rows.length>1001))throw new Error('SHEET_CONTRACT');
+ const files=Object.fromEntries(unzip(textWorkbook([['']])));delete files['xl/worksheets/sheet1.xml'];
+ let sheets='',relationships='',types='';
+ for(const [index,[name,rows]] of entries.entries()){
+  const part=`worksheets/sheet${index+1}.xml`;
+  files['xl/'+part]=Object.fromEntries(unzip(textWorkbook(rows)))['xl/worksheets/sheet1.xml']!;
+  sheets+=`<sheet name="${name}" sheetId="${index+1}" r:id="part${index}"/>`;
+  relationships+=`<Relationship Id="part${index}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="${part}"/>`;
+  types+=`<Override PartName="/xl/${part}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`;
+ }
+ files['xl/workbook.xml']=files['xl/workbook.xml']!.replace(/<sheets>.*<\/sheets>/,`<sheets>${sheets}</sheets>`);
+ files['xl/_rels/workbook.xml.rels']=`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships}</Relationships>`;
+ files['[Content_Types].xml']=files['[Content_Types].xml']!.replace(/<Override PartName="\/xl\/worksheets\/sheet1.xml"[^>]*\/>/,types);
+ return zipText(files);
 }

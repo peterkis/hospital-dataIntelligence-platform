@@ -16,6 +16,7 @@ import {registerOrganizationRoutes,type OrganizationHttpContext} from '../platfo
 import {registerHierarchyRoutes,type HierarchyHttpContext} from '../platform/fastify/vnext-hierarchy-routes.js';
 import {registerOrganizationMappingRoutes,type OrganizationMappingHttpContext} from '../platform/fastify/vnext-organization-mapping-routes.js';
 import {registerOrganizationIdentifierRoutes,type OrganizationIdentifierHttpContext} from '../platform/fastify/vnext-organization-identifier-routes.js';
+import {registerOrganizationEvolutionRoutes,type OrganizationEvolutionHttpContext} from '../platform/fastify/vnext-organization-evolution-routes.js';
 
 // Closing with unread upload bytes can reset the socket before the client receives 413.
 // Discard a bounded remainder without buffering; hostile/unfinished uploads still close.
@@ -46,7 +47,7 @@ async function discardRejectedUpload(request:IncomingMessage):Promise<void> {
   });
 }
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext,identifiers?:OrganizationIdentifierHttpContext) {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext,identifiers?:OrganizationIdentifierHttpContext,evolution?:OrganizationEvolutionHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
   app.addHook('onRequest',async(request,reply)=>{if(request.url.startsWith('/api/vnext/'))reply.header('Cache-Control','no-store');if(request.method==='GET')started.set(request,performance.now());});
@@ -91,5 +92,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerHierarchyRoutes(app,hierarchy);
   registerOrganizationMappingRoutes(app,mapping);
   registerOrganizationIdentifierRoutes(app,identifiers);
+  registerOrganizationEvolutionRoutes(app,evolution);
   return app;
 }

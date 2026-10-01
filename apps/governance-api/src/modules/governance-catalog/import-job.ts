@@ -3,6 +3,7 @@ import {Type,type Static} from 'typebox';
 const Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
 const Scope=Type.Union([Type.Literal('BASELINE'),Type.Literal('SYNTHETIC')]);
 export const ImportMetadataSchema=Type.Union([
+ Type.Object({kind:Type.Literal('FILE'),format:Type.Literal('XLSX'),parserPolicy:Type.Literal('STRICT_ORGANIZATION_EVOLUTION_V1')},{additionalProperties:false}),
  Type.Object({kind:Type.Literal('FILE'),format:Type.Literal('XLSX'),parserPolicy:Type.Literal('STRICT_ORG_BUNDLE_V1'),manifestDigest:Type.String({pattern:'^[a-f0-9]{64}$'}),contractsDigest:Type.String({pattern:'^[a-f0-9]{64}$'})},{additionalProperties:false}),
  Type.Object({kind:Type.Literal('METADATA_ONLY'),declaredSha256:Type.String({pattern:'^[a-f0-9]{64}$'})},{additionalProperties:false}),
  Type.Object({kind:Type.Literal('FILE'),format:Type.Union([Type.Literal('CSV'),Type.Literal('JSON'),Type.Literal('XLSX')]),parserPolicy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2'),Type.Literal('STRICT_DEPARTMENT_V1'),Type.Literal('STRICT_ORGANIZATION_MAPPING_V1'),Type.Literal('STRICT_ORGANIZATION_IDENTIFIER_V1')])},{additionalProperties:false}),

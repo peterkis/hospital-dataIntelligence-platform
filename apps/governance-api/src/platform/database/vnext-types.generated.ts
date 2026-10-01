@@ -34,6 +34,64 @@ export interface DepartmentMasterDepartment {
   id: Generated<string>;
 }
 
+export interface DepartmentMasterEvolutionEvent {
+  campus: string;
+  change_type: string;
+  content_digest: string;
+  effective_at: string;
+  facts: Json;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  source_client_key: string;
+  source_row: number;
+  source_system_id: string;
+}
+
+export interface DepartmentMasterEvolutionInput {
+  campus: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  source_system_id: string;
+}
+
+export interface DepartmentMasterEvolutionRelation {
+  context_rule: string;
+  event_id: string;
+  from_department_id: string;
+  from_version_id: string;
+  id: Generated<string>;
+  recorded_at: string;
+  relation_kind: string;
+  source_client_key: string;
+  source_recorded_at: string;
+  source_row: number;
+  source_to_alias: string;
+  to_department_id: string;
+  to_version_id: string;
+  transfer_scope: string;
+}
+
+export interface DepartmentMasterEvolutionVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface DepartmentMasterHierarchyCandidate {
   applied_at: string | null;
   approved_at: string | null;
@@ -276,6 +334,14 @@ export interface DepartmentMasterOrganizationMappingVersion {
   valid_to: string | null;
 }
 
+export interface DepartmentMasterReplacement {
+  department_id: string;
+  effective_at: string;
+  event_id: string;
+  expected_version_id: string;
+  recorded_at: string;
+}
+
 export interface DepartmentMasterVerification {
   actor: string;
   digest: string;
@@ -291,9 +357,10 @@ export interface DepartmentMasterVerification {
 export interface DepartmentMasterVersion {
   content_digest: string;
   department_id: string;
+  evolution_event_id: string | null;
   facts: Json;
   id: Generated<string>;
-  input_id: string;
+  input_id: string | null;
   number: Int8;
   recorded_at: Generated<string>;
   source_row: number;
@@ -940,6 +1007,10 @@ export interface VnextControlRequestIdentity {
 export interface DB {
   "department_master.access": DepartmentMasterAccess;
   "department_master.department": DepartmentMasterDepartment;
+  "department_master.evolution_event": DepartmentMasterEvolutionEvent;
+  "department_master.evolution_input": DepartmentMasterEvolutionInput;
+  "department_master.evolution_relation": DepartmentMasterEvolutionRelation;
+  "department_master.evolution_verification": DepartmentMasterEvolutionVerification;
   "department_master.hierarchy_candidate": DepartmentMasterHierarchyCandidate;
   "department_master.hierarchy_closure": DepartmentMasterHierarchyClosure;
   "department_master.hierarchy_grant": DepartmentMasterHierarchyGrant;
@@ -958,6 +1029,7 @@ export interface DB {
   "department_master.organization_identifier_version": DepartmentMasterOrganizationIdentifierVersion;
   "department_master.organization_mapping": DepartmentMasterOrganizationMapping;
   "department_master.organization_mapping_version": DepartmentMasterOrganizationMappingVersion;
+  "department_master.replacement": DepartmentMasterReplacement;
   "department_master.verification": DepartmentMasterVerification;
   "department_master.version": DepartmentMasterVersion;
   "governance_catalog.apply_approval": GovernanceCatalogApplyApproval;
