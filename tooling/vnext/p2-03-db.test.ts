@@ -83,15 +83,18 @@ test('a verifier with namespace WRITE cannot freeze another persons mapping inpu
  finally{await app.close();}
 });
 
-test('the original submitters alias may plan but cannot approve its own candidate',async()=>{
+test('the submitters alias may plan and an independent reviewer may approve, but the submitter cannot self-approve',async()=>{
  const entry=f.entry(),staged=await owner.stage('maker',await f.input([entry]));
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO independent verification before alias plan',evidenceId:f.artifact.artifactId,contextApproved:true,sourceKeyReuse:false}]});
- const candidate=await owner.plan('maker-alias',{inputId:staged.inputId,requestId:randomUUID()});
+ const requestId=randomUUID(),candidate=await owner.plan('maker-alias',{inputId:staged.inputId,requestId});
  expect(candidate.candidateId).toMatch(/^[a-f0-9-]{36}$/);
  const scope=`'maker',${quote(entry.row.from_system_id)}::uuid,${quote(entry.row.source_entity_type)},${quote(entry.row.source_context)},'NORTH','REVIEW'`;
  peer(receipt.name,`INSERT INTO department_master.mapping_access VALUES(${scope}) ON CONFLICT DO NOTHING;`);
  try{await expect(owner.approveApplyUnit('maker',candidate)).rejects.toThrow('MAKER_CHECKER_REQUIRED');}
  finally{peer(receipt.name,`DELETE FROM department_master.mapping_access WHERE actor='maker' AND from_system_id=${quote(entry.row.from_system_id)}::uuid AND entity_type=${quote(entry.row.source_entity_type)} AND context=${quote(entry.row.source_context)} AND campus='NORTH' AND permission='REVIEW';`);}
+ await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ expect((await owner.approveApplyUnit('reviewer',candidate)).approvedBy).toBe('reviewer');
+ expect((await owner.applyUnit('maker-alias',{candidateId:candidate.candidateId,requestId})).status).toBe('COMMITTED');
 });
 
 test('an input submitter cannot approve a candidate frozen by a different planner',async()=>{
