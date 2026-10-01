@@ -89795,8 +89795,7 @@
                                     "sourceRecordedAt",
                                     "sourceSystemId",
                                     "policyVersionId",
-                                    "verificationId",
-                                    "commandDigest"
+                                    "verificationId"
                                   ],
                                   "properties": {
                                     "name": {
@@ -92780,8 +92779,7 @@
                                 "sourceRecordedAt",
                                 "sourceSystemId",
                                 "policyVersionId",
-                                "verificationId",
-                                "commandDigest"
+                                "verificationId"
                               ],
                               "properties": {
                                 "name": {
@@ -93160,8 +93158,7 @@
                               "sourceRecordedAt",
                               "sourceSystemId",
                               "policyVersionId",
-                              "verificationId",
-                              "commandDigest"
+                              "verificationId"
                             ],
                             "properties": {
                               "name": {

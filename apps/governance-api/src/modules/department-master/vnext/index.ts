@@ -17,7 +17,7 @@ interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 interface Verification {id:string;actor:string;identity_code:string;digest:string;envelope:Envelope}
 interface InputRecord {id:string;revision:string;job_id:string;job_revision:string;maker:string;identity_code:string;digest:string;campus:'NORTH'|'SOUTH';envelope:Envelope;verification:Verification|null}
 type PreparedDepartmentCommand={row:number;entry:ReturnType<typeof normalizeEntry>};
-export interface DepartmentFacts {name:string;shortName:string|null;orgType:string;establishedOn:string|null;description:string|null;virtual:boolean;historicalException:boolean;sourceVersion:string;sourceRecordedAt:string;sourceSystemId:string;policyVersionId:string;verificationId:string;commandDigest:string}
+export interface DepartmentFacts {name:string;shortName:string|null;orgType:string;establishedOn:string|null;description:string|null;virtual:boolean;historicalException:boolean;sourceVersion:string;sourceRecordedAt:string;sourceSystemId:string;policyVersionId:string;verificationId:string;commandDigest?:string}
 export interface DepartmentVersion {id:string;department_id:string;number:string;valid_from:string;valid_to:string|null;recorded_at:string;source_row:number;facts:DepartmentFacts;content_digest:string}
 export interface DepartmentHistory {id:string;code:string;versions:DepartmentVersion[]}
 export interface DepartmentIssue {row:number;field:string;code:string;status:'FAIL'|'BLOCKED';sourceRow?:number}
@@ -55,7 +55,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   if(active[0]?.versionId!==c.versionId)throw new Error('STALE_VALIDATION');
   return c;
  };
- const factsFor=(e:ReturnType<typeof normalizeEntry>,contract:ImportContractItem,record:InputRecord,review:VerifyInput['rows'][number]|undefined,commandDigest:string):DepartmentFacts=>({name:e.row.org_name,shortName:e.row.org_short_name||null,orgType:e.row.org_type,establishedOn:e.row.established_on||null,description:e.row.description||null,virtual:e.row.is_virtual==='Y',historicalException:review?.historicalException??false,sourceVersion:e.row.version_no,sourceRecordedAt:e.recordedAt,sourceSystemId:e.row.source_system_id,policyVersionId:contract.versionId,verificationId:record.verification?.id??'',commandDigest});
+ const factsFor=(e:ReturnType<typeof normalizeEntry>,contract:ImportContractItem,record:InputRecord,review:VerifyInput['rows'][number]|undefined,commandDigest:string):DepartmentFacts&{commandDigest:string}=>({name:e.row.org_name,shortName:e.row.org_short_name||null,orgType:e.row.org_type,establishedOn:e.row.established_on||null,description:e.row.description||null,virtual:e.row.is_virtual==='Y',historicalException:review?.historicalException??false,sourceVersion:e.row.version_no,sourceRecordedAt:e.recordedAt,sourceSystemId:e.row.source_system_id,policyVersionId:contract.versionId,verificationId:record.verification?.id??'',commandDigest});
  const inspectInput=async(s:Scope,actor:string,id:string)=>{
   const r=await record(s,actor,id),input=unseal<StoredStageInput>('DEPARTMENT_INPUT_V1',r,StoredStageSchema),j=await inputJob(s,actor,id);
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');

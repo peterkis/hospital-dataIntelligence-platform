@@ -67,7 +67,8 @@ try{
  const changed=await maker.apply(recodeCommand);assert.equal(changed.response.status,200);assert.equal(changed.data.status,'COMMITTED');assert.equal(changed.data.facts.length,2);const {responseStatus,...committedOutcome}=changed.data;assert.equal(responseStatus,'DELIVERED');assert.deepEqual((await maker.resume(recodeCommand)).data,committedOutcome);
  const resolve=(value,businessAt,recordAsOf)=>maker.resolve({scheme:'SYNTHETIC_DEPARTMENT_CODE',value,campus:'NORTH',businessAt,...(recordAsOf?{recordAsOf}:{})});
  assert.equal((await resolve(recode.oldCode.value,'2026-05-31T23:59:59.999999')).data.status,'RESOLVED');assert.equal((await resolve(recode.oldCode.value,'2026-06-01T00:00:00')).data.status,'NOT_FOUND');assert.equal((await resolve(recode.newCode,'2026-06-01T00:00:00')).data.targetId,recode.targetId);assert.equal((await resolve(recode.oldCode.value,'2026-07-01T00:00:00',recode.oldCode.version.recorded_at)).data.targetId,recode.targetId);
- const departmentClient=createDepartmentClient(url,'maker'),codeQuery={id:recode.targetId,campus:'NORTH',businessAt:'2026-07-01T00:00:00'},positiveCode=await departmentClient.read(codeQuery);
+ const departmentClient=createDepartmentClient(url,'maker'),codeQuery={id:recode.targetId,campus:'NORTH',businessAt:'2026-07-01T00:00:00'};
+ const positiveCode=await departmentClient.read(codeQuery);
  assert.equal(positiveCode.response.status,200);assert.equal(positiveCode.data.effectiveCode,recode.newCode);assert.equal(positiveCode.data.initialCode,recode.oldCode.value);
  assert.equal((await departmentClient.read({id:recode.targetId,businessAt:codeQuery.businessAt})).response.status,403);
  for(const [table,predicate] of [['identifier_access',"actor='maker' AND scheme='SYNTHETIC_DEPARTMENT_CODE' AND campus='NORTH' AND permission='READ'"],['mapping_target_access',`actor='maker' AND target_type='ORG' AND target_id=${quote(recode.targetId)}::uuid AND campus='NORTH'`]]){

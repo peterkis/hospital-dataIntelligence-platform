@@ -1,7 +1,7 @@
 import {test,expect,afterAll,beforeAll} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import {openCatalog,LocalSyntheticKeyProvider,planBinding} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {openOrganizationIdentifiers,openDepartment} from '../../apps/governance-api/src/modules/department-master/index.js';
 import {organizationIdentifierFixture} from './p2-04-fixture.js';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
@@ -65,6 +65,17 @@ test('0087 storage requires the current release before workspace Owners can open
  finally{dropTemporary(owned.receipt);}
 });
 test('existing Department revision preview serializes its previous head',async()=>{await revisionPreview(f.targetId);});
+
+test('accepted predecessor Department facts without a command digest remain readable over HTTP',async()=>{
+ const original=await department.history('maker',f.targetId),{commandDigest:_digest,...legacyFacts}=original.versions[0]!.facts,id=randomUUID(),code='LEGACY_'+randomUUID().replaceAll('-','');
+ const entry=f.department.entry();entry.row.org_code=code;const staged=await department.stage('maker',await f.department.input([entry]));
+ // Representative predecessor storage, not a current registration/approval claim.
+ peer(receipt.name,`INSERT INTO department_master.department(id,code) VALUES(${quote(id)}::uuid,${quote(code)}); INSERT INTO department_master.version(department_id,number,valid_from,valid_to,input_id,source_row,facts,content_digest) VALUES(${quote(id)}::uuid,1,'2026-01-01'::timestamp,NULL,${quote(staged.inputId)}::uuid,1,${quote(JSON.stringify(legacyFacts))}::jsonb,${quote(planBinding(provider,'DEPARTMENT_FACTS_V1',legacyFacts))});`);
+ f.grantTarget(id);const before=await department.history('maker',id);expect(before.versions[0]!.facts).not.toHaveProperty('commandDigest');
+ const history=await post('departments/history',{id}),query=await post('departments/query',{id,campus:'NORTH',businessAt:'2026-03-01T00:00:00'});
+ expect(history.status).toBe(200);expect(query.status).toBe(200);expect(query.body.effectiveCode).toBe(code);expect(query.body.version.facts).not.toHaveProperty('commandDigest');
+ await revisionPreview(id);expect(await department.history('maker',id)).toEqual(before);
+});
 
 test('current selected-version query should not require access to a superseded independent source',async()=>{
  const originalSource=await f.newSource(),latestSource=f.source;

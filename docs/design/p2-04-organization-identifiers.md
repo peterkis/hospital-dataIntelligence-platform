@@ -59,6 +59,8 @@ PR #23 remediation adds migration 0117 without changing installed 0115/0116 byte
 
 `npm run prototype:db:with -- vnext:p2-04:review` runs the review regressions through real Owner, HTTP and database-role seams. They cover both closure actions with missing/expired submitter and verifier material, empty material digests after recovery, permission denial, unrelated preferred peers and a newly conflicting peer, positive and revoked Department code reads, previews before/after recode, independent replacement-source reads, old-R/history/diff denial and selected-source-only comparison. A real 0087 temporary prefix now proves explicit upgrade rejection; orchestration tests prove rejection precedes credentials, keys, Owners and listen. The original immutable independent test expecting usable 0087 startup is superseded by this deliberate gate policy, not reported as GREEN.
 
+The persistent upgrade also exposed accepted predecessor Department facts that have no `commandDigest`. History/query/preview describe that absence as an optional read field; they do not invent or backfill a digest or alter stored facts. Current write construction still requires and produces the command digest. A real HTTP predecessor fixture reproduced RED500, then verifies all three read projections and unchanged original history.
+
 | Requirement | Evidence in tooling/vnext/p2-04-db.test.ts (public seams) |
 |---|---|
 | AC-01 alias does not merge identity | Duplicate aliases on two real Department IDs; distinct relationships |

@@ -27691,7 +27691,7 @@ export interface operations {
                                     sourceSystemId: string;
                                     policyVersionId: string;
                                     verificationId: string;
-                                    commandDigest: string;
+                                    commandDigest?: string;
                                 };
                                 content_digest: string;
                             }[];
@@ -28943,7 +28943,7 @@ export interface operations {
                                 sourceSystemId: string;
                                 policyVersionId: string;
                                 verificationId: string;
-                                commandDigest: string;
+                                commandDigest?: string;
                             };
                             content_digest: string;
                         } | null;
@@ -29089,7 +29089,7 @@ export interface operations {
                                 sourceSystemId: string;
                                 policyVersionId: string;
                                 verificationId: string;
-                                commandDigest: string;
+                                commandDigest?: string;
                             };
                             content_digest: string;
                         }[];
