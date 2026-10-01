@@ -11,7 +11,7 @@ import {assertHierarchyProvisioned,grantHierarchyFunctions} from './hierarchy-pr
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
- if(!['p1-06','p1-07','p2-01','p2-03'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
+ if(!['p1-06','p1-07','p2-01','p2-03','p2-04'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
  const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();
  const prefix=workspaceDeploymentPrefix(files,before.ledger,reuseExisting);
  if(evidenceTask==='p2-01'&&prefix<83)throw new Error('P1_07_REPAIRED_DEPLOYMENT_REQUIRED');

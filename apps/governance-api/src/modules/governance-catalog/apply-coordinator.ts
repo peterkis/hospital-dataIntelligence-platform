@@ -41,7 +41,7 @@ interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
 const codes=new Set(['CAMPUS_RETIRED','CAMPUS_SUSPENDED','DISPOSITION_INCOMPLETE','DISPOSITION_ALREADY_COMPLETE','ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','PAIR_PREAUTHORIZATION_REQUIRED','STALE_REVISION','BUNDLE_CONTEXT_REQUIRED','LEGAL_REVIEW_REQUIRED','BATCH_REJECTED','UNSUPPORTED_STATE_TRANSITION','PARENT_PERIOD_NOT_COVERED']);
 function failure(error:unknown):Error {
- const mappingCodes=['MAPPING_ALREADY_REGISTERED','MAPPING_IDENTITY_IMMUTABLE','MAPPING_RETRACTED','BATCH_CONFLICT'];
+ const mappingCodes=['MAPPING_ALREADY_REGISTERED','MAPPING_IDENTITY_IMMUTABLE','MAPPING_RETRACTED','BATCH_CONFLICT','IDENTIFIER_IDENTITY_IMMUTABLE','IDENTIFIER_CLOSED','SOURCE_MAPPING_REQUIRED','IDENTIFIER_RESOLUTION_FORBIDDEN'];
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';
  if((typeof code==='string'&&(/^08[A-Z0-9]{3}$/.test(code)||['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','57P01'].includes(code)))||
@@ -50,7 +50,7 @@ function failure(error:unknown):Error {
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 function bound(unit:ObservedOwnerUnit):void {
- const blockedOrg22=unit.atomicRule==='ORG22_WHOLE_REVISION_V1'&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
+ const blockedOrg22=['ORG22_WHOLE_REVISION_V1','ORG23_WHOLE_REVISION_V1'].includes(unit.atomicRule)&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
  if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1'&&!blockedOrg22)||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
  const seen=new Set<number>();
  for(const c of unit.commands){

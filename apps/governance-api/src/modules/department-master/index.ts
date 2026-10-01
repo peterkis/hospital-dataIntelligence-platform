@@ -430,3 +430,5 @@ export {openHierarchy,validateHierarchyForest,HierarchyCandidateSchema,Hierarchy
 export type {HierarchyCandidateInput,CreateHierarchyViewInput,HierarchyPublishInput,HierarchySnapshot,HierarchyIssue,ForestValidation} from './vnext/hierarchy.js';
 export * from './vnext/organization-mapping-contracts.js';
 export {openOrganizationMappings} from './vnext/organization-mapping.js';
+export * from './vnext/organization-identifier-contracts.js';
+export {openOrganizationIdentifiers} from './vnext/organization-identifier.js';

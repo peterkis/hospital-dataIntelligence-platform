@@ -32,6 +32,8 @@ const postWorkspaceMigrations = [
  '0112_organization_source_mapping',
  '0113_organization_mapping_optional_snapshot',
  '0114_organization_mapping_original_maker_approval',
+ '0115_organization_identifiers',
+ '0116_org23_contract_and_department_code',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

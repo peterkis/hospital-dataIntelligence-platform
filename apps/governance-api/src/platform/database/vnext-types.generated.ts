@@ -128,6 +128,40 @@ export interface DepartmentMasterHierarchyViewVersion {
   view_type: string;
 }
 
+export interface DepartmentMasterIdentifierAccess {
+  actor: string;
+  campus: string;
+  permission: string;
+  scheme: string;
+}
+
+export interface DepartmentMasterIdentifierInput {
+  campus: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  schemes: Json;
+}
+
+export interface DepartmentMasterIdentifierVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface DepartmentMasterInput {
   campus: string;
   digest: string;
@@ -183,6 +217,36 @@ export interface DepartmentMasterMappingVerification {
   number: Int8;
   recorded_at: Generated<string>;
   request_id: string;
+}
+
+export interface DepartmentMasterOrganizationIdentifier {
+  id: Generated<string>;
+  kind: string;
+  reserved_value: string | null;
+  scheme: string;
+  target_id: string;
+  target_type: string;
+}
+
+export interface DepartmentMasterOrganizationIdentifierVersion {
+  action: string;
+  content_digest: string;
+  facts: Json;
+  id: Generated<string>;
+  identifier_id: string;
+  input_id: string | null;
+  language: string;
+  legacy_version_id: string | null;
+  number: Int8;
+  predecessor: string | null;
+  preferred: boolean;
+  reason: string;
+  recorded_at: Generated<string>;
+  source_row: number;
+  step: string;
+  valid_from: string;
+  valid_to: string | null;
+  value: string;
 }
 
 export interface DepartmentMasterOrganizationMapping {
@@ -882,11 +946,16 @@ export interface DB {
   "department_master.hierarchy_node": DepartmentMasterHierarchyNode;
   "department_master.hierarchy_view": DepartmentMasterHierarchyView;
   "department_master.hierarchy_view_version": DepartmentMasterHierarchyViewVersion;
+  "department_master.identifier_access": DepartmentMasterIdentifierAccess;
+  "department_master.identifier_input": DepartmentMasterIdentifierInput;
+  "department_master.identifier_verification": DepartmentMasterIdentifierVerification;
   "department_master.input": DepartmentMasterInput;
   "department_master.mapping_access": DepartmentMasterMappingAccess;
   "department_master.mapping_input": DepartmentMasterMappingInput;
   "department_master.mapping_target_access": DepartmentMasterMappingTargetAccess;
   "department_master.mapping_verification": DepartmentMasterMappingVerification;
+  "department_master.organization_identifier": DepartmentMasterOrganizationIdentifier;
+  "department_master.organization_identifier_version": DepartmentMasterOrganizationIdentifierVersion;
   "department_master.organization_mapping": DepartmentMasterOrganizationMapping;
   "department_master.organization_mapping_version": DepartmentMasterOrganizationMappingVersion;
   "department_master.verification": DepartmentMasterVerification;
