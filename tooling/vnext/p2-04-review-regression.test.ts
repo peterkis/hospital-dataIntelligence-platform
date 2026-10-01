@@ -77,6 +77,31 @@ test('accepted predecessor Department facts without a command digest remain read
  await revisionPreview(id);expect(await department.history('maker',id)).toEqual(before);
 });
 
+test('Department version diff supports optional predecessor facts in both directions',async()=>{
+ const original=await department.history('maker',f.targetId),{commandDigest:_digest,...legacyFacts}=original.versions[0]!.facts;
+ const id=randomUUID(),code='DIFF_LEGACY_'+randomUUID().replaceAll('-',''),entry=f.department.entry();entry.row.org_code=code;
+ const staged=await department.stage('maker',await f.department.input([entry]));
+ // Accepted predecessor fixture; the newer version still uses public approval and current write construction.
+ peer(receipt.name,`INSERT INTO department_master.department(id,code) VALUES(${quote(id)}::uuid,${quote(code)}); INSERT INTO department_master.version(department_id,number,valid_from,valid_to,input_id,source_row,facts,content_digest) VALUES(${quote(id)}::uuid,1,'2026-01-01'::timestamp,NULL,${quote(staged.inputId)}::uuid,1,${quote(JSON.stringify(legacyFacts))}::jsonb,${quote(planBinding(provider,'DEPARTMENT_FACTS_V1',legacyFacts))});`);
+ f.grantTarget(id);const before=await department.history('maker',id);
+ entry.intent='REVISE';entry.target={owner:'department-master',id,expectedVersion:'1'};entry.row.org_name='DEMO revised predecessor Department';
+ const revision=await department.stage('maker',await f.department.input([entry]));
+ await department.verify('reviewer',{requestId:randomUUID(),inputId:revision.inputId,inputDigest:revision.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'Predecessor diff regression',evidenceId:f.department.artifact.artifactId}]});
+ const requestId=randomUUID(),candidate=await department.plan('maker',{inputId:revision.inputId,requestId});
+ await department.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await department.approveApplyUnit('reviewer',candidate);
+ expect((await department.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).status).toBe('COMMITTED');
+ const after=await department.history('maker',id);expect(after.versions).toHaveLength(2);expect(after.versions[0]).toEqual(before.versions[0]);
+ const digest=after.versions[1]!.facts.commandDigest;expect(digest).toMatch(/^[a-f0-9]{64}$/);
+ const forward=await post('departments/diff',{id,fromVersion:'1',toVersion:'2'}),backward=await post('departments/diff',{id,fromVersion:'2',toVersion:'1'});
+ expect(forward.status).toBe(200);expect(backward.status).toBe(200);
+ expect(forward.body.changes).toContainEqual({field:'commandDigest',before:null,after:digest});
+ expect(backward.body.changes).toContainEqual({field:'commandDigest',before:digest,after:null});
+ const reversed=backward.body.changes.map((change:{field:string;before:unknown;after:unknown})=>({field:change.field,before:change.after,after:change.before}));
+ expect(forward.body.changes).toEqual(expect.arrayContaining(reversed));expect(forward.body.changes).toHaveLength(reversed.length);
+ const unchanged=await post('departments/diff',{id,fromVersion:'1',toVersion:'1'});expect(unchanged.status).toBe(200);expect(unchanged.body.changes).toEqual([]);
+ expect((await department.history('maker',id)).versions[0]).toEqual(before.versions[0]);
+});
+
 test('current selected-version query should not require access to a superseded independent source',async()=>{
  const originalSource=await f.newSource(),latestSource=f.source;
  const {organizationIdentifierContractDefinition}=await import('./p2-04-contract-fixture.js');
