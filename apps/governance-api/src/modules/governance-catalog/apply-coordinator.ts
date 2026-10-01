@@ -50,8 +50,8 @@ function failure(error:unknown):Error {
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 function bound(unit:ObservedOwnerUnit):void {
- const blockedOrg22=['ORG22_WHOLE_REVISION_V1','ORG23_WHOLE_REVISION_V1'].includes(unit.atomicRule)&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
- if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1'&&!blockedOrg22)||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
+ const blockedOrganizationRevision=['ORG22_WHOLE_REVISION_V1','ORG23_WHOLE_REVISION_V1'].includes(unit.atomicRule)&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
+ if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1'&&!blockedOrganizationRevision)||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
  const seen=new Set<number>();
  for(const c of unit.commands){
   // Owner declares the whole unit and an execution order; the Coordinator never splits or infers bundles.

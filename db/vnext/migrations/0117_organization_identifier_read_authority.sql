@@ -37,4 +37,43 @@ CREATE OR REPLACE FUNCTION department_master.department_code_at(p_actor text,p_i
 END $$;
 REVOKE ALL ON FUNCTION department_master.identifier_selected(text,uuid,text,timestamp),department_master.department_code_at_authorized(text,uuid,timestamp,timestamp,text) FROM PUBLIC,hdi_prototype;
 
+-- Apply the same Catalog-owned interfaces used by Department since 0087.
+-- Preserve all signed tickets, frozen identities, approval checks and facts.
+DO $repair$
+DECLARE body text;needle text;replacement text;BEGIN
+ body:=pg_get_functiondef('department_master.identifier_mutate(text,text)'::regprocedure);
+ FOR needle,replacement IN SELECT * FROM (VALUES
+  ('j governance_catalog.import_job;','j jsonb;'),
+  ('c governance_catalog.apply_candidate;a governance_catalog.apply_approval;','c jsonb;approved_by text;approved_identity text;'),
+  ($before$PERFORM governance_catalog.import_job_read(actor,jsonb_build_object('scope','SYNTHETIC','jobId',t->>'jobId'));SELECT * INTO j FROM governance_catalog.import_job WHERE id=(t->>'jobId')::uuid;
+  IF j.submitter_identity IS DISTINCT FROM identity OR j.current_revision_id IS DISTINCT FROM (t->>'revisionId')::uuid OR j.contract_snapshot->>'dataset'<>'ORG23' THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
+  INSERT INTO department_master.identifier_input(job_id,job_revision,maker,identity_code,request_id,digest,campus,schemes,envelope) VALUES(j.id,j.current_revision_id,actor,identity,(t->>'requestId')::uuid,t->>'digest',t->>'campus',t->'schemes',t->'envelope') RETURNING * INTO r;$before$,
+   $after$j:=governance_catalog.import_job_context(actor,jsonb_build_object('scope','SYNTHETIC','jobId',t->>'jobId'));
+  IF j->>'submitterIdentity' IS DISTINCT FROM identity OR j->>'currentRevisionId' IS DISTINCT FROM t->>'revisionId' OR j->'contract'->>'dataset'<>'ORG23' THEN RAISE EXCEPTION 'STALE_REVISION';END IF;
+  INSERT INTO department_master.identifier_input(job_id,job_revision,maker,identity_code,request_id,digest,campus,schemes,envelope) VALUES((j->>'id')::uuid,(j->>'currentRevisionId')::uuid,actor,identity,(t->>'requestId')::uuid,t->>'digest',t->>'campus',t->'schemes',t->'envelope') RETURNING * INTO r;$after$),
+  ($before$IF r.job_revision IS DISTINCT FROM (SELECT current_revision_id FROM governance_catalog.import_job WHERE id=r.job_id) THEN RAISE EXCEPTION 'STALE_REVISION';END IF;$before$,
+   $after$j:=governance_catalog.import_job_context(actor,jsonb_build_object('scope','SYNTHETIC','jobId',r.job_id));
+ IF r.job_revision IS DISTINCT FROM (j->>'currentRevisionId')::uuid THEN RAISE EXCEPTION 'STALE_REVISION';END IF;$after$),
+  ($before$SELECT * INTO c FROM governance_catalog.apply_candidate WHERE id=(t->>'candidateId')::uuid;SELECT * INTO a FROM governance_catalog.apply_approval WHERE candidate_id=c.id;
+ IF c.digest IS DISTINCT FROM t->>'digest' OR c.input->>'jobId' IS DISTINCT FROM r.id::text OR c.input->>'revisionId' IS DISTINCT FROM r.revision::text OR a.candidate_id IS NULL THEN RAISE EXCEPTION 'APPROVAL_REQUIRED';END IF;
+ IF c.maker_identity IS DISTINCT FROM r.identity_code OR a.identity_code=r.identity_code THEN RAISE EXCEPTION 'MAKER_CHECKER_REQUIRED';END IF;
+ PERFORM governance_catalog.apply_record(a.actor_code,'CHECK_APPROVAL',jsonb_build_object('candidateId',c.id));PERFORM department_master.identifier_input_read(a.actor_code,r.id,'REVIEW');
+ PERFORM department_master.mapping_target_authorize(actor,row->>'target_type',(row->>'target_id')::uuid,r.campus);PERFORM department_master.mapping_target_authorize(a.actor_code,row->>'target_type',(row->>'target_id')::uuid,r.campus);
+ PERFORM vnext_control.require_source_access(actor,'SYNTHETIC',(row->>'source_system_id')::uuid);PERFORM vnext_control.require_source_access(a.actor_code,'SYNTHETIC',(row->>'source_system_id')::uuid);$before$,
+   $after$c:=governance_catalog.apply_record(actor,'READ_CANDIDATE',jsonb_build_object('candidateId',(t->>'candidateId')::uuid));
+ IF c->>'digest' IS DISTINCT FROM t->>'digest' OR c->'input'->>'jobId' IS DISTINCT FROM r.id::text OR c->'input'->>'revisionId' IS DISTINCT FROM r.revision::text OR coalesce(c->>'approvedBy','')='' THEN RAISE EXCEPTION 'APPROVAL_REQUIRED';END IF;
+ IF c->>'makerIdentity' IS DISTINCT FROM r.identity_code THEN RAISE EXCEPTION 'MAKER_CHECKER_REQUIRED';END IF;
+ approved_by:=c->>'approvedBy';PERFORM governance_catalog.apply_record(approved_by,'CHECK_APPROVAL',jsonb_build_object('candidateId',(t->>'candidateId')::uuid));
+ approved_identity:=vnext_control.authorize(approved_by,'SYNTHETIC','REVIEW');IF approved_identity=r.identity_code THEN RAISE EXCEPTION 'MAKER_CHECKER_REQUIRED';END IF;
+ PERFORM department_master.identifier_input_read(approved_by,r.id,'REVIEW');
+ PERFORM department_master.mapping_target_authorize(actor,row->>'target_type',(row->>'target_id')::uuid,r.campus);PERFORM department_master.mapping_target_authorize(approved_by,row->>'target_type',(row->>'target_id')::uuid,r.campus);
+ PERFORM vnext_control.require_source_access(actor,'SYNTHETIC',(row->>'source_system_id')::uuid);PERFORM vnext_control.require_source_access(approved_by,'SYNTHETIC',(row->>'source_system_id')::uuid);$after$)
+ ) changes(needle,replacement) LOOP
+  IF position(needle IN body)=0 THEN RAISE EXCEPTION 'IDENTIFIER_CATALOG_INTERFACE_BASELINE_MISMATCH';END IF;
+  body:=replace(body,needle,replacement);
+ END LOOP;
+ IF body~'governance_catalog\.(import_job|apply_candidate|apply_approval)([^a-z_]|$)' THEN RAISE EXCEPTION 'IDENTIFIER_CATALOG_INTERFACE_BASELINE_MISMATCH';END IF;
+ EXECUTE body;
+END $repair$;
+
 
