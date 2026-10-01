@@ -15,7 +15,7 @@ beforeAll(async()=>{owner=openOrganizationIdentifiers(connection,provider);f=awa
 afterAll(async()=>{await app?.close();await owner?.close();await department.close();await catalog.close();});
 async function prepare(entries:NonNullable<Parameters<typeof f.input>[0]>){const staged=await owner.stage('maker',await f.input(entries));await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:entries.map((_,i)=>({row:i+1,reason:'Independent regression',evidenceId:f.artifact.artifactId,policyApproved:true}))});const validation=await owner.validate('maker',{inputId:staged.inputId});expect(validation.decision).toBe('PASS');const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);return {candidate,requestId,staged};}
 async function apply(entries:NonNullable<Parameters<typeof f.input>[0]>){const p=await prepare(entries);const result=await owner.applyUnit('maker',{candidateId:p.candidate.candidateId,requestId:p.requestId});expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');return {...p,result};}
-async function post(path:string,body:any){const response=await fetch(url+'/api/vnext/'+path,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(body)});return {status:response.status,body:await response.json()};}
+async function post(path:string,body:any,who='maker'){const response=await fetch(url+'/api/vnext/'+path,{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':who},body:JSON.stringify(body)});return {status:response.status,body:await response.json()};}
 test.each(['END','RETRACT'] as const)('closure %s recovers missing or expired submitter and verifier material without losing sibling issues',async action=>{
  for(const side of ['submitter','verifier'] as const)for(const mode of ['missing','expired'] as const){
  const e=f.entry();e.row.identifier_value='closure '+randomUUID();const accepted=await apply([e]);e.action=action;e.identifier={owner:'department-master/organization-identifier',id:accepted.result.facts[0]!.id,expectedHead:'1'};if(action==='END')e.row.valid_to='2026-06-01T00:00:00';
@@ -25,6 +25,24 @@ test.each(['END','RETRACT'] as const)('closure %s recovers missing or expired su
  const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),reviewed=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});expect(reviewed.unit.basis['materials']).toEqual([]);
  }
 });
+test.each(['missing','expired'] as const)('admission discards rolled-back row materials when verifier evidence is %s',async mode=>{
+ const j=await f.input(),material=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:j.jobId,revisionId:j.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:7200},Buffer.from('Independent submitter material for failing admission'));
+ let unavailable:string=randomUUID();
+ if(mode==='expired'){const expired=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:j.jobId,revisionId:j.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:1},Buffer.from('Expiring admission verification'));unavailable=expired.artifactId;await new Promise(resolve=>setTimeout(resolve,1200));}
+ const before=f.entry(),failed=f.entry(),after=f.entry();failed.evidenceId=material.artifactId;const entries=[before,failed,after];
+ const staged=await owner.stage('maker',await f.input(entries));
+ await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:entries.map((_,i)=>({row:i+1,reason:'Admission recovery regression',evidenceId:i===1?unavailable:f.artifact.artifactId,policyApproved:true}))});
+ const validated=await post('organization-identifiers/validate',{inputId:staged.inputId});expect(validated.status).toBe(200);expect(validated.body.decision).toBe('BLOCKED');expect(validated.body.commandCount).toBe(2);
+ expect(validated.body.issues).toContainEqual({row:2,field:'target_id',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'});
+ const candidate=await owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()}),review=await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});
+ const materials=review.unit.basis['materials'] as Array<{id:string;digest:string}>;
+ expect(materials).toHaveLength(4);expect(materials.every(m=>m.id===f.artifact.artifactId)).toBe(true);expect(materials.some(m=>m.id===material.artifactId)).toBe(false);
+ expect(review.unit.commands).toHaveLength(2);expect(review.unit.basis['entries']).toEqual(entries.map((entry,i)=>({...entry,sourceRow:i+1})));
+ const response=await post('organization-identifiers/review',{candidateId:candidate.candidateId},'reviewer');expect(response.status).toBe(200);expect(response.body.basis.materials).toEqual(materials);
+ expect(peer(receipt.name,`SELECT count(*) FROM vnext_control.audit WHERE object_id=${quote(material.artifactId)}::uuid AND action='REGISTRATION_EVIDENCE_READ';`)).toBe('0');
+ await expect(owner.approveApplyUnit('reviewer',candidate)).rejects.toThrow('BLOCKED_DEPENDENCY');
+});
+
 test('closure evidence access denial remains a whole-request rejection',async()=>{
  const e=f.entry();e.row.identifier_value='restricted closure '+randomUUID();const first=await apply([e]);e.action='END';e.identifier={owner:'department-master/organization-identifier',id:first.result.facts[0]!.id,expectedHead:'1'};e.row.valid_to='2026-06-01T00:00:00';
  const staged=await owner.stage('maker',await f.input([e]));await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'Closure authority',evidenceId:f.artifact.artifactId,policyApproved:true}]});

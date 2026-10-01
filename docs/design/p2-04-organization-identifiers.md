@@ -51,6 +51,20 @@ Manual input and a single ORG23 XLSX worksheet share the same Owner. File input 
 
 Apply rechecks current executor/reviewer/verification permissions, actual personnel separation and dependency digest under one transaction. Another authorized writer may execute the approved request; the frozen original submitter identity still determines maker/checker separation. Changes fail STALE_VALIDATION and write no formal facts. Source retirement does not forbid a separately approved safe end/retract. Recovery uses the original request/candidate and returns the original committed result with current access checks; it does not reapply facts. The first response's delivery marker is separate from the persisted outcome; recovery compares all original facts, IDs and recorded time.
 
+### Executor permission matrix
+
+An authorized executor must satisfy the current ORG23 scheme permissions, target/source/protected-material checks and the Catalog job-context contract. Domain WRITE alone does not establish the complete authorization. The current ORG23 scope is SYNTHETIC.
+
+| Executor's actual personnel identity | Domain and referenced-resource prerequisites | Catalog job-context prerequisites |
+|---|---|---|
+| Original job submitter | Current scheme READ/WRITE/READ_RESTRICTED and target/source/protected-material authority | SYNTHETIC READ and referenced contract READ; no additional REVIEW solely for reading one's own job context |
+| Alias account with the original submitter's actual identity | The same current checks; an alias is not a new person | The same job-context checks, compared by actual identity rather than actor name |
+| Different actual identity executing an already-approved request | The same current domain/resource checks; approval and original maker/checker separation remain required | The same READ/contract checks **plus SYNTHETIC REVIEW** under the existing non-submitter guard in `governance_catalog.import_job_context()` (migration 0087) |
+
+All normal Catalog write/source authorization, candidate/job binding and current reviewer/verifier checks still apply. Reading the staged ORG23 input does not prove permission to read the Catalog context used during apply observation and signed writes; a distinct executor may therefore read the input but receive ACCESS_DENIED on apply. Catalog REVIEW does not replace the domain/resource permissions or permit another actual identity to plan the original submitter's input.
+
+This matrix records the current contract, not an instruction to automatically grant broad REVIEW to deployment actors. A future execution-only role without that grant requires a separately designed Catalog context capability restricted to the approved candidate and its job, retaining contract/source authorization, candidate binding and actual identity separation. No shared guard is removed and no submitter identity is impersonated in this ticket.
+
 Exact official resolution returns the precise identifier version and typed target. Alias/search schemes cannot use it. Alias queries return a set; preferred returns the chosen bucket assertion. Historical reads explicitly mark assertions and do not grant operational permission.
 
 ## Requirements and verification index
@@ -60,6 +74,8 @@ PR #23 remediation adds migration 0117 without changing installed 0115/0116 byte
 `npm run prototype:db:with -- vnext:p2-04:review` runs the review regressions through real Owner, HTTP and database-role seams. They cover both closure actions with missing/expired submitter and verifier material, empty material digests after recovery, permission denial, unrelated preferred peers and a newly conflicting peer, positive and revoked Department code reads, previews before/after recode, independent replacement-source reads, old-R/history/diff denial and selected-source-only comparison. A real 0087 temporary prefix now proves explicit upgrade rejection; orchestration tests prove rejection precedes credentials, keys, Owners and listen. The original immutable independent test expecting usable 0087 startup is superseded by this deliberate gate policy, not reported as GREEN.
 
 The persistent upgrade also exposed accepted predecessor Department facts that have no `commandDigest`. History/query/preview describe that absence as an optional read field; they do not invent or backfill a digest or alter stored facts. Current write construction still requires and produces the command digest. A real HTTP predecessor fixture reproduced RED500, then verifies all three read projections and unchanged original history.
+
+Admission savepoint recovery also restores the JavaScript material-array checkpoint and discards the failed row's source pins and target. Frozen blocked review retains every original row and issue, while its material summaries and executable commands represent the successful dependency checks that survived recovery. Missing and expired verifier-material regressions use valid/failed/valid rows and compare public frozen review with evidence-read audit; the blocked candidate remains unapprovable. ACCESS_DENIED and KEY_UNAVAILABLE still reject the request.
 
 | Requirement | Evidence in tooling/vnext/p2-04-db.test.ts (public seams) |
 |---|---|

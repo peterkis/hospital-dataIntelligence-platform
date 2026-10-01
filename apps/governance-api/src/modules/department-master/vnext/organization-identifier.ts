@@ -105,11 +105,12 @@ export function openOrganizationIdentifiers(connection:string,provider?:KeyProvi
     const policy=ORGANIZATION_IDENTIFIER_SCHEMES[e.row.identifier_system];if(!policy||policy.kind!==e.row.identifier_kind||!policy.targets.includes(e.row.target_type)||scheme?.codeSystem!==policy.issuer)issue(row,'identifier_system','BLOCKED_DEPENDENCY');
     if(!covered([{from:c.validFrom,to:c.validTo}],e.validFrom,e.validTo))issue(row,'valid_from','BLOCKED_DEPENDENCY');
     for(const field of ['target_type','identifier_kind','identifier_system','is_preferred','record_status'] as const){const codes=c.definition.codeSets.find(x=>x.field===field);if(!codes||codes.status!=='SYNTHETIC_ADOPTED'||!codes.codes.includes(e.row[field])||!covered([{from:codes.validFrom,to:codes.validTo}],e.validFrom,e.validTo))issue(row,field,'BLOCKED_DEPENDENCY');}
+    const materialCount=materials.length;
     try{await recoverable(s,async()=>{
      sourcePins.push((await sql<{r:unknown}>`select department_master.mapping_source(${actor},${e.row.source_system_id}::uuid,${e.validFrom}::timestamp,${e.validTo}::timestamp,true) r`.execute(s)).rows[0]!.r);
      materials.push(await evidence(s,actor,e.evidenceId,e,c,r.campus));if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,r.campus));await evidence(s,r.verification!.actor,review.evidenceId,e,c,r.campus);}
      target=await targets.read(s,actor,{type:e.row.target_type,id:e.row.target_id,validFrom:e.validFrom,validTo:e.validTo});
-    });}catch(error){if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'target_id','BLOCKED_DEPENDENCY');target=undefined;}
+    });}catch(error){materials.length=materialCount;sourcePins.length=0;target=undefined;if(error instanceof Error&&['KEY_UNAVAILABLE','ACCESS_DENIED'].includes(error.message))throw error;issue(row,'target_id','BLOCKED_DEPENDENCY');}
    }else if(prior){
     const materialCount=materials.length;
     try{await recoverable(s,async()=>{materials.push(await evidence(s,actor,e.evidenceId,e,c,r.campus,'CLOSURE'));if(review){materials.push(await evidence(s,actor,review.evidenceId,e,c,r.campus,'CLOSURE'));await evidence(s,r.verification!.actor,review.evidenceId,e,c,r.campus,'CLOSURE');}});}
