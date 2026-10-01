@@ -64,7 +64,7 @@ try{
  }
  const recodeCommand={candidateId:recode.candidate.candidateId,requestId:recode.requestId},recodeResumed=await maker.resume(recodeCommand);assert.equal(recodeResumed.response.status,200);
  if(!recodeResumed.data){assert.equal((await reviewer.review({candidateId:recode.candidate.candidateId})).response.status,200);assert.equal((await reviewer.approve(recode.candidate)).response.status,200);}
- const changed=await maker.apply(recodeCommand);assert.equal(changed.response.status,200);assert.equal(changed.data.status,'COMMITTED');assert.equal(changed.data.facts.length,2);assert.deepEqual((await maker.resume(recodeCommand)).data,changed.data);
+ const changed=await maker.apply(recodeCommand);assert.equal(changed.response.status,200);assert.equal(changed.data.status,'COMMITTED');assert.equal(changed.data.facts.length,2);const {responseStatus,...committedOutcome}=changed.data;assert.equal(responseStatus,'DELIVERED');assert.deepEqual((await maker.resume(recodeCommand)).data,committedOutcome);
  const resolve=(value,businessAt,recordAsOf)=>maker.resolve({scheme:'SYNTHETIC_DEPARTMENT_CODE',value,campus:'NORTH',businessAt,...(recordAsOf?{recordAsOf}:{})});
  assert.equal((await resolve(recode.oldCode.value,'2026-05-31T23:59:59.999999')).data.status,'RESOLVED');assert.equal((await resolve(recode.oldCode.value,'2026-06-01T00:00:00')).data.status,'NOT_FOUND');assert.equal((await resolve(recode.newCode,'2026-06-01T00:00:00')).data.targetId,recode.targetId);assert.equal((await resolve(recode.oldCode.value,'2026-07-01T00:00:00',recode.oldCode.version.recorded_at)).data.targetId,recode.targetId);
  await deployment.complete();

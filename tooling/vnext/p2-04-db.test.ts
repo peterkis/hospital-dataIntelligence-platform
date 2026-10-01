@@ -76,6 +76,7 @@ test('typed HTTP freezes full input, independently approves and replays one immu
   const id=accepted.data!.facts![0]!.id;expect((await maker.history({id,campus:'NORTH'})).data?.versions).toHaveLength(1);
   expect((await createOrganizationIdentifierClient(url,'outsider').history({id,campus:'NORTH'})).response.status).toBe(403);
   const unknown=await fetch(url+'/api/vnext/organization-identifiers/inputs',{method:'POST',headers:{'content-type':'application/json','x-hdi-actor':'maker'},body:JSON.stringify({...await f.input(),platformId:randomUUID()})});expect(unknown.status).toBe(400);
+  const numericInput=await f.input(),numeric=await fetch(url+'/api/vnext/organization-identifiers/inputs',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({...numericInput,entries:numericInput.entries.map(entry=>({...entry,row:{...entry.row,identifier_value:12}}))})});expect(numeric.status).toBe(400);
  }finally{await app.close();}
 });
 test('ORG23 source codes keep their complete input and freeze a blocked handoff to ORG22',async()=>{

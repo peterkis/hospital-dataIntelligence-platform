@@ -1,5 +1,6 @@
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import {Type,type Static,type TSchema} from 'typebox';
+import {Check} from 'typebox/value';
 import {openOrganizationIdentifiers,OrganizationIdentifierStageSchema,OrganizationIdentifierStoredStageSchema,OrganizationIdentifierEntrySchema,OrganizationIdentifierStoredEntrySchema,OrganizationIdentifierVerifySchema,OrganizationIdentifierResolveSchema,OrganizationIdentifierReceiveSchema} from '../../modules/department-master/index.js';
 import {ApproveApplyUnitSchema,ApplyUnitSchema,PlanOwnerUnitSchema,ContractItemSchema} from '../../modules/governance-catalog/index.js';
 const closed={additionalProperties:false} as const,Text=Type.String(),Id=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'}),Nullable=Type.Union([Text,Type.Null()]);
@@ -18,7 +19,7 @@ const Read=Type.Object({id:Id,campus:Campus,recordAsOf:Type.Optional(Time)},clos
 const ErrorSchema=Type.Object({code:Text,message:Text,field:Type.Optional(Text)},closed),errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,413:ErrorSchema,500:ErrorSchema,503:ErrorSchema};
 export interface OrganizationIdentifierHttpContext {owner:ReturnType<typeof openOrganizationIdentifiers>;actor:(request:FastifyRequest)=>string}
 export function registerOrganizationIdentifierRoutes(app:FastifyInstance,context?:OrganizationIdentifierHttpContext){
- const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handler:(owner:OrganizationIdentifierHttpContext['owner'],actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/organization-identifiers/'+path,{schema:{operationId,body,response:{200:response,...errors}},...(path==='files'?{bodyLimit:1500000}:{})},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handler(context.owner,context.actor(r),r.body as Static<S>);});
+ const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handler:(owner:OrganizationIdentifierHttpContext['owner'],actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/organization-identifiers/'+path,{schema:{operationId,body,response:{200:response,...errors}},preValidation:async request=>{if(!Check(body,request.body))throw new Error('CLOSED_INPUT_REQUIRED');},...(path==='files'?{bodyLimit:1500000}:{})},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handler(context.owner,context.actor(r),r.body as Static<S>);});
  route('inputs','stageOrganizationIdentifiers',OrganizationIdentifierStageSchema,Staged,(o,a,b)=>o.stage(a,b));
  route('inputs/read','readOrganizationIdentifierInput',Input,OrganizationIdentifierStoredStageSchema,(o,a,b)=>o.readInput(a,b));
  route('preview','previewOrganizationIdentifiers',Input,Type.Object({entries:Type.Array(OrganizationIdentifierStoredEntrySchema),verification:Type.Union([OrganizationIdentifierVerifySchema,Type.Null()]),heads:Type.Array(History),issues:Type.Array(Issue)},closed),(o,a,b)=>o.preview(a,b));
