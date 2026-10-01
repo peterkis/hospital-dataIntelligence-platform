@@ -21,7 +21,9 @@ beforeAll(async()=>{
   await expect(scenario.campusApply(activate(trial))).rejects.toThrow('BLOCKED_DEPENDENCY');
   expect((await scenario.campus.references.read('maker',{id:trial.id})).head).toBe(trial.version);
   const {upgradeEffectiveActivation}=await import('./review-ci-database.mjs');await upgradeEffectiveActivation(receipt);
-  const after=await inspect(receipt);expect(workspaceStartupPrefix(migrationFiles(),after.ledger)).toBe(87);
+  const after=await inspect(receipt);expect(after.ledger).toHaveLength(87);
+  // This isolated historical campus repair does not admit current workspace startup.
+  expect(()=>workspaceStartupPrefix(migrationFiles(),after.ledger)).toThrow('WORKSPACE_MIGRATION_REQUIRED');
  }
 });
 afterAll(async()=>{await workspace?.close();await scenario?.close();await catalog?.close();});

@@ -19,6 +19,10 @@ const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')
 const provider=new LocalSyntheticKeyProvider(),connection=process.env['VNEXT_VALIDATION_OWNER_URL']!;
 const owner=openDepartment(connection,provider),catalog=await openCatalog(connection,provider);
 let f:Awaited<ReturnType<typeof departmentFixture>>;
+async function readDepartment(input:Parameters<typeof owner.read>[1]){
+ peer(receipt.name,`INSERT INTO department_master.identifier_access(actor,scheme,campus,permission) VALUES('maker','SYNTHETIC_DEPARTMENT_CODE','NORTH','READ') ON CONFLICT DO NOTHING; INSERT INTO department_master.mapping_target_access(actor,target_type,target_id,campus) VALUES('maker','ORG',${quote(input.id)}::uuid,'NORTH') ON CONFLICT DO NOTHING;`);
+ return owner.read('maker',{...input,campus:'NORTH'});
+}
 afterAll(async()=>{await owner.close();await catalog.close();});
 test('Department Owner rejects unauthorised reading at its public boundary',async()=>{
  const owner=openDepartment(process.env['VNEXT_VALIDATION_OWNER_URL']!);
@@ -44,7 +48,7 @@ test('ORG04 policy adoption and independently approved creation return one datab
  const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});
  expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error();
  const fact=result.facts[0]!;expect(fact.id).not.toBe(input.entries[0]!.row.org_id);expect(fact.version).toBe('1');
- expect((await owner.read('maker',{id:fact.id,businessAt:'2026-03-01T00:00:00'})).version?.facts).toMatchObject({name:'DEMO 同名科室',sourceVersion:'9'});
+ expect((await readDepartment({id:fact.id,businessAt:'2026-03-01T00:00:00'})).version?.facts).toMatchObject({name:'DEMO 同名科室',sourceVersion:'9'});
 });
 
  test('row validation outcomes are independent and a valid row can commit beside a blocked row',async()=>{
@@ -79,7 +83,7 @@ test('ORG04 XLSX rejects offsets and preserves local source fields through the s
  const staged=await owner.stage('maker',{...await f.input(),requestId:randomUUID(),timePolicy:'LOCAL',entries:[{...f.entry(),row:{...entry.row,org_code:entry.row.org_code+'_MANUAL',valid_from:'2026-01-01T00:00:00',recorded_at:'2026-01-02T00:00:00'}}]});
  await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO local timestamp',evidenceId:f.artifact.artifactId}]});
  const applyRequestId=randomUUID(),normalized=await owner.plan('maker',{inputId:staged.inputId,requestId:applyRequestId});await owner.readApplyCandidate('reviewer',{candidateId:normalized.candidateId});await owner.approveApplyUnit('reviewer',normalized);const applied=await owner.applyUnit('maker',{candidateId:normalized.candidateId,requestId:applyRequestId});expect(applied.status).toBe('COMMITTED');if(applied.status!=='COMMITTED')throw new Error();
- expect((await owner.read('maker',{id:applied.facts[0]!.id,businessAt:'2026-02-01T00:00:00'})).version?.facts.sourceRecordedAt).toBe('2026-01-02T00:00:00.000000');
+ expect((await readDepartment({id:applied.facts[0]!.id,businessAt:'2026-02-01T00:00:00'})).version?.facts.sourceRecordedAt).toBe('2026-01-02T00:00:00.000000');
 });
 
 test('ORG04 XLSX keeps valid rows when another physical row is invalid',async()=>{
@@ -190,9 +194,9 @@ test('AC01/02/05 same-name departments remain distinct and rename preserves iden
   await expect(owner.history('maker',one!.id,'2020-01-01T00:00:00')).rejects.toThrow('NOT_FOUND');
  const revision={...a,intent:'REVISE' as const,target:{owner:'department-master' as const,id:one!.id,expectedVersion:'1'},row:{...a.row,org_name:'DEMO 更名',valid_from:'2026-07-01T00:00:00.000001'}};
  const [updated]=await apply([revision]);expect(updated!.id).toBe(one!.id);
- expect((await owner.read('maker',{id:one!.id,businessAt:'2026-07-01T00:00:00.000000'})).version?.facts.name).toBe(a.row.org_name);
- expect((await owner.read('maker',{id:one!.id,businessAt:'2026-07-01T00:00:00.000001'})).version?.facts.name).toBe('DEMO 更名');
- expect((await owner.read('maker',{id:one!.id,businessAt:'2026-08-01T00:00:00',recordAsOf:original.recordedAt})).version?.facts.name).toBe(a.row.org_name);
+ expect((await readDepartment({id:one!.id,businessAt:'2026-07-01T00:00:00.000000'})).version?.facts.name).toBe(a.row.org_name);
+ expect((await readDepartment({id:one!.id,businessAt:'2026-07-01T00:00:00.000001'})).version?.facts.name).toBe('DEMO 更名');
+ expect((await readDepartment({id:one!.id,businessAt:'2026-08-01T00:00:00',recordAsOf:original.recordedAt})).version?.facts.name).toBe(a.row.org_name);
  expect((await owner.coverage('maker',{id:one!.id,validFrom:'2026-01-01T00:00:00',validTo:null})).covered).toBe(true);
  await expect(prepare([{...revision,target:{...revision.target,expectedVersion:'2'},row:{...revision.row,org_code:'DIFFERENT'}}])).rejects.toThrow('BLOCKED_DEPENDENCY');
  await expect(prepare([a])).rejects.toThrow('IDENTIFIER_CONFLICT');
@@ -211,7 +215,7 @@ test('historical missing evidence requires an exact independent exception; a new
  await expect(prepare([entry],[1])).rejects.toThrow('CLOSED_INPUT_REQUIRED');
  entry.origin='HISTORICAL';await expect(prepare([entry])).rejects.toThrow('LEGAL_REVIEW_REQUIRED');
  const [fact]=await apply([entry],[1]);
- expect((await owner.read('maker',{id:fact!.id,businessAt:'2026-01-01T00:00:00'})).version?.facts).toMatchObject({historicalException:true,establishedOn:null});
+ expect((await readDepartment({id:fact!.id,businessAt:'2026-01-01T00:00:00'})).version?.facts).toMatchObject({historicalException:true,establishedOn:null});
 });
 test('real HTTP exposes the Department Owner and enforces outsider access',async()=>{
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});

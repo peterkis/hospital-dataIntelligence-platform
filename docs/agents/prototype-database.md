@@ -55,7 +55,10 @@ where rolcanlogin and (rolcreatedb or rolsuper)
 order by rolname;
 ```
 
+Current workspace startup requires the complete ordered, checksummed migration chain (through 0117 for P2-04). Prefix 0087 is an upgrade predecessor and is rejected with `WORKSPACE_MIGRATION_REQUIRED` before credentials, keys, Owners or HTTP listen. Use the receipt-bound current deployment runner, `npm run prototype:db:with -- vnext:p2-04:deploy`, to perform the authorized synthetic forward upgrade and preservation checks; never edit installed migration bytes. Department queries for ORG23 derived codes must supply the explicit `campus` and hold both scheme and target READ authority in addition to Department HOSPITAL/READ.
+
 The wrapper is the first database action in a local development or validation session. It:
+
 
 1. Requires the ignored `.env.prototype.local` file without reading or printing its values.
 2. Checks the fixed `Anolis-8.9-HDI-POC` WSL2 distribution and the `postgresql-18` service.

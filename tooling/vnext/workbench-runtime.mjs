@@ -1,4 +1,5 @@
-import {openDepartment,openHierarchy,openOrganizationMappings} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {openDepartment,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {assertOrganizationIdentifiersProvisioned} from './organization-identifier-provisioning.mjs';
 import {assertOrganizationMappingsProvisioned} from './organization-mapping-provisioning.mjs';
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -47,7 +48,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -58,6 +59,7 @@ export async function startWorkbench({
     await department?.close();
     await hierarchy?.close();
     await mapping?.close();
+    await identifiers?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -109,6 +111,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=87){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
     if(owned||persistentPrefix>=109){await assertHierarchyProvisioned(connection);hierarchy=openHierarchy(connection,provider);}
     if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
+    if(persistent&&persistentPrefix>=116){await assertOrganizationIdentifiersProvisioned(connection,provider);identifiers=openOrganizationIdentifiers(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -167,6 +170,7 @@ export async function startWorkbench({
       department?{owner:department,actor:r=>syntheticActor(r.headers)}:undefined,
       hierarchy?{owner:hierarchy,actor:r=>syntheticActor(r.headers)}:undefined,
       mapping?{owner:mapping,actor:r=>syntheticActor(r.headers)}:undefined,
+      identifiers?{owner:identifiers,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

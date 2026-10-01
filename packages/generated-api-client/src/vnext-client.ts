@@ -183,3 +183,27 @@ export function createOrganizationMappingClient(baseUrl:string,actor:string){
   receiveFile:(body:operations['receiveOrganizationMappingFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-mappings/files',{body}),
  };
 }
+export type OrganizationIdentifierInput=operations['stageOrganizationIdentifiers']['requestBody']['content']['application/json'];
+export function createOrganizationIdentifierClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  stage:(body:OrganizationIdentifierInput)=>client.POST('/api/vnext/organization-identifiers/inputs',{body}),
+  readInput:(body:operations['readOrganizationIdentifierInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/inputs/read',{body}),
+  preview:(body:operations['previewOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/preview',{body}),
+  validate:(body:operations['validateOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/validate',{body}),
+  verify:(body:operations['verifyOrganizationIdentifierEvidence']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/verify',{body}),
+  plan:(body:operations['planOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/plan',{body}),
+  review:(body:operations['reviewOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/review',{body}),
+  approve:(body:operations['approveOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/approve',{body}),
+  apply:(body:operations['applyOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/apply',{body}),
+  resume:(body:operations['resumeOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/resume',{body}),
+  list:(body:operations['listOrganizationIdentifiers']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/list',{body}),
+  history:(body:operations['getOrganizationIdentifierHistory']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/history',{body}),
+  read:(body:operations['getOrganizationIdentifierAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/query',{body}),
+  resolve:(body:operations['resolveOrganizationIdentifier']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/resolve',{body}),
+  forTarget:(body:operations['getOrganizationTargetAliases']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/targets',{body}),
+  preferred:(body:operations['getPreferredOrganizationAlias']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/preferred',{body}),
+  diff:(body:operations['compareOrganizationIdentifierVersions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/diff',{body}),
+  receiveFile:(body:operations['receiveOrganizationIdentifierFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-identifiers/files',{body}),
+ };
+}
