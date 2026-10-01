@@ -14,7 +14,7 @@ const ManifestSchema=Type.Object({bomDetected:Type.Boolean(),bomMembers:Type.Arr
 const RowSchema=Type.Record(Type.String(),Text);
 const IssueSchema=Type.Object({code:Type.String({pattern:'^[A-Z_]{1,64}$'}),row:IssueRow,column:Int,sheet:Type.Optional(Text)},{additionalProperties:false});
 const ResultSchema=Type.Object({
- policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2'),Type.Literal('STRICT_DEPARTMENT_V1')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
+ policy:Type.Union([Type.Literal('STRICT_V1'),Type.Literal('STRICT_V2'),Type.Literal('STRICT_DEPARTMENT_V1'),Type.Literal('STRICT_ORGANIZATION_MAPPING_V1')]),structuralStatus:Type.Union([Type.Literal('PARSED'),Type.Literal('REJECTED')]),
  manifest:ManifestSchema,rows:Type.Array(RowSchema,{maxItems:1000}),
  cells:Type.Array(Type.Object({row:Int,sourceRow:IssueRow,column:Int,field:Text,value:Text,sourceType:Type.Union(['CSV','JSON','inlineStr','s'].map(value=>Type.Literal(value)))},{additionalProperties:false}),{maxItems:100000}),
  issues:Type.Array(IssueSchema,{maxItems:100000}),
@@ -47,7 +47,7 @@ export function verifyParsedPayload(bytes:Uint8Array,expected:{sourceArtifactId:
  }
   const departmentSourceRows=new Set(result.cells.map(cell=>cell.sourceRow));
   const departmentMaxSourceRow=Math.max(...departmentSourceRows,0);
-  const rowLocalDepartmentIssues=result.policy==='STRICT_DEPARTMENT_V1'&&result.issues.length>0&&result.issues.every(issue=>{
+  const rowLocalDepartmentIssues=['STRICT_DEPARTMENT_V1','STRICT_ORGANIZATION_MAPPING_V1'].includes(result.policy)&&result.issues.length>0&&result.issues.every(issue=>{
    if(issue.row<1)return false;
    if(issue.code==='ROW_GAP')return issue.column===0&&issue.row>1&&issue.row<departmentMaxSourceRow&&!departmentSourceRows.has(issue.row);
    return departmentSourceRows.has(issue.row);

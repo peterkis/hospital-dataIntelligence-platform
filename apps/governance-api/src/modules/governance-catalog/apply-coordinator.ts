@@ -27,6 +27,8 @@ export interface ObservedOwnerUnit {
 export interface ApplyOwnerPort {
  observe(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<ObservedOwnerUnit>;
  authorize(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,action:'READ'|'WRITE'|'REVIEW'):Promise<void>;
+ authorizeApproval?(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<void>;
+ authorizeFrozen?(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit):Promise<void>;
  // FREEZE may retain an Owner-declared blocked observation for review. Omitted
  // means full admission; approval and apply never accept a freeze-only decision.
  validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,stage?:'FREEZE'):Promise<void>;
@@ -39,15 +41,17 @@ interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
 const codes=new Set(['CAMPUS_RETIRED','CAMPUS_SUSPENDED','DISPOSITION_INCOMPLETE','DISPOSITION_ALREADY_COMPLETE','ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','PAIR_PREAUTHORIZATION_REQUIRED','STALE_REVISION','BUNDLE_CONTEXT_REQUIRED','LEGAL_REVIEW_REQUIRED','BATCH_REJECTED','UNSUPPORTED_STATE_TRANSITION','PARENT_PERIOD_NOT_COVERED']);
 function failure(error:unknown):Error {
+ const mappingCodes=['MAPPING_ALREADY_REGISTERED','MAPPING_IDENTITY_IMMUTABLE','MAPPING_RETRACTED','BATCH_CONFLICT'];
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';
  if((typeof code==='string'&&(/^08[A-Z0-9]{3}$/.test(code)||['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','57P01'].includes(code)))||
   ['Connection terminated unexpectedly','Connection terminated','Connection terminated due to connection timeout'].includes(message))return new Error('TRANSPORT_FAILED');
- return new Error(codes.has(message)?message:'APPLY_FAILED');
+ return new Error(codes.has(message)||mappingCodes.includes(message)?message:'APPLY_FAILED');
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 function bound(unit:ObservedOwnerUnit):void {
- if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1')||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
+ const blockedOrg22=unit.atomicRule==='ORG22_WHOLE_REVISION_V1'&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
+ if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1'&&!blockedOrg22)||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
  const seen=new Set<number>();
  for(const c of unit.commands){
   // Owner declares the whole unit and an execution order; the Coordinator never splits or infers bundles.
@@ -93,6 +97,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
   const c=await record<Candidate>(scope,actor,'READ_CANDIDATE',{candidateId:id});
   await port().authorize(scope,actor,c.input,'READ');
   if(permission!=='READ')await port().authorize(scope,actor,c.input,permission);
+  if(port().authorizeFrozen)await port().authorizeFrozen!(scope,actor,unseal(c));
   return c;
  };
  const recheck=async(scope:CatalogTransactionScope,actor:string,c:Candidate)=>{
@@ -157,6 +162,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
    try{return await root(async scope=>{
     const c=await candidate(scope,actor,input.candidateId,'REVIEW');
     if(!equalBinding(c.digest,input.digest))throw new Error('STALE_VALIDATION');
+    await port().authorizeApproval?.(scope,actor,c.input);
     const approvedUnit=unseal(c);await recheck(scope,actor,c);if(approvedUnit.commands.length===0)throw new Error('BATCH_REJECTED');
     return record<{candidateId:string;approvedBy:string}>(scope,actor,'APPROVE',input);
    });}catch(error){throw failure(error);}
@@ -173,6 +179,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     if(!c.approvedBy)throw new Error('APPROVAL_REQUIRED');
     // Both executor and original approver must retain current permissions until this commit.
     await port().authorize(scope,c.approvedBy,c.input,'REVIEW');
+    await port().authorizeApproval?.(scope,c.approvedBy,c.input);
     await record(scope,c.approvedBy,'CHECK_APPROVAL',{candidateId:c.id});
     // Admission belongs to approval/apply, never to reading immutable history.
     // Recheck the approver's source/material permissions in this same write root.

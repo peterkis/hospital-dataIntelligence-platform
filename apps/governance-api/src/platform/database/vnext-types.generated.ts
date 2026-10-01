@@ -142,6 +142,76 @@ export interface DepartmentMasterInput {
   revision: Generated<string>;
 }
 
+export interface DepartmentMasterMappingAccess {
+  actor: string;
+  campus: string;
+  context: string;
+  entity_type: string;
+  from_system_id: string;
+  permission: string;
+}
+
+export interface DepartmentMasterMappingInput {
+  campus: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  namespaces: Json;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+}
+
+export interface DepartmentMasterMappingTargetAccess {
+  actor: string;
+  campus: string;
+  target_id: string;
+  target_type: string;
+}
+
+export interface DepartmentMasterMappingVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface DepartmentMasterOrganizationMapping {
+  campus: string;
+  context: string;
+  entity_type: string;
+  from_system_id: string;
+  id: Generated<string>;
+  source_code: string;
+}
+
+export interface DepartmentMasterOrganizationMappingVersion {
+  action: string;
+  content_digest: string;
+  facts: Json;
+  id: Generated<string>;
+  input_id: string;
+  mapping_id: string;
+  number: Int8;
+  predecessor: string | null;
+  reason: string;
+  recorded_at: Generated<string>;
+  source_row: number;
+  target_id: string;
+  target_type: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface DepartmentMasterVerification {
   actor: string;
   digest: string;
@@ -813,6 +883,12 @@ export interface DB {
   "department_master.hierarchy_view": DepartmentMasterHierarchyView;
   "department_master.hierarchy_view_version": DepartmentMasterHierarchyViewVersion;
   "department_master.input": DepartmentMasterInput;
+  "department_master.mapping_access": DepartmentMasterMappingAccess;
+  "department_master.mapping_input": DepartmentMasterMappingInput;
+  "department_master.mapping_target_access": DepartmentMasterMappingTargetAccess;
+  "department_master.mapping_verification": DepartmentMasterMappingVerification;
+  "department_master.organization_mapping": DepartmentMasterOrganizationMapping;
+  "department_master.organization_mapping_version": DepartmentMasterOrganizationMappingVersion;
   "department_master.verification": DepartmentMasterVerification;
   "department_master.version": DepartmentMasterVersion;
   "governance_catalog.apply_approval": GovernanceCatalogApplyApproval;

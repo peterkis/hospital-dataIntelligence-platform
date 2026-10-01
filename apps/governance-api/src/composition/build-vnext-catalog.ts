@@ -14,6 +14,7 @@ import { registerWorkbenchRoutes } from '../platform/fastify/vnext-workbench-rou
 import { validCatalogLocalTime, catalogClockTime } from '../platform/fastify/vnext-local-time.js';
 import {registerOrganizationRoutes,type OrganizationHttpContext} from '../platform/fastify/vnext-organization-routes.js';
 import {registerHierarchyRoutes,type HierarchyHttpContext} from '../platform/fastify/vnext-hierarchy-routes.js';
+import {registerOrganizationMappingRoutes,type OrganizationMappingHttpContext} from '../platform/fastify/vnext-organization-mapping-routes.js';
 
 // Closing with unread upload bytes can reset the socket before the client receives 413.
 // Discard a bounded remainder without buffering; hostile/unfinished uploads still close.
@@ -44,7 +45,7 @@ async function discardRejectedUpload(request:IncomingMessage):Promise<void> {
   });
 }
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext) {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
   app.addHook('onRequest',async(request,reply)=>{if(request.url.startsWith('/api/vnext/'))reply.header('Cache-Control','no-store');if(request.method==='GET')started.set(request,performance.now());});
@@ -87,5 +88,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerOrganizationWorkspaceRoutes(app,workspace);
   registerDepartmentRoutes(app,department);
   registerHierarchyRoutes(app,hierarchy);
+  registerOrganizationMappingRoutes(app,mapping);
   return app;
 }
