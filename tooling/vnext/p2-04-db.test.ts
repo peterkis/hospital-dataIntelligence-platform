@@ -204,6 +204,10 @@ test('a verifier lacking the current target read grant cannot certify its input'
  try{await expect(owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO verification without target authority',evidenceId:f.artifact.artifactId,policyApproved:true}]})).rejects.toThrow('ACCESS_DENIED');expect((await owner.preview('maker',{inputId:staged.inputId})).verification).toBeNull();}finally{f.grantTarget(f.targetId);}
 });
 
+test('Department reads before its first recorded version do not disclose initial code evidence',async()=>{
+ const department=openDepartment(connection,provider);try{const known=await department.history('maker',f.targetId);expect(known.versions).not.toHaveLength(0);await expect(department.read('maker',{id:f.targetId,businessAt:'2026-01-01T00:00:00',recordAsOf:'2000-01-01T00:00:00'})).rejects.toThrow('NOT_FOUND');}finally{await department.close();}
+});
+
 test('source retirement still permits explicit end and withdrawal without requalifying expansion',async()=>{
  const source=f.source,e=f.entry();e.row.identifier_value='DEMO retire with upstream';const accepted=await apply([e]),id=accepted.result.facts[0]!.id;
  const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',source.id,'RETIRE');await catalog.command('reviewer',{action:'RETIRE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_UPSTREAM_RETIRE',target:source.id,expectedHead:source.head,...(impact.definitionDigest===null?{}:{reviewDigest:impact.definitionDigest}),impactDigest:impact.impactDigest});
