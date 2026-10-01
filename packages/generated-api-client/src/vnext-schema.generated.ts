@@ -31389,6 +31389,11 @@ export interface operations {
                         candidateId: string;
                         digest: string;
                         approvedBy: string | null;
+                        /**
+                         * @description COMPLETE includes every frozen input row. LEGACY_EXECUTABLE_ROWS_ONLY restores only frozen executable commands; blocked input rows may be absent.
+                         * @enum {unknown}
+                         */
+                        inputCoverage: "COMPLETE" | "LEGACY_EXECUTABLE_ROWS_ONLY";
                         entries: {
                             /** @enum {unknown} */
                             action: "REGISTER" | "CORRECT" | "RETRACT";

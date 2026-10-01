@@ -27,6 +27,7 @@ export interface ObservedOwnerUnit {
 export interface ApplyOwnerPort {
  observe(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<ObservedOwnerUnit>;
  authorize(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,action:'READ'|'WRITE'|'REVIEW'):Promise<void>;
+ authorizeApproval?(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput):Promise<void>;
  authorizeFrozen?(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit):Promise<void>;
  // FREEZE may retain an Owner-declared blocked observation for review. Omitted
  // means full admission; approval and apply never accept a freeze-only decision.
@@ -161,6 +162,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
    try{return await root(async scope=>{
     const c=await candidate(scope,actor,input.candidateId,'REVIEW');
     if(!equalBinding(c.digest,input.digest))throw new Error('STALE_VALIDATION');
+    await port().authorizeApproval?.(scope,actor,c.input);
     const approvedUnit=unseal(c);await recheck(scope,actor,c);if(approvedUnit.commands.length===0)throw new Error('BATCH_REJECTED');
     return record<{candidateId:string;approvedBy:string}>(scope,actor,'APPROVE',input);
    });}catch(error){throw failure(error);}
@@ -177,6 +179,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     if(!c.approvedBy)throw new Error('APPROVAL_REQUIRED');
     // Both executor and original approver must retain current permissions until this commit.
     await port().authorize(scope,c.approvedBy,c.input,'REVIEW');
+    await port().authorizeApproval?.(scope,c.approvedBy,c.input);
     await record(scope,c.approvedBy,'CHECK_APPROVAL',{candidateId:c.id});
     // Admission belongs to approval/apply, never to reading immutable history.
     // Recheck the approver's source/material permissions in this same write root.

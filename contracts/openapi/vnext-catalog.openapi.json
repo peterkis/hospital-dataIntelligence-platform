@@ -100404,6 +100404,7 @@
                     "candidateId",
                     "digest",
                     "approvedBy",
+                    "inputCoverage",
                     "entries",
                     "issues",
                     "input",
@@ -100430,6 +100431,13 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "inputCoverage": {
+                      "enum": [
+                        "COMPLETE",
+                        "LEGACY_EXECUTABLE_ROWS_ONLY"
+                      ],
+                      "description": "COMPLETE includes every frozen input row. LEGACY_EXECUTABLE_ROWS_ONLY restores only frozen executable commands; blocked input rows may be absent."
                     },
                     "entries": {
                       "type": "array",
