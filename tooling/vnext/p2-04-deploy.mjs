@@ -72,7 +72,8 @@ try{
  assert.equal(positiveCode.response.status,200);assert.equal(positiveCode.data.effectiveCode,recode.newCode);assert.equal(positiveCode.data.initialCode,recode.oldCode.value);
  assert.equal((await departmentClient.read({id:recode.targetId,businessAt:codeQuery.businessAt})).response.status,403);
  for(const [table,predicate] of [['identifier_access',"actor='maker' AND scheme='SYNTHETIC_DEPARTMENT_CODE' AND campus='NORTH' AND permission='READ'"],['mapping_target_access',`actor='maker' AND target_type='ORG' AND target_id=${quote(recode.targetId)}::uuid AND campus='NORTH'`]]){
-  const originalGrants=peer(receipt.name,identitySQL(receipt)+`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM department_master.${table} g WHERE ${predicate};`);
+  const originalGrants=peer(receipt.name,identitySQL(receipt)+`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM department_master.${table} g WHERE ${predicate};`).split(/\r?\n/).filter(line=>line!=='DO').join('\n');
+  assert.ok(Array.isArray(JSON.parse(originalGrants))); // Validate the backup before revoking anything.
   peer(receipt.name,identitySQL(receipt)+`DELETE FROM department_master.${table} WHERE ${predicate};`);
   try{assert.equal((await departmentClient.read(codeQuery)).response.status,403);assert.equal((await resolve(recode.newCode,codeQuery.businessAt)).response.status,403);}
   finally{peer(receipt.name,identitySQL(receipt)+`INSERT INTO department_master.${table} SELECT * FROM jsonb_populate_recordset(NULL::department_master.${table},${quote(originalGrants)}::jsonb) ON CONFLICT DO NOTHING;`);}
