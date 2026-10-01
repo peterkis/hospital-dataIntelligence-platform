@@ -1,0 +1,8 @@
+import type {CatalogField} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import {ORGANIZATION_IDENTIFIER_SCHEMES} from '../../apps/governance-api/src/modules/department-master/index.js';
+
+export const ORG23_SYNTHETIC_CODES:Record<string,string[]>={target_type:['LEGAL','CAMPUS','ORG','UNIT','WARD','NURSING','TEAM','LOCATION'],identifier_kind:['HOSPITAL_CODE','SOURCE_CODE','ALIAS','FORMER_NAME','SEARCH_CODE'],is_preferred:['Y','N'],record_status:['DRAFT','REVIEW','ACTIVE','SUSPENDED','RETIRED'],identifier_system:Object.keys(ORGANIZATION_IDENTIFIER_SCHEMES)};
+export function organizationIdentifierContractDefinition(fields:CatalogField['original'][],sourceVersionId:string){
+ const enums=ORG23_SYNTHETIC_CODES;
+ return {templateVersion:'ORG23_CORE_V1',ruleVersion:'ORG23_CORE_V1',sourceVersionId,businessKey:['org_identifier_id'],fields:fields.map(f=>({code:f.code,type:f.type,required:f.required,privacy:f.privacy,condition:f.required==='C'?'EVALUATED':f.required==='R'?'ALWAYS':'OPTIONAL',enumValues:enums[f.code]??[]})),rules:[{id:'ORG_IDENTIFIER_APPROVAL_V1',field:'approval_ref',text:'Source approval never replaces platform approval.',status:'MACHINE',version:'P2_04_V1'}],references:fields.filter(f=>f.ref).map(f=>({field:f.code,target:f.ref,status:'ORGANIZATION_IDENTIFIER_CORE'})),codeSets:Object.entries(enums).map(([field,codes])=>({field,codes,codeSystem:field==='identifier_system'?'SYNTHETIC_ORGANIZATION_PERSONNEL':'SYNTHETIC_'+field.toUpperCase(),version:'DEMO_1',status:'SYNTHETIC_ADOPTED',sourceVersionId,validFrom:'2026-01-01T00:00:00',validTo:null}))};
+}

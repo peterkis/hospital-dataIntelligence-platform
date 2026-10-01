@@ -184,9 +184,29 @@ test('replaced verification invalidates an already approved candidate',async()=>
  const e=f.entry(),approved=await prepare([e]);await owner.verify('reviewer',{requestId:randomUUID(),inputId:approved.staged.inputId,inputDigest:approved.staged.digest,rows:[{row:1,reason:'DEMO replacement personnel verification',evidenceId:f.artifact.artifactId,policyApproved:true}]});
  await expect(owner.applyUnit('maker',{candidateId:approved.candidate.candidateId,requestId:approved.requestId})).rejects.toThrow('STALE_VALIDATION');expect(await owner.resumeOutcome('maker',{candidateId:approved.candidate.candidateId,requestId:approved.requestId})).toBeNull();
 });
+test('initial official codes preserve finite ORG04 periods and alias admission rejects a middle coverage gap',async()=>{
+ const department=openDepartment(connection,provider),row=f.department.entry();row.row.valid_to='2026-02-01T00:00:00';
+ const commit=async(entry:typeof row)=>{const staged=await department.stage('maker',await f.department.input([entry]));await department.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO finite identity coverage',evidenceId:f.department.artifact.artifactId}]});const requestId=randomUUID(),candidate=await department.plan('maker',{inputId:staged.inputId,requestId});await department.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await department.approveApplyUnit('reviewer',candidate);const result=await department.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');return result.facts[0]!.id;};
+ try{const id=await commit(row);f.grantTarget(id);row.intent='REVISE';row.target={owner:'department-master',id,expectedVersion:'1'};row.row.valid_from='2026-03-01T00:00:00';row.row.valid_to='';await commit(row);
+  expect((await department.coverage('maker',{id,validFrom:'2026-01-01T00:00:00',validTo:'2026-04-01T00:00:00'})).covered).toBe(false);
+  const alias=f.entry();alias.row.target_id=id;alias.row.valid_to='2026-04-01T00:00:00';const staged=await owner.stage('maker',await f.input([alias]));expect((await owner.validate('maker',{inputId:staged.inputId})).issues).toContainEqual({row:1,field:'target_id',code:'BLOCKED_DEPENDENCY',status:'BLOCKED'});
+  expect(await owner.resolve('maker',{scheme:'SYNTHETIC_DEPARTMENT_CODE',value:row.row.org_code,campus:'NORTH',businessAt:'2026-03-01T00:00:00'})).toEqual({status:'NOT_FOUND'});
+ }finally{await department.close();}
+});
+
+test('ending a finite alias must actually shorten its accepted interval',async()=>{
+ const e=f.entry();e.row.valid_to='2026-06-01T00:00:00';const first=await apply([e]);e.action='END';e.identifier={owner:'department-master/organization-identifier',id:first.result.facts[0]!.id,expectedHead:'1'};
+ const staged=await owner.stage('maker',await f.input([e]));expect((await owner.validate('maker',{inputId:staged.inputId})).issues).toContainEqual({row:1,field:'action',code:'CLOSED_INPUT_REQUIRED',status:'FAIL'});expect((await owner.history('maker',{id:e.identifier.id,campus:'NORTH'})).versions).toHaveLength(1);
+});
+
+test('a verifier lacking the current target read grant cannot certify its input',async()=>{
+ const staged=await owner.stage('maker',await f.input());peer(receipt.name,`DELETE FROM department_master.mapping_target_access WHERE actor='reviewer' AND target_type='ORG' AND target_id=${quote(f.targetId)}::uuid AND campus='NORTH';`);
+ try{await expect(owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,reason:'DEMO verification without target authority',evidenceId:f.artifact.artifactId,policyApproved:true}]})).rejects.toThrow('ACCESS_DENIED');expect((await owner.preview('maker',{inputId:staged.inputId})).verification).toBeNull();}finally{f.grantTarget(f.targetId);}
+});
+
 test('source retirement still permits explicit end and withdrawal without requalifying expansion',async()=>{
  const source=f.source,e=f.entry();e.row.identifier_value='DEMO retire with upstream';const accepted=await apply([e]),id=accepted.result.facts[0]!.id;
- const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',source.id,'RETIRE');await catalog.command('reviewer',{action:'RETIRE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_UPSTREAM_RETIRE',target:source.id,expectedHead:source.head,reviewDigest:impact.definitionDigest??undefined,impactDigest:impact.impactDigest});
+ const impact=await catalog.sourceImpact('reviewer','SYNTHETIC',source.id,'RETIRE');await catalog.command('reviewer',{action:'RETIRE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_UPSTREAM_RETIRE',target:source.id,expectedHead:source.head,...(impact.definitionDigest===null?{}:{reviewDigest:impact.definitionDigest}),impactDigest:impact.impactDigest});
  expect(await owner.resumeOutcome('maker',{candidateId:accepted.candidate.candidateId,requestId:accepted.requestId})).toMatchObject({status:'COMMITTED',facts:accepted.result.facts});
  e.action='END';e.identifier={owner:'department-master/organization-identifier',id,expectedHead:'1'};e.row.valid_to='2026-07-01T00:00:00';await apply([e]);
  e.action='RETRACT';e.identifier.expectedHead='2';await apply([e]);expect((await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-03-01T00:00:00'})).version).toBeNull();

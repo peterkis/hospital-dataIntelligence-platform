@@ -52,7 +52,7 @@ try{
  const recodePath='.runtime/vnext/p2-04/recode-state.json';let recode;
  try{recode=JSON.parse(readFileSync(recodePath,'utf8'));assert.equal(recode.databaseOid,receipt.oid);assert.equal(recode.databaseRequestId,receipt.requestId);}catch(error){if(error.code!=='ENOENT')throw error;}
  if(!recode){
-  const prior=await maker.forTarget({type:'ORG',id:state.row.target_id,campus:'NORTH',businessAt:'2026-03-01T00:00:00'});assert.equal(prior.response.status,200);const code=prior.data.items.find(item=>item.kind==='HOSPITAL_CODE');assert.ok(code);
+  const prior=await maker.forTarget({type:'ORG',id:state.row.target_id,campus:'NORTH',businessAt:'2026-03-01T00:00:00'});assert.equal(prior.response.status,200);const foundCode=prior.data.items.find(item=>item.kind==='HOSPITAL_CODE');assert.ok(foundCode);const code=saved('recode-original-code',foundCode);
   const original=saved('identifier-stage-input.command',null),entry=original.entries[0];
   const aliasJob=await catalog.importJobRead('maker',{scope:'SYNTHETIC',jobId:original.jobId});
   const job=await catalog.importJobCommand('maker',freeze('recode-job',{action:'CREATE',scope:'SYNTHETIC',requestId:requestId('recode-job'),reason:'SYNTHETIC_ORG_IDENTIFIER',profile:'CORE',input:{kind:'METADATA_ONLY',declaredSha256:'a'.repeat(64)},contractId:aliasJob.contract.id,contractVersionId:aliasJob.contract.versionId}));

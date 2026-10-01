@@ -63,13 +63,13 @@ Exact official resolution returns the precise identifier version and typed targe
 | AC-04 search code is not identity | Search-code XLSX and forbidden alias/search scheme resolution |
 | AC-05 withdrawal keeps history | Correction/retraction, old R and unchanged original version |
 | Q14 source namespace separation | SOURCE_CODE blocked with full raw retention and ORG22 handoff; no formal fact/approval |
-| Atomic timelines | Preferred handover in reverse row order, language separation, code microsecond boundary, no fallback |
-| Approval/current permission | Same-person verify/approve denial, maker identity, revoked access, replacement verification staleness |
+| Atomic timelines | Preferred handover in reverse row order, language separation, strict END shortening, finite initial code, middle coverage gap, no fallback |
+| Approval/current permission | Same-person verify/approve denial, maker identity, revoked access, verifier target grant, replacement verification staleness |
 | Transaction/recovery | SQL second-row fault rollback, retry, real HTTP replay and same facts |
 | Database authority | Actual application role direct INSERT/UPDATE/key SELECT denied with 42501 |
 | Limits/profile/targets | Expanded 101 command rejection, FULL/offset/unsupported target block; actual LEGAL/CAMPUS Owner profiles |
 | Upstream exit | Explicit source retirement followed by end and retract |
 
-Unit tests cover the closed 16-field schema, no silent normalization and CORE/FULL adapter split. Fresh and 0114-to-current runs verify exact ordered/checksummed migration lineage and generated database types. The upgrade cohort compares predecessor ledger/data hashes. Persistent deployment verifies old row/key preservation and runs real HTTP against receipt-bound synthetic permissions, retaining original requests for recovery. The ignored `.runtime/vnext/p2-04-handoff.md` records actual commands, failures, final results, review and final commit/tree; local green is not formal acceptance.
+Unit tests cover the closed 16-field schema, no silent normalization and CORE/FULL adapter split. Fresh and 0114-to-current runs verify exact ordered/checksummed migration lineage and generated database types. The upgrade cohort compares predecessor ledger/data hashes. `--upgrade-periods` creates a real approved finite ORG04 assertion on 0114 and verifies unchanged original history, old R, new R and the microsecond end boundary after migration. Temporary and persistent fixtures share one synthetic contract builder. Persistent deployment verifies old row/key preservation and runs real HTTP against receipt-bound synthetic permissions, retaining original requests for recovery. The ignored `.runtime/vnext/p2-04-handoff.md` records actual commands, failures, final results, review and final commit/tree; local green is not formal acceptance.
 
 Run through the repository wrapper: `npm.cmd run prototype:db:with -- vnext:p2-04:validate`, `... --upgrade`, and `... vnext:p2-04:deploy`. Required wrapper evidence is ready, target exit 0 and cleanupPassed=true. The final applicable suite covers P2-01/02/03, shared Apply/files/validation/workbench and migration gates plus typecheck/build/boundaries. No UI browser acceptance or production restart is claimed.

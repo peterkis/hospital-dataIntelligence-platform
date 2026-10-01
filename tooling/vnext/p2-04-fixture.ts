@@ -1,3 +1,4 @@
+import {ORG23_SYNTHETIC_CODES,organizationIdentifierContractDefinition} from './p2-04-contract-fixture.js';
 import {randomUUID} from 'node:crypto';
 import type {Catalog,KeyProviderPort} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import type {OrganizationIdentifierStageInput} from '../../apps/governance-api/src/modules/department-master/index.js';
@@ -10,8 +11,8 @@ export async function organizationIdentifierFixture(receipt:{name:string},catalo
  const submitted=await catalog.command('maker',cmd('SUBMIT',{target:draft.id,expectedHead:draft.head}));
  const dataset=await catalog.command('reviewer',cmd('PUBLISH',{target:draft.id,expectedHead:submitted.head,reviewDigest:submitted.reviewDigest}));
  const fields=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.id===dataset.id)!.payload.fields!.map(f=>f.original);
- const enums:Record<string,string[]>={target_type:['LEGAL','CAMPUS','ORG','UNIT','WARD','NURSING','TEAM','LOCATION'],identifier_kind:['HOSPITAL_CODE','SOURCE_CODE','ALIAS','FORMER_NAME','SEARCH_CODE'],is_preferred:['Y','N'],record_status:['DRAFT','REVIEW','ACTIVE','SUSPENDED','RETIRED'],identifier_system:['SYNTHETIC_DEPARTMENT_CODE','SYNTHETIC_ALIAS','SYNTHETIC_FORMER_NAME','SYNTHETIC_SEARCH_CODE']};
- const definition={templateVersion:'ORG23_CORE_V1',ruleVersion:'ORG23_CORE_V1',sourceVersionId:base.source.versionId,businessKey:['org_identifier_id'],fields:fields.map(f=>({code:f.code,type:f.type,required:f.required,privacy:f.privacy,condition:f.required==='C'?'EVALUATED':f.required==='R'?'ALWAYS':'OPTIONAL',enumValues:enums[f.code]??[]})),rules:[{id:'ORG_IDENTIFIER_APPROVAL_V1',field:'approval_ref',text:'Source approval never replaces platform approval.',status:'MACHINE',version:'P2_04_V1'}],references:fields.filter(f=>f.ref).map(f=>({field:f.code,target:f.ref,status:'ORGANIZATION_IDENTIFIER_CORE'})),codeSets:Object.entries(enums).map(([field,codes])=>({field,codes,codeSystem:field==='identifier_system'?'SYNTHETIC_ORGANIZATION_PERSONNEL':'SYNTHETIC_'+field.toUpperCase(),version:'DEMO_1',status:'SYNTHETIC_ADOPTED',sourceVersionId:base.source.versionId,validFrom:'2026-01-01T00:00:00',validTo:null}))};
+ const enums=ORG23_SYNTHETIC_CODES;
+ const definition=organizationIdentifierContractDefinition(fields,base.source.versionId);
  const cd=await catalog.contractCommand('maker',cmd('CREATE',{datasetVersionId:dataset.versionId,profile:'CORE',validFrom:'2026-01-01T00:00:00',validTo:null,definition}));
  const approved=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:cd.id,expectedHead:cd.head,reviewDigest:cd.reviewDigest}));
  const contract=await catalog.contractCommand('reviewer',cmd('PUBLISH',{target:cd.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest}));
