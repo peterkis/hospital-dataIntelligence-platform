@@ -98,7 +98,7 @@ jobs:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
           HDIP_REVIEW_CI_PREVIOUS_UPGRADE: '1'
         run: npx vitest run --config tooling/vnext/vitest.p1-06-review-ci.config.ts tooling/vnext/p1-06-previous-access-db.test.ts --reporter=json --outputFile=.runtime/vnext/review-results/upgrade-0074.json
-      - name: Populated 0079 to current 0087 release and explicit resume upgrade
+      - name: Populated 0079 to 0087 repair and current startup rejection
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
