@@ -35,7 +35,7 @@ test('same Department changes its official code atomically and keeps the origina
  const resolved=await owner.resolve('maker',{scheme:'SYNTHETIC_DEPARTMENT_CODE',value:'0012',campus:'NORTH',businessAt:'2026-06-01T00:00:00'});expect(resolved).toMatchObject({status:'RESOLVED',targetId:f.targetId});
  expect(await owner.resolve('maker',{scheme:'SYNTHETIC_DEPARTMENT_CODE',value:code.value,campus:'NORTH',businessAt:'2026-06-01T00:00:00'})).toEqual({status:'NOT_FOUND'});
  expect(await owner.resolve('maker',{scheme:'SYNTHETIC_DEPARTMENT_CODE',value:code.value,campus:'NORTH',businessAt:'2026-03-01T00:00:00',recordAsOf:code.version.recorded_at})).toMatchObject({status:'RESOLVED',targetId:f.targetId});
- const department=openDepartment(connection,provider);try{expect(await department.read('maker',{id:f.targetId,businessAt:'2026-07-01T00:00:00'})).toMatchObject({id:f.targetId,initialCode:code.value,effectiveCode:'0012'});}finally{await department.close();}
+ const department=openDepartment(connection,provider);try{expect(await department.read('maker',{id:f.targetId,campus:'NORTH',businessAt:'2026-07-01T00:00:00'})).toMatchObject({id:f.targetId,initialCode:code.value,effectiveCode:'0012'});}finally{await department.close();}
 });
 test('duplicate aliases remain independent relations on distinct Department identities',async()=>{
  const other=await f.newDepartment();f.grantTarget(other);const a=f.entry(),b=f.entry();b.row.target_id=other;
@@ -128,7 +128,7 @@ test('retiring a formal code never revives the initial code or releases its perm
  const h=await owner.forTarget('maker',{type:'ORG',id:f.targetId,campus:'NORTH',businessAt:'2026-07-01T00:00:00'}),code=h.items.find(x=>x.kind==='HOSPITAL_CODE')!;
  const e=f.entry();e.action='END';e.identifier={owner:'department-master/organization-identifier',id:code.id,expectedHead:code.version.number};Object.assign(e.row,{identifier_kind:'HOSPITAL_CODE',identifier_system:'SYNTHETIC_DEPARTMENT_CODE',identifier_value:code.value,language:'',valid_from:code.version.valid_from,valid_to:'2026-08-01T00:00:00'});await apply([e]);
  expect(await owner.resolve('maker',{scheme:'SYNTHETIC_DEPARTMENT_CODE',value:'0012',campus:'NORTH',businessAt:'2026-08-01T00:00:00'})).toEqual({status:'NOT_FOUND'});
- const department=openDepartment(connection,provider);try{expect((await department.read('maker',{id:f.targetId,businessAt:'2026-08-01T00:00:00'})).effectiveCode).toBeNull();}finally{await department.close();}
+ const department=openDepartment(connection,provider);try{expect((await department.read('maker',{id:f.targetId,campus:'NORTH',businessAt:'2026-08-01T00:00:00'})).effectiveCode).toBeNull();}finally{await department.close();}
  const registration=f.entry();Object.assign(registration.row,{identifier_kind:'HOSPITAL_CODE',identifier_system:'SYNTHETIC_DEPARTMENT_CODE',identifier_value:'0012',language:'',valid_from:'2027-01-01T00:00:00'});const staged=await owner.stage('maker',await f.input([registration]));expect((await owner.validate('maker',{inputId:staged.inputId})).issues).toContainEqual({row:1,field:'identifier_value',code:'IDENTIFIER_CONFLICT',status:'FAIL'});
  e.action='RETRACT';e.identifier.expectedHead=String(BigInt(code.version.number)+1n);await apply([e]);expect((await owner.read('maker',{id:code.id,campus:'NORTH',businessAt:'2026-07-01T00:00:00'})).version).toBeNull();
 });
@@ -206,7 +206,7 @@ test('a verifier lacking the current target read grant cannot certify its input'
 });
 
 test('Department reads before its first recorded version do not disclose initial code evidence',async()=>{
- const department=openDepartment(connection,provider);try{const known=await department.history('maker',f.targetId);expect(known.versions).not.toHaveLength(0);await expect(department.read('maker',{id:f.targetId,businessAt:'2026-01-01T00:00:00',recordAsOf:'2000-01-01T00:00:00'})).rejects.toThrow('NOT_FOUND');}finally{await department.close();}
+ const department=openDepartment(connection,provider);try{const known=await department.history('maker',f.targetId);expect(known.versions).not.toHaveLength(0);await expect(department.read('maker',{id:f.targetId,campus:'NORTH',businessAt:'2026-01-01T00:00:00',recordAsOf:'2000-01-01T00:00:00'})).rejects.toThrow('NOT_FOUND');}finally{await department.close();}
 });
 
 test('source retirement still permits explicit end and withdrawal without requalifying expansion',async()=>{

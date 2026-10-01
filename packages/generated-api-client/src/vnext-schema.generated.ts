@@ -28899,6 +28899,8 @@ export interface operations {
                     id: string;
                     businessAt: string;
                     recordAsOf?: string;
+                    /** @enum {unknown} */
+                    campus?: "NORTH" | "SOUTH";
                 };
             };
         };

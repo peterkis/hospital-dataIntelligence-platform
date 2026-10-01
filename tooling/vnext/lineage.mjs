@@ -99,6 +99,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=113) allowedRoutines.add('department_master.mapping_snapshot_optional');
     if(ledger.length>=115) for(const name of ['identifier_authorize','identifier_input_read','identifier_job_read','identifier_snapshot','identifier_list','identifier_code','identifier_initial_code','identifier_assert_timeline','identifier_mutate','identifier_peers']) allowedRoutines.add('department_master.'+name);
     if(ledger.length>=116) allowedRoutines.add('department_master.department_code_at');
+    if(ledger.length>=117) for(const name of ['identifier_selected','department_code_at_authorized']) allowedRoutines.add('department_master.'+name);
     if(ledger.length>=94) allowedRoutines.add('department_master.hierarchy_lifecycle');
     if(ledger.length>=96) allowedRoutines.add('department_master.hierarchy_authorize');
     if(ledger.length>=97) allowedRoutines.add('department_master.hierarchy_read');

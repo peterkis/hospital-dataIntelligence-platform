@@ -5,11 +5,11 @@ import {prepareWorkspaceDeployment} from './p1-06-deployment.mjs';
 import {peer,identitySQL,quote} from './lineage.mjs';
 import {ORGANIZATION_IDENTIFIER_FUNCTIONS,assertOrganizationIdentifiersProvisioned} from './organization-identifier-provisioning.mjs';
 import {openCatalog,planBinding} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
-import {openOrganizationIdentifiers} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {openOrganizationIdentifiers,openDepartment} from '../../apps/governance-api/src/modules/department-master/index.ts';
 import {persistentOrganizationIdentifierFixture} from './p2-04-persistent-fixture.ts';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.ts';
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
-import {createOrganizationIdentifierClient} from '../../packages/generated-api-client/src/index.ts';
+import {createOrganizationIdentifierClient,createDepartmentClient} from '../../packages/generated-api-client/src/index.ts';
 
 if(process.argv.length!==2)throw new Error('CLOSED_COMMAND_REQUIRED');
 const deployment=await prepareWorkspaceDeployment({evidenceTask:'p2-04'}),{receipt,connection,provider,evidence}=deployment;
@@ -26,7 +26,7 @@ function saved(name,value){
  writeFileSync(path,JSON.stringify({databaseOid:receipt.oid,databaseRequestId:receipt.requestId,value}),{flag:'wx'});return value;
 }
 const requestId=name=>saved(name+'.request',randomUUID()),freeze=(name,value)=>saved(name+'.command',value);
-const catalog=await openCatalog(connection,provider),owner=openOrganizationIdentifiers(connection,provider);let app;
+const catalog=await openCatalog(connection,provider),owner=openOrganizationIdentifiers(connection,provider),department=openDepartment(connection,provider);let app;
 try{
  const statePath='.runtime/vnext/p2-04/http-state.json';let state;
  try{state=JSON.parse(readFileSync(statePath,'utf8'));assert.equal(state.databaseOid,receipt.oid);assert.equal(state.databaseRequestId,receipt.requestId);}catch(error){if(error.code!=='ENOENT')throw error;}
@@ -40,7 +40,7 @@ try{
  const provisionPath='.runtime/vnext/p2-04/provisioning.json';
  try{const prior=JSON.parse(readFileSync(provisionPath,'utf8'));assert.deepEqual(prior,state.binding);}catch(error){if(error.code!=='ENOENT')throw error;writeFileSync(provisionPath,JSON.stringify(state.binding,null,2),{flag:'wx'});}
  await assertOrganizationIdentifiersProvisioned(connection,provider,state.binding);
- app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,{owner:department,actor:r=>actor(r.headers)},undefined,undefined,{owner,actor:r=>actor(r.headers)});
  const url=await app.listen({host:'127.0.0.1',port:0}),maker=createOrganizationIdentifierClient(url,'maker'),reviewer=createOrganizationIdentifierClient(url,'reviewer'),command={candidateId:state.candidate.candidateId,requestId:state.requestId};
  const resumed=await maker.resume(command);assert.equal(resumed.response.status,200);
  if(!resumed.data){assert.equal((await reviewer.review({candidateId:state.candidate.candidateId})).response.status,200);assert.equal((await reviewer.approve(state.candidate)).response.status,200);}
@@ -67,6 +67,16 @@ try{
  const changed=await maker.apply(recodeCommand);assert.equal(changed.response.status,200);assert.equal(changed.data.status,'COMMITTED');assert.equal(changed.data.facts.length,2);const {responseStatus,...committedOutcome}=changed.data;assert.equal(responseStatus,'DELIVERED');assert.deepEqual((await maker.resume(recodeCommand)).data,committedOutcome);
  const resolve=(value,businessAt,recordAsOf)=>maker.resolve({scheme:'SYNTHETIC_DEPARTMENT_CODE',value,campus:'NORTH',businessAt,...(recordAsOf?{recordAsOf}:{})});
  assert.equal((await resolve(recode.oldCode.value,'2026-05-31T23:59:59.999999')).data.status,'RESOLVED');assert.equal((await resolve(recode.oldCode.value,'2026-06-01T00:00:00')).data.status,'NOT_FOUND');assert.equal((await resolve(recode.newCode,'2026-06-01T00:00:00')).data.targetId,recode.targetId);assert.equal((await resolve(recode.oldCode.value,'2026-07-01T00:00:00',recode.oldCode.version.recorded_at)).data.targetId,recode.targetId);
+ const departmentClient=createDepartmentClient(url,'maker'),codeQuery={id:recode.targetId,campus:'NORTH',businessAt:'2026-07-01T00:00:00'},positiveCode=await departmentClient.read(codeQuery);
+ assert.equal(positiveCode.response.status,200);assert.equal(positiveCode.data.effectiveCode,recode.newCode);assert.equal(positiveCode.data.initialCode,recode.oldCode.value);
+ assert.equal((await departmentClient.read({id:recode.targetId,businessAt:codeQuery.businessAt})).response.status,403);
+ for(const [table,predicate] of [['identifier_access',"actor='maker' AND scheme='SYNTHETIC_DEPARTMENT_CODE' AND campus='NORTH' AND permission='READ'"],['mapping_target_access',`actor='maker' AND target_type='ORG' AND target_id=${quote(recode.targetId)}::uuid AND campus='NORTH'`]]){
+  const originalGrants=peer(receipt.name,identitySQL(receipt)+`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM department_master.${table} g WHERE ${predicate};`);
+  peer(receipt.name,identitySQL(receipt)+`DELETE FROM department_master.${table} WHERE ${predicate};`);
+  try{assert.equal((await departmentClient.read(codeQuery)).response.status,403);assert.equal((await resolve(recode.newCode,codeQuery.businessAt)).response.status,403);}
+  finally{peer(receipt.name,identitySQL(receipt)+`INSERT INTO department_master.${table} SELECT * FROM jsonb_populate_recordset(NULL::department_master.${table},${quote(originalGrants)}::jsonb) ON CONFLICT DO NOTHING;`);}
+ }
+ assert.equal((await departmentClient.read(codeQuery)).response.status,200);
  await deployment.complete();
- const output=evidence+'.http.json';writeFileSync(output,JSON.stringify({status:'PASS',gate:'P2-04-PERSISTENT-HTTP',databaseOid:receipt.oid,identifierId:id,candidateId:state.candidate.candidateId,recodeCandidateId:recode.candidate.candidateId,independentApproval:true,atomicApply:true,replaySameFacts:true,history:true,targetAliases:true,outsiderDenied:true,officialRecode:true,microsecondBoundary:true,oldRecordTime:true,authorization:'EXPLICIT_SYNTHETIC_ACTORS',hospitalPolicy:'NOT_ADOPTED',formalAcceptance:'NOT_RUN'},null,2),{flag:'wx'});console.log(JSON.stringify({status:'PASS',gate:'P2-04-PERSISTENT-HTTP',evidence:output}));
-}finally{await app?.close();await owner.close();await catalog.close();}
+ const output=evidence+'.http.json';writeFileSync(output,JSON.stringify({status:'PASS',gate:'P2-04-PERSISTENT-HTTP',databaseOid:receipt.oid,identifierId:id,candidateId:state.candidate.candidateId,recodeCandidateId:recode.candidate.candidateId,independentApproval:true,atomicApply:true,replaySameFacts:true,history:true,targetAliases:true,outsiderDenied:true,officialRecode:true,microsecondBoundary:true,oldRecordTime:true,departmentCodeAuthority:true,schemeWithdrawalDenied:true,targetWithdrawalDenied:true,missingCampusDenied:true,authorization:'EXPLICIT_SYNTHETIC_ACTORS',hospitalPolicy:'NOT_ADOPTED',formalAcceptance:'NOT_RUN'},null,2),{flag:'wx'});console.log(JSON.stringify({status:'PASS',gate:'P2-04-PERSISTENT-HTTP',evidence:output}));
+}finally{await app?.close();await owner.close();await department.close();await catalog.close();}

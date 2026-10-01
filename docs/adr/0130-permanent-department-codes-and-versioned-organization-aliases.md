@@ -18,8 +18,14 @@ CORE aliases support LEGAL/CAMPUS/ORG via public target Owner ports. Official co
 
 The finite scheme policies bind kind, target types and synthetic issuer. A published ORG23 contract supplies adopted code sets and their validity; independent personnel verification and platform candidate approval are both required. This does not constitute hospital policy adoption. Each revision is atomic, with at most 100 expanded domain commands; CHANGE counts as two.
 
+ORG23 derived code output requires an explicit NORTH/SOUTH authorization context, the scheme's READ grant, the target reference grant and selected source READ. Department HOSPITAL/READ remains necessary but does not imply these grants. Missing context or withdrawn authority fails with ACCESS_DENIED, including when no code is effective; it does not masquerade as null. Initial ORG04 history and the pre-ORG23 record-time fallback remain original registration evidence under Department authorization. Single-version reads authorize the version selected at R; complete history authorizes every returned version, and diff authorizes the two compared versions.
+
+Preferred candidate dependencies include direct command heads and currently preferred, non-retracted assertions in the exact language bucket whose business periods overlap the command. Apply still observes peers again and checks the deferred timeline constraint, so a newly relevant conflict cannot bypass approval. Expected closure material failures recover a savepoint, discard the row's accumulated material digests and report evidenceId/BLOCKED_DEPENDENCY; access denial and unexpected errors reject the request.
+
 ## Consequences
 
 Migration 0115 adds append-only relationships and versions. Migration 0116 integrates contract/parser policy and ORG04 reservation/read behavior. Installed predecessor migrations, facts and approvals remain unchanged. Migration-created facts use actual R; reads before the migration derive code evidence from the original ORG04 version instead of inventing a historical identifier version.
+
+Migration 0117 adds the shared selected-assertion read boundary and authorized Department code projection, and closes the prior context-free code function. Workspace startup requires the entire current migration chain before credentials, keys or Owners are opened. 0087 is an upgrade predecessor, not a supported runtime prefix; rejection uses WORKSPACE_MIGRATION_REQUIRED.
 
 The API response change requires current client regeneration. Historical hierarchy snapshots and source mapping targets retain their pinned identity/version facts. UI maintenance belongs to P2-07; FULL/P2-08 and formal acceptance are separate. See [P2-04 design](../design/p2-04-organization-identifiers.md).

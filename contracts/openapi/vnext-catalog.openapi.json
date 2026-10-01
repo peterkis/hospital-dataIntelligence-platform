@@ -92639,6 +92639,12 @@
                     "minLength": 1,
                     "maxLength": 26,
                     "pattern": "\\S"
+                  },
+                  "campus": {
+                    "enum": [
+                      "NORTH",
+                      "SOUTH"
+                    ]
                   }
                 },
                 "additionalProperties": false

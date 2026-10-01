@@ -6,7 +6,7 @@ export const ORGANIZATION_IDENTIFIER_FUNCTIONS=Object.freeze([
  'identifier_authorize(text,text,text,text)','identifier_input_read(text,uuid,text)','identifier_job_read(text,uuid)',
  'identifier_snapshot(text,uuid,text)','identifier_list(text,text,uuid,integer,timestamp,text,uuid)',
  'identifier_code(text,text,uuid)','identifier_peers(text,text,uuid,text,text,text)','identifier_mutate(text,text)',
- 'department_code_at(text,uuid,timestamp,timestamp)','mapping_target_authorize(text,text,uuid,text)','mapping_source(text,uuid,timestamp,timestamp,boolean)',
+ 'department_code_at(text,uuid,timestamp,timestamp)','department_code_at_authorized(text,uuid,timestamp,timestamp,text)','identifier_selected(text,uuid,text,timestamp)','mapping_target_authorize(text,text,uuid,text)','mapping_source(text,uuid,timestamp,timestamp,boolean)',
 ]);
 export async function assertOrganizationIdentifiersProvisioned(connection,provider,binding){
  const expected=binding??JSON.parse(readFileSync('.runtime/vnext/p2-04/provisioning.json','utf8'));

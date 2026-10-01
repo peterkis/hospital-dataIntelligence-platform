@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {openDepartment} from '../../apps/governance-api/src/modules/department-master/index.js';
 import {departmentFixture} from './p2-01-fixture.js';
+import {peer,quote} from './lineage.mjs';
 
 export async function createFinitePrefixDepartment(receipt:{name:string},connection:string){
  const provider=new LocalSyntheticKeyProvider(),catalog=await openCatalog(connection,provider),department=openDepartment(connection,provider);
@@ -12,11 +13,12 @@ export async function createFinitePrefixDepartment(receipt:{name:string},connect
   return {id,code:e.row.org_code,recordAsOf:history.versions[0]!.recorded_at,history,provider};
  }finally{await department.close();await catalog.close();}
 }
-export async function verifyFinitePrefixDepartment(connection:string,state:Awaited<ReturnType<typeof createFinitePrefixDepartment>>){
+export async function verifyFinitePrefixDepartment(connection:string,state:Awaited<ReturnType<typeof createFinitePrefixDepartment>>,receipt:{name:string}){
+ peer(receipt.name,`INSERT INTO department_master.identifier_access(actor,scheme,campus,permission) VALUES('maker','SYNTHETIC_DEPARTMENT_CODE','NORTH','READ') ON CONFLICT DO NOTHING; INSERT INTO department_master.mapping_target_access(actor,target_type,target_id,campus) VALUES('maker','ORG',${quote(state.id)}::uuid,'NORTH') ON CONFLICT DO NOTHING;`);
  const department=openDepartment(connection,state.provider);try{
   assert.deepEqual(await department.history('maker',state.id),state.history);
   for(const recordAsOf of [undefined,state.recordAsOf]){const scope=recordAsOf===undefined?{}:{recordAsOf};
-   const inside=await department.read('maker',{id:state.id,businessAt:'2026-01-31T23:59:59.999999',...scope}),outside=await department.read('maker',{id:state.id,businessAt:'2026-02-01T00:00:00',...scope});assert.equal(inside.effectiveCode,state.code);assert.equal(outside.effectiveCode,null);
+   const inside=await department.read('maker',{id:state.id,campus:'NORTH',businessAt:'2026-01-31T23:59:59.999999',...scope}),outside=await department.read('maker',{id:state.id,campus:'NORTH',businessAt:'2026-02-01T00:00:00',...scope});assert.equal(inside.effectiveCode,state.code);assert.equal(outside.effectiveCode,null);
    if(recordAsOf){assert.equal(inside.codeEvidence,'ORG04_HISTORICAL');assert.equal(inside.codeVersion,null);assert.equal(outside.codeEvidence,'ORG04_HISTORICAL');}
   }
   console.log(JSON.stringify({status:'PASS',gate:'P2-04-FINITE-ORG04-PREFIX',oldRecordTime:true,halfOpenBoundary:true,originalHistoryPreserved:true}));

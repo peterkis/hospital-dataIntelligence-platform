@@ -49,7 +49,7 @@ export const VerifySchema=Type.Object({
 },closed);
 export type VerifyInput=Static<typeof VerifySchema>;
 export const PlanSchema=Type.Object({inputId:Id,requestId:Id},closed);
-export const ReadSchema=Type.Object({id:Id,businessAt:required(26),recordAsOf:Type.Optional(required(26))},closed);
+export const ReadSchema=Type.Object({id:Id,businessAt:required(26),recordAsOf:Type.Optional(required(26)),campus:Type.Optional(Type.Enum(['NORTH','SOUTH']))},closed);
 export const CoverageSchema=Type.Object({id:Id,validFrom:required(26),validTo:Type.Union([required(26),Type.Null()]),recordAsOf:Type.Optional(required(26))},closed);
 export function check(schema:unknown,input:unknown):void{if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 export function validateORG04(value:unknown):ORG04Row{check(RowSchema,value);const row=structuredClone(value) as ORG04Row;if(Object.values(row).some(v=>v!==v.trim())||BigInt(row.version_no)>2147483647n)throw new Error('CLOSED_INPUT_REQUIRED');return row;}

@@ -77,7 +77,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -141,7 +141,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0116_org23_contract_and_department_code');
+ expect(files.at(-1)?.id).toBe('0117_organization_identifier_read_authority');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{

@@ -1,8 +1,7 @@
 import {checkPrefix,migrationFiles} from './lineage.mjs';
 
-// The workspace Owner release ends at 0087. Later vNext migrations remain in
-// the same ordered chain, but are accepted only as the complete current tail
-// so historical workspace upgrades can still exercise their 0087 seam.
+// 0087 marks the start of the workspace Owner release. Startup requires the
+// complete current chain; predecessor prefixes are supported for upgrades only.
 export const workspaceMigration = '0087_department_catalog_interfaces';
 const postWorkspaceMigrations = [
  '0088_hierarchy_views',
@@ -34,6 +33,7 @@ const postWorkspaceMigrations = [
  '0114_organization_mapping_original_maker_approval',
  '0115_organization_identifiers',
  '0116_org23_contract_and_department_code',
+ '0117_organization_identifier_read_authority',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
@@ -45,10 +45,9 @@ export function workspaceStartupPrefix(files,ledger) {
  const releaseFiles=workspaceReleaseFiles(files);
  const prefix=checkPrefix(releaseFiles,ledger);
  // Pre-workspace installations retain their catalog-only path. Once workspace
- // storage exists, the workspace release or the complete current vNext tail
- // is mandatory before opening any Owner.
- const boundary=releaseFiles.findIndex(file=>file.id===workspaceMigration)+1;
- if(prefix>=71&&prefix!==boundary&&prefix!==releaseFiles.length)throw new Error('WORKSPACE_MIGRATION_REQUIRED');
+ // storage exists, all current Owner capabilities must precede credential/key
+ // loading, Owner creation and listen.
+ if(prefix>=71&&prefix!==releaseFiles.length)throw new Error('WORKSPACE_MIGRATION_REQUIRED');
  return prefix;
 }
 export function workspaceDeploymentPrefix(files,ledger,reuseExisting=false) {

@@ -17,7 +17,7 @@ export function grantOrganizationIdentifierFunctions(receipt,role){
 if(process.argv[1]?.replaceAll('\\','/').endsWith('/p2-04-validate.mjs')){
  const args=process.argv.slice(2);
  if(args[0]==='--dispose'&&args.length===2){const receipt=JSON.parse(readFileSync(args[1],'utf8'));if(receipt.taskId!=='P2-04')throw new Error('DISPOSAL_NOT_AUTHORIZED');dropTemporary(receipt);process.exit(0);}
- if(args.some(a=>!['--generate','--upgrade','--upgrade-periods'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
+ if(args.some(a=>!['--generate','--upgrade','--upgrade-periods','--review'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
  const prefix=args.includes('--upgrade')||args.includes('--upgrade-periods')?114:null;
  const owned=createTemporary('P2-04');let owner;
  try{
@@ -29,8 +29,8 @@ if(process.argv[1]?.replaceAll('\\','/').endsWith('/p2-04-validate.mjs')){
   owner??=await createValidationOwnerSession(owned.receipt);grantOrganizationIdentifierFunctions(owned.receipt,owner.receipt.role);
   if(args.includes('--generate'))assert.equal(spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-generate',owned.receiptPath],{stdio:'inherit',windowsHide:true}).status,0);
   assert.equal(spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-verify',owned.receiptPath],{stdio:'inherit',windowsHide:true}).status,0);
-  if(finite){await verifyFinitePrefixDepartment(owner.connectionString,finite);console.log(JSON.stringify({gate:'P2-04',exit:0,mode:'114_FINITE_PERIOD_TO_CURRENT'}));}
-  else{const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.p2-04-db.config.ts'],{env:{...process.env,VNEXT_VALIDATION_OWNER_URL:owner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P2-04'},stdio:'inherit',windowsHide:true});
+  if(finite){await verifyFinitePrefixDepartment(owner.connectionString,finite,owned.receipt);console.log(JSON.stringify({gate:'P2-04',exit:0,mode:'114_FINITE_PERIOD_TO_CURRENT'}));}
+  else{const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config',args.includes('--review')?'tooling/vnext/vitest.p2-04-review.config.ts':'tooling/vnext/vitest.p2-04-db.config.ts'],{env:{...process.env,VNEXT_VALIDATION_OWNER_URL:owner.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P2-04'},stdio:'inherit',windowsHide:true});
    process.exitCode=run.status??1;console.log(JSON.stringify({gate:'P2-04',exit:run.status,mode:prefix?prefix+'_TO_CURRENT':'FRESH'}));}
  }catch(error){owner??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(owner)dropValidationOwnerSession(owner);}
 }

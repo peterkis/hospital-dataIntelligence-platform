@@ -55,6 +55,10 @@ Exact official resolution returns the precise identifier version and typed targe
 
 ## Requirements and verification index
 
+PR #23 remediation adds migration 0117 without changing installed 0115/0116 bytes. Department query accepts explicit `campus: NORTH | SOUTH` and requires it for ORG23 derived output; absent context or withdrawn scheme/target/source authority returns ACCESS_DENIED. `initialCode` in Department history remains original evidence. Single-version query, resolution and target collection use selected-version authority; history and diff retain authorization for their actual returned versions. Department revision preview projects internal `code` to public `initialCode` without rewriting frozen candidate basis or digests.
+
+`npm run prototype:db:with -- vnext:p2-04:review` runs the review regressions through real Owner, HTTP and database-role seams. They cover both closure actions with missing/expired submitter and verifier material, empty material digests after recovery, permission denial, unrelated preferred peers and a newly conflicting peer, positive and revoked Department code reads, previews before/after recode, independent replacement-source reads, old-R/history/diff denial and selected-source-only comparison. A real 0087 temporary prefix now proves explicit upgrade rejection; orchestration tests prove rejection precedes credentials, keys, Owners and listen. The original immutable independent test expecting usable 0087 startup is superseded by this deliberate gate policy, not reported as GREEN.
+
 | Requirement | Evidence in tooling/vnext/p2-04-db.test.ts (public seams) |
 |---|---|
 | AC-01 alias does not merge identity | Duplicate aliases on two real Department IDs; distinct relationships |
