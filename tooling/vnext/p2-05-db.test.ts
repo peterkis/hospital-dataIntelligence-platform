@@ -185,6 +185,15 @@ test('revoked material access blocks frozen reads, execution and recovery before
  expect((await owner.applyUnit('maker',command)).status).toBe('COMMITTED');
 });
 
+test('revoked source access blocks a frozen application and outcome recovery before any formal write',async()=>{
+ const p=await prepare(await splitInput()),command={candidateId:p.candidate.candidateId,requestId:p.requestId},before=formalFactsDigest();
+ const predicate=`actor_code='maker' AND object_id=${quote(f.source.id)}::uuid AND permission='READ' AND purpose='SYNTHETIC_REFERENCE'`,grants=peer(receipt.name,`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM vnext_control.object_grant g WHERE ${predicate};`);expect(JSON.parse(grants).length).toBeGreaterThan(0);
+ peer(receipt.name,`DELETE FROM vnext_control.object_grant WHERE ${predicate};`);
+ try{await expect(owner.applyUnit('maker',command)).rejects.toThrow('ACCESS_DENIED');await expect(owner.resumeOutcome('maker',command)).rejects.toThrow('ACCESS_DENIED');expect(formalFactsDigest()).toBe(before);}
+ finally{peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb);`);}
+ expect((await owner.applyUnit('maker',command)).status).toBe('COMMITTED');
+});
+
 test('raw evolution input and HTTP reads recheck each referenced successor source before disclosure',async()=>{
  const input=await splitInput(),source=await f.newSource();input.successors[0]!.row.source_system_id=source.id;
  const staged=await owner.stage('maker',input);expect((await owner.readInput('reviewer',{inputId:staged.inputId})).successors[0]!.row).toEqual(input.successors[0]!.row);
@@ -341,6 +350,7 @@ test('RENAME preserves stable identity and the original business and record-time
   if(accepted.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
   const event=await owner.query('maker',{id:accepted.facts[0]!.id,campus:'NORTH',businessAt:input.event.effective_at});
   expect(event).toMatchObject({changeType:'RENAME',predecessors:[{id:f.targetId,version:'1'}],successors:[{id:f.targetId,version:'2'}],edges:[]});
+  await expect(owner.query('maker',{id:accepted.facts[0]!.id,campus:'NORTH',businessAt:input.event.effective_at,recordAsOf:oldR.replace(' ','T')})).rejects.toThrow('NOT_FOUND');
   expect((await departments.read('maker',{id:f.targetId,campus:'NORTH',businessAt:'2026-05-31T23:59:59.999999'})).version?.facts.name).toBe(original.versions[0]!.facts.name);
   expect((await departments.read('maker',{id:f.targetId,campus:'NORTH',businessAt:input.event.effective_at})).version?.facts.name).toBe('DEMO renamed Department');
   expect((await departments.read('maker',{id:f.targetId,campus:'NORTH',businessAt:input.event.effective_at,recordAsOf:oldR.replace(' ','T')})).version?.facts.name).toBe(original.versions[0]!.facts.name);

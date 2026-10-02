@@ -55,6 +55,11 @@ export interface SuccessionEdge {from:string;to:string;scope:string;context:stri
 export interface SuccessionGraphInput {changeType:string;predecessors:string[];successors:string[];edges:SuccessionEdge[];acceptedEdges?:Array<{from:string;to:string}>}
 export interface EvolutionIssue {row:number;field:string;code:string;status:'FAIL'|'BLOCKED';sheet?:string}
 
+/** Count the actual domain writes hidden behind one whole-event Owner command. */
+export function evolutionExpandedWriteCount(input:Pick<EvolutionStoredStageInput,'event'|'successors'|'relations'|'predecessors'>):number{
+ return 1+input.successors.length*4+input.relations.length+(input.event.change_type==='RENAME'?1:input.predecessors.length);
+}
+
 /** Same-identity labels are event evidence and never identity succession edges. */
 export function validateSuccessionGraph(input:SuccessionGraphInput):{edges:SuccessionEdge[];issues:EvolutionIssue[]}{
  if(input.changeType==='RENAME'&&input.predecessors.length===1&&input.successors.length===1&&input.predecessors[0]===input.successors[0]&&input.edges.length===1&&input.edges[0]!.from===input.predecessors[0]&&input.edges[0]!.to===input.successors[0])return {edges:[],issues:[]};

@@ -7,7 +7,7 @@ import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authe
 import {fileIntake,protectedArtifacts,parseEvolutionWorkbookBounded,recordOwnerFileValidation,textSheetsWorkbook,type EvolutionWorkbookResult,type EvolutionSheet,type ParserField,type ValidationEvaluation} from '../../governance-catalog/index.js';
 import {localTime,covered} from '../../organization-master/index.js';
 import {Id,check,ORG04_FIELDS,normalizeEntry,validateORG04,MAX_EXPECTED_VERSION} from './contracts.js';
-import {EvolutionStageSchema,EvolutionStoredStageSchema,EvolutionVerifySchema,EvolutionReceiveSchema,EvolutionTemplateSchema,EvolutionEventRowSchema,EvolutionRelationRowSchema,ORG26_FIELDS,ORG27_FIELDS,EVOLUTION_IMPACT_DOMAINS,validateSuccessionGraph,type EvolutionStageInput,type EvolutionStoredStageInput,type EvolutionVerifyInput,type EvolutionReceiveInput,type EvolutionTemplateInput,type EvolutionIssue} from './organization-evolution-contracts.js';
+import {EvolutionStageSchema,EvolutionStoredStageSchema,EvolutionVerifySchema,EvolutionReceiveSchema,EvolutionTemplateSchema,EvolutionEventRowSchema,EvolutionRelationRowSchema,ORG26_FIELDS,ORG27_FIELDS,EVOLUTION_IMPACT_DOMAINS,validateSuccessionGraph,evolutionExpandedWriteCount,type EvolutionStageInput,type EvolutionStoredStageInput,type EvolutionVerifyInput,type EvolutionReceiveInput,type EvolutionTemplateInput,type EvolutionIssue} from './organization-evolution-contracts.js';
 import type {DepartmentHistory} from './index.js';
 
 type Scope=CatalogTransactionScope;
@@ -19,6 +19,39 @@ export interface EvolutionSnapshot {id:string;input_id:string;change_type:'RENAM
 const oneInput=Type.Object({inputId:Id},{additionalProperties:false});
 const querySchema=Type.Object({id:Id,campus:Type.Enum(['NORTH','SOUTH']),businessAt:Type.String(),recordAsOf:Type.Optional(Type.String())},{additionalProperties:false});
 const stamp=(value:string)=>localTime(value.replace(' ','T'));
+const objectRecord=(value:unknown):value is Record<string,unknown>=>typeof value==='object'&&value!==null&&!Array.isArray(value);
+
+/** Re-bind the frozen ORG04 rows, exact evidence digests and source pins immediately before SQL signing. */
+export function assertEvolutionApplyBinding(provider:KeyProviderPort|undefined,input:EvolutionStoredStageInput,value:unknown,expandedCount:unknown):void{
+ const stale=():never=>{throw new Error('STALE_VALIDATION');};
+ if(!objectRecord(value))throw new Error('STALE_VALIDATION');
+ const materials=value['materials'],frozenSuccessors=value['successorFacts'];
+ if(!Array.isArray(materials)||!Array.isArray(frozenSuccessors))throw new Error('STALE_VALIDATION');
+ if(expandedCount!==String(evolutionExpandedWriteCount(input))||frozenSuccessors.length!==input.successors.length)stale();
+ const byAlias=new Map<string,Record<string,unknown>>();
+ for(const candidate of frozenSuccessors){
+  if(!objectRecord(candidate))stale();
+  const alias=candidate['alias'];
+  if(typeof alias!=='string'||byAlias.has(alias))stale();
+  byAlias.set(alias,candidate);
+ }
+ const verificationId=typeof value['verificationId']==='string'?value['verificationId']:'';
+ for(const raw of input.successors){
+  const entry=normalizeEntry(raw,'LOCAL'),prepared=byAlias.get(entry.row.org_id);
+  if(!prepared)throw new Error('STALE_VALIDATION');
+  const contentDigest=prepared['contentDigest'],successorFacts=prepared['facts'];
+  if(typeof contentDigest!=='string'||!objectRecord(successorFacts))throw new Error('STALE_VALIDATION');
+  const pin=successorFacts['sourcePin'];
+  if(!objectRecord(pin)||pin['sourceId']!==entry.row.source_system_id)stale();
+  const material=materials.find((candidate:unknown)=>objectRecord(candidate)&&candidate['id']===entry.evidenceId);
+  if(!objectRecord(material)||typeof material['digest']!=='string')stale();
+  const {sourceRow:_,...normalized}=entry,policy=input.contracts.departmentContractVersionId;
+  const commandDigest=planBinding(provider,'EVOLUTION_DEPARTMENT_COMMAND_V1',{entry:normalized,policy,proof:{pin,material}});
+  const expected={name:entry.row.org_name,shortName:entry.row.org_short_name||null,orgType:entry.row.org_type,establishedOn:entry.row.established_on,description:entry.row.description||null,virtual:entry.row.is_virtual==='Y',historicalException:false,sourceVersion:entry.row.version_no,sourceRecordedAt:entry.recordedAt,sourceSystemId:entry.row.source_system_id,policyVersionId:policy,verificationId,commandDigest,sourcePin:pin};
+  if(canonicalPlan(successorFacts)!==canonicalPlan(expected)||contentDigest!==planBinding(provider,'DEPARTMENT_FACTS_V1',expected))stale();
+ }
+ if(byAlias.size!==input.successors.length)stale();
+}
 
 export function openOrganizationEvolutions(connection:string,provider?:KeyProviderPort){
  const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(value:string)=>value:types.getTypeParser(oid,format)}})})});
@@ -151,7 +184,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   }
   // A new Department produces identity, version, permanent code reservation
   // and its code assertion. Count all four domain writes in the shared budget.
-  const expandedCount=1+input.successors.length*4+input.relations.length+(input.event.change_type==='RENAME'?1:input.predecessors.length);
+  const expandedCount=evolutionExpandedWriteCount(input);
   if(expandedCount>100)issue('event','PLAN_INPUT_LIMIT','FAIL');
   const facts={event:input.event,sourceSystemId:input.sourceSystemId,contractVersionId:c.versionId,companionVersions:input.contracts,verificationId:r.verification?.id??null,impacts:input.impacts,materials,sourcePin,sourceArtifact:file?.binding??null,successorFacts};
   return {r,input,j,verification,policies,heads,materials,sourcePin,file,issues,expandedCount,facts,graph};
@@ -169,9 +202,9 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    for(const entry of input.successors)await evidenceAccess(s,actor,entry.evidenceId,departmentSource,input.campus);
    if(input.sourceArtifactId)await evidenceAccess(s,actor,input.sourceArtifactId,eventSource,input.campus);
   },
-  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG_EVOLUTION_WHOLE_EVENT_V1',basis:{inputDigest:v.r.digest,entries:v.input,verification:v.verification,verificationDigest:v.r.verification?.digest??null,policies:v.policies,heads:v.heads,materials:v.materials,sourcePin:v.sourcePin,issues:v.issues,expandedCount:v.expandedCount},commands:v.issues.length?[]:[{owner:'department-master/organization-evolution',row:1,intent:'CREATE',target:null,aliases:[],value:{inputId:v.r.id,command:canonicalPlan(v.input),facts:canonicalPlan(v.facts)}}],diff:[{changeType:v.input.event.change_type,effectiveAt:v.input.event.effective_at,predecessors:v.heads,successors:v.input.successors,rename:v.input.rename,impacts:v.input.impacts}]};},
+  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG_EVOLUTION_WHOLE_EVENT_V1',basis:{inputDigest:v.r.digest,entries:v.input,verification:v.verification,verificationDigest:v.r.verification?.digest??null,policies:v.policies,heads:v.heads,materials:v.materials,sourcePin:v.sourcePin,issues:v.issues,expandedCount:v.expandedCount},commands:v.issues.length?[]:[{owner:'department-master/organization-evolution',row:1,intent:'CREATE',target:null,aliases:[],value:{inputId:v.r.id,command:canonicalPlan(v.input),facts:canonicalPlan(v.facts),expandedCount:String(v.expandedCount)}}],diff:[{changeType:v.input.event.change_type,effectiveAt:v.input.event.effective_at,predecessors:v.heads,successors:v.input.successors,rename:v.input.rename,impacts:v.input.impacts}]};},
   async validate(_s,_actor,unit,stage){if(stage==='FREEZE')return;const issues=unit.basis['issues'] as EvolutionIssue[];if(issues.length)throw new Error(issues[0]!.code);if(unit.commands.length!==1)throw new Error('BATCH_REJECTED');},
-  async apply(s,actor,command,_resolved,approval){const facts=JSON.parse(command.value['facts']!);return {ok:true,fact:await mutate<OwnerFact>(s,actor,{operation:'APPLY',inputId:command.value['inputId'],command:JSON.parse(command.value['command']!),facts,contentDigest:planBinding(provider,'EVOLUTION_FACTS_V1',facts),...approval})};},
+  async apply(s,actor,command,_resolved,approval){const input:unknown=JSON.parse(command.value['command']!),facts:unknown=JSON.parse(command.value['facts']!);check(EvolutionStoredStageSchema,input);assertEvolutionApplyBinding(provider,input as EvolutionStoredStageInput,facts,command.value['expandedCount']);return {ok:true,fact:await mutate<OwnerFact>(s,actor,{operation:'APPLY',inputId:command.value['inputId'],command:input,facts,contentDigest:planBinding(provider,'EVOLUTION_FACTS_V1',facts),...approval})};},
   async exactRead(s,actor,input,fact){if(fact.owner!=='department-master/organization-evolution'||fact.version!=='1')return null;await snapshot(s,actor,fact.id,input.campus);return fact;},
  };
  const coordinator=applyCoordinator(db,provider,port);

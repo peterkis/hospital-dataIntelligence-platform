@@ -1,5 +1,9 @@
 import {test,expect} from 'vitest';
-import {validateSuccessionGraph} from '../../apps/governance-api/src/modules/department-master/index.js';
+import {randomUUID} from 'node:crypto';
+import {validateSuccessionGraph,evolutionExpandedWriteCount,type EvolutionStoredStageInput} from '../../apps/governance-api/src/modules/department-master/index.js';
+import {normalizeEntry} from '../../apps/governance-api/src/modules/department-master/vnext/contracts.js';
+import {assertEvolutionApplyBinding} from '../../apps/governance-api/src/modules/department-master/vnext/organization-evolution.js';
+import {LocalSyntheticKeyProvider,planBinding} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {parseEvolutionWorkbook,unzip} from '../../apps/governance-api/src/modules/governance-catalog/file-parser.js';
 import {zipText} from '../../apps/governance-api/src/modules/governance-catalog/issue-workbook.js';
 import {organizationWorkbook} from './organization-workbook-fixture.js';
@@ -9,6 +13,26 @@ test.each([['ORG26','ORG_EVOLUTION_CORE_V1'],['ORG27','ORG_SUCCESSION_CORE_V1']]
  const request={dataset,templateVersion,profile:'CORE' as const,contractVersion:1,parserPolicy:'STRICT_ORGANIZATION_EVOLUTION_V1'};
  expect(selectImportAdapter(request)).toMatchObject({owner:'department-master',capability:'READY',allowedIntents:['RENAME','SPLIT','MERGE']});
  expect(()=>requireImportExecution(request,'apply')).toThrow('BUNDLE_CONTEXT_REQUIRED');expect(selectImportAdapter({...request,profile:'FULL'}).capability).toBe('NOT_READY');expect(selectImportAdapter({...request,parserPolicy:'STRICT_V2'}).capability).toBe('NOT_READY');
+});
+
+test('the whole-event budget counts hidden successor writes rather than the single root command',()=>{
+ const base={event:{change_type:'SPLIT'},successors:Array.from({length:20},()=>({})),relations:Array.from({length:20},()=>({})),predecessors:[{}]} as unknown as EvolutionStoredStageInput;
+ expect(evolutionExpandedWriteCount(base)).toBe(102);
+ expect(evolutionExpandedWriteCount({...base,event:{change_type:'RENAME'},successors:[],relations:[{}],predecessors:[{}]} as unknown as EvolutionStoredStageInput)).toBe(3);
+});
+
+test('the final apply payload binds each successor to its source pin, evidence digest and frozen budget',()=>{
+ const provider=new LocalSyntheticKeyProvider(),source=randomUUID(),evidenceId=randomUUID(),policy=randomUUID(),verificationId=randomUUID();
+ const entry={intent:'CREATE' as const,target:null,origin:'NEW' as const,evidenceId,row:{org_id:'SUCCESSOR-A',org_code:'D-A',org_name:'Successor A',org_short_name:'',org_type:'CLINICAL',established_on:'2026-06-01',abolished_on:'',establishment_doc:'DOC-A',description:'',is_virtual:'N' as const,version_no:'1',valid_from:'2026-06-01T00:00:00',valid_to:'',record_status:'ACTIVE' as const,source_system_id:source,source_record_id:'SRC/1',approval_ref:'APPROVED',recorded_at:'2026-05-01T00:00:00'}};
+ const input={event:{change_type:'SPLIT'},successors:[entry],relations:[{}],predecessors:[{}],contracts:{departmentContractVersionId:policy}} as unknown as EvolutionStoredStageInput;
+ const normalizedEntry=normalizeEntry(entry,'LOCAL'),{sourceRow:_,...normalized}=normalizedEntry,pin={sourceId:source,versionId:randomUUID()},material={id:evidenceId,digest:'a'.repeat(64)};
+ const commandDigest=planBinding(provider,'EVOLUTION_DEPARTMENT_COMMAND_V1',{entry:normalized,policy,proof:{pin,material}});
+ const successorFacts={name:entry.row.org_name,shortName:null,orgType:entry.row.org_type,establishedOn:entry.row.established_on,description:null,virtual:false,historicalException:false,sourceVersion:'1',sourceRecordedAt:normalizedEntry.recordedAt,sourceSystemId:source,policyVersionId:policy,verificationId,commandDigest,sourcePin:pin};
+ const facts={verificationId,materials:[material],successorFacts:[{alias:entry.row.org_id,facts:successorFacts,contentDigest:planBinding(provider,'DEPARTMENT_FACTS_V1',successorFacts)}]},expandedCount=String(evolutionExpandedWriteCount(input));
+ expect(()=>assertEvolutionApplyBinding(provider,input,facts,expandedCount)).not.toThrow();
+ const wrongSource=structuredClone(facts);wrongSource.successorFacts[0]!.facts.sourceSystemId=randomUUID();expect(()=>assertEvolutionApplyBinding(provider,input,wrongSource,expandedCount)).toThrow('STALE_VALIDATION');
+ const wrongEvidence=structuredClone(facts);wrongEvidence.materials[0]!.digest='b'.repeat(64);expect(()=>assertEvolutionApplyBinding(provider,input,wrongEvidence,expandedCount)).toThrow('STALE_VALIDATION');
+ expect(()=>assertEvolutionApplyBinding(provider,input,facts,'1')).toThrow('STALE_VALIDATION');
 });
 
 test('the evolution workbook accepts exactly ORG26, ORG27 and ORG04 including an empty rename successor sheet',()=>{
