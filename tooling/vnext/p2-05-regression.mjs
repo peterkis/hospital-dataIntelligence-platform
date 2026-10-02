@@ -10,6 +10,7 @@ const checks=[
  ['vnext:catalog:boundaries'],['vnext:apply:fresh'],['vnext:files:validate'],
  ['vnext:p2-01:validate'],['vnext:p2-02:validate'],['vnext:p2-03:validate'],
  ['vnext:p2-04:validate'],['vnext:p2-05:validate','--','--upgrade'],
+ ['vnext:p2-05:review','--','--upgrade'],
 ];
 const args=process.argv.slice(2);
 if(args.length!==0&&(args.length!==2||args[0]!=='--from'))throw new Error('CLOSED_COMMAND_REQUIRED');

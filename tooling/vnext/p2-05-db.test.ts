@@ -1,7 +1,7 @@
 import {test,expect,beforeAll,afterAll} from 'vitest';
 import {randomUUID,createHmac} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import {openCatalog,LocalSyntheticKeyProvider,canonicalPlan,planBinding} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import {openCatalog,LocalSyntheticKeyProvider,canonicalPlan,planBinding,authenticateRegistrationEvidence} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {openOrganizationEvolutions,openDepartment,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,type HierarchyCandidateInput} from '../../apps/governance-api/src/modules/department-master/index.js';
 import {evolutionFixture} from './p2-05-fixture.js';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
@@ -206,6 +206,36 @@ test('raw evolution input and HTTP reads recheck each referenced successor sourc
  }finally{await app.close();peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb);`);}
 });
 
+test('staging checks every successor source before an input is persisted',async()=>{
+ const input=await splitInput(),source=await f.newSource();input.successors[0]!.row.source_system_id=source.id;
+ const predicate=`actor_code='maker' AND object_id=${quote(source.id)}::uuid AND permission='READ' AND purpose='SYNTHETIC_REFERENCE'`,grants=peer(receipt.name,`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM vnext_control.object_grant g WHERE ${predicate};`);expect(JSON.parse(grants).length).toBeGreaterThan(0);
+ peer(receipt.name,`DELETE FROM vnext_control.object_grant WHERE ${predicate};`);
+ try{
+ await expect(owner.stage('maker',input)).rejects.toThrow('ACCESS_DENIED');
+ expect(Number(peer(receipt.name,`SELECT count(*) FROM department_master.evolution_input WHERE request_id=${quote(input.requestId)}::uuid;`))).toBe(0);
+ }finally{peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb);`);}
+});
+
+test('verification cannot attest a successor source after reviewer access is revoked',async()=>{
+ const input=await splitInput(),source=await f.newSource();input.successors[0]!.row.source_system_id=source.id;
+ const staged=await owner.stage('maker',input),predicate=`actor_code='reviewer' AND object_id=${quote(source.id)}::uuid AND permission='READ' AND purpose='SYNTHETIC_REFERENCE'`,grants=peer(receipt.name,`SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM vnext_control.object_grant g WHERE ${predicate};`);expect(JSON.parse(grants).length).toBeGreaterThan(0);
+ peer(receipt.name,`DELETE FROM vnext_control.object_grant WHERE ${predicate};`);
+ try{
+ await expect(owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST POLICY ONLY revoked successor source review',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews})).rejects.toThrow('ACCESS_DENIED');
+ expect(Number(peer(receipt.name,`SELECT count(*) FROM department_master.evolution_verification WHERE input_id=${quote(staged.inputId)}::uuid;`))).toBe(0);
+ }finally{peer(receipt.name,`INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb);`);}
+});
+
+test('event listing applies the same current material access predicate as exact reads',async()=>{
+ const input=await renameInput(),prepared=await prepare(input),accepted=await owner.applyUnit('maker',{candidateId:prepared.candidate.candidateId,requestId:prepared.requestId});
+ expect(accepted.status).toBe('COMMITTED');if(accepted.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');const eventId=accepted.facts[0]!.id;
+ peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(f.eventDataset.id)}::uuid AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
+ try{
+ await expect(owner.query('maker',{id:eventId,campus:'NORTH',businessAt:input.event.effective_at})).rejects.toThrow('ACCESS_DENIED');
+ expect(await owner.list('maker',{campus:'NORTH',limit:100})).not.toContain(eventId);
+ }finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(f.eventDataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);}
+});
+
 test.each(['uppercase','braced','unhyphenated'] as const)('closed source references reject %s UUID spellings before staging or HTTP application',async(format)=>{
  const input=await splitInput();input.successors[0]!.row.source_system_id=format==='uppercase'?f.source.id.toUpperCase():format==='braced'?'{'+f.source.id+'}':f.source.id.replaceAll('-','');
  const before=formalFactsDigest();await expect(owner.stage('maker',input)).rejects.toThrow('CLOSED_INPUT_REQUIRED');
@@ -262,7 +292,9 @@ test('the real service role cannot write evolution tables, read signing authorit
 
 test('materials and their contract source version cannot be paired with another logical source',async()=>{
  const input=await renameInput(),source=await f.newSource();input.sourceSystemId=source.id;
- const staged=await owner.stage('maker',input);await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST POLICY ONLY verify original source material',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews});
+ const staged=await owner.stage('maker',input),verification={requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST POLICY ONLY verify original source material',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews};
+ await expect(owner.verify('reviewer',verification)).rejects.toThrow('BLOCKED_DEPENDENCY');
+ expect(Number(peer(receipt.name,`SELECT count(*) FROM department_master.evolution_verification WHERE input_id=${quote(staged.inputId)}::uuid;`))).toBe(0);
  expect(await owner.validate('maker',{inputId:staged.inputId})).toMatchObject({decision:'BLOCKED',issues:expect.arrayContaining([expect.objectContaining({field:'sourceSystemId',code:'BLOCKED_DEPENDENCY'})])});
 });
 
@@ -419,5 +451,10 @@ test('an invalid file row blocks the complete event while the protected original
  const bytes=organizationWorkbook({ORG26:[ORG26_FIELDS,ORG26_FIELDS.map(field=>event[field])],ORG27:[ORG27_FIELDS,...relations.map(row=>ORG27_FIELDS.map(field=>row[field]))],ORG04:[[...ORG04_FIELDS,'unapproved_field'],...successors.map(entry=>[...ORG04_FIELDS.map(field=>entry.row[field]),'FORBIDDEN'])]});
  const before=formalFactsDigest(),received=await owner.receiveFile('maker',{requestId,fileRequestId:randomUUID(),job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'SYNTHETIC_BAD_EVOLUTION_FILE',contractId:f.eventContract.id,contractVersionId:f.eventContract.versionId,profile:'CORE',input:{kind:'FILE',format:'XLSX',parserPolicy:'STRICT_ORGANIZATION_EVOLUTION_V1'}},retentionSeconds:3600,...control,successors:successors.map(({row:_,...entry})=>entry)},bytes);
  expect(received).toMatchObject({structuralStatus:'REJECTED',input:null,issues:[expect.objectContaining({code:'FIELD_CONTRACT',sheet:'ORG04',status:'FAIL'})]});expect(formalFactsDigest()).toBe(before);
- const retained=await catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:received.sourceArtifactId});try{expect(Buffer.from(retained)).toEqual(bytes);}finally{retained.fill(0);}
+ await expect(catalog.authorizeSensitiveRead('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',requestId:randomUUID(),artifactId:received.sourceArtifactId})).rejects.toThrow('ACCESS_DENIED');
+ // Test-administrator inspection proves quarantine preserves the exact bytes;
+ // it does not grant the public Catalog a bypass around unresolved references.
+ const proofText=peer(receipt.name,`SELECT jsonb_build_object('binding',jsonb_build_array(a.job_id,a.revision_id,a.kind,a.campus,a.purpose,a.request_id),'envelope',jsonb_build_object('keyId',p.key_id,'nonce',encode(p.nonce,'hex'),'tag',encode(p.tag,'hex'),'ciphertext',encode(p.ciphertext,'hex')))::text FROM governance_catalog.protected_artifact a JOIN governance_catalog.protected_payload p ON p.artifact_id=a.id WHERE a.id=${quote(received.sourceArtifactId)}::uuid;`,{sensitive:true});
+ const proof=JSON.parse(proofText.split(/\r?\n/).find(line=>line.startsWith('{'))!);
+ const retained=authenticateRegistrationEvidence(proof,provider);try{expect(Buffer.from(retained)).toEqual(bytes);}finally{retained.fill(0);}
 });

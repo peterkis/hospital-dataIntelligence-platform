@@ -131,7 +131,7 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     await port().authorize(scope,actor,input,'READ');
     // Recovery returns the immutable observation, never implicitly replans changed evidence.
     const prior=await record<{candidateId:string;digest:string}|null>(scope,actor,'FROZEN_PRIOR',{input});
-    if(prior)return prior;
+    if(prior){await candidate(scope,actor,prior.candidateId,'WRITE');return prior;}
     const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit,'FREEZE');
     const digest=planBinding(provider,'APPROVED_OWNER_UNIT_V1',unit);
     return record<{candidateId:string;digest:string}>(scope,actor,'FREEZE',{input,digest,envelope:seal(unit,digest)});

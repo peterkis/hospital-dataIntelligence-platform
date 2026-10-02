@@ -5,6 +5,7 @@ import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/vnext-types.generated.js';
 import type { ImportJob } from './import-job.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
+import {authorizeEvolutionProtectedRead} from './protected-evolution-access.js';
 
 /** Local synthetic development only. No implicit key, no production key service. */
 export interface KeyProviderPort {
@@ -49,7 +50,7 @@ export type ProtectedStoreInput = Static<typeof ProtectedStoreSchema>;
 export type ProtectedReadInput = Static<typeof ProtectedReadSchema>;
 export interface ProtectedReference { artifactId: string; status: 'QUARANTINED'; masked: '[REDACTED]'; purged: boolean; expiresAt: string }
 type Envelope = { keyId: string; nonce: string; tag: string; ciphertext: string };
-type Result = ProtectedReference & { error?: string; envelope?: Envelope; binding?: string };
+type Result = ProtectedReference & { error?: string; envelope?: Envelope; binding?: string; evolutionScope?:unknown };
 const publicDigestConflict = Symbol('verified-public-digest-conflict');
 const safeCodes = new Set(['BATCH_REJECTED','ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','EXACT_CONTRACT_UNAVAILABLE','STALE_REVISION','RETENTION_NOT_EXPIRED','PAYLOAD_UNAVAILABLE','CLOSED_INPUT_REQUIRED']);
 function safeError(error: unknown): Error { return new Error(error instanceof Error && safeCodes.has(error.message) ? error.message : 'PROTECTED_OPERATION_FAILED'); }
@@ -118,6 +119,19 @@ export function protectedArtifacts(db: Kysely<DB>|CatalogTransactionScope, provi
           if(trx instanceof CatalogTransactionScope)await trx.protectedReadCompleted();
           // Commit the non-sensitive denial/request ledger even if crypto cannot release bytes.
           if (result.error) return new Error(result.error);
+          // Older prefixes lack the reference-access protocol. They may serve
+          // their original non-evolution artifacts, never an unbound evolution file.
+          if(result.evolutionScope===undefined){
+            const binding:unknown=JSON.parse(result.binding!);
+            if(!Array.isArray(binding)||typeof binding[0]!=='string'||typeof binding[1]!=='string')return new Error('ACCESS_DENIED');
+            const job=(await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:input.scope,jobId:binding[0]})}::jsonb) result`.execute(trx)).rows[0]!.result;
+            const revision=job.revisions.find(revision=>revision.id===binding[1]);
+            if(!revision||revision.input.kind==='FILE'&&revision.input.parserPolicy==='STRICT_ORGANIZATION_EVOLUTION_V1')return new Error('ACCESS_DENIED');
+          }
+          if(result.evolutionScope){
+            try{await authorizeEvolutionProtectedRead(trx,actor,input.artifactId,result.evolutionScope,keyProvider());}
+            catch(error){return safeError(error);}
+          }
           try {
             if (expected) {
               const binding: unknown[] = JSON.parse(result.binding!);

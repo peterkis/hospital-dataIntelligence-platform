@@ -316,6 +316,7 @@
     "vnext:p2-05:validate": "node --import tsx tooling/vnext/p2-05-validate.mjs",
     "vnext:p2-05:deploy": "node --import tsx tooling/vnext/p2-05-deploy.mjs",
     "vnext:p2-05:regression": "node tooling/vnext/p2-05-regression.mjs",
+    "vnext:p2-05:review": "node --import tsx tooling/vnext/p2-05-independent-review.mjs",
     "vnext:p2-04:unit": "vitest run --config tooling/vnext/vitest.p2-04-unit.config.ts",
     "vnext:p2-04:typecheck": "tsc -p tooling/vnext/tsconfig.p2-04.json",
     "vnext:p2-04:deploy": "node --import tsx tooling/vnext/p2-04-deploy.mjs",

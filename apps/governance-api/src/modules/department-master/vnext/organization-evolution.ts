@@ -95,6 +95,26 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   const bytes=authenticateRegistrationEvidence(proof,provider);
   try{return {binding:{id:input.sourceArtifactId,digest:planBinding(provider,'EVOLUTION_FILE_V1',Buffer.from(bytes).toString('base64'))},parsed:await parseEvolutionWorkbookBounded(bytes,workbookFields(policies))};}finally{bytes.fill(0);}
  };
+ const authorizeInputSources=async(s:Scope,actor:string,input:EvolutionStoredStageInput,allowMissingPredecessor=false)=>{
+  const sources=new Set([input.sourceSystemId,...input.successors.map(entry=>entry.row.source_system_id)]);
+  for(const reference of input.predecessors){
+   try{const h=await recoverable(s,async()=>(await sql<{r:DepartmentHistory}>`select department_master.snapshot(${actor},${reference.id}::uuid) r`.execute(s)).rows[0]!.r);for(const version of h.versions)sources.add(version.facts.sourceSystemId);}
+   catch(error){if(!(allowMissingPredecessor&&error instanceof Error&&error.message==='NOT_FOUND'))throw error;}
+  }
+  for(const source of sources)await sql`select department_master.evolution_source_authorize(${actor},${source}::uuid)`.execute(s);
+ };
+ const authenticateBoundEvidence=async(s:Scope,actor:string,id:string,sourceId:string,sourceVersionId:string,campus:string,from:string,to:string|null,point=false)=>{
+  const proof=point
+   ?(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select department_master.evidence(${actor},${id}::uuid,${sourceId}::uuid,${sourceVersionId}::uuid,${campus},${from}::timestamp,${from}::timestamp+interval '1 microsecond') r`.execute(s)).rows[0]!.r
+   :(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select department_master.evidence(${actor},${id}::uuid,${sourceId}::uuid,${sourceVersionId}::uuid,${campus},${from}::timestamp,${to}::timestamp) r`.execute(s)).rows[0]!.r;
+  const bytes=authenticateRegistrationEvidence(proof,provider);bytes.fill(0);
+ };
+ const exactPolicies=async(s:Scope,actor:string,j:ImportJob,input:EvolutionStoredStageInput)=>{
+  const now=(await sql<{r:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') r`.execute(s)).rows[0]!.r;
+  const policies=[await currentContract(s,actor,j.contract.id,j.contract.versionId,now),await currentContract(s,actor,input.contracts.successionContractId,input.contracts.successionContractVersionId,now),await currentContract(s,actor,input.contracts.departmentContractId,input.contracts.departmentContractVersionId,now)];
+  if(!assertContract(policies[0]!,'ORG26','ORG_EVOLUTION_CORE_V1',ORG26_FIELDS)||!assertContract(policies[1]!,'ORG27','ORG_SUCCESSION_CORE_V1',ORG27_FIELDS)||!assertContract(policies[2]!,'ORG04','ORG04_CORE_V1',ORG04_FIELDS))throw new Error('BLOCKED_DEPENDENCY');
+  return policies;
+ };
  const saveValidation=async(s:Scope,actor:string,j:ImportJob,campus:'NORTH'|'SOUTH',sourceArtifactId:string,parsed:EvolutionWorkbookResult,issues:EvolutionIssue[])=>{
   const decision=issues.some(issue=>issue.status==='FAIL')?'FAIL':issues.length?'BLOCKED':'PASS';
   const evaluation:ValidationEvaluation={decision,issues:issues.map(issue=>({rule:(issue.sheet??'ORG_EVOLUTION')+'_'+issue.code,layer:2,row:issue.row,field:issue.field,status:issue.status==='FAIL'?'FAIL':'UNKNOWN',code:issue.code})),layers:[{layer:1,status:parsed.structuralStatus==='PARSED'?'PASS':'FAIL'},{layer:2,status:decision==='PASS'?'PASS':decision==='FAIL'?'FAIL':'UNKNOWN'}],evidenceRequirements:[],dependencies:[],interpretationPolicy:'EXACT_TEXT_V1'};
@@ -102,6 +122,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
  };
  const inspectInput=async(s:Scope,actor:string,id:string)=>{
   const r=await record(s,actor,id),input=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract;
+  await authorizeInputSources(s,actor,input,true);
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');
   const verification=r.verification?unseal<EvolutionVerifyInput>('EVOLUTION_VERIFICATION_V1',r.verification,EvolutionVerifySchema):null;
   const issues:EvolutionIssue[]=[],heads:DepartmentHistory[]=[],materials:Array<{id:string;digest:string}>=[],policies:ImportContractItem[]=[],successorFacts:Array<{alias:string;facts:Record<string,unknown>;contentDigest:string}>=[];
@@ -134,7 +155,9 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    if(rel.from_target_type!=='ORG'||rel.to_target_type!=='ORG')issue('target_type','BLOCKED_DEPENDENCY','BLOCKED',i+1);
   }
   for(const ref of input.predecessors){
-   const h=(await sql<{r:DepartmentHistory}>`select department_master.snapshot(${actor},${ref.id}::uuid) r`.execute(s)).rows[0]!.r;
+   let h:DepartmentHistory;
+   try{h=await recoverable(s,async()=>(await sql<{r:DepartmentHistory}>`select department_master.snapshot(${actor},${ref.id}::uuid) r`.execute(s)).rows[0]!.r);}
+   catch(error){if(!(error instanceof Error&&error.message==='NOT_FOUND'))throw error;issue('predecessors','BLOCKED_DEPENDENCY');continue;}
    const head=h.versions.at(-1),effective=effectiveAt?h.versions.filter(version=>stamp(version.valid_from)<=effectiveAt!&&(version.valid_to===null||stamp(version.valid_to)>effectiveAt!)).at(-1):undefined;
    const relevant=h.versions.filter(version=>version.id===head?.id||version.id===effective?.id);heads.push({...h,versions:relevant});
    for(const version of relevant)await sql`select department_master.evolution_source_authorize(${actor},${version.facts.sourceSystemId}::uuid)`.execute(s);
@@ -219,7 +242,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   return {id:e.id,changeType:e.change_type,effectiveAt:stamp(e.effective_at),recordedAt:stamp(e.recorded_at),effective:stamp(e.effective_at)<=businessAt,sourceClientKey:e.source_client_key,aliasMap,facts:e.facts,predecessors,successors,relations:e.relations.map(relation=>({...relation,source_recorded_at:stamp(relation.source_recorded_at),recorded_at:stamp(relation.recorded_at)})),edges:e.relations.filter(relation=>relation.relation_kind==='SUCCESSION').map(relation=>({id:relation.id,from:relation.from_department_id,to:relation.to_department_id,transferScope:relation.transfer_scope,contextRule:relation.context_rule})),handoff:'NOT_EXECUTED' as const};
  };
  return {
-  async stage(actor:string,raw:EvolutionStageInput){check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);});},
+  async stage(actor:string,raw:EvolutionStageInput){check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');await authorizeInputSources(s,actor,input,true);return stageIn(s,actor,input);});},
   async template(actor:string,input:EvolutionTemplateInput){
    check(EvolutionTemplateSchema,input);return root(async s=>{
     await authorize(s,actor,input.campus,'READ');const now=(await sql<{r:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') r`.execute(s)).rows[0]!.r;
@@ -237,7 +260,12 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    return root(async s=>{
     const j=await job(s,actor,received.job.id),now=(await sql<{r:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') r`.execute(s)).rows[0]!.r;
     const policies=[j.contract,await currentContract(s,actor,input.contracts.successionContractId,input.contracts.successionContractVersionId,now),await currentContract(s,actor,input.contracts.departmentContractId,input.contracts.departmentContractVersionId,now)];
-    const content=await protectedArtifacts(s,provider).authorizeSensitiveRead(actor,{scope:'SYNTHETIC',campus:input.campus,purpose:'IDENTITY_VERIFY',requestId:input.requestId,artifactId:received.artifact.artifactId},{jobId:j.id,revisionId:received.job.revisionId,kind:'RAW_FILE'});
+    // The Owner inspects quarantined bytes internally before there is a bound
+    // input. Generic byte release requires that authenticated input afterwards.
+    const sourceVersion=j.contract.definition.sourceVersionId;if(!sourceVersion)throw new Error('BLOCKED_DEPENDENCY');
+    const proof=(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select governance_catalog.registration_evidence(${actor},${received.artifact.artifactId}::uuid,${sourceVersion}::uuid,${input.campus}) r`.execute(s)).rows[0]!.r;
+    if(proof.binding[0]!==j.id||proof.binding[1]!==received.job.revisionId||proof.binding[2]!=='RAW_FILE')throw new Error('ACCESS_DENIED');
+    const content=authenticateRegistrationEvidence(proof,provider);
     try{
      const parsed=await parseEvolutionWorkbookBounded(content,workbookFields(policies)),issues:EvolutionIssue[]=parsed.issues.map(item=>({row:item.row,field:'',code:item.code,status:'FAIL',...(item.sheet?{sheet:item.sheet}:{})}));
      if(parsed.structuralStatus==='PARSED'){
@@ -250,24 +278,32 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
      if(issues.length){await saveValidation(s,actor,j,input.campus,received.artifact.artifactId,parsed,issues);return {...base,input:null};}
      const {job:_,fileRequestId:__,retentionSeconds:___,successors,...control}=input;
      const staged:EvolutionStoredStageInput={...control,jobId:j.id,revisionId:received.job.revisionId,profile:j.profile,event:parsed.sheets.ORG26.rows[0] as EvolutionStoredStageInput['event'],relations:parsed.sheets.ORG27.rows as EvolutionStoredStageInput['relations'],successors:parsed.sheets.ORG04.rows.map((row,index)=>({...successors[index]!,row:validateORG04(row)})),sourceArtifactId:received.artifact.artifactId,sourceRows:{event:parsed.sheets.ORG26.cells[0]!.sourceRow,relations:parsed.sheets.ORG27.rows.map((_,index)=>parsed.sheets.ORG27.cells.find(cell=>cell.row===index+1)!.sourceRow),successors:parsed.sheets.ORG04.rows.map((_,index)=>parsed.sheets.ORG04.cells.find(cell=>cell.row===index+1)!.sourceRow)}};
-     check(EvolutionStoredStageSchema,staged);const result=await stageIn(s,actor,staged);return {...base,input:result};
+     check(EvolutionStoredStageSchema,staged);await authorizeInputSources(s,actor,staged,true);const result=await stageIn(s,actor,staged);return {...base,input:result};
     }finally{content.fill(0);}
    });
   },
   async readInput(actor:string,input:{inputId:string}){
    check(oneInput,input);return root(async s=>{
     const stored=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',await record(s,actor,input.inputId),EvolutionStoredStageSchema);
-    const sources=new Set([stored.sourceSystemId,...stored.successors.map(entry=>entry.row.source_system_id)]);
-    for(const reference of stored.predecessors){const h=(await sql<{r:DepartmentHistory}>`select department_master.snapshot(${actor},${reference.id}::uuid) r`.execute(s)).rows[0]!.r;for(const version of h.versions)sources.add(version.facts.sourceSystemId);}
     // Raw rows still require current source READ; material references need
     // not resolve merely to inspect an incomplete candidate for correction.
-    for(const source of sources)await sql`select department_master.evolution_source_authorize(${actor},${source}::uuid)`.execute(s);
+    await authorizeInputSources(s,actor,stored,true);
     return stored;
    });
   },
   async preview(actor:string,input:{inputId:string}){check(oneInput,input);return root(async s=>{const v=await inspectInput(s,actor,input.inputId);return {input:v.input,heads:v.heads,verification:v.verification,issues:v.issues};});},
   async validate(actor:string,input:{inputId:string}){check(oneInput,input);return root(async s=>{const v=await inspectInput(s,actor,input.inputId),validationRunId=v.file?(await saveValidation(s,actor,v.j,v.r.campus,v.file.binding.id,v.file.parsed,v.issues)).run.runId:null;return {inputId:v.r.id,digest:v.r.digest,decision:v.issues.some(i=>i.status==='FAIL')?'FAIL' as const:v.issues.length?'BLOCKED' as const:'PASS' as const,issues:v.issues,expandedCount:v.expandedCount,validationRunId};});},
-  async verify(actor:string,input:EvolutionVerifyInput){check(EvolutionVerifySchema,input);return root(async s=>{const r=await record(s,actor,input.inputId,'VERIFY'),raw=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,r.id);if(!j.contract.definition.sourceVersionId)throw new Error('BLOCKED_DEPENDENCY');for(const id of new Set([raw.decisionEvidenceId,...raw.impacts.map(x=>x.evidenceId),...(raw.migrationEvidenceId?[raw.migrationEvidenceId]:[]),...(raw.contextEvidenceId?[raw.contextEvidenceId]:[])]))await evidence(s,actor,id,j.contract.definition.sourceVersionId,r.campus);return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...seal('EVOLUTION_VERIFICATION_V1',input)});});},
+  async verify(actor:string,input:EvolutionVerifyInput){check(EvolutionVerifySchema,input);return root(async s=>{
+   const r=await record(s,actor,input.inputId,'VERIFY'),raw=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,r.id),policies=await exactPolicies(s,actor,j,raw);
+   const eventSource=policies[0]!.definition.sourceVersionId,departmentSource=policies[2]!.definition.sourceVersionId;if(!eventSource||!departmentSource)throw new Error('BLOCKED_DEPENDENCY');
+   await authorizeInputSources(s,actor,raw);
+   const file=await readFile(s,actor,r,raw,policies);
+   if(file&&(file.parsed.structuralStatus!=='PARSED'||canonicalPlan(file.parsed.sheets.ORG26.rows)!==canonicalPlan([raw.event])||canonicalPlan(file.parsed.sheets.ORG27.rows)!==canonicalPlan(raw.relations)||canonicalPlan(file.parsed.sheets.ORG04.rows)!==canonicalPlan(raw.successors.map(entry=>entry.row))))throw new Error('PAYLOAD_UNAVAILABLE');
+   const eventAt=localTime(raw.event.effective_at);
+   for(const id of new Set([raw.decisionEvidenceId,...raw.impacts.map(x=>x.evidenceId),...(raw.migrationEvidenceId?[raw.migrationEvidenceId]:[]),...(raw.contextEvidenceId?[raw.contextEvidenceId]:[])]))await authenticateBoundEvidence(s,actor,id,raw.sourceSystemId,eventSource,r.campus,eventAt,null,true);
+   for(const successor of raw.successors){const entry=normalizeEntry(successor,'LOCAL');await authenticateBoundEvidence(s,actor,entry.evidenceId,entry.row.source_system_id,departmentSource,r.campus,entry.validFrom,entry.validTo);}
+   return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...seal('EVOLUTION_VERIFICATION_V1',input)});
+  });},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(Type.Object({inputId:Id,requestId:Id},{additionalProperties:false}),input);const r=await root(async s=>{const r=await record(s,actor,input.inputId,'WRITE');if(await authorize(s,actor,r.campus,'WRITE')!==r.identity_code)throw new Error('ACCESS_DENIED');return r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,
   async query(actor:string,input:{id:string;campus:'NORTH'|'SOUTH';businessAt:string;recordAsOf?:string}){check(querySchema,input);return root(s=>queryIn(s,actor,input));},

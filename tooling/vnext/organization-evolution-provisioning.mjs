@@ -5,6 +5,7 @@ import {canonicalPlan,planBinding} from '../../apps/governance-api/src/modules/g
 
 export const ORGANIZATION_EVOLUTION_FUNCTIONS=Object.freeze([
  'evolution_authorize(text,text,text)','evolution_source_authorize(text,uuid)',
+ 'evolution_original_context(text,uuid)','evolution_original_authorize(text,uuid,jsonb)',
  'evolution_input_read(text,uuid,text)','evolution_job_read(text,uuid)',
  'evolution_snapshot(text,uuid,text)','evolution_list(text,text,uuid,integer,timestamp)',
  'evolution_history(text,uuid,text,uuid,integer,timestamp)','evolution_mutate(text,text)',
@@ -15,6 +16,7 @@ export const ORGANIZATION_EVOLUTION_FUNCTIONS=Object.freeze([
 export const EVOLUTION_CATALOG_FUNCTIONS=Object.freeze([
  'apply_record(text,text,jsonb)','registration_evidence(text,uuid,uuid,text)',
  'registration_evidence_access(text,uuid,uuid,text)','contract_read(text,jsonb)','import_job_read(text,jsonb)',
+ 'protected_original_context(text,uuid)',
 ]);
 export async function assertOrganizationEvolutionsProvisioned(connection,provider,binding){
  const expected=binding??JSON.parse(readFileSync('.runtime/vnext/p2-05/provisioning.json','utf8'));
