@@ -37,3 +37,9 @@ P2-05 verification either selects an exact existing assessment or records one be
 Q15 evidence is limited to Department evolution and explicit disposition of its supported references. A017 evidence is limited to this finite dependency observation, original snapshot preservation and synthetic handoff. Neither closes P2-08, the whole phase, or real downstream migration.
 
 Formal policy adoption, FULL profiles, maintenance UI, actual restart, real integration and formal acceptance remain separate pending/not-run conclusions.
+
+## Legacy code closure sample
+
+The initial persistent observation had one open predecessor-code obligation. On 2026-10-02 the user authorized ending its identifier assertion at the accepted split boundary, `2026-06-01T00:00:00`. The Identifier Owner appends END, then the impact workflow links that committed result as CLOSE_RELATION, independently approves it and rechecks the case. Original versions, permanent code ownership and the accepted evolution remain intact.
+
+Run `npm.cmd run prototype:db:with -- vnext:p2-06:close-legacy-code --inspect` before `--close`. This receipt-bound sample uses generated clients over loopback HTTP and saves exact requests for recovery. Replaying closure verifies two identifier versions, four case events, zero unresolved cases, pre-boundary resolution, post-boundary non-resolution, old-record-time lookup and old-event replay. Evidence is under `.runtime/vnext/p2-06/legacy-code-closure/`. Do not reopen or delete this history to demonstrate a pending state; use a separate synthetic case.
