@@ -37266,6 +37266,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37279,6 +37285,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37292,6 +37304,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37305,6 +37323,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37318,6 +37342,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37331,6 +37361,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37344,6 +37380,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37384,7 +37426,7 @@ export interface operations {
                         contextEvidenceId: string | null;
                         impacts: {
                             /** @enum {unknown} */
-                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                             /** @enum {unknown} */
                             determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                             ownerRole: string;
@@ -37524,6 +37566,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37537,6 +37585,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37550,6 +37604,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37563,6 +37623,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37576,6 +37642,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37589,6 +37661,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37602,6 +37680,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37702,7 +37786,7 @@ export interface operations {
                     contextEvidenceId: string | null;
                     impacts: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                         /** @enum {unknown} */
                         determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                         ownerRole: string;
@@ -37739,6 +37823,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37752,6 +37842,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37765,6 +37861,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37778,6 +37880,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37791,6 +37899,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37804,6 +37918,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37817,6 +37937,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37929,6 +38055,17 @@ export interface operations {
                         contextEvidenceId: string | null;
                         impacts: {
                             /** @enum {unknown} */
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                            /** @enum {unknown} */
+                            determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                            ownerRole: string;
+                            ownerSignatory: string;
+                            ownerDecisionRef: string;
+                            requiredAction: string;
+                            reason: string;
+                            evidenceId: string;
+                        }[] | {
+                            /** @enum {unknown} */
                             domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                             /** @enum {unknown} */
                             determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -37958,6 +38095,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37971,6 +38114,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37984,6 +38133,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37997,6 +38152,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38010,6 +38171,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38023,6 +38190,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38036,6 +38209,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38149,6 +38328,17 @@ export interface operations {
                             contextEvidenceId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                /** @enum {unknown} */
+                                determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                ownerDecisionRef: string;
+                                requiredAction: string;
+                                reason: string;
+                                evidenceId: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -38213,6 +38403,12 @@ export interface operations {
                             materialsAccepted: boolean;
                             impactReviews: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                ownerAttestationAccepted: boolean;
+                                dispositionAccepted: boolean;
+                                reason: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 ownerAttestationAccepted: boolean;
                                 dispositionAccepted: boolean;
@@ -38240,6 +38436,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38253,6 +38455,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38266,6 +38474,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38279,6 +38493,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38292,6 +38512,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38305,6 +38531,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38318,6 +38550,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38372,6 +38610,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38385,6 +38629,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38398,6 +38648,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38411,6 +38667,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38424,6 +38686,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38437,6 +38705,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38450,6 +38724,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38477,7 +38757,7 @@ export interface operations {
                     materialsAccepted: boolean;
                     impactReviews: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                         ownerAttestationAccepted: boolean;
                         dispositionAccepted: boolean;
                         reason: string;
@@ -38507,6 +38787,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38520,6 +38806,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38533,6 +38825,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38546,6 +38844,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38559,6 +38863,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38572,6 +38882,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38585,6 +38901,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38628,6 +38950,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38641,6 +38969,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38654,6 +38988,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38667,6 +39007,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38680,6 +39026,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38693,6 +39045,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38706,6 +39064,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38899,6 +39263,17 @@ export interface operations {
                             contextEvidenceId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                /** @enum {unknown} */
+                                determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                ownerDecisionRef: string;
+                                requiredAction: string;
+                                reason: string;
+                                evidenceId: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -38928,6 +39303,12 @@ export interface operations {
                             policyApproved: boolean;
                             materialsAccepted: boolean;
                             impactReviews: {
+                                /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                ownerAttestationAccepted: boolean;
+                                dispositionAccepted: boolean;
+                                reason: string;
+                            }[] | {
                                 /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 ownerAttestationAccepted: boolean;
@@ -39133,7 +39514,7 @@ export interface operations {
                             verificationId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -39192,6 +39573,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39205,6 +39592,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39218,6 +39611,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39231,6 +39630,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39244,6 +39649,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39257,6 +39668,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39270,6 +39687,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39313,6 +39736,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39326,6 +39755,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39339,6 +39774,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39352,6 +39793,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39365,6 +39812,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39378,6 +39831,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39391,6 +39850,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39452,6 +39917,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39465,6 +39936,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39478,6 +39955,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39491,6 +39974,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39504,6 +39993,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39517,6 +40012,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39530,6 +40031,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39591,6 +40098,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39604,6 +40117,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39617,6 +40136,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39630,6 +40155,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39643,6 +40174,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39656,6 +40193,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39669,6 +40212,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39741,7 +40290,7 @@ export interface operations {
                             verificationId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -39839,6 +40388,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39852,6 +40407,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39865,6 +40426,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39878,6 +40445,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39891,6 +40464,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39904,6 +40483,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39917,6 +40502,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39979,6 +40570,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39992,6 +40589,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40005,6 +40608,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40018,6 +40627,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40031,6 +40646,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40044,6 +40665,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40057,6 +40684,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40133,7 +40766,7 @@ export interface operations {
                                 verificationId: string | null;
                                 impacts: {
                                     /** @enum {unknown} */
-                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                                     /** @enum {unknown} */
                                     determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole: string;
@@ -40233,6 +40866,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40246,6 +40885,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40259,6 +40904,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40272,6 +40923,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40285,6 +40942,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40298,6 +40961,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40311,6 +40980,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40354,6 +41029,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40367,6 +41048,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40380,6 +41067,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40393,6 +41086,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40406,6 +41105,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40419,6 +41124,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40432,6 +41143,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40559,6 +41276,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40572,6 +41295,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40585,6 +41314,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40598,6 +41333,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40611,6 +41352,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40624,6 +41371,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40637,6 +41390,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40754,6 +41513,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40767,6 +41532,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40780,6 +41551,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40793,6 +41570,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40806,6 +41589,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40819,6 +41608,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40832,6 +41627,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40962,6 +41763,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40975,6 +41782,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40988,6 +41801,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41001,6 +41820,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41014,6 +41839,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41027,6 +41858,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41040,6 +41877,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41168,6 +42011,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41181,6 +42030,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41194,6 +42049,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41207,6 +42068,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41220,6 +42087,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41233,6 +42106,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41246,6 +42125,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41462,6 +42347,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41475,6 +42366,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41488,6 +42385,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41501,6 +42404,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41514,6 +42423,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41527,6 +42442,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41540,6 +42461,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41597,6 +42524,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41610,6 +42543,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41623,6 +42562,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41636,6 +42581,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41649,6 +42600,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41662,6 +42619,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41675,6 +42638,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41780,6 +42749,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41793,6 +42768,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41806,6 +42787,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41819,6 +42806,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41832,6 +42825,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41845,6 +42844,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41858,6 +42863,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41915,6 +42926,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41928,6 +42945,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41941,6 +42964,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41954,6 +42983,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41967,6 +43002,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41980,6 +43021,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -41993,6 +43040,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42049,6 +43102,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42062,6 +43121,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42075,6 +43140,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42088,6 +43159,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42101,6 +43178,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42114,6 +43197,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42127,6 +43216,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42190,6 +43285,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42203,6 +43304,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42216,6 +43323,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42229,6 +43342,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42242,6 +43361,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42255,6 +43380,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42268,6 +43399,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42319,6 +43456,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42332,6 +43475,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42345,6 +43494,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42358,6 +43513,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42371,6 +43532,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42384,6 +43551,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -42397,6 +43570,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };

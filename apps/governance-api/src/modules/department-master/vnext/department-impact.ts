@@ -38,7 +38,7 @@ export function departmentImpacts(
   if(input.profile!=='CORE')throw new Error('BLOCKED_DEPENDENCY');
   const effectiveAt=localTime(input.event.effective_at);
   const references=await ports.references(scope,actor,input.predecessors.map(ref=>ref.id),input.campus);
-  if(references.length>2000)throw new Error('PLAN_INPUT_LIMIT');
+  if(references.length>2000)throw Object.assign(new Error('PLAN_INPUT_LIMIT'),{budget:{kind:'REFERENCE_COUNT',observed:references.length,limit:2000}});
   const changeType=input.event.change_type;if(changeType!=='RENAME'&&changeType!=='SPLIT'&&changeType!=='MERGE')throw new Error('BLOCKED_DEPENDENCY');
   const exits=new Map<string,string|null>();
   for(const id of input.predecessors.map(ref=>ref.id))exits.set(id,await ports.replacement(scope,actor,id));
@@ -50,7 +50,12 @@ export function departmentImpacts(
    ...(['PERSONNEL','BUSINESS_UNIT','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
   ];
   const basis:Omit<DepartmentAssessment,'dependencyDigest'>={target,departmentIds:input.predecessors.map(ref=>ref.id).sort(),inputId:context.inputId,inputDigest:context.inputDigest,campus:input.campus,changeType,effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage,references};
-  return {...basis,dependencyDigest:createHash('sha256').update(canonicalPlan(basis)).digest('hex')};
+  const assessment={...basis,dependencyDigest:createHash('sha256').update(canonicalPlan(basis)).digest('hex')};
+  // Match the canonical PostgreSQL JSONB representation used by the immutable
+  // store CHECK, including its UTF-8 encoding and separator bytes.
+  const {bytes}=(await sql<{bytes:number}>`select octet_length(${JSON.stringify(assessment)}::jsonb::text) bytes`.execute(scope)).rows[0]!;
+  if(bytes>524288)throw Object.assign(new Error('PLAN_INPUT_LIMIT'),{budget:{kind:'ASSESSMENT_BYTES',observed:bytes,limit:524288}});
+  return assessment;
  };
  const assessInTransaction=async(scope:CatalogTransactionScope,actor:string,input:AssessDepartmentChangeInput)=>{
   check(AssessDepartmentChangeSchema,input);

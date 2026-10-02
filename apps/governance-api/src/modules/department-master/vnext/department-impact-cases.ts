@@ -23,8 +23,8 @@ export function departmentImpactCases(ports:CasePorts){
  };
  const prior=(scope:CatalogTransactionScope,actor:string,operation:string,input:Record<string,unknown>)=>ports.record<ImpactCommandResult|null>(scope,actor,'PRIOR_COMMAND',{...input,commandOperation:operation,requestDigest:digest({operation,input})});
  const append=(scope:CatalogTransactionScope,actor:string,operation:string,input:Record<string,unknown>,derived:Record<string,unknown>={})=>ports.record<ImpactCommandResult>(scope,actor,operation,{...input,...derived,requestDigest:digest({operation,input})});
- const result=async(scope:CatalogTransactionScope,actor:string,campus:string,ref:ImpactResultReference)=>
-  (await sql<{r:{owner:string;id:string;versionId:string;departmentIds:string[];period:ImpactSpan;action:string;safeShrink:boolean}}>`select department_master.impact_result(${actor},${JSON.stringify(ref)}::jsonb,${campus}) r`.execute(scope)).rows[0]!.r;
+ const result=async(scope:CatalogTransactionScope,actor:string,campus:string,ref:ImpactResultReference,caseId:string)=>
+  (await sql<{r:{owner:string;id:string;versionId:string;departmentIds:string[];period:ImpactSpan;action:string;safeShrink:boolean}}>`select department_master.impact_result(${actor},${JSON.stringify({...ref,caseId})}::jsonb,${campus}) r`.execute(scope)).rows[0]!.r;
  const closes=(proof:Awaited<ReturnType<typeof result>>,original:{owner:string;id:string;departmentId:string})=>proof.owner===original.owner&&proof.id===original.id&&(
   ['RETRACT','END','CLOSED','REVOKED'].includes(proof.action)||['CORRECT','PUBLISHED'].includes(proof.action)&&proof.safeShrink&&proof.departmentIds.includes(original.departmentId)
  );
@@ -34,7 +34,7 @@ export function departmentImpactCases(ports:CasePorts){
   if(item.obligation.kind!=='REFERENCE')throw new Error('DISPOSITION_INCOMPLETE');
   const original=item.obligation.reference;
   if(disposition.kind==='KEEP_HISTORY')return;
-  const proof=await result(scope,actor,item.campus,disposition.result);
+  const proof=await result(scope,actor,item.campus,disposition.result,item.id);
   if(proof.owner!==original.owner)throw new Error('IMPACT_RESULT_MISMATCH');
   if(disposition.kind==='CLOSE_RELATION'){
    if(!closes(proof,original))throw new Error('IMPACT_RESULT_MISMATCH');
@@ -42,7 +42,7 @@ export function departmentImpactCases(ports:CasePorts){
    const targets=(await sql<{r:string[]}>`select department_master.impact_successors(${actor},${item.eventId}::uuid,${item.campus}) r`.execute(scope)).rows[0]!.r;
    if(!proof.departmentIds.some(id=>targets.includes(id))||['RETRACT','END','CLOSED','REVOKED'].includes(proof.action))throw new Error('IMPACT_RESULT_MISMATCH');
    if(disposition.oldRelation.kind==='CLOSE'){
-    const closed=await result(scope,actor,item.campus,disposition.oldRelation.result);
+    const closed=await result(scope,actor,item.campus,disposition.oldRelation.result,item.id);
     if(!closes(closed,original))throw new Error('IMPACT_RESULT_MISMATCH');
    }
   }
@@ -82,7 +82,7 @@ export function departmentImpactCases(ports:CasePorts){
      remainingSpans=detail.item.obligation.affectedSpans.flatMap(span=>intersect(span,reference.currentPeriod));
     }
     if(proposal.disposition.kind==='NEW_RELATION'){
-     const replacement=await result(scope,actor,input.campus,proposal.disposition.result);
+     const replacement=await result(scope,actor,input.campus,proposal.disposition.result,detail.item.id);
      const uncovered=detail.item.obligation.affectedSpans.flatMap(span=>subtract(span,[replacement.period]));
      for(const span of uncovered)remainingSpans.push(...subtract(span,remainingSpans));
      remainingSpans.sort((a,b)=>a.from.localeCompare(b.from));

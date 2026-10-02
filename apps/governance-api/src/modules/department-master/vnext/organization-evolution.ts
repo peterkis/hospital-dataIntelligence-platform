@@ -7,7 +7,7 @@ import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authe
 import {fileIntake,protectedArtifacts,parseEvolutionWorkbookBounded,recordOwnerFileValidation,textSheetsWorkbook,type EvolutionWorkbookResult,type EvolutionSheet,type ParserField,type ValidationEvaluation} from '../../governance-catalog/index.js';
 import {localTime,covered} from '../../organization-master/index.js';
 import {Id,check,ORG04_FIELDS,normalizeEntry,validateORG04,MAX_EXPECTED_VERSION} from './contracts.js';
-import {EvolutionStageSchema,EvolutionStoredStageSchema,EvolutionVerifySchema,EvolutionReceiveSchema,EvolutionTemplateSchema,EvolutionEventRowSchema,EvolutionRelationRowSchema,ORG26_FIELDS,ORG27_FIELDS,EVOLUTION_IMPACT_DOMAINS,validateSuccessionGraph,evolutionExpandedWriteCount,type EvolutionStageInput,type EvolutionStoredStageInput,type EvolutionVerifyInput,type EvolutionReceiveInput,type EvolutionTemplateInput,type EvolutionIssue} from './organization-evolution-contracts.js';
+import {EvolutionStageSchema,EvolutionStoredStageSchema,EvolutionVerifySchema,EvolutionStoredVerifySchema,EvolutionReceiveSchema,EvolutionTemplateSchema,EvolutionEventRowSchema,EvolutionRelationRowSchema,ORG26_FIELDS,ORG27_FIELDS,EVOLUTION_IMPACT_DOMAINS,validateSuccessionGraph,evolutionExpandedWriteCount,type EvolutionStageInput,type EvolutionStoredStageInput,type EvolutionVerifyInput,type EvolutionReceiveInput,type EvolutionTemplateInput,type EvolutionIssue} from './organization-evolution-contracts.js';
 import {departmentImpacts,departmentImpactPorts,type DepartmentImpactPorts} from './department-impact.js';
 import {DepartmentAssessmentSchema,type DepartmentAssessment} from './department-impact-contracts.js';
 import type {DepartmentHistory} from './index.js';
@@ -126,7 +126,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   const r=await record(s,actor,id),input=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract;
   await authorizeInputSources(s,actor,input,true);
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');
-  const verification=r.verification?unseal<EvolutionVerifyInput>('EVOLUTION_VERIFICATION_V1',r.verification,EvolutionVerifySchema):null;
+  const verification=r.verification?unseal<EvolutionVerifyInput>('EVOLUTION_VERIFICATION_V1',r.verification,EvolutionStoredVerifySchema):null;
   const issues:EvolutionIssue[]=[],heads:DepartmentHistory[]=[],materials:Array<{id:string;digest:string}>=[],policies:ImportContractItem[]=[],successorFacts:Array<{alias:string;facts:Record<string,unknown>;contentDigest:string}>=[];
   const issue=(field:string,code:string,status:EvolutionIssue['status']='BLOCKED',row=0)=>issues.push({row,field,code,status});
   const now=(await sql<{r:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') r`.execute(s)).rows[0]!.r;
@@ -145,7 +145,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   try{effectiveAt=localTime(input.event.effective_at);localTime(input.event.recorded_at);for(const rel of input.relations)localTime(rel.recorded_at);}catch{issue('effective_at','LOCAL_TIME_REQUIRED','FAIL');}
   if(!['RENAME','SPLIT','MERGE'].includes(input.event.change_type))issue('change_type','BLOCKED_DEPENDENCY');
   for(const [field,value] of Object.entries(input.event))if(value!==value.trim())issue(field,'CLOSED_INPUT_REQUIRED','FAIL');
-  if(new Set(input.impacts.map(x=>x.domain)).size!==8||EVOLUTION_IMPACT_DOMAINS.some(domain=>!input.impacts.some(x=>x.domain===domain)))issue('impacts','CLOSED_INPUT_REQUIRED','FAIL');
+  if(new Set(input.impacts.map(x=>x.domain)).size!==EVOLUTION_IMPACT_DOMAINS.length||EVOLUTION_IMPACT_DOMAINS.some(domain=>!input.impacts.some(x=>x.domain===domain)))issue('impacts','CLOSED_INPUT_REQUIRED','FAIL');
   if(input.impacts.some(x=>x.determination==='UNKNOWN'))issue('impacts','BLOCKED_DEPENDENCY');
   if(input.impacts.some(impact=>impact.determination==='AFFECTED'&&!impact.requiredAction.trim()))issue('impacts','DISPOSITION_INCOMPLETE');
   const migrationRequired=input.impacts.some(x=>x.determination==='AFFECTED'&&['PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER','SOURCE_MAPPING'].includes(x.domain));
@@ -171,7 +171,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   }
   if(input.event.change_type==='RENAME'&&(!input.rename||input.successors.length))issue('rename','CLOSED_INPUT_REQUIRED','FAIL');
   if(['SPLIT','MERGE'].includes(input.event.change_type)&&input.rename!==null)issue('rename','CLOSED_INPUT_REQUIRED','FAIL');
-  if(verification){if(verification.inputDigest!==r.digest)throw new Error('STALE_VALIDATION');if(await authorize(s,r.verification!.actor,r.campus,'VERIFY')!==r.verification!.identity_code)throw new Error('ACCESS_DENIED');if(!verification.materialsAccepted||!verification.policyApproved)issue('verification','LEGAL_REVIEW_REQUIRED');if(new Set(verification.impactReviews.map(review=>review.domain)).size!==8||EVOLUTION_IMPACT_DOMAINS.some(domain=>!verification.impactReviews.some(review=>review.domain===domain&&review.ownerAttestationAccepted&&review.dispositionAccepted)))issue('impacts','LEGAL_REVIEW_REQUIRED');}
+  if(verification){if(verification.inputDigest!==r.digest)throw new Error('STALE_VALIDATION');if(await authorize(s,r.verification!.actor,r.campus,'VERIFY')!==r.verification!.identity_code)throw new Error('ACCESS_DENIED');if(!verification.materialsAccepted||!verification.policyApproved)issue('verification','LEGAL_REVIEW_REQUIRED');if(new Set(verification.impactReviews.map(review=>review.domain)).size!==EVOLUTION_IMPACT_DOMAINS.length||EVOLUTION_IMPACT_DOMAINS.some(domain=>!verification.impactReviews.some(review=>review.domain===domain&&review.ownerAttestationAccepted&&review.dispositionAccepted)))issue('impacts','LEGAL_REVIEW_REQUIRED');}
   else issue('verification','LEGAL_REVIEW_REQUIRED');
   let sourcePin:unknown=null;
   if(effectiveAt){
@@ -211,12 +211,12 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   // and its code assertion. Count all four domain writes in the shared budget.
   const expandedCount=evolutionExpandedWriteCount(input);
   if(expandedCount>100)issue('event','PLAN_INPUT_LIMIT','FAIL');
-  const assessment=issues.length===0?await impacts.observe(s,actor,{kind:'INPUT',id:r.id}):null;
-  for(const domain of ['SOURCE_MAPPING','HIERARCHY'] as const){
+  const assessment=issues.every(item=>item.code==='LEGAL_REVIEW_REQUIRED')?await impacts.observe(s,actor,{kind:'INPUT',id:r.id}):null;
+  for(const domain of ['SOURCE_MAPPING','IDENTIFIER','HIERARCHY'] as const){
    if(assessment?.references.some(ref=>ref.owner===domain&&ref.constraint==='UNSATISFIED')&&input.impacts.find(impact=>impact.domain===domain)?.determination!=='AFFECTED')issue('impacts','IMPACT_DECLARATION_CONFLICT');
   }
   if(verification&&!verification.impactAssessment)issue('impacts','IMPACT_ASSESSMENT_REQUIRED');
-  if(assessment&&verification?.impactAssessment?.digest!==assessment.dependencyDigest)issue('impacts','STALE_VALIDATION');
+  if(assessment&&verification&&verification.impactAssessment?.digest!==assessment.dependencyDigest)issue('impacts','STALE_VALIDATION');
   const facts={impactAssessment:verification?.impactAssessment??null,event:input.event,sourceSystemId:input.sourceSystemId,contractVersionId:c.versionId,companionVersions:input.contracts,verificationId:r.verification?.id??null,impacts:input.impacts,materials,sourcePin,sourceArtifact:file?.binding??null,successorFacts};
   return {r,input,j,verification,policies,heads,materials,sourcePin,file,issues,expandedCount,facts,graph,assessment};
  };
@@ -253,7 +253,10 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
  });
  const coordinator=applyCoordinator(db,provider,port);
  const files=fileIntake(db,provider);
- const stageIn=(s:Scope,actor:string,input:EvolutionStoredStageInput)=>mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('EVOLUTION_INPUT_V1',input)});
+ const stageIn=(s:Scope,actor:string,input:EvolutionStoredStageInput)=>{
+  if(new Set(input.impacts.map(x=>x.domain)).size!==EVOLUTION_IMPACT_DOMAINS.length||EVOLUTION_IMPACT_DOMAINS.some(domain=>!input.impacts.some(x=>x.domain===domain)))throw new Error('CLOSED_INPUT_REQUIRED');
+  return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('EVOLUTION_INPUT_V1',input)});
+ };
  const queryIn=async(s:Scope,actor:string,input:{id:string;campus:'NORTH'|'SOUTH';businessAt:string;recordAsOf?:string})=>{
   const businessAt=localTime(input.businessAt),recordAsOf=input.recordAsOf===undefined?null:localTime(input.recordAsOf),e=await snapshot(s,actor,input.id,input.campus);
   if(recordAsOf!==null&&stamp(e.recorded_at)>recordAsOf)throw new Error('NOT_FOUND');
@@ -327,6 +330,11 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    for(const successor of raw.successors){const entry=normalizeEntry(successor,'LOCAL');await authenticateBoundEvidence(s,actor,entry.evidenceId,entry.row.source_system_id,departmentSource,r.campus,entry.validFrom,entry.validTo);}
    const assessment=input.impactAssessment?await impacts.readAssessmentInTransaction(s,actor,{assessmentId:input.impactAssessment.id,campus:r.campus}):await impacts.assessInTransaction(s,actor,{requestId:input.requestId,reason:input.reason,target:{kind:'INPUT',id:r.id}});
    const current=await impacts.observe(s,actor,{kind:'INPUT',id:r.id});
+   if(new Set(raw.impacts.map(x=>x.domain)).size!==EVOLUTION_IMPACT_DOMAINS.length||EVOLUTION_IMPACT_DOMAINS.some(domain=>!raw.impacts.some(x=>x.domain===domain)))throw new Error('CLOSED_INPUT_REQUIRED');
+   // A complete negative review must still be recorded so it invalidates any
+   // earlier approval. inspectInput prevents it from authorizing application.
+   if(new Set(input.impactReviews.map(x=>x.domain)).size!==EVOLUTION_IMPACT_DOMAINS.length||EVOLUTION_IMPACT_DOMAINS.some(domain=>!input.impactReviews.some(x=>x.domain===domain)))throw new Error('LEGAL_REVIEW_REQUIRED');
+   if(current.references.some(ref=>['SOURCE_MAPPING','IDENTIFIER','HIERARCHY'].includes(ref.owner)&&ref.constraint==='UNSATISFIED'&&raw.impacts.find(impact=>impact.domain===ref.owner)?.determination!=='AFFECTED'))throw new Error('IMPACT_DECLARATION_CONFLICT');
    if(current.dependencyDigest!==assessment.dependencyDigest||input.impactAssessment&&(input.impactAssessment.id!==assessment.assessmentId||input.impactAssessment.digest!==assessment.dependencyDigest))throw new Error('STALE_VALIDATION');
    const verified={...input,impactAssessment:{id:assessment.assessmentId,digest:assessment.dependencyDigest}};
    return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...verified,...seal('EVOLUTION_VERIFICATION_V1',verified)});

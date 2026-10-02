@@ -220,6 +220,15 @@ export interface DepartmentMasterIdentifierVerification {
   request_id: string;
 }
 
+export interface DepartmentMasterImpactExternalOwnerAccess {
+  actor: string;
+  campus: string;
+  owner: string;
+  owner_role: string;
+  permission: string;
+  responsibility_version_id: string;
+}
+
 export interface DepartmentMasterInput {
   campus: string;
   digest: string;
@@ -1059,6 +1068,7 @@ export interface DB {
   "department_master.identifier_access": DepartmentMasterIdentifierAccess;
   "department_master.identifier_input": DepartmentMasterIdentifierInput;
   "department_master.identifier_verification": DepartmentMasterIdentifierVerification;
+  "department_master.impact_external_owner_access": DepartmentMasterImpactExternalOwnerAccess;
   "department_master.input": DepartmentMasterInput;
   "department_master.mapping_access": DepartmentMasterMappingAccess;
   "department_master.mapping_input": DepartmentMasterMappingInput;

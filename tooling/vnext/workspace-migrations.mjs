@@ -41,6 +41,12 @@ const postWorkspaceMigrations = [
  '0122_department_change_impacts',
  '0123_department_impact_dispositions',
  '0124_statistical_frozen_source',
+ '0125_impact_exact_hierarchy_closure',
+ '0126_impact_original_semantics',
+ '0127_impact_frozen_current_authority',
+ '0128_identifier_impact_gate',
+ '0129_external_impact_owner_authority',
+ '0130_impact_assessment_budget',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

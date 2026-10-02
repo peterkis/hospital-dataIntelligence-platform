@@ -31,7 +31,7 @@ async function prepare(input:Parameters<typeof owner.stage>[1]){
 
 async function splitInput(){
  const source=await f.newDepartment();f.grantTarget(source);
- const input=await f.input();input.event.change_type='SPLIT';input.rename=null;input.predecessors=[{owner:'department-master',id:source,expectedVersion:'1'}];input.successors=[f.department.entry(),f.department.entry()];input.contextEvidenceId=f.material.artifactId;
+ const input=await f.input();input.event.change_type='SPLIT';Object.assign(input.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST explicit Identifier Owner closure'});input.rename=null;input.predecessors=[{owner:'department-master',id:source,expectedVersion:'1'}];input.successors=[f.department.entry(),f.department.entry()];input.contextEvidenceId=f.material.artifactId;
  for(const next of input.successors){next.row.valid_from=input.event.effective_at;next.row.established_on='2026-06-01';}
  input.relations=input.successors.map((next,i)=>({succession_id:randomUUID(),org_event_id:input.event.org_event_id,from_target_type:'ORG',from_target_id:source,to_target_type:'ORG',to_target_id:next.row.org_id,transfer_scope:i?'INPATIENT':'OUTPATIENT',context_rule:'TEST POLICY ONLY explicit future destination',recorded_at:input.event.recorded_at}));
  return input;
@@ -395,7 +395,7 @@ test('RENAME preserves stable identity and the original business and record-time
 test('P2-05-AC-01 a split creates both new successors and retires its predecessor at exactly T without historical fallback',async()=>{
  const source=await f.newDepartment();f.grantTarget(source);
  const input=await f.input(),a=f.department.entry(),b=f.department.entry();
- input.event.change_type='SPLIT';input.event.reason='TEST POLICY ONLY explicit split';input.predecessors=[{owner:'department-master',id:source,expectedVersion:'1'}];input.rename=null;input.successors=[a,b];input.contextEvidenceId=f.material.artifactId;
+ input.event.change_type='SPLIT';Object.assign(input.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST explicit Identifier Owner closure'});input.event.reason='TEST POLICY ONLY explicit split';input.predecessors=[{owner:'department-master',id:source,expectedVersion:'1'}];input.rename=null;input.successors=[a,b];input.contextEvidenceId=f.material.artifactId;
  for(const e of input.successors){e.row.valid_from=input.event.effective_at;e.row.established_on='2026-06-01';}
  input.relations=input.successors.map((e,i)=>({succession_id:randomUUID(),org_event_id:input.event.org_event_id,from_target_type:'ORG',from_target_id:source,to_target_type:'ORG',to_target_id:e.row.org_id,transfer_scope:i?'INPATIENT':'OUTPATIENT',context_rule:i?'Inpatient future business to C':'Outpatient future business to B',recorded_at:input.event.recorded_at}));
  const department=openDepartment(connection,provider);
@@ -416,7 +416,7 @@ test('P2-05-AC-01 a split creates both new successors and retires its predecesso
 
 test('P2-05-AC-02 a merge preserves both original sources and records one new successor',async()=>{
  const first=await f.newDepartment(),second=await f.newDepartment();f.grantTarget(first);f.grantTarget(second);
- const input=await f.input(),next=f.department.entry();input.event.change_type='MERGE';input.predecessors=[first,second].map(id=>({owner:'department-master',id,expectedVersion:'1'}));input.rename=null;input.successors=[next];next.row.valid_from=input.event.effective_at;next.row.established_on='2026-06-01';
+ const input=await f.input(),next=f.department.entry();input.event.change_type='MERGE';Object.assign(input.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST explicit Identifier Owner closure'});input.predecessors=[first,second].map(id=>({owner:'department-master',id,expectedVersion:'1'}));input.rename=null;input.successors=[next];next.row.valid_from=input.event.effective_at;next.row.established_on='2026-06-01';
  input.relations=[first,second].map(id=>({succession_id:randomUUID(),org_event_id:input.event.org_event_id,from_target_type:'ORG',from_target_id:id,to_target_type:'ORG',to_target_id:next.row.org_id,transfer_scope:'BUSINESS',context_rule:'',recorded_at:input.event.recorded_at}));
  const p=await prepare(input),accepted=await owner.applyUnit('maker',{candidateId:p.candidate.candidateId,requestId:p.requestId});expect(accepted.status).toBe('COMMITTED');if(accepted.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
  const event=await owner.query('maker',{id:accepted.facts[0]!.id,campus:'NORTH',businessAt:input.event.effective_at});expect(event.successors).toHaveLength(1);expect(event.predecessors.map(x=>x.id)).toEqual([first,second]);expect(event.edges.map(x=>x.from)).toEqual([first,second]);expect([first,second]).not.toContain(event.successors[0]!.id);
