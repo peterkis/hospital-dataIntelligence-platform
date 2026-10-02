@@ -245,7 +245,14 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   await authorizeInputSources(s,actor,input);
   return {inputId:r.id,inputDigest:r.digest,input};
  },impactPorts,provider,async(s,actor,eventId,campus,evidenceId,admission)=>{
-  const event=await snapshot(s,actor,eventId,campus),r=await record(s,actor,event.input_id),raw=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,r.id),policies=await exactPolicies(s,actor,j,raw),sourceVersion=policies[0]!.definition.sourceVersionId;
+  const event=await snapshot(s,actor,eventId,campus),r=await record(s,actor,event.input_id),raw=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,r.id),sourceVersion=j.contract.definition.sourceVersionId;
+  // Dispositions belong to an accepted event, not to today's import contracts.
+  // Reauthorize its exact companion versions without requiring current admission.
+  if(j.contract.versionId!==event.facts['contractVersionId'])throw new Error('PAYLOAD_UNAVAILABLE');
+  for(const [id,versionId] of [[raw.contracts.successionContractId,raw.contracts.successionContractVersionId],[raw.contracts.departmentContractId,raw.contracts.departmentContractVersionId]]){
+   const accepted=(await sql<{r:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:'SYNTHETIC',mode:'HISTORY',target:id,versionId})}::jsonb) r`.execute(s)).rows[0]!.r;
+   if(!accepted.some(contract=>contract.versionId===versionId))throw new Error('BLOCKED_DEPENDENCY');
+  }
   if(!sourceVersion)throw new Error('BLOCKED_DEPENDENCY');
   if(!admission){await evidenceAccess(s,actor,evidenceId,sourceVersion,campus);return '';}
   await authenticateBoundEvidence(s,actor,evidenceId,raw.sourceSystemId,sourceVersion,campus,localTime(raw.event.effective_at),null,true);

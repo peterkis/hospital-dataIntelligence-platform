@@ -52,3 +52,15 @@ Formal policy adoption, FULL profiles, maintenance UI, actual restart, real inte
 The initial persistent observation had one open predecessor-code obligation. On 2026-10-02 the user authorized ending its identifier assertion at the accepted split boundary, `2026-06-01T00:00:00`. The Identifier Owner appends END, then the impact workflow links that committed result as CLOSE_RELATION, independently approves it and rechecks the case. Original versions, permanent code ownership and the accepted evolution remain intact.
 
 Run `npm.cmd run prototype:db:with -- vnext:p2-06:close-legacy-code --inspect` before `--close`. This receipt-bound sample uses generated clients over loopback HTTP and saves exact requests for recovery. Replaying closure verifies two identifier versions, four case events, zero unresolved cases, pre-boundary resolution, post-boundary non-resolution, old-record-time lookup and old-event replay. Evidence is under `.runtime/vnext/p2-06/legacy-code-closure/`. Do not reopen or delete this history to demonstrate a pending state; use a separate synthetic case.
+
+## Independent review follow-up for 82a4d9e
+
+The follow-up repairs three independently reproduced gaps. Migration 0131 changes installed routines without editing 0122–0130 or existing rows. New APPROVE and RECEIPT commands cannot reopen RESOLVED or SIMULATED_COMPLETED cases; the original accepted request still replays after current authorization. Rechecks keep their existing no-op semantics.
+
+Disposition evidence belongs to the accepted evolution's exact contract and companion versions. History reads, command replay and later disposition work reauthorize those versions, sources and material access; they do not require the old import contract to remain today's current contract. New evolution admission still requires current policies, and new disposition evidence still authenticates its bytes and source/time binding.
+
+A successful assessment request is looked up before a fresh reverse scan. Replay still reauthorizes the input and every original/frozen-current reference. New requests remain subject to both budgets. Regression checks cover 524,287, 524,288 and 524,289 PostgreSQL JSONB UTF-8 bytes, successful replay after byte/count growth and conflicting request reuse. The volume adapter remains synthetic and is not production scan or capacity evidence.
+
+The populated-upgrade runner pins the predecessor evolution Owner, evolution contracts and, for 0124, its impact implementation/contracts to the selected commit. Shared Catalog infrastructure and fixture builders remain current; this is not execution of an entirely historical repository checkout. The source bundle digest and file list make that boundary explicit.
+
+The additional public-Owner/real-HTTP tests exercise terminal-state preservation and historical reads/replay after a real Catalog contract publication. Review logs and command outcomes remain under ignored `.runtime/vnext/p2-06/independent-82a4d9e/`. This follow-up does not deploy the user's persistent database, rerun its legacy END sample, authorize merging, establish real integration or change formal acceptance from NOT_RUN.

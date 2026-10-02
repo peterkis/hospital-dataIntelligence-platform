@@ -59,8 +59,11 @@ export function departmentImpacts(
  };
  const assessInTransaction=async(scope:CatalogTransactionScope,actor:string,input:AssessDepartmentChangeInput)=>{
   check(AssessDepartmentChangeSchema,input);
+   const context=await load(scope,actor,input.target),requestDigest=planBinding(provider,'DEPARTMENT_ASSESS_REQUEST_V1',input);
+   const prior=await record<StoredDepartmentAssessment|null>(scope,actor,'PRIOR_ASSESSMENT',{...input,campus:context.input.campus,requestDigest});
+   if(prior){await authorizeFrozen(scope,actor,prior);return prior;}
    const assessment=await observe(scope,actor,input.target);
-   const stored=await record<StoredDepartmentAssessment>(scope,actor,'ASSESS',{...input,campus:assessment.campus,assessment,requestDigest:planBinding(provider,'DEPARTMENT_ASSESS_REQUEST_V1',input)});
+   const stored=await record<StoredDepartmentAssessment>(scope,actor,'ASSESS',{...input,campus:assessment.campus,assessment,requestDigest});
    await authorizeFrozen(scope,actor,stored);return stored;
  };
  const authorizeFrozen=async(scope:CatalogTransactionScope,actor:string,assessment:DepartmentAssessment)=>{for(const reference of assessment.references)await ports.referenceAccess(scope,actor,reference,assessment.campus);};

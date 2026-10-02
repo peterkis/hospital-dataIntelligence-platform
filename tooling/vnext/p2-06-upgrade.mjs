@@ -20,14 +20,22 @@ export async function validateImpactUpgrade(){
  await validateImpactUpgradeFrom(124,'ff98277');
 }
 async function validateImpactUpgradeFrom(prefix,baseline){
- // Execute the exact predecessor Owner against the real 0121 prefix. This is
- // validation-only source, never a production fallback or fabricated candidate.
+ // Freeze the predecessor's impact modules too: current helpers can require
+ // migrations that the populated predecessor intentionally does not have yet.
  const path='apps/governance-api/src/modules/department-master/vnext/organization-evolution.ts';
- const original=execFileSync('git',['show',baseline+':'+path],{encoding:'utf8',windowsHide:true});
- mkdirSync('.runtime/vnext/p2-06',{recursive:true});const predecessor=resolve(`.runtime/vnext/p2-06/predecessor-${prefix}-owner.mts`),contractsPath=path.replace('organization-evolution.ts','organization-evolution-contracts.ts'),oldContracts=resolve(`.runtime/vnext/p2-06/predecessor-${prefix}-contracts.mts`);
- const imports=(text,replaceContracts=false)=>text.replace(/from '([.][^']+)'/g,(_all,specifier)=>"from '"+pathToFileURL(replaceContracts&&specifier==='./organization-evolution-contracts.js'?oldContracts:resolve(dirname(path),specifier.replace(/\.js$/,'.ts'))).href+"'");
- writeFileSync(oldContracts,imports(execFileSync('git',['show',baseline+':'+contractsPath],{encoding:'utf8',windowsHide:true})));
- writeFileSync(predecessor,imports(original,true));
+ const names=['organization-evolution.ts','organization-evolution-contracts.ts',...(prefix>=122?['department-impact.ts','department-impact-cases.ts','department-impact-contracts.ts']:[])];
+ const directory=resolve('.runtime/vnext/p2-06/predecessor-'+prefix);mkdirSync(directory,{recursive:true});
+ const sources=new Map(names.map(name=>{const file=resolve(dirname(path),name);return [file,execFileSync('git',['show',baseline+':'+dirname(path).replaceAll('\\','/')+'/'+name],{encoding:'utf8',windowsHide:true})];}));
+ const frozen=new Map(names.map(name=>[resolve(dirname(path),name),resolve(directory,name.replace(/\.ts$/,'.mts'))]));
+ for(const [file,source] of sources){
+  const rewritten=source.replace(/from '([.][^']+)'/g,(_all,specifier)=>{
+   const target=resolve(dirname(file),specifier.replace(/\.js$/,'.ts'));
+   return "from '"+pathToFileURL(frozen.get(target)??target).href+"'";
+  });
+  writeFileSync(frozen.get(file),rewritten);
+ }
+ const predecessor=frozen.get(resolve(path));
+ const sourceDigest=createHash('sha256').update(JSON.stringify(names.map(name=>({name,source:sources.get(resolve(dirname(path),name))})))).digest('hex');
  const {openOrganizationEvolutions:openPredecessor}=await import(pathToFileURL(predecessor).href);
  const owned=createTemporary('P2-06'),provider=new LocalSyntheticKeyProvider();let session,catalog,old,current;
  try{
@@ -71,7 +79,7 @@ async function validateImpactUpgradeFrom(prefix,baseline){
   const restaged=await current.stage('maker',fresh);
   await current.verify('reviewer',{requestId:randomUUID(),inputId:restaged.inputId,inputDigest:restaged.digest,reason:'TEST fresh nine-domain independent assessment',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews});
   const requestId=randomUUID(),candidate=await current.plan('maker',{inputId:restaged.inputId,requestId});await current.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await current.approveApplyUnit('reviewer',candidate);assert.equal((await current.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).status,'COMMITTED');
-  const result={status:'P2_06_PREDECESSOR_UPGRADE_PASSED',baseline,sourceDigest:createHash('sha256').update(original).digest('hex'),prefix,current:after.ledger.length,priorRowsAndKeysPreserved:true,committedReplay:true,closedCasePreserved:prefix===124,oldPendingBlocked:true,newApprovalCommitted:true,laterAssessmentId:assessment.assessmentId};
+  const result={status:'P2_06_PREDECESSOR_UPGRADE_PASSED',baseline,sourceDigest,sourceFiles:names,prefix,current:after.ledger.length,priorRowsAndKeysPreserved:true,committedReplay:true,closedCasePreserved:prefix===124,oldPendingBlocked:true,newApprovalCommitted:true,laterAssessmentId:assessment.assessmentId};
   writeFileSync(`.runtime/vnext/p2-06/upgrade-${prefix}.json`,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
  }catch(error){session??=error.ownerSession;throw error;}finally{await old?.close();await current?.close();await catalog?.close();dropTemporary(owned.receipt);if(session)dropValidationOwnerSession(session);}
 }

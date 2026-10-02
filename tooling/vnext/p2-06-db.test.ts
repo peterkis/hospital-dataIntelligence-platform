@@ -71,11 +71,15 @@ test('assessment byte budget is explicit at the persistence boundary over real H
   padding=524287-baseBytes;expect(padding).toBeGreaterThan(0);expect(Math.ceil(padding/count)).toBeLessThanOrEqual(2000);
   const post=async(body:typeof request)=>{const response=await fetch(url+'/api/vnext/department-impacts/assess',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
   expect((await post({...request,requestId:randomUUID()})).status).toBe(200);
-  padding+=2;const oversized={...request,requestId:randomUUID()},failed=await post(oversized);
+  padding+=1;expect((await post({...request,requestId:randomUUID()})).status).toBe(200);
+  padding+=1;const oversized={...request,requestId:randomUUID()},failed=await post(oversized);
   expect(failed).toMatchObject({status:400,data:{code:'PLAN_INPUT_LIMIT',budget:{kind:'ASSESSMENT_BYTES',observed:524289,limit:524288}}});
   expect(await post(oversized)).toEqual(failed);
+  await expect.soft(budgetOwner.assessDepartmentChange('maker',request)).resolves.toEqual(baseline);
   count=2001;padding=0;
   expect(await post({...request,requestId:randomUUID()})).toMatchObject({status:400,data:{code:'PLAN_INPUT_LIMIT',budget:{kind:'REFERENCE_COUNT',observed:2001,limit:2000}}});
+  expect(await budgetOwner.assessDepartmentChange('maker',request)).toEqual(baseline);
+  await expect(budgetOwner.assessDepartmentChange('maker',{...request,reason:'TEST_CONFLICT'})).rejects.toThrow('REQUEST_CONFLICT');
  }finally{await app.close();await budgetOwner.close();await pool.end();}
 });
 test('P2-06-AC-01 rename commits frozen change evidence and explicit open impact cases',async()=>{
@@ -132,6 +136,22 @@ test('active identifiers require an affected declaration before evolution verifi
  const job=await f.newJob();input.jobId=job.id;input.revisionId=job.revisionId;input.requestId=randomUUID();input.impacts.find(i=>i.domain==='IDENTIFIER')!.determination='AFFECTED';
  const accepted=await owner.stage('maker',input);await verify(accepted);
  const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:accepted.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
+ expect((await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).status).toBe('COMMITTED');
+});
+test('a complete negative IDENTIFIER Owner review is recorded, withdraws the old approval, and allows a fresh approval',async()=>{
+ const staged=await owner.stage('maker',await freshRename());await verify(staged);
+ const oldRequestId=randomUUID(),oldCandidate=await owner.plan('maker',{inputId:staged.inputId,requestId:oldRequestId});
+ await owner.readApplyCandidate('reviewer',{candidateId:oldCandidate.candidateId});await owner.approveApplyUnit('reviewer',oldCandidate);
+ const impactReviews=structuredClone(f.impactReviews),identifier=impactReviews.find(review=>review.domain==='IDENTIFIER');
+ if(!identifier)throw new Error('IDENTIFIER_REVIEW_REQUIRED');
+ identifier.ownerAttestationAccepted=false;identifier.dispositionAccepted=false;identifier.reason='TEST explicit negative Identifier Owner review';
+ const negative=await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST record complete negative Owner review',policyApproved:true,materialsAccepted:true,impactReviews});
+ expect(negative.verificationId).toMatch(/^[a-f0-9-]{36}$/);
+ await expect(owner.applyUnit('maker',{candidateId:oldCandidate.candidateId,requestId:oldRequestId})).rejects.toThrow('STALE_VALIDATION');
+ expect(await owner.resumeOutcome('maker',{candidateId:oldCandidate.candidateId,requestId:oldRequestId})).toBeNull();
+ await verify(staged);
+ const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});
+ await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
  expect((await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).status).toBe('COMMITTED');
 });
 test.each(['UNCHANGED','SEMANTIC','TARGET'] as const)('P2-06-AC-02 mapping shrink preserves original semantics (%s)',async(mode)=>{
@@ -418,4 +438,58 @@ test.each(['CLOSE','REVOKE','SHRINK','CHANGED_TREE','DUPLICATE'] as const)('hier
   await close(replacement,action);
   await expect(owner.recheckImpact('maker',{caseId:item.id,campus:'NORTH',requestId:randomUUID(),reason:'TEST_RECHECK_CLOSED_REPLACEMENT',expectedHead:approved.head})).rejects.toThrow('IMPACT_RESULT_MISMATCH');
  }finally{await department.close();await hierarchy.close();}
+});
+
+async function independentlyClosedReference(){
+ const {eventId}=await applyRename(),item=(await owner.listImpactCases('maker',{eventId,campus:'NORTH'})).items.find(c=>c.obligation.owner==='IDENTIFIER')!,r=await responsibility('ORG23');
+ peer(receipt.name,"INSERT INTO department_master.identifier_access SELECT a,'SYNTHETIC_DEPARTMENT_CODE','NORTH',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['WRITE','REVIEW']) p ON CONFLICT DO NOTHING;");
+ const base={caseId:item.id,campus:'NORTH' as const,reason:'TEST independent terminal case'};
+ const assigned=await owner.assignImpactCase('maker',{...base,requestId:randomUUID(),expectedHead:'0',responsibilityId:r.id});
+ const proposal=await owner.recordDisposition('maker',{...base,requestId:randomUUID(),expectedHead:assigned.head,disposition:{kind:'KEEP_HISTORY',evidenceId:f.material.artifactId}});
+ const approve={...base,requestId:randomUUID(),expectedHead:proposal.head,proposalEventId:proposal.eventId},approved=await owner.approveDisposition('reviewer',approve);
+ const closed=await owner.recheckImpact('maker',{...base,requestId:randomUUID(),expectedHead:approved.head});expect(closed.status).toBe('RESOLVED');
+ return {base,approve,approved,closed};
+}
+test('independent review: a new approval cannot reopen a resolved case, but the accepted request replays',async()=>{
+ const {base,approve,approved,closed}=await independentlyClosedReference();
+ const before=await owner.readImpactCase('maker',{caseId:base.caseId,campus:base.campus});
+ expect(await owner.approveDisposition('reviewer',approve)).toEqual(approved);
+ await expect(owner.approveDisposition('reviewer',{...approve,requestId:randomUUID(),expectedHead:closed.head})).rejects.toThrow('DISPOSITION_ALREADY_COMPLETE');
+ expect(await owner.readImpactCase('maker',{caseId:base.caseId,campus:base.campus})).toEqual(before);
+});
+
+test.each(['APPROVE','RECEIPT'] as const)('independent review: completed synthetic handoff rejects a new %s over HTTP',async(operation)=>{
+ const input=await freshRename(),r=await responsibility('ORG26');
+ Object.assign(input.impacts.find(i=>i.domain==='CONSUMER')!,{determination:'AFFECTED',requiredAction:'TEST synthetic handoff',ownerRole:'SYNTHETIC_OWNER_A',ownerSignatory:'SYNTHETIC_REVIEWER'});input.event.migration_plan_ref='TEST';input.migrationEvidenceId=f.material.artifactId;
+ const staged=await owner.stage('maker',input);await verify(staged);const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
+ const applied=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(applied.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
+ const item=(await owner.listImpactCases('maker',{eventId:applied.facts[0]!.id,campus:'NORTH'})).items.find(c=>c.obligation.owner==='CONSUMER')!;
+ peer(receipt.name,`INSERT INTO department_master.impact_external_owner_access VALUES('maker','CONSUMER','NORTH','WRITE','SYNTHETIC_OWNER_A',${quote(r.versionId!)}::uuid),('reviewer','CONSUMER','NORTH','REVIEW','SYNTHETIC_OWNER_A',${quote(r.versionId!)}::uuid) ON CONFLICT DO NOTHING;INSERT INTO vnext_control.actor(code,identity_code,active,principal_kind) VALUES('impact-consumer-a','SYNTHETIC_CONSUMER_A',true,'SERVICE') ON CONFLICT DO NOTHING;INSERT INTO vnext_control.actor_grant SELECT 'impact-consumer-a','SYNTHETIC',p FROM unnest(ARRAY['READ','WRITE']) p ON CONFLICT DO NOTHING;`);
+ const base={caseId:item.id,campus:'NORTH' as const,reason:'TEST terminal preservation'},read={caseId:item.id,campus:'NORTH' as const};
+ const assigned=await owner.assignImpactCase('maker',{...base,requestId:randomUUID(),expectedHead:'0',responsibilityId:r.id});
+ const proposal=await owner.recordDisposition('maker',{...base,requestId:randomUUID(),expectedHead:assigned.head,disposition:{kind:'MIGRATE_EXTERNAL',evidenceId:f.material.artifactId,consumers:['impact-consumer-a']}});
+ const approve={...base,requestId:randomUUID(),expectedHead:proposal.head,proposalEventId:proposal.eventId},approved=await owner.approveDisposition('reviewer',approve);
+ const receiptCommand={...base,requestId:randomUUID(),expectedHead:approved.head,proposalEventId:proposal.eventId,consumerActor:'impact-consumer-a',outcome:'SIMULATED_COMPLETED' as const,receiptRef:'TEST synthetic completion',simulated:true as const};
+ const received=await owner.recordMigrationReceipt('impact-consumer-a',receiptCommand),closed=await owner.recheckImpact('maker',{...base,requestId:randomUUID(),expectedHead:received.head});expect(closed.status).toBe('SIMULATED_COMPLETED');
+ const before=await owner.readImpactCase('maker',read);
+ expect(await owner.recordMigrationReceipt('impact-consumer-a',receiptCommand)).toEqual(received);
+ expect(await owner.approveDisposition('reviewer',approve)).toEqual(approved);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),command=operation==='APPROVE'?approve:receiptCommand;
+  const response=await fetch(url+'/api/vnext/department-impacts/'+(operation==='APPROVE'?'dispositions/approve':'receipts'),{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':operation==='APPROVE'?'reviewer':'impact-consumer-a'},body:JSON.stringify({...command,requestId:randomUUID(),expectedHead:closed.head})});
+  expect({status:response.status,data:await response.json()}).toMatchObject({status:409,data:{code:'DISPOSITION_ALREADY_COMPLETE'}});
+  expect(await owner.readImpactCase('maker',read)).toEqual(before);
+ }finally{await app.close();}
+});
+
+test('independent review: contract publication does not invalidate closed impact history or accepted command replay',async()=>{
+ const {base,approve,approved}=await independentlyClosedReference(),read={caseId:base.caseId,campus:base.campus};
+ const before=await owner.readImpactCase('maker',read),current=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.id===f.eventContract.id)!;
+ const cmd=<A extends string>(action:A,extra:Record<string,unknown>)=>({action,scope:'SYNTHETIC' as const,requestId:randomUUID(),reason:'TEST_LATER_CONTRACT_VERSION',...extra});
+ const draft=await catalog.contractCommand('maker',cmd('REVISE',{target:current.id,expectedHead:current.head,datasetVersionId:current.datasetVersionId,definition:{...current.definition,ruleVersion:'ORG_EVOLUTION_REVIEW_2'},validFrom:'2026-01-01T00:00:00',validTo:null}));
+ const accepted=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:draft.id,expectedHead:draft.head,reviewDigest:draft.reviewDigest})),impact=await catalog.contractImpact('reviewer','SYNTHETIC',draft.id,'PUBLISH');
+ await catalog.contractCommand('reviewer',cmd('PUBLISH',{target:draft.id,expectedHead:accepted.head,reviewDigest:accepted.reviewDigest,impactDigest:impact.impactDigest}));
+ expect(await owner.readImpactCase('maker',read)).toEqual(before);
+ expect(await owner.approveDisposition('reviewer',approve)).toEqual(approved);
 });
