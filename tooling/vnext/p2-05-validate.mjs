@@ -21,7 +21,7 @@ async function validatePredecessorUpgrade(){
   catalog=await openCatalog(session.connectionString,provider);const base=await organizationMappingFixture(owned.receipt,catalog,provider,session.connectionString);department=openDepartment(session.connectionString,provider);
   const prior=await department.history('maker',base.targetId),oldR=prior.versions[0].recorded_at.replace(' ','T');
   const before=await inspect(owned.receipt),tables=predecessorTables(before.tables),digest=predecessorDigest(owned.receipt,tables);
-  const after=await migrate(owned.receipt);assert.deepEqual(after.ledger.slice(0,117),before.ledger);assert.equal(after.identity.oid,before.identity.oid);assert.equal(predecessorDigest(owned.receipt,tables,{'department_master.version':['evolution_event_id']}),digest);
+  const after=await migrate(owned.receipt);assert.deepEqual(after.ledger.slice(0,117),before.ledger);assert.equal(after.identity.oid,before.identity.oid);assert.equal(predecessorDigest(owned.receipt,tables,{'department_master.version':['evolution_event_id'],'vnext_control.actor':['principal_kind']}),digest);
   grantDepartment(owned.receipt,session.receipt.role);const f=await evolutionFixture(owned.receipt,catalog,provider,session.connectionString,base);evolution=openOrganizationEvolutions(session.connectionString,provider);
   const input=await f.input(),staged=await evolution.stage('maker',input);
   await evolution.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST POLICY ONLY independent predecessor upgrade evidence',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews});

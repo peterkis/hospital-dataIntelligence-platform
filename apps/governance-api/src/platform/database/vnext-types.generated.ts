@@ -409,6 +409,44 @@ export interface GovernanceCatalogContractImpactEvent {
   upstream_object: string;
 }
 
+export interface GovernanceCatalogDepartmentImpactAssessment {
+  actor_identity: string;
+  campus: string;
+  content: Json;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_digest: string;
+  request_id: string;
+  target_id: string;
+  target_kind: string;
+}
+
+export interface GovernanceCatalogDepartmentImpactCase {
+  assessment_id: string;
+  campus: string;
+  event_id: string;
+  id: Generated<string>;
+  obligation: Json;
+  recorded_at: Generated<string>;
+  reference_key: string;
+}
+
+export interface GovernanceCatalogDepartmentImpactCaseEvent {
+  actor_code: string;
+  actor_identity: string;
+  case_id: string;
+  id: Generated<string>;
+  kind: string;
+  payload: Json;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_digest: string;
+  request_id: string;
+  sequence: Int8;
+  status: string;
+}
+
 export interface GovernanceCatalogEvent {
   actor_code: string;
   head: Generated<Int8>;
@@ -893,6 +931,7 @@ export interface VnextControlActor {
   active: boolean;
   code: string;
   identity_code: string;
+  principal_kind: Generated<string>;
 }
 
 export interface VnextControlActorGrant {
@@ -1036,6 +1075,9 @@ export interface DB {
   "governance_catalog.apply_candidate": GovernanceCatalogApplyCandidate;
   "governance_catalog.apply_commit": GovernanceCatalogApplyCommit;
   "governance_catalog.contract_impact_event": GovernanceCatalogContractImpactEvent;
+  "governance_catalog.department_impact_assessment": GovernanceCatalogDepartmentImpactAssessment;
+  "governance_catalog.department_impact_case": GovernanceCatalogDepartmentImpactCase;
+  "governance_catalog.department_impact_case_event": GovernanceCatalogDepartmentImpactCaseEvent;
   "governance_catalog.event": GovernanceCatalogEvent;
   "governance_catalog.impact_event": GovernanceCatalogImpactEvent;
   "governance_catalog.import_contract": GovernanceCatalogImportContract;

@@ -27,6 +27,7 @@ vi.mock('./department-provisioning.mjs',()=>({assertDepartmentProvisioned:vi.fn(
 vi.mock('./organization-mapping-provisioning.mjs',()=>({assertOrganizationMappingsProvisioned:vi.fn(async()=>{state.events.push('mapping-provisioned');})}));
 vi.mock('./organization-identifier-provisioning.mjs',()=>({assertOrganizationIdentifiersProvisioned:vi.fn(async()=>{state.events.push('identifier-provisioned');})}));
 vi.mock('./organization-evolution-provisioning.mjs',()=>({assertOrganizationEvolutionsProvisioned:vi.fn(async()=>{state.events.push('evolution-provisioned');})}));
+vi.mock('./department-impact-provisioning.mjs',()=>({assertDepartmentImpactsProvisioned:vi.fn(async()=>{state.events.push('impacts-provisioned');})}));
 vi.mock('./hierarchy-provisioning.mjs',async importOriginal=>{
  const real=await importOriginal<typeof import('./hierarchy-provisioning.mjs')>();
  return {...real,assertHierarchyProvisioned:vi.fn(async()=>{state.events.push('hierarchy-provisioned');})};
@@ -78,7 +79,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -90,6 +91,11 @@ test('missing evolution provisioning prevents the repaired persistent service fr
  const {assertOrganizationEvolutionsProvisioned}=await import('./organization-evolution-provisioning.mjs');
  vi.mocked(assertOrganizationEvolutionsProvisioned).mockRejectedValueOnce(new Error('ORGANIZATION_EVOLUTION_PROVISIONING_REQUIRED'));
  await expect(startWorkbench({persistent:true})).rejects.toThrow('ORGANIZATION_EVOLUTION_PROVISIONING_REQUIRED');expect(state.events).not.toContain('listen');
+});
+test('missing impact provisioning prevents persistent service from listening',async()=>{
+ const {assertDepartmentImpactsProvisioned}=await import('./department-impact-provisioning.mjs');
+ vi.mocked(assertDepartmentImpactsProvisioned).mockRejectedValueOnce(new Error('DEPARTMENT_IMPACT_PROVISIONING_REQUIRED'));
+ await expect(startWorkbench({persistent:true})).rejects.toThrow('DEPARTMENT_IMPACT_PROVISIONING_REQUIRED');expect(state.events).not.toContain('listen');
 });
 test('pre-workspace prefix 70 retains catalog routing without a workspace Owner',async()=>{
  state.ledger=ledger(70);const runtime=await startWorkbench({persistent:true});
@@ -147,7 +153,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0121_evolution_original_read_authority');
+ expect(files.at(-1)?.id).toBe('0124_statistical_frozen_source');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{

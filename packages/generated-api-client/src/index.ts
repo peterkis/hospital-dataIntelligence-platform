@@ -35,3 +35,5 @@ export {createHierarchyClient,type HierarchyInput} from './vnext-client.js';
 export {createOrganizationMappingClient,type OrganizationMappingInput} from './vnext-client.js';
 export {createOrganizationIdentifierClient,type OrganizationIdentifierInput} from './vnext-client.js';
 export {createOrganizationEvolutionClient,type OrganizationEvolutionInput} from './vnext-client.js';
+
+export {createDepartmentImpactClient} from './vnext-client.js';

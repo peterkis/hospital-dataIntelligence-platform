@@ -63,5 +63,5 @@ export async function registerCatalogRoutes(app:FastifyInstance,catalog?:Catalog
   app.get<{Params:{id:string};Querystring:{scope:string}}>('/api/vnext/sources/:id/impact-cases',{schema:{operationId:'sourceImpactCases',params:Type.Object({id:Type.String({format:'uuid'})}),querystring:Type.Object({scope:Scope},{additionalProperties:false}),response:{200:Type.Array(Type.Record(Type.String(),Type.Unknown())),...errors}}},async request=>owner().impactCases(actor(request.headers),request.query.scope,request.params.id));
 }
 export function actor(headers:Record<string,string|string[]|undefined>):string {
-  const value=headers['x-catalog-actor'];if(typeof value!=='string'||!['maker','maker-alias','reviewer','outsider','bundle-admin','workspace-reviewer','workspace-steward'].includes(value))throw new Error('ACCESS_DENIED');return value;
+  const value=headers['x-catalog-actor'];if(typeof value!=='string'||!['maker','maker-alias','reviewer','outsider','bundle-admin','workspace-reviewer','workspace-steward','impact-consumer-a','impact-consumer-b'].includes(value))throw new Error('ACCESS_DENIED');return value;
 }

@@ -48,7 +48,7 @@ export const EvolutionReceiveSchema=Type.Object({
 export type EvolutionReceiveInput=Static<typeof EvolutionReceiveSchema>;
 export const EvolutionTemplateSchema=Type.Object({campus:Type.Enum(['NORTH','SOUTH']),contractId:Id,contractVersionId:Id,contracts:CompanionContracts},closed);
 export type EvolutionTemplateInput=Static<typeof EvolutionTemplateSchema>;
-export const EvolutionVerifySchema=Type.Object({requestId:Id,inputId:Id,inputDigest:Type.String({pattern:'^[a-f0-9]{64}$'}),reason:required(),policyApproved:Type.Boolean(),materialsAccepted:Type.Boolean(),impactReviews:Type.Array(Type.Object({domain:Type.Enum(EVOLUTION_IMPACT_DOMAINS),ownerAttestationAccepted:Type.Boolean(),dispositionAccepted:Type.Boolean(),reason:required()},closed),{minItems:8,maxItems:8})},closed);
+export const EvolutionVerifySchema=Type.Object({impactAssessment:Type.Optional(Type.Object({id:Id,digest:Type.String({pattern:'^[a-f0-9]{64}$'})},closed)),requestId:Id,inputId:Id,inputDigest:Type.String({pattern:'^[a-f0-9]{64}$'}),reason:required(),policyApproved:Type.Boolean(),materialsAccepted:Type.Boolean(),impactReviews:Type.Array(Type.Object({domain:Type.Enum(EVOLUTION_IMPACT_DOMAINS),ownerAttestationAccepted:Type.Boolean(),dispositionAccepted:Type.Boolean(),reason:required()},closed),{minItems:8,maxItems:8})},closed);
 export type EvolutionVerifyInput=Static<typeof EvolutionVerifySchema>;
 
 export interface SuccessionEdge {from:string;to:string;scope:string;context:string}

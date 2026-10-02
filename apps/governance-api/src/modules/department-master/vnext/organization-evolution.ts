@@ -8,6 +8,8 @@ import {fileIntake,protectedArtifacts,parseEvolutionWorkbookBounded,recordOwnerF
 import {localTime,covered} from '../../organization-master/index.js';
 import {Id,check,ORG04_FIELDS,normalizeEntry,validateORG04,MAX_EXPECTED_VERSION} from './contracts.js';
 import {EvolutionStageSchema,EvolutionStoredStageSchema,EvolutionVerifySchema,EvolutionReceiveSchema,EvolutionTemplateSchema,EvolutionEventRowSchema,EvolutionRelationRowSchema,ORG26_FIELDS,ORG27_FIELDS,EVOLUTION_IMPACT_DOMAINS,validateSuccessionGraph,evolutionExpandedWriteCount,type EvolutionStageInput,type EvolutionStoredStageInput,type EvolutionVerifyInput,type EvolutionReceiveInput,type EvolutionTemplateInput,type EvolutionIssue} from './organization-evolution-contracts.js';
+import {departmentImpacts,departmentImpactPorts,type DepartmentImpactPorts} from './department-impact.js';
+import {DepartmentAssessmentSchema,type DepartmentAssessment} from './department-impact-contracts.js';
 import type {DepartmentHistory} from './index.js';
 
 type Scope=CatalogTransactionScope;
@@ -53,7 +55,7 @@ export function assertEvolutionApplyBinding(provider:KeyProviderPort|undefined,i
  if(byAlias.size!==input.successors.length)stale();
 }
 
-export function openOrganizationEvolutions(connection:string,provider?:KeyProviderPort){
+export function openOrganizationEvolutions(connection:string,provider?:KeyProviderPort,impactPorts:DepartmentImpactPorts=departmentImpactPorts){
  const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(value:string)=>value:types.getTypeParser(oid,format)}})})});
  const root=<T>(work:(s:Scope)=>Promise<T>)=>db.transaction().execute(async transaction=>{await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);return work(CatalogTransactionScope.from(transaction));});
  const authorize=async(s:Scope,actor:string,campus:string,permission:string)=>(await sql<{r:string}>`select department_master.evolution_authorize(${actor},${campus},${permission}) r`.execute(s)).rows[0]!.r;
@@ -209,8 +211,14 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   // and its code assertion. Count all four domain writes in the shared budget.
   const expandedCount=evolutionExpandedWriteCount(input);
   if(expandedCount>100)issue('event','PLAN_INPUT_LIMIT','FAIL');
-  const facts={event:input.event,sourceSystemId:input.sourceSystemId,contractVersionId:c.versionId,companionVersions:input.contracts,verificationId:r.verification?.id??null,impacts:input.impacts,materials,sourcePin,sourceArtifact:file?.binding??null,successorFacts};
-  return {r,input,j,verification,policies,heads,materials,sourcePin,file,issues,expandedCount,facts,graph};
+  const assessment=issues.length===0?await impacts.observe(s,actor,{kind:'INPUT',id:r.id}):null;
+  for(const domain of ['SOURCE_MAPPING','HIERARCHY'] as const){
+   if(assessment?.references.some(ref=>ref.owner===domain&&ref.constraint==='UNSATISFIED')&&input.impacts.find(impact=>impact.domain===domain)?.determination!=='AFFECTED')issue('impacts','IMPACT_DECLARATION_CONFLICT');
+  }
+  if(verification&&!verification.impactAssessment)issue('impacts','IMPACT_ASSESSMENT_REQUIRED');
+  if(assessment&&verification?.impactAssessment?.digest!==assessment.dependencyDigest)issue('impacts','STALE_VALIDATION');
+  const facts={impactAssessment:verification?.impactAssessment??null,event:input.event,sourceSystemId:input.sourceSystemId,contractVersionId:c.versionId,companionVersions:input.contracts,verificationId:r.verification?.id??null,impacts:input.impacts,materials,sourcePin,sourceArtifact:file?.binding??null,successorFacts};
+  return {r,input,j,verification,policies,heads,materials,sourcePin,file,issues,expandedCount,facts,graph,assessment};
  };
  const port:ApplyOwnerPort={
   async authorize(s,actor,input,action){const r=await record(s,actor,input.jobId,action);if(r.revision!==input.revisionId||r.campus!==input.campus||input.purpose!=='IDENTITY_VERIFY')throw new Error('ACCESS_DENIED');await record(s,actor,r.id,'READ_RESTRICTED');},
@@ -224,12 +232,25 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    for(const id of new Set([input.decisionEvidenceId,...input.impacts.map(impact=>impact.evidenceId),...(input.migrationEvidenceId?[input.migrationEvidenceId]:[]),...(input.contextEvidenceId?[input.contextEvidenceId]:[])]))await evidenceAccess(s,actor,id,eventSource,input.campus);
    for(const entry of input.successors)await evidenceAccess(s,actor,entry.evidenceId,departmentSource,input.campus);
    if(input.sourceArtifactId)await evidenceAccess(s,actor,input.sourceArtifactId,eventSource,input.campus);
+   if(unit.basis['assessment']){check(DepartmentAssessmentSchema,unit.basis['assessment']);await impacts.authorizeFrozen(s,actor,unit.basis['assessment'] as DepartmentAssessment);}
   },
-  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG_EVOLUTION_WHOLE_EVENT_V1',basis:{inputDigest:v.r.digest,entries:v.input,verification:v.verification,verificationDigest:v.r.verification?.digest??null,policies:v.policies,heads:v.heads,materials:v.materials,sourcePin:v.sourcePin,issues:v.issues,expandedCount:v.expandedCount},commands:v.issues.length?[]:[{owner:'department-master/organization-evolution',row:1,intent:'CREATE',target:null,aliases:[],value:{inputId:v.r.id,command:canonicalPlan(v.input),facts:canonicalPlan(v.facts),expandedCount:String(v.expandedCount)}}],diff:[{changeType:v.input.event.change_type,effectiveAt:v.input.event.effective_at,predecessors:v.heads,successors:v.input.successors,rename:v.input.rename,impacts:v.input.impacts}]};},
+  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG_EVOLUTION_WHOLE_EVENT_V1',basis:{assessment:v.assessment,inputDigest:v.r.digest,entries:v.input,verification:v.verification,verificationDigest:v.r.verification?.digest??null,policies:v.policies,heads:v.heads,materials:v.materials,sourcePin:v.sourcePin,issues:v.issues,expandedCount:v.expandedCount},commands:v.issues.length?[]:[{owner:'department-master/organization-evolution',row:1,intent:'CREATE',target:null,aliases:[],value:{inputId:v.r.id,command:canonicalPlan(v.input),facts:canonicalPlan(v.facts),expandedCount:String(v.expandedCount)}}],diff:[{changeType:v.input.event.change_type,effectiveAt:v.input.event.effective_at,predecessors:v.heads,successors:v.input.successors,rename:v.input.rename,impacts:v.input.impacts}]};},
   async validate(_s,_actor,unit,stage){if(stage==='FREEZE')return;const issues=unit.basis['issues'] as EvolutionIssue[];if(issues.length)throw new Error(issues[0]!.code);if(unit.commands.length!==1)throw new Error('BATCH_REJECTED');},
   async apply(s,actor,command,_resolved,approval){const input:unknown=JSON.parse(command.value['command']!),facts:unknown=JSON.parse(command.value['facts']!);check(EvolutionStoredStageSchema,input);assertEvolutionApplyBinding(provider,input as EvolutionStoredStageInput,facts,command.value['expandedCount']);return {ok:true,fact:await mutate<OwnerFact>(s,actor,{operation:'APPLY',inputId:command.value['inputId'],command:input,facts,contentDigest:planBinding(provider,'EVOLUTION_FACTS_V1',facts),...approval})};},
   async exactRead(s,actor,input,fact){if(fact.owner!=='department-master/organization-evolution'||fact.version!=='1')return null;await snapshot(s,actor,fact.id,input.campus);return fact;},
  };
+ const impacts=departmentImpacts(root,async(s,actor,target)=>{
+  const id=target.kind==='INPUT'?target.id:(await snapshot(s,actor,target.id,target.campus)).input_id;
+  const r=await record(s,actor,id),input=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema);
+  await authorizeInputSources(s,actor,input);
+  return {inputId:r.id,inputDigest:r.digest,input};
+ },impactPorts,provider,async(s,actor,eventId,campus,evidenceId,admission)=>{
+  const event=await snapshot(s,actor,eventId,campus),r=await record(s,actor,event.input_id),raw=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,r.id),policies=await exactPolicies(s,actor,j,raw),sourceVersion=policies[0]!.definition.sourceVersionId;
+  if(!sourceVersion)throw new Error('BLOCKED_DEPENDENCY');
+  if(!admission){await evidenceAccess(s,actor,evidenceId,sourceVersion,campus);return '';}
+  await authenticateBoundEvidence(s,actor,evidenceId,raw.sourceSystemId,sourceVersion,campus,localTime(raw.event.effective_at),null,true);
+  return (await evidence(s,actor,evidenceId,sourceVersion,campus)).digest;
+ });
  const coordinator=applyCoordinator(db,provider,port);
  const files=fileIntake(db,provider);
  const stageIn=(s:Scope,actor:string,input:EvolutionStoredStageInput)=>mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('EVOLUTION_INPUT_V1',input)});
@@ -242,6 +263,8 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   return {id:e.id,changeType:e.change_type,effectiveAt:stamp(e.effective_at),recordedAt:stamp(e.recorded_at),effective:stamp(e.effective_at)<=businessAt,sourceClientKey:e.source_client_key,aliasMap,facts:e.facts,predecessors,successors,relations:e.relations.map(relation=>({...relation,source_recorded_at:stamp(relation.source_recorded_at),recorded_at:stamp(relation.recorded_at)})),edges:e.relations.filter(relation=>relation.relation_kind==='SUCCESSION').map(relation=>({id:relation.id,from:relation.from_department_id,to:relation.to_department_id,transferScope:relation.transfer_scope,contextRule:relation.context_rule})),handoff:'NOT_EXECUTED' as const};
  };
  return {
+  readDepartmentAssessment:impacts.readDepartmentAssessment,listDepartmentAssessments:impacts.listDepartmentAssessments,assessDepartmentChange:impacts.assessDepartmentChange,listImpactCases:impacts.listImpactCases,
+  recordMigrationReceipt:impacts.recordMigrationReceipt,readMigrationHandoff:impacts.readMigrationHandoff,readImpactCase:impacts.readImpactCase,assignImpactCase:impacts.assignImpactCase,recordDisposition:impacts.recordDisposition,approveDisposition:impacts.approveDisposition,recheckImpact:impacts.recheckImpact,
   async stage(actor:string,raw:EvolutionStageInput){check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');await authorizeInputSources(s,actor,input,true);return stageIn(s,actor,input);});},
   async template(actor:string,input:EvolutionTemplateInput){
    check(EvolutionTemplateSchema,input);return root(async s=>{
@@ -302,7 +325,11 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    const eventAt=localTime(raw.event.effective_at);
    for(const id of new Set([raw.decisionEvidenceId,...raw.impacts.map(x=>x.evidenceId),...(raw.migrationEvidenceId?[raw.migrationEvidenceId]:[]),...(raw.contextEvidenceId?[raw.contextEvidenceId]:[])]))await authenticateBoundEvidence(s,actor,id,raw.sourceSystemId,eventSource,r.campus,eventAt,null,true);
    for(const successor of raw.successors){const entry=normalizeEntry(successor,'LOCAL');await authenticateBoundEvidence(s,actor,entry.evidenceId,entry.row.source_system_id,departmentSource,r.campus,entry.validFrom,entry.validTo);}
-   return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...seal('EVOLUTION_VERIFICATION_V1',input)});
+   const assessment=input.impactAssessment?await impacts.readAssessmentInTransaction(s,actor,{assessmentId:input.impactAssessment.id,campus:r.campus}):await impacts.assessInTransaction(s,actor,{requestId:input.requestId,reason:input.reason,target:{kind:'INPUT',id:r.id}});
+   const current=await impacts.observe(s,actor,{kind:'INPUT',id:r.id});
+   if(current.dependencyDigest!==assessment.dependencyDigest||input.impactAssessment&&(input.impactAssessment.id!==assessment.assessmentId||input.impactAssessment.digest!==assessment.dependencyDigest))throw new Error('STALE_VALIDATION');
+   const verified={...input,impactAssessment:{id:assessment.assessmentId,digest:assessment.dependencyDigest}};
+   return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...verified,...seal('EVOLUTION_VERIFICATION_V1',verified)});
   });},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(Type.Object({inputId:Id,requestId:Id},{additionalProperties:false}),input);const r=await root(async s=>{const r=await record(s,actor,input.inputId,'WRITE');if(await authorize(s,actor,r.campus,'WRITE')!==r.identity_code)throw new Error('ACCESS_DENIED');return r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,

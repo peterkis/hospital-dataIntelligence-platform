@@ -1,3 +1,4 @@
+import {registerDepartmentImpactRoutes} from '../platform/fastify/vnext-department-impact-routes.js';
 import {registerDepartmentRoutes,type DepartmentHttpContext} from '../platform/fastify/vnext-department-routes.js';
 import {registerOrganizationWorkspaceRoutes,type OrganizationWorkspaceHttpContext} from '../platform/fastify/vnext-organization-workspace-routes.js';
 import {registerOperatingRoutes,type OperatingHttpContext} from '../platform/fastify/vnext-operating-routes.js';
@@ -93,5 +94,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerOrganizationMappingRoutes(app,mapping);
   registerOrganizationIdentifierRoutes(app,identifiers);
   registerOrganizationEvolutionRoutes(app,evolution);
+  registerDepartmentImpactRoutes(app,evolution);
   return app;
 }

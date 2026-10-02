@@ -38,6 +38,9 @@ const postWorkspaceMigrations = [
  '0119_evolution_reference_admission_repair',
  '0120_evolution_authorization_closure',
  '0121_evolution_original_read_authority',
+ '0122_department_change_impacts',
+ '0123_department_impact_dispositions',
+ '0124_statistical_frozen_source',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

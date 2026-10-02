@@ -55,6 +55,9 @@ export async function persistentEvolutionFixture(receipt:{name:string;oid:string
   if(!prior){await department.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await department.approveApplyUnit('reviewer',candidate);}
   const result=await department.applyUnit('maker',{candidateId:candidate.candidateId,requestId:request});if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');predecessorId=result.facts[0]!.id;
  }finally{await department.close();}
+ // Assessment reads of the permanent code require explicit target/namespace
+ // authority, independently of Department write permissions.
+ peer(receipt.name,identitySQL(receipt)+` INSERT INTO department_master.mapping_target_access SELECT a,'ORG',${quote(predecessorId)}::uuid,'NORTH' FROM unnest(ARRAY['maker','reviewer']) a ON CONFLICT DO NOTHING;INSERT INTO department_master.identifier_access SELECT a,'SYNTHETIC_DEPARTMENT_CODE','NORTH','READ' FROM unnest(ARRAY['maker','reviewer']) a ON CONFLICT DO NOTHING;`);
  const eventJob=await catalog.importJobCommand('maker',freeze('evolution-job',command('CREATE','evolution-job',{contractId:eventPolicy.contract.id,contractVersionId:eventPolicy.contract.versionId,profile:'CORE',input:{kind:'METADATA_ONLY',declaredSha256:'a'.repeat(64)}})));
  const proof=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:requestId('evolution-evidence'),jobId:eventJob.id,revisionId:eventJob.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:2592000},Buffer.from('TEST POLICY ONLY explicit Department split, independent external Owner attestations for eight impact domains and destination rules; no automatic migration authorized'));
  const eventAlias=requestId('event-alias'),effectiveAt='2026-06-01T00:00:00',successors=[entry('SUCCESSOR_B',effectiveAt),entry('SUCCESSOR_C',effectiveAt)];

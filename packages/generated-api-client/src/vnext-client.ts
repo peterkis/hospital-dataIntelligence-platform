@@ -229,3 +229,20 @@ export function createOrganizationEvolutionClient(baseUrl:string,actor:string){
   list:(body:operations['listOrganizationEvolutions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/list',{body}),
  };
 }
+
+export function createDepartmentImpactClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  assess:(body:operations['assessDepartmentChange']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/assess',{body}),
+  assessment:(body:operations['readDepartmentAssessment']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/assessments/read',{body}),
+  assessments:(body:operations['listDepartmentAssessments']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/assessments',{body}),
+  cases:(body:operations['listDepartmentImpactCases']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/cases',{body}),
+  case:(body:operations['readDepartmentImpactCase']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/cases/read',{body}),
+  assign:(body:operations['assignDepartmentImpactCase']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/assign',{body}),
+  disposition:(body:operations['recordDepartmentImpactDisposition']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/dispositions',{body}),
+  approve:(body:operations['approveDepartmentImpactDisposition']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/dispositions/approve',{body}),
+  recheck:(body:operations['recheckDepartmentImpact']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/recheck',{body}),
+  receipt:(body:operations['recordDepartmentMigrationReceipt']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/receipts',{body}),
+  handoff:(body:operations['readDepartmentMigrationHandoff']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/handoffs/read',{body}),
+ };
+}
