@@ -5,7 +5,7 @@ import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/vnext-types.generated.js';
 import { ImportJobCommandSchema, type ImportJob, type ImportJobOutcome } from './import-job.js';
 import { protectedArtifacts, ProtectedReadSchema, type KeyProviderPort } from './protected-artifact.js';
-import type { ParserField, ParserResult, FileFormat,OrganizationSheet,OrganizationWorkbookResult } from './file-parser.js';
+import type { ParserField, ParserResult, FileFormat,OrganizationSheet,OrganizationWorkbookResult,EvolutionSheet,EvolutionWorkbookResult } from './file-parser.js';
 import { issueWorkbook } from './issue-workbook.js';
 import {parseSignature} from './parse-provenance.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
@@ -39,6 +39,7 @@ async function runParser<T>(workerData:unknown):Promise<T> {
 
 export const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'])=>runParser<ParserResult>({bytes,format,fields,policy});
 export const parseOrganizationWorkbookBounded=(bytes:Uint8Array,organizationFields:Record<OrganizationSheet,ParserField[]>)=>runParser<OrganizationWorkbookResult>({bytes,organizationFields,policy:'STRICT_ORG_BUNDLE_V1'});
+export const parseEvolutionWorkbookBounded=(bytes:Uint8Array,evolutionFields:Record<EvolutionSheet,ParserField[]>)=>runParser<EvolutionWorkbookResult>({bytes,evolutionFields,policy:'STRICT_ORGANIZATION_EVOLUTION_V1'});
 
 /** Internal root-transaction seam used when a file receive must be linked to another Owner write. */
 function assertReceiveFileInput(input:ReceiveFileInput,bytes:Uint8Array){
@@ -68,7 +69,7 @@ export function fileIntake(db:Kysely<DB>,provider?:KeyProviderPort) {
       if(!Check(ParseFileSchema,input))throw new Error('CLOSED_INPUT_REQUIRED'); input={...input};
       const job=await jobRead(actor,input);const metadata=job.revisions.at(-1)!.input;
       if(metadata.kind!=='FILE')throw new Error('FILE_REVISION_REQUIRED');
-      if(metadata.parserPolicy==='STRICT_ORG_BUNDLE_V1')throw new Error('BUNDLE_CONTEXT_REQUIRED');
+      if(metadata.parserPolicy==='STRICT_ORG_BUNDLE_V1'||metadata.parserPolicy==='STRICT_ORGANIZATION_EVOLUTION_V1')throw new Error('BUNDLE_CONTEXT_REQUIRED');
       const raw=await protectedStore.authorizeSensitiveRead(actor,readInput(input),{jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_FILE'});
       try {
         const result=await boundedParse(raw,metadata.format,job.contract.definition.fields,metadata.parserPolicy);

@@ -147,8 +147,9 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
 }
 export type Catalog = Awaited<ReturnType<typeof openCatalog>>;
 
-export {receiveFileInTransaction,parseOrganizationWorkbookBounded} from './file-intake.js';
-export type {OrganizationWorkbookResult,OrganizationSheet,ParserField} from './file-parser.js';
+export {receiveFileInTransaction,parseOrganizationWorkbookBounded,parseEvolutionWorkbookBounded} from './file-intake.js';
+export type {OrganizationWorkbookResult,OrganizationSheet,EvolutionWorkbookResult,EvolutionSheet,ParserField} from './file-parser.js';
+export {textSheetsWorkbook} from './issue-workbook.js';
 
 export {protectedArtifacts} from './protected-artifact.js';
 

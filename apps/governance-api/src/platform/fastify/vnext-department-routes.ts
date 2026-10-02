@@ -5,16 +5,17 @@ import {ApplyUnitSchema,ApproveApplyUnitSchema} from '../../modules/governance-c
 
 const closed={additionalProperties:false} as const,Text=Type.String(),Nullable=Type.Union([Text,Type.Null()]);
 const Time=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'});
+const SourcePin=Type.Object({sourceId:Id,versionId:Type.Optional(Type.Union([Id,Type.Null()]))},closed);
 const ErrorSchema=Type.Object({code:Text,message:Text,field:Type.Optional(Text)},closed);
 const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,413:ErrorSchema,500:ErrorSchema,503:ErrorSchema};
 const Input=Type.Object({inputId:Id},closed),Staged=Type.Object({inputId:Id,revisionId:Id,digest:Text},closed);
 const Candidate=Type.Object({candidateId:Id},closed),Planned=Type.Object({candidateId:Id,digest:Text},closed);
 const Issue=Type.Object({row:Type.Integer(),field:Text,code:Text,status:Type.Enum(['FAIL','BLOCKED'])},closed);
-const Facts=Type.Object({name:Text,shortName:Nullable,orgType:Text,establishedOn:Nullable,description:Nullable,virtual:Type.Boolean(),historicalException:Type.Boolean(),sourceVersion:Text,sourceRecordedAt:Text,sourceSystemId:Id,policyVersionId:Id,verificationId:Id,commandDigest:Type.Optional(Type.String({pattern:'^[a-f0-9]{64}$'}))},closed);
-const Version=Type.Object({id:Id,department_id:Id,number:Text,valid_from:Text,valid_to:Nullable,recorded_at:Text,source_row:Type.Integer(),facts:Facts,content_digest:Text},closed);
+const Facts=Type.Object({name:Text,shortName:Nullable,orgType:Text,establishedOn:Nullable,description:Nullable,virtual:Type.Boolean(),historicalException:Type.Boolean(),sourceVersion:Text,sourceRecordedAt:Text,sourceSystemId:Id,policyVersionId:Id,verificationId:Id,commandDigest:Type.Optional(Type.String({pattern:'^[a-f0-9]{64}$'})),sourcePin:Type.Optional(SourcePin)},closed);
+const Version=Type.Object({id:Id,department_id:Id,number:Text,valid_from:Text,valid_to:Nullable,recorded_at:Text,source_row:Type.Integer(),facts:Facts,content_digest:Text,evolution_event_id:Type.Optional(Type.Union([Id,Type.Null()]))},closed);
 const History=Type.Object({id:Id,initialCode:Text,versions:Type.Array(Version)},closed);
 const Outcome=Type.Object({status:Type.Enum(['COMMITTED','COMMIT_UNKNOWN']),candidateId:Id,requestId:Id,facts:Type.Optional(Type.Array(Type.Object({owner:Type.Literal('department-master'),id:Id,version:Text,source:Type.Object({dataset:Type.Literal('ORG04'),row:Type.Integer(),step:Text},closed)},closed))),recordedAt:Type.Optional(Time),responseStatus:Type.Optional(Type.Enum(['DELIVERED','POST_COMMIT_FAILED']))},closed);
-const Scalar=Type.Union([Text,Type.Boolean(),Type.Null()]);
+const Scalar=Type.Union([Text,Type.Boolean(),Type.Null(),SourcePin]);
 export interface DepartmentHttpContext {owner:ReturnType<typeof openDepartment>;actor:(r:FastifyRequest)=>string}
 export function registerDepartmentRoutes(app:FastifyInstance,context?:DepartmentHttpContext){
  const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handler:(owner:DepartmentHttpContext['owner'],actor:string,input:Static<S>)=>Promise<unknown>)=>{
@@ -31,7 +32,7 @@ export function registerDepartmentRoutes(app:FastifyInstance,context?:Department
  route('apply','applyDepartment',ApplyUnitSchema,Outcome,(o,a,b)=>o.applyUnit(a,b));
  route('resume','resumeDepartment',ApplyUnitSchema,Type.Union([Outcome,Type.Null()]),(o,a,b)=>o.resumeOutcome(a,b));
  route('list','listDepartments',Type.Object({after:Type.Optional(Id),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(Time)},closed),Type.Array(Id),(o,a,b)=>o.list(a,b));
- route('query','getDepartmentAsOf',ReadSchema,Type.Object({id:Id,initialCode:Text,effectiveCode:Nullable,codeVersion:Type.Union([Type.Object({id:Id,version:Text,versionId:Id},closed),Type.Null()]),codeEvidence:Type.Enum(['ORG04_HISTORICAL','ORG23_ASSERTION']),version:Type.Union([Version,Type.Null()])},closed),(o,a,b)=>o.read(a,b));
+ route('query','getDepartmentAsOf',ReadSchema,Type.Object({id:Id,initialCode:Text,effectiveCode:Nullable,codeVersion:Type.Union([Type.Object({id:Id,version:Text,versionId:Id},closed),Type.Null()]),codeEvidence:Type.Enum(['ORG04_HISTORICAL','ORG23_ASSERTION']),version:Type.Union([Version,Type.Null()]),businessState:Type.Enum(['ACTIVE','SUPERSEDED','NOT_EFFECTIVE']),replacement:Type.Union([Type.Object({eventId:Id,effectiveAt:Time,recordedAt:Time},closed),Type.Null()])},closed),(o,a,b)=>o.read(a,b));
  route('history','getDepartmentVersionHistory',Type.Object({id:Id,recordAsOf:Type.Optional(Time)},closed),History,(o,a,b)=>o.history(a,b.id,b.recordAsOf));
  route('references/exact','getExactDepartmentReference',Type.Object({id:Id,version:Type.String({pattern:'^[1-9][0-9]*$'}),recordAsOf:Type.Optional(Time)},closed),Type.Object({owner:Type.Literal('department-master'),id:Id,version:Text,versionId:Id,contentDigest:Text,validFrom:Time,validTo:Type.Union([Time,Type.Null()]),recordedAt:Time},closed),(o,a,b)=>o.exact(a,b));
  route('references/coverage','getDepartmentCoverage',CoverageSchema,Type.Object({owner:Type.Literal('department-master'),id:Id,covered:Type.Boolean(),parts:Type.Array(Type.Object({from:Time,to:Type.Union([Time,Type.Null()]),versionId:Id,version:Text},closed))},closed),(o,a,b)=>o.coverage(a,b));

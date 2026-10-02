@@ -432,3 +432,5 @@ export * from './vnext/organization-mapping-contracts.js';
 export {openOrganizationMappings} from './vnext/organization-mapping.js';
 export * from './vnext/organization-identifier-contracts.js';
 export {openOrganizationIdentifiers} from './vnext/organization-identifier.js';
+export * from './vnext/organization-evolution-contracts.js';
+export {openOrganizationEvolutions} from './vnext/organization-evolution.js';
