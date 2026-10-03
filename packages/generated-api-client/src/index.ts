@@ -39,3 +39,4 @@ export {createOrganizationEvolutionClient,type OrganizationEvolutionInput} from 
 export {createDepartmentImpactClient} from './vnext-client.js';
 
 export {createDepartmentLifecycleClient} from './vnext-client.js';
+export {createDepartmentWorkspaceClient,type DepartmentWorkspaceDraft} from './vnext-client.js';

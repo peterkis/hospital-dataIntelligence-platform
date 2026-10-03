@@ -1,5 +1,5 @@
 import {createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {Check} from 'typebox/value';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
@@ -10,7 +10,7 @@ interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface RecordInput {id:string;domain:string;revision:string;digest:string;campus:'NORTH'|'SOUTH';target:string|null;envelope:Envelope;jobId:string;jobRevision:string;currentRevision:string;withdrawn:boolean}
 export function check(schema:unknown,value:unknown){if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');}
 export function campusInput(connectionString:string,provider?:KeyProviderPort){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connectionString)})});
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
  const record=async(scope:Scope,actor:string,id:string,permission='READ')=>{
   const r=(await sql<{r:RecordInput}>`select organization_master.input_read(${actor},${id}::uuid,${permission}) r`.execute(scope)).rows[0]!.r;

@@ -12,6 +12,20 @@ export type VNextParameterCommand = operations['parameterDefinitionCommand']['re
 export function createVNextCatalogClient(baseUrl:string,actor:string) {
   return createClient<paths>({baseUrl,headers:{'x-catalog-actor':actor}});
 }
+export type DepartmentWorkspaceDraft=operations['saveDepartmentDraft']['requestBody']['content']['application/json'];
+export function createDepartmentWorkspaceClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  save:(body:DepartmentWorkspaceDraft)=>client.POST('/api/vnext/department-workspace/drafts/save',{body}),
+  recover:(requestId:string)=>client.POST('/api/vnext/department-workspace/drafts/recover',{body:{requestId}}),
+  permissions:(body:operations['departmentWorkspacePermissions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-workspace/permissions',{body}),
+  applications:(body:operations['listDepartmentApplications']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/department-workspace/applications/list',{body}),
+  read:(id:string)=>client.POST('/api/vnext/department-workspace/drafts/read',{body:{id}}),
+  list:(body:operations['listDepartmentDrafts']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/department-workspace/drafts/list',{body}),
+  discard:(body:operations['discardDepartmentDraft']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-workspace/drafts/discard',{body}),
+  submit:(body:operations['submitDepartmentDraft']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-workspace/drafts/submit',{body}),
+ };
+}
 export type OrganizationInput=operations['stageOrganizationCommand']['requestBody']['content']['application/json'];
 export type OrganizationRead=operations['readOrganizations']['requestBody']['content']['application/json'];
 /** Uses the same loopback synthetic actor context as the current vNext catalog. */
@@ -129,6 +143,11 @@ export type HierarchyInput=operations['importHierarchyCandidate']['requestBody']
 export function createHierarchyClient(baseUrl:string,actor:string){
  const client=createVNextCatalogClient(baseUrl,actor);
  return {
+  list:(body:operations['listHierarchyViews']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/hierarchy/views/list',{body}),
+  candidates:(body:operations['listHierarchyCandidates']['requestBody']['content']['application/json']={})=>client.POST('/api/vnext/hierarchy/candidates/list',{body}),
+  readCandidate:(body:operations['readHierarchyCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/candidates/read',{body}),
+  history:(body:operations['hierarchyHistory']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/history',{body}),
+  window:(body:operations['readHierarchyWindow']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/snapshots/window',{body}),
   createView:(body:operations['createHierarchyView']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/views',{body}),
   importCandidate:(body:HierarchyInput)=>client.POST('/api/vnext/hierarchy/candidates',{body}),
   approve:(body:operations['approveHierarchyCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/hierarchy/candidates/approve',{body}),

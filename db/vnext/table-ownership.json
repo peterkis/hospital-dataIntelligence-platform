@@ -3,16 +3,19 @@
   "schemas": {
     "vnext_control": "catalog-control-plane",
     "governance_catalog": "governance-catalog",
-    "organization_master": "organization-master"
+    "organization_master": "organization-master",
+    "department_master": "department-master"
   },
   "publicOwner": "apps/governance-api/src/modules/governance-catalog/index.ts",
   "migrationRole": "postgres via fixed local WSL peer",
   "applicationRole": "hdi_prototype",
   "businessInstanceSchemas": [
-    "organization_master"
+    "organization_master",
+    "department_master"
   ],
   "domainOwners": {
-    "organization_master": "apps/governance-api/src/modules/organization-master/index.ts"
+    "organization_master": "apps/governance-api/src/modules/organization-master/index.ts",
+    "department_master": "apps/governance-api/src/modules/department-master/index.ts"
   },
   "operatingCapabilities": {
     "owner": "organization-master",
@@ -29,5 +32,12 @@
     "fileAdapter": "NOT_READY",
     "FULL": "BLOCKED_DEPENDENCY",
     "manualContractIdentity": "governance_catalog.import_contract.manual_org03"
+  },
+  "departmentWorkspace": {
+    "owner": "department-master",
+    "storage": "workspace_draft_revision",
+    "schemaPrefix": 144,
+    "profile": "CORE",
+    "FULL": "BLOCKED_DEPENDENCY"
   }
 }

@@ -1,6 +1,6 @@
 import {assertDepartmentLifecycleProvisioned} from './department-lifecycle-provisioning.mjs';
 import {assertDepartmentImpactsProvisioned} from './department-impact-provisioning.mjs';
-import {openDepartment,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,openOrganizationEvolutions,openDepartmentLifecycle} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {openDepartment,openDepartmentWorkspace,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,openOrganizationEvolutions,openDepartmentLifecycle} from '../../apps/governance-api/src/modules/department-master/index.ts';
 import {assertOrganizationEvolutionsProvisioned} from './organization-evolution-provisioning.mjs';
 import {assertOrganizationIdentifiersProvisioned} from './organization-identifier-provisioning.mjs';
 import {assertOrganizationMappingsProvisioned} from './organization-mapping-provisioning.mjs';
@@ -51,7 +51,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -59,6 +59,7 @@ export async function startWorkbench({
     await operating?.close();
     await organizationImport?.close();
     await organizationWorkspace?.close();
+    await departmentWorkspace?.close();
     await department?.close();
     await hierarchy?.close();
     await mapping?.close();
@@ -113,6 +114,7 @@ export async function startWorkbench({
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
+    if(persistent&&persistentPrefix>=144)departmentWorkspace=openDepartmentWorkspace(connection,provider);
     if(persistent&&persistentPrefix>=87){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
     if(owned||persistentPrefix>=109){await assertHierarchyProvisioned(connection);hierarchy=openHierarchy(connection,provider);}
     if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
@@ -181,6 +183,7 @@ export async function startWorkbench({
       identifiers?{owner:identifiers,actor:r=>syntheticActor(r.headers)}:undefined,
       evolutions?{owner:evolutions,actor:r=>syntheticActor(r.headers)}:undefined,
       departmentLifecycle?{owner:departmentLifecycle,actor:r=>syntheticActor(r.headers)}:undefined,
+      departmentWorkspace?{owner:departmentWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),
@@ -192,6 +195,7 @@ export async function startWorkbench({
       "parameter-definitions",
       "imports",
       "organizations",
+      "departments",
     ])
       app.get("/admin/vnext/" + path, (_req, reply) =>
         reply.sendFile("vnext.html"),
