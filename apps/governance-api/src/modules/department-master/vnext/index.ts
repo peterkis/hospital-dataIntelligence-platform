@@ -11,6 +11,7 @@ import {protectedArtifacts} from '../../governance-catalog/index.js';
 import {recordOwnerFileValidation} from '../../governance-catalog/index.js';
 import type {ParserResult} from '../../governance-catalog/index.js';
 import type {ValidationEvaluation} from '../../governance-catalog/index.js';
+import {orderLifecycleByEffectiveTime} from './lifecycle-time.js';
 export * from './contracts.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
@@ -204,7 +205,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   async read(actor:string,input:{id:string;businessAt:string;recordAsOf?:string;campus?:'NORTH'|'SOUTH'}){check(ReadSchema,input);const at=localTime(input.businessAt);return root(async s=>{
    const h=await snapshot(s,actor,input.id),versions=h.versions.filter(v=>input.recordAsOf===undefined||stamp(v.recorded_at)<=localTime(input.recordAsOf));if(versions.length===0)throw new Error('NOT_FOUND');
    const terminal=await replacement(s,actor,input.id,input.recordAsOf),superseded=terminal!==null&&stamp(terminal.effective_at)<=at;
-   const lifecycle=(await sql<{r:{lifecycle:Array<{action:string;effective_at:string}>}}>`select department_master.lifecycle_snapshot(${actor},${input.id}::uuid,${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp) r`.execute(s)).rows[0]!.r.lifecycle;
+   const lifecycle=orderLifecycleByEffectiveTime((await sql<{r:{lifecycle:Array<{action:string;effective_at:string;number:string}>}}>`select department_master.lifecycle_snapshot(${actor},${input.id}::uuid,${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp) r`.execute(s)).rows[0]!.r.lifecycle);
    const selected=lifecycle.filter(e=>stamp(e.effective_at)<=at).at(-1),deprecated=lifecycle.some(e=>e.action==='DEPRECATE'&&stamp(e.effective_at)<=at);
    const businessState=superseded?'SUPERSEDED' as const:deprecated?'DEPRECATED' as const:selected?.action==='SUSPEND'?'SUSPENDED' as const:'ACTIVE' as const;
    const v=superseded?undefined:versions.filter(v=>span(v).from<=at&&(span(v).to===null||span(v).to!>at)).at(-1);

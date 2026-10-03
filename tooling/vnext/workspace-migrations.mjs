@@ -57,6 +57,8 @@ const postWorkspaceMigrations = [
  '0138_campus_relation_impact_references',
  '0139_evolution_campus_bundle',
  '0140_lifecycle_authority_closure',
+ '0141_lifecycle_effective_time_projection',
+ '0142_future_replacement_bounded_rename',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

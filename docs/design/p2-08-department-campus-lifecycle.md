@@ -16,6 +16,8 @@ SUSPEND 持续到显式 RESUME。RESUME 不追加属性身份版本，须重新�
 
 所有业务时间按北京时间解析，记录时间由数据库产生。读取支持 businessAt 和 recordAsOf，使用原 exact 版本及原记录时点；当前准入另行重核，不能把后来的可用状态改写成原接受依据。
 
+生命周期业务投影按 effective_at 排序，同一业务点以权威 number 决定后发断言；历史记录仍按 number 展示。补录恢复不会抹去更晚的计划暂停。属性断言保留 P2-01 的局部区间覆盖：高序号版本只替换重叠片段，其区间外保留原断言；结束业务资格使用生命周期退出／替换，不把有限属性修正解释成整体退出。
+
 ## 公共职责与输入输出
 
 复用 Department Owner、Catalog ApplyCoordinator 和现有 Campus/Operating Owner，不新建编排服务。
@@ -42,9 +44,11 @@ SUSPEND 持续到显式 RESUME。RESUME 不追加属性身份版本，须重新�
 4. SQL HMAC 权威入口绑定当前事务和批准单元。主事实、关系版本、影响 case、audit、共同结果一并提交或回滚。失败不结束来源；同 request 的已接受结果可恢复与重放。
 5. 历史恢复重核当前访问权限和原 exact 引用，不把 retention TTL 或新准入政策用作改写旧 outcome 的理由。
 
-0134—0140 均为前向迁移。6 个新表只存领域必需的输入、验证、根操作、生命周期及关系/版本。关系版本属于生命周期或演变的一个根操作，deferred guard 核对共同 R、端点以及最终无重复服务区间。永久代码归属继续由原 Owner 维护。
+0134—0142 均为前向迁移。6 个新表只存领域必需的输入、验证、根操作、生命周期及关系/版本。关系版本属于生命周期或演变的一个根操作，deferred guard 核对共同 R、端点以及最终无重复服务区间。永久代码归属继续由原 Owner 维护。
 
 0140 根据固定候选两轴评审补齐：原提交身份与冻结/最终批准身份的 SQL 防线；当前终态的任职准入与演变前驱限制；跨治理域关系与 SourceMapping 按自身 scope 授权，同时保留原 case 的治理域。Identifier 没有归属院区，继续核验请求域、scheme 与目标读取权限。历史 coverage 保留完整有效片段；层级的 ownerDepartmentId 与节点均检查生命周期完整期间，截止退出时点的历史层级仍可发布。当前 admission 单独拒绝终态的新任职，显式旧 R 仍保留原接受知识。HTTP review 输出原输入、独立验证、冻结状态/材料/许可依据/assessment 与展开后的 MOVE 三项写入。
+
+PR #26 审查修复使用 0141 的业务时间投影和 0142 的未来永久退出前有界更名。未来退出前可追加合法更名／同身份补偿，新属性版本截止最早的原替换或 DEPRECATE 时点；原事件、替换点、弃用事实和承继身份不变，已生效终态仍拒绝历史回填扩张。恢复、重放和对账只重核原冻结 ID/版本及证据的当前权限，之后新增的无关关系不会改变原接受结果的授权要求；当前全量读取及新申请仍检查实际关系集合。
 
 服务角色只显式获得公开入口权限；不能直接修改事实表、读取签名权威密钥或调用未签名的内部 companion writer。启动前执行实际 privilege 检查，缺少授权时在 listener 前失败。验证工具的实际角色亦撤销这些内部入口。
 
@@ -81,4 +85,8 @@ npm.cmd run prototype:db:with -- vnext:p2-08:regression
 
 2026-10-03 执行结果：完整 28 项适用回归全部通过，P2-08 的 14 个公共 Owner/HTTP/实际 PostgreSQL 角色用例通过。0133 前驱升级保留原行、键、ledger、已接受 outcome/event/cases，原待批准候选被判 STALE；研发库 OID 206108 当前为 0140，保全检查和生成客户端真实 HTTP 暂停、恢复、重放均通过。两个最终数据库 runner 均 READY、target exit 0、cleanupPassed=true。Standards 与 Spec 的独立固定候选评审均无剩余阻断。
 
-评审采用 implement 调用的 code-review：按实施基线固定候选，两位独立只读 reviewer 分别判断 Standards 与 Spec，修复后仅复跑受影响检查。最终提交为当前 `main` 一个本地完成提交，不 fetch/push，不进入 P2-07。
+首次本地评审采用 implement 调用的 code-review：按实施基线固定候选，两位独立只读 reviewer 分别判断 Standards 与 Spec，修复后仅复跑受影响检查。首次提交为 `main` 一个本地完成提交，按当时授权不 fetch/push，不进入 P2-07。
+
+首次本地交付后，用户另行授权推送、创建 PR、迭代 `@codex review` 并在问题解决后合并。PR #26 首轮实际问题及同源路径保留真实 RED→GREEN；属性区间覆盖反馈保留公共 Owner 反例与既有规则。修复后的 20 个数据库用例、0133 前驱升级均通过。完整矩阵先取得 27 项通过及退出边界用例 RED，收敛 0142 后复跑受影响的 P2-05/P2-06/P2-08 升级回归，最终 28 项适用检查均有通过证据；未把首轮 RED 报为通过。两轴最终固定候选静态评审均无剩余阻断。
+
+研发库 OID 206108 已由 0140 前向升级到 0142，原行、键、ledger 保全及生成客户端真实 HTTP 重放通过，runner READY、target exit 0、cleanupPassed=true。首次交付的 14 用例和 0140 部署记录保留；准确 head、追加回归、迁移及云端审查/合并状态在 ignored publication/remediation handoff 中记录。新 head 的云端审查与合并仍以 GitHub 当前证据为准，不替代正式验收或院方政策采纳。

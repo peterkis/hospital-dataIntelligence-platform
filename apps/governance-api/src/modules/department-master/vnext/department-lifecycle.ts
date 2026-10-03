@@ -9,6 +9,7 @@ import type {DepartmentAssessment,ImpactReference} from './department-impact-con
 import {EVOLUTION_IMPACT_DOMAINS} from './organization-evolution-contracts.js';
 import type {DepartmentHistory,DepartmentReplacement} from './index.js';
 import type {EvolutionStoredStageInput} from './organization-evolution-contracts.js';
+import {orderLifecycleByEffectiveTime} from './lifecycle-time.js';
 import {DepartmentLifecycleStageSchema,DepartmentLifecycleVerifySchema,DepartmentAdmissionSchema,DepartmentLifecycleReadSchema,DepartmentLifecycleHistorySchema,DepartmentLifecycleInputSchema,DepartmentLifecyclePlanSchema,DepartmentRelationListSchema,DepartmentRelationDiffSchema,lifecycleCheck,type DepartmentLifecycleStageInput,type DepartmentLifecycleVerifyInput,type DepartmentAdmissionInput} from './department-lifecycle-contracts.js';
 
 type Scope=CatalogTransactionScope;
@@ -66,6 +67,22 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
    for(const endpoint of endpoints){await campuses.references.inTransaction(s).resolveCampusReference(actor,{references:[endpoint.campus]});await sql`select organization_master.operating_pair(${actor},${endpoint.subject.id}::uuid,${endpoint.campus.id}::uuid,'RELATION')`.execute(s);}
   }
  };
+ const frozenReferenceAccess=async(s:Scope,actor:string,input:DepartmentLifecycleStageInput,states:readonly Snapshot[])=>{
+  await authorize(s,actor,input.campus,'READ_RESTRICTED');
+  const relationAccess=async(id:string,campus:string,departmentId:string)=>{
+   const r=(await sql<{r:Relation}>`select department_master.lifecycle_relation_snapshot(${actor},${id}::uuid,${campus},'READ') r`.execute(s)).rows[0]!.r;
+   if(r.department_id!==departmentId)throw new Error('ACCESS_DENIED');return r;
+  };
+  for(const c of input.commands){
+   await sql`select department_master.snapshot(${actor},${c.department.id}::uuid)`.execute(s);
+   if('relation' in c){const r=await relationAccess(c.relation.id,input.campus,c.department.id);if(!r.versions.some(v=>String(v.number)===c.relation.expectedVersion))throw new Error('ACCESS_DENIED');}
+   const endpoints=c.action==='ASSIGN'?[{campus:c.campus,subject:c.subject}]:c.action==='MOVE'?[c.destination]:[];
+   for(const endpoint of endpoints){await campuses.references.inTransaction(s).resolveCampusReference(actor,{references:[endpoint.campus]});await sql`select organization_master.operating_pair(${actor},${endpoint.subject.id}::uuid,${endpoint.campus.id}::uuid,'RELATION')`.execute(s);}
+  }
+  // These IDs and versions belong to the signed original basis. Later unrelated
+  // relationships must not become new authority requirements for accepted replay.
+  for(const state of states)for(const relation of state.relations){const actual=await relationAccess(relation.id,relation.governance_scope,state.department.id);if(relation.versions.some(v=>!actual.versions.some(a=>a.id===v.id)))throw new Error('NOT_FOUND');}
+ };
  const material=async(s:Scope,actor:string,id:string,job:ImportJob,campus:string)=>{
   const proof=(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select governance_catalog.registration_evidence(${actor},${id}::uuid,${job.contract.definition.sourceVersionId}::uuid,${campus}) r`.execute(s)).rows[0]!.r;
   const bytes=authenticateRegistrationEvidence(proof,provider);try{return {id,digest:planBinding(provider,'DEPARTMENT_LIFECYCLE_MATERIAL_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}
@@ -111,9 +128,10 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
    if('effectiveAt' in c)c.effectiveAt=localTime(c.effectiveAt);if('validFrom' in c){c.validFrom=localTime(c.validFrom);c.validTo=c.validTo===null?null:localTime(c.validTo);if(c.validTo!==null&&c.validTo<=c.validFrom)throw new Error('CLOSED_INPUT_REQUIRED');}
    if(c.action==='SUSPEND'||c.action==='RESUME'||c.action==='DEPRECATE'){
     if(touched.has('L:'+c.department.id))throw new Error('BATCH_CONFLICT');touched.add('L:'+c.department.id);
-    const terminal=state.replacement?stamp(state.replacement.effective_at):state.lifecycle.find(v=>v.action==='DEPRECATE')?.effective_at;
+     const timeline=orderLifecycleByEffectiveTime(state.lifecycle);
+     const terminal=state.replacement?stamp(state.replacement.effective_at):timeline.find(v=>v.action==='DEPRECATE')?.effective_at;
     if(terminal&&(terminal<=now||c.effectiveAt>=terminal))throw new Error('UNSUPPORTED_STATE_TRANSITION');
-    const at=state.lifecycle.filter(v=>v.effective_at<=c.effectiveAt).at(-1);
+     const at=timeline.filter(v=>v.effective_at<=c.effectiveAt).at(-1);
     if(c.action==='RESUME'){
      if(at?.action!=='SUSPEND')throw new Error('UNSUPPORTED_STATE_TRANSITION');
      for(const rel of state.relations){const v=rel.versions.at(-1)!;for(const part of intersect(span(v),{from:c.effectiveAt,to:terminal??null}))await requireOperating(rel.subject_id,rel.campus_id,v.services,part);}
@@ -164,7 +182,7 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
  const port:ApplyOwnerPort={
   async authorize(s,actor,input,permission){const r=await record(s,actor,input.jobId,permission);if(r.revision!==input.revisionId||r.campus!==input.campus)throw new Error('ACCESS_DENIED');},
   async authorizeApproval(s,actor,input){const r=await record(s,actor,input.jobId,'REVIEW');if(await authorize(s,actor,r.campus,'REVIEW')===r.identity_code)throw new Error('MAKER_CHECKER_REQUIRED');},
-  async authorizeFrozen(s,actor,unit){const input=unit.basis['rawInput'] as DepartmentLifecycleStageInput;await referenceAccess(s,actor,input);const r=await record(s,actor,unit.input.jobId);const job=(await sql<{r:ImportJob}>`select governance_catalog.import_job_context(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:r.job_id})}::jsonb) r`.execute(s)).rows[0]!.r;for(const id of new Set([...input.commands.map(c=>c.evidenceId),...input.impacts.map(i=>i.evidenceId)]))await sql`select governance_catalog.registration_evidence_access(${actor},${id}::uuid,${job.contract.definition.sourceVersionId}::uuid,${r.campus})`.execute(s);const assessment=unit.basis['assessment'] as {content:DepartmentAssessment}|undefined;for(const reference of assessment?.content.references??[])await sql`select department_master.impact_reference_access(${actor},${JSON.stringify(reference)}::jsonb,${r.campus})`.execute(s);},
+   async authorizeFrozen(s,actor,unit){const input=unit.basis['rawInput'] as DepartmentLifecycleStageInput;await frozenReferenceAccess(s,actor,input,(unit.basis['states'] as Snapshot[]|undefined)??[]);const r=await record(s,actor,unit.input.jobId);const job=(await sql<{r:ImportJob}>`select governance_catalog.import_job_context(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:r.job_id})}::jsonb) r`.execute(s)).rows[0]!.r;for(const id of new Set([...input.commands.map(c=>c.evidenceId),...input.impacts.map(i=>i.evidenceId)]))await sql`select governance_catalog.registration_evidence_access(${actor},${id}::uuid,${job.contract.definition.sourceVersionId}::uuid,${r.campus})`.execute(s);const assessment=unit.basis['assessment'] as {content:DepartmentAssessment}|undefined;for(const reference of assessment?.content.references??[])await sql`select department_master.impact_reference_access(${actor},${JSON.stringify(reference)}::jsonb,${r.campus})`.execute(s);},
   async observe(s,actor,input){
    await sql`savepoint lifecycle_observation`.execute(s);
    try{const v=await inspect(s,actor,input.jobId);await sql`release savepoint lifecycle_observation`.execute(s);return {input,atomicRule:'DEPARTMENT_LIFECYCLE_WHOLE_UNIT_V1',basis:{rawInput:v.input,inputDigest:v.r.digest,verificationId:v.r.verification!.id,verification:v.verification,states:v.states,materials:v.materials,dependencies:v.dependencies,assessment:v.assessment,issues:[]},commands:[{owner:'department-master/lifecycle',row:1,intent:'REVISE' as const,target:null,aliases:[],value:{inputId:v.r.id,writes:canonicalPlan(v.writes),assessment:canonicalPlan(v.assessment)}}],diff:v.writes};}
@@ -180,8 +198,8 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
  const coordinator=applyCoordinator(db,provider,port);
  const evolutionCampusAccess=async(s:Scope,actor:string,input:EvolutionStoredStageInput)=>{
   for(const c of input.campusChanges??[]){
-   if(c.action==='END'){const state=await snapshot(s,actor,c.departmentId);if(!state.relations.some(r=>r.id===c.relation.id&&r.governance_scope===input.campus))throw new Error('ACCESS_DENIED');}
-   else {await campuses.references.inTransaction(s).resolveCampusReference(actor,{references:[c.campus]});await sql`select organization_master.operating_pair(${actor},${c.subject.id}::uuid,${c.campus.id}::uuid,'RELATION')`.execute(s);if(c.department.owner==='department-master')await snapshot(s,actor,c.department.id);}
+    if(c.action==='END'){const r=(await sql<{r:Relation}>`select department_master.lifecycle_relation_snapshot(${actor},${c.relation.id}::uuid,${input.campus},'READ') r`.execute(s)).rows[0]!.r;if(r.department_id!==c.departmentId||!r.versions.some(v=>String(v.number)===c.relation.expectedVersion))throw new Error('ACCESS_DENIED');}
+    else {await campuses.references.inTransaction(s).resolveCampusReference(actor,{references:[c.campus]});await sql`select organization_master.operating_pair(${actor},${c.subject.id}::uuid,${c.campus.id}::uuid,'RELATION')`.execute(s);if(c.department.owner==='department-master')await sql`select department_master.snapshot(${actor},${c.department.id}::uuid)`.execute(s);}
   }
  };
  return {
@@ -213,7 +231,7 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
   async plan(actor:string,input:{inputId:string;requestId:string}){lifecycleCheck(DepartmentLifecyclePlanSchema,input);const r=await root(async s=>{const r=await record(s,actor,input.inputId,'WRITE');if(await authorize(s,actor,r.campus,'WRITE')!==r.identity_code)throw new Error('MAKER_CHECKER_REQUIRED');return r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   async readInput(actor:string,input:{inputId:string}){lifecycleCheck(DepartmentLifecycleInputSchema,input);return root(async s=>{const r=await record(s,actor,input.inputId),raw=unseal<DepartmentLifecycleStageInput>('DEPARTMENT_LIFECYCLE_INPUT_V1',r,DepartmentLifecycleStageSchema);await referenceAccess(s,actor,raw);const job=(await sql<{r:ImportJob}>`select governance_catalog.import_job_context(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:r.job_id})}::jsonb) r`.execute(s)).rows[0]!.r;for(const id of new Set([...raw.commands.map(c=>c.evidenceId),...raw.impacts.map(i=>i.evidenceId)]))await sql`select governance_catalog.registration_evidence_access(${actor},${id}::uuid,${job.contract.definition.sourceVersionId}::uuid,${r.campus})`.execute(s);return raw;});},
   async history(actor:string,input:{id:string;recordAsOf?:string}){lifecycleCheck(DepartmentLifecycleHistorySchema,input);return root(s=>snapshot(s,actor,input.id,input.recordAsOf===undefined?undefined:localTime(input.recordAsOf)));},
-  async read(actor:string,input:{id:string;businessAt:string;recordAsOf?:string}){lifecycleCheck(DepartmentLifecycleReadSchema,input);const at=localTime(input.businessAt),state=await root(s=>snapshot(s,actor,input.id,input.recordAsOf===undefined?undefined:localTime(input.recordAsOf))),v=state.lifecycle.filter(v=>v.effective_at<=at).at(-1),terminal=state.lifecycle.find(v=>v.action==='DEPRECATE'&&v.effective_at<=at);return {...state,businessState:state.replacement&&stamp(state.replacement.effective_at)<=at?'SUPERSEDED' as const:terminal?'DEPRECATED' as const:v?.action==='SUSPEND'?'SUSPENDED' as const:!state.department.versions.some(v=>stamp(v.valid_from)<=at&&(v.valid_to===null||at<stamp(v.valid_to)))?'NOT_EFFECTIVE' as const:'ACTIVE' as const};},
+   async read(actor:string,input:{id:string;businessAt:string;recordAsOf?:string}){lifecycleCheck(DepartmentLifecycleReadSchema,input);const at=localTime(input.businessAt),state=await root(s=>snapshot(s,actor,input.id,input.recordAsOf===undefined?undefined:localTime(input.recordAsOf))),timeline=orderLifecycleByEffectiveTime(state.lifecycle),v=timeline.filter(v=>v.effective_at<=at).at(-1),terminal=timeline.find(v=>v.action==='DEPRECATE'&&v.effective_at<=at);return {...state,businessState:state.replacement&&stamp(state.replacement.effective_at)<=at?'SUPERSEDED' as const:terminal?'DEPRECATED' as const:v?.action==='SUSPEND'?'SUSPENDED' as const:!state.department.versions.some(v=>stamp(v.valid_from)<=at&&(v.valid_to===null||at<stamp(v.valid_to)))?'NOT_EFFECTIVE' as const:'ACTIVE' as const};},
   async listRelations(actor:string,input:{id:string;businessAt:string;recordAsOf?:string;campusId?:string;afterId?:string;limit:number}){lifecycleCheck(DepartmentRelationListSchema,input);const at=localTime(input.businessAt),state=await root(s=>snapshot(s,actor,input.id,input.recordAsOf===undefined?undefined:localTime(input.recordAsOf)));const items=state.relations.filter(r=>{const v=r.versions.at(-1)!;return (!input.campusId||r.campus_id===input.campusId)&&(!input.afterId||r.id>input.afterId)&&v.valid_from<=at&&(v.valid_to===null||at<v.valid_to);}).sort((a,b)=>a.id.localeCompare(b.id));return {items:items.slice(0,input.limit),nextAfterId:items.length>input.limit?items[input.limit-1]!.id:null};},
   async diffRelation(actor:string,input:{departmentId:string;relationId:string;fromVersion:string;toVersion:string}){lifecycleCheck(DepartmentRelationDiffSchema,input);const state=await root(s=>snapshot(s,actor,input.departmentId)),relation=state.relations.find(r=>r.id===input.relationId);if(!relation)throw new Error('NOT_FOUND');const before=relation.versions.find(v=>v.number===input.fromVersion),after=relation.versions.find(v=>v.number===input.toVersion);if(!before||!after)throw new Error('NOT_FOUND');return {relation,before,after};},
   readAdmissionWindow:(actor:string,input:DepartmentAdmissionInput)=>root(s=>readAdmission(s,actor,input)),

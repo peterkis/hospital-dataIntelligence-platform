@@ -219,3 +219,99 @@ test.each(['SUSPEND','DEPRECATE'] as const)('a %s Department cannot own a new GR
   await expect(publish('2026-06-01T00:00:00',null)).rejects.toThrow('BLOCKED_DEPENDENCY');
  }finally{await hierarchy.close();}
 });
+
+test('backdated resume retains a later scheduled suspension in admission and both Department queries',async()=>{
+ const id=await newDepartment();
+ for(const [action,head,at] of [['SUSPEND','0','2026-11-15T00:00:00'],['RESUME','1','2026-11-20T00:00:00'],['SUSPEND','2','2026-12-01T00:00:00']] as const)expect(await lifecycle.applyUnit('maker',await prepare([command(id,action,head,at)]))).toMatchObject({status:'COMMITTED'});
+ const oldR=(await lifecycle.history('maker',{id})).lifecycle.at(-1)!.recorded_at;
+ for(const [action,head,at] of [['SUSPEND','3','2026-11-25T00:00:00'],['RESUME','4','2026-11-30T00:00:00']] as const)expect(await lifecycle.applyUnit('maker',await prepare([command(id,action,head,at)]))).toMatchObject({status:'COMMITTED'});
+ expect(await owner.readAdmissionWindow('maker',{id,validFrom:'2026-12-01T00:00:00',validTo:'2026-12-02T00:00:00'})).toMatchObject({covered:false});
+ expect(await lifecycle.read('maker',{id,businessAt:'2026-12-01T00:00:00'})).toMatchObject({businessState:'SUSPENDED'});
+ expect(await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-12-01T00:00:00'})).toMatchObject({businessState:'SUSPENDED'});
+ expect(await lifecycle.read('maker',{id,businessAt:'2026-12-01T00:00:00',recordAsOf:oldR})).toMatchObject({businessState:'SUSPENDED'});
+ expect((await lifecycle.history('maker',{id})).lifecycle.map(v=>v.number)).toEqual(['1','2','3','4','5']);
+});
+
+test('bounded attribute correction preserves the original assertion outside its own business interval',async()=>{
+ const entry=f.department.entry();
+ async function apply(entryValue:typeof entry){const input=await f.department.input([entryValue]),staged=await owner.stage('maker',input);await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'TEST bounded assertion',evidenceId:f.department.artifact.artifactId}]});const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(result.status!=='COMMITTED')throw new Error('NOT_COMMITTED');return result.facts[0]!.id;}
+ const id=await apply(entry);f.grantTarget(id);
+ const correction={...entry,intent:'REVISE' as const,target:{owner:'department-master' as const,id,expectedVersion:'1'},row:{...entry.row,org_name:'TEST March assertion',valid_from:'2026-03-01T00:00:00',valid_to:'2026-04-01T00:00:00'}};
+ expect(await apply(correction)).toBe(id);
+ expect(await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-03-15T00:00:00'})).toMatchObject({version:{number:'2',facts:{name:'TEST March assertion'}}});
+ expect(await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-05-01T00:00:00'})).toMatchObject({version:{number:'1',facts:{name:entry.row.org_name}}});
+ expect(await owner.coverage('maker',{id,validFrom:'2026-05-01T00:00:00',validTo:'2026-06-01T00:00:00'})).toMatchObject({covered:true});
+ expect(await lifecycle.readAdmissionWindow('maker',{id,validFrom:'2026-05-01T00:00:00',validTo:'2026-06-01T00:00:00'})).toMatchObject({covered:true});
+});
+
+test('forward rename compensation before a scheduled split is bounded by the original exit',async()=>{
+ const id=await newDepartment(),ef=evolutionData??=await evolutionFixture(receipt,catalog,provider,connection,f),e=openOrganizationEvolutions(connection,provider);
+ try{
+  async function apply(input:Awaited<ReturnType<typeof ef.input>>){const staged=await (input.compensatesEvent?e.compensateEvolution('maker',input):e.stage('maker',input));await e.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST pre-exit correction',policyApproved:true,materialsAccepted:true,impactReviews:ef.impactReviews});const requestId=randomUUID(),candidate=await e.plan('maker',{inputId:staged.inputId,requestId});await e.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await e.approveApplyUnit('reviewer',candidate);const result=await e.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(result.status!=='COMMITTED')throw new Error('NOT_COMMITTED');return result.facts[0]!.id;}
+  const first=await ef.input();first.event.effective_at='2026-11-01T00:00:00';first.predecessors=[{owner:'department-master',id,expectedVersion:'1'}];first.relations[0]!.from_target_id=id;first.relations[0]!.to_target_id=id;
+  const original=await apply(first),originalQuery={id:original,campus:'NORTH' as const,businessAt:first.event.effective_at},originalEvent=await e.query('maker',originalQuery);
+  const split=await ef.input();split.event.change_type='SPLIT';split.event.effective_at='2026-12-01T00:00:00';split.rename=null;split.contextEvidenceId=ef.material.artifactId;split.predecessors=[{owner:'department-master',id,expectedVersion:'2'}];split.successors=[f.department.entry(),f.department.entry()];for(const row of split.successors){row.row.valid_from=split.event.effective_at;row.row.established_on='2026-12-01';}
+  Object.assign(split.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST explicitly close code at scheduled exit'});
+  split.relations=split.successors.map(row=>({...first.relations[0]!,org_event_id:split.event.org_event_id,succession_id:randomUUID(),to_target_id:row.row.org_id,context_rule:'TEST future split'}));
+  const splitId=await apply(split),splitQuery={id:splitId,campus:'NORTH' as const,businessAt:split.event.effective_at},splitEvent=await e.query('maker',splitQuery);
+  const correction=await ef.input();correction.compensatesEvent={owner:'department-master/organization-evolution',id:original,version:'1'};correction.event.effective_at='2026-11-15T00:00:00';correction.predecessors=[{owner:'department-master',id,expectedVersion:'2'}];correction.relations[0]!.from_target_id=id;correction.relations[0]!.to_target_id=id;correction.rename={name:'TEST legal pre-exit correction',shortName:'TEST'};
+  Object.assign(correction.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST preserve pending code closure at original scheduled exit'});
+  await apply(correction);
+  expect((await owner.history('maker',id)).versions.at(-1)).toMatchObject({valid_from:'2026-11-15T00:00:00',valid_to:'2026-12-01T00:00:00'});
+  expect(await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-11-20T00:00:00'})).toMatchObject({businessState:'ACTIVE',version:{number:'3',facts:{name:'TEST legal pre-exit correction'}}});
+  expect(await owner.read('maker',{id,campus:'NORTH',businessAt:split.event.effective_at})).toMatchObject({businessState:'SUPERSEDED'});
+  expect(await e.query('maker',originalQuery)).toEqual(originalEvent);expect(await e.query('maker',splitQuery)).toEqual(splitEvent);
+ }finally{await e.close();}
+});
+
+test('accepted replay ignores an unrelated later SOUTH relationship but preserves frozen access checks',async()=>{
+ const id=await newDepartment(),s=await operatingScenario(receipt,connection,provider,catalog,true);
+ try{
+  await lifecycle.applyUnit('maker',await prepare([command(id,'SUSPEND')]));
+  const request=await prepare([command(id,'RESUME','1','2026-07-01T00:00:00')]),accepted=await lifecycle.applyUnit('maker',request);if(accepted.status!=='COMMITTED')throw new Error('NOT_COMMITTED');
+  const subject=await s.createSubject(),campus=await s.createCampus();await s.activateCampus(campus);s.grantPair(subject.id,campus.id);const license=await s.addLicense(subject),scope=await s.verifyScope(subject,campus,license,['DEMO_MEDICAL_A']);await s.operatingApply({...s.common,...s.endpoints(subject,campus),action:'ESTABLISH',evidence:s.artifact.artifactId,facts:{role:'OPERATOR',relationTypeText:'TEST later relationship',primary:'Y',catalog:s.codeSet.reference,services:['DEMO_MEDICAL_A'],scopeTargets:[scope],licenseScopeText:'TEST POLICY ONLY'}});
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(f.department.dataset.id)}::uuid,'SOUTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;INSERT INTO department_master.mapping_target_access SELECT actor,target_type,target_id,'SOUTH' FROM department_master.mapping_target_access WHERE target_id=${quote(id)}::uuid ON CONFLICT DO NOTHING;`);
+  const job=await f.department.input(),proof=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:job.jobId,revisionId:job.revisionId,campus:'SOUTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:3600},Buffer.from('TEST POLICY ONLY later SOUTH relationship'));
+  await lifecycle.applyUnit('maker',await prepare([{action:'ASSIGN',department:{owner:'department-master',id,expectedVersion:'1',expectedLifecycleHead:'2'},...s.endpoints(subject,campus),services:['DEMO_MEDICAL_A'],validFrom:'2026-08-01T00:00:00',validTo:null,reason:'TEST later SOUTH relationship',evidenceId:proof.artifactId}],'SOUTH',proof.artifactId));
+  peer(receipt.name,`DELETE FROM organization_master.access WHERE actor='maker' AND subject_id=${quote(campus.id)}::uuid AND permission='READ';`);
+  try{
+   await expect(lifecycle.history('maker',{id})).rejects.toThrow('ACCESS_DENIED');
+   expect(await lifecycle.resumeOutcome('maker',request)).toMatchObject({status:'COMMITTED',facts:accepted.facts});
+   expect(await lifecycle.applyUnit('maker',request)).toMatchObject({status:'COMMITTED',facts:accepted.facts});
+   expect(await lifecycle.reconcileCommittedUnit('maker',request)).toMatchObject({status:'MATCHED'});
+   peer(receipt.name,"DELETE FROM department_master.access WHERE actor='maker' AND scope='HOSPITAL' AND permission='READ';");
+   try{await expect(lifecycle.resumeOutcome('maker',request)).rejects.toThrow('ACCESS_DENIED');}finally{peer(receipt.name,"INSERT INTO department_master.access VALUES('maker','HOSPITAL','READ') ON CONFLICT DO NOTHING;");}
+  }finally{peer(receipt.name,`INSERT INTO organization_master.access VALUES('maker',${quote(campus.id)}::uuid,'NORTH','READ') ON CONFLICT DO NOTHING;`);}
+ }finally{await s.close();}
+});
+
+test('composite evolution replay authorizes its original campus rather than a later unrelated relationship',async()=>{
+ const id=await newDepartment(),ef=evolutionData??=await evolutionFixture(receipt,catalog,provider,connection,f),e=openOrganizationEvolutions(connection,provider),s=await operatingScenario(receipt,connection,provider,catalog,true);
+ try{
+  const subject=await s.createSubject(),a=await s.createCampus(),b=await s.createCampus();await s.activateCampus(a);await s.activateCampus(b);s.grantPair(subject.id,a.id);s.grantPair(subject.id,b.id);const license=await s.addLicense(subject);
+  for(const campus of [a,b]){const scope=await s.verifyScope(subject,campus,license,['DEMO_MEDICAL_A']);await s.operatingApply({...s.common,...s.endpoints(subject,campus),action:'ESTABLISH',evidence:s.artifact.artifactId,facts:{role:'OPERATOR',relationTypeText:'TEST frozen campus access',primary:'Y',catalog:s.codeSet.reference,services:['DEMO_MEDICAL_A'],scopeTargets:[scope],licenseScopeText:'TEST POLICY ONLY'}});}
+  const input=await ef.input();input.predecessors=[{owner:'department-master',id,expectedVersion:'1'}];input.relations[0]!.from_target_id=id;input.relations[0]!.to_target_id=id;input.campusChanges=[{action:'ASSIGN',department:{owner:'department-master',id},...s.endpoints(subject,a),services:['DEMO_MEDICAL_A'],validTo:null}];
+  const staged=await e.stage('maker',input);await e.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST original composite',policyApproved:true,materialsAccepted:true,impactReviews:ef.impactReviews});const requestId=randomUUID(),candidate=await e.plan('maker',{inputId:staged.inputId,requestId});await e.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await e.approveApplyUnit('reviewer',candidate);const request={candidateId:candidate.candidateId,requestId},accepted=await e.applyUnit('maker',request);if(accepted.status!=='COMMITTED')throw new Error('NOT_COMMITTED');
+  peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT actor,${quote(f.department.dataset.id)}::uuid,'SOUTH','IDENTITY_VERIFY',permission FROM (VALUES('maker','READ'),('maker','STORE'),('reviewer','READ'),('reviewer','STORE')) x(actor,permission) ON CONFLICT DO NOTHING;INSERT INTO department_master.mapping_target_access SELECT actor,target_type,target_id,'SOUTH' FROM department_master.mapping_target_access WHERE target_id=${quote(id)}::uuid ON CONFLICT DO NOTHING;`);
+  const job=await f.department.input(),proof=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:job.jobId,revisionId:job.revisionId,campus:'SOUTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:3600},Buffer.from('TEST POLICY ONLY unrelated SOUTH relation'));
+  await lifecycle.applyUnit('maker',await prepare([{action:'ASSIGN',department:{owner:'department-master',id,expectedVersion:'2',expectedLifecycleHead:'0'},...s.endpoints(subject,b),services:['DEMO_MEDICAL_A'],validFrom:'2026-07-01T00:00:00',validTo:null,reason:'TEST unrelated later relation',evidenceId:proof.artifactId}],'SOUTH',proof.artifactId));
+  peer(receipt.name,`DELETE FROM organization_master.access WHERE actor='maker' AND subject_id=${quote(b.id)}::uuid AND permission='READ';`);
+  try{expect(await e.resumeOutcome('maker',request)).toMatchObject({status:'COMMITTED',facts:accepted.facts});expect(await e.applyUnit('maker',request)).toMatchObject({status:'COMMITTED',facts:accepted.facts});expect(await e.reconcileCommittedUnit('maker',request)).toMatchObject({status:'MATCHED'});}finally{peer(receipt.name,`INSERT INTO organization_master.access VALUES('maker',${quote(b.id)}::uuid,'NORTH','READ') ON CONFLICT DO NOTHING;`);}
+ }finally{await e.close();await s.close();}
+});
+
+test('rename before a scheduled deprecation ends at the immutable terminal boundary',async()=>{
+ const id=await newDepartment(),ef=evolutionData??=await evolutionFixture(receipt,catalog,provider,connection,f),e=openOrganizationEvolutions(connection,provider);
+ try{
+  await lifecycle.applyUnit('maker',await prepare([command(id,'DEPRECATE','0','2026-12-01T00:00:00')]));
+  const terminal=(await lifecycle.history('maker',{id})).lifecycle;
+  const input=await ef.input();input.event.effective_at='2026-11-15T00:00:00';input.predecessors=[{owner:'department-master',id,expectedVersion:'1'}];input.relations[0]!.from_target_id=id;input.relations[0]!.to_target_id=id;
+  Object.assign(input.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST preserve code closure at scheduled deprecation'});
+  const staged=await e.stage('maker',input);await e.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,reason:'TEST pre-deprecation rename',policyApproved:true,materialsAccepted:true,impactReviews:ef.impactReviews});const requestId=randomUUID(),candidate=await e.plan('maker',{inputId:staged.inputId,requestId});await e.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await e.approveApplyUnit('reviewer',candidate);
+  expect(await e.applyUnit('maker',{candidateId:candidate.candidateId,requestId})).toMatchObject({status:'COMMITTED'});
+  expect((await owner.history('maker',id)).versions.at(-1)).toMatchObject({valid_from:'2026-11-15T00:00:00',valid_to:'2026-12-01T00:00:00'});
+  expect(await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-11-20T00:00:00'})).toMatchObject({businessState:'ACTIVE',version:{number:'2'}});
+  expect(await owner.read('maker',{id,campus:'NORTH',businessAt:'2026-12-01T00:00:00'})).toMatchObject({businessState:'DEPRECATED'});
+  expect((await lifecycle.history('maker',{id})).lifecycle).toEqual(terminal);
+ }finally{await e.close();}
+});
