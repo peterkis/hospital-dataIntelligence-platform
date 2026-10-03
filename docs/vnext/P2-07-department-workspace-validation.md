@@ -49,3 +49,5 @@ PR #27 首轮云端审查针对 `de8e22c` 提出三项修复：补全演化／�
 科室页面实际 save 200 后读取失败的 RED／GREEN 与刷新恢复已验证；恢复前新建、选择其他草稿／申请及修订入口锁定。证据 `browser-main-save-red.png`、`browser-main-save-green.png`、`browser-main-context-recovery.png`，本轮服务重启见 `cloud-restart-green.log`。临时服务、视口及网络阻断均清理。
 
 首轮 Linux CI 的业务、浏览器与升级步骤通过，当前契约步骤因缺少本地生成器失败。生成器锁定在 `tooling/openapi-generator`：openapi-typescript 7.13.0 与其 TypeScript 5.9.3 peer，应用编译器保留 TypeScript 7.0.2；不依赖机器缓存。当前 API/client/form 门禁及迁移单元复验通过，远端最终 head 的 CI 和 Codex 复审另行记录，不把首轮失败记作通过。
+
+`b48ff15` 的 Standards 复审无问题，Spec 复审指出已接受保存的重试遇到 403 时会清除恢复标识。实际浏览器复现后，两类页面均按原请求 UUID 保留已接受状态，准确读取前继续锁定。科室实际保存后阻断读取，再由临时浏览器 Fetch 边界注入重试 403；修复前字段可编辑，修复后字段、新建和切换保持禁用。刷新后恢复原草稿 `01a103bf-dffc-727c-aca9-04b82f6c9180` v4；通用层级页面相同场景恢复原 v1。403 是明确标记的测试注入，原保存及恢复仍使用真实 HTTP/PostgreSQL。证据 `browser-accepted-retry-{red,green,recovered}.png`、`browser-generic-accepted-retry-{green,recovered}.png`、`browser-accepted-retry.log`；当前 UI 类型检查及 vNext 构建通过，临时接口拦截和服务已清理。

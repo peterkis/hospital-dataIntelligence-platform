@@ -138,6 +138,7 @@ export function DepartmentWorkspaceApp() {
   }, []);
   const epoch = useRef(0),
     pendingSave = useRef<Draft | null>(null),
+    acceptedSaveRequest = useRef<string | null>(null),
     pendingSubmit = useRef<{
       id: string;
       expectedVersion: string;
@@ -207,6 +208,7 @@ export function DepartmentWorkspaceApp() {
       setAcknowledged(false);
       setDirty(false);
       pendingSave.current = null;
+      acceptedSaveRequest.current = null;
       if (
         pending?.id === id &&
         pending.expectedVersion === record.version &&
@@ -243,6 +245,7 @@ export function DepartmentWorkspaceApp() {
       setSaved(null);
       setDirty(false);
       pendingSave.current = null;
+      acceptedSaveRequest.current = null;
       pendingSubmit.current = null;
       remember(undefined, item.inputId);
     });
@@ -262,6 +265,7 @@ export function DepartmentWorkspaceApp() {
     setSources([]);
     setHistories([]);
     pendingSave.current = null;
+    acceptedSaveRequest.current = null;
     pendingSubmit.current = null;
     setRecoverId(
       panel === "DEPARTMENT" ? sessionStorage.getItem(recoveryKey) : null,
@@ -403,10 +407,13 @@ export function DepartmentWorkspaceApp() {
         ...(saved ? { id: saved.id, expectedVersion: saved.version } : {}),
       };
       sessionStorage.setItem(recoveryKey, pendingSave.current.requestId);
-      let accepted = false;
+      const requestId = pendingSave.current.requestId;
+      let accepted = acceptedSaveRequest.current === requestId;
       try {
         const result = await value(workspace().save(pendingSave.current));
         accepted = true;
+        if (generation !== epoch.current) return;
+        acceptedSaveRequest.current = requestId;
         const restored = await value(workspace().read(result.id));
         if (generation !== epoch.current) return;
         if (restored.content.kind !== "DEPARTMENT")
@@ -416,11 +423,16 @@ export function DepartmentWorkspaceApp() {
         setDirty(false);
         remember(restored.id);
         pendingSave.current = null;
+        acceptedSaveRequest.current = null;
         sessionStorage.removeItem(recoveryKey);
         setMessage("草稿已保存，可刷新恢复。尚未形成科室事实。");
         await reload(generation);
       } catch (error) {
-        if (!accepted && definiteFailure(error)) {
+        if (
+          generation === epoch.current &&
+          !accepted &&
+          definiteFailure(error)
+        ) {
           pendingSave.current = null;
           sessionStorage.removeItem(recoveryKey);
         }

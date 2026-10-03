@@ -299,6 +299,7 @@ export function DepartmentDomainWorkspace({
   const alive = useRef(true),
     generation = useRef(0),
     pendingSave = useRef<DepartmentWorkspaceDraft | null>(null),
+    acceptedSaveRequest = useRef<string | null>(null),
     pendingSubmit = useRef<{
       id: string;
       expectedVersion: string;
@@ -744,22 +745,25 @@ export function DepartmentDomainWorkspace({
         ...(saved ? { id: saved.id, expectedVersion: saved.version } : {}),
       };
       sessionStorage.setItem(recoveryKey, pendingSave.current.requestId);
-      let accepted = false;
+      const requestId = pendingSave.current.requestId;
+      let accepted = acceptedSaveRequest.current === requestId;
       try {
         const written = await value(workspace.save(pendingSave.current));
         accepted = true;
         if (!alive.current) return;
+        acceptedSaveRequest.current = requestId;
         const restored = await value(workspace.read(written.id));
         if (!alive.current) return;
         setSaved(restored);
         setDirty(false);
         remember(written.id);
         pendingSave.current = null;
+        acceptedSaveRequest.current = null;
         sessionStorage.removeItem(recoveryKey);
         setMessage("私有草稿已保存，刷新可恢复。");
         await load();
       } catch (error) {
-        if (!accepted && definiteFailure(error)) {
+        if (alive.current && !accepted && definiteFailure(error)) {
           pendingSave.current = null;
           sessionStorage.removeItem(recoveryKey);
         }
