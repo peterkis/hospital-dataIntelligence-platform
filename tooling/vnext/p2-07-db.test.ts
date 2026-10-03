@@ -632,6 +632,13 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
   if (submission.kind !== "HIERARCHY") throw new Error("WRONG_SUBMISSION_KIND");
   const hierarchy = openHierarchy(connection, provider);
   try {
+    expect(
+      (await owner.readDraft("maker", { id: saved.id })).content.payload,
+    ).toEqual(payload);
+    expect(
+      (await owner.recoverDraft("maker", { requestId: saveRequestId }))
+        ?.submission,
+    ).toEqual(submission);
     const initialCandidate = (
       await hierarchy.listHierarchyCandidates("maker", {
         viewId: submission.viewId,

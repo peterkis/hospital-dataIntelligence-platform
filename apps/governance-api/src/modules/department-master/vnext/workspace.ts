@@ -55,7 +55,10 @@ import {
 export * from "./workspace-contracts.js";
 type StaticTemplate = Static<typeof HierarchyWorkspaceTemplateSchema>;
 
-function metadata(input: SaveDepartmentDraft) {
+function metadata(
+  input: SaveDepartmentDraft,
+  submission?: DepartmentDraftSubmission | null,
+) {
   const references: Array<{ owner: string; id: string }> = [];
   const namespaces: Array<{ source: string; entity: string; context: string }> =
       [],
@@ -123,6 +126,8 @@ function metadata(input: SaveDepartmentDraft) {
     Object.values(item).forEach(visit);
   };
   visit(input.payload);
+  if (submission?.kind === "HIERARCHY")
+    add("department-master/hierarchy-view", submission.viewId);
   return {
     kind: input.kind,
     campus: input.campus,
@@ -176,7 +181,8 @@ export function openDepartmentWorkspace(
           state: record.state,
           input: content,
         }) !== record.digest ||
-        canonicalPlan(metadata(content)) !== canonicalPlan(record.metadata)
+        canonicalPlan(metadata(content, record.submission)) !==
+          canonicalPlan(record.metadata)
       )
         throw new Error("PAYLOAD_UNAVAILABLE");
       return content;
@@ -237,25 +243,12 @@ export function openDepartmentWorkspace(
     submission: DepartmentDraftSubmission,
   ) => {
     const saved = { ...content, ...input },
-      authorization = metadata(saved),
+      authorization = metadata(saved, submission),
       digest = planBinding(provider, "DEPARTMENT_WORKSPACE_DRAFT_V1", {
         state: "SUBMITTED",
         input: saved,
       }),
       bytes = Buffer.from(canonicalPlan(saved));
-    if (
-      submission.kind === "HIERARCHY" &&
-      !authorization.references.some(
-        (ref) =>
-          ref.owner === "department-master/hierarchy-view" &&
-          ref.id === submission.viewId,
-      )
-    ) {
-      authorization.references.push({
-        owner: "department-master/hierarchy-view",
-        id: submission.viewId,
-      });
-    }
     try {
       const envelope = sealProtectedPayload(
         bytes,

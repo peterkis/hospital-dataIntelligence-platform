@@ -37,3 +37,5 @@ A018 使用当前 Department／Hierarchy／生成客户端与当前调用方。�
 适用回归及持久升级在本轮关闭前完成；准确候选 commit/tree、Spec／Standards 审查、GitHub 当前 head、CI、Codex review 修复与合并状态在 ignored handoff 中分别记录。历史 P0-02 browser 待验、院方政策采纳、正式验收及生产准入不因本轮 CORE 通过而自动完成。
 
 首次固定候选 `c62bc45` 由两个独立代理分别静态审查 Spec 和 Standards，各发现两项问题。新建层级视图授权遗漏及历史 R 状态泄漏已在实际 Owner 复现 RED，修复后读取／恢复／提交重放随准确 view READ 撤权拒绝，R0/R1 分别返回 VALIDATED/APPROVED。Catalog 审批和影响表查询移入 Catalog 的有限事务接口，普通和服务角色不获其直接 EXECUTE。通用草稿保存恢复问题由实际浏览器复现并验证 GREEN。专项 fresh／已填充升级回归见 `review-red.log`、`review-green-2.log`；最终修复候选重新固定审查，不沿用首次候选结论。
+
+修复候选 `60726d5` 的两轴复审又发现授权元数据与密文恢复比较不一致。实际授权读取复现 `PAYLOAD_UNAVAILABLE` 后，将提交和恢复统一为同一有限元数据投影，同时保留原 payload 的空 viewId；新增正向读取／原请求恢复断言与撤权拒绝断言一起执行。证据 `metadata-binding-red.log`、`metadata-binding-green.log`。只有新候选复审通过才部署持久迁移。
