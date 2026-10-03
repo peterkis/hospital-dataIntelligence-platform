@@ -517,6 +517,45 @@ test.each(['REFERENCE_COUNT','ASSESSMENT_BYTES'] as const)('accepted case comman
  }finally{await app.close();await replayOwner.close();}
 });
 
+test.each(['FAILED','PARTIAL'] as const)('accepted %s receipt replays its historical approval after a replacement handoff',async(outcome)=>{
+ const input=await freshRename(),r=await responsibility('ORG26');
+ Object.assign(input.impacts.find(i=>i.domain==='CONSUMER')!,{determination:'AFFECTED',requiredAction:'TEST historical receipt',ownerRole:'SYNTHETIC_OWNER_A',ownerSignatory:'SYNTHETIC_REVIEWER'});input.event.migration_plan_ref='TEST';input.migrationEvidenceId=f.material.artifactId;
+ const staged=await owner.stage('maker',input);await verify(staged);const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);
+ const applied=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(applied.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
+ const item=(await owner.listImpactCases('maker',{eventId:applied.facts[0]!.id,campus:'NORTH'})).items.find(c=>c.obligation.owner==='CONSUMER')!,base={caseId:item.id,campus:'NORTH' as const,reason:'TEST historical receipt'};
+ const grant=(version:string)=>peer(receipt.name,`INSERT INTO department_master.impact_external_owner_access VALUES('maker','CONSUMER','NORTH','WRITE','SYNTHETIC_OWNER_A',${quote(version)}::uuid),('reviewer','CONSUMER','NORTH','REVIEW','SYNTHETIC_OWNER_A',${quote(version)}::uuid) ON CONFLICT DO NOTHING;`);
+ grant(r.versionId!);
+ peer(receipt.name,"INSERT INTO vnext_control.actor(code,identity_code,active,principal_kind) VALUES('impact-consumer-a','SYNTHETIC_CONSUMER_A',true,'SERVICE'),('impact-consumer-b','SYNTHETIC_CONSUMER_B',true,'SERVICE') ON CONFLICT DO NOTHING;INSERT INTO vnext_control.actor_grant SELECT a,'SYNTHETIC',p FROM unnest(ARRAY['impact-consumer-a','impact-consumer-b']) a CROSS JOIN unnest(ARRAY['READ','WRITE']) p ON CONFLICT DO NOTHING;");
+ const assigned=await owner.assignImpactCase('maker',{...base,requestId:randomUUID(),expectedHead:'0',responsibilityId:r.id});
+ const proposal=await owner.recordDisposition('maker',{...base,requestId:randomUUID(),expectedHead:assigned.head,disposition:{kind:'MIGRATE_EXTERNAL',evidenceId:f.material.artifactId,consumers:['impact-consumer-a']}});
+ const approved=await owner.approveDisposition('reviewer',{...base,requestId:randomUUID(),expectedHead:proposal.head,proposalEventId:proposal.eventId});
+ const command={...base,requestId:randomUUID(),expectedHead:approved.head,proposalEventId:proposal.eventId,consumerActor:'impact-consumer-a',outcome,receiptRef:'TEST original response',simulated:true as const};
+ const accepted=await owner.recordMigrationReceipt('impact-consumer-a',command);
+ // Catalog metadata is reusable only with a separate explicit Consumer grant.
+ const replacement=await responsibility('ORG22');grant(replacement.versionId!);expect(replacement.versionId).not.toBe(r.versionId);
+ const reassigned=await owner.assignImpactCase('maker',{...base,requestId:randomUUID(),expectedHead:accepted.head,responsibilityId:replacement.id});
+ const next=await owner.recordDisposition('maker',{...base,requestId:randomUUID(),expectedHead:reassigned.head,disposition:{kind:'MIGRATE_EXTERNAL',evidenceId:f.material.artifactId,consumers:['impact-consumer-b']}});
+ const nextApproved=await owner.approveDisposition('reviewer',{...base,requestId:randomUUID(),expectedHead:next.head,proposalEventId:next.eventId});
+ const nextReceipt=await owner.recordMigrationReceipt('impact-consumer-b',{...base,requestId:randomUUID(),expectedHead:nextApproved.head,proposalEventId:next.eventId,consumerActor:'impact-consumer-b',outcome:'SIMULATED_COMPLETED',receiptRef:'TEST replacement completion',simulated:true});
+ expect((await owner.recheckImpact('maker',{...base,requestId:randomUUID(),expectedHead:nextReceipt.head})).status).toBe('SIMULATED_COMPLETED');
+ const read={caseId:item.id,campus:'NORTH' as const},before=await owner.readImpactCase('maker',read);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
+ try{
+  const url=await app.listen({host:'127.0.0.1',port:0}),post=async(body:typeof command)=>{const response=await fetch(url+'/api/vnext/department-impacts/receipts',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'impact-consumer-a'},body:JSON.stringify(body)});return {status:response.status,data:await response.json()};};
+  await expect.soft(post(command)).resolves.toEqual({status:200,data:accepted});
+  await expect.soft(post({...command,receiptRef:'TEST request conflict'})).resolves.toMatchObject({status:409,data:{code:'REQUEST_CONFLICT'}});
+  await expect(post({...command,requestId:randomUUID()})).resolves.toMatchObject({status:403,data:{code:'ACCESS_DENIED'}});
+  peer(receipt.name,`DELETE FROM department_master.impact_external_owner_access WHERE actor='reviewer' AND owner='CONSUMER' AND campus='NORTH' AND permission='REVIEW' AND responsibility_version_id=${quote(r.versionId!)}::uuid;`);
+  try{await expect(owner.recordMigrationReceipt('impact-consumer-a',command)).rejects.toThrow('RESPONSIBILITY_NOT_READY');}
+  finally{grant(r.versionId!);}
+  peer(receipt.name,"UPDATE vnext_control.actor SET active=false WHERE code='impact-consumer-a';");
+  try{await expect(post(command)).resolves.toMatchObject({status:403,data:{code:'ACCESS_DENIED'}});}
+  finally{peer(receipt.name,"UPDATE vnext_control.actor SET active=true WHERE code='impact-consumer-a';");}
+  await expect.soft(post(command)).resolves.toEqual({status:200,data:accepted});
+  expect(await owner.readImpactCase('maker',read)).toEqual(before);
+ }finally{await app.close();}
+});
+
 test('independent review: contract publication does not invalidate closed impact history or accepted command replay',async()=>{
  const {base,approve,approved}=await independentlyClosedReference(),read={caseId:base.caseId,campus:base.campus};
  const before=await owner.readImpactCase('maker',read),current=(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.id===f.eventContract.id)!;

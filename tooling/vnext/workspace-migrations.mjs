@@ -49,6 +49,7 @@ const postWorkspaceMigrations = [
  '0130_impact_assessment_budget',
  '0131_impact_replay_and_terminal_state',
  '0132_impact_terminal_command_order',
+ '0133_impact_historical_receipt_replay',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
