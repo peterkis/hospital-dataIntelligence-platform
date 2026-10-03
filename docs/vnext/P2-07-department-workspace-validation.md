@@ -65,3 +65,5 @@ PR #27 首轮云端审查针对 `de8e22c` 提出三项修复：补全演化／�
 内部接口的实际权限断言发现，旧验证夹具的 Department 批量函数授权会把新内部接口一起授予验证角色。三个新接口已加入夹具既有的内部接口排除清单，保持数据库 PUBLIC／普通服务角色不可直接执行。带此断言的 19 项 fresh 及旧数据升级复验通过；证据 `round2-final-acl-green.log`（RED）、`round2-final-verified.log`（GREEN）、`round2-final-group-green.log`。
 
 合法调用方对象字段顺序另复现私有恢复 `PAYLOAD_UNAVAILABLE`：密文内容规范排序，而授权引用数组原先依赖输入对象字段顺序。新增保存／恢复边界按准确引用多重集合比较，仅忽略授权集合顺序，保留全部项、重复计数及其他元数据；业务命令和节点顺序仍由原内容 MAC 绑定。新写入先复制规范内容，旧 145／146 密文无需重写。证据 `reference-key-order-red.log`、`reference-key-order-green.log`；升级夹具还从真实旧源码创建此前因顺序错误无法读取的草稿，验证前向恢复和原行保留。此专项使 P2-07 总计 20 项，适用数据库回归累计 374 项。
+
+`23b3af1` 的独立 Spec 审查无可操作问题；Standards 审查发现工作台导入 Organization 内部事务适配器，违反 ADR-0083 的模块边界。工作台改为在 Department 内建立事务运行器，使用既有共享池、同一 advisory lock 和 Catalog 事务作用域，保留原原子提交与关闭行为，不扩大模块外部接口。验证证据为 `module-boundary-types.log`、`module-boundary-gate.log`、`module-boundary-green.log`；首次静态命令误用不存在的脚本，随后使用仓库实际 `check:module-boundaries` 命令通过。

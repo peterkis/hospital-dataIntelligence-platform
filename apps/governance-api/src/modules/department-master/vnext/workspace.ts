@@ -1,7 +1,8 @@
-import { sql } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import type { Static } from "typebox";
 import { createHash } from "node:crypto";
-import { campusInput } from "../../organization-master/campus/input.js";
+import { vnextPool } from "../../../platform/database/vnext-pool.js";
+import type { DB } from "../../../platform/database/vnext-types.generated.js";
 import {
   authenticateRegistrationEvidence,
   canonicalPlan,
@@ -9,7 +10,7 @@ import {
   sealProtectedPayload,
   protectedArtifacts,
   type KeyProviderPort,
-  type CatalogTransactionScope,
+  CatalogTransactionScope,
 } from "../../governance-catalog/index.js";
 import { check, Id, StageSchema, type StageInput } from "./contracts.js";
 import { openDepartment } from "./index.js";
@@ -319,7 +320,14 @@ export function openDepartmentWorkspace(
   connection: string,
   provider?: KeyProviderPort,
 ) {
-  const { db, root } = campusInput(connection, provider);
+  const db = new Kysely<DB>({
+    dialect: new PostgresDialect({ pool: vnextPool(connection) }),
+  });
+  const root = <T>(work: (scope: CatalogTransactionScope) => Promise<T>) =>
+    db.transaction().execute(async (transaction) => {
+      await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);
+      return work(CatalogTransactionScope.from(transaction));
+    });
   const department = openDepartment(connection, provider);
   const hierarchy = openHierarchy(connection, provider);
   const mapping = openOrganizationMappings(connection, provider),
