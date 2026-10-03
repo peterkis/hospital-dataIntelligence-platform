@@ -299,7 +299,6 @@ export function DepartmentDomainWorkspace({
   const alive = useRef(true),
     generation = useRef(0),
     pendingSave = useRef<DepartmentWorkspaceDraft | null>(null),
-    acceptedSaveRequest = useRef<string | null>(null),
     pendingSubmit = useRef<{
       id: string;
       expectedVersion: string;
@@ -736,6 +735,8 @@ export function DepartmentDomainWorkspace({
   };
   const save = () =>
     run(async () => {
+      // A retained request may already have committed even if its response was lost.
+      const retrying = pendingSave.current !== null;
       pendingSave.current ??= {
         ...structuredClone(draft),
         payload: fixedForm(
@@ -745,20 +746,17 @@ export function DepartmentDomainWorkspace({
         ...(saved ? { id: saved.id, expectedVersion: saved.version } : {}),
       };
       sessionStorage.setItem(recoveryKey, pendingSave.current.requestId);
-      const requestId = pendingSave.current.requestId;
-      let accepted = acceptedSaveRequest.current === requestId;
+      let accepted = retrying;
       try {
         const written = await value(workspace.save(pendingSave.current));
         accepted = true;
         if (!alive.current) return;
-        acceptedSaveRequest.current = requestId;
         const restored = await value(workspace.read(written.id));
         if (!alive.current) return;
         setSaved(restored);
         setDirty(false);
         remember(written.id);
         pendingSave.current = null;
-        acceptedSaveRequest.current = null;
         sessionStorage.removeItem(recoveryKey);
         setMessage("私有草稿已保存，刷新可恢复。");
         await load();
@@ -773,6 +771,7 @@ export function DepartmentDomainWorkspace({
   const submit = () =>
     run(async () => {
       if (!saved || dirty) throw new Error("请先保存当前内容。");
+      const retrying = pendingSubmit.current !== null;
       pendingSubmit.current ??= {
         id: saved.id,
         expectedVersion: saved.version,
@@ -782,7 +781,7 @@ export function DepartmentDomainWorkspace({
         submitRecoveryKey,
         JSON.stringify(pendingSubmit.current),
       );
-      let accepted = false;
+      let accepted = retrying;
       try {
         const submitted = await value(workspace.submit(pendingSubmit.current));
         accepted = true;
@@ -797,7 +796,7 @@ export function DepartmentDomainWorkspace({
         sessionStorage.removeItem(submitRecoveryKey);
         setMessage("已提交到现有领域核验流程。");
       } catch (error) {
-        if (!accepted && definiteFailure(error)) {
+        if (alive.current && !accepted && definiteFailure(error)) {
           pendingSubmit.current = null;
           sessionStorage.removeItem(submitRecoveryKey);
         }
@@ -903,6 +902,7 @@ export function DepartmentDomainWorkspace({
         throw new Error("当前身份没有此维护权限。");
       if (approval && (!ack || !approvalBound))
         throw new Error("请先读取准确候选或案件并核对内容。");
+      const retrying = pendingOperation.current !== null;
       pendingOperation.current ??= {
         operation,
         body: record(
@@ -917,7 +917,7 @@ export function DepartmentDomainWorkspace({
           recoveryKey,
           String(pendingOperation.current.body["requestId"]),
         );
-      let acceptedFile = false;
+      let acceptedFile = retrying && mutation;
       try {
         const output = await execute(
           pendingOperation.current.operation,
@@ -963,7 +963,7 @@ export function DepartmentDomainWorkspace({
         if (mutation) await load();
         setMessage("操作已完成，以下为服务端持久化结果。");
       } catch (error) {
-        if (!acceptedFile && definiteFailure(error)) {
+        if (alive.current && !acceptedFile && definiteFailure(error)) {
           pendingOperation.current = null;
           if (operation === "receiveHierarchyWorkspaceFile")
             sessionStorage.removeItem(recoveryKey);

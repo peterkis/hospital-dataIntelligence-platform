@@ -138,7 +138,6 @@ export function DepartmentWorkspaceApp() {
   }, []);
   const epoch = useRef(0),
     pendingSave = useRef<Draft | null>(null),
-    acceptedSaveRequest = useRef<string | null>(null),
     pendingSubmit = useRef<{
       id: string;
       expectedVersion: string;
@@ -208,7 +207,6 @@ export function DepartmentWorkspaceApp() {
       setAcknowledged(false);
       setDirty(false);
       pendingSave.current = null;
-      acceptedSaveRequest.current = null;
       if (
         pending?.id === id &&
         pending.expectedVersion === record.version &&
@@ -245,7 +243,6 @@ export function DepartmentWorkspaceApp() {
       setSaved(null);
       setDirty(false);
       pendingSave.current = null;
-      acceptedSaveRequest.current = null;
       pendingSubmit.current = null;
       remember(undefined, item.inputId);
     });
@@ -265,7 +262,6 @@ export function DepartmentWorkspaceApp() {
     setSources([]);
     setHistories([]);
     pendingSave.current = null;
-    acceptedSaveRequest.current = null;
     pendingSubmit.current = null;
     setRecoverId(
       panel === "DEPARTMENT" ? sessionStorage.getItem(recoveryKey) : null,
@@ -402,18 +398,18 @@ export function DepartmentWorkspaceApp() {
   const save = () =>
     run(async () => {
       const generation = epoch.current;
+      // A retained request may already have committed even if its response was lost.
+      const retrying = pendingSave.current !== null;
       pendingSave.current ??= {
         ...structuredClone(draft),
         ...(saved ? { id: saved.id, expectedVersion: saved.version } : {}),
       };
       sessionStorage.setItem(recoveryKey, pendingSave.current.requestId);
-      const requestId = pendingSave.current.requestId;
-      let accepted = acceptedSaveRequest.current === requestId;
+      let accepted = retrying;
       try {
         const result = await value(workspace().save(pendingSave.current));
         accepted = true;
         if (generation !== epoch.current) return;
-        acceptedSaveRequest.current = requestId;
         const restored = await value(workspace().read(result.id));
         if (generation !== epoch.current) return;
         if (restored.content.kind !== "DEPARTMENT")
@@ -423,7 +419,6 @@ export function DepartmentWorkspaceApp() {
         setDirty(false);
         remember(restored.id);
         pendingSave.current = null;
-        acceptedSaveRequest.current = null;
         sessionStorage.removeItem(recoveryKey);
         setMessage("草稿已保存，可刷新恢复。尚未形成科室事实。");
         await reload(generation);
@@ -443,6 +438,7 @@ export function DepartmentWorkspaceApp() {
     run(async () => {
       if (!saved || dirty) throw new Error("请先保存当前内容。");
       const generation = epoch.current;
+      const retrying = pendingSubmit.current !== null;
       pendingSubmit.current ??= {
         id: saved.id,
         expectedVersion: saved.version,
@@ -458,7 +454,11 @@ export function DepartmentWorkspaceApp() {
         result = await value(workspace().submit(pendingSubmit.current));
         accepted = true;
       } catch (error) {
-        if (definiteFailure(error)) {
+        if (
+          generation === epoch.current &&
+          !retrying &&
+          definiteFailure(error)
+        ) {
           pendingSubmit.current = null;
           sessionStorage.removeItem(submitRecoveryKey);
         }

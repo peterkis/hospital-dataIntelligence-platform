@@ -51,3 +51,7 @@ PR #27 首轮云端审查针对 `de8e22c` 提出三项修复：补全演化／�
 首轮 Linux CI 的业务、浏览器与升级步骤通过，当前契约步骤因缺少本地生成器失败。生成器锁定在 `tooling/openapi-generator`：openapi-typescript 7.13.0 与其 TypeScript 5.9.3 peer，应用编译器保留 TypeScript 7.0.2；不依赖机器缓存。当前 API/client/form 门禁及迁移单元复验通过，远端最终 head 的 CI 和 Codex 复审另行记录，不把首轮失败记作通过。
 
 `b48ff15` 的 Standards 复审无问题，Spec 复审指出已接受保存的重试遇到 403 时会清除恢复标识。实际浏览器复现后，两类页面均按原请求 UUID 保留已接受状态，准确读取前继续锁定。科室实际保存后阻断读取，再由临时浏览器 Fetch 边界注入重试 403；修复前字段可编辑，修复后字段、新建和切换保持禁用。刷新后恢复原草稿 `01a103bf-dffc-727c-aca9-04b82f6c9180` v4；通用层级页面相同场景恢复原 v1。403 是明确标记的测试注入，原保存及恢复仍使用真实 HTTP/PostgreSQL。证据 `browser-accepted-retry-{red,green,recovered}.png`、`browser-generic-accepted-retry-{green,recovered}.png`、`browser-accepted-retry.log`；当前 UI 类型检查及 vNext 构建通过，临时接口拦截和服务已清理。
+
+`001b991` 两轴复审进一步发现 ACK 丢失时仍需保留未知结果。最终客户端直接使用保留的原 pending 请求区分首次明确拒绝与结果未知的重试；收到 200 和未收到响应两种情况都保留原身份，准确读取后解锁。相同规则用于提交和有限维护操作／层级文件接收，防止重试拒绝消除先前未知结果。实际浏览器在服务端 save 已返回 200 的 Response 阶段关闭连接，再在重试 Request 阶段注入 403，完成 RED／GREEN；科室恢复准确 ID `01a103c7-6f2d-717f-aff0-01b3733ddbe7` v1，层级恢复 `01a103c7-d1ef-797f-9257-2a85b10f2161` v1，均未再保存。首次明确 403 的对照仍可编辑且没有恢复标记。证据 `browser-ackloss-retry-{red,green,recovered}.png`、`browser-generic-ackloss-retry-{green,recovered}.png`、`browser-ackloss-retry.log`、`ackloss-retry-typecheck.log`、`ackloss-retry-build.log`；连接关闭和 403 均为浏览器边界的测试注入。
+
+持久研发库 OID206108 的 0145→0146 前向升级、当前类型与实际 HTTP 私有草稿原请求恢复通过；原行、密钥和迁移账本保留，别名仍按当前权限拒绝，不扩大 actor 授权。证据 `persistent-146-deploy.log`、`deployment-1791064516628.{preservation,http}.json`；包装器 ready／targetExitCode 0／cleanupPassed true。0001–0146 现均已安装，之后数据库修复必须另加迁移。正式验收与 FULL 状态不变。
