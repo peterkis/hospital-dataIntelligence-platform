@@ -58,9 +58,35 @@ type StaticTemplate = Static<typeof HierarchyWorkspaceTemplateSchema>;
 function metadata(
   input: SaveDepartmentDraft,
   submission?: DepartmentDraftSubmission | null,
-  legacyReferences = false,
+  projection: 145 | 146 | 147 = 147,
 ) {
+  const legacyReferences = projection === 145;
   const references: Array<{ owner: string; id: string }> = [];
+  const contractRefs: Array<{
+    contractId?: string;
+    contractVersionId?: string;
+  }> = [];
+  const groupRefs: Array<{ groupId?: string; groupVersionId?: string }> = [];
+  const departmentVersions: Array<{
+    departmentId?: string;
+    versionId: string;
+  }> = [];
+  const addContract = (contractId: unknown, contractVersionId: unknown) => {
+    const ref: { contractId?: string; contractVersionId?: string } = {};
+    if (typeof contractId === "string") {
+      check(Id, contractId);
+      ref.contractId = contractId;
+    }
+    if (typeof contractVersionId === "string") {
+      check(Id, contractVersionId);
+      ref.contractVersionId = contractVersionId;
+    }
+    if (
+      Object.keys(ref).length &&
+      !contractRefs.some((prior) => canonicalPlan(prior) === canonicalPlan(ref))
+    )
+      contractRefs.push(ref);
+  };
   const namespaces: Array<{ source: string; entity: string; context: string }> =
       [],
     schemes: string[] = [];
@@ -78,6 +104,83 @@ function metadata(
     }
     if (!value || typeof value !== "object") return;
     const item = value as Record<string, unknown>;
+    if (projection === 147) {
+      const embedded = (key: string, owner: string) => {
+        const ref = item[key];
+        if (ref && typeof ref === "object")
+          add(owner, (ref as Record<string, unknown>)["id"]);
+      };
+      if (["DEPARTMENT", "EVOLUTION"].includes(input.kind))
+        embedded("target", "department-master");
+      if (input.kind === "MAPPING")
+        embedded("mapping", "department-master/organization-mapping");
+      if (input.kind === "IDENTIFIER")
+        embedded("identifier", "department-master/organization-identifier");
+      if (["EVOLUTION", "LIFECYCLE"].includes(input.kind)) {
+        embedded("department", "department-master");
+        embedded("subject", "organization-master");
+        embedded("campus", "organization-master/campus");
+      }
+      for (const key of [
+        "evidenceId",
+        "decisionEvidenceId",
+        "migrationEvidenceId",
+        "contextEvidenceId",
+        "sourceArtifactId",
+      ])
+        add("governance-catalog/registration-evidence", item[key]);
+      if (input.kind === "IMPACT") {
+        const result = item["result"] as Record<string, unknown> | undefined;
+        if (
+          result?.["id"] &&
+          ![
+            "SOURCE_MAPPING",
+            "IDENTIFIER",
+            "HIERARCHY",
+            "CAMPUS_RELATION",
+          ].includes(String(result["owner"]))
+        )
+          throw new Error("CLOSED_INPUT_REQUIRED");
+      }
+      if (
+        typeof item["target_id"] === "string" &&
+        !["ORG", "LEGAL", "CAMPUS"].includes(String(item["target_type"]))
+      )
+        throw new Error("CLOSED_INPUT_REQUIRED");
+      if (
+        input.kind === "IMPACT" &&
+        [
+          "SOURCE_MAPPING",
+          "IDENTIFIER",
+          "HIERARCHY",
+          "CAMPUS_RELATION",
+        ].includes(String(item["owner"]))
+      )
+        add(String(item["owner"]), item["id"]);
+      if (input.kind === "HIERARCHY")
+        addContract(item["contractId"], item["contractVersionId"]);
+      if (input.kind === "HIERARCHY") {
+        const groupRef: { groupId?: string; groupVersionId?: string } = {};
+        for (const key of ["groupId", "groupVersionId"] as const) {
+          const id = item[key];
+          if (typeof id === "string") {
+            check(Id, id);
+            groupRef[key] = id;
+          }
+        }
+        if (Object.keys(groupRef).length) groupRefs.push(groupRef);
+        const versionId = item["departmentVersionId"];
+        if (typeof versionId === "string") {
+          check(Id, versionId);
+          departmentVersions.push({
+            versionId,
+            ...(typeof item["departmentId"] === "string"
+              ? { departmentId: item["departmentId"] }
+              : {}),
+          });
+        }
+      }
+    }
     if (
       [
         "department-master",
@@ -142,6 +245,30 @@ function metadata(
     Object.values(item).forEach(visit);
   };
   visit(input.payload);
+  if (projection === 147) {
+    if (input.transport)
+      addContract(
+        input.transport.contractId,
+        input.transport.contractVersionId,
+      );
+    if (input.kind === "EVOLUTION") {
+      const predecessors = input.payload["predecessors"];
+      if (Array.isArray(predecessors))
+        for (const predecessor of predecessors)
+          add(
+            "department-master",
+            (predecessor as Record<string, unknown>)["id"],
+          );
+      const contracts = input.payload["contracts"] as
+        Record<string, unknown> | undefined;
+      if (contracts)
+        for (const prefix of ["succession", "department"])
+          addContract(
+            contracts[prefix + "ContractId"],
+            contracts[prefix + "ContractVersionId"],
+          );
+    }
+  }
   if (submission?.kind === "HIERARCHY")
     add("department-master/hierarchy-view", submission.viewId);
   return {
@@ -152,7 +279,35 @@ function metadata(
     schemes,
     hasAttachment: !!input.attachment,
     ...(input.transport ? { transport: input.transport } : {}),
+    ...(projection === 147 && contractRefs.length ? { contractRefs } : {}),
+    ...(projection === 147 && groupRefs.length ? { groupRefs } : {}),
+    ...(projection === 147 && departmentVersions.length
+      ? { departmentVersions }
+      : {}),
   };
+}
+function metadataBinding(value: ReturnType<typeof metadata>): string {
+  const projected: Record<string, unknown> = { ...value };
+  // Authorization references are multisets; payload command/node order remains MAC-bound.
+  for (const key of [
+    "references",
+    "namespaces",
+    "schemes",
+    "contractRefs",
+    "groupRefs",
+    "departmentVersions",
+  ]) {
+    const refs = projected[key];
+    if (refs === undefined) continue;
+    if (!Array.isArray(refs)) throw new Error("PAYLOAD_UNAVAILABLE");
+    projected[key] = refs
+      .map((ref) => ({ ref, key: canonicalPlan(ref) }))
+      .sort((left, right) =>
+        left.key < right.key ? -1 : left.key > right.key ? 1 : 0,
+      )
+      .map(({ ref }) => ref);
+  }
+  return canonicalPlan(projected);
 }
 interface Stored extends DepartmentDraftSaved {
   digest: string;
@@ -197,10 +352,12 @@ export function openDepartmentWorkspace(
           state: record.state,
           input: content,
         }) !== record.digest ||
-        (canonicalPlan(metadata(content, record.submission)) !==
-          canonicalPlan(record.metadata) &&
-          canonicalPlan(metadata(content, record.submission, true)) !==
-            canonicalPlan(record.metadata))
+        !([147, 146, 145] as const).some(
+          (projection) =>
+            metadataBinding(
+              metadata(content, record.submission, projection),
+            ) === metadataBinding(record.metadata),
+        )
       )
         throw new Error("PAYLOAD_UNAVAILABLE");
       return content;
@@ -214,7 +371,7 @@ export function openDepartmentWorkspace(
     state: DepartmentDraftSaved["state"],
   ) => {
     check(SaveDepartmentDraftSchema, input);
-    input = structuredClone(input);
+    input = JSON.parse(canonicalPlan(input)) as SaveDepartmentDraft;
     const digest = planBinding(provider, "DEPARTMENT_WORKSPACE_DRAFT_V1", {
         state,
         input,

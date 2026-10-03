@@ -20,6 +20,7 @@ import { actor } from "../../apps/governance-api/src/platform/fastify/vnext-cata
 import { peer, quote } from "./lineage.mjs";
 import { textSheetsWorkbook } from "../../apps/governance-api/src/modules/governance-catalog/index.js";
 import { evolutionFixture } from "./p2-05-fixture.js";
+import { operatingScenario } from "./operating-scenario.js";
 import { createDepartmentTestServer } from "./p2-07-http.mjs";
 
 const connection = process.env["VNEXT_VALIDATION_OWNER_URL"]!,
@@ -51,9 +52,9 @@ test("P2-07 actual multi-Owner HTTP initialization stays within the unchanged ei
   expect(
     peer(
       receipt.name,
-      `SELECT has_function_privilege(${quote(role)},'governance_catalog.department_workspace_application(uuid,uuid)','EXECUTE'),has_function_privilege(${quote(role)},'governance_catalog.department_workspace_impact_access(text,uuid,text,text,uuid,text)','EXECUTE');`,
+      `SELECT has_function_privilege(${quote(role)},'governance_catalog.department_workspace_application(uuid,uuid)','EXECUTE'),has_function_privilege(${quote(role)},'governance_catalog.department_workspace_impact_access(text,uuid,text,text,uuid,text)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_impact_result_access(text,text,uuid,text)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_hierarchy_group_access(text,jsonb)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_department_version_access(text,jsonb)','EXECUTE');`,
     ).trim(),
-  ).toBe("f|f");
+  ).toBe("f|f|f|f|f");
   const server = await createDepartmentTestServer(connection, provider);
   try {
     const url = await server.app.listen({ host: "127.0.0.1", port: 0 }),
@@ -222,6 +223,561 @@ test("P2-07 private draft rejects mismatched contract pairs and unknown lifecycl
       },
     }),
   ).rejects.toThrow("NOT_FOUND");
+});
+test("P2-07 private evolution companion contracts and hierarchy dependencies reauthorize exact pairs", async () => {
+  const receipt = JSON.parse(
+    readFileSync(process.env["VNEXT_TEST_RECEIPT"]!, "utf8"),
+  );
+  for (const prefix of ["succession", "department"] as const) {
+    const policy =
+      prefix === "succession"
+        ? domainFixture.successionContract
+        : fixture.contract;
+    const draft = {
+      requestId: randomUUID(),
+      kind: "EVOLUTION" as const,
+      campus: "NORTH" as const,
+      payload: {
+        contracts: {
+          [prefix + "ContractId"]: policy.id,
+          [prefix + "ContractVersionId"]: policy.versionId,
+        },
+      },
+    };
+    const saved = await owner.saveDraft("maker", draft);
+    expect((await owner.readDraft("maker", { id: saved.id })).content).toEqual(
+      draft,
+    );
+    expect
+      .soft(
+        await owner
+          .saveDraft("maker", {
+            ...draft,
+            requestId: randomUUID(),
+            payload: {
+              contracts: {
+                [prefix + "ContractId"]: policy.id,
+                [prefix + "ContractVersionId"]:
+                  domainFixture.eventContract.versionId,
+              },
+            },
+          })
+          .then(
+            () => "ALLOWED",
+            (error: Error) => error.message,
+          ),
+      )
+      .toBe("CLOSED_INPUT_REQUIRED");
+    const datasetId = peer(
+      receipt.name,
+      `SELECT dataset_id FROM governance_catalog.import_contract WHERE id=${quote(policy.id)}::uuid;`,
+    ).trim();
+    const grants = peer(
+      receipt.name,
+      `SELECT coalesce(jsonb_agg(to_jsonb(g)), '[]') FROM vnext_control.object_grant g WHERE actor_code='maker' AND object_id=${quote(datasetId)}::uuid AND permission='READ';`,
+    ).trim();
+    peer(
+      receipt.name,
+      `DELETE FROM vnext_control.object_grant WHERE actor_code='maker' AND object_id=${quote(datasetId)}::uuid AND permission='READ';`,
+    );
+    try {
+      await expect(
+        catalog.contractRead("maker", {
+          scope: "SYNTHETIC",
+          mode: "HISTORY",
+          target: policy.id,
+          versionId: policy.versionId,
+        }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner.readDraft("maker", { id: saved.id }).then(
+            () => "ALLOWED",
+            (error: Error) => error.message,
+          ),
+        )
+        .toBe("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner
+            .recoverDraft("maker", { requestId: draft.requestId })
+            .then(
+              () => "ALLOWED",
+              (error: Error) => error.message,
+            ),
+        )
+        .toBe("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner
+            .saveDraft("maker", { ...draft, requestId: randomUUID() })
+            .then(
+              () => "ALLOWED",
+              (error: Error) => error.message,
+            ),
+        )
+        .toBe("ACCESS_DENIED");
+    } finally {
+      peer(
+        receipt.name,
+        `INSERT INTO vnext_control.object_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.object_grant,${quote(grants)}::jsonb) ON CONFLICT DO NOTHING;`,
+      );
+    }
+    expect(
+      (await owner.recoverDraft("maker", { requestId: draft.requestId }))?.id,
+    ).toBe(saved.id);
+    for (const field of [prefix + "ContractId", prefix + "ContractVersionId"]) {
+      await owner.saveDraft("maker", {
+        ...draft,
+        requestId: randomUUID(),
+        payload: {
+          contracts: {
+            [field]: field.endsWith("VersionId") ? policy.versionId : policy.id,
+          },
+        },
+      });
+    }
+  }
+  expect
+    .soft(
+      await owner
+        .saveDraft("maker", {
+          requestId: randomUUID(),
+          kind: "HIERARCHY",
+          campus: "NORTH",
+          payload: {
+            dependencies: [
+              {
+                dataset: "ORG05",
+                contractId: fixture.contract.id,
+                contractVersionId: domainFixture.eventContract.versionId,
+              },
+            ],
+          },
+        })
+        .then(
+          () => "ALLOWED",
+          (error: Error) => error.message,
+        ),
+    )
+    .toBe("CLOSED_INPUT_REQUIRED");
+});
+test("P2-07 partial fixed-owner and protected-evidence references cannot omit authorization", async () => {
+  const id = randomUUID();
+  const cases = [
+    ["DEPARTMENT", { entries: [{ target: { id } }] }],
+    [
+      "HIERARCHY",
+      { nodes: [{ nodeKind: "DEPARTMENT", departmentVersionId: id }] },
+    ],
+    ["MAPPING", { entries: [{ mapping: { id } }] }],
+    ["EVOLUTION", { predecessors: [{ id }] }],
+    ["EVOLUTION", { successors: [{ target: { id } }] }],
+    ["EVOLUTION", { campusChanges: [{ subject: { id } }] }],
+    ["LIFECYCLE", { commands: [{ department: { id } }] }],
+    [
+      "LIFECYCLE",
+      { commands: [{ destination: { campus: { id }, subject: { id } } }] },
+    ],
+    ["DEPARTMENT", { entries: [{ evidenceId: id }] }],
+    ["EVOLUTION", { decisionEvidenceId: id }],
+    ["LIFECYCLE", { commands: [{ evidenceId: id }] }],
+    ["IMPACT", { disposition: { kind: "KEEP_HISTORY", evidenceId: id } }],
+  ] as const;
+  for (const [kind, payload] of cases) {
+    expect
+      .soft(
+        await owner
+          .saveDraft("maker", {
+            requestId: randomUUID(),
+            kind,
+            campus: "NORTH",
+            payload,
+          })
+          .then(
+            () => "ALLOWED",
+            () => "DENIED",
+          ),
+        kind + JSON.stringify(payload),
+      )
+      .toBe("DENIED");
+  }
+});
+test("P2-07 existing identifier and mapping result drafts follow exact Owner READ revocation", async () => {
+  const receipt = JSON.parse(
+    readFileSync(process.env["VNEXT_TEST_RECEIPT"]!, "utf8"),
+  );
+  const identifier = openOrganizationIdentifiers(connection, provider),
+    mapping = openOrganizationMappings(connection, provider);
+  try {
+    const input = await domainFixture.identifierInput(
+        domainFixture.targetId,
+        "2026-01-01T00:00:00",
+      ),
+      entry = input.entries[0]!;
+    const staged = await identifier.stage("maker", input);
+    await identifier.verify("reviewer", {
+      requestId: randomUUID(),
+      inputId: staged.inputId,
+      inputDigest: staged.digest,
+      rows: [
+        {
+          row: 1,
+          reason: "SYNTHETIC independent exact identifier",
+          evidenceId: entry.evidenceId,
+          policyApproved: true,
+        },
+      ],
+    });
+    const requestId = randomUUID(),
+      candidate = await identifier.plan("maker", {
+        inputId: staged.inputId,
+        requestId,
+      });
+    await identifier.readApplyCandidate("reviewer", {
+      candidateId: candidate.candidateId,
+    });
+    await identifier.approveApplyUnit("reviewer", candidate);
+    const applied = await identifier.applyUnit("maker", {
+      candidateId: candidate.candidateId,
+      requestId,
+    });
+    if (applied.status !== "COMMITTED")
+      throw new Error("COMMITTED_RESULT_REQUIRED");
+    const id = applied.facts[0]!.id;
+    const requests = [
+      {
+        requestId: randomUUID(),
+        kind: "IDENTIFIER" as const,
+        campus: "NORTH" as const,
+        payload: { entries: [{ identifier: { id } }] },
+      },
+      {
+        requestId: randomUUID(),
+        kind: "IMPACT" as const,
+        campus: "NORTH" as const,
+        payload: {
+          disposition: {
+            kind: "CLOSE_RELATION",
+            result: { owner: "IDENTIFIER", id },
+          },
+        },
+      },
+    ];
+    const saved = [];
+    for (const request of requests) {
+      const written = await owner.saveDraft("maker", request);
+      expect(
+        (await owner.readDraft("maker", { id: written.id })).content,
+      ).toEqual(request);
+      saved.push({ id: written.id, requestId: request.requestId });
+    }
+    peer(
+      receipt.name,
+      `DELETE FROM department_master.identifier_access WHERE actor='maker' AND scheme=${quote(entry.row.identifier_system)} AND campus='NORTH' AND permission='READ';`,
+    );
+    try {
+      await expect(
+        identifier.history("maker", { id, campus: "NORTH" }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      for (const draft of saved) {
+        await expect(
+          owner.readDraft("maker", { id: draft.id }),
+        ).rejects.toThrow("ACCESS_DENIED");
+        await expect(
+          owner.recoverDraft("maker", { requestId: draft.requestId }),
+        ).rejects.toThrow("ACCESS_DENIED");
+      }
+    } finally {
+      peer(
+        receipt.name,
+        `INSERT INTO department_master.identifier_access VALUES('maker',${quote(entry.row.identifier_system)},'NORTH','READ') ON CONFLICT DO NOTHING;`,
+      );
+    }
+    const row = domainFixture.entry();
+    row.row.source_context = "P207_" + randomUUID();
+    domainFixture.grantNamespace(
+      row.row.from_system_id,
+      row.row.source_context,
+    );
+    const mappingStage = await mapping.stage(
+      "maker",
+      await domainFixture.mappingInput([row]),
+    );
+    await mapping.verify("reviewer", {
+      requestId: randomUUID(),
+      inputId: mappingStage.inputId,
+      inputDigest: mappingStage.digest,
+      rows: [
+        {
+          row: 1,
+          reason: "SYNTHETIC independent exact mapping",
+          evidenceId: row.evidenceId,
+          contextApproved: true,
+          sourceKeyReuse: false,
+        },
+      ],
+    });
+    const mappingRequest = randomUUID(),
+      mappingCandidate = await mapping.plan("maker", {
+        inputId: mappingStage.inputId,
+        requestId: mappingRequest,
+      });
+    await mapping.readApplyCandidate("reviewer", {
+      candidateId: mappingCandidate.candidateId,
+    });
+    await mapping.approveApplyUnit("reviewer", mappingCandidate);
+    const mappingApplied = await mapping.applyUnit("maker", {
+      candidateId: mappingCandidate.candidateId,
+      requestId: mappingRequest,
+    });
+    if (mappingApplied.status !== "COMMITTED")
+      throw new Error("COMMITTED_RESULT_REQUIRED");
+    const mappingId = mappingApplied.facts[0]!.id;
+    const original = {
+      requestId: randomUUID(),
+      kind: "IMPACT" as const,
+      campus: "NORTH" as const,
+      payload: {
+        disposition: {
+          kind: "NEW_RELATION",
+          result: { owner: "SOURCE_MAPPING", id: mappingId },
+        },
+      },
+    };
+    const stored = await owner.saveDraft("maker", original);
+    expect((await owner.readDraft("maker", { id: stored.id })).content).toEqual(
+      original,
+    );
+    peer(
+      receipt.name,
+      `DELETE FROM department_master.mapping_access WHERE actor='maker' AND from_system_id=${quote(row.row.from_system_id)}::uuid AND entity_type=${quote(row.row.source_entity_type)} AND context=${quote(row.row.source_context)} AND campus='NORTH' AND permission='READ';`,
+    );
+    try {
+      await expect(mapping.history("maker", mappingId)).rejects.toThrow(
+        "ACCESS_DENIED",
+      );
+      await expect(owner.readDraft("maker", { id: stored.id })).rejects.toThrow(
+        "ACCESS_DENIED",
+      );
+      await expect(
+        owner.recoverDraft("maker", { requestId: original.requestId }),
+      ).rejects.toThrow("ACCESS_DENIED");
+    } finally {
+      domainFixture.grantNamespace(
+        row.row.from_system_id,
+        row.row.source_context,
+      );
+    }
+  } finally {
+    await identifier.close();
+    await mapping.close();
+  }
+});
+test("P2-07 private evidence reference is denied after actual material READ revocation", async () => {
+  const receipt = JSON.parse(
+    readFileSync(process.env["VNEXT_TEST_RECEIPT"]!, "utf8"),
+  );
+  const original = {
+    requestId: randomUUID(),
+    kind: "DEPARTMENT" as const,
+    campus: "NORTH" as const,
+    payload: { entries: [{ evidenceId: fixture.artifact.artifactId }] },
+  };
+  const saved = await owner.saveDraft("maker", original);
+  expect((await owner.readDraft("maker", { id: saved.id })).content).toEqual(
+    original,
+  );
+  peer(
+    receipt.name,
+    `DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(fixture.dataset.id)}::uuid AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`,
+  );
+  try {
+    await expect(
+      catalog.authorizeSensitiveRead("maker", {
+        scope: "SYNTHETIC",
+        campus: "NORTH",
+        purpose: "IDENTITY_VERIFY",
+        requestId: randomUUID(),
+        artifactId: fixture.artifact.artifactId,
+      }),
+    ).rejects.toThrow("ACCESS_DENIED");
+    await expect(owner.readDraft("maker", { id: saved.id })).rejects.toThrow(
+      "ACCESS_DENIED",
+    );
+    await expect(
+      owner.recoverDraft("maker", { requestId: original.requestId }),
+    ).rejects.toThrow("ACCESS_DENIED");
+  } finally {
+    peer(
+      receipt.name,
+      `INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(fixture.dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ') ON CONFLICT DO NOTHING;`,
+    );
+  }
+  expect(
+    (await owner.recoverDraft("maker", { requestId: original.requestId }))?.id,
+  ).toBe(saved.id);
+});
+test("P2-07 SOUTH private impact draft authorizes its actual NORTH campus relation", async () => {
+  const receipt = JSON.parse(
+    readFileSync(process.env["VNEXT_TEST_RECEIPT"]!, "utf8"),
+  );
+  // Existing P2-08 fixture ports, granted only to this owned validation role.
+  const role = new URL(connection).username.replaceAll('"', '""');
+  peer(
+    receipt.name,
+    `GRANT EXECUTE ON FUNCTION governance_catalog.operating_catalog(text,jsonb,timestamp,timestamp,timestamp),governance_catalog.department_lifecycle_assessment(text,text) TO "${role}";`,
+  );
+  const lifecycle = openDepartmentLifecycle(connection, provider),
+    scenario = await operatingScenario(receipt, connection, provider, catalog);
+  try {
+    const departmentId = await domainFixture.newDepartment(),
+      subject = await scenario.createSubject(),
+      campus = await scenario.createCampus("SYNTHETIC P207 referenced campus");
+    domainFixture.grantTarget(departmentId);
+    await scenario.activateCampus(campus);
+    scenario.grantPair(subject.id, campus.id);
+    const license = await scenario.addLicense(subject),
+      services = ["DEMO_MEDICAL_A"],
+      scope = await scenario.verifyScope(subject, campus, license, services);
+    await scenario.operatingApply({
+      ...scenario.common,
+      ...scenario.endpoints(subject, campus),
+      action: "ESTABLISH",
+      evidence: scenario.artifact.artifactId,
+      facts: {
+        role: "OPERATOR",
+        relationTypeText: "SYNTHETIC operator",
+        primary: "Y",
+        catalog: scenario.codeSet.reference,
+        services,
+        scopeTargets: [scope],
+        licenseScopeText: "SYNTHETIC explicit scope",
+      },
+    });
+    const job = await fixture.input(),
+      evolutionInput = await domainFixture.input();
+    const input = await lifecycle.stage("maker", {
+      requestId: randomUUID(),
+      jobId: job.jobId,
+      revisionId: job.revisionId,
+      campus: "NORTH",
+      profile: "CORE",
+      commands: [
+        {
+          action: "ASSIGN",
+          department: {
+            owner: "department-master",
+            id: departmentId,
+            expectedVersion: "1",
+            expectedLifecycleHead: "0",
+          },
+          ...scenario.endpoints(subject, campus),
+          services,
+          validFrom: "2026-01-01T00:00:00",
+          validTo: null,
+          reason: "SYNTHETIC exact relation",
+          evidenceId: fixture.artifact.artifactId,
+        },
+      ],
+      impacts: evolutionInput.impacts,
+    });
+    await lifecycle.verify("reviewer", {
+      requestId: randomUUID(),
+      inputId: input.inputId,
+      inputDigest: input.digest,
+      reason: "SYNTHETIC independent relation",
+      policyApproved: true,
+      materialsAccepted: true,
+      impactReviews: domainFixture.impactReviews,
+    });
+    const requestId = randomUUID(),
+      candidate = await lifecycle.plan("maker", {
+        inputId: input.inputId,
+        requestId,
+      });
+    await lifecycle.readApplyCandidate("reviewer", {
+      candidateId: candidate.candidateId,
+    });
+    await lifecycle.approveApplyUnit("reviewer", candidate);
+    expect(
+      (
+        await lifecycle.applyUnit("maker", {
+          candidateId: candidate.candidateId,
+          requestId,
+        })
+      ).status,
+    ).toBe("COMMITTED");
+    const relation = (await lifecycle.history("maker", { id: departmentId }))
+      .relations[0]!;
+    peer(
+      receipt.name,
+      "INSERT INTO department_master.access SELECT actor,'SOUTH',permission FROM department_master.access WHERE scope='NORTH' AND permission IN ('READ','WRITE','READ_RESTRICTED') ON CONFLICT DO NOTHING;",
+    );
+    const original = {
+      requestId: randomUUID(),
+      kind: "IMPACT" as const,
+      campus: "SOUTH" as const,
+      payload: {
+        disposition: {
+          kind: "CLOSE_RELATION",
+          result: { owner: "CAMPUS_RELATION", id: relation.id },
+        },
+      },
+    };
+    const saved = await owner.saveDraft("maker", original);
+    expect((await owner.readDraft("maker", { id: saved.id })).content).toEqual(
+      original,
+    );
+    expect(
+      (await owner.recoverDraft("maker", { requestId: original.requestId }))
+        ?.id,
+    ).toBe(saved.id);
+    peer(
+      receipt.name,
+      `DELETE FROM organization_master.operating_access WHERE actor='maker' AND subject_id=${quote(subject.id)}::uuid AND campus_id=${quote(campus.id)}::uuid AND permission='READ';`,
+    );
+    try {
+      await expect(
+        lifecycle.history("maker", { id: departmentId }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      await expect(owner.readDraft("maker", { id: saved.id })).rejects.toThrow(
+        "ACCESS_DENIED",
+      );
+      await expect(
+        owner.recoverDraft("maker", { requestId: original.requestId }),
+      ).rejects.toThrow("ACCESS_DENIED");
+    } finally {
+      scenario.grantPair(subject.id, campus.id);
+    }
+    expect((await owner.readDraft("maker", { id: saved.id })).content).toEqual(
+      original,
+    );
+  } finally {
+    await lifecycle.close();
+    await scenario.close();
+  }
+});
+test("P2-07 private reference binding survives caller object-key order", async () => {
+  const other = await domainFixture.newDepartment();
+  const request = {
+    requestId: randomUUID(),
+    kind: "EVOLUTION" as const,
+    campus: "NORTH" as const,
+    payload: {
+      successors: [{ target: { owner: "department-master", id: other } }],
+      predecessors: [
+        { owner: "department-master", id: domainFixture.targetId },
+      ],
+    },
+  };
+  const saved = await owner.saveDraft("maker", request);
+  expect((await owner.readDraft("maker", { id: saved.id })).content).toEqual(
+    request,
+  );
+  expect(
+    (await owner.recoverDraft("maker", { requestId: request.requestId }))?.id,
+  ).toBe(saved.id);
 });
 test("P2-07 private partial draft persists without staging a business command", async () => {
   const input = {
@@ -677,6 +1233,32 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
         viewId: submission.viewId,
       })
     ).items[0]!;
+    const resultDrafts = [];
+    for (const disposition of [
+      {
+        kind: "CLOSE_RELATION",
+        result: { owner: "HIERARCHY", id: submission.viewId },
+      },
+      {
+        kind: "NEW_RELATION",
+        oldRelation: {
+          kind: "CLOSE",
+          result: { owner: "HIERARCHY", id: submission.viewId },
+        },
+      },
+    ]) {
+      const original = {
+        requestId: randomUUID(),
+        kind: "IMPACT" as const,
+        campus: "NORTH" as const,
+        payload: { disposition },
+      };
+      const stored = await owner.saveDraft("maker", original);
+      expect(
+        (await owner.readDraft("maker", { id: stored.id })).content,
+      ).toEqual(original);
+      resultDrafts.push({ id: stored.id, requestId: original.requestId });
+    }
     peer(
       receipt.name,
       `DELETE FROM department_master.hierarchy_grant WHERE actor_code='maker' AND object_id=${quote(submission.viewId)}::uuid AND permission='READ';`,
@@ -687,6 +1269,26 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
           candidateId: submission.candidateId,
         }),
       ).rejects.toThrow("ACCESS_DENIED");
+      for (const draft of resultDrafts) {
+        expect
+          .soft(
+            await owner.readDraft("maker", { id: draft.id }).then(
+              () => "ALLOWED",
+              (error: Error) => error.message,
+            ),
+          )
+          .toBe("ACCESS_DENIED");
+        expect
+          .soft(
+            await owner
+              .recoverDraft("maker", { requestId: draft.requestId })
+              .then(
+                () => "ALLOWED",
+                (error: Error) => error.message,
+              ),
+          )
+          .toBe("ACCESS_DENIED");
+      }
       expect
         .soft(
           await owner.readDraft("maker", { id: saved.id }).then(
@@ -803,6 +1405,60 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
     expect(await owner.submitDraft("maker", request)).toEqual(submission);
     const frozen = versions.items[0]!,
       group = frozen.nodes[0]!;
+    const groupRequest = {
+      requestId: randomUUID(),
+      kind: "HIERARCHY" as const,
+      campus: "NORTH" as const,
+      payload: {
+        nodes: [
+          {
+            nodeKind: "GROUP",
+            groupId: group.groupId,
+            groupVersionId: group.groupVersionId,
+          },
+        ],
+      },
+    };
+    const groupSaved = await owner.saveDraft("maker", groupRequest);
+    expect(
+      (await owner.readDraft("maker", { id: groupSaved.id })).content,
+    ).toEqual(groupRequest);
+    peer(
+      receipt.name,
+      `DELETE FROM department_master.hierarchy_grant WHERE actor_code='maker' AND object_id=${quote(submission.viewId)}::uuid AND permission='READ';`,
+    );
+    try {
+      await expect(
+        hierarchy.readHierarchySnapshot("maker", {
+          viewId: submission.viewId,
+          version: frozen.view.version,
+        }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner.readDraft("maker", { id: groupSaved.id }).then(
+            () => "ALLOWED",
+            (error: Error) => error.message,
+          ),
+        )
+        .toBe("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner
+            .recoverDraft("maker", { requestId: groupRequest.requestId })
+            .then(
+              () => "ALLOWED",
+              (error: Error) => error.message,
+            ),
+        )
+        .toBe("ACCESS_DENIED");
+    } finally {
+      peer(
+        receipt.name,
+        `INSERT INTO department_master.hierarchy_grant VALUES('maker',${quote(submission.viewId)}::uuid,'READ') ON CONFLICT DO NOTHING;`,
+      );
+    }
+
     const nextPayload = {
       ...payload,
       viewId: submission.viewId,

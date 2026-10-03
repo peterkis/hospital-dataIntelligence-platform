@@ -55,3 +55,13 @@ PR #27 首轮云端审查针对 `de8e22c` 提出三项修复：补全演化／�
 `001b991` 两轴复审进一步发现 ACK 丢失时仍需保留未知结果。最终客户端直接使用保留的原 pending 请求区分首次明确拒绝与结果未知的重试；收到 200 和未收到响应两种情况都保留原身份，准确读取后解锁。相同规则用于提交和有限维护操作／层级文件接收，防止重试拒绝消除先前未知结果。实际浏览器在服务端 save 已返回 200 的 Response 阶段关闭连接，再在重试 Request 阶段注入 403，完成 RED／GREEN；科室恢复准确 ID `01a103c7-6f2d-717f-aff0-01b3733ddbe7` v1，层级恢复 `01a103c7-d1ef-797f-9257-2a85b10f2161` v1，均未再保存。首次明确 403 的对照仍可编辑且没有恢复标记。证据 `browser-ackloss-retry-{red,green,recovered}.png`、`browser-generic-ackloss-retry-{green,recovered}.png`、`browser-ackloss-retry.log`、`ackloss-retry-typecheck.log`、`ackloss-retry-build.log`；连接关闭和 403 均为浏览器边界的测试注入。
 
 持久研发库 OID206108 的 0145→0146 前向升级、当前类型与实际 HTTP 私有草稿原请求恢复通过；原行、密钥和迁移账本保留，别名仍按当前权限拒绝，不扩大 actor 授权。证据 `persistent-146-deploy.log`、`deployment-1791064516628.{preservation,http}.json`；包装器 ready／targetExitCode 0／cleanupPassed true。0001–0146 现均已安装，之后数据库修复必须另加迁移。正式验收与 FULL 状态不变。
+
+`46d2c29` 的 CI 两项均通过，第二轮 Codex review 仍提出影响处置结果引用及演化配套契约的授权遗漏。实际 Owner RED 后追加 0147：四类结果引用通过有限内部接口检查原 Owner 的当前读取权限，映射按实际院区、院区关系按自身治理范围读取；不重算历史业务处置或最新结果证明。ORG27／ORG04 配套契约及层级依赖逐个检查准确 ID／版本配对；只填 ID 或版本的部分草稿也授权已知部分。两条云端线程的最终关闭和后续准确 head 的检查另记 ignored handoff。
+
+字段清点同时覆盖省略固定 Owner 的部分引用、受保护证据、既有层级分组的实际视图，以及科室版本引用。业务 Owner 保留原有新分组身份规则；已有分组和已知版本仍检查实际 Owner 权限与绑定。旧 0145／0146 元数据投影仅用于鉴真，返回正文、恢复和提交重放始终使用完整当前投影重新授权。未改旧密文、请求或修订。证明包括单独撤销已提交映射／标识的 READ、证据 READ、准确视图 READ，以及 SOUTH 草稿引用 NORTH 院区关系的正向与撤权检查。
+
+专项增至 19 项真实 DB/HTTP 测试，适用回归累计 305 项单元、373 项数据库测试。143→147 领域升级与真实 145／146 旧草稿升级保留原行、密钥、账本及原请求恢复，针对原引用的撤权仍拒绝。证据 `cloud-round2-red.log`、`complete-reference-inventory-red.log`、`group-reference-red.log`、`complete-reference-final-green.log`、`reference-upgrade-145.json`、`reference-upgrade-146.json`。新拒绝测试的两个初次错误分别是管理夹具列名，以及错误地把科室元数据历史当作受保护材料读取；改用准确权限列和真实 `authorizeSensitiveRead` Owner 接口，不改变既有领域读取语义。跨院区测试只给 owned 验证角色授予已有 P2-08 夹具的两个有限接口，并显式授权新测试科室；业务和持久角色不自动扩权。类型检查、199 项迁移单元、当前契约、22 项 P2-08 回归及两个实际服务进程重启通过；证据 `round2-typecheck.log`、`round2-migration-unit.log`、`round2-contract.log`、`round2-p208-regression.log`、`round2-restart.log`。0147 在固定候选本地审查通过前不安装至持久库。
+
+内部接口的实际权限断言发现，旧验证夹具的 Department 批量函数授权会把新内部接口一起授予验证角色。三个新接口已加入夹具既有的内部接口排除清单，保持数据库 PUBLIC／普通服务角色不可直接执行。带此断言的 19 项 fresh 及旧数据升级复验通过；证据 `round2-final-acl-green.log`（RED）、`round2-final-verified.log`（GREEN）、`round2-final-group-green.log`。
+
+合法调用方对象字段顺序另复现私有恢复 `PAYLOAD_UNAVAILABLE`：密文内容规范排序，而授权引用数组原先依赖输入对象字段顺序。新增保存／恢复边界按准确引用多重集合比较，仅忽略授权集合顺序，保留全部项、重复计数及其他元数据；业务命令和节点顺序仍由原内容 MAC 绑定。新写入先复制规范内容，旧 145／146 密文无需重写。证据 `reference-key-order-red.log`、`reference-key-order-green.log`；升级夹具还从真实旧源码创建此前因顺序错误无法读取的草稿，验证前向恢复和原行保留。此专项使 P2-07 总计 20 项，适用数据库回归累计 374 项。
