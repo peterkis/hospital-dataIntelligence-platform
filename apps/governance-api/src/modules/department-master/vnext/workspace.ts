@@ -237,18 +237,32 @@ export function openDepartmentWorkspace(
     submission: DepartmentDraftSubmission,
   ) => {
     const saved = { ...content, ...input },
+      authorization = metadata(saved),
       digest = planBinding(provider, "DEPARTMENT_WORKSPACE_DRAFT_V1", {
         state: "SUBMITTED",
         input: saved,
       }),
       bytes = Buffer.from(canonicalPlan(saved));
+    if (
+      submission.kind === "HIERARCHY" &&
+      !authorization.references.some(
+        (ref) =>
+          ref.owner === "department-master/hierarchy-view" &&
+          ref.id === submission.viewId,
+      )
+    ) {
+      authorization.references.push({
+        owner: "department-master/hierarchy-view",
+        id: submission.viewId,
+      });
+    }
     try {
       const envelope = sealProtectedPayload(
         bytes,
         ["DEPARTMENT_WORKSPACE_DRAFT_V1", digest],
         provider,
       );
-      await sql`select department_master.workspace_save(${actor},${JSON.stringify({ ...input, state: "SUBMITTED", metadata: metadata(saved), submission })}::jsonb,${digest},${JSON.stringify(envelope)}::jsonb)`.execute(
+      await sql`select department_master.workspace_save(${actor},${JSON.stringify({ ...input, state: "SUBMITTED", metadata: authorization, submission })}::jsonb,${digest},${JSON.stringify(envelope)}::jsonb)`.execute(
         scope,
       );
     } finally {

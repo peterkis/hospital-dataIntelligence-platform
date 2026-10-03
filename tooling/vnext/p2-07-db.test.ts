@@ -44,6 +44,16 @@ afterAll(async () => {
   await catalog.close();
 });
 test("P2-07 actual multi-Owner HTTP initialization stays within the unchanged eight-connection role budget", async () => {
+  const receipt = JSON.parse(
+    readFileSync(process.env["VNEXT_TEST_RECEIPT"]!, "utf8"),
+  );
+  const role = new URL(connection).username;
+  expect(
+    peer(
+      receipt.name,
+      `SELECT has_function_privilege(${quote(role)},'governance_catalog.department_workspace_application(uuid,uuid)','EXECUTE'),has_function_privilege(${quote(role)},'governance_catalog.department_workspace_impact_access(text,uuid,text,text,uuid,text)','EXECUTE');`,
+    ).trim(),
+  ).toBe("f|f");
   const server = await createDepartmentTestServer(connection, provider);
   try {
     const url = await server.app.listen({ host: "127.0.0.1", port: 0 }),
@@ -605,8 +615,9 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
       },
     ],
   };
+  const saveRequestId = randomUUID();
   const saved = await owner.saveDraft("maker", {
-    requestId: randomUUID(),
+    requestId: saveRequestId,
     kind: "HIERARCHY",
     campus: "NORTH",
     payload,
@@ -621,6 +632,51 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
   if (submission.kind !== "HIERARCHY") throw new Error("WRONG_SUBMISSION_KIND");
   const hierarchy = openHierarchy(connection, provider);
   try {
+    const initialCandidate = (
+      await hierarchy.listHierarchyCandidates("maker", {
+        viewId: submission.viewId,
+      })
+    ).items[0]!;
+    peer(
+      receipt.name,
+      `DELETE FROM department_master.hierarchy_grant WHERE actor_code='maker' AND object_id=${quote(submission.viewId)}::uuid AND permission='READ';`,
+    );
+    try {
+      await expect(
+        hierarchy.readHierarchyCandidate("maker", {
+          candidateId: submission.candidateId,
+        }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner.readDraft("maker", { id: saved.id }).then(
+            () => "READ_ALLOWED",
+            (error: Error) => error.message,
+          ),
+        )
+        .toBe("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner.recoverDraft("maker", { requestId: saveRequestId }).then(
+            () => "READ_ALLOWED",
+            (error: Error) => error.message,
+          ),
+        )
+        .toBe("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner.submitDraft("maker", request).then(
+            () => "REPLAY_ALLOWED",
+            (error: Error) => error.message,
+          ),
+        )
+        .toBe("ACCESS_DENIED");
+    } finally {
+      peer(
+        receipt.name,
+        `INSERT INTO department_master.hierarchy_grant VALUES('maker',${quote(submission.viewId)}::uuid,'READ') ON CONFLICT DO NOTHING;`,
+      );
+    }
     await expect(
       hierarchy.approveHierarchyCandidate("reviewer", {
         candidateId: submission.candidateId,
@@ -635,6 +691,10 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
       candidateId: submission.candidateId,
       digest: submission.digest,
     });
+    const approvedAt = peer(
+      receipt.name,
+      `SELECT to_char(approved_at,'YYYY-MM-DD"T"HH24:MI:SS.US') FROM department_master.hierarchy_candidate WHERE id=${quote(submission.candidateId)}::uuid;`,
+    ).trim();
     expect(
       (
         await hierarchy.publishHierarchySnapshot("maker", {
@@ -656,6 +716,22 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
         })
       ).items[0]!.status,
     ).toBe("APPLIED");
+    expect(
+      (
+        await hierarchy.listHierarchyCandidates("reviewer", {
+          viewId: submission.viewId,
+          recordAsOf: initialCandidate.recordedAt,
+        })
+      ).items[0],
+    ).toMatchObject({ status: "VALIDATED", approvedBy: null });
+    expect(
+      (
+        await hierarchy.listHierarchyCandidates("reviewer", {
+          viewId: submission.viewId,
+          recordAsOf: approvedAt,
+        })
+      ).items[0],
+    ).toMatchObject({ status: "APPROVED", approvedBy: "reviewer" });
     expect(
       (
         await hierarchy.readHierarchyCandidate("reviewer", {

@@ -22,6 +22,7 @@
 - 标识、演化、生命周期、影响处置：分别验证部分草稿保存和刷新恢复；生命周期读取同一原科室身份的真实历史。其他完整领域闭环由相应公共 Owner／HTTP 回归覆盖，不把部分表单验证记作全流程浏览器通过。
 - 网络失败：仅在开发浏览器网络边界阻断 submit，刷新后恢复同一 `requestId`；客户端保存的提交元数据只有 `id/expectedVersion/requestId`，没有来源行或文件内容。完整 Owner 同请求重放另有数据库及重启证据。
 - 后续读取失败：实际 submit 返回 200 后阻断草稿读取，刷新仍锁定原提交；通过“恢复提交状态”读回同一 SUBMITTED 草稿。另在文件 PARSED 后阻断草稿读取，刷新从原接收请求恢复准确新草稿，文件字段保持只读。证据 `browser-post-acceptance-recovery.png`。
+- 保存后读取失败：实际 save 返回 200 后阻断读取；旧页面丢失恢复标识的 RED 已复现。修复后新建与已有映射草稿均保留原请求和编辑锁，刷新时恢复读取失败也保持锁定，恢复后同一草稿从 v1 到 v2，未重复创建。证据 `browser-save-recovery-red.png`、`browser-save-recovery-green.png`。
 - 权限及依赖：身份切换清除原上下文；无权限身份看不到私有草稿且保存禁用；FULL 实际返回 `BLOCKED_DEPENDENCY`，不转为 CORE 或模拟成功。人工入口不会提交服务主体回执。
 - 1366、1024、390 宽度检查，1024 下 Tab 焦点从映射列表到映射历史；手机嵌套结果改为纵向字段后页面无水平溢出。证据 `browser-workspace-1024.png`、`browser-workspace-mobile.png`。临时视口和网络阻断已撤销。
 
@@ -34,3 +35,5 @@ Q03 按当前 Owner 算法分别核对 B 与 R、半开业务期间、准确引�
 A018 使用当前 Department／Hierarchy／生成客户端与当前调用方。本票不连接旧库，不跑旧 SDK、旧静态 hash/path 或七制品协议门禁，不创建没有实际消费者的重复投影。P2-08、P2-03、P2-04、P2-05、P2-06 的原 Owner 不变量保留并执行适用回归；退休来源仍可走原 Owner 的非扩张撤回，新增／改动主张仍阻断。
 
 适用回归及持久升级在本轮关闭前完成；准确候选 commit/tree、Spec／Standards 审查、GitHub 当前 head、CI、Codex review 修复与合并状态在 ignored handoff 中分别记录。历史 P0-02 browser 待验、院方政策采纳、正式验收及生产准入不因本轮 CORE 通过而自动完成。
+
+首次固定候选 `c62bc45` 由两个独立代理分别静态审查 Spec 和 Standards，各发现两项问题。新建层级视图授权遗漏及历史 R 状态泄漏已在实际 Owner 复现 RED，修复后读取／恢复／提交重放随准确 view READ 撤权拒绝，R0/R1 分别返回 VALIDATED/APPROVED。Catalog 审批和影响表查询移入 Catalog 的有限事务接口，普通和服务角色不获其直接 EXECUTE。通用草稿保存恢复问题由实际浏览器复现并验证 GREEN。专项 fresh／已填充升级回归见 `review-red.log`、`review-green-2.log`；最终修复候选重新固定审查，不沿用首次候选结论。

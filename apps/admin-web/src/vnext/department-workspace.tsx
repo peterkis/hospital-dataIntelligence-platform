@@ -25,6 +25,8 @@ import { DepartmentQueries } from "./department-queries.js";
 type Draft = Extract<DepartmentWorkspaceDraft, { kind: "DEPARTMENT" }>;
 type Saved =
   Operations["saveDepartmentDraft"]["responses"][200]["content"]["application/json"];
+type ReadSaved =
+  Operations["readDepartmentDraft"]["responses"][200]["content"]["application/json"];
 type Summary =
   Operations["listDepartmentDrafts"]["responses"][200]["content"]["application/json"]["items"][number];
 type Application =
@@ -187,12 +189,12 @@ export function DepartmentWorkspaceApp() {
       setDepartmentCursor(ids.length === 100 ? ids.at(-1)! : null);
     }
   };
-  const restore = async (id: string) => {
+  const restore = async (id: string, recovered?: ReadSaved) => {
     const generation = ++epoch.current;
     await run(async () => {
       const pending = pendingDepartmentSubmission(submitRecoveryKey);
       if (pending?.id === id) pendingSubmit.current = pending;
-      const record = await value(workspace().read(id));
+      const record = recovered ?? (await value(workspace().read(id)));
       if (generation !== epoch.current) return;
       if (record.content.kind !== "DEPARTMENT")
         throw new Error("请选择对应维护页恢复此草稿。");
@@ -217,6 +219,10 @@ export function DepartmentWorkspaceApp() {
         if (pending?.id === id) sessionStorage.removeItem(submitRecoveryKey);
       }
       remember(id);
+      if (recovered) {
+        sessionStorage.removeItem(recoveryKey);
+        setRecoverId(null);
+      }
     });
   };
   const selectApplication = async (item: Application) => {
@@ -298,12 +304,11 @@ export function DepartmentWorkspaceApp() {
       setHistories(rows);
       const unresolved = sessionStorage.getItem(recoveryKey);
       if (unresolved) {
+        setRecoverId(unresolved);
         const recovered = await value(workspace().recover(unresolved));
         if (generation !== epoch.current) return;
         if (recovered && recovered.content.kind === "DEPARTMENT") {
-          sessionStorage.removeItem(recoveryKey);
-          setRecoverId(null);
-          await restore(recovered.id);
+          await restore(recovered.id, recovered);
           return;
         }
         setRecoverId(unresolved);
@@ -562,9 +567,7 @@ export function DepartmentWorkspaceApp() {
                 setMessage("服务端尚无此保存结果，保留原请求标识等待恢复。");
                 return;
               }
-              sessionStorage.removeItem(recoveryKey);
-              setRecoverId(null);
-              await restore(recovered.id);
+              await restore(recovered.id, recovered);
             })
           }
         >

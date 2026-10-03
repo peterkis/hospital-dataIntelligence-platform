@@ -102,6 +102,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=88) for(const name of ['department_master.hierarchy_create_view','department_master.hierarchy_store_candidate','department_master.hierarchy_approve','department_master.hierarchy_publish']) allowedRoutines.add(name);
     if(ledger.length>=112) for(const name of ['mapping_list','mapping_authorize','mapping_target_authorize','mapping_source','mapping_input_read','mapping_job_read','mapping_snapshot','mapping_find','mapping_mutate','mapping_resolution_required']) allowedRoutines.add('department_master.'+name);
     if(ledger.length>=144)for(const name of ['workspace_authorize','workspace_save','workspace_read','workspace_list','workspace_recover','workspace_input_access','workspace_applications'])allowedRoutines.add('department_master.'+name);
+    if(ledger.length>=144)for(const name of ['department_workspace_application','department_workspace_impact_access'])allowedRoutines.add('governance_catalog.'+name);
     if(ledger.length>=145)allowedRoutines.add('department_master.hierarchy_workspace_query');
     if(ledger.length>=113) allowedRoutines.add('department_master.mapping_snapshot_optional');
     if(ledger.length>=115) for(const name of ['identifier_authorize','identifier_input_read','identifier_job_read','identifier_snapshot','identifier_list','identifier_code','identifier_initial_code','identifier_assert_timeline','identifier_mutate','identifier_peers']) allowedRoutines.add('department_master.'+name);

@@ -275,7 +275,9 @@ export function DepartmentDomainWorkspace({
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
-    [recoverId, setRecoverId] = useState<string | null>(null),
+    [recoverId, setRecoverId] = useState<string | null>(() =>
+      sessionStorage.getItem(`hdip:p2-07:save:${actor}:${kind}`),
+    ),
     [canSave, setCanSave] = useState(false),
     [viewAccess, setViewAccess] = useState<
       Record<string, { canWrite: boolean; canReview: boolean }>
@@ -546,6 +548,7 @@ export function DepartmentDomainWorkspace({
       }
       const unresolved = sessionStorage.getItem(recoveryKey);
       if (unresolved) {
+        setRecoverId(unresolved);
         const recovered = await value(workspace.recover(unresolved));
         if (!alive.current) return;
         if (recovered && recovered.content.kind === kind) {
@@ -554,6 +557,7 @@ export function DepartmentDomainWorkspace({
           setDraft(recovered.content);
           setDirty(false);
           remember(recovered.id);
+          setRecoverId(null);
         } else {
           setRecoverId(unresolved);
           setMessage("原保存结果尚未确认，请恢复保存结果。");
@@ -740,20 +744,22 @@ export function DepartmentDomainWorkspace({
         ...(saved ? { id: saved.id, expectedVersion: saved.version } : {}),
       };
       sessionStorage.setItem(recoveryKey, pendingSave.current.requestId);
+      let accepted = false;
       try {
         const written = await value(workspace.save(pendingSave.current));
+        accepted = true;
         if (!alive.current) return;
-        pendingSave.current = null;
-        sessionStorage.removeItem(recoveryKey);
         const restored = await value(workspace.read(written.id));
         if (!alive.current) return;
         setSaved(restored);
         setDirty(false);
         remember(written.id);
+        pendingSave.current = null;
+        sessionStorage.removeItem(recoveryKey);
         setMessage("私有草稿已保存，刷新可恢复。");
         await load();
       } catch (error) {
-        if (definiteFailure(error)) {
+        if (!accepted && definiteFailure(error)) {
           pendingSave.current = null;
           sessionStorage.removeItem(recoveryKey);
         }

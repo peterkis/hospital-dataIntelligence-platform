@@ -33,7 +33,8 @@ BEGIN
   IF selected_view IS NOT NULL THEN PERFORM department_master.hierarchy_authorize(p_actor,selected_view,'READ');END IF;
   FOR c IN SELECT * FROM department_master.hierarchy_candidate q WHERE (selected_view IS NULL OR q.view_id=selected_view) AND recorded_at<=at_record AND (NOT (p_input?'after') OR id>(p_input->>'after')::uuid) ORDER BY id LOOP
    BEGIN PERFORM department_master.hierarchy_authorize(p_actor,c.view_id,'READ');EXCEPTION WHEN SQLSTATE 'P0001' THEN IF SQLERRM<>'ACCESS_DENIED' THEN RAISE;END IF;CONTINUE;END;
-   items:=items||jsonb_build_array(jsonb_build_object('candidateId',c.id,'viewId',c.view_id,'requestId',c.request_id,'digest',c.digest,'status',c.status,'maker',c.maker,'approvedBy',c.approved_by,'recordedAt',to_char(c.recorded_at,'YYYY-MM-DD"T"HH24:MI:SS.US')));
+   state:=CASE WHEN c.applied_at<=at_record THEN 'APPLIED' WHEN c.approved_at<=at_record THEN 'APPROVED' ELSE 'VALIDATED' END;
+   items:=items||jsonb_build_array(jsonb_build_object('candidateId',c.id,'viewId',c.view_id,'requestId',c.request_id,'digest',c.digest,'status',state,'maker',c.maker,'approvedBy',CASE WHEN c.approved_at<=at_record THEN c.approved_by ELSE NULL END,'recordedAt',to_char(c.recorded_at,'YYYY-MM-DD"T"HH24:MI:SS.US')));
    IF jsonb_array_length(items)>=lim THEN EXIT;END IF;
   END LOOP;
   RETURN jsonb_build_object('items',items,'nextCursor',CASE WHEN jsonb_array_length(items)=lim THEN items->-1->>'candidateId' ELSE NULL END);

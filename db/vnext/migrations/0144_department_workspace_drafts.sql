@@ -1,4 +1,22 @@
 SELECT pg_advisory_xact_lock(901002);
+-- Catalog owns these finite transaction ports. Their callers already hold the
+-- Department input authorization; ordinary/service roles receive no EXECUTE.
+CREATE FUNCTION governance_catalog.department_workspace_application(p_input uuid,p_revision uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE c governance_catalog.apply_candidate;approved text;state text;BEGIN
+ SELECT * INTO c FROM governance_catalog.apply_candidate WHERE input->>'jobId'=p_input::text AND input->>'revisionId'=p_revision::text ORDER BY recorded_at DESC,id DESC LIMIT 1;
+ SELECT actor_code INTO approved FROM governance_catalog.apply_approval WHERE candidate_id=c.id;
+ state:=CASE WHEN EXISTS(SELECT 1 FROM governance_catalog.apply_commit WHERE candidate_id=c.id) THEN 'COMMITTED' WHEN approved IS NOT NULL THEN 'APPROVED' WHEN c.id IS NOT NULL THEN 'CANDIDATE' ELSE 'STAGED' END;
+ RETURN jsonb_build_object('state',state,'candidateId',c.id,'requestId',c.input->>'requestId','candidateDigest',c.digest,'approvedBy',approved);
+END $$;
+CREATE FUNCTION governance_catalog.department_workspace_impact_access(p_actor text,p_case uuid,p_campus text,p_permission text,p_proposal uuid DEFAULT NULL,p_head text DEFAULT NULL) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE c governance_catalog.department_impact_case;identity text;BEGIN
+ IF p_permission NOT IN ('READ','WRITE','READ_RESTRICTED') THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
+ SELECT * INTO c FROM governance_catalog.department_impact_case WHERE id=p_case AND campus=p_campus;
+ IF NOT FOUND THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
+ identity:=department_master.impact_case_authorize(p_actor,c.obligation,c.campus,CASE WHEN p_permission='READ_RESTRICTED' THEN 'READ' ELSE p_permission END);
+ IF p_proposal IS NOT NULL AND NOT EXISTS(SELECT 1 FROM governance_catalog.department_impact_case_event e WHERE e.id=p_proposal AND e.case_id=c.id AND e.actor_identity=identity AND e.kind='PROPOSE' AND e.sequence::text=p_head) THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
+END $$;
+REVOKE ALL ON FUNCTION governance_catalog.department_workspace_application(uuid,uuid),governance_catalog.department_workspace_impact_access(text,uuid,text,text,uuid,text) FROM PUBLIC,hdi_prototype;
 CREATE TABLE department_master.workspace_draft_revision(
  id uuid NOT NULL,number bigint NOT NULL CHECK(number>0),identity_code text NOT NULL,maker text NOT NULL REFERENCES vnext_control.actor(code),
  request_id uuid NOT NULL,digest text NOT NULL CHECK(digest~'^[a-f0-9]{64}$'),metadata jsonb NOT NULL,envelope jsonb NOT NULL,
@@ -11,7 +29,7 @@ ALTER TABLE department_master.workspace_draft_revision ENABLE ROW LEVEL SECURITY
 REVOKE ALL ON department_master.workspace_draft_revision FROM PUBLIC,hdi_prototype;
 
 CREATE FUNCTION department_master.workspace_authorize(p_actor text,m jsonb,p_permission text) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE identity text;ref jsonb;c governance_catalog.department_impact_case;BEGIN
+DECLARE identity text;ref jsonb;BEGIN
  IF m->>'kind' NOT IN ('DEPARTMENT','HIERARCHY','MAPPING','IDENTIFIER','EVOLUTION','LIFECYCLE','IMPACT') OR m->>'campus' NOT IN ('NORTH','SOUTH') OR jsonb_typeof(m->'references') IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
  identity:=department_master.authorize(p_actor,m->>'campus',p_permission);
  PERFORM department_master.authorize(p_actor,'HOSPITAL','READ');
@@ -21,9 +39,7 @@ DECLARE identity text;ref jsonb;c governance_catalog.department_impact_case;BEGI
   WHEN 'department-master' THEN PERFORM department_master.snapshot(p_actor,(ref->>'id')::uuid);
   WHEN 'department-master/hierarchy-view' THEN PERFORM department_master.hierarchy_authorize(p_actor,(ref->>'id')::uuid,'READ');
   WHEN 'department-master/impact-case' THEN
-   SELECT * INTO c FROM governance_catalog.department_impact_case WHERE id=(ref->>'id')::uuid AND campus=m->>'campus';
-   IF NOT FOUND THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
-   PERFORM department_master.impact_case_authorize(p_actor,c.obligation,c.campus,CASE WHEN p_permission='READ_RESTRICTED' THEN 'READ' ELSE p_permission END);
+   PERFORM governance_catalog.department_workspace_impact_access(p_actor,(ref->>'id')::uuid,m->>'campus',p_permission);
   WHEN 'organization-master' THEN PERFORM organization_master.read(p_actor,jsonb_build_object('id',ref->>'id'));
   WHEN 'organization-master/campus' THEN PERFORM organization_master.campus_snapshot(p_actor,(ref->>'id')::uuid);
   WHEN 'department-master/organization-mapping' THEN PERFORM department_master.mapping_snapshot(p_actor,(ref->>'id')::uuid);
@@ -66,7 +82,8 @@ DECLARE identity text;previous department_master.workspace_draft_revision;r depa
   IF NOT EXISTS(SELECT 1 FROM department_master.hierarchy_candidate c WHERE c.id=(p_input->'submission'->>'candidateId')::uuid AND c.view_id=(p_input->'submission'->>'viewId')::uuid AND c.digest=p_input->'submission'->>'digest' AND c.maker_identity=identity AND c.request_id=(p_input->'submission'->>'publicationRequestId')::uuid) THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
  END IF;
  IF p_input->>'state'='SUBMITTED' AND p_input->'metadata'->>'kind'='IMPACT' THEN
-  IF NOT EXISTS(SELECT 1 FROM governance_catalog.department_impact_case_event e WHERE e.id=(p_input->'submission'->>'proposalEventId')::uuid AND e.case_id=(p_input->'submission'->>'caseId')::uuid AND e.actor_identity=identity AND e.kind='PROPOSE' AND e.sequence::text=p_input->'submission'->>'head') THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
+  IF p_input->'submission'->>'proposalEventId' IS NULL OR p_input->'submission'->>'head' IS NULL THEN RAISE EXCEPTION 'ACCESS_DENIED';END IF;
+  PERFORM governance_catalog.department_workspace_impact_access(p_actor,(p_input->'submission'->>'caseId')::uuid,p_input->'metadata'->>'campus','WRITE',(p_input->'submission'->>'proposalEventId')::uuid,p_input->'submission'->>'head');
  END IF;
  IF p_input->>'state'='SUBMITTED' AND p_input->'metadata'->>'kind' NOT IN ('DEPARTMENT','HIERARCHY','IMPACT') THEN
   IF NOT EXISTS(
@@ -129,7 +146,7 @@ BEGIN
  END CASE;
 END $$;
 CREATE FUNCTION department_master.workspace_applications(p_actor text,p_after uuid,p_limit integer,p_input uuid DEFAULT NULL) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE identity text;r record;c governance_catalog.apply_candidate;approved text;items jsonb:='[]';access jsonb;permission text;field text;allowed boolean;state text;BEGIN
+DECLARE identity text;r record;application jsonb;items jsonb:='[]';access jsonb;permission text;field text;allowed boolean;BEGIN
  PERFORM pg_advisory_xact_lock(901002);identity:=vnext_control.authorize(p_actor,'SYNTHETIC','READ');
  IF p_limit NOT BETWEEN 1 AND 100 THEN RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';END IF;
  FOR r IN SELECT * FROM (
@@ -150,10 +167,8 @@ DECLARE identity text;r record;c governance_catalog.apply_candidate;approved tex
    access:=access||jsonb_build_object(field,allowed);
   END LOOP;
   access:=access||jsonb_build_object('canPlan',identity=r.identity_code AND (access->>'canWrite')::boolean,'canApply',identity=r.identity_code AND (access->>'canWrite')::boolean);
-  SELECT * INTO c FROM governance_catalog.apply_candidate WHERE input->>'jobId'=r.id::text AND input->>'revisionId'=r.revision::text ORDER BY recorded_at DESC LIMIT 1;
-  SELECT actor_code INTO approved FROM governance_catalog.apply_approval WHERE candidate_id=c.id;
-  state:=CASE WHEN EXISTS(SELECT 1 FROM governance_catalog.apply_commit WHERE candidate_id=c.id) THEN 'COMMITTED' WHEN approved IS NOT NULL THEN 'APPROVED' WHEN c.id IS NOT NULL THEN 'CANDIDATE' ELSE 'STAGED' END;
-  items:=items||jsonb_build_array(jsonb_build_object('kind',r.kind,'inputId',r.id,'revisionId',r.revision,'inputDigest',r.digest,'campus',r.campus,'maker',r.maker,'state',state,'candidateId',c.id,'requestId',c.input->>'requestId','candidateDigest',c.digest,'approvedBy',approved,'access',access,'recordedAt',to_char(r.recorded_at,'YYYY-MM-DD"T"HH24:MI:SS.US')));
+  application:=governance_catalog.department_workspace_application(r.id,r.revision);
+  items:=items||jsonb_build_array(jsonb_build_object('kind',r.kind,'inputId',r.id,'revisionId',r.revision,'inputDigest',r.digest,'campus',r.campus,'maker',r.maker,'access',access,'recordedAt',to_char(r.recorded_at,'YYYY-MM-DD"T"HH24:MI:SS.US'))||application);
   IF jsonb_array_length(items)>=p_limit THEN EXIT;END IF;
  END LOOP;
  RETURN jsonb_build_object('items',items,'nextCursor',CASE WHEN jsonb_array_length(items)=p_limit THEN items->-1->>'inputId' ELSE NULL END);
