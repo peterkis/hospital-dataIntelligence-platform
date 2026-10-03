@@ -190,6 +190,39 @@ test("P2-07 CORE hierarchy workbook creates an encrypted recoverable private dra
     "ACCESS_DENIED",
   );
 });
+test("P2-07 private draft rejects mismatched contract pairs and unknown lifecycle references", async () => {
+  await expect(
+    owner.saveDraft("maker", {
+      requestId: randomUUID(),
+      kind: "DEPARTMENT",
+      campus: "NORTH",
+      transport: {
+        contractId: fixture.contract.id,
+        contractVersionId: domainFixture.eventContract.versionId,
+      },
+      payload: { entries: [{ row: { org_name: "SYNTHETIC invalid pair" } }] },
+    }),
+  ).rejects.toThrow("CLOSED_INPUT_REQUIRED");
+  await expect(
+    owner.saveDraft("maker", {
+      requestId: randomUUID(),
+      kind: "LIFECYCLE",
+      campus: "NORTH",
+      payload: {
+        commands: [
+          {
+            action: "END",
+            relation: {
+              owner: "department-master/campus-relation",
+              id: randomUUID(),
+              expectedVersion: "1",
+            },
+          },
+        ],
+      },
+    }),
+  ).rejects.toThrow("NOT_FOUND");
+});
 test("P2-07 private partial draft persists without staging a business command", async () => {
   const input = {
     requestId: randomUUID(),
@@ -1094,6 +1127,59 @@ test("P2-07 private impact draft records one real disposition proposal without a
       requestId,
     });
     if (outcome.status !== "COMMITTED") throw new Error("COMMIT_REQUIRED");
+    const compensationRequest = randomUUID(),
+      compensationDraft = await owner.saveDraft("maker", {
+        requestId: compensationRequest,
+        kind: "EVOLUTION",
+        campus: "NORTH",
+        payload: {
+          compensatesEvent: {
+            owner: "department-master/organization-evolution",
+            id: outcome.facts[0]!.id,
+            version: "1",
+          },
+        },
+      });
+    expect(
+      (await owner.readDraft("maker", { id: compensationDraft.id })).content
+        .payload,
+    ).toHaveProperty("compensatesEvent");
+    peer(
+      receipt.name,
+      `DELETE FROM vnext_control.protected_grant WHERE actor_code='maker' AND dataset_id=${quote(domainFixture.eventDataset.id)}::uuid AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`,
+    );
+    try {
+      await expect(
+        evolution.query("maker", {
+          id: outcome.facts[0]!.id,
+          campus: "NORTH",
+          businessAt: "2026-06-01T00:00:00",
+        }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner.readDraft("maker", { id: compensationDraft.id }).then(
+            () => "READ_ALLOWED",
+            (error: Error) => error.message,
+          ),
+        )
+        .toBe("ACCESS_DENIED");
+      expect
+        .soft(
+          await owner
+            .recoverDraft("maker", { requestId: compensationRequest })
+            .then(
+              () => "READ_ALLOWED",
+              (error: Error) => error.message,
+            ),
+        )
+        .toBe("ACCESS_DENIED");
+    } finally {
+      peer(
+        receipt.name,
+        `INSERT INTO vnext_control.protected_grant VALUES('maker',${quote(domainFixture.eventDataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ') ON CONFLICT DO NOTHING;`,
+      );
+    }
     const cases = await evolution.listImpactCases("maker", {
         eventId: outcome.facts[0]!.id,
         campus: "NORTH",

@@ -43,3 +43,9 @@ A018 使用当前 Department／Hierarchy／生成客户端与当前调用方。�
 `596845e` 的 Spec／Standards 固定候选复审均无剩余可操作问题。修复后 13 项专项 DB/HTTP、0143 已填充升级及两个真实服务进程重启再次通过；本轮适用回归总计 305 项单元、367 项数据库测试。证据 `metadata-binding-green.log`、`metadata-restart-green.log`、`verified-evidence.json`。
 
 持久研发库 OID206108 已从 0143 前向升至 0145，生成类型核验、原行／密钥／账本保留、实际工作台页面、私有保存／读取／原请求恢复及无权限拒绝通过。首次 HTTP 验证因测试脚本假定别名权限而拒绝；按当前权限检查后，仅在有权限时允许同身份读取，未新增 actor 权限。复核命令为 `prototype:db:with -- vnext:p2-07:deploy --verify-existing`；证据 `persistent-verify.log`、`deployment-1791060023382.http.json`、`deployment-1791060023382.preservation.json`、`persistent-chain.json`。既有已安装迁移保持只读；之后的数据库修复必须追加迁移。
+
+PR #27 首轮云端审查针对 `de8e22c` 提出三项修复：补全演化／院区关系引用授权、科室保存后读取准确草稿再解锁、完整契约 ID／版本配对。真实 Owner 复现撤权后仍可读取／恢复以及错误配对仍被保存；追加 0146 修复 SQL 并保留 0001–0145 字节。0145 的真实旧工作台代码生成草稿后升级，旧密文／原行保留，已知旧元数据投影仅用于鉴真，返回正文和提交重放前仍在同一事务重新检查完整当前引用。fresh、0143→0146、0145→0146 与 14 项专项 DB/HTTP 通过，适用回归总计更新为 305 项单元、368 项数据库测试。证据 `cloud-owner-reference-red.log`、`cloud-reference-upgrade-green.log`、`reference-upgrade.json`。
+
+科室页面实际 save 200 后读取失败的 RED／GREEN 与刷新恢复已验证；恢复前新建、选择其他草稿／申请及修订入口锁定。证据 `browser-main-save-red.png`、`browser-main-save-green.png`、`browser-main-context-recovery.png`，本轮服务重启见 `cloud-restart-green.log`。临时服务、视口及网络阻断均清理。
+
+首轮 Linux CI 的业务、浏览器与升级步骤通过，当前契约步骤因缺少本地生成器失败。生成器锁定在 `tooling/openapi-generator`：openapi-typescript 7.13.0 与其 TypeScript 5.9.3 peer，应用编译器保留 TypeScript 7.0.2；不依赖机器缓存。当前 API/client/form 门禁及迁移单元复验通过，远端最终 head 的 CI 和 Codex 复审另行记录，不把首轮失败记作通过。

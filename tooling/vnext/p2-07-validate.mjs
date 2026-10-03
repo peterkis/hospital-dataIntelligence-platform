@@ -10,6 +10,7 @@ import { seed } from "./catalog-seed.mjs";
 import { grantDepartment } from "./p2-01-validate.mjs";
 import { grantOrganization } from "./p1-02-validate.mjs";
 import { validateDepartmentWorkspaceUpgrade } from "./p2-07-upgrade.mjs";
+import { validateWorkspaceReferencesUpgrade } from "./p2-07-reference-upgrade.mjs";
 
 const args = process.argv.slice(2);
 if (args[0] === "--dispose-owned") {
@@ -25,7 +26,10 @@ if (
   new Set(args).size !== args.length
 )
   throw new Error("CLOSED_COMMAND_REQUIRED");
-if (args.includes("--upgrade")) await validateDepartmentWorkspaceUpgrade();
+if (args.includes("--upgrade")) {
+  await validateDepartmentWorkspaceUpgrade();
+  await validateWorkspaceReferencesUpgrade();
+}
 const owned = createTemporary("P2-07");
 let session;
 try {

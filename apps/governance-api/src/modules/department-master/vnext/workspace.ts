@@ -58,6 +58,7 @@ type StaticTemplate = Static<typeof HierarchyWorkspaceTemplateSchema>;
 function metadata(
   input: SaveDepartmentDraft,
   submission?: DepartmentDraftSubmission | null,
+  legacyReferences = false,
 ) {
   const references: Array<{ owner: string; id: string }> = [];
   const namespaces: Array<{ source: string; entity: string; context: string }> =
@@ -84,6 +85,12 @@ function metadata(
         "organization-master/campus",
         "department-master/organization-mapping",
         "department-master/organization-identifier",
+        ...(!legacyReferences
+          ? [
+              "department-master/organization-evolution",
+              "department-master/campus-relation",
+            ]
+          : []),
       ].includes(String(item["owner"]))
     )
       add(String(item["owner"]), item["id"]);
@@ -93,6 +100,15 @@ function metadata(
     if (item["viewId"]) add("department-master/hierarchy-view", item["viewId"]);
     if (input.kind === "IMPACT" && item["caseId"])
       add("department-master/impact-case", item["caseId"]);
+    if (!legacyReferences) {
+      const compensation = item["compensatesEvent"] as
+        Record<string, unknown> | undefined;
+      const relation = item["relation"] as Record<string, unknown> | undefined;
+      if (input.kind === "EVOLUTION" && compensation)
+        add("department-master/organization-evolution", compensation["id"]);
+      if (["EVOLUTION", "LIFECYCLE"].includes(input.kind) && relation)
+        add("department-master/campus-relation", relation["id"]);
+    }
     if (
       item["target_id"] &&
       ["ORG", "LEGAL", "CAMPUS"].includes(String(item["target_type"]))
@@ -181,8 +197,10 @@ export function openDepartmentWorkspace(
           state: record.state,
           input: content,
         }) !== record.digest ||
-        canonicalPlan(metadata(content, record.submission)) !==
-          canonicalPlan(record.metadata)
+        (canonicalPlan(metadata(content, record.submission)) !==
+          canonicalPlan(record.metadata) &&
+          canonicalPlan(metadata(content, record.submission, true)) !==
+            canonicalPlan(record.metadata))
       )
         throw new Error("PAYLOAD_UNAVAILABLE");
       return content;
@@ -222,18 +240,32 @@ export function openDepartmentWorkspace(
       bytes.fill(0);
     }
   };
+  const authorizedContent = async (
+    scope: CatalogTransactionScope,
+    actor: string,
+    record: Stored,
+  ) => {
+    const content = unseal(record);
+    // Known 0145 projections remain authentic, but current permissions use the
+    // complete reference projection before any plaintext or replay is returned.
+    const current = JSON.stringify(metadata(content, record.submission));
+    await sql`select department_master.workspace_authorize(${actor},${current}::jsonb,'READ'),department_master.workspace_authorize(${actor},${current}::jsonb,'READ_RESTRICTED')`.execute(
+      scope,
+    );
+    return content;
+  };
   const read = async (actor: string, id: string) => {
     check(Id, id);
-    return root(
-      async (scope) =>
-        (
-          await sql<{
-            r: Stored;
-          }>`select department_master.workspace_read(${actor},${id}::uuid) r`.execute(
-            scope,
-          )
-        ).rows[0]!.r,
-    );
+    return root(async (scope) => {
+      const record = (
+        await sql<{
+          r: Stored;
+        }>`select department_master.workspace_read(${actor},${id}::uuid) r`.execute(
+          scope,
+        )
+      ).rows[0]!.r;
+      return { record, content: await authorizedContent(scope, actor, record) };
+    });
   };
   const link = async (
     scope: CatalogTransactionScope,
@@ -359,26 +391,24 @@ export function openDepartmentWorkspace(
       check(Id, input.requestId);
       if (Object.keys(input).some((key) => key !== "requestId"))
         throw new Error("CLOSED_INPUT_REQUIRED");
-      const record = await root(
-        async (scope) =>
-          (
-            await sql<{
-              r: Stored | null;
-            }>`select department_master.workspace_recover(${actor},${input.requestId}::uuid) r`.execute(
-              scope,
-            )
-          ).rows[0]!.r,
-      );
-      return record
-        ? {
-            id: record.id,
-            version: record.version,
-            state: record.state,
-            recordedAt: record.recordedAt,
-            content: unseal(record),
-            submission: record.submission,
-          }
-        : null;
+      return root(async (scope) => {
+        const record = (
+          await sql<{
+            r: Stored | null;
+          }>`select department_master.workspace_recover(${actor},${input.requestId}::uuid) r`.execute(
+            scope,
+          )
+        ).rows[0]!.r;
+        if (!record) return null;
+        return {
+          id: record.id,
+          version: record.version,
+          state: record.state,
+          recordedAt: record.recordedAt,
+          content: await authorizedContent(scope, actor, record),
+          submission: record.submission,
+        };
+      });
     },
     permissions,
     async listApplications(actor: string, input: DepartmentApplicationList) {
@@ -400,13 +430,13 @@ export function openDepartmentWorkspace(
       check(Id, input.id);
       if (Object.keys(input).some((key) => key !== "id"))
         throw new Error("CLOSED_INPUT_REQUIRED");
-      const record = await read(actor, input.id);
+      const { record, content } = await read(actor, input.id);
       return {
         id: record.id,
         version: record.version,
         state: record.state,
         recordedAt: record.recordedAt,
-        content: unseal(record),
+        content,
         submission: record.submission,
       };
     },
@@ -430,8 +460,8 @@ export function openDepartmentWorkspace(
     },
     async discardDraft(actor: string, input: DepartmentDraftAction) {
       check(DepartmentDraftActionSchema, input);
-      const record = await read(actor, input.id);
-      return save(actor, { ...unseal(record), ...input }, "DISCARDED");
+      const { content } = await read(actor, input.id);
+      return save(actor, { ...content, ...input }, "DISCARDED");
     },
     async submitDraft(
       actor: string,
@@ -447,6 +477,7 @@ export function openDepartmentWorkspace(
             scope,
           )
         ).rows[0]!.r;
+        const content = await authorizedContent(scope, actor, record);
         if (record.submission) {
           if (
             record.submission.requestId !== input.requestId ||
@@ -460,7 +491,6 @@ export function openDepartmentWorkspace(
           record.version !== input.expectedVersion
         )
           throw new Error("STALE_HEAD");
-        const content = unseal(record);
         if (content.profile === "FULL") throw new Error("BLOCKED_DEPENDENCY");
         if (content.kind === "HIERARCHY") {
           if (content.transport) throw new Error("CLOSED_INPUT_REQUIRED");

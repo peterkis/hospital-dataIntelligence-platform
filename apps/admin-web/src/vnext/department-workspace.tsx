@@ -263,6 +263,9 @@ export function DepartmentWorkspaceApp() {
     setHistories([]);
     pendingSave.current = null;
     pendingSubmit.current = null;
+    setRecoverId(
+      panel === "DEPARTMENT" ? sessionStorage.getItem(recoveryKey) : null,
+    );
     setMessage("");
     if (panel !== "DEPARTMENT") {
       setBusy(false);
@@ -400,24 +403,29 @@ export function DepartmentWorkspaceApp() {
         ...(saved ? { id: saved.id, expectedVersion: saved.version } : {}),
       };
       sessionStorage.setItem(recoveryKey, pendingSave.current.requestId);
-      let result;
+      let accepted = false;
       try {
-        result = await value(workspace().save(pendingSave.current));
+        const result = await value(workspace().save(pendingSave.current));
+        accepted = true;
+        const restored = await value(workspace().read(result.id));
+        if (generation !== epoch.current) return;
+        if (restored.content.kind !== "DEPARTMENT")
+          throw new Error("草稿类型不匹配。");
+        setDraft(restored.content);
+        setSaved(restored);
+        setDirty(false);
+        remember(restored.id);
+        pendingSave.current = null;
+        sessionStorage.removeItem(recoveryKey);
+        setMessage("草稿已保存，可刷新恢复。尚未形成科室事实。");
+        await reload(generation);
       } catch (error) {
-        if (definiteFailure(error)) {
+        if (!accepted && definiteFailure(error)) {
           pendingSave.current = null;
           sessionStorage.removeItem(recoveryKey);
         }
         throw error;
       }
-      if (generation !== epoch.current) return;
-      pendingSave.current = null;
-      sessionStorage.removeItem(recoveryKey);
-      setSaved(result);
-      setDirty(false);
-      remember(result.id);
-      setMessage("草稿已保存，可刷新恢复。尚未形成科室事实。");
-      await reload(generation);
     });
   const submit = () =>
     run(async () => {
@@ -471,6 +479,12 @@ export function DepartmentWorkspaceApp() {
     await reload();
     if (item) await selectApplication(item);
   };
+  const contextLocked =
+    busy ||
+    dirty ||
+    !!recoverId ||
+    !!pendingSave.current ||
+    !!pendingSubmit.current;
   return (
     <div className="organization-workspace department-workspace">
       <header className="workspace-header">
@@ -590,12 +604,7 @@ export function DepartmentWorkspaceApp() {
           <aside className="draft-list">
             <h2>私有草稿</h2>
             <button
-              disabled={
-                busy ||
-                dirty ||
-                !!pendingSave.current ||
-                !!pendingSubmit.current
-              }
+              disabled={!canSave || contextLocked}
               onClick={() => {
                 epoch.current++;
                 setDraft(blank());
@@ -616,7 +625,7 @@ export function DepartmentWorkspaceApp() {
               .map((item) => (
                 <button
                   className="draft-item"
-                  disabled={busy || dirty}
+                  disabled={contextLocked}
                   key={item.id}
                   onClick={() => void restore(item.id)}
                 >
@@ -654,7 +663,7 @@ export function DepartmentWorkspaceApp() {
               .map((item) => (
                 <button
                   className="draft-item"
-                  disabled={busy || dirty}
+                  disabled={contextLocked}
                   key={item.inputId}
                   onClick={() => void selectApplication(item)}
                 >
@@ -1170,7 +1179,7 @@ export function DepartmentWorkspaceApp() {
                   <article className="history" key={item.id}>
                     <h3>{item.versions.at(-1)?.facts.name}</h3>
                     <button
-                      disabled={!canSave || !!recoverId || busy || dirty}
+                      disabled={!canSave || contextLocked}
                       onClick={() => {
                         const version = item.versions.at(-1);
                         if (!version) return;
