@@ -13,6 +13,7 @@ import {grantDepartment} from './p2-01-validate.mjs';
 import {grantOrganization} from './p1-02-validate.mjs';
 import {openCatalog,LocalSyntheticKeyProvider} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
 import {openOrganizationEvolutions} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {organizationMappingFixture} from './p2-03-fixture.ts';
 import {evolutionFixture} from './p2-05-fixture.ts';
 
 export async function validateImpactUpgrade(){
@@ -23,7 +24,7 @@ async function validateImpactUpgradeFrom(prefix,baseline){
  // Freeze the predecessor's impact modules too: current helpers can require
  // migrations that the populated predecessor intentionally does not have yet.
  const path='apps/governance-api/src/modules/department-master/vnext/organization-evolution.ts';
- const names=['organization-evolution.ts','organization-evolution-contracts.ts',...(prefix>=122?['department-impact.ts','department-impact-cases.ts','department-impact-contracts.ts']:[])];
+ const names=['index.ts','organization-evolution.ts','organization-evolution-contracts.ts',...(prefix>=122?['department-impact.ts','department-impact-cases.ts','department-impact-contracts.ts']:[])];
  const directory=resolve('.runtime/vnext/p2-06/predecessor-'+prefix);mkdirSync(directory,{recursive:true});
  const sources=new Map(names.map(name=>{const file=resolve(dirname(path),name);return [file,execFileSync('git',['show',baseline+':'+dirname(path).replaceAll('\\','/')+'/'+name],{encoding:'utf8',windowsHide:true})];}));
  const frozen=new Map(names.map(name=>[resolve(dirname(path),name),resolve(directory,name.replace(/\.ts$/,'.mts'))]));
@@ -37,11 +38,12 @@ async function validateImpactUpgradeFrom(prefix,baseline){
  const predecessor=frozen.get(resolve(path));
  const sourceDigest=createHash('sha256').update(JSON.stringify(names.map(name=>({name,source:sources.get(resolve(dirname(path),name))})))).digest('hex');
  const {openOrganizationEvolutions:openPredecessor}=await import(pathToFileURL(predecessor).href);
+ const {openDepartment:openPredecessorDepartment}=await import(pathToFileURL(frozen.get(resolve(dirname(path),'index.ts'))).href);
  const owned=createTemporary('P2-06'),provider=new LocalSyntheticKeyProvider();let session,catalog,old,current;
  try{
   await migrate(owned.receipt,migrationFiles().slice(0,prefix));await seed(owned.receipt);
   session=await createValidationOwnerSession(owned.receipt);grantDepartment(owned.receipt,session.receipt.role);grantOrganization(owned.receipt,session.receipt.role);
-  catalog=await openCatalog(session.connectionString,provider);const f=await evolutionFixture(owned.receipt,catalog,provider,session.connectionString);old=openPredecessor(session.connectionString,provider);
+  catalog=await openCatalog(session.connectionString,provider);const base=await organizationMappingFixture(owned.receipt,catalog,provider,session.connectionString,openPredecessorDepartment);const f=await evolutionFixture(owned.receipt,catalog,provider,session.connectionString,base);old=openPredecessor(session.connectionString,provider);
   const prepare=async()=>{
    const input=await f.input(),id=await f.newDepartment();f.grantTarget(id);input.predecessors=[{owner:'department-master',id,expectedVersion:'1'}];input.relations[0].from_target_id=id;input.relations[0].to_target_id=id;
    input.impacts=input.impacts.filter(item=>item.domain!=='IDENTIFIER');
@@ -66,8 +68,8 @@ async function validateImpactUpgradeFrom(prefix,baseline){
    closedCase=await old.readImpactCase('maker',{caseId:item.id,campus:'NORTH'});
   }
   await old.close();old=null;
-  const before=await inspect(owned.receipt),tables=predecessorTables(before.tables),added=prefix===121?{'vnext_control.actor':['principal_kind']}:{},digest=predecessorDigest(owned.receipt,tables,added);
-  const after=await migrate(owned.receipt);assert.equal(after.identity.oid,before.identity.oid);assert.deepEqual(after.ledger.slice(0,prefix),before.ledger);assert.equal(predecessorDigest(owned.receipt,tables,added),digest);
+  const before=await inspect(owned.receipt),tables=predecessorTables(before.tables),added=prefix===121?{'vnext_control.actor':['principal_kind'],'department_master.evolution_event':['compensates_event_id']}:{'department_master.evolution_event':['compensates_event_id']},digest=predecessorDigest(owned.receipt,tables,added);
+  added['department_master.evolution_event']=['compensates_event_id'];const after=await migrate(owned.receipt);assert.equal(after.identity.oid,before.identity.oid);assert.deepEqual(after.ledger.slice(0,prefix),before.ledger);assert.equal(predecessorDigest(owned.receipt,tables,added),digest);
   grantDepartment(owned.receipt,session.receipt.role);peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION governance_catalog.department_impact_record(text,text) TO ${session.receipt.role}`);current=openOrganizationEvolutions(session.connectionString,provider);
   assert.deepEqual(await current.applyUnit('maker',accepted.command),outcome);assert.deepEqual(await current.query('maker',eventQuery),event);
   if(closedCase)assert.deepEqual(await current.readImpactCase('maker',{caseId:closedCase.item.id,campus:'NORTH'}),closedCase);

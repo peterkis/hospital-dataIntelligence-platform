@@ -127,10 +127,10 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
    });
   });
  };
- const evaluateOperatingWindow=async(actor:string,input:EvaluateOperatingInput)=>{
+ const evaluateOperatingWindowInTransaction=async(scope:Scope,actor:string,input:EvaluateOperatingInput)=>{
   check(EvaluateOperatingSchema,input);input=structuredClone(input);const requested={from:localTime(input.validFrom),to:input.validTo===null?null:localTime(input.validTo)};
   if(requested.to!==null&&requested.to<=requested.from)throw new Error('INVALID_BUSINESS_PERIOD');
-  return root(async scope=>{
+  return (async()=>{
    const observedAt=await clock(scope),asOf=localTime(input.asOf??observedAt),relations=await pair(scope,actor,input.subject.id,input.campus.id,'RELATION');
    const reg=await registration.inTransaction(scope).read(actor,{id:input.subject.id,asOf});
    const cr=campuses.inTransaction(scope),profiles=await cr.readCampusReferenceCoverage(actor,{references:[input.campus],validFrom:requested.from,validTo:requested.to,asOf});
@@ -180,9 +180,10 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
    }
    const status=services.some(s=>s.status==='NOT_EVALUABLE')?'NOT_EVALUABLE' as const:services.some(s=>s.status==='REVIEW_REQUIRED')?'REVIEW_REQUIRED' as const:services.some(s=>s.status==='NOT_SATISFIED')?'NOT_SATISFIED' as const:'SATISFIED' as const;
    return {policy:'ORG03_SYNTHETIC_V1' as const,status,observedAt,asOf,subject:input.subject,campus:input.campus,validFrom:requested.from,validTo:requested.to,services};
-  });
+  })();
  };
- return {commandsInTransaction:(scope:Scope)=>({stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stageInTransaction(scope,actor,input);},port}),stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stage(actor,input);},
+ const evaluateOperatingWindow=(actor:string,input:EvaluateOperatingInput)=>root(scope=>evaluateOperatingWindowInTransaction(scope,actor,input));
+ return {evaluateOperatingWindowInTransaction,commandsInTransaction:(scope:Scope)=>({stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stageInTransaction(scope,actor,input);},port}),stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stage(actor,input);},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);const r=await root(async scope=>(await sql<{r:Awaited<ReturnType<typeof record>>}>`select organization_master.operating_plan(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);return root(async scope=>(await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.operating_withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,

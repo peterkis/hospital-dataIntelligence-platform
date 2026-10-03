@@ -37,3 +37,5 @@ export {createOrganizationIdentifierClient,type OrganizationIdentifierInput} fro
 export {createOrganizationEvolutionClient,type OrganizationEvolutionInput} from './vnext-client.js';
 
 export {createDepartmentImpactClient} from './vnext-client.js';
+
+export {createDepartmentLifecycleClient} from './vnext-client.js';

@@ -34,7 +34,7 @@ export function departmentImpactCases(ports:CasePorts){
  const result=async(scope:CatalogTransactionScope,actor:string,campus:string,ref:ImpactResultReference,caseId:string)=>
   (await sql<{r:{owner:string;id:string;versionId:string;departmentIds:string[];period:ImpactSpan;action:string;safeShrink:boolean}}>`select department_master.impact_result(${actor},${JSON.stringify({...ref,caseId})}::jsonb,${campus}) r`.execute(scope)).rows[0]!.r;
  const closes=(proof:Awaited<ReturnType<typeof result>>,original:{owner:string;id:string;departmentId:string})=>proof.owner===original.owner&&proof.id===original.id&&(
-  ['RETRACT','END','CLOSED','REVOKED'].includes(proof.action)||['CORRECT','PUBLISHED'].includes(proof.action)&&proof.safeShrink&&proof.departmentIds.includes(original.departmentId)
+  ['RETRACT','END','CLOSED','REVOKED'].includes(proof.action)||['CORRECT','PUBLISHED','REVISE'].includes(proof.action)&&proof.safeShrink&&proof.departmentIds.includes(original.departmentId)
  );
  const validateDisposition=async(scope:CatalogTransactionScope,actor:string,detail:ImpactCaseDetail,disposition:ImpactDisposition)=>{
   const {item}=detail;

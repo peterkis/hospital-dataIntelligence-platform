@@ -213,6 +213,7 @@ export function createOrganizationEvolutionClient(baseUrl:string,actor:string){
  return {
   template:(body:operations['getOrganizationEvolutionTemplate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/template',{body}),
   receiveFile:(body:operations['receiveOrganizationEvolutionFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/files',{body}),
+  compensate:(body:operations['compensateDepartmentEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/compensate',{body}),
   stage:(body:operations['stageOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/inputs',{body}),
   readInput:(body:operations['readOrganizationEvolutionInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/inputs/read',{body}),
   preview:(body:operations['previewOrganizationEvolution']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/organization-evolutions/preview',{body}),
@@ -244,5 +245,24 @@ export function createDepartmentImpactClient(baseUrl:string,actor:string){
   recheck:(body:operations['recheckDepartmentImpact']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/recheck',{body}),
   receipt:(body:operations['recordDepartmentMigrationReceipt']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/receipts',{body}),
   handoff:(body:operations['readDepartmentMigrationHandoff']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-impacts/handoffs/read',{body}),
+ };
+}
+
+export function createDepartmentLifecycleClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  stage:(body:operations['stageDepartmentLifecycle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/inputs',{body}),
+  input:(body:operations['readDepartmentLifecycleInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/inputs/read',{body}),
+  verify:(body:operations['verifyDepartmentLifecycle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/verify',{body}),
+  plan:(body:operations['planDepartmentLifecycle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/plan',{body}),
+  review:(body:operations['reviewDepartmentLifecycle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/review',{body}),
+  approve:(body:operations['approveDepartmentLifecycle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/approve',{body}),
+  apply:(body:operations['applyDepartmentLifecycle']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/apply',{body}),
+  resume:(body:operations['resumeDepartmentLifecycleOutcome']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/resume',{body}),
+  history:(body:operations['getDepartmentLifecycleHistory']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/history',{body}),
+  query:(body:operations['getDepartmentLifecycleAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/query',{body}),
+  admission:(body:operations['getDepartmentAdmissionWindow']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/admission',{body}),
+  relations:(body:operations['listDepartmentCampusRelations']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/relations',{body}),
+  diffRelation:(body:operations['diffDepartmentCampusRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/relations/diff',{body}),
  };
 }

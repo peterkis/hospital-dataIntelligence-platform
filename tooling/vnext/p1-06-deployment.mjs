@@ -11,7 +11,7 @@ import {assertHierarchyProvisioned,grantHierarchyFunctions} from './hierarchy-pr
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
- if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
+ if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-08'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
  const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();
  const prefix=workspaceDeploymentPrefix(files,before.ledger,reuseExisting);
  if(evidenceTask==='p2-01'&&prefix<83)throw new Error('P1_07_REPAIRED_DEPLOYMENT_REQUIRED');
@@ -19,6 +19,7 @@ export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTa
  // repairs and this ticket's 0112 advance it together without rewriting lineage.
  if(evidenceTask==='p2-03'&&prefix<109)throw new Error('P2_02_MERGED_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p2-06'&&prefix<121)throw new Error('P2_05_CURRENT_DEPLOYMENT_REQUIRED');
+ if(evidenceTask==='p2-08'&&prefix<133)throw new Error('P2_06_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p2-05'&&prefix<117)throw new Error('P2_04_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p1-07'&&prefix<71)throw new Error('P1_06_MERGED_DEPLOYMENT_REQUIRED');
  mkdirSync('.runtime/vnext/'+evidenceTask,{recursive:true});const evidence='.runtime/vnext/'+evidenceTask+'/deployment-'+Date.now();

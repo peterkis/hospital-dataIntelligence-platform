@@ -50,6 +50,13 @@ const postWorkspaceMigrations = [
  '0131_impact_replay_and_terminal_state',
  '0132_impact_terminal_command_order',
  '0133_impact_historical_receipt_replay',
+ '0134_department_campus_lifecycle',
+ '0135_department_forward_compensation',
+ '0136_lifecycle_shared_impacts',
+ '0137_department_lifecycle_reference_admission',
+ '0138_campus_relation_impact_references',
+ '0139_evolution_campus_bundle',
+ '0140_lifecycle_authority_closure',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

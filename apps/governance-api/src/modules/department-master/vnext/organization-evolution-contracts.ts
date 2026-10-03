@@ -1,6 +1,7 @@
 import {Type,type Static} from 'typebox';
 import {Id,ReferenceSchema,EntrySchema} from './contracts.js';
 import {ImportJobCommandSchema} from '../../governance-catalog/index.js';
+import {EvolutionCampusChangeSchema} from './evolution-campus-contracts.js';
 
 const closed={additionalProperties:false} as const;
 const text=(maxLength=2000)=>Type.String({maxLength});
@@ -26,6 +27,8 @@ export const EvolutionImpactSchema=Type.Object({
 },closed);
 const CompanionContracts=Type.Object({successionContractId:Id,successionContractVersionId:Id,departmentContractId:Id,departmentContractVersionId:Id},closed);
 const fields={
+ campusChanges:Type.Optional(Type.Array(EvolutionCampusChangeSchema,{maxItems:100})),
+ compensatesEvent:Type.Optional(Type.Object({owner:Type.Literal('department-master/organization-evolution'),id:Id,version:Type.Literal('1')},closed)),
  requestId:Id,jobId:Id,revisionId:Id,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),
  event:EvolutionEventRowSchema,relations:Type.Array(EvolutionRelationRowSchema,{minItems:1,maxItems:100}),
  predecessors:Type.Array(ReferenceSchema,{minItems:1,maxItems:100}),
@@ -62,8 +65,8 @@ export interface SuccessionGraphInput {changeType:string;predecessors:string[];s
 export interface EvolutionIssue {row:number;field:string;code:string;status:'FAIL'|'BLOCKED';sheet?:string}
 
 /** Count the actual domain writes hidden behind one whole-event Owner command. */
-export function evolutionExpandedWriteCount(input:Pick<EvolutionStoredStageInput,'event'|'successors'|'relations'|'predecessors'>):number{
- return 1+input.successors.length*4+input.relations.length+(input.event.change_type==='RENAME'?1:input.predecessors.length);
+export function evolutionExpandedWriteCount(input:Pick<EvolutionStoredStageInput,'event'|'successors'|'relations'|'predecessors'|'campusChanges'>):number{
+ return 1+input.successors.length*4+input.relations.length+(input.event.change_type==='RENAME'?1:input.predecessors.length)+(input.campusChanges??[]).reduce((n,c)=>n+(c.action==='ASSIGN'?2:1),0);
 }
 
 /** Same-identity labels are event evidence and never identity succession edges. */

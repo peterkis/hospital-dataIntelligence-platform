@@ -29,6 +29,27 @@ export interface DepartmentMasterAccess {
   scope: string;
 }
 
+export interface DepartmentMasterCampusRelation {
+  campus_id: string;
+  department_id: string;
+  governance_scope: string;
+  id: Generated<string>;
+  subject_id: string;
+}
+
+export interface DepartmentMasterCampusRelationVersion {
+  action: string;
+  dependencies: Json;
+  id: Generated<string>;
+  number: Int8;
+  operation_id: string;
+  recorded_at: string;
+  relation_id: string;
+  services: Json;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface DepartmentMasterDepartment {
   code: string;
   id: Generated<string>;
@@ -37,6 +58,7 @@ export interface DepartmentMasterDepartment {
 export interface DepartmentMasterEvolutionEvent {
   campus: string;
   change_type: string;
+  compensates_event_id: Generated<string | null>;
   content_digest: string;
   effective_at: string;
   facts: Json;
@@ -241,6 +263,52 @@ export interface DepartmentMasterInput {
   recorded_at: Generated<string>;
   request_id: string;
   revision: Generated<string>;
+}
+
+export interface DepartmentMasterLifecycleInput {
+  campus: string;
+  department_ids: Json;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+}
+
+export interface DepartmentMasterLifecycleOperation {
+  assessment: Json;
+  content_digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface DepartmentMasterLifecycleVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface DepartmentMasterLifecycleVersion {
+  action: string;
+  department_id: string;
+  effective_at: string;
+  id: Generated<string>;
+  number: Int8;
+  operation_id: string;
+  recorded_at: string;
 }
 
 export interface DepartmentMasterMappingAccess {
@@ -1054,6 +1122,8 @@ export interface VnextControlRequestIdentity {
 
 export interface DB {
   "department_master.access": DepartmentMasterAccess;
+  "department_master.campus_relation": DepartmentMasterCampusRelation;
+  "department_master.campus_relation_version": DepartmentMasterCampusRelationVersion;
   "department_master.department": DepartmentMasterDepartment;
   "department_master.evolution_event": DepartmentMasterEvolutionEvent;
   "department_master.evolution_input": DepartmentMasterEvolutionInput;
@@ -1070,6 +1140,10 @@ export interface DB {
   "department_master.identifier_verification": DepartmentMasterIdentifierVerification;
   "department_master.impact_external_owner_access": DepartmentMasterImpactExternalOwnerAccess;
   "department_master.input": DepartmentMasterInput;
+  "department_master.lifecycle_input": DepartmentMasterLifecycleInput;
+  "department_master.lifecycle_operation": DepartmentMasterLifecycleOperation;
+  "department_master.lifecycle_verification": DepartmentMasterLifecycleVerification;
+  "department_master.lifecycle_version": DepartmentMasterLifecycleVersion;
   "department_master.mapping_access": DepartmentMasterMappingAccess;
   "department_master.mapping_input": DepartmentMasterMappingInput;
   "department_master.mapping_target_access": DepartmentMasterMappingTargetAccess;
