@@ -11,6 +11,7 @@ const Version=Type.Object({id:Id,kind:Type.Enum(['RELATION','SCOPE']),head:Text,
 const Span=Type.Object({from:Time,to:End},closed),Status=Type.Enum(['SATISFIED','NOT_SATISFIED','REVIEW_REQUIRED','NOT_EVALUABLE']);
 const Evaluation=Type.Object({policy:Type.Literal('ORG03_SYNTHETIC_V1'),status:Status,observedAt:Time,asOf:Time,subject:SubjectRef,campus:CampusRef,validFrom:Time,validTo:End,services:Type.Array(Type.Object({code:Text,status:Status,segments:Type.Array(Type.Object({from:Time,to:End,relation:Type.Object({owner:Type.Literal('organization-master/operating-relation'),id:Id,version:Text,versionId:Id},closed),scope:ScopeRef,license:LicenseRef},closed)),gaps:Type.Array(Span),reviewRequired:Type.Array(Span),reasons:Type.Array(Text)},closed))},closed);
 export interface OperatingHttpContext {owner:OperatingOwner;actor:(r:FastifyRequest)=>string}
+export const OperatingEvaluationResponseSchema=Evaluation;
 export function registerOperatingRoutes(app:FastifyInstance,context?:OperatingHttpContext){
  const owner=()=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return context.owner;};
  const actor=(r:FastifyRequest)=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return context.actor(r);};

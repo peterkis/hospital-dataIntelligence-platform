@@ -1,5 +1,6 @@
+import {assertDepartmentLifecycleProvisioned} from './department-lifecycle-provisioning.mjs';
 import {assertDepartmentImpactsProvisioned} from './department-impact-provisioning.mjs';
-import {openDepartment,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,openOrganizationEvolutions} from '../../apps/governance-api/src/modules/department-master/index.ts';
+import {openDepartment,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,openOrganizationEvolutions,openDepartmentLifecycle} from '../../apps/governance-api/src/modules/department-master/index.ts';
 import {assertOrganizationEvolutionsProvisioned} from './organization-evolution-provisioning.mjs';
 import {assertOrganizationIdentifiersProvisioned} from './organization-identifier-provisioning.mjs';
 import {assertOrganizationMappingsProvisioned} from './organization-mapping-provisioning.mjs';
@@ -50,7 +51,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -63,6 +64,7 @@ export async function startWorkbench({
     await mapping?.close();
     await identifiers?.close();
     await evolutions?.close();
+    await departmentLifecycle?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -117,6 +119,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=116){await assertOrganizationIdentifiersProvisioned(connection,provider);identifiers=openOrganizationIdentifiers(connection,provider);}
     if(persistent&&persistentPrefix>=122)await assertDepartmentImpactsProvisioned(connection);
     if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider);}
+    if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -177,6 +180,7 @@ export async function startWorkbench({
       mapping?{owner:mapping,actor:r=>syntheticActor(r.headers)}:undefined,
       identifiers?{owner:identifiers,actor:r=>syntheticActor(r.headers)}:undefined,
       evolutions?{owner:evolutions,actor:r=>syntheticActor(r.headers)}:undefined,
+      departmentLifecycle?{owner:departmentLifecycle,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

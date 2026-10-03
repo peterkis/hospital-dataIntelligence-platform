@@ -5,8 +5,8 @@ import {conditionMappings} from '../../apps/governance-api/src/modules/governanc
 import {departmentFixture} from './p2-01-fixture.js';
 import {peer,quote} from './lineage.mjs';
 
-export async function organizationMappingFixture(receipt:{name:string},catalog:Catalog,provider:KeyProviderPort,connection:string){
- const department=await departmentFixture(receipt,catalog,provider),owner=openDepartment(connection,provider);
+export async function organizationMappingFixture(receipt:{name:string},catalog:Catalog,provider:KeyProviderPort,connection:string,departmentConstructor= openDepartment){
+ const department=await departmentFixture(receipt,catalog,provider),owner=departmentConstructor(connection,provider);
  let targetId:string;
  try{
   const input=await department.input(),staged=await owner.stage('maker',input);
@@ -35,7 +35,7 @@ export async function organizationMappingFixture(receipt:{name:string},catalog:C
  const entry=():OrganizationMappingStageInput['entries'][number]=>({action:'REGISTER',mapping:null,reason:'DEMO_REGISTER',evidenceId:artifact.artifactId,row:{org_map_id:randomUUID(),from_system_id:department.source.id,source_entity_type:'DEPARTMENT',source_code:'DEMO_'+randomUUID(),source_name:'DEMO name is never a key',source_context:'DEFAULT',target_type:'ORG',target_id:targetId,mapping_relation:'EXACT',resolution_rule:'',verified_by:'DEMO Information management',version_no:'9',valid_from:'2026-01-01T00:00:00',valid_to:'',record_status:'ACTIVE',source_system_id:department.source.id,source_record_id:'DEMO/ORG22/2',approval_ref:'DEMO_APPROVAL',recorded_at:'2026-01-02T00:00:00'}});
  const input=async(entries=[entry()]):Promise<OrganizationMappingStageInput>=>{const j=await newJob();return {requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',profile:'CORE',entries};};
  const newDepartment=async()=>{
-  const owner=openDepartment(connection,provider);
+  const owner=departmentConstructor(connection,provider);
   try{
    const staged=await owner.stage('maker',await department.input());await owner.verify('reviewer',{requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,rows:[{row:1,disposition:'DEPARTMENT',historicalException:false,reason:'DEMO mapping correction target',evidenceId:department.artifact.artifactId}]});
    const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);

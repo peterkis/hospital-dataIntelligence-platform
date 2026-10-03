@@ -13,7 +13,7 @@ export type AssessDepartmentChangeInput=Static<typeof AssessDepartmentChangeSche
 export const ImpactSpanSchema=Type.Object({from:Text,to:Type.Union([Text,Type.Null()])},closed);
 export type ImpactSpan=Static<typeof ImpactSpanSchema>;
 export const ImpactReferenceSchema=Type.Object({
- owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY']),id:Id,versionId:Id,version:Text,
+ owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION']),id:Id,versionId:Id,version:Text,
  referenceRole:Type.Enum(['TARGET','NODE','OWNER']),sourceSystemIds:Type.Array(Id),
  departmentId:Id,departmentVersionId:Type.Union([Id,Type.Null()]),
  acceptedVersions:Type.Array(Type.Object({versionId:Id,version:Text,from:Text,to:Type.Union([Text,Type.Null()])},closed)),
@@ -25,10 +25,10 @@ export const ImpactReferenceSchema=Type.Object({
  affectedSpans:Type.Array(ImpactSpanSchema),
 },closed);
 export type ImpactReference=Static<typeof ImpactReferenceSchema>;
-export const ImpactCoverageSchema=Type.Object({owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','PERSONNEL','BUSINESS_UNIT','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER']),status:Type.Enum(['EVALUATED','NOT_EVALUABLE']),reason:Type.Enum(['OWNER_AVAILABLE','OWNER_NOT_IMPLEMENTED'])},closed);
+export const ImpactCoverageSchema=Type.Object({owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION','PERSONNEL','BUSINESS_UNIT','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER']),status:Type.Enum(['EVALUATED','NOT_EVALUABLE']),reason:Type.Enum(['OWNER_AVAILABLE','OWNER_NOT_IMPLEMENTED'])},closed);
 export const DepartmentAssessmentSchema=Type.Object({
  target:ImpactTargetSchema,departmentIds:Type.Array(Id,{minItems:1,maxItems:100}),inputId:Id,inputDigest:Text,campus:Type.Enum(['NORTH','SOUTH']),
- changeType:Type.Enum(['RENAME','SPLIT','MERGE']),effectiveAt:Text,ruleVersion:Type.Literal('DEPARTMENT_IMPACT_V1'),
+ changeType:Type.Enum(['RENAME','SPLIT','MERGE','SUSPEND','RESUME','DEPRECATE','CAMPUS_RELATION','MOVE_SCOPE']),effectiveAt:Text,ruleVersion:Type.Literal('DEPARTMENT_IMPACT_V1'),
  dependencyDigest:Text,coverage:Type.Array(ImpactCoverageSchema),references:Type.Array(ImpactReferenceSchema),
 },closed);
 export type DepartmentAssessment=Static<typeof DepartmentAssessmentSchema>;
@@ -37,7 +37,7 @@ export type StoredDepartmentAssessment=Static<typeof StoredDepartmentAssessmentS
 export const ImpactCaseListSchema=Type.Object({eventId:Id,campus:Type.Enum(['NORTH','SOUTH']),after:Type.Optional(Id),limit:Type.Optional(Type.Integer({minimum:1,maximum:100}))},closed);
 export type ImpactCaseListInput=Static<typeof ImpactCaseListSchema>;
 export const ImpactObligationSchema=Type.Union([
- Type.Object({kind:Type.Literal('REFERENCE'),owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY']),reference:ImpactReferenceSchema,affectedSpans:Type.Array(ImpactSpanSchema)},closed),
+ Type.Object({kind:Type.Literal('REFERENCE'),owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION']),reference:ImpactReferenceSchema,affectedSpans:Type.Array(ImpactSpanSchema)},closed),
  Type.Object({kind:Type.Literal('EXTERNAL'),owner:Type.Enum(['PERSONNEL','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER']),materialId:Id,ownerRole:Text,ownerSignatory:Text,decisionRef:Text,requiredAction:Text,affectedSpans:Type.Array(ImpactSpanSchema)},closed),
 ]);
 export type ImpactObligation=Static<typeof ImpactObligationSchema>;
@@ -49,7 +49,7 @@ const Head=Type.String({pattern:'^(0|[1-9][0-9]*)$'}),Reason=Type.String({minLen
 export const ImpactCaseReadSchema=Type.Object({caseId:Id,campus:Campus},closed);
 const Command={...ImpactCaseReadSchema.properties,requestId:Id,reason:Reason,expectedHead:Head};
 export const AssignImpactCaseSchema=Type.Object({...Command,responsibilityId:Id},closed);
-export const ImpactResultReferenceSchema=Type.Object({owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY']),id:Id,versionId:Id,candidateId:Id,requestId:Id},closed);
+export const ImpactResultReferenceSchema=Type.Object({owner:Type.Enum(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION']),id:Id,versionId:Id,candidateId:Id,requestId:Id},closed);
 export const ImpactDispositionSchema=Type.Union([
  Type.Object({kind:Type.Literal('KEEP_HISTORY'),evidenceId:Id},closed),
  Type.Object({kind:Type.Literal('CLOSE_RELATION'),evidenceId:Id,result:ImpactResultReferenceSchema},closed),

@@ -11,6 +11,7 @@ import {protectedArtifacts} from '../../governance-catalog/index.js';
 import {recordOwnerFileValidation} from '../../governance-catalog/index.js';
 import type {ParserResult} from '../../governance-catalog/index.js';
 import type {ValidationEvaluation} from '../../governance-catalog/index.js';
+import {orderLifecycleByEffectiveTime} from './lifecycle-time.js';
 export * from './contracts.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
@@ -37,7 +38,13 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
  const coverageIn=async(s:Scope,actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf?:string})=>{
   const raw=await snapshot(s,actor,input.id),versions=raw.versions.filter(v=>input.recordAsOf===undefined||stamp(v.recorded_at)<=localTime(input.recordAsOf)),terminal=await replacement(s,actor,input.id,input.recordAsOf);
   const assertions=versions.flatMap((v,i)=>subtract(span(v),versions.slice(i+1).map(span)).map(p=>({...p,versionId:v.id,version:String(v.number)})));
-  const parts=terminal?assertions.flatMap(part=>part.from<stamp(terminal.effective_at)?intersect(part,{from:part.from,to:stamp(terminal.effective_at)}).map(p=>({...part,...p})):[]):assertions;
+  const eligible=terminal?assertions.flatMap(part=>part.from<stamp(terminal.effective_at)?intersect(part,{from:part.from,to:stamp(terminal.effective_at)}).map(p=>({...part,...p})):[]):assertions;
+  // Coverage exposes all historical assertions, including parts outside the requested
+  // interval. Current admission is a separate port with terminal-state restrictions.
+  const from=eligible.reduce((first,part)=>part.from<first?part.from:first,eligible[0]?.from??localTime(input.validFrom));
+  const to=eligible.some(part=>part.to===null)?null:eligible.reduce((last,part)=>part.to!==null&&part.to>last?part.to:last,eligible[0]?.to??localTime(input.validTo??input.validFrom));
+  const admission=eligible.length===0?{parts:[]}:(await sql<{r:{parts:Array<{from:string;to:string|null}>}}>`select department_master.lifecycle_admission(${actor},${input.id}::uuid,${from}::timestamp,${to}::timestamp,${input.recordAsOf===undefined?sql`timezone('Asia/Shanghai',clock_timestamp())`:localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;
+  const parts=eligible.flatMap(part=>admission.parts.flatMap(p=>intersect(part,p).map(segment=>({...part,...segment}))));
   return {owner:'department-master' as const,id:raw.id,covered:covered(parts,input.validFrom,input.validTo),parts};
  };
  const seal=(domain:string,value:unknown)=>{
@@ -97,7 +104,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
    if(missing&&(e.origin!=='HISTORICAL'||!review?.historicalException))issue(row,!e.row.established_on?'established_on':'establishment_doc','LEGAL_REVIEW_REQUIRED');
    if(review?.historicalException&&(!missing||e.origin!=='HISTORICAL'))issue(row,'established_on','CLOSED_INPUT_REQUIRED','FAIL');
    if(e.target){try{const h=await snapshot(s,actor,e.target.id);heads.push(h);if(String(h.versions.at(-1)?.number)!==e.target.expectedVersion)issue(row,'target','STALE_VALIDATION');const own=(await sql<{r:unknown}>`select department_master.identifier_code(${actor},${e.row.org_code},${e.target.id}::uuid) r`.execute(s)).rows[0]!.r;if(!own)issue(row,'org_code','BLOCKED_DEPENDENCY');}catch(error){if(error instanceof Error&&error.message==='NOT_FOUND')issue(row,'target','BLOCKED_DEPENDENCY');else throw error;}}
-   if(e.target){const terminal=await replacement(s,actor,e.target.id);if(terminal&&(e.validTo===null||e.validTo>stamp(terminal.effective_at)))issue(row,'target','UNSUPPORTED_STATE_TRANSITION');}
+   if(e.target){const admitted=(await sql<{r:boolean}>`select department_master.lifecycle_state_admission(${actor},${e.target.id}::uuid,${e.validFrom}::timestamp,${e.validTo}::timestamp) r`.execute(s)).rows[0]!.r;if(!admitted)issue(row,'target','UNSUPPORTED_STATE_TRANSITION');const terminal=await replacement(s,actor,e.target.id);if(terminal&&(e.validTo===null||e.validTo>stamp(terminal.effective_at)))issue(row,'target','UNSUPPORTED_STATE_TRANSITION');}
    let entryEvidence:{id:string;digest:string}|undefined,reviewEvidence:{id:string;digest:string}|undefined,evidenceAvailable=true;
    try{entryEvidence=await evidence(s,actor,e.evidenceId,e,c,input.campus);materials.push(entryEvidence);if(review){reviewEvidence=await evidence(s,actor,review.evidenceId,e,c,input.campus);materials.push(reviewEvidence);await evidence(s,r.verification!.actor,review.evidenceId,e,c,input.campus);}}
    catch(error){if(error instanceof Error&&error.message==='KEY_UNAVAILABLE')throw error;evidenceAvailable=false;issue(row,'source_system_id','BLOCKED_DEPENDENCY');}
@@ -198,13 +205,17 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   async read(actor:string,input:{id:string;businessAt:string;recordAsOf?:string;campus?:'NORTH'|'SOUTH'}){check(ReadSchema,input);const at=localTime(input.businessAt);return root(async s=>{
    const h=await snapshot(s,actor,input.id),versions=h.versions.filter(v=>input.recordAsOf===undefined||stamp(v.recorded_at)<=localTime(input.recordAsOf));if(versions.length===0)throw new Error('NOT_FOUND');
    const terminal=await replacement(s,actor,input.id,input.recordAsOf),superseded=terminal!==null&&stamp(terminal.effective_at)<=at;
+   const lifecycle=orderLifecycleByEffectiveTime((await sql<{r:{lifecycle:Array<{action:string;effective_at:string;number:string}>}}>`select department_master.lifecycle_snapshot(${actor},${input.id}::uuid,${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp) r`.execute(s)).rows[0]!.r.lifecycle);
+   const selected=lifecycle.filter(e=>stamp(e.effective_at)<=at).at(-1),deprecated=lifecycle.some(e=>e.action==='DEPRECATE'&&stamp(e.effective_at)<=at);
+   const businessState=superseded?'SUPERSEDED' as const:deprecated?'DEPRECATED' as const:selected?.action==='SUSPEND'?'SUSPENDED' as const:'ACTIVE' as const;
    const v=superseded?undefined:versions.filter(v=>span(v).from<=at&&(span(v).to===null||span(v).to!>at)).at(-1);
    const code=(await sql<{r:{initialCode:string;effectiveCode:string|null;codeVersion:{id:string;version:string;versionId:string}|null;codeEvidence:'ORG04_HISTORICAL'|'ORG23_ASSERTION'}}> `select department_master.department_code_at_authorized(${actor},${input.id}::uuid,${at}::timestamp,${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp,${input.campus??null}) r`.execute(s)).rows[0]!.r;
-   return {id:h.id,...code,version:v??null,businessState:superseded?'SUPERSEDED' as const:v?'ACTIVE' as const:'NOT_EFFECTIVE' as const,replacement:terminal?{eventId:terminal.event_id,effectiveAt:stamp(terminal.effective_at),recordedAt:stamp(terminal.recorded_at)}:null};
+   return {id:h.id,...code,version:v??null,businessState:v||superseded?businessState:'NOT_EFFECTIVE' as const,replacement:terminal?{eventId:terminal.event_id,effectiveAt:stamp(terminal.effective_at),recordedAt:stamp(terminal.recorded_at)}:null};
   });},
   async coverage(actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf?:string}){check(CoverageSchema,input);return root(s=>coverageIn(s,actor,input));},
   async coverageInTransaction(scope:Scope,actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf?:string}){check(CoverageSchema,input);return coverageIn(scope,actor,input);},
   async exact(actor:string,input:{id:string;version:string;recordAsOf?:string}){if(Object.keys(input).some(k=>!['id','version','recordAsOf'].includes(k))||!/^\d+$/.test(input.version))throw new Error('CLOSED_INPUT_REQUIRED');const h=await history(actor,input.id,input.recordAsOf),v=h.versions.find(v=>String(v.number)===input.version);if(!v)throw new Error('NOT_FOUND');return {owner:'department-master' as const,id:h.id,version:input.version,versionId:v.id,contentDigest:v.content_digest,validFrom:stamp(v.valid_from),validTo:v.valid_to&&stamp(v.valid_to),recordedAt:stamp(v.recorded_at)};},
+  async readAdmissionWindow(actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf?:string}){check(CoverageSchema,input);return root(async s=>(await sql<{r:{owner:'department-master';id:string;covered:boolean;parts:Array<{from:string;to:string|null}>}}>`select department_master.lifecycle_admission(${actor},${input.id}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${input.recordAsOf===undefined?null:localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r);},
   close:()=>db.destroy(),
  };
 }

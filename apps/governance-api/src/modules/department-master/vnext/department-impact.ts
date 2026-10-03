@@ -9,7 +9,7 @@ import {departmentImpactCases} from './department-impact-cases.js';
 import {ImpactCaseListSchema,type ImpactCaseListInput,type ImpactCaseListResult} from './department-impact-contracts.js';
 import {ReadDepartmentAssessmentSchema,ListDepartmentAssessmentsSchema,type ReadDepartmentAssessmentInput,type ListDepartmentAssessmentsInput,type ListDepartmentAssessmentsResult} from './department-impact-contracts.js';
 
-export interface DepartmentImpactContext {inputId:string;inputDigest:string;input:EvolutionStoredStageInput}
+export interface DepartmentImpactContext {inputId:string;inputDigest:string;profile:string;campus:'NORTH'|'SOUTH';departmentIds:string[];effectiveAt:string;changeType:DepartmentAssessment['changeType']}
 export interface DepartmentImpactPorts {
  references(scope:CatalogTransactionScope,actor:string,departments:string[],campus:string):Promise<ImpactReference[]>;
  referenceAccess(scope:CatalogTransactionScope,actor:string,reference:ImpactReference,campus:string):Promise<void>;
@@ -34,22 +34,22 @@ export function departmentImpacts(
   try{return await recordDepartmentImpact<T>(scope,ticket,createHmac('sha256',key).update(ticket).digest('hex'));}finally{key.fill(0);}
  };
  const observe=async(scope:CatalogTransactionScope,actor:string,target:ImpactTarget):Promise<DepartmentAssessment>=>{
-  const context=await load(scope,actor,target),{input}=context;
-  if(input.profile!=='CORE')throw new Error('BLOCKED_DEPENDENCY');
-  const effectiveAt=localTime(input.event.effective_at);
-  const references=await ports.references(scope,actor,input.predecessors.map(ref=>ref.id),input.campus);
+  const context=await load(scope,actor,target);
+  if(context.profile!=='CORE')throw new Error('BLOCKED_DEPENDENCY');
+  const effectiveAt=localTime(context.effectiveAt);
+  const references=await ports.references(scope,actor,context.departmentIds,context.campus);
   if(references.length>2000)throw Object.assign(new Error('PLAN_INPUT_LIMIT'),{budget:{kind:'REFERENCE_COUNT',observed:references.length,limit:2000}});
-  const changeType=input.event.change_type;if(changeType!=='RENAME'&&changeType!=='SPLIT'&&changeType!=='MERGE')throw new Error('BLOCKED_DEPENDENCY');
+  const changeType=context.changeType;
   const exits=new Map<string,string|null>();
-  for(const id of input.predecessors.map(ref=>ref.id))exits.set(id,await ports.replacement(scope,actor,id));
+  for(const id of context.departmentIds)exits.set(id,await ports.replacement(scope,actor,id));
   for(const ref of references){
    projectImpactReference(ref,effectiveAt,changeType,exits.get(ref.departmentId)??null);
   }
   const coverage:DepartmentAssessment['coverage']=[
-   ...(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY'] as const).map(owner=>({owner,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const})),
+   ...(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION'] as const).map(owner=>({owner,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const})),
    ...(['PERSONNEL','BUSINESS_UNIT','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
   ];
-  const basis:Omit<DepartmentAssessment,'dependencyDigest'>={target,departmentIds:input.predecessors.map(ref=>ref.id).sort(),inputId:context.inputId,inputDigest:context.inputDigest,campus:input.campus,changeType,effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage,references};
+  const basis:Omit<DepartmentAssessment,'dependencyDigest'>={target,departmentIds:[...context.departmentIds].sort(),inputId:context.inputId,inputDigest:context.inputDigest,campus:context.campus,changeType,effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage,references};
   const assessment={...basis,dependencyDigest:createHash('sha256').update(canonicalPlan(basis)).digest('hex')};
   // Match the canonical PostgreSQL JSONB representation used by the immutable
   // store CHECK, including its UTF-8 encoding and separator bytes.
@@ -60,7 +60,7 @@ export function departmentImpacts(
  const assessInTransaction=async(scope:CatalogTransactionScope,actor:string,input:AssessDepartmentChangeInput)=>{
   check(AssessDepartmentChangeSchema,input);
    const context=await load(scope,actor,input.target),requestDigest=planBinding(provider,'DEPARTMENT_ASSESS_REQUEST_V1',input);
-   const prior=await record<StoredDepartmentAssessment|null>(scope,actor,'PRIOR_ASSESSMENT',{...input,campus:context.input.campus,requestDigest});
+   const prior=await record<StoredDepartmentAssessment|null>(scope,actor,'PRIOR_ASSESSMENT',{...input,campus:context.campus,requestDigest});
    if(prior){await authorizeFrozen(scope,actor,prior);return prior;}
    const assessment=await observe(scope,actor,input.target);
    const stored=await record<StoredDepartmentAssessment>(scope,actor,'ASSESS',{...input,campus:assessment.campus,assessment,requestDigest});
@@ -74,7 +74,7 @@ export function departmentImpacts(
  return {...departmentImpactCases({root,record,observe,evidence}),observe,assessInTransaction,authorizeFrozen,readAssessmentInTransaction,
   async readDepartmentAssessment(actor:string,input:ReadDepartmentAssessmentInput){return root(scope=>readAssessmentInTransaction(scope,actor,input));},
   async listDepartmentAssessments(actor:string,input:ListDepartmentAssessmentsInput){check(ListDepartmentAssessmentsSchema,input);return root(async scope=>{
-   const context=await load(scope,actor,input.target),result=await record<ListDepartmentAssessmentsResult>(scope,actor,'LIST_ASSESSMENTS',{...input,inputId:context.inputId,campus:context.input.campus});
+   const context=await load(scope,actor,input.target),result=await record<ListDepartmentAssessmentsResult>(scope,actor,'LIST_ASSESSMENTS',{...input,inputId:context.inputId,campus:context.campus});
    for(const assessment of result.items)await authorizeFrozen(scope,actor,assessment);return result;
   });},
   async assessDepartmentChange(actor:string,input:AssessDepartmentChangeInput){return root(scope=>assessInTransaction(scope,actor,input));},
@@ -86,8 +86,8 @@ export function departmentImpacts(
 }
 
 /** Project a full half-open obligation without changing accepted evidence. */
-export function projectImpactReference(ref:ImpactReference,effectiveAt:string,changeType:'RENAME'|'SPLIT'|'MERGE',replacementAt:string|null):void{
-   const exitAt=changeType==='RENAME'?replacementAt:effectiveAt;
+export function projectImpactReference(ref:ImpactReference,effectiveAt:string,changeType:DepartmentAssessment['changeType'],replacementAt:string|null):void{
+   const exitAt=['SPLIT','MERGE','SUSPEND','DEPRECATE'].includes(changeType)?effectiveAt:replacementAt;
    const boundary=exitAt??effectiveAt;
    const from=ref.currentPeriod.from>boundary?ref.currentPeriod.from:boundary,to=ref.currentPeriod.to;
    const active=ref.current&&ref.currentReferencesDepartment&&!['RETRACT','CLOSED','REVOKED'].includes(ref.currentAction)&&ref.currentTargetId===ref.departmentId&&(to===null||to>from);

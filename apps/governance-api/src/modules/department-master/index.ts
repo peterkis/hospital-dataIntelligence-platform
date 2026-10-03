@@ -437,3 +437,5 @@ export {openOrganizationEvolutions} from './vnext/organization-evolution.js';
 
 export * from './vnext/department-impact-contracts.js';
 export {departmentImpactPorts,type DepartmentImpactPorts} from './vnext/department-impact.js';
+export {openDepartmentLifecycle} from './vnext/department-lifecycle.js';
+export * from './vnext/department-lifecycle-contracts.js';

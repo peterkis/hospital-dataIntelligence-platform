@@ -1,3 +1,4 @@
+import {openDepartmentLifecycle} from './department-lifecycle.js';
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
 import {Pool,types} from 'pg';
 import {Kysely,PostgresDialect,sql} from 'kysely';
@@ -98,6 +99,8 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   try{return {binding:{id:input.sourceArtifactId,digest:planBinding(provider,'EVOLUTION_FILE_V1',Buffer.from(bytes).toString('base64'))},parsed:await parseEvolutionWorkbookBounded(bytes,workbookFields(policies))};}finally{bytes.fill(0);}
  };
  const authorizeInputSources=async(s:Scope,actor:string,input:EvolutionStoredStageInput,allowMissingPredecessor=false)=>{
+  if(input.compensatesEvent)await snapshot(s,actor,input.compensatesEvent.id,input.campus);
+  if(input.campusChanges?.length)await lifecycle().authorizeEvolutionCampusChangesInTransaction(s,actor,input);
   const sources=new Set([input.sourceSystemId,...input.successors.map(entry=>entry.row.source_system_id)]);
   for(const reference of input.predecessors){
    try{const h=await recoverable(s,async()=>(await sql<{r:DepartmentHistory}>`select department_master.snapshot(${actor},${reference.id}::uuid) r`.execute(s)).rows[0]!.r);for(const version of h.versions)sources.add(version.facts.sourceSystemId);}
@@ -127,7 +130,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   await authorizeInputSources(s,actor,input,true);
   if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');
   const verification=r.verification?unseal<EvolutionVerifyInput>('EVOLUTION_VERIFICATION_V1',r.verification,EvolutionStoredVerifySchema):null;
-  const issues:EvolutionIssue[]=[],heads:DepartmentHistory[]=[],materials:Array<{id:string;digest:string}>=[],policies:ImportContractItem[]=[],successorFacts:Array<{alias:string;facts:Record<string,unknown>;contentDigest:string}>=[];
+  const issues:EvolutionIssue[]=[],heads:DepartmentHistory[]=[],lifecycleHeads:unknown[]=[],materials:Array<{id:string;digest:string}>=[],policies:ImportContractItem[]=[],successorFacts:Array<{alias:string;facts:Record<string,unknown>;contentDigest:string}>=[];
   const issue=(field:string,code:string,status:EvolutionIssue['status']='BLOCKED',row=0)=>issues.push({row,field,code,status});
   const now=(await sql<{r:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') r`.execute(s)).rows[0]!.r;
   if(input.profile!=='CORE'||j.profile!=='CORE'||!assertContract(c,'ORG26','ORG_EVOLUTION_CORE_V1',ORG26_FIELDS))issue('profile','BLOCKED_DEPENDENCY');
@@ -167,7 +170,8 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    if(!head||head.number!==ref.expectedVersion)issue('predecessors','STALE_VALIDATION');
    if(effectiveAt&&!effective)issue('predecessors','BLOCKED_DEPENDENCY');
    if(effectiveAt&&h.versions.some(version=>stamp(version.valid_from)>effectiveAt))issue('predecessors','STALE_VALIDATION');
-   const replaced=(await sql<{r:unknown}>`select department_master.replacement_read(${actor},${ref.id}::uuid,NULL) r`.execute(s)).rows[0]!.r;if(replaced)issue('predecessors','UNSUPPORTED_STATE_TRANSITION','FAIL');
+   const replaced=(await sql<{r:{effective_at:string}|null}>`select department_master.replacement_read(${actor},${ref.id}::uuid,NULL) r`.execute(s)).rows[0]!.r;if(replaced&&(input.event.change_type!=='RENAME'||!effectiveAt||stamp(replaced.effective_at)<=effectiveAt))issue('predecessors','UNSUPPORTED_STATE_TRANSITION','FAIL');
+   if(effectiveAt){const lifecycle=(await sql<{r:{lifecycle:unknown[]}}> `select department_master.lifecycle_snapshot(${actor},${ref.id}::uuid,NULL) r`.execute(s)).rows[0]!.r.lifecycle;lifecycleHeads.push({departmentId:ref.id,lifecycle,replacement:replaced});const admissible=(await sql<{r:boolean}>`select department_master.lifecycle_state_admission(${actor},${ref.id}::uuid,${effectiveAt}::timestamp,${effectiveAt}::timestamp+interval '1 microsecond') r`.execute(s)).rows[0]!.r;if(!admissible)issue('predecessors','UNSUPPORTED_STATE_TRANSITION','FAIL');}
   }
   if(input.event.change_type==='RENAME'&&(!input.rename||input.successors.length))issue('rename','CLOSED_INPUT_REQUIRED','FAIL');
   if(['SPLIT','MERGE'].includes(input.event.change_type)&&input.rename!==null)issue('rename','CLOSED_INPUT_REQUIRED','FAIL');
@@ -202,13 +206,14 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
       if(r.verification)await evidence(s,r.verification.actor,entry.evidenceId,departmentPolicy.definition.sourceVersionId!,r.campus);return {pin,material};
      });materials.push(proof.material);
      const {sourceRow:_,...normalized}=entry;
-     const facts={name:entry.row.org_name,shortName:entry.row.org_short_name||null,orgType:entry.row.org_type,establishedOn:entry.row.established_on,description:entry.row.description||null,virtual:entry.row.is_virtual==='Y',historicalException:false,sourceVersion:entry.row.version_no,sourceRecordedAt:entry.recordedAt,sourceSystemId:entry.row.source_system_id,policyVersionId:departmentPolicy.versionId,verificationId:r.verification?.id??'',commandDigest:planBinding(provider,'EVOLUTION_DEPARTMENT_COMMAND_V1',{entry:normalized,policy:departmentPolicy.versionId,proof}),sourcePin:proof.pin};
+  const facts={name:entry.row.org_name,shortName:entry.row.org_short_name||null,orgType:entry.row.org_type,establishedOn:entry.row.established_on,description:entry.row.description||null,virtual:entry.row.is_virtual==='Y',historicalException:false,sourceVersion:entry.row.version_no,sourceRecordedAt:entry.recordedAt,sourceSystemId:entry.row.source_system_id,policyVersionId:departmentPolicy.versionId,verificationId:r.verification?.id??'',commandDigest:planBinding(provider,'EVOLUTION_DEPARTMENT_COMMAND_V1',{entry:normalized,policy:departmentPolicy.versionId,proof}),sourcePin:proof.pin};
      successorFacts.push({alias:entry.row.org_id,facts,contentDigest:planBinding(provider,'DEPARTMENT_FACTS_V1',facts)});
     }catch(error){if(error instanceof Error&&['ACCESS_DENIED','KEY_UNAVAILABLE'].includes(error.message))throw error;issue('successors',error instanceof Error&&['CLOSED_INPUT_REQUIRED','LOCAL_TIME_REQUIRED'].includes(error.message)?error.message:'BLOCKED_DEPENDENCY','BLOCKED',index+1);}
    }
   }
   // A new Department produces identity, version, permanent code reservation
   // and its code assertion. Count all four domain writes in the shared budget.
+  if(input.compensatesEvent){const original=await snapshot(s,actor,input.compensatesEvent.id,input.campus);if(localTime(input.event.effective_at)<=stamp(original.effective_at)||input.predecessors.some(ref=>!original.relations.some(r=>r.to_department_id===ref.id)))issue('compensatesEvent','UNSUPPORTED_STATE_TRANSITION');}
   const expandedCount=evolutionExpandedWriteCount(input);
   if(expandedCount>100)issue('event','PLAN_INPUT_LIMIT','FAIL');
   const assessment=issues.every(item=>item.code==='LEGAL_REVIEW_REQUIRED')?await impacts.observe(s,actor,{kind:'INPUT',id:r.id}):null;
@@ -217,14 +222,17 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   }
   if(verification&&!verification.impactAssessment)issue('impacts','IMPACT_ASSESSMENT_REQUIRED');
   if(assessment&&verification&&verification.impactAssessment?.digest!==assessment.dependencyDigest)issue('impacts','STALE_VALIDATION');
-  const facts={impactAssessment:verification?.impactAssessment??null,event:input.event,sourceSystemId:input.sourceSystemId,contractVersionId:c.versionId,companionVersions:input.contracts,verificationId:r.verification?.id??null,impacts:input.impacts,materials,sourcePin,sourceArtifact:file?.binding??null,successorFacts};
-  return {r,input,j,verification,policies,heads,materials,sourcePin,file,issues,expandedCount,facts,graph,assessment};
+  let campusChanges:unknown[]|undefined;
+  if(input.campusChanges?.length)try{campusChanges=await recoverable(s,()=>lifecycle().inspectEvolutionCampusChangesInTransaction(s,actor,input));if(r.verification)await lifecycle().authorizeEvolutionCampusChangesInTransaction(s,r.verification.actor,input);}catch(error){if(error instanceof Error&&error.message==='ACCESS_DENIED')throw error;issue('campusChanges',error instanceof Error?error.message:'BLOCKED_DEPENDENCY');}
+  const facts={...(campusChanges?{campusChanges}:{}),...(input.compensatesEvent?{compensatesEvent:input.compensatesEvent}:{}),impactAssessment:verification?.impactAssessment??null,event:input.event,sourceSystemId:input.sourceSystemId,contractVersionId:c.versionId,companionVersions:input.contracts,verificationId:r.verification?.id??null,impacts:input.impacts,materials,sourcePin,sourceArtifact:file?.binding??null,successorFacts};
+  return {r,input,j,verification,policies,heads,lifecycleHeads,materials,sourcePin,file,issues,expandedCount,facts,graph,assessment};
  };
  const port:ApplyOwnerPort={
   async authorize(s,actor,input,action){const r=await record(s,actor,input.jobId,action);if(r.revision!==input.revisionId||r.campus!==input.campus||input.purpose!=='IDENTITY_VERIFY')throw new Error('ACCESS_DENIED');await record(s,actor,r.id,'READ_RESTRICTED');},
   async authorizeApproval(s,actor,input){const r=await record(s,actor,input.jobId,'REVIEW');if(await authorize(s,actor,r.campus,'REVIEW')===r.identity_code)throw new Error('MAKER_CHECKER_REQUIRED');},
   async authorizeFrozen(s,actor,unit){
    const input=unit.basis['entries'] as EvolutionStoredStageInput;check(EvolutionStoredStageSchema,input);
+   if(input.campusChanges?.length)await lifecycle().authorizeEvolutionCampusChangesInTransaction(s,actor,input);
    const policies=unit.basis['policies'] as ImportContractItem[],eventSource=policies[0]?.definition.sourceVersionId,departmentSource=policies[2]?.definition.sourceVersionId;
    if(!eventSource||!departmentSource)throw new Error('BLOCKED_DEPENDENCY');
    const heads=unit.basis['heads'] as DepartmentHistory[];
@@ -234,17 +242,23 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    if(input.sourceArtifactId)await evidenceAccess(s,actor,input.sourceArtifactId,eventSource,input.campus);
    if(unit.basis['assessment']){check(DepartmentAssessmentSchema,unit.basis['assessment']);await impacts.authorizeFrozen(s,actor,unit.basis['assessment'] as DepartmentAssessment);}
   },
-  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG_EVOLUTION_WHOLE_EVENT_V1',basis:{assessment:v.assessment,inputDigest:v.r.digest,entries:v.input,verification:v.verification,verificationDigest:v.r.verification?.digest??null,policies:v.policies,heads:v.heads,materials:v.materials,sourcePin:v.sourcePin,issues:v.issues,expandedCount:v.expandedCount},commands:v.issues.length?[]:[{owner:'department-master/organization-evolution',row:1,intent:'CREATE',target:null,aliases:[],value:{inputId:v.r.id,command:canonicalPlan(v.input),facts:canonicalPlan(v.facts),expandedCount:String(v.expandedCount)}}],diff:[{changeType:v.input.event.change_type,effectiveAt:v.input.event.effective_at,predecessors:v.heads,successors:v.input.successors,rename:v.input.rename,impacts:v.input.impacts}]};},
+  async observe(s,actor,input){const v=await inspectInput(s,actor,input.jobId);return {input,atomicRule:'ORG_EVOLUTION_WHOLE_EVENT_V1',basis:{assessment:v.assessment,inputDigest:v.r.digest,entries:v.input,verification:v.verification,verificationDigest:v.r.verification?.digest??null,policies:v.policies,heads:v.heads,lifecycleHeads:v.lifecycleHeads,materials:v.materials,sourcePin:v.sourcePin,issues:v.issues,expandedCount:v.expandedCount},commands:v.issues.length?[]:[{owner:'department-master/organization-evolution',row:1,intent:'CREATE',target:null,aliases:[],value:{inputId:v.r.id,command:canonicalPlan(v.input),facts:canonicalPlan(v.facts),expandedCount:String(v.expandedCount)}}],diff:[{changeType:v.input.event.change_type,effectiveAt:v.input.event.effective_at,predecessors:v.heads,successors:v.input.successors,rename:v.input.rename,impacts:v.input.impacts}]};},
   async validate(_s,_actor,unit,stage){if(stage==='FREEZE')return;const issues=unit.basis['issues'] as EvolutionIssue[];if(issues.length)throw new Error(issues[0]!.code);if(unit.commands.length!==1)throw new Error('BATCH_REJECTED');},
   async apply(s,actor,command,_resolved,approval){const input:unknown=JSON.parse(command.value['command']!),facts:unknown=JSON.parse(command.value['facts']!);check(EvolutionStoredStageSchema,input);assertEvolutionApplyBinding(provider,input as EvolutionStoredStageInput,facts,command.value['expandedCount']);return {ok:true,fact:await mutate<OwnerFact>(s,actor,{operation:'APPLY',inputId:command.value['inputId'],command:input,facts,contentDigest:planBinding(provider,'EVOLUTION_FACTS_V1',facts),...approval})};},
   async exactRead(s,actor,input,fact){if(fact.owner!=='department-master/organization-evolution'||fact.version!=='1')return null;await snapshot(s,actor,fact.id,input.campus);return fact;},
  };
+ let lifecycleOwner:ReturnType<typeof openDepartmentLifecycle>|undefined;
+ const lifecycle=()=>lifecycleOwner??=openDepartmentLifecycle(connection,provider);
  const impacts=departmentImpacts(root,async(s,actor,target)=>{
+  const context=(await sql<{r:{owner:string;input_id:string}}>`select department_master.impact_change_context(${actor},${target.id}::uuid,${target.kind},${target.kind==='EVENT'?target.campus:null}) r`.execute(s)).rows[0]!.r;
+  if(context.owner==='department-master/lifecycle')return lifecycle().impactContextInTransaction(s,actor,context.input_id);
   const id=target.kind==='INPUT'?target.id:(await snapshot(s,actor,target.id,target.campus)).input_id;
   const r=await record(s,actor,id),input=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema);
   await authorizeInputSources(s,actor,input);
-  return {inputId:r.id,inputDigest:r.digest,input};
+  const changeType=input.event.change_type;if(changeType!=='RENAME'&&changeType!=='SPLIT'&&changeType!=='MERGE')throw new Error('BLOCKED_DEPENDENCY');return {inputId:r.id,inputDigest:r.digest,profile:input.profile,campus:input.campus,departmentIds:input.predecessors.map(r=>r.id),effectiveAt:input.event.effective_at,changeType};
  },impactPorts,provider,async(s,actor,eventId,campus,evidenceId,admission)=>{
+  const context=(await sql<{r:{owner:string;input_id:string}}>`select department_master.impact_change_context(${actor},${eventId}::uuid,'EVENT',${campus}) r`.execute(s)).rows[0]!.r;
+  if(context.owner==='department-master/lifecycle')return lifecycle().impactEvidenceInTransaction(s,actor,context.input_id,evidenceId,admission);
   const event=await snapshot(s,actor,eventId,campus),r=await record(s,actor,event.input_id),raw=unseal<EvolutionStoredStageInput>('EVOLUTION_INPUT_V1',r,EvolutionStoredStageSchema),j=await inputJob(s,actor,r.id),sourceVersion=j.contract.definition.sourceVersionId;
   // Dispositions belong to an accepted event, not to today's import contracts.
   // Reauthorize its exact companion versions without requiring current admission.
@@ -272,10 +286,12 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   const aliasMap=[{dataset:'ORG26' as const,sourceClientKey:e.source_client_key,id:e.id,version:'1',sourceRow:e.source_row},...e.relations.map(relation=>({dataset:'ORG27' as const,sourceClientKey:relation.source_client_key,id:relation.id,version:'1',sourceRow:relation.source_row})),...[...new Map(e.relations.filter(relation=>relation.relation_kind==='SUCCESSION').map(relation=>[relation.to_department_id,{dataset:'ORG04' as const,sourceClientKey:relation.source_to_alias,id:relation.to_department_id,version:relation.toVersion,sourceRow:relation.toSourceRow}])).values()]];
   return {id:e.id,changeType:e.change_type,effectiveAt:stamp(e.effective_at),recordedAt:stamp(e.recorded_at),effective:stamp(e.effective_at)<=businessAt,sourceClientKey:e.source_client_key,aliasMap,facts:e.facts,predecessors,successors,relations:e.relations.map(relation=>({...relation,source_recorded_at:stamp(relation.source_recorded_at),recorded_at:stamp(relation.recorded_at)})),edges:e.relations.filter(relation=>relation.relation_kind==='SUCCESSION').map(relation=>({id:relation.id,from:relation.from_department_id,to:relation.to_department_id,transferScope:relation.transfer_scope,contextRule:relation.context_rule})),handoff:'NOT_EXECUTED' as const};
  };
+const stage=async(actor:string,raw:EvolutionStageInput)=>{check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');await authorizeInputSources(s,actor,input,true);return stageIn(s,actor,input);});};
  return {
+  async compensateEvolution(actor:string,input:EvolutionStageInput){if(!input.compensatesEvent)throw new Error('CLOSED_INPUT_REQUIRED');return stage(actor,input);},
   readDepartmentAssessment:impacts.readDepartmentAssessment,listDepartmentAssessments:impacts.listDepartmentAssessments,assessDepartmentChange:impacts.assessDepartmentChange,listImpactCases:impacts.listImpactCases,
   recordMigrationReceipt:impacts.recordMigrationReceipt,readMigrationHandoff:impacts.readMigrationHandoff,readImpactCase:impacts.readImpactCase,assignImpactCase:impacts.assignImpactCase,recordDisposition:impacts.recordDisposition,approveDisposition:impacts.approveDisposition,recheckImpact:impacts.recheckImpact,
-  async stage(actor:string,raw:EvolutionStageInput){check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');await authorizeInputSources(s,actor,input,true);return stageIn(s,actor,input);});},
+  stage,
   async template(actor:string,input:EvolutionTemplateInput){
    check(EvolutionTemplateSchema,input);return root(async s=>{
     await authorize(s,actor,input.campus,'READ');const now=(await sql<{r:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') r`.execute(s)).rows[0]!.r;
@@ -355,6 +371,6 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
    return root(async s=>{const ids=(await sql<{r:string[]}>`select department_master.evolution_history(${actor},${input.id}::uuid,${input.campus},${input.after??null}::uuid,${input.limit??50},${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp) r`.execute(s)).rows[0]!.r;const events=[];for(const id of ids)events.push(await queryIn(s,actor,{id,campus:input.campus,businessAt:input.businessAt,...(input.recordAsOf?{recordAsOf:input.recordAsOf}:{})}));return {departmentId:input.id,events,nextCursor:ids.length===(input.limit??50)?ids.at(-1)!:null};});
   },
   async list(actor:string,input:{campus:'NORTH'|'SOUTH';after?:string;limit?:number;recordAsOf?:string}){check(Type.Object({campus:Type.Enum(['NORTH','SOUTH']),after:Type.Optional(Id),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(Type.String())},{additionalProperties:false}),input);return root(async s=>(await sql<{r:string[]}>`select department_master.evolution_list(${actor},${input.campus},${input.after??null}::uuid,${input.limit??50},${input.recordAsOf?localTime(input.recordAsOf):null}::timestamp) r`.execute(s)).rows[0]!.r);},
-  close:()=>db.destroy(),
+  close:async()=>{await lifecycleOwner?.close();await db.destroy();},
  };
 }
