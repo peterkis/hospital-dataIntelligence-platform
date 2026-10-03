@@ -55,18 +55,21 @@ export function departmentImpactCases(ports:CasePorts){
    }
   }
  };
+ const recordDispositionInTransaction=async(scope:CatalogTransactionScope,actor:string,input:RecordDispositionInput)=>{
+  check(RecordDispositionSchema,input);
+  const existing=await prior(scope,actor,'PROPOSE',input);if(existing)return existing;
+  const detail=await read(scope,actor,input);
+  await validateDisposition(scope,actor,detail,input.disposition);
+  const evidenceDigest=await ports.evidence(scope,actor,detail.item.eventId,input.campus,input.disposition.evidenceId,true);
+  return append(scope,actor,'PROPOSE',input,{evidenceDigest});
+ };
  return {
+  recordDispositionInTransaction,
   async recordMigrationReceipt(actor:string,input:RecordMigrationReceiptInput){check(RecordMigrationReceiptSchema,input);return ports.root(scope=>append(scope,actor,'RECEIPT',input));},
   async readMigrationHandoff(actor:string,input:ImpactCaseReadInput){check(ImpactCaseReadSchema,input);return ports.root(scope=>ports.record<ServiceImpactHandoff>(scope,actor,'READ_HANDOFF',input));},
   async readImpactCase(actor:string,input:ImpactCaseReadInput){check(ImpactCaseReadSchema,input);return ports.root(scope=>read(scope,actor,input));},
   async assignImpactCase(actor:string,input:AssignImpactCaseInput){check(AssignImpactCaseSchema,input);return ports.root(async scope=>{const existing=await prior(scope,actor,'ASSIGN',input);if(existing)return existing;await read(scope,actor,input);return append(scope,actor,'ASSIGN',input);});},
-  async recordDisposition(actor:string,input:RecordDispositionInput){check(RecordDispositionSchema,input);return ports.root(async scope=>{
-   const existing=await prior(scope,actor,'PROPOSE',input);if(existing)return existing;
-   const detail=await read(scope,actor,input);
-   await validateDisposition(scope,actor,detail,input.disposition);
-   const evidenceDigest=await ports.evidence(scope,actor,detail.item.eventId,input.campus,input.disposition.evidenceId,true);
-   return append(scope,actor,'PROPOSE',input,{evidenceDigest});
-  });},
+  async recordDisposition(actor:string,input:RecordDispositionInput){return ports.root(scope=>recordDispositionInTransaction(scope,actor,input));},
   async approveDisposition(actor:string,input:ApproveDispositionInput){check(ApproveDispositionSchema,input);return ports.root(async scope=>{
    const existing=await prior(scope,actor,'APPROVE',input);if(existing)return existing;
    const detail=await read(scope,actor,input);

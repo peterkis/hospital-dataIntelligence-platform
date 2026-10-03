@@ -60,6 +60,14 @@ jobs:
       - name: PostgreSQL client
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Current Department contract and unit gates
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run vnext:p2-07:typecheck && npm run vnext:p2-07:unit && npm run vnext:contract:verify
+      - name: Department workspace real PostgreSQL and HTTP regressions
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          HDIP_REVIEW_CI_ADMIN_URL: postgresql://postgres:synthetic-review-only@127.0.0.1:55434/postgres
+        run: npx vitest run --config tooling/vnext/vitest.p2-07-review-ci.config.ts --reporter=json --outputFile=.runtime/vnext/review-results/department.json
       - name: Fresh PostgreSQL Owner and HTTP regressions
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:

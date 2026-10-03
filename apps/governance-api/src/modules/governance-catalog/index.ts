@@ -1,5 +1,5 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
-import { Pool } from 'pg';
+import {vnextPool} from '../../platform/database/vnext-pool.js';
 import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.js';
 import { fileIntake } from './file-intake.js';
 import {validation} from './validation.js';
@@ -70,7 +70,7 @@ export interface SourceImpact {contractCurrent:Array<Record<string,unknown>>;con
 
 export async function openCatalog(connectionString = process.env['VNEXT_DATABASE_URL'], keyProvider?: KeyProviderPort, applyOwner?:ApplyOwnerPort) {
   if (!connectionString) throw new Error('RECEIPT_BOUND_CONNECTION_REQUIRED');
-  const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,application_name:'hdi-vnext-catalog',options:'-c timezone=Asia/Shanghai'})})});
+  const db = new Kysely<VNextDB>({dialect:new PostgresDialect({pool:vnextPool(connectionString,false)})});
   const readImportJob=async(actor:string,input:{scope:'BASELINE'|'SYNTHETIC';jobId:string}):Promise<ImportJob>=>{
     if(!Check(ImportJobReadSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');
     return (await sql<{result:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify(input)}::jsonb) as result`.execute(db)).rows[0]!.result;
@@ -147,7 +147,8 @@ export async function openCatalog(connectionString = process.env['VNEXT_DATABASE
 }
 export type Catalog = Awaited<ReturnType<typeof openCatalog>>;
 
-export {receiveFileInTransaction,parseOrganizationWorkbookBounded,parseEvolutionWorkbookBounded} from './file-intake.js';
+export {receiveFileInTransaction,parseOrganizationWorkbookBounded,parseEvolutionWorkbookBounded,parseHierarchyWorkbookBounded} from './file-intake.js';
+export type {HierarchyWorkbookResult,HierarchySheet} from './file-parser.js';
 export type {OrganizationWorkbookResult,OrganizationSheet,EvolutionWorkbookResult,EvolutionSheet,ParserField} from './file-parser.js';
 export {textSheetsWorkbook} from './issue-workbook.js';
 

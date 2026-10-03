@@ -15,7 +15,7 @@ export function grantDepartment(receipt,role){
  INSERT INTO department_master.access SELECT a,'NORTH',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED']) p ON CONFLICT DO NOTHING;
  INSERT INTO department_master.access SELECT a,'HOSPITAL','READ' FROM unnest(ARRAY['maker','maker-alias','reviewer']) a ON CONFLICT DO NOTHING;
  INSERT INTO department_master.access SELECT 'reviewer','HOSPITAL',p FROM unnest(ARRAY['REVIEW','VERIFY']) p ON CONFLICT DO NOTHING;
- DO $$ DECLARE signature text;BEGIN FOREACH signature IN ARRAY ARRAY['department_master.apply_evolution_campus_changes(text,uuid)','department_master.lifecycle_state_periods(uuid,timestamp)','department_master.lifecycle_active_periods(uuid,timestamp)'] LOOP IF to_regprocedure(signature) IS NOT NULL THEN EXECUTE 'REVOKE ALL ON FUNCTION '||signature||' FROM ${role}';END IF;END LOOP;END $$;`);
+ DO $$ DECLARE signature text;BEGIN FOREACH signature IN ARRAY ARRAY['department_master.apply_evolution_campus_changes(text,uuid)','department_master.lifecycle_state_periods(uuid,timestamp)','department_master.lifecycle_active_periods(uuid,timestamp)','department_master.workspace_impact_result_access(text,text,uuid,text)','department_master.workspace_hierarchy_group_access(text,jsonb)','department_master.workspace_department_version_access(text,jsonb)'] LOOP IF to_regprocedure(signature) IS NOT NULL THEN EXECUTE 'REVOKE ALL ON FUNCTION '||signature||' FROM ${role}';END IF;END LOOP;END $$;`);
 }
 if(process.argv[1]?.replaceAll('\\','/').endsWith('/p2-01-validate.mjs')){
  const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');

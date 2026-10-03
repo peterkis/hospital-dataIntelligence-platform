@@ -1,13 +1,62 @@
-import { writeFileSync, readdirSync, existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
-import { buildCatalogServer } from '../../apps/governance-api/src/composition/build-vnext-catalog.ts';
-const app=await buildCatalogServer();
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { buildCatalogServer } from "../../apps/governance-api/src/composition/build-vnext-catalog.ts";
+import { verifyCurrentContract } from "./current-contract.mjs";
+import { departmentUiContract } from "./department-ui-contract.mjs";
+const args = process.argv.slice(2);
+if (args.length > 1 || (args.length === 1 && args[0] !== "--check"))
+  throw new Error("CLOSED_COMMAND_REQUIRED");
+const verify = args[0] === "--check";
+const app = await buildCatalogServer();
 await app.ready();
-writeFileSync('contracts/openapi/vnext-catalog.openapi.json',JSON.stringify(app.swagger(),null,2)+'\n');
+const current = app.swagger(),
+  directory = resolve(".runtime/vnext/current-contract", randomUUID());
+const uiPath = "apps/admin-web/src/vnext/department-forms.generated.ts",
+  ui = departmentUiContract(current);
+if (verify) {
+  if (!existsSync(uiPath) || readFileSync(uiPath, "utf8") !== ui)
+    throw new Error("CURRENT_UI_CONTRACT_DRIFT");
+} else writeFileSync(uiPath, ui);
+if (verify) mkdirSync(directory, { recursive: true });
+const apiPath = verify
+  ? resolve(directory, "openapi.json")
+  : "contracts/openapi/vnext-catalog.openapi.json";
+const clientPath = verify
+  ? resolve(directory, "client.ts")
+  : "packages/generated-api-client/src/vnext-schema.generated.ts";
+writeFileSync(apiPath, JSON.stringify(current, null, 2) + "\n");
 await app.close();
-const cache='D:/npm-cache/_npx';
-const cli=readdirSync(cache).map(name=>resolve(cache,name,'node_modules/openapi-typescript/bin/cli.js')).find(path=>existsSync(path));
-if(!cli)throw new Error('LOCAL_OPENAPI_GENERATOR_MISSING');
-const result=spawnSync(process.execPath,[cli,'contracts/openapi/vnext-catalog.openapi.json','-o','packages/generated-api-client/src/vnext-schema.generated.ts'],{stdio:'inherit',windowsHide:true});
-if(result.status!==0)process.exitCode=1;
+// The generator requires TypeScript 5; its locked tooling workspace keeps the
+// application's TypeScript 7 compiler independent and needs no machine cache.
+const generatorRequire = createRequire(
+  resolve("tooling/openapi-generator/package.json"),
+);
+const cli = resolve(
+  dirname(generatorRequire.resolve("openapi-typescript")),
+  "../bin/cli.js",
+);
+if (!existsSync(cli)) throw new Error("LOCAL_OPENAPI_GENERATOR_MISSING");
+const result = spawnSync(process.execPath, [cli, apiPath, "-o", clientPath], {
+  stdio: "inherit",
+  windowsHide: true,
+});
+if (result.status !== 0) process.exitCode = 1;
+else if (verify)
+  console.log(
+    JSON.stringify(
+      verifyCurrentContract(
+        current,
+        JSON.parse(
+          readFileSync("contracts/openapi/vnext-catalog.openapi.json", "utf8"),
+        ),
+        readFileSync(clientPath, "utf8"),
+        readFileSync(
+          "packages/generated-api-client/src/vnext-schema.generated.ts",
+          "utf8",
+        ),
+      ),
+    ),
+  );

@@ -17,7 +17,9 @@ test('revision expectedVersion leaves one bigint value for the SQL matcher incre
  expect(()=>normalizeEntry({...validEntry,target:{...validEntry.target,expectedVersion:'9223372036854775807'}},'LOCAL')).toThrow('CLOSED_INPUT_REQUIRED');
 });
 test('Department startup requirements mirror the controlled deployment surface',()=>{
- expect(DEPARTMENT_FUNCTIONS).toHaveLength(10);
+ expect(DEPARTMENT_FUNCTIONS).toHaveLength(17);
+ expect(DEPARTMENT_FUNCTIONS).toContain('workspace_recover(text,uuid)');
+ expect(DEPARTMENT_FUNCTIONS).toContain('workspace_applications(text,uuid,integer,uuid)');
  expect(DEPARTMENT_FUNCTIONS).toContain('replacement_read(text,uuid,timestamp)');
  expect(DEPARTMENT_FUNCTIONS).toContain('input_read(text,uuid,text)');
  expect(DEPARTMENT_FUNCTIONS).toContain('committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb)');

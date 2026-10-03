@@ -1,3 +1,4 @@
+import {registerDepartmentWorkspaceRoutes,type DepartmentWorkspaceHttpContext} from '../platform/fastify/vnext-department-workspace-routes.js';
 import {registerDepartmentLifecycleRoutes,type DepartmentLifecycleHttpContext} from '../platform/fastify/vnext-department-lifecycle-routes.js';
 import {registerDepartmentImpactRoutes} from '../platform/fastify/vnext-department-impact-routes.js';
 import {registerDepartmentRoutes,type DepartmentHttpContext} from '../platform/fastify/vnext-department-routes.js';
@@ -49,7 +50,7 @@ async function discardRejectedUpload(request:IncomingMessage):Promise<void> {
   });
 }
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext,identifiers?:OrganizationIdentifierHttpContext,evolution?:OrganizationEvolutionHttpContext,lifecycle?:DepartmentLifecycleHttpContext) {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext,identifiers?:OrganizationIdentifierHttpContext,evolution?:OrganizationEvolutionHttpContext,lifecycle?:DepartmentLifecycleHttpContext,departmentWorkspace?:DepartmentWorkspaceHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
   app.addHook('onRequest',async(request,reply)=>{if(request.url.startsWith('/api/vnext/'))reply.header('Cache-Control','no-store');if(request.method==='GET')started.set(request,performance.now());});
@@ -101,6 +102,7 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerOrganizationImportRoutes(app,organizationImport);
   registerOrganizationWorkspaceRoutes(app,workspace);
   registerDepartmentRoutes(app,department);
+  registerDepartmentWorkspaceRoutes(app,departmentWorkspace);
   registerHierarchyRoutes(app,hierarchy);
   registerOrganizationMappingRoutes(app,mapping);
   registerOrganizationIdentifierRoutes(app,identifiers);

@@ -1,5 +1,5 @@
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
 import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,type ApplyOwnerPort,type OwnerFact,type KeyProviderPort,type ImportContractItem} from '../../governance-catalog/index.js';
@@ -27,7 +27,7 @@ const stamp=(s:string)=>localTime(s.replace(' ','T'));
 const span=(v:DepartmentVersion)=>({from:stamp(v.valid_from),to:v.valid_to===null?null:stamp(v.valid_to)});
 
 export function openDepartment(connection:string,provider?:KeyProviderPort){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const root=<T>(work:(s:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
  const authorize=async(s:Scope,actor:string,scope:string,permission:string)=>(await sql<{r:string}>`select department_master.authorize(${actor},${scope},${permission}) r`.execute(s)).rows[0]!.r;
  const record=async(s:Scope,actor:string,id:string,permission='READ_RESTRICTED')=>(await sql<{r:InputRecord}>`select department_master.input_read(${actor},${id}::uuid,${permission}) r`.execute(s)).rows[0]!.r;
@@ -136,10 +136,12 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
   const evaluation:ValidationEvaluation={decision,issues:issues.map(i=>({rule:'ORG04_'+i.code,layer:2,row:i.sourceRow??sourceRows?.get(i.row)??parsed.cells.find(c=>c.row===i.row)?.sourceRow??i.row,field:i.field,status:i.status==='FAIL'?'FAIL':'UNKNOWN',code:i.code})),layers:[{layer:1,status:parsed.structuralStatus==='PARSED'?'PASS':'FAIL'},{layer:2,status:decision==='PASS'?'PASS':decision==='FAIL'?'FAIL':'UNKNOWN'}],evidenceRequirements:[],dependencies:[],interpretationPolicy:'EXACT_TEXT_V1'};
   return recordOwnerFileValidation(s,provider,actor,{jobId:j.id,revisionId:j.currentRevisionId,sourceArtifactId,campus,requestId,parseRequestId:randomUUID(),outputRequestId:randomUUID(),contractVersionId:j.contract.versionId,ruleVersion:j.contract.definition.ruleVersion,parserPolicy:'STRICT_DEPARTMENT_V1',structuralStatus:parsed.structuralStatus,parsed:{sourceArtifactId,result:parsed},evaluation});
  };
- const stage=async(actor:string,raw:StageInput)=>{check(StageSchema,raw);const input:StoredStageInput={...structuredClone(raw),entries:raw.entries.map((entry,index)=>({...entry,sourceRow:index+1}))};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(input.sourceArtifactId||j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('DEPARTMENT_INPUT_V1',input)});});};
+ const stageInTransaction=async(s:Scope,actor:string,raw:StageInput)=>{check(StageSchema,raw);const input:StoredStageInput={...structuredClone(raw),entries:raw.entries.map((entry,index)=>({...entry,sourceRow:index+1}))};const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(input.sourceArtifactId||j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,...seal('DEPARTMENT_INPUT_V1',input)});};
+ const stage=(actor:string,raw:StageInput)=>root(scope=>stageInTransaction(scope,actor,raw));
  const history=async(actor:string,id:string,recordAsOf?:string)=>{check(Id,id);const at=recordAsOf===undefined?null:localTime(recordAsOf);return root(async s=>{const h=await snapshot(s,actor,id),versions=h.versions.filter(v=>at===null||stamp(v.recorded_at)<=at);if(versions.length===0)throw new Error('NOT_FOUND');return {id:h.id,initialCode:h.code,versions};});};
  return {
   stage,
+  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:StageInput)=>stageInTransaction(scope,actor,input)}),
   async receiveFile(actor:string,raw:ReceiveInput,bytes:Uint8Array){
    check(ReceiveSchema,raw);const input=structuredClone(raw);
    if(input.job.input.kind!=='FILE'||input.job.input.format!=='XLSX'||input.job.input.parserPolicy!=='STRICT_DEPARTMENT_V1')throw new Error('CLOSED_INPUT_REQUIRED');

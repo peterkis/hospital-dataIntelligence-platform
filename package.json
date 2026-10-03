@@ -336,7 +336,14 @@
     "vnext:p2-08:validate": "node --import tsx tooling/vnext/p2-08-validate.mjs",
     "vnext:p2-08:typecheck": "tsc -p tooling/vnext/tsconfig.p2-08.json",
     "vnext:p2-08:deploy": "node --import tsx tooling/vnext/p2-08-deploy.mjs",
-    "vnext:p2-08:regression": "node tooling/vnext/p2-08-regression.mjs"
+    "vnext:p2-08:regression": "node tooling/vnext/p2-08-regression.mjs",
+    "vnext:p2-07:validate": "node --import tsx tooling/vnext/p2-07-validate.mjs",
+    "vnext:p2-07:typecheck": "tsc -p tooling/vnext/tsconfig.p2-07.json",
+    "vnext:contract:verify": "node --import tsx tooling/vnext/contracts.mjs --check",
+    "vnext:p2-07:unit": "vitest run --config tooling/vnext/vitest.p2-07-unit.config.ts",
+    "vnext:p2-07:restart": "node --import tsx tooling/vnext/p2-07-restart.mjs",
+    "vnext:p2-07:browser": "node --import tsx tooling/vnext/p2-07-browser.mjs",
+    "vnext:p2-07:deploy": "node --import tsx tooling/vnext/p2-07-deploy.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

@@ -249,10 +249,10 @@ function decodeXlsxText(value:string,row=0,column=0):string {
   assertTextSafety(decoded,row,column);return decoded;
 }
 interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][];physicalRows:number[];issues:ParserIssue[]}
-function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'EVOLUTION'|'DEPARTMENT'|'MAPPING'|'IDENTIFIER'='GENERIC'): Map<string,XlsxTable> {
+function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'EVOLUTION'|'HIERARCHY'|'DEPARTMENT'|'MAPPING'|'IDENTIFIER'='GENERIC'): Map<string,XlsxTable> {
   const files = unzip(bytes,mode!=='GENERIC');
   const worksheetParts=[...files.keys()].filter(name=>/^xl\/worksheets\//u.test(name));
-  if(worksheetParts.length!==(['ORGANIZATION','EVOLUTION'].includes(mode)?3:1))fail('SHEET_CONTRACT');
+  if(worksheetParts.length!==(mode==='HIERARCHY'?2:['ORGANIZATION','EVOLUTION'].includes(mode)?3:1))fail('SHEET_CONTRACT');
   manifest.bomMembers=[...files].filter(([,value])=>value.startsWith('\uFEFF')).map(([name])=>name);
   manifest.bomDetected=manifest.bomMembers.length>0;
   const docs = new Map([...files].map(([name, value]) => [name, xml(value)]));
@@ -320,7 +320,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
   for(const entry of sheets.children)only(entry,[]);
   for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
-  const expected=mode==='DEPARTMENT'?['ORG04']:mode==='MAPPING'?['ORG22']:mode==='IDENTIFIER'?['ORG23']:mode==='ORGANIZATION'?['ORG01','ORG02','ORG03']:mode==='EVOLUTION'?['ORG26','ORG27','ORG04']:['Data'];
+  const expected=mode==='DEPARTMENT'?['ORG04']:mode==='MAPPING'?['ORG22']:mode==='IDENTIFIER'?['ORG23']:mode==='ORGANIZATION'?['ORG01','ORG02','ORG03']:mode==='EVOLUTION'?['ORG26','ORG27','ORG04']:mode==='HIERARCHY'?['ORG05','ORG06']:['Data'];
   if(sheets.children.length!==expected.length||new Set(sheets.children.map(s=>s.attrs['name'])).size!==expected.length||sheets.children.some(s=>!expected.includes(s.attrs['name']??'')))fail('SHEET_CONTRACT',1,1,sheets.children.find(s=>!expected.includes(s.attrs['name']??''))?.attrs['name']??'workbook');
   const ids=new Set<number>();for(const sheet of sheets.children){const id=unsignedAttribute(sheet.attrs['sheetId'],true);if(ids.has(id))fail('SHEET_CONTRACT');ids.add(id);}
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
@@ -466,6 +466,10 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
 }
 export const organizationSheets=['ORG01','ORG02','ORG03'] as const;
 export type OrganizationSheet=typeof organizationSheets[number];
+export const hierarchySheets=['ORG05','ORG06'] as const;
+export type HierarchySheet=typeof hierarchySheets[number];
+export type HierarchyWorkbookResult=FiniteWorkbookResult<HierarchySheet,'STRICT_HIERARCHY_CORE_V1'>;
+export function parseHierarchyWorkbook(bytes:Uint8Array,fields:Record<HierarchySheet,ParserField[]>):HierarchyWorkbookResult{return parseFiniteWorkbook(bytes,fields,hierarchySheets,'STRICT_HIERARCHY_CORE_V1','HIERARCHY');}
 export const evolutionSheets=['ORG26','ORG27','ORG04'] as const;
 export type EvolutionSheet=typeof evolutionSheets[number];
 interface FiniteWorkbookResult<S extends string,P extends string> {
@@ -480,7 +484,7 @@ export function parseOrganizationWorkbook(bytes:Uint8Array,fields:Record<Organiz
 export function parseEvolutionWorkbook(bytes:Uint8Array,fields:Record<EvolutionSheet,ParserField[]>):EvolutionWorkbookResult{
  return parseFiniteWorkbook(bytes,fields,evolutionSheets,'STRICT_ORGANIZATION_EVOLUTION_V1','EVOLUTION');
 }
-function parseFiniteWorkbook<S extends string,P extends string>(bytes:Uint8Array,fields:Record<S,ParserField[]>,sheets:readonly S[],policy:P,mode:'ORGANIZATION'|'EVOLUTION'):FiniteWorkbookResult<S,P>{
+function parseFiniteWorkbook<S extends string,P extends string>(bytes:Uint8Array,fields:Record<S,ParserField[]>,sheets:readonly S[],policy:P,mode:'ORGANIZATION'|'EVOLUTION'|'HIERARCHY'):FiniteWorkbookResult<S,P>{
  const tablesBySheet={} as FiniteWorkbookResult<S,P>['sheets'];for(const sheet of sheets)tablesBySheet[sheet]={rows:[],cells:[]};
  const result:FiniteWorkbookResult<S,P>={policy,structuralStatus:'REJECTED',manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},sheets:tablesBySheet,issues:[]};
  try{
@@ -509,6 +513,6 @@ function tableObjects(table: string[][], fields: ParserField[], physicalRows?:nu
 }
 
 if (!isMainThread && parentPort) {
-  try { parentPort.postMessage(workerData.policy==='STRICT_ORG_BUNDLE_V1'?parseOrganizationWorkbook(workerData.bytes,workerData.organizationFields):workerData.policy==='STRICT_ORGANIZATION_EVOLUTION_V1'?parseEvolutionWorkbook(workerData.bytes,workerData.evolutionFields):parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy)); }
+  try { parentPort.postMessage(workerData.policy==='STRICT_ORG_BUNDLE_V1'?parseOrganizationWorkbook(workerData.bytes,workerData.organizationFields):workerData.policy==='STRICT_ORGANIZATION_EVOLUTION_V1'?parseEvolutionWorkbook(workerData.bytes,workerData.evolutionFields):workerData.policy==='STRICT_HIERARCHY_CORE_V1'?parseHierarchyWorkbook(workerData.bytes,workerData.hierarchyFields):parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy)); }
   catch { parentPort.postMessage(null); }
 }
