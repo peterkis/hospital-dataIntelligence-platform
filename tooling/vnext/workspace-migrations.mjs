@@ -59,6 +59,7 @@ const postWorkspaceMigrations = [
  '0140_lifecycle_authority_closure',
  '0141_lifecycle_effective_time_projection',
  '0142_future_replacement_bounded_rename',
+ '0143_evolution_end_relation_scope',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

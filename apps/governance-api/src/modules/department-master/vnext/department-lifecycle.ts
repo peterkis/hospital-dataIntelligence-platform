@@ -129,7 +129,7 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
    if(c.action==='SUSPEND'||c.action==='RESUME'||c.action==='DEPRECATE'){
     if(touched.has('L:'+c.department.id))throw new Error('BATCH_CONFLICT');touched.add('L:'+c.department.id);
      const timeline=orderLifecycleByEffectiveTime(state.lifecycle);
-     const terminal=state.replacement?stamp(state.replacement.effective_at):timeline.find(v=>v.action==='DEPRECATE')?.effective_at;
+     const terminal=[state.replacement?stamp(state.replacement.effective_at):null,timeline.find(v=>v.action==='DEPRECATE')?.effective_at??null].filter((v):v is string=>v!==null).sort()[0];
     if(terminal&&(terminal<=now||c.effectiveAt>=terminal))throw new Error('UNSUPPORTED_STATE_TRANSITION');
      const at=timeline.filter(v=>v.effective_at<=c.effectiveAt).at(-1);
     if(c.action==='RESUME'){
@@ -198,7 +198,7 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
  const coordinator=applyCoordinator(db,provider,port);
  const evolutionCampusAccess=async(s:Scope,actor:string,input:EvolutionStoredStageInput)=>{
   for(const c of input.campusChanges??[]){
-    if(c.action==='END'){const r=(await sql<{r:Relation}>`select department_master.lifecycle_relation_snapshot(${actor},${c.relation.id}::uuid,${input.campus},'READ') r`.execute(s)).rows[0]!.r;if(r.department_id!==c.departmentId||!r.versions.some(v=>String(v.number)===c.relation.expectedVersion))throw new Error('ACCESS_DENIED');}
+    if(c.action==='END'){const r=(await sql<{r:Relation}>`select department_master.lifecycle_relation_snapshot(${actor},${c.relation.id}::uuid,NULL,'READ') r`.execute(s)).rows[0]!.r;if(r.department_id!==c.departmentId||!r.versions.some(v=>String(v.number)===c.relation.expectedVersion))throw new Error('ACCESS_DENIED');}
     else {await campuses.references.inTransaction(s).resolveCampusReference(actor,{references:[c.campus]});await sql`select organization_master.operating_pair(${actor},${c.subject.id}::uuid,${c.campus.id}::uuid,'RELATION')`.execute(s);if(c.department.owner==='department-master')await sql`select department_master.snapshot(${actor},${c.department.id}::uuid)`.execute(s);}
   }
  };
