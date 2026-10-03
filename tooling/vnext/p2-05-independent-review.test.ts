@@ -31,7 +31,7 @@ async function prepare(input:Parameters<typeof owner.stage>[1]){
 
 async function splitInput(){
  const source=await f.newDepartment();f.grantTarget(source);
- const input=await f.input();input.event.change_type='SPLIT';input.rename=null;input.predecessors=[{owner:'department-master',id:source,expectedVersion:'1'}];input.successors=[f.department.entry(),f.department.entry()];input.contextEvidenceId=f.material.artifactId;
+ const input=await f.input();input.event.change_type='SPLIT';Object.assign(input.impacts.find(i=>i.domain==='IDENTIFIER')!,{determination:'AFFECTED',requiredAction:'TEST explicit Identifier Owner closure'});input.rename=null;input.predecessors=[{owner:'department-master',id:source,expectedVersion:'1'}];input.successors=[f.department.entry(),f.department.entry()];input.contextEvidenceId=f.material.artifactId;
  for(const next of input.successors){next.row.valid_from=input.event.effective_at;next.row.established_on='2026-06-01';}
  input.relations=input.successors.map((next,i)=>({succession_id:randomUUID(),org_event_id:input.event.org_event_id,from_target_type:'ORG',from_target_id:source,to_target_type:'ORG',to_target_id:next.row.org_id,transfer_scope:i?'INPATIENT':'OUTPATIENT',context_rule:'TEST POLICY ONLY explicit future destination',recorded_at:input.event.recorded_at}));
  return input;

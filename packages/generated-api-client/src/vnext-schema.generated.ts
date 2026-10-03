@@ -2996,6 +2996,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/department-impacts/assess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assessDepartmentChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/assessments/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readDepartmentAssessment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listDepartmentAssessments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listDepartmentImpactCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/cases/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readDepartmentImpactCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignDepartmentImpactCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/dispositions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recordDepartmentImpactDisposition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/dispositions/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveDepartmentImpactDisposition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/recheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recheckDepartmentImpact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recordDepartmentMigrationReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/department-impacts/handoffs/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readDepartmentMigrationHandoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -30573,6 +30749,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         view: {
+                            versionId: string;
                             ownerDepartmentVersionId: string | null;
                             sourceDefinitionVersionId: string | null;
                             id: string;
@@ -30737,6 +30914,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         view: {
+                            versionId: string;
                             ownerDepartmentVersionId: string | null;
                             sourceDefinitionVersionId: string | null;
                             id: string;
@@ -37088,6 +37266,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37101,6 +37285,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37114,6 +37304,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37127,6 +37323,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37140,6 +37342,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37153,6 +37361,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37166,6 +37380,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37206,7 +37426,7 @@ export interface operations {
                         contextEvidenceId: string | null;
                         impacts: {
                             /** @enum {unknown} */
-                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                             /** @enum {unknown} */
                             determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                             ownerRole: string;
@@ -37346,6 +37566,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37359,6 +37585,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37372,6 +37604,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37385,6 +37623,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37398,6 +37642,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37411,6 +37661,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37424,6 +37680,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37524,7 +37786,7 @@ export interface operations {
                     contextEvidenceId: string | null;
                     impacts: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                         /** @enum {unknown} */
                         determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                         ownerRole: string;
@@ -37561,6 +37823,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37574,6 +37842,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37587,6 +37861,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37600,6 +37880,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37613,6 +37899,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37626,6 +37918,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37639,6 +37937,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37751,6 +38055,17 @@ export interface operations {
                         contextEvidenceId: string | null;
                         impacts: {
                             /** @enum {unknown} */
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                            /** @enum {unknown} */
+                            determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                            ownerRole: string;
+                            ownerSignatory: string;
+                            ownerDecisionRef: string;
+                            requiredAction: string;
+                            reason: string;
+                            evidenceId: string;
+                        }[] | {
+                            /** @enum {unknown} */
                             domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                             /** @enum {unknown} */
                             determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -37780,6 +38095,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37793,6 +38114,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37806,6 +38133,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37819,6 +38152,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37832,6 +38171,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37845,6 +38190,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37858,6 +38209,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -37971,6 +38328,17 @@ export interface operations {
                             contextEvidenceId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                /** @enum {unknown} */
+                                determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                ownerDecisionRef: string;
+                                requiredAction: string;
+                                reason: string;
+                                evidenceId: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -38023,6 +38391,10 @@ export interface operations {
                             }[];
                         }[];
                         verification: {
+                            impactAssessment?: {
+                                id: string;
+                                digest: string;
+                            };
                             requestId: string;
                             inputId: string;
                             inputDigest: string;
@@ -38030,6 +38402,12 @@ export interface operations {
                             policyApproved: boolean;
                             materialsAccepted: boolean;
                             impactReviews: {
+                                /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                ownerAttestationAccepted: boolean;
+                                dispositionAccepted: boolean;
+                                reason: string;
+                            }[] | {
                                 /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 ownerAttestationAccepted: boolean;
@@ -38058,6 +38436,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38071,6 +38455,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38084,6 +38474,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38097,6 +38493,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38110,6 +38512,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38123,6 +38531,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38136,6 +38550,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38190,6 +38610,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38203,6 +38629,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38216,6 +38648,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38229,6 +38667,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38242,6 +38686,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38255,6 +38705,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38268,6 +38724,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38283,6 +38745,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    impactAssessment?: {
+                        id: string;
+                        digest: string;
+                    };
                     requestId: string;
                     inputId: string;
                     inputDigest: string;
@@ -38291,7 +38757,7 @@ export interface operations {
                     materialsAccepted: boolean;
                     impactReviews: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                         ownerAttestationAccepted: boolean;
                         dispositionAccepted: boolean;
                         reason: string;
@@ -38321,6 +38787,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38334,6 +38806,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38347,6 +38825,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38360,6 +38844,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38373,6 +38863,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38386,6 +38882,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38399,6 +38901,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38442,6 +38950,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38455,6 +38969,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38468,6 +38988,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38481,6 +39007,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38494,6 +39026,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38507,6 +39045,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38520,6 +39064,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38547,6 +39097,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        assessment: {
+                            target: {
+                                /** @enum {string} */
+                                kind: "INPUT";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EVENT";
+                                id: string;
+                                /** @enum {unknown} */
+                                campus: "NORTH" | "SOUTH";
+                            };
+                            departmentIds: string[];
+                            inputId: string;
+                            inputDigest: string;
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            changeType: "RENAME" | "SPLIT" | "MERGE";
+                            effectiveAt: string;
+                            /** @enum {string} */
+                            ruleVersion: "DEPARTMENT_IMPACT_V1";
+                            dependencyDigest: string;
+                            coverage: {
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "PERSONNEL" | "BUSINESS_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                /** @enum {unknown} */
+                                status: "EVALUATED" | "NOT_EVALUABLE";
+                                /** @enum {unknown} */
+                                reason: "OWNER_AVAILABLE" | "OWNER_NOT_IMPLEMENTED";
+                            }[];
+                            references: {
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                                /** @enum {unknown} */
+                                referenceRole: "TARGET" | "NODE" | "OWNER";
+                                sourceSystemIds: string[];
+                                departmentId: string;
+                                departmentVersionId: string | null;
+                                acceptedVersions: {
+                                    versionId: string;
+                                    version: string;
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                                originalPeriod: {
+                                    from: string;
+                                    to: string | null;
+                                };
+                                originalDigest: string;
+                                frozenLabel: string | null;
+                                currentVersionId: string;
+                                currentPeriod: {
+                                    from: string;
+                                    to: string | null;
+                                };
+                                currentAction: string;
+                                currentTargetId: string;
+                                current: boolean;
+                                currentReferencesDepartment: boolean;
+                                /** @enum {unknown} */
+                                change: "UNCHANGED" | "CHANGED" | "NOT_EVALUABLE";
+                                /** @enum {unknown} */
+                                constraint: "SATISFIED" | "UNSATISFIED" | "NOT_EVALUABLE";
+                                /** @enum {unknown} */
+                                reason: "LABEL_CHANGED" | "REFERENCE_EXITED" | "HISTORICAL_REFERENCE" | "REFERENCE_UNCHANGED";
+                                affectedSpans: {
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                            }[];
+                        } | null;
                         candidateId: string;
                         digest: string;
                         approvedBy: string | null;
@@ -38638,6 +39263,17 @@ export interface operations {
                             contextEvidenceId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                /** @enum {unknown} */
+                                determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                ownerDecisionRef: string;
+                                requiredAction: string;
+                                reason: string;
+                                evidenceId: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -38656,6 +39292,10 @@ export interface operations {
                             };
                         };
                         verification: {
+                            impactAssessment?: {
+                                id: string;
+                                digest: string;
+                            };
                             requestId: string;
                             inputId: string;
                             inputDigest: string;
@@ -38663,6 +39303,12 @@ export interface operations {
                             policyApproved: boolean;
                             materialsAccepted: boolean;
                             impactReviews: {
+                                /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
+                                ownerAttestationAccepted: boolean;
+                                dispositionAccepted: boolean;
+                                reason: string;
+                            }[] | {
                                 /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
                                 ownerAttestationAccepted: boolean;
@@ -38843,6 +39489,10 @@ export interface operations {
                         } | null;
                         expandedCount: number;
                         commandFacts: {
+                            impactAssessment?: {
+                                id: string;
+                                digest: string;
+                            } | null;
                             event: {
                                 org_event_id: string;
                                 change_type: string;
@@ -38864,7 +39514,7 @@ export interface operations {
                             verificationId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -38923,6 +39573,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38936,6 +39592,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38949,6 +39611,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38962,6 +39630,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38975,6 +39649,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -38988,6 +39668,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39001,6 +39687,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39044,6 +39736,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39057,6 +39755,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39070,6 +39774,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39083,6 +39793,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39096,6 +39812,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39109,6 +39831,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39122,6 +39850,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39183,6 +39917,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39196,6 +39936,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39209,6 +39955,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39222,6 +39974,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39235,6 +39993,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39248,6 +40012,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39261,6 +40031,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39322,6 +40098,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39335,6 +40117,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39348,6 +40136,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39361,6 +40155,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39374,6 +40174,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39387,6 +40193,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39400,6 +40212,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39447,6 +40265,10 @@ export interface operations {
                             sourceRow: number;
                         }[];
                         facts: {
+                            impactAssessment?: {
+                                id: string;
+                                digest: string;
+                            } | null;
                             event: {
                                 org_event_id: string;
                                 change_type: string;
@@ -39468,7 +40290,7 @@ export interface operations {
                             verificationId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -39566,6 +40388,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39579,6 +40407,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39592,6 +40426,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39605,6 +40445,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39618,6 +40464,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39631,6 +40483,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39644,6 +40502,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39706,6 +40570,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39719,6 +40589,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39732,6 +40608,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39745,6 +40627,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39758,6 +40646,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39771,6 +40665,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39784,6 +40684,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39835,6 +40741,10 @@ export interface operations {
                                 sourceRow: number;
                             }[];
                             facts: {
+                                impactAssessment?: {
+                                    id: string;
+                                    digest: string;
+                                } | null;
                                 event: {
                                     org_event_id: string;
                                     change_type: string;
@@ -39856,7 +40766,7 @@ export interface operations {
                                 verificationId: string | null;
                                 impacts: {
                                     /** @enum {unknown} */
-                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER";
+                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER";
                                     /** @enum {unknown} */
                                     determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole: string;
@@ -39956,6 +40866,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39969,6 +40885,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39982,6 +40904,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -39995,6 +40923,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40008,6 +40942,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40021,6 +40961,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40034,6 +40980,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40077,6 +41029,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40090,6 +41048,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40103,6 +41067,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40116,6 +41086,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40129,6 +41105,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40142,6 +41124,12 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };
@@ -40155,6 +41143,2439 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    assessDepartmentChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    reason: string;
+                    target: {
+                        /** @enum {string} */
+                        kind: "INPUT";
+                        id: string;
+                    } | {
+                        /** @enum {string} */
+                        kind: "EVENT";
+                        id: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        target: {
+                            /** @enum {string} */
+                            kind: "INPUT";
+                            id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "EVENT";
+                            id: string;
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                        };
+                        departmentIds: string[];
+                        inputId: string;
+                        inputDigest: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        changeType: "RENAME" | "SPLIT" | "MERGE";
+                        effectiveAt: string;
+                        /** @enum {string} */
+                        ruleVersion: "DEPARTMENT_IMPACT_V1";
+                        dependencyDigest: string;
+                        coverage: {
+                            /** @enum {unknown} */
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "PERSONNEL" | "BUSINESS_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                            /** @enum {unknown} */
+                            status: "EVALUATED" | "NOT_EVALUABLE";
+                            /** @enum {unknown} */
+                            reason: "OWNER_AVAILABLE" | "OWNER_NOT_IMPLEMENTED";
+                        }[];
+                        references: {
+                            /** @enum {unknown} */
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            /** @enum {unknown} */
+                            referenceRole: "TARGET" | "NODE" | "OWNER";
+                            sourceSystemIds: string[];
+                            departmentId: string;
+                            departmentVersionId: string | null;
+                            acceptedVersions: {
+                                versionId: string;
+                                version: string;
+                                from: string;
+                                to: string | null;
+                            }[];
+                            originalPeriod: {
+                                from: string;
+                                to: string | null;
+                            };
+                            originalDigest: string;
+                            frozenLabel: string | null;
+                            currentVersionId: string;
+                            currentPeriod: {
+                                from: string;
+                                to: string | null;
+                            };
+                            currentAction: string;
+                            currentTargetId: string;
+                            current: boolean;
+                            currentReferencesDepartment: boolean;
+                            /** @enum {unknown} */
+                            change: "UNCHANGED" | "CHANGED" | "NOT_EVALUABLE";
+                            /** @enum {unknown} */
+                            constraint: "SATISFIED" | "UNSATISFIED" | "NOT_EVALUABLE";
+                            /** @enum {unknown} */
+                            reason: "LABEL_CHANGED" | "REFERENCE_EXITED" | "HISTORICAL_REFERENCE" | "REFERENCE_UNCHANGED";
+                            affectedSpans: {
+                                from: string;
+                                to: string | null;
+                            }[];
+                        }[];
+                        assessmentId: string;
+                        recordedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readDepartmentAssessment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    assessmentId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        target: {
+                            /** @enum {string} */
+                            kind: "INPUT";
+                            id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "EVENT";
+                            id: string;
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                        };
+                        departmentIds: string[];
+                        inputId: string;
+                        inputDigest: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        changeType: "RENAME" | "SPLIT" | "MERGE";
+                        effectiveAt: string;
+                        /** @enum {string} */
+                        ruleVersion: "DEPARTMENT_IMPACT_V1";
+                        dependencyDigest: string;
+                        coverage: {
+                            /** @enum {unknown} */
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "PERSONNEL" | "BUSINESS_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                            /** @enum {unknown} */
+                            status: "EVALUATED" | "NOT_EVALUABLE";
+                            /** @enum {unknown} */
+                            reason: "OWNER_AVAILABLE" | "OWNER_NOT_IMPLEMENTED";
+                        }[];
+                        references: {
+                            /** @enum {unknown} */
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            /** @enum {unknown} */
+                            referenceRole: "TARGET" | "NODE" | "OWNER";
+                            sourceSystemIds: string[];
+                            departmentId: string;
+                            departmentVersionId: string | null;
+                            acceptedVersions: {
+                                versionId: string;
+                                version: string;
+                                from: string;
+                                to: string | null;
+                            }[];
+                            originalPeriod: {
+                                from: string;
+                                to: string | null;
+                            };
+                            originalDigest: string;
+                            frozenLabel: string | null;
+                            currentVersionId: string;
+                            currentPeriod: {
+                                from: string;
+                                to: string | null;
+                            };
+                            currentAction: string;
+                            currentTargetId: string;
+                            current: boolean;
+                            currentReferencesDepartment: boolean;
+                            /** @enum {unknown} */
+                            change: "UNCHANGED" | "CHANGED" | "NOT_EVALUABLE";
+                            /** @enum {unknown} */
+                            constraint: "SATISFIED" | "UNSATISFIED" | "NOT_EVALUABLE";
+                            /** @enum {unknown} */
+                            reason: "LABEL_CHANGED" | "REFERENCE_EXITED" | "HISTORICAL_REFERENCE" | "REFERENCE_UNCHANGED";
+                            affectedSpans: {
+                                from: string;
+                                to: string | null;
+                            }[];
+                        }[];
+                        assessmentId: string;
+                        recordedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listDepartmentAssessments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    target: {
+                        /** @enum {string} */
+                        kind: "INPUT";
+                        id: string;
+                    } | {
+                        /** @enum {string} */
+                        kind: "EVENT";
+                        id: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                    };
+                    after?: string;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            target: {
+                                /** @enum {string} */
+                                kind: "INPUT";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EVENT";
+                                id: string;
+                                /** @enum {unknown} */
+                                campus: "NORTH" | "SOUTH";
+                            };
+                            departmentIds: string[];
+                            inputId: string;
+                            inputDigest: string;
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            changeType: "RENAME" | "SPLIT" | "MERGE";
+                            effectiveAt: string;
+                            /** @enum {string} */
+                            ruleVersion: "DEPARTMENT_IMPACT_V1";
+                            dependencyDigest: string;
+                            coverage: {
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "PERSONNEL" | "BUSINESS_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                /** @enum {unknown} */
+                                status: "EVALUATED" | "NOT_EVALUABLE";
+                                /** @enum {unknown} */
+                                reason: "OWNER_AVAILABLE" | "OWNER_NOT_IMPLEMENTED";
+                            }[];
+                            references: {
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                                /** @enum {unknown} */
+                                referenceRole: "TARGET" | "NODE" | "OWNER";
+                                sourceSystemIds: string[];
+                                departmentId: string;
+                                departmentVersionId: string | null;
+                                acceptedVersions: {
+                                    versionId: string;
+                                    version: string;
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                                originalPeriod: {
+                                    from: string;
+                                    to: string | null;
+                                };
+                                originalDigest: string;
+                                frozenLabel: string | null;
+                                currentVersionId: string;
+                                currentPeriod: {
+                                    from: string;
+                                    to: string | null;
+                                };
+                                currentAction: string;
+                                currentTargetId: string;
+                                current: boolean;
+                                currentReferencesDepartment: boolean;
+                                /** @enum {unknown} */
+                                change: "UNCHANGED" | "CHANGED" | "NOT_EVALUABLE";
+                                /** @enum {unknown} */
+                                constraint: "SATISFIED" | "UNSATISFIED" | "NOT_EVALUABLE";
+                                /** @enum {unknown} */
+                                reason: "LABEL_CHANGED" | "REFERENCE_EXITED" | "HISTORICAL_REFERENCE" | "REFERENCE_UNCHANGED";
+                                affectedSpans: {
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                            }[];
+                            assessmentId: string;
+                            recordedAt: string;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listDepartmentImpactCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    eventId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    after?: string;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            eventId: string;
+                            assessmentId: string;
+                            /** @enum {unknown} */
+                            observationBasis: "FROZEN_APPROVAL" | "LATER_OBSERVATION";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            obligation: {
+                                /** @enum {string} */
+                                kind: "REFERENCE";
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                reference: {
+                                    /** @enum {unknown} */
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                    id: string;
+                                    versionId: string;
+                                    version: string;
+                                    /** @enum {unknown} */
+                                    referenceRole: "TARGET" | "NODE" | "OWNER";
+                                    sourceSystemIds: string[];
+                                    departmentId: string;
+                                    departmentVersionId: string | null;
+                                    acceptedVersions: {
+                                        versionId: string;
+                                        version: string;
+                                        from: string;
+                                        to: string | null;
+                                    }[];
+                                    originalPeriod: {
+                                        from: string;
+                                        to: string | null;
+                                    };
+                                    originalDigest: string;
+                                    frozenLabel: string | null;
+                                    currentVersionId: string;
+                                    currentPeriod: {
+                                        from: string;
+                                        to: string | null;
+                                    };
+                                    currentAction: string;
+                                    currentTargetId: string;
+                                    current: boolean;
+                                    currentReferencesDepartment: boolean;
+                                    /** @enum {unknown} */
+                                    change: "UNCHANGED" | "CHANGED" | "NOT_EVALUABLE";
+                                    /** @enum {unknown} */
+                                    constraint: "SATISFIED" | "UNSATISFIED" | "NOT_EVALUABLE";
+                                    /** @enum {unknown} */
+                                    reason: "LABEL_CHANGED" | "REFERENCE_EXITED" | "HISTORICAL_REFERENCE" | "REFERENCE_UNCHANGED";
+                                    affectedSpans: {
+                                        from: string;
+                                        to: string | null;
+                                    }[];
+                                };
+                                affectedSpans: {
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXTERNAL";
+                                /** @enum {unknown} */
+                                owner: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                materialId: string;
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                decisionRef: string;
+                                requiredAction: string;
+                                affectedSpans: {
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                            };
+                            head: string;
+                            /** @enum {unknown} */
+                            status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                            recordedAt: string;
+                        }[];
+                        total: number;
+                        unresolved: number;
+                        simulatedCompleted: number;
+                        nextCursor: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readDepartmentImpactCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        item: {
+                            id: string;
+                            eventId: string;
+                            assessmentId: string;
+                            /** @enum {unknown} */
+                            observationBasis: "FROZEN_APPROVAL" | "LATER_OBSERVATION";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            obligation: {
+                                /** @enum {string} */
+                                kind: "REFERENCE";
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                reference: {
+                                    /** @enum {unknown} */
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                    id: string;
+                                    versionId: string;
+                                    version: string;
+                                    /** @enum {unknown} */
+                                    referenceRole: "TARGET" | "NODE" | "OWNER";
+                                    sourceSystemIds: string[];
+                                    departmentId: string;
+                                    departmentVersionId: string | null;
+                                    acceptedVersions: {
+                                        versionId: string;
+                                        version: string;
+                                        from: string;
+                                        to: string | null;
+                                    }[];
+                                    originalPeriod: {
+                                        from: string;
+                                        to: string | null;
+                                    };
+                                    originalDigest: string;
+                                    frozenLabel: string | null;
+                                    currentVersionId: string;
+                                    currentPeriod: {
+                                        from: string;
+                                        to: string | null;
+                                    };
+                                    currentAction: string;
+                                    currentTargetId: string;
+                                    current: boolean;
+                                    currentReferencesDepartment: boolean;
+                                    /** @enum {unknown} */
+                                    change: "UNCHANGED" | "CHANGED" | "NOT_EVALUABLE";
+                                    /** @enum {unknown} */
+                                    constraint: "SATISFIED" | "UNSATISFIED" | "NOT_EVALUABLE";
+                                    /** @enum {unknown} */
+                                    reason: "LABEL_CHANGED" | "REFERENCE_EXITED" | "HISTORICAL_REFERENCE" | "REFERENCE_UNCHANGED";
+                                    affectedSpans: {
+                                        from: string;
+                                        to: string | null;
+                                    }[];
+                                };
+                                affectedSpans: {
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXTERNAL";
+                                /** @enum {unknown} */
+                                owner: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                materialId: string;
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                decisionRef: string;
+                                requiredAction: string;
+                                affectedSpans: {
+                                    from: string;
+                                    to: string | null;
+                                }[];
+                            };
+                            head: string;
+                            /** @enum {unknown} */
+                            status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                            recordedAt: string;
+                        };
+                        history: {
+                            caseId: string;
+                            eventId: string;
+                            head: string;
+                            /** @enum {unknown} */
+                            kind: "ASSIGN" | "PROPOSE" | "APPROVE" | "RECHECK" | "RECEIPT";
+                            /** @enum {unknown} */
+                            status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                            remainingSpans: {
+                                from: string;
+                                to: string | null;
+                            }[];
+                            actor: string;
+                            identity: string;
+                            reason: string;
+                            recordedAt: string;
+                            responsibility?: {
+                                id: string;
+                                versionId: string;
+                                role: string;
+                            };
+                            disposition?: {
+                                /** @enum {string} */
+                                kind: "KEEP_HISTORY";
+                                evidenceId: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "CLOSE_RELATION";
+                                evidenceId: string;
+                                result: {
+                                    /** @enum {unknown} */
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                    id: string;
+                                    versionId: string;
+                                    candidateId: string;
+                                    requestId: string;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                kind: "NEW_RELATION";
+                                evidenceId: string;
+                                result: {
+                                    /** @enum {unknown} */
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                    id: string;
+                                    versionId: string;
+                                    candidateId: string;
+                                    requestId: string;
+                                };
+                                oldRelation: {
+                                    /** @enum {string} */
+                                    kind: "KEEP_HISTORY";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "CLOSE";
+                                    result: {
+                                        /** @enum {unknown} */
+                                        owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                        id: string;
+                                        versionId: string;
+                                        candidateId: string;
+                                        requestId: string;
+                                    };
+                                };
+                            } | {
+                                /** @enum {string} */
+                                kind: "MIGRATE_EXTERNAL";
+                                evidenceId: string;
+                                consumers: string[];
+                            };
+                            evidenceDigest?: string;
+                            proposalEventId?: string;
+                            dependencyDigest?: string;
+                            receipt?: {
+                                consumerActor: string;
+                                /** @enum {unknown} */
+                                outcome: "FAILED" | "PARTIAL" | "SIMULATED_COMPLETED";
+                                receiptRef: string;
+                                /** @enum {boolean} */
+                                simulated: true;
+                            };
+                            consumerBindings?: {
+                                actor: string;
+                                identity: string;
+                            }[];
+                        }[];
+                        handoffs: {
+                            consumerActor: string;
+                            proposalEventId: string;
+                            /** @enum {unknown} */
+                            status: "PENDING" | "FAILED" | "PARTIAL" | "SIMULATED_COMPLETED";
+                            /** @enum {boolean} */
+                            simulated: true;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    assignDepartmentImpactCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    requestId: string;
+                    reason: string;
+                    expectedHead: string;
+                    responsibilityId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        caseId: string;
+                        eventId: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        kind: "ASSIGN" | "PROPOSE" | "APPROVE" | "RECHECK" | "RECEIPT";
+                        /** @enum {unknown} */
+                        status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                        remainingSpans: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    recordDepartmentImpactDisposition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    requestId: string;
+                    reason: string;
+                    expectedHead: string;
+                    disposition: {
+                        /** @enum {string} */
+                        kind: "KEEP_HISTORY";
+                        evidenceId: string;
+                    } | {
+                        /** @enum {string} */
+                        kind: "CLOSE_RELATION";
+                        evidenceId: string;
+                        result: {
+                            /** @enum {unknown} */
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                            id: string;
+                            versionId: string;
+                            candidateId: string;
+                            requestId: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "NEW_RELATION";
+                        evidenceId: string;
+                        result: {
+                            /** @enum {unknown} */
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                            id: string;
+                            versionId: string;
+                            candidateId: string;
+                            requestId: string;
+                        };
+                        oldRelation: {
+                            /** @enum {string} */
+                            kind: "KEEP_HISTORY";
+                        } | {
+                            /** @enum {string} */
+                            kind: "CLOSE";
+                            result: {
+                                /** @enum {unknown} */
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY";
+                                id: string;
+                                versionId: string;
+                                candidateId: string;
+                                requestId: string;
+                            };
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "MIGRATE_EXTERNAL";
+                        evidenceId: string;
+                        consumers: string[];
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        caseId: string;
+                        eventId: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        kind: "ASSIGN" | "PROPOSE" | "APPROVE" | "RECHECK" | "RECEIPT";
+                        /** @enum {unknown} */
+                        status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                        remainingSpans: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    approveDepartmentImpactDisposition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    requestId: string;
+                    reason: string;
+                    expectedHead: string;
+                    proposalEventId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        caseId: string;
+                        eventId: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        kind: "ASSIGN" | "PROPOSE" | "APPROVE" | "RECHECK" | "RECEIPT";
+                        /** @enum {unknown} */
+                        status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                        remainingSpans: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    recheckDepartmentImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    requestId: string;
+                    reason: string;
+                    expectedHead: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        caseId: string;
+                        eventId: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        kind: "ASSIGN" | "PROPOSE" | "APPROVE" | "RECHECK" | "RECEIPT";
+                        /** @enum {unknown} */
+                        status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                        remainingSpans: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    recordDepartmentMigrationReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    requestId: string;
+                    reason: string;
+                    expectedHead: string;
+                    proposalEventId: string;
+                    consumerActor: string;
+                    /** @enum {unknown} */
+                    outcome: "FAILED" | "PARTIAL" | "SIMULATED_COMPLETED";
+                    receiptRef: string;
+                    /** @enum {boolean} */
+                    simulated: true;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        caseId: string;
+                        eventId: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        kind: "ASSIGN" | "PROPOSE" | "APPROVE" | "RECHECK" | "RECEIPT";
+                        /** @enum {unknown} */
+                        status: "OPEN" | "RESOLVED" | "SIMULATED_COMPLETED";
+                        remainingSpans: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readDepartmentMigrationHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caseId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        consumerActor: string;
+                        proposalEventId: string;
+                        /** @enum {unknown} */
+                        status: "PENDING" | "FAILED" | "PARTIAL" | "SIMULATED_COMPLETED";
+                        /** @enum {boolean} */
+                        simulated: true;
+                        caseId: string;
+                        eventId: string;
+                        head: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };

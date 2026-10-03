@@ -118,6 +118,7 @@ export type ValidatedHierarchyNode = HierarchyNodeInput & { readonly depth: numb
 export interface ForestValidation { readonly nodes: readonly ValidatedHierarchyNode[]; readonly digest: string }
 export interface HierarchyIssue { readonly code: string; readonly nodeKey?: string; readonly field?: string }
 export interface HierarchyViewRecord {
+  readonly versionId: string;
   readonly ownerDepartmentVersionId: string | null; readonly sourceDefinitionVersionId: string | null;
   readonly id: string; readonly sourceClientKey: string; readonly viewCode: string; readonly viewName: string;
   readonly viewType: HierarchyCandidateInput['viewType']; readonly purpose: string; readonly aggregationRule: string;
@@ -159,7 +160,7 @@ export function validateHierarchyForest(value: unknown): ForestValidation {
   const to = value.validTo === null ? null : normalizeTime(value.validTo);
   normalizeTime(value.recordedAt);
   if (to !== null && to <= from) issue('INVALID_BUSINESS_PERIOD', undefined, 'validTo');
-  if (value.viewType === 'FINANCE' || value.viewType === 'STATISTICAL') issue('VIEW_TYPE_NOT_OPERATIONAL');
+  if (value.viewType === 'FINANCE' || value.viewType === 'STATISTICAL' && value.aggregationRule !== 'FROZEN_SOURCE') issue('VIEW_TYPE_NOT_OPERATIONAL');
 
   const byKey = new Map<string, HierarchyNodeInput>();
   const departments = new Set<string>();
@@ -288,7 +289,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
     const sourceRecordedAt = formatLocalDbTime(v['recorded_at']);
     return {
       view: {
-        ownerDepartmentVersionId: v['owner_department_version_id'] === null ? null : String(v['owner_department_version_id']),
+        versionId: String(v['id']), ownerDepartmentVersionId: v['owner_department_version_id'] === null ? null : String(v['owner_department_version_id']),
         sourceDefinitionVersionId: v['source_definition_version_id'] === null ? null : String(v['source_definition_version_id']),
         id: String(v['view_id']), sourceClientKey: String(v['source_client_key']), viewCode: String(v['view_code']), viewName: String(v['view_name']),
         viewType: v['view_type'] as HierarchyCandidateInput['viewType'], purpose: String(v['purpose']), aggregationRule: String(v['aggregation_rule']),

@@ -1,3 +1,4 @@
+import {registerDepartmentImpactRoutes} from '../platform/fastify/vnext-department-impact-routes.js';
 import {registerDepartmentRoutes,type DepartmentHttpContext} from '../platform/fastify/vnext-department-routes.js';
 import {registerOrganizationWorkspaceRoutes,type OrganizationWorkspaceHttpContext} from '../platform/fastify/vnext-organization-workspace-routes.js';
 import {registerOperatingRoutes,type OperatingHttpContext} from '../platform/fastify/vnext-operating-routes.js';
@@ -78,7 +79,17 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
     const field=code==='CATALOG_CODE_CONFLICT'?'code':code==='SOURCE_REFERENCE_INVALID'?'sourceEvidence':code==='INVALID_BUSINESS_PERIOD'?'validTo':code==='LOCAL_TIME_REQUIRED'&&typeof error==='object'&&error!==null&&'field' in error&&typeof error.field==='string'&&['validFrom','validTo','asOf','businessAt'].includes(error.field)?error.field:undefined;
     const contractFields:Record<string,string>={UNKNOWN_FIELD:'definition.fields[].code',INVALID_FIELD_ENUM:'definition.fields[]',CODESET_AUTHORITY_INVALID:'definition.codeSets[]',CODESET_REQUIRED:'definition.codeSets[]',REFERENCE_INVALID:'definition.references[]',REFERENCE_REQUIRED:'definition.references[]',PARAMETER_NOT_APPROVED:'definition.references[].parameterVersionId',PARAMETER_PERIOD_NOT_COVERED:'definition.references[].parameterVersionId',PARAMETER_SCOPE_REQUIRED:'campus',IMMUTABLE_RULE_VERSION:'definition.ruleVersion'};
     const safeField=field??contractFields[code];
-    return reply.code(status).send({code,...(safeField?{field:safeField}:{}),message:messages[code]??'请求未被接受，请检查字段、范围、版本和治理状态。'});
+    let budget:unknown;
+    if(code==='PLAN_INPUT_LIMIT'&&typeof error==='object'&&error!==null){
+      let value:unknown='budget' in error?error.budget:undefined;
+      if(value===undefined&&'detail' in error&&typeof error.detail==='string'){try{value=JSON.parse(error.detail);}catch{/* Non-budget diagnostics remain private. */}}
+      if(typeof value==='object'&&value!==null&&'kind' in value&&'observed' in value&&'limit' in value
+        &&(value.kind==='REFERENCE_COUNT'||value.kind==='ASSESSMENT_BYTES')&&Number.isSafeInteger(value.observed)&&Number.isSafeInteger(value.limit)
+        &&typeof value.observed==='number'&&typeof value.limit==='number'&&value.observed>value.limit&&value.limit>0){
+        budget={kind:value.kind,observed:value.observed,limit:value.limit};
+      }
+    }
+    return reply.code(status).send({code,...(safeField?{field:safeField}:{}),...(budget?{budget}:{}),message:messages[code]??'请求未被接受，请检查字段、范围、版本和治理状态。'});
   });
   await registerCatalogRoutes(app,catalog);
   await registerContractRoutes(app,catalog);
@@ -93,5 +104,6 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerOrganizationMappingRoutes(app,mapping);
   registerOrganizationIdentifierRoutes(app,identifiers);
   registerOrganizationEvolutionRoutes(app,evolution);
+  registerDepartmentImpactRoutes(app,evolution);
   return app;
 }

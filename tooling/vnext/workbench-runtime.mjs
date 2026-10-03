@@ -1,3 +1,4 @@
+import {assertDepartmentImpactsProvisioned} from './department-impact-provisioning.mjs';
 import {openDepartment,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,openOrganizationEvolutions} from '../../apps/governance-api/src/modules/department-master/index.ts';
 import {assertOrganizationEvolutionsProvisioned} from './organization-evolution-provisioning.mjs';
 import {assertOrganizationIdentifiersProvisioned} from './organization-identifier-provisioning.mjs';
@@ -114,6 +115,7 @@ export async function startWorkbench({
     if(owned||persistentPrefix>=109){await assertHierarchyProvisioned(connection);hierarchy=openHierarchy(connection,provider);}
     if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
     if(persistent&&persistentPrefix>=116){await assertOrganizationIdentifiersProvisioned(connection,provider);identifiers=openOrganizationIdentifiers(connection,provider);}
+    if(persistent&&persistentPrefix>=122)await assertDepartmentImpactsProvisioned(connection);
     if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider);}
     catalog = await openCatalog(connection, provider);
     let setup;

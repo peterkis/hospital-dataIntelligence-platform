@@ -220,6 +220,15 @@ export interface DepartmentMasterIdentifierVerification {
   request_id: string;
 }
 
+export interface DepartmentMasterImpactExternalOwnerAccess {
+  actor: string;
+  campus: string;
+  owner: string;
+  owner_role: string;
+  permission: string;
+  responsibility_version_id: string;
+}
+
 export interface DepartmentMasterInput {
   campus: string;
   digest: string;
@@ -407,6 +416,44 @@ export interface GovernanceCatalogContractImpactEvent {
   resolution_source_event: Int8 | null;
   upstream_event: Int8;
   upstream_object: string;
+}
+
+export interface GovernanceCatalogDepartmentImpactAssessment {
+  actor_identity: string;
+  campus: string;
+  content: Json;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_digest: string;
+  request_id: string;
+  target_id: string;
+  target_kind: string;
+}
+
+export interface GovernanceCatalogDepartmentImpactCase {
+  assessment_id: string;
+  campus: string;
+  event_id: string;
+  id: Generated<string>;
+  obligation: Json;
+  recorded_at: Generated<string>;
+  reference_key: string;
+}
+
+export interface GovernanceCatalogDepartmentImpactCaseEvent {
+  actor_code: string;
+  actor_identity: string;
+  case_id: string;
+  id: Generated<string>;
+  kind: string;
+  payload: Json;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_digest: string;
+  request_id: string;
+  sequence: Int8;
+  status: string;
 }
 
 export interface GovernanceCatalogEvent {
@@ -893,6 +940,7 @@ export interface VnextControlActor {
   active: boolean;
   code: string;
   identity_code: string;
+  principal_kind: Generated<string>;
 }
 
 export interface VnextControlActorGrant {
@@ -1020,6 +1068,7 @@ export interface DB {
   "department_master.identifier_access": DepartmentMasterIdentifierAccess;
   "department_master.identifier_input": DepartmentMasterIdentifierInput;
   "department_master.identifier_verification": DepartmentMasterIdentifierVerification;
+  "department_master.impact_external_owner_access": DepartmentMasterImpactExternalOwnerAccess;
   "department_master.input": DepartmentMasterInput;
   "department_master.mapping_access": DepartmentMasterMappingAccess;
   "department_master.mapping_input": DepartmentMasterMappingInput;
@@ -1036,6 +1085,9 @@ export interface DB {
   "governance_catalog.apply_candidate": GovernanceCatalogApplyCandidate;
   "governance_catalog.apply_commit": GovernanceCatalogApplyCommit;
   "governance_catalog.contract_impact_event": GovernanceCatalogContractImpactEvent;
+  "governance_catalog.department_impact_assessment": GovernanceCatalogDepartmentImpactAssessment;
+  "governance_catalog.department_impact_case": GovernanceCatalogDepartmentImpactCase;
+  "governance_catalog.department_impact_case_event": GovernanceCatalogDepartmentImpactCaseEvent;
   "governance_catalog.event": GovernanceCatalogEvent;
   "governance_catalog.impact_event": GovernanceCatalogImpactEvent;
   "governance_catalog.import_contract": GovernanceCatalogImportContract;

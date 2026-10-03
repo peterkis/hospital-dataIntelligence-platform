@@ -434,3 +434,6 @@ export * from './vnext/organization-identifier-contracts.js';
 export {openOrganizationIdentifiers} from './vnext/organization-identifier.js';
 export * from './vnext/organization-evolution-contracts.js';
 export {openOrganizationEvolutions} from './vnext/organization-evolution.js';
+
+export * from './vnext/department-impact-contracts.js';
+export {departmentImpactPorts,type DepartmentImpactPorts} from './vnext/department-impact.js';

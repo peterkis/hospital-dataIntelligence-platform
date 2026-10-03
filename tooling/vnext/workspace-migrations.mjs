@@ -38,6 +38,18 @@ const postWorkspaceMigrations = [
  '0119_evolution_reference_admission_repair',
  '0120_evolution_authorization_closure',
  '0121_evolution_original_read_authority',
+ '0122_department_change_impacts',
+ '0123_department_impact_dispositions',
+ '0124_statistical_frozen_source',
+ '0125_impact_exact_hierarchy_closure',
+ '0126_impact_original_semantics',
+ '0127_impact_frozen_current_authority',
+ '0128_identifier_impact_gate',
+ '0129_external_impact_owner_authority',
+ '0130_impact_assessment_budget',
+ '0131_impact_replay_and_terminal_state',
+ '0132_impact_terminal_command_order',
+ '0133_impact_historical_receipt_replay',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
