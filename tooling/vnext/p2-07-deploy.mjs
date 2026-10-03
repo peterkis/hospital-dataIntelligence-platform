@@ -9,8 +9,13 @@ import {
 } from "./department-provisioning.mjs";
 import { startWorkbench } from "./workbench-runtime.mjs";
 import { createDepartmentWorkspaceClient } from "../../packages/generated-api-client/src/index.ts";
-if (process.argv.length !== 2) throw new Error("CLOSED_COMMAND_REQUIRED");
-const deployment = await prepareWorkspaceDeployment({ evidenceTask: "p2-07" });
+const args = process.argv.slice(2);
+if (args.length > 1 || args.some((arg) => arg !== "--verify-existing"))
+  throw new Error("CLOSED_COMMAND_REQUIRED");
+const deployment = await prepareWorkspaceDeployment({
+  evidenceTask: "p2-07",
+  reuseExisting: args.includes("--verify-existing"),
+});
 const { receipt, connection, provider, evidence } = deployment;
 const service = JSON.parse(
   readFileSync(".runtime/vnext/p0-09/owner-service.json", "utf8"),
@@ -66,16 +71,15 @@ try {
   const restored = await checked(client.read(saved.id));
   assert.deepEqual(restored.content, draft);
   assert.equal((await checked(client.recover(draft.requestId))).id, saved.id);
-  assert.equal(
-    (
-      await checked(
-        createDepartmentWorkspaceClient(runtime.url, "maker-alias").read(
-          saved.id,
-        ),
-      )
-    ).id,
-    saved.id,
+  const alias = createDepartmentWorkspaceClient(runtime.url, "maker-alias");
+  const aliasPermission = await checked(
+    alias.permissions({ kind: "DEPARTMENT", campus: "NORTH" }),
   );
+  const aliasRead = await alias.read(saved.id);
+  if (aliasPermission.canRead) {
+    assert.equal(aliasRead.response.status, 200);
+    assert.equal(aliasRead.data.id, saved.id);
+  } else assert.equal(aliasRead.response.status, 403);
   assert.equal(
     (
       await createDepartmentWorkspaceClient(runtime.url, "outsider").read(
@@ -95,6 +99,8 @@ try {
         generatedClient: true,
         privatePartialDraft: true,
         originalIdentityRecovery: true,
+        aliasCurrentPermissionRechecked: true,
+        aliasPrivateReadAllowed: aliasPermission.canRead,
         currentPermissionDenial: true,
         formalAcceptance: "NOT_RUN",
         fullHierarchy: "BLOCKED_DEPENDENCY",

@@ -39,3 +39,7 @@ A018 使用当前 Department／Hierarchy／生成客户端与当前调用方。�
 首次固定候选 `c62bc45` 由两个独立代理分别静态审查 Spec 和 Standards，各发现两项问题。新建层级视图授权遗漏及历史 R 状态泄漏已在实际 Owner 复现 RED，修复后读取／恢复／提交重放随准确 view READ 撤权拒绝，R0/R1 分别返回 VALIDATED/APPROVED。Catalog 审批和影响表查询移入 Catalog 的有限事务接口，普通和服务角色不获其直接 EXECUTE。通用草稿保存恢复问题由实际浏览器复现并验证 GREEN。专项 fresh／已填充升级回归见 `review-red.log`、`review-green-2.log`；最终修复候选重新固定审查，不沿用首次候选结论。
 
 修复候选 `60726d5` 的两轴复审又发现授权元数据与密文恢复比较不一致。实际授权读取复现 `PAYLOAD_UNAVAILABLE` 后，将提交和恢复统一为同一有限元数据投影，同时保留原 payload 的空 viewId；新增正向读取／原请求恢复断言与撤权拒绝断言一起执行。证据 `metadata-binding-red.log`、`metadata-binding-green.log`。只有新候选复审通过才部署持久迁移。
+
+`596845e` 的 Spec／Standards 固定候选复审均无剩余可操作问题。修复后 13 项专项 DB/HTTP、0143 已填充升级及两个真实服务进程重启再次通过；本轮适用回归总计 305 项单元、367 项数据库测试。证据 `metadata-binding-green.log`、`metadata-restart-green.log`、`verified-evidence.json`。
+
+持久研发库 OID206108 已从 0143 前向升至 0145，生成类型核验、原行／密钥／账本保留、实际工作台页面、私有保存／读取／原请求恢复及无权限拒绝通过。首次 HTTP 验证因测试脚本假定别名权限而拒绝；按当前权限检查后，仅在有权限时允许同身份读取，未新增 actor 权限。复核命令为 `prototype:db:with -- vnext:p2-07:deploy --verify-existing`；证据 `persistent-verify.log`、`deployment-1791060023382.http.json`、`deployment-1791060023382.preservation.json`、`persistent-chain.json`。既有已安装迁移保持只读；之后的数据库修复必须追加迁移。
