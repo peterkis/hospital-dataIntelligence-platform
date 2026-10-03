@@ -20,11 +20,12 @@ const { receipt, connection, provider, evidence } = deployment;
 const service = JSON.parse(
   readFileSync(".runtime/vnext/p0-09/owner-service.json", "utf8"),
 );
-peer(
-  receipt.name,
-  identitySQL(receipt) +
-    ` BEGIN;SELECT pg_advisory_xact_lock(901002);DO $$ BEGIN IF (SELECT oid::text FROM pg_roles WHERE rolname=${quote(service.role)}) IS DISTINCT FROM ${quote(service.roleOid)} THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH';END IF;END $$;GRANT EXECUTE ON FUNCTION ${DEPARTMENT_FUNCTIONS.map((name) => "department_master." + name).join(",")} TO ${service.role};COMMIT;`,
-);
+if (!args.includes("--verify-existing"))
+  peer(
+    receipt.name,
+    identitySQL(receipt) +
+      ` BEGIN;SELECT pg_advisory_xact_lock(901002);DO $$ BEGIN IF (SELECT oid::text FROM pg_roles WHERE rolname=${quote(service.role)}) IS DISTINCT FROM ${quote(service.roleOid)} THEN RAISE EXCEPTION 'OWNER_ROLE_IDENTITY_MISMATCH';END IF;END $$;GRANT EXECUTE ON FUNCTION ${DEPARTMENT_FUNCTIONS.map((name) => "department_master." + name).join(",")} TO ${service.role};COMMIT;`,
+  );
 await assertDepartmentProvisioned(connection, provider);
 const requestPath = ".runtime/vnext/p2-07/persistent-draft-request.json";
 let draft;
