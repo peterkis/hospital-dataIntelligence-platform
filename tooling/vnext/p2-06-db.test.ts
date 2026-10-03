@@ -444,17 +444,17 @@ async function independentlyClosedReference(){
  const {eventId}=await applyRename(),item=(await owner.listImpactCases('maker',{eventId,campus:'NORTH'})).items.find(c=>c.obligation.owner==='IDENTIFIER')!,r=await responsibility('ORG23');
  peer(receipt.name,"INSERT INTO department_master.identifier_access SELECT a,'SYNTHETIC_DEPARTMENT_CODE','NORTH',p FROM unnest(ARRAY['maker','reviewer']) a CROSS JOIN unnest(ARRAY['WRITE','REVIEW']) p ON CONFLICT DO NOTHING;");
  const base={caseId:item.id,campus:'NORTH' as const,reason:'TEST independent terminal case'};
- const assigned=await owner.assignImpactCase('maker',{...base,requestId:randomUUID(),expectedHead:'0',responsibilityId:r.id});
- const proposal=await owner.recordDisposition('maker',{...base,requestId:randomUUID(),expectedHead:assigned.head,disposition:{kind:'KEEP_HISTORY',evidenceId:f.material.artifactId}});
+ const assign={...base,requestId:randomUUID(),expectedHead:'0',responsibilityId:r.id},assigned=await owner.assignImpactCase('maker',assign);
+ const propose={...base,requestId:randomUUID(),expectedHead:assigned.head,disposition:{kind:'KEEP_HISTORY' as const,evidenceId:f.material.artifactId}},proposal=await owner.recordDisposition('maker',propose);
  const approve={...base,requestId:randomUUID(),expectedHead:proposal.head,proposalEventId:proposal.eventId},approved=await owner.approveDisposition('reviewer',approve);
- const closed=await owner.recheckImpact('maker',{...base,requestId:randomUUID(),expectedHead:approved.head});expect(closed.status).toBe('RESOLVED');
- return {base,approve,approved,closed};
+ const recheck={...base,requestId:randomUUID(),expectedHead:approved.head},closed=await owner.recheckImpact('maker',recheck);expect(closed.status).toBe('RESOLVED');
+ return {base,assign,assigned,propose,proposal,approve,approved,recheck,closed};
 }
 test('independent review: a new approval cannot reopen a resolved case, but the accepted request replays',async()=>{
  const {base,approve,approved,closed}=await independentlyClosedReference();
  const before=await owner.readImpactCase('maker',{caseId:base.caseId,campus:base.campus});
  expect(await owner.approveDisposition('reviewer',approve)).toEqual(approved);
- await expect(owner.approveDisposition('reviewer',{...approve,requestId:randomUUID(),expectedHead:closed.head})).rejects.toThrow('DISPOSITION_ALREADY_COMPLETE');
+ for(const expectedHead of [approve.expectedHead,closed.head])await expect.soft(owner.approveDisposition('reviewer',{...approve,requestId:randomUUID(),expectedHead})).rejects.toThrow('DISPOSITION_ALREADY_COMPLETE');
  expect(await owner.readImpactCase('maker',{caseId:base.caseId,campus:base.campus})).toEqual(before);
 });
 
@@ -477,10 +477,44 @@ test.each(['APPROVE','RECEIPT'] as const)('independent review: completed synthet
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner,actor:r=>actor(r.headers)});
  try{
   const url=await app.listen({host:'127.0.0.1',port:0}),command=operation==='APPROVE'?approve:receiptCommand;
-  const response=await fetch(url+'/api/vnext/department-impacts/'+(operation==='APPROVE'?'dispositions/approve':'receipts'),{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':operation==='APPROVE'?'reviewer':'impact-consumer-a'},body:JSON.stringify({...command,requestId:randomUUID(),expectedHead:closed.head})});
-  expect({status:response.status,data:await response.json()}).toMatchObject({status:409,data:{code:'DISPOSITION_ALREADY_COMPLETE'}});
+  for(const expectedHead of [command.expectedHead,closed.head]){
+   const response=await fetch(url+'/api/vnext/department-impacts/'+(operation==='APPROVE'?'dispositions/approve':'receipts'),{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':operation==='APPROVE'?'reviewer':'impact-consumer-a'},body:JSON.stringify({...command,requestId:randomUUID(),expectedHead})});
+   expect.soft({status:response.status,data:await response.json()}).toMatchObject({status:409,data:{code:'DISPOSITION_ALREADY_COMPLETE'}});
+  }
   expect(await owner.readImpactCase('maker',read)).toEqual(before);
  }finally{await app.close();}
+});
+
+test.each(['REFERENCE_COUNT','ASSESSMENT_BYTES'] as const)('accepted case commands replay before fresh %s budgets, with current authority',async(budget)=>{
+ const accepted=await independentlyClosedReference(),read={caseId:accepted.base.caseId,campus:accepted.base.campus},before=await owner.readImpactCase('maker',read);
+ const replayOwner=openOrganizationEvolutions(connection,provider,{...departmentImpactPorts,async references(scope,who,departments,campus){
+  const references=await departmentImpactPorts.references(scope,who,departments,campus),reference=references[0];if(!reference)throw new Error('REFERENCE_REQUIRED');
+  return budget==='REFERENCE_COUNT'?Array.from({length:2001},()=>structuredClone(reference)):references.map(ref=>({...ref,frozenLabel:'x'.repeat(524289)}));
+ }});
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner:replayOwner,actor:r=>actor(r.headers)});
+ try{
+  await expect(replayOwner.readImpactCase('maker',read)).rejects.toThrow('PLAN_INPUT_LIMIT');
+  for(const [replay,expected] of [
+   [()=>replayOwner.assignImpactCase('maker',accepted.assign),accepted.assigned],
+   [()=>replayOwner.recordDisposition('maker',accepted.propose),accepted.proposal],
+   [()=>replayOwner.approveDisposition('reviewer',accepted.approve),accepted.approved],
+   [()=>replayOwner.recheckImpact('maker',accepted.recheck),accepted.closed],
+  ] as const)await expect.soft(replay()).resolves.toEqual(expected);
+  const url=await app.listen({host:'127.0.0.1',port:0}),post=async(command:typeof accepted.approve)=>{
+   const response=await fetch(url+'/api/vnext/department-impacts/dispositions/approve',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'reviewer'},body:JSON.stringify(command)});
+   return {status:response.status,data:await response.json()};
+  };
+  await expect.soft(post(accepted.approve)).resolves.toEqual({status:200,data:accepted.approved});
+  await expect.soft(post({...accepted.approve,reason:'TEST different request intent'})).resolves.toMatchObject({status:409,data:{code:'REQUEST_CONFLICT'}});
+  peer(receipt.name,"DELETE FROM department_master.identifier_access WHERE actor='reviewer' AND scheme='SYNTHETIC_DEPARTMENT_CODE' AND campus='NORTH' AND permission='REVIEW';");
+  try{await expect.soft(post(accepted.approve)).resolves.toMatchObject({status:403,data:{code:'ACCESS_DENIED'}});}
+  finally{peer(receipt.name,"INSERT INTO department_master.identifier_access VALUES('reviewer','SYNTHETIC_DEPARTMENT_CODE','NORTH','REVIEW');");}
+  peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code='reviewer' AND dataset_id=${quote(f.eventDataset.id)}::uuid AND campus='NORTH' AND purpose='IDENTITY_VERIFY' AND permission='READ';`);
+  try{await expect.soft(post(accepted.approve)).resolves.toMatchObject({status:403,data:{code:'ACCESS_DENIED'}});}
+  finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant VALUES('reviewer',${quote(f.eventDataset.id)}::uuid,'NORTH','IDENTITY_VERIFY','READ');`);}
+  await expect.soft(post(accepted.approve)).resolves.toEqual({status:200,data:accepted.approved});
+  expect(await owner.readImpactCase('maker',read)).toEqual(before);
+ }finally{await app.close();await replayOwner.close();}
 });
 
 test('independent review: contract publication does not invalidate closed impact history or accepted command replay',async()=>{

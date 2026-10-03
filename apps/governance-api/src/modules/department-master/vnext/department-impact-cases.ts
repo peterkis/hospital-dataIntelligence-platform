@@ -15,13 +15,21 @@ interface CasePorts {
  evidence(scope:CatalogTransactionScope,actor:string,eventId:string,campus:'NORTH'|'SOUTH',evidenceId:string,admission:boolean):Promise<string>;
 }
 export function departmentImpactCases(ports:CasePorts){
- const read=async(scope:CatalogTransactionScope,actor:string,input:ImpactCaseReadInput)=>{
+ const readFrozen=async(scope:CatalogTransactionScope,actor:string,input:ImpactCaseReadInput)=>{
   const detail=await ports.record<ImpactCaseDetail>(scope,actor,'READ_CASE',input);
-  await ports.observe(scope,actor,{kind:'EVENT',id:detail.item.eventId,campus:input.campus});
   for(const event of detail.history)if(event.disposition)await ports.evidence(scope,actor,detail.item.eventId,input.campus,event.disposition.evidenceId,false);
   return detail;
  };
- const prior=(scope:CatalogTransactionScope,actor:string,operation:string,input:Record<string,unknown>)=>ports.record<ImpactCommandResult|null>(scope,actor,'PRIOR_COMMAND',{...input,commandOperation:operation,requestDigest:digest({operation,input})});
+ const read=async(scope:CatalogTransactionScope,actor:string,input:ImpactCaseReadInput)=>{
+  const detail=await readFrozen(scope,actor,input);
+  await ports.observe(scope,actor,{kind:'EVENT',id:detail.item.eventId,campus:input.campus});
+  return detail;
+ };
+ const prior=async(scope:CatalogTransactionScope,actor:string,operation:string,input:ImpactCaseReadInput&Record<string,unknown>)=>{
+  const accepted=await ports.record<ImpactCommandResult|null>(scope,actor,'PRIOR_COMMAND',{...input,commandOperation:operation,requestDigest:digest({operation,input})});
+  if(accepted)await readFrozen(scope,actor,input);
+  return accepted;
+ };
  const append=(scope:CatalogTransactionScope,actor:string,operation:string,input:Record<string,unknown>,derived:Record<string,unknown>={})=>ports.record<ImpactCommandResult>(scope,actor,operation,{...input,...derived,requestDigest:digest({operation,input})});
  const result=async(scope:CatalogTransactionScope,actor:string,campus:string,ref:ImpactResultReference,caseId:string)=>
   (await sql<{r:{owner:string;id:string;versionId:string;departmentIds:string[];period:ImpactSpan;action:string;safeShrink:boolean}}>`select department_master.impact_result(${actor},${JSON.stringify({...ref,caseId})}::jsonb,${campus}) r`.execute(scope)).rows[0]!.r;
@@ -51,15 +59,17 @@ export function departmentImpactCases(ports:CasePorts){
   async recordMigrationReceipt(actor:string,input:RecordMigrationReceiptInput){check(RecordMigrationReceiptSchema,input);return ports.root(scope=>append(scope,actor,'RECEIPT',input));},
   async readMigrationHandoff(actor:string,input:ImpactCaseReadInput){check(ImpactCaseReadSchema,input);return ports.root(scope=>ports.record<ServiceImpactHandoff>(scope,actor,'READ_HANDOFF',input));},
   async readImpactCase(actor:string,input:ImpactCaseReadInput){check(ImpactCaseReadSchema,input);return ports.root(scope=>read(scope,actor,input));},
-  async assignImpactCase(actor:string,input:AssignImpactCaseInput){check(AssignImpactCaseSchema,input);return ports.root(async scope=>{await read(scope,actor,input);return append(scope,actor,'ASSIGN',input);});},
+  async assignImpactCase(actor:string,input:AssignImpactCaseInput){check(AssignImpactCaseSchema,input);return ports.root(async scope=>{const existing=await prior(scope,actor,'ASSIGN',input);if(existing)return existing;await read(scope,actor,input);return append(scope,actor,'ASSIGN',input);});},
   async recordDisposition(actor:string,input:RecordDispositionInput){check(RecordDispositionSchema,input);return ports.root(async scope=>{
-   const detail=await read(scope,actor,input),existing=await prior(scope,actor,'PROPOSE',input);if(existing)return existing;
+   const existing=await prior(scope,actor,'PROPOSE',input);if(existing)return existing;
+   const detail=await read(scope,actor,input);
    await validateDisposition(scope,actor,detail,input.disposition);
    const evidenceDigest=await ports.evidence(scope,actor,detail.item.eventId,input.campus,input.disposition.evidenceId,true);
    return append(scope,actor,'PROPOSE',input,{evidenceDigest});
   });},
   async approveDisposition(actor:string,input:ApproveDispositionInput){check(ApproveDispositionSchema,input);return ports.root(async scope=>{
-   const detail=await read(scope,actor,input),existing=await prior(scope,actor,'APPROVE',input);if(existing)return existing;
+   const existing=await prior(scope,actor,'APPROVE',input);if(existing)return existing;
+   const detail=await read(scope,actor,input);
    const proposal=detail.history.find(event=>event.eventId===input.proposalEventId&&event.kind==='PROPOSE');
    if(!proposal?.disposition)throw new Error('APPROVAL_REQUIRED');
    await validateDisposition(scope,actor,detail,proposal.disposition);
@@ -68,7 +78,8 @@ export function departmentImpactCases(ports:CasePorts){
    return append(scope,actor,'APPROVE',input);
   });},
   async recheckImpact(actor:string,input:RecheckImpactInput){check(RecheckImpactSchema,input);return ports.root(async scope=>{
-   const detail=await read(scope,actor,input),existing=await prior(scope,actor,'RECHECK',input);if(existing)return existing;
+   const existing=await prior(scope,actor,'RECHECK',input);if(existing)return existing;
+   const detail=await read(scope,actor,input);
    const proposal=detail.history.filter(e=>e.kind==='PROPOSE').at(-1),approved=detail.history.filter(e=>e.kind==='APPROVE').at(-1);
    if(!proposal?.disposition||approved?.proposalEventId!==proposal.eventId)throw new Error('APPROVAL_REQUIRED');
    await validateDisposition(scope,actor,detail,proposal.disposition);
