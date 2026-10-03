@@ -67,3 +67,5 @@ PR #27 首轮云端审查针对 `de8e22c` 提出三项修复：补全演化／�
 合法调用方对象字段顺序另复现私有恢复 `PAYLOAD_UNAVAILABLE`：密文内容规范排序，而授权引用数组原先依赖输入对象字段顺序。新增保存／恢复边界按准确引用多重集合比较，仅忽略授权集合顺序，保留全部项、重复计数及其他元数据；业务命令和节点顺序仍由原内容 MAC 绑定。新写入先复制规范内容，旧 145／146 密文无需重写。证据 `reference-key-order-red.log`、`reference-key-order-green.log`；升级夹具还从真实旧源码创建此前因顺序错误无法读取的草稿，验证前向恢复和原行保留。此专项使 P2-07 总计 20 项，适用数据库回归累计 374 项。
 
 `23b3af1` 的独立 Spec 审查无可操作问题；Standards 审查发现工作台导入 Organization 内部事务适配器，违反 ADR-0083 的模块边界。工作台改为在 Department 内建立事务运行器，使用既有共享池、同一 advisory lock 和 Catalog 事务作用域，保留原原子提交与关闭行为，不扩大模块外部接口。验证证据为 `module-boundary-types.log`、`module-boundary-gate.log`、`module-boundary-green.log`；首次静态命令误用不存在的脚本，随后使用仓库实际 `check:module-boundaries` 命令通过。
+
+`1f1da49` 的独立 Spec／Standards 复审均无剩余可操作发现。修复后的 20 项专项 DB／HTTP 和实际两进程重启通过，重启保留私有草稿、准确历史与原接受 Apply 重放；证据 `module-boundary-green.log`、`module-boundary-restart.log`。持久研发库 OID206108 的 0146→0147 前向升级完成，原行、密钥及迁移账本保留；当前生成类型、实际工作台 HTTP、原私有请求恢复及当前权限拒绝通过，未扩大 actor 权限。证据 `persistent-147-deploy.log`、`deployment-1791070256603.{migration,preservation,http}.json`；包装器 ready／targetExitCode 0／cleanupPassed true。0001–0147 均已安装，后续 SQL 修复必须追加迁移。PR #27 的最终 head、云端复审和 CI 状态按实际发布记录，正式验收与 FULL 边界保持不变。
