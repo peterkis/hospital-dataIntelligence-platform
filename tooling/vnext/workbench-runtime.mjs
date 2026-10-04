@@ -1,3 +1,6 @@
+import {withBusinessUnitImpacts} from '../../apps/governance-api/src/composition/business-unit-dependencies.ts';
+import {openBusinessUnit} from '../../apps/governance-api/src/modules/care-organization/index.ts';
+import {assertBusinessUnitProvisioned} from './p3-01-provisioning.mjs';
 import {openLocation} from '../../apps/governance-api/src/modules/location-master/index.ts';
 import {assertLocationProvisioned} from './p3-06-provisioning.mjs';
 import {assertDepartmentLifecycleProvisioned} from './department-lifecycle-provisioning.mjs';
@@ -54,7 +57,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -70,6 +73,7 @@ export async function startWorkbench({
     await evolutions?.close();
     await departmentLifecycle?.close();
     await location?.close();
+    await businessUnit?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -115,7 +119,7 @@ export async function startWorkbench({
     // An installed persistent Owner must never silently fall back to fresh keys.
     const organizationReady=persistent;
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
-    if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider);operating=openOperatingRelations(connection,provider);}
+    if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider,{readInTransaction:(s,a,i)=>{if(!businessUnit)throw new Error('BLOCKED_DEPENDENCY');return businessUnit.readCampusDependenciesInTransaction(s,a,i);}});operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     if(persistent&&persistentPrefix>=144)departmentWorkspace=openDepartmentWorkspace(connection,provider);
@@ -124,9 +128,10 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
     if(persistent&&persistentPrefix>=116){await assertOrganizationIdentifiersProvisioned(connection,provider);identifiers=openOrganizationIdentifiers(connection,provider);}
     if(persistent&&persistentPrefix>=122)await assertDepartmentImpactsProvisioned(connection);
-    if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider);}
-    if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider);}
+    if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider,withBusinessUnitImpacts(()=>businessUnit));}
+    if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider,withBusinessUnitImpacts(()=>businessUnit));}
     if(persistent&&persistentPrefix>=150){await assertLocationProvisioned(connection,provider);location=openLocation(connection,provider,campus.references);}
+    if(persistent&&persistentPrefix>=154){await assertBusinessUnitProvisioned(connection,provider);businessUnit=openBusinessUnit(connection,provider,{departmentCoverage:departmentLifecycle.readUnitBindingCoverageInTransaction,referenceAccess:departmentLifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction});}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -190,6 +195,7 @@ export async function startWorkbench({
       departmentLifecycle?{owner:departmentLifecycle,actor:r=>syntheticActor(r.headers)}:undefined,
       departmentWorkspace?{owner:departmentWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
       location?{owner:location,actor:r=>syntheticActor(r.headers)}:undefined,
+      businessUnit?{owner:businessUnit,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

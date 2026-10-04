@@ -1,4 +1,4 @@
-import {assessImpact} from './impact.js';
+import {assessImpact,type CampusBusinessUnitPort} from './impact.js';
 import {createHmac} from 'node:crypto';
 import {sql} from 'kysely';
 import {applyCoordinator,type ApplyOwnerPort,type OwnerFact,canonicalPlan,planBinding,authenticateRegistrationEvidence,type KeyProviderPort} from '../../governance-catalog/index.js';
@@ -10,8 +10,9 @@ export type {CampusEvent,CampusSnapshot,CampusReferencePort,LocationCampusCovera
 import {createCampusReader,campusOperationAt,type CampusEvent,type CampusSnapshot} from './reader.js';
 export * from './reference-contracts.js';
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
-export function openCampus(connectionString:string,provider?:KeyProviderPort){
+export function openCampus(connectionString:string,provider?:KeyProviderPort,units?:CampusBusinessUnitPort){
  const store=campusInput(connectionString,provider),{db,root,record,unseal}=store;
+ const assess=(scope:Scope,actor:string,input:Parameters<typeof assessImpact>[2])=>assessImpact(scope,actor,input,units);
  const snapshot=async(scope:Scope,actor:string,id:string)=>(await sql<{r:CampusSnapshot}>`select organization_master.campus_snapshot(${actor},${id}::uuid) r`.execute(scope)).rows[0]!.r;
  const normalize=(raw:CampusCommand)=>{const c=structuredClone(raw);c.validFrom=localTime(c.validFrom);c.validTo=c.validTo===null?null:localTime(c.validTo);c.source.recordedAt=localTime(c.source.recordedAt.replace(/\+08:00$/u,''));if(c.validTo!==null&&c.validTo<=c.validFrom)throw new Error('CLOSED_INPUT_REQUIRED');if(c.action==='SCHEDULE_OPENING'){c.plannedOpeningAt=localTime(c.plannedOpeningAt);if(c.plannedOpeningAt<c.validFrom)throw new Error('CLOSED_INPUT_REQUIRED');}if('facts' in c&&c.facts.openingDate)localTime(c.facts.openingDate);if(['SUSPEND','RETIRE','RECORD_DISPOSITION','COMPLETE_DISPOSITION'].includes(c.action)&&c.validTo!==null)throw new Error('CLOSED_INPUT_REQUIRED');return c;};
  const span=(e:CampusEvent)=>({from:stamp(e.valid_from),to:e.valid_to&&stamp(e.valid_to)});
@@ -25,7 +26,7 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    if(!(c.action==='SUSPEND'&&c.validFrom<stamp(retired.valid_from)&&now<stamp(retired.valid_from))&&(openingAfterRetirement||c.action==='RETIRE'||stamp(retired.valid_from)<=now||intersect(span(retired),period).length))throw new Error('CAMPUS_RETIRED');
   }
   if('assessmentDigest' in c){
-   const report=await assessImpact(scope,actor,{id:c.target.id,validFrom:c.validFrom,validTo:c.validTo});
+   const report=await assess(scope,actor,{id:c.target.id,validFrom:c.validFrom,validTo:c.validTo});
    if(report.digest!==c.assessmentDigest)throw new Error('STALE_VALIDATION');
    if(c.action!=='RETIRE'&&(!retired||stamp(retired.valid_from)!==c.validFrom))throw new Error('BLOCKED_DEPENDENCY');
    if(report.completed)throw new Error('DISPOSITION_ALREADY_COMPLETE');
@@ -103,7 +104,7 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
    const transaction=(await sql<{id:string}>`select pg_current_xact_id()::text id`.execute(scope)).rows[0]!.id;
    const c=JSON.parse(command.value['command']!) as CampusCommand;
    let lifecycle:unknown=null;
-   if('assessmentDigest' in c){const {digest,dependencyDigest,...report}=await assessImpact(scope,actor,{id:c.target.id,validFrom:c.validFrom,validTo:c.validTo});if(digest!==c.assessmentDigest)throw new Error('STALE_VALIDATION');lifecycle={report,dependencyDigest,...(c.action==='RECORD_DISPOSITION'?{resolution:c.resolution}:{})};}
+   if('assessmentDigest' in c){const {digest,dependencyDigest,...report}=await assess(scope,actor,{id:c.target.id,validFrom:c.validFrom,validTo:c.validTo});if(digest!==c.assessmentDigest)throw new Error('STALE_VALIDATION');lifecycle={report,dependencyDigest,...(c.action==='RECORD_DISPOSITION'?{resolution:c.resolution}:{})};}
    const ticket=canonicalPlan({actor,inputId:command.value['inputId'],command:c,candidateId:approval.candidateId,digest:approval.digest,transaction,lifecycle});
    const key=Buffer.from(planBinding(provider,'CAMPUS_SQL_AUTHORITY_V1',{}),'hex');
    try{const signature=createHmac('sha256',key).update(ticket).digest('hex');return {ok:true,fact:(await sql<{r:OwnerFact}>`select organization_master.campus_write_approved(${ticket},${signature}) r`.execute(scope)).rows[0]!.r};}finally{key.fill(0);}
@@ -114,7 +115,7 @@ export function openCampus(connectionString:string,provider?:KeyProviderPort){
  const references=createCampusReader(root,snapshot);
 
  return {
-  assessCampusImpact:(actor:string,input:Parameters<typeof assessImpact>[2])=>root(scope=>assessImpact(scope,actor,input)),
+  assessCampusImpact:(actor:string,input:Parameters<typeof assessImpact>[2])=>root(scope=>assess(scope,actor,input)),
   async inspectCommandInTransaction(scope:Scope,actor:string,raw:CampusCommand){check(CampusCommandSchema,raw);const c=normalize(raw),current='target' in c?await snapshot(scope,actor,c.target.id):null;if(await conflict(scope,c))throw new Error('IDENTIFIER_CONFLICT');return admission(scope,actor,c,current);},
   commandsInTransaction:(scope:Scope)=>({stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(CampusCommandSchema,input.command);normalize(input.command);return store.stageInTransaction(scope,actor,input);},port}),
   async stage(actor:string,input:Parameters<typeof store.stage>[1]){check(CampusCommandSchema,input.command);normalize(input.command);return store.stage(actor,input);},readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,

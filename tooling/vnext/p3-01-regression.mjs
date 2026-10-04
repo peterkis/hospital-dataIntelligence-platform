@@ -1,0 +1,7 @@
+import {spawnSync} from 'node:child_process';
+import {mkdirSync,openSync,closeSync,writeFileSync} from 'node:fs';
+const checks=['vnext:p3-01:upgrade','vnext:files:unit','vnext:validation:unit','vnext:workbench:unit','vnext:p1-06:unit','vnext:p2-06:unit','vnext:p2-07:unit','vnext:p3-06:unit','check:module-boundaries','vnext:apply:fresh','vnext:files:validate','vnext:p1-04:validate','vnext:p1-07:validate','vnext:p2-06:validate','vnext:p2-08:validate','vnext:p3-06:validate'];
+const args=process.argv.slice(2);if(args.length!==0&&(args.length!==2||args[0]!=='--from'))throw new Error('CLOSED_COMMAND_REQUIRED');const start=args.length?checks.indexOf(args[1]):0;if(start<0)throw new Error('CLOSED_COMMAND_REQUIRED');
+const directory='.runtime/vnext/p3-01/regression/'+new Date().toISOString().replaceAll(/[:.]/g,'-');mkdirSync(directory,{recursive:true});const results=[];
+for(const script of checks.slice(start)){const path=directory+'/'+script.replaceAll(':','-')+'.log',fd=openSync(path,'w');let run;try{run=spawnSync(process.execPath,[process.env.npm_execpath,'run',script],{stdio:['ignore',fd,fd],windowsHide:true});}finally{closeSync(fd);}results.push({script,exit:run.status??1,path});writeFileSync(directory+'/summary.json',JSON.stringify({status:run.status?'FAIL':'IN_PROGRESS',results},null,2));console.log(JSON.stringify(results.at(-1)));if(run.status!==0)process.exit(run.status??1);}
+writeFileSync(directory+'/summary.json',JSON.stringify({status:'PASS',results},null,2));

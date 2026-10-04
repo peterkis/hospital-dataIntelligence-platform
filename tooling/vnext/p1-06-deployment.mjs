@@ -11,9 +11,10 @@ import {assertHierarchyProvisioned,grantHierarchyFunctions} from './hierarchy-pr
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
- if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-07','p2-08','p3-06'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
+ if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-07','p2-08','p3-06','p3-01'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
  const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();
  const prefix=workspaceDeploymentPrefix(files,before.ledger,reuseExisting);
+ if(evidenceTask==='p3-01'&&prefix<151)throw new Error('P3_06_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-06'&&prefix<148)throw new Error('P2_07_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p2-01'&&prefix<83)throw new Error('P1_07_REPAIRED_DEPLOYMENT_REQUIRED');
  // 0109 is the inspected persistent P2-02 prefix. The already-merged 0110/0111

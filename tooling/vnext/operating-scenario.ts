@@ -54,6 +54,6 @@ export async function operatingScenario(receipt:{name:string},connection:string,
   const v=(await operating.read('maker',{kind:'SCOPE',mode:'EXACT',id:s.id,version:s.version}))[0]!;return {owner:'organization-master/license-scope' as const,id:s.id,version:s.version,versionId:v.versionId};
  };
 
- return {org,campus,operating,common,artifact,source,codeSet,endpoints,verifyScope,activateCampus,createSubject,createCampus,addLicense,grantPair,orgApply,campusApply,operatingInput,operatingApply,close:async()=>{await org.close();await campus.close();await operating.close();}};
+ return {org,campus,operating,campusContext:input,common,artifact,source,codeSet,endpoints,verifyScope,activateCampus,createSubject,createCampus,addLicense,grantPair,orgApply,campusApply,operatingInput,operatingApply,close:async()=>{await org.close();await campus.close();await operating.close();}};
  }catch(error){await Promise.all([org.close(),campus.close(),operating.close()]);throw error;}
 }

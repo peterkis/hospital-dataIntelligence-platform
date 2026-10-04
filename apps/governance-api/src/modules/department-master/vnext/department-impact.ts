@@ -11,6 +11,7 @@ import {ReadDepartmentAssessmentSchema,ListDepartmentAssessmentsSchema,type Read
 
 export interface DepartmentImpactContext {inputId:string;inputDigest:string;profile:string;campus:'NORTH'|'SOUTH';departmentIds:string[];effectiveAt:string;changeType:DepartmentAssessment['changeType']}
 export interface DepartmentImpactPorts {
+ businessUnitsAvailable?:boolean;
  references(scope:CatalogTransactionScope,actor:string,departments:string[],campus:string):Promise<ImpactReference[]>;
  referenceAccess(scope:CatalogTransactionScope,actor:string,reference:ImpactReference,campus:string):Promise<void>;
  replacement(scope:CatalogTransactionScope,actor:string,departmentId:string):Promise<string|null>;
@@ -47,7 +48,8 @@ export function departmentImpacts(
   }
   const coverage:DepartmentAssessment['coverage']=[
    ...(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION'] as const).map(owner=>({owner,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const})),
-   ...(['PERSONNEL','BUSINESS_UNIT','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
+   ...(ports.businessUnitsAvailable?[{owner:'BUSINESS_UNIT' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'BUSINESS_UNIT' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
+   ...(['PERSONNEL','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
   ];
   const basis:Omit<DepartmentAssessment,'dependencyDigest'>={target,departmentIds:[...context.departmentIds].sort(),inputId:context.inputId,inputDigest:context.inputDigest,campus:context.campus,changeType,effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage,references};
   const assessment={...basis,dependencyDigest:createHash('sha256').update(canonicalPlan(basis)).digest('hex')};

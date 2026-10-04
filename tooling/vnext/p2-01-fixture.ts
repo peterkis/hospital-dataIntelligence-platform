@@ -6,11 +6,12 @@ import {peer,quote} from './lineage.mjs';
 import {fixture} from './protected-fixture.js';
 import type {DepartmentStageInput as StageInput} from '../../apps/governance-api/src/modules/department-master/index.js';
 
-export async function departmentFixture(receipt:{name:string},catalog:Catalog,provider:KeyProviderPort,options:{persistentSmoke?:boolean;requestId?:()=>string;freezeCommand?:(name:string,input:Record<string,unknown>)=>Record<string,unknown>}={}){
+export async function departmentFixture(receipt:{name:string},catalog:Catalog,provider:KeyProviderPort,options:{persistentSmoke?:boolean;reusePublishedContract?:boolean;requestId?:()=>string;freezeCommand?:(name:string,input:Record<string,unknown>)=>Record<string,unknown>}={}){
  const nextId=options.requestId??randomUUID;
  const freeze=options.freezeCommand??((_name:string,input:Record<string,unknown>)=>input);
  if(!options.persistentSmoke)await fixture(catalog,{textField:true});
- const source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='SOURCE'&&i.status==='PUBLISHED')!;
+ const prior=options.persistentSmoke?(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.dataset==='ORG04'&&c.profile==='CORE'):undefined;
+ const source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='SOURCE'&&i.status==='PUBLISHED'&&(!options.reusePublishedContract||!prior||i.versionId===prior.definition.sourceVersionId));if(!source)throw new Error('SOURCE_NOT_READY');
  const cmd=<A extends string>(action:A,extra:Record<string,unknown>={})=>({action,scope:'SYNTHETIC' as const,requestId:nextId(),reason:'SYNTHETIC_DEPARTMENT',...extra});
  const create=cmd('CREATE',{kind:'DATASET',code:'ORG04',values:{name:'DEMO 科室'},validFrom:'2026-01-01T00:00:00'}),submitId=nextId(),publishId=nextId();
  const existing=options.persistentSmoke?(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.kind==='DATASET'&&i.code==='ORG04'):undefined;
@@ -24,11 +25,12 @@ export async function departmentFixture(receipt:{name:string},catalog:Catalog,pr
  const fields=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(i=>i.id===dataset.id)!.payload.fields!.map(f=>f.original);
  const enums={org_type:['ADMIN','CLINICAL','MEDTECH','PHARMACY','NURSING','SUPPORT','MANAGEMENT_CENTER','OTHER'],is_virtual:['Y','N'],record_status:['DRAFT','REVIEW','ACTIVE','SUSPENDED','RETIRED']};
  const definition={templateVersion:'ORG04_CORE_V1',ruleVersion:'ORG04_CORE_V1',sourceVersionId:source.versionId,businessKey:['org_id'],fields:fields.map(f=>({code:f.code,type:f.type,required:f.required,privacy:f.privacy,condition:f.required==='C'?'EVALUATED':f.required==='R'?'ALWAYS':'OPTIONAL',enumValues:enums[f.code as keyof typeof enums]??[]})),rules:[...conditionMappings.filter(r=>r.dataset==='ORG04').map(r=>({id:r.id,field:r.field,text:r.text,status:'MACHINE',version:r.version})),{id:'DEPARTMENT_APPROVAL_V1',field:'approval_ref',text:'Source approval never replaces platform approval.',status:'MACHINE',version:'P2_01_V1'}],references:fields.filter(f=>f.ref).map(f=>({field:f.code,target:f.ref,status:'DEPARTMENT_CORE'})),codeSets:Object.entries(enums).map(([field,codes])=>({field,codes,codeSystem:'SYNTHETIC_'+field.toUpperCase(),version:'DEMO_1',status:'SYNTHETIC_ADOPTED',sourceVersionId:source.versionId,validFrom:'2026-01-01T00:00:00',validTo:null}))};
- const prior=options.persistentSmoke?(await catalog.contractRead('maker',{scope:'SYNTHETIC',mode:'CURRENT'})).find(c=>c.dataset==='ORG04'&&c.profile==='CORE'):undefined;
+ const contract=options.reusePublishedContract&&prior?.status==='PUBLISHED'?{id:prior.id,versionId:prior.versionId}:await(async()=>{
  const draft=await catalog.contractCommand('maker',freeze('contract-draft',prior?cmd('REVISE',{target:prior.id,expectedHead:prior.head,datasetVersionId:dataset.versionId,validFrom:'2026-01-01T00:00:00',validTo:null,definition}):cmd('CREATE',{datasetVersionId:dataset.versionId,profile:'CORE',validFrom:'2026-01-01T00:00:00',validTo:null,definition})));
  const approved=await catalog.contractCommand('reviewer',cmd('APPROVE',{target:draft.id,expectedHead:draft.head,reviewDigest:draft.reviewDigest}));
  const impact=options.persistentSmoke?await catalog.contractImpact('reviewer','SYNTHETIC',draft.id,'PUBLISH'):undefined;
- const contract=await catalog.contractCommand('reviewer',freeze('contract-publish',cmd('PUBLISH',{target:draft.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest,...(impact?{impactDigest:impact.impactDigest}:{})})));
+ return catalog.contractCommand('reviewer',freeze('contract-publish',cmd('PUBLISH',{target:draft.id,expectedHead:approved.head,reviewDigest:approved.reviewDigest,...(impact?{impactDigest:impact.impactDigest}:{})})));
+ })();
  if(!options.persistentSmoke)peer(receipt.name,`INSERT INTO vnext_control.department_write_authority(key_hex) VALUES(${quote(planBinding(provider,'DEPARTMENT_SQL_AUTHORITY_V1',{}))});`,{sensitive:true});
  peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(dataset.id)}::uuid,'NORTH','IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;`);
  const newJob=()=>catalog.importJobCommand('maker',{action:'CREATE',scope:'SYNTHETIC',reason:'SYNTHETIC_DEPARTMENT',requestId:nextId(),profile:'CORE',input:{kind:'METADATA_ONLY',declaredSha256:'a'.repeat(64)},contractId:contract.id,contractVersionId:contract.versionId});
