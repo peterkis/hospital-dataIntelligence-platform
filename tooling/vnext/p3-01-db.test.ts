@@ -24,6 +24,12 @@ test('P3-01 CORE keeps an empty responsible person pending and publishes real un
  expect(await f.owner.read('maker',{id,businessAt:'2026-04-01T00:00:00'})).toMatchObject({id,departmentId:d,state:'ACTIVE',clinicalReadiness:'NOT_READY',version:{facts:{responsibilityStatus:'PENDING'}}});
  expect(id).not.toBe(value.entries[0]!.row.unit_id);expect((await f.owner.history('maker',{id})).bindings).toHaveLength(1);
 });
+test('independent receiving verification must cover exactly every input row',async()=>{
+ const d=await f.newDepartment(),a=await f.endpoint(d),value=await f.input([f.entry(a),f.entry(a)]),i=await f.owner.stage('maker',value);
+ for(const numbers of [[2,3],[1,1],[1],[1,2,3]]){const proof=f.verification(value,i);proof.rows=numbers.map(n=>({...proof.rows[0]!,row:n}));await expect(f.owner.verify('reviewer',proof)).rejects.toThrow('VERIFICATION_ROW_MISMATCH');}
+ expect((await f.owner.preview('maker',{inputId:i.inputId})).decision).toBe('BLOCKED');await expect(f.owner.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow();expect((await f.owner.list('maker',{campus:'NORTH',departmentId:d})).items).toHaveLength(0);
+ const correct=f.verification(value,i);correct.rows.reverse();await f.owner.verify('reviewer',correct);const requestId=randomUUID(),c=await f.owner.plan('maker',{inputId:i.inputId,requestId});await f.owner.readApplyCandidate('reviewer',{candidateId:c.candidateId});await f.owner.approveApplyUnit('reviewer',c);const outcome=await f.owner.applyUnit('maker',{candidateId:c.candidateId,requestId});expect(outcome.status).toBe('COMMITTED');if(outcome.status!=='COMMITTED')throw new Error();for(const fact of outcome.facts)expect((await f.owner.exact('maker',{id:fact.id,version:fact.version})).facts.receivingBasis).not.toBeNull();
+});
 async function populated(){const d=await f.newDepartment(),a=await f.endpoint(d),outcome=await f.apply(await f.input([f.entry(a)])),h=await f.owner.history('maker',{id:outcome.facts[0]!.id});return {d,a,h};}
 function revision(h:UnitHistory,action:'REVISE'|'CLOSE'|'REBIND',at='2026-06-01T00:00:00',destination?:UnitBindingInput):UnitEntry{
  const v=h.versions.at(-1)!,binding=destination??h.bindings.find(b=>{const v=b.versions.at(-1)!;return v.validFrom<=at&&(v.validTo===null||at<v.validTo);})!.versions.at(-1)!.binding;
