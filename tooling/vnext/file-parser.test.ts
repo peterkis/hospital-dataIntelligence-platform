@@ -6,6 +6,14 @@ import { textWorkbook, zipText, issueWorkbook } from '../../apps/governance-api/
 const fields=[{code:'code',type:'code'},{code:'label',type:'text'}];
 const parse=(text:string)=>parseBytes(Buffer.from(text),'CSV',fields);
 const workbook=textWorkbook([['code','label'],['0012','DEMO']]);
+
+test('Nursing JSON null text preserves raw lexemes and only normalizes its two nullable fields',()=>{
+ const fs=[{code:'nursing_code',type:'text'},{code:'care_level',type:'text'},{code:'office_phone',type:'text'}],bytes=Buffer.from('[{"nursing_code":"TEST","care_level":null,"office_phone":null}]'),result=parseBytes(bytes,'JSON',fs,'STRICT_NURSING_V1');
+ assert.deepEqual(result.issues,[]);assert.deepEqual(result.rows.map(row=>({...row})),[{nursing_code:'TEST',care_level:'',office_phone:''}]);assert.deepEqual(result.cells.map(c=>c.value),['TEST','null','null']);
+ assert.equal(parseBytes(bytes,'JSON',fs,'STRICT_V2').issues[0]?.code,'TEXT_CELL_REQUIRED');
+ for(const scalar of ['false','123'])assert.equal(parseBytes(Buffer.from('[{"nursing_code":"TEST","care_level":'+scalar+',"office_phone":null}]'),'JSON',fs,'STRICT_NURSING_V1').issues[0]?.code,'TEXT_CELL_REQUIRED');
+ assert.equal(parseBytes(Buffer.from('[{"nursing_code":null,"care_level":"TEST","office_phone":""}]'),'JSON',fs,'STRICT_NURSING_V1').issues[0]?.code,'TEXT_CELL_REQUIRED');
+});
 test('PR7: issue workbooks accept both explicit parser policies including V2 rejected input',()=>{
  for(const policy of ['STRICT_V1','STRICT_V2'] as const){
   const result=parseBytes(Buffer.from('code,label\n0012, INVALID'),'CSV',fields,policy);

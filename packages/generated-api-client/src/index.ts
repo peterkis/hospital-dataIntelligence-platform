@@ -42,4 +42,5 @@ export {createDepartmentLifecycleClient} from './vnext-client.js';
 export {createDepartmentWorkspaceClient,type DepartmentWorkspaceDraft} from './vnext-client.js';
 
 export {createLocationClient,type LocationInput} from './vnext-client.js';
+export {createNursingUnitClient,type NursingUnitInput} from './nursing-unit-client.js';
 export {createBusinessUnitClient,type BusinessUnitInput} from './business-unit-client.js';

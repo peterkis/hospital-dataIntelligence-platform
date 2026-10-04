@@ -79,6 +79,107 @@ export interface CareOrganizationInput {
   scope: string;
 }
 
+export interface CareOrganizationNursingAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface CareOrganizationNursingApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface CareOrganizationNursingBindingVersion {
+  binding: Json;
+  binding_id: string;
+  change_id: string;
+  dependencies: Json;
+  id: Generated<string>;
+  number: Int8;
+  recorded_at: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationNursingChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface CareOrganizationNursingCode {
+  code: string;
+  unit_id: string;
+}
+
+export interface CareOrganizationNursingInput {
+  campus_ids: string[];
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface CareOrganizationNursingUnit {
+  department_id: string;
+  id: Generated<string>;
+}
+
+export interface CareOrganizationNursingUnitBinding {
+  campus_id: string;
+  id: Generated<string>;
+  managing_department_id: string;
+  scope: string;
+  unit_id: string;
+}
+
+export interface CareOrganizationNursingVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface CareOrganizationNursingVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  unit_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationNursingWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface CareOrganizationUnit {
   department_id: string;
   id: Generated<string>;
@@ -1274,6 +1375,11 @@ export interface VnextControlMigration {
   sha256: string;
 }
 
+export interface VnextControlNursingWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlObjectGrant {
   actor_code: string;
   campus: string;
@@ -1330,6 +1436,17 @@ export interface DB {
   "care_organization.change": CareOrganizationChange;
   "care_organization.code": CareOrganizationCode;
   "care_organization.input": CareOrganizationInput;
+  "care_organization.nursing_access": CareOrganizationNursingAccess;
+  "care_organization.nursing_apply_binding": CareOrganizationNursingApplyBinding;
+  "care_organization.nursing_binding_version": CareOrganizationNursingBindingVersion;
+  "care_organization.nursing_change": CareOrganizationNursingChange;
+  "care_organization.nursing_code": CareOrganizationNursingCode;
+  "care_organization.nursing_input": CareOrganizationNursingInput;
+  "care_organization.nursing_unit": CareOrganizationNursingUnit;
+  "care_organization.nursing_unit_binding": CareOrganizationNursingUnitBinding;
+  "care_organization.nursing_verification": CareOrganizationNursingVerification;
+  "care_organization.nursing_version": CareOrganizationNursingVersion;
+  "care_organization.nursing_withdrawal": CareOrganizationNursingWithdrawal;
   "care_organization.unit": CareOrganizationUnit;
   "care_organization.unit_binding": CareOrganizationUnitBinding;
   "care_organization.verification": CareOrganizationVerification;
@@ -1442,6 +1559,7 @@ export interface DB {
   "vnext_control.department_write_authority": VnextControlDepartmentWriteAuthority;
   "vnext_control.location_write_authority": VnextControlLocationWriteAuthority;
   "vnext_control.migration": VnextControlMigration;
+  "vnext_control.nursing_write_authority": VnextControlNursingWriteAuthority;
   "vnext_control.object_grant": VnextControlObjectGrant;
   "vnext_control.operating_write_authority": VnextControlOperatingWriteAuthority;
   "vnext_control.organization_key_binding": VnextControlOrganizationKeyBinding;
