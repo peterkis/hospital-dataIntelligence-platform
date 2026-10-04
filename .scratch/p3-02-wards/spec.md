@@ -45,3 +45,7 @@ no following ticket. Preserve prior failures, user branches/stashes and source p
 - 2026-10-05: CORE implementation is ready for final review. Actual validation,
   deployment and exact local completion coordinates are in the ignored handoff;
   this status does not claim hospital adoption or formal acceptance.
+- 2026-10-05: User authorized push/PR, repeated GitHub Codex review/fix, exact-head
+  merge, main fast-forward, verified branch/worktree cleanup and handoff update.
+  PR31 review repairs use forward0168; installed0166/0167 and original accepted
+  facts remain unchanged. Published review/CI outcomes are separate evidence.

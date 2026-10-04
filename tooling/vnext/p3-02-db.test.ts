@@ -139,7 +139,7 @@ test('current independent verification authority is rechecked after freeze',asyn
 
 
 
-test.each(['CLOSE','REBIND'] as const)('committed %s disposition survives upstream suspension and preserves exact accepted history',async action=>{
+test.each(['CLOSE','REBIND'] as const)('committed %s disposition survives upstream suspension and later revisions',async action=>{
  const state=await populated(),{d,h,entry}=state,a=state.binding,replacement=action==='REBIND'?await managerInSameCampus(a):null,j=await f.dep.newJob(),i=await f.lifecycle.stage('maker',{requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',profile:'CORE',commands:[{action:'SUSPEND',department:{owner:'department-master',id:d,expectedVersion:'1',expectedLifecycleHead:'0'},effectiveAt:'2026-06-01T00:00:00',reason:'TEST permanent closure',evidenceId:f.dep.artifact.artifactId}],impacts:f.impacts.map(impact=>({...impact,determination:['IDENTIFIER','SOURCE_MAPPING','HIERARCHY','BUSINESS_UNIT','WARD'].includes(impact.domain)?'AFFECTED' as const:impact.determination}))});
  await f.lifecycle.verify('reviewer',{requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST explicit pending dispositions',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews});const requestId=randomUUID(),c=await f.lifecycle.plan('maker',{inputId:i.inputId,requestId});await f.lifecycle.readApplyCandidate('reviewer',{candidateId:c.candidateId});await f.lifecycle.approveApplyUnit('reviewer',c);const lifecycleResult=await f.lifecycle.applyUnit('maker',{candidateId:c.candidateId,requestId});if(lifecycleResult.status!=='COMMITTED')throw new Error();
  const evolution=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>f.base.owner,()=>undefined,()=>f.owner));
@@ -150,6 +150,7 @@ test.each(['CLOSE','REBIND'] as const)('committed %s disposition survives upstre
   peer(receipt.name,"UPDATE vnext_control.actor SET principal_kind='SERVICE' WHERE code='maker';");try{await expect(evolution.assignImpactCase('maker',{requestId:randomUUID(),reason:'TEST service cannot adjudicate',caseId:item.id,campus:'NORTH',expectedHead:item.head,responsibilityId})).rejects.toThrow('ACCESS_DENIED');}finally{peer(receipt.name,"UPDATE vnext_control.actor SET principal_kind='HUMAN' WHERE code='maker';");}
   const assigned=await evolution.assignImpactCase('maker',{requestId:randomUUID(),reason:'TEST unit Owner',caseId:item.id,campus:'NORTH',expectedHead:item.head,responsibilityId});
   const command:WardEntry=replacement?{action:'REBIND',target:{owner:'care-organization/ward',id:h.id,expectedHead:'1'},binding:replacement,row:{...entry.row,managing_unit_id:replacement.unit.id,valid_from:'2026-06-01T00:00:00'},reason:'TEST committed management handoff',evidenceId:f.artifact.artifactId}:revise(state,'CLOSE','2026-06-01T00:00:00'),closeRequest=await f.prepare(await f.input([command])),result=await f.owner.applyUnit('maker',closeRequest);expect(result.status).toBe('COMMITTED');const v=(await f.owner.history('maker',{id:h.id})).versions.at(-1)!,proof={owner:'WARD' as const,id:h.id,versionId:v.id,...closeRequest};
+  if(replacement){await f.apply(await f.input([{action:'REVISE',target:{owner:'care-organization/ward',id:h.id,expectedHead:v.number},row:{...command.row,ward_name:'TEST property revision after committed rebind',valid_from:'2026-07-01T00:00:00'},reason:'TEST later attribute revision retains committed source closure',evidenceId:f.artifact.artifactId}]));expect((await f.owner.history('maker',{id:h.id})).versions.at(-1)!.number).toBe('3');}
   await expect(evolution.recordDisposition('maker',{requestId:randomUUID(),reason:'TEST forged result',caseId:item.id,campus:'NORTH',expectedHead:assigned.head,disposition:{kind:'CLOSE_RELATION',evidenceId:f.dep.artifact.artifactId,result:{...proof,requestId:randomUUID()}}})).rejects.toThrow();
   const proposed=await evolution.recordDisposition('maker',{requestId:randomUUID(),reason:'TEST committed closure',caseId:item.id,campus:'NORTH',expectedHead:assigned.head,disposition:{kind:'CLOSE_RELATION',evidenceId:f.dep.artifact.artifactId,result:proof}}),approved=await evolution.approveDisposition('reviewer',{requestId:randomUUID(),reason:'TEST independent result',caseId:item.id,campus:'NORTH',expectedHead:proposed.head,proposalEventId:proposed.eventId});expect((await evolution.recheckImpact('maker',{requestId:randomUUID(),reason:'TEST result recheck',caseId:item.id,campus:'NORTH',expectedHead:approved.head})).status).toBe('RESOLVED');
  }finally{await evolution.close();}
@@ -259,6 +260,37 @@ test('unrelated unreadable management does not poison the complete Department re
  peer(receipt.name,`DELETE FROM care_organization.access WHERE actor='maker' AND campus_id=${quote(b.binding.campus.id)}::uuid AND permission='READ';`);
  try{const report=await evolution.assessDepartmentChange('maker',{requestId:randomUUID(),reason:'TEST complete target reference set',target:{kind:'INPUT',id:i.inputId}});expect(report.references.filter(r=>r.owner==='WARD').map(r=>r.id)).toEqual([a.h.id]);}
  finally{peer(receipt.name,`INSERT INTO care_organization.access VALUES('maker',${quote(b.binding.campus.id)}::uuid,'NORTH','READ');`);await evolution.close();}
+});
+
+test('Ward references select the requested governance scope before authorizing objects',async()=>{
+ const a=await populated(),pool=new Pool({connectionString:connection,max:1});
+ try{
+  const query=(campus:string)=>pool.query('select care_organization.ward_department_references($1,$2::jsonb,$3) r',['maker',JSON.stringify([a.d]),campus]);
+  expect((await query('NORTH')).rows[0].r.map((r:{id:string})=>r.id)).toEqual([a.h.id]);
+  expect((await query('SOUTH')).rows[0].r).toEqual([]);
+  peer(receipt.name,`DELETE FROM care_organization.ward_access WHERE actor='maker' AND campus_id=${quote(a.binding.campus.id)}::uuid AND permission='READ';`);
+  try{expect((await query('SOUTH')).rows[0].r).toEqual([]);await expect(query('NORTH')).rejects.toThrow('ACCESS_DENIED');}
+  finally{peer(receipt.name,`INSERT INTO care_organization.ward_access VALUES('maker',${quote(a.binding.campus.id)}::uuid,'NORTH','READ');`);}
+ }finally{await pool.end();}
+});
+
+test('Ward freezes exact accepted Department versions and periods in its management history',async()=>{
+ const a=await populated(),department=await f.base.department.history('maker',a.d),parts=[{versionId:department.versions[0]!.id,version:'1',from:'2026-01-01T00:00:00.000000',to:null}];
+ expect(a.h.bindings[0]!.versions[0]!.dependencies).toMatchObject({department:{id:a.d,parts}});
+ const pool=new Pool({connectionString:connection,max:1});
+ try{const references=(await pool.query('select care_organization.ward_department_references($1,$2::jsonb,$3) r',['maker',JSON.stringify([a.d]),'NORTH'])).rows[0].r;expect(references.find((r:{id:string})=>r.id===a.h.id).acceptedVersions).toEqual(parts);}
+ finally{await pool.end();}
+ await f.apply(await f.input([revise(a,'REVISE','2026-02-01T00:00:00')]));
+ expect((await f.owner.history('maker',{id:a.h.id})).bindings[0]!.versions[0]!.dependencies).toEqual(a.h.bindings[0]!.versions[0]!.dependencies);
+});
+
+test.skipIf(process.env['VNEXT_P3_02_WARD_UPGRADED']!=='1')('a 0167 Ward retains exact accepted Department evidence after upgrade without rewriting history',async()=>{
+ const prior=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!+'.ward-impact.json','utf8')),history=await f.owner.history('maker',{id:prior.id});
+ expect(history.bindings[0]!.versions[0]!.dependencies).toEqual(prior.dependencies);
+ expect(prior.dependencies.department.parts).toEqual([]);
+ const pool=new Pool({connectionString:connection,max:1});
+ try{const references=(await pool.query('select care_organization.ward_department_references($1,$2::jsonb,$3) r',['maker',JSON.stringify([prior.departmentId]),'NORTH'])).rows[0].r,reference=references.find((r:{id:string})=>r.id===prior.id);expect(reference.originalDigest).toBe(prior.originalDigest);expect(reference.acceptedVersions).toEqual(prior.expectedParts);}
+ finally{await pool.end();}
 });
 test('a mismatched input digest and a service reviewer cannot approve Ward publication',async()=>{
  const b=await f.endpoint(),v=await f.input([f.entry(b)]),i=await f.owner.stage('maker',v),proof=f.verification(v,i);

@@ -92,6 +92,15 @@ Current evolution/lifecycle inputs and reviews declare ten domains including WAR
 the signed historical eight/nine-domain evidence remains readable, while unapplied
 older proposals must be replaced/reassessed and approved under the current declaration.
 
+Forward repair0168 selects Ward bindings by the requested governance scope before
+authorizing their objects. A committed REBIND remains valid disposition evidence
+after later property revisions; exact candidate, request, outcome and frozen source
+binding checks still apply. Department version parts come from the independently
+accepted Unit relation, separately from current lifecycle coverage. For0167 Ward
+bindings whose top-level projection is empty, the reader exposes the exact parts
+already retained inside the original admitted pieces. It never rewrites the binding,
+its original digest or an existing frozen impact case.
+
 ## Validation and operation
 
 ```powershell
@@ -99,13 +108,16 @@ npm.cmd run vnext:p3-02:unit
 npm.cmd run vnext:p3-02:typecheck
 npm.cmd run prototype:db:with -- vnext:p3-02:validate
 npm.cmd run prototype:db:with -- vnext:p3-02:upgrade
+npm.cmd run prototype:db:with -- vnext:p3-02:validate --ward-upgrade
 npm.cmd run prototype:db:with -- vnext:p3-02:regression
 npm.cmd run prototype:db:with -- vnext:p3-02:deploy
 npm.cmd run prototype:db:with -- vnext:workbench:persistent
 ```
 
 Validate owns a fresh receipt database. Upgrade first builds real Unit/Nursing and
-upstream Owner facts at0165, then verifies old row and ledger preservation. Deploy
+upstream Owner facts at0165, then verifies old row and ledger preservation. The
+additional validation mode, `validate --ward-upgrade`, builds a real
+Ward at0167 and checks its unchanged history/digest after the forward repair. Deploy
 only forward-upgrades the retained receipt database, preserves OID/old rows/keys/ledger
 and exercises generated HTTP on the real workbench. Startup checks the complete manifest
 before credentials and the exact Ward key/provisioning before constructing business Owners
@@ -119,3 +131,6 @@ AC03 real shared admission remains P3-04; AC04 beds remains P7-05. Ward browser/
 cross-campus migration/restorable pause is P3-11. Hospital policy NOT_ADOPTED, FULL
 BLOCKED_DEPENDENCY, formal acceptance and actual restart NOT_RUN. Prior P3-06/P1-03
 failures and pending acceptance remain inherited. Local completion only; no fetch/push/PR.
+The user subsequently authorized PR31 publication, repeated GitHub Codex review/fix,
+exact-head merge, main fast-forward and verified cleanup; that explicit authorization
+supersedes the original local-only fence as recorded in the task specification.
