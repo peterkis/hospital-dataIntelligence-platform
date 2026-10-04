@@ -22,6 +22,8 @@ import {organizationMappingFixture} from './p2-03-fixture.js';
 const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),provider=validationKeys(receipt),catalog=await openCatalog(connection,provider);
 const p=new Pool({connectionString:connection,max:1}),role=(await p.query('select current_user r')).rows[0].r;await p.end();
 const f=await wardFixture(receipt,role,catalog,provider,connection,process.env['VNEXT_P3_02_POPULATED']==='1');
+let evolutionProtocolPromise:Promise<Awaited<ReturnType<typeof evolutionFixture>>>|undefined;
+const evolutionProtocol=()=>evolutionProtocolPromise??=organizationMappingFixture(receipt,catalog,provider,connection,undefined,f.dep).then(base=>evolutionFixture(receipt,catalog,provider,connection,base));
 afterAll(async()=>{await f.close();await catalog.close();});
 test('published Ward CORE retains all source fields and a real admitted management Unit',async()=>{
  const b=await f.endpoint(),entry=f.entry(b),v=await f.input([entry]),outcome=await f.apply(v),id=outcome.facts[0]!.id;
@@ -150,7 +152,12 @@ test.each(['CLOSE','REBIND'] as const)('committed %s disposition survives upstre
   peer(receipt.name,"UPDATE vnext_control.actor SET principal_kind='SERVICE' WHERE code='maker';");try{await expect(evolution.assignImpactCase('maker',{requestId:randomUUID(),reason:'TEST service cannot adjudicate',caseId:item.id,campus:'NORTH',expectedHead:item.head,responsibilityId})).rejects.toThrow('ACCESS_DENIED');}finally{peer(receipt.name,"UPDATE vnext_control.actor SET principal_kind='HUMAN' WHERE code='maker';");}
   const assigned=await evolution.assignImpactCase('maker',{requestId:randomUUID(),reason:'TEST unit Owner',caseId:item.id,campus:'NORTH',expectedHead:item.head,responsibilityId});
   const command:WardEntry=replacement?{action:'REBIND',target:{owner:'care-organization/ward',id:h.id,expectedHead:'1'},binding:replacement,row:{...entry.row,managing_unit_id:replacement.unit.id,valid_from:'2026-06-01T00:00:00'},reason:'TEST committed management handoff',evidenceId:f.artifact.artifactId}:revise(state,'CLOSE','2026-06-01T00:00:00'),closeRequest=await f.prepare(await f.input([command])),result=await f.owner.applyUnit('maker',closeRequest);expect(result.status).toBe('COMMITTED');const v=(await f.owner.history('maker',{id:h.id})).versions.at(-1)!,proof={owner:'WARD' as const,id:h.id,versionId:v.id,...closeRequest};
-  if(replacement){await f.apply(await f.input([{action:'REVISE',target:{owner:'care-organization/ward',id:h.id,expectedHead:v.number},row:{...command.row,ward_name:'TEST property revision after committed rebind',valid_from:'2026-07-01T00:00:00'},reason:'TEST later attribute revision retains committed source closure',evidenceId:f.artifact.artifactId}]));expect((await f.owner.history('maker',{id:h.id})).versions.at(-1)!.number).toBe('3');}
+  if(replacement){
+   await f.apply(await f.input([{action:'REVISE',target:{owner:'care-organization/ward',id:h.id,expectedHead:v.number},row:{...command.row,ward_name:'TEST property revision after committed rebind',valid_from:'2026-07-01T00:00:00'},reason:'TEST later attribute revision retains committed source closure',evidenceId:f.artifact.artifactId}]));
+   const historical=await managerInSameCampus(a);
+   await f.apply(await f.input([{action:'REBIND',target:{owner:'care-organization/ward',id:h.id,expectedHead:'3'},binding:historical,row:{...entry.row,managing_unit_id:historical.unit.id,valid_from:'2026-05-01T00:00:00',valid_to:'2026-06-01T00:00:00'},reason:'TEST historical management revision retains June outcome',evidenceId:f.artifact.artifactId}]));
+   expect((await f.owner.history('maker',{id:h.id})).versions.at(-1)!.number).toBe('4');
+  }
   await expect(evolution.recordDisposition('maker',{requestId:randomUUID(),reason:'TEST forged result',caseId:item.id,campus:'NORTH',expectedHead:assigned.head,disposition:{kind:'CLOSE_RELATION',evidenceId:f.dep.artifact.artifactId,result:{...proof,requestId:randomUUID()}}})).rejects.toThrow();
   const proposed=await evolution.recordDisposition('maker',{requestId:randomUUID(),reason:'TEST committed closure',caseId:item.id,campus:'NORTH',expectedHead:assigned.head,disposition:{kind:'CLOSE_RELATION',evidenceId:f.dep.artifact.artifactId,result:proof}}),approved=await evolution.approveDisposition('reviewer',{requestId:randomUUID(),reason:'TEST independent result',caseId:item.id,campus:'NORTH',expectedHead:proposed.head,proposalEventId:proposed.eventId});expect((await evolution.recheckImpact('maker',{requestId:randomUUID(),reason:'TEST result recheck',caseId:item.id,campus:'NORTH',expectedHead:approved.head})).status).toBe('RESOLVED');
  }finally{await evolution.close();}
@@ -232,6 +239,16 @@ test('a finite latest property version never falls back to an older open version
  expect((await f.owner.coverage('maker',{id:a.h.id,validFrom:'2026-03-01T00:00:00',validTo:'2026-04-01T00:00:00.000001'})).covered).toBe(false);
  const campus=openCampus(connection,provider,{owners:['WARD'],readInTransaction:f.owner.readCampusDependenciesInTransaction});try{const request={id:a.binding.campus.id,validFrom:'2026-04-01T00:00:00',validTo:null};expect((await campus.assessCampusImpact('maker',request)).dependencies).toContainEqual(expect.objectContaining({owner:'WARD',id:a.h.id,active:false,outstanding:false}));expect((await campus.assessCampusImpact('maker',{...request,asOf:a.h.versions[0]!.recordedAt})).dependencies).toContainEqual(expect.objectContaining({owner:'WARD',id:a.h.id,active:true,outstanding:true}));}finally{await campus.close();}
 });
+
+test('a finite Ward can permanently close exactly at its property and management end',async()=>{
+ const b=await f.endpoint(),entry=f.entry(b);entry.row.valid_to='2026-06-01T00:00:00';
+ const created=await f.apply(await f.input([entry])),id=created.facts[0]!.id,prior=await f.owner.history('maker',{id});
+ await f.apply(await f.input([{action:'CLOSE',target:{owner:'care-organization/ward',id,expectedHead:'1'},row:{...entry.row,valid_from:'2026-06-01T00:00:00',valid_to:null,record_status:'RETIRED'},reason:'TEST terminal closure at the excluded finite end',evidenceId:f.artifact.artifactId}]));
+ expect(await f.owner.read('maker',{id,businessAt:'2026-06-01T00:00:00'})).toMatchObject({state:'CLOSED',head:'2'});
+ expect((await f.owner.read('maker',{id,businessAt:'2026-05-01T00:00:00',recordAsOf:prior.versions[0]!.recordedAt})).state).toBe('ACTIVE');
+ expect((await f.owner.history('maker',{id})).bindings[0]!.versions).toEqual(prior.bindings[0]!.versions);
+ await expect(f.prepare(await f.input([{action:'REVISE',target:{owner:'care-organization/ward',id,expectedHead:'2'},row:{...entry.row,valid_from:'2026-07-01T00:00:00',valid_to:null},reason:'TEST a property cannot restore closure',evidenceId:f.artifact.artifactId}]))).rejects.toThrow('WARD_CLOSED');
+});
 test('unknown receiving basis and a permanent close carrying property edits remain blocked',async()=>{
  const a=await populated(),revision=revise(a,'REVISE','2026-02-01T00:00:00'),v=await f.input([revision]),i=await f.owner.stage('maker',v),proof=f.verification(v,i);proof.rows[0]!.receiving={kind:'UNKNOWN'};
  await f.owner.verify('reviewer',proof);await expect(f.owner.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow('RECEIVING_BASIS_REQUIRED');
@@ -250,9 +267,21 @@ test('management coverage stitches property versions and rejects an internal Cam
  const history=await f.owner.history('maker',{id:accepted.facts[0]!.id});expect(history.bindings[0]!.versions[0]!.dependencies).toEqual((await f.owner.history('maker',{id:accepted.facts[0]!.id,recordAsOf:history.versions[0]!.recordedAt})).bindings[0]!.versions[0]!.dependencies);
 });
 test('a ten-domain evolution commits real Ward references through both application and SQL guards',async()=>{
- const evolution=await evolutionFixture(receipt,catalog,provider,connection,await organizationMappingFixture(receipt,catalog,provider,connection,undefined,f.dep)),binding=await f.endpoint(evolution.targetId),ward=await f.apply(await f.input([f.entry(binding)])),owner=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>f.base.owner,()=>undefined,()=>f.owner));
+ const evolution=await evolutionProtocol(),binding=await f.endpoint(evolution.targetId),ward=await f.apply(await f.input([f.entry(binding)])),owner=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>f.base.owner,()=>undefined,()=>f.owner));
  try{const v=await evolution.input(),i=await owner.stage('maker',v);await owner.verify('reviewer',{requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST exact ten-domain review',policyApproved:true,materialsAccepted:true,impactReviews:evolution.impactReviews});const requestId=randomUUID(),c=await owner.plan('maker',{inputId:i.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:c.candidateId});await owner.approveApplyUnit('reviewer',c);const outcome=await owner.applyUnit('maker',{candidateId:c.candidateId,requestId});expect(outcome.status).toBe('COMMITTED');if(outcome.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
   const report=await owner.assessDepartmentChange('maker',{requestId:randomUUID(),reason:'TEST accepted Ward original basis',target:{kind:'EVENT',id:outcome.facts[0]!.id,campus:'NORTH'}});expect(report.coverage).toContainEqual({owner:'WARD',status:'EVALUATED',reason:'OWNER_AVAILABLE'});expect(report.references).toContainEqual(expect.objectContaining({owner:'WARD',id:ward.facts[0]!.id,change:'CHANGED',constraint:'SATISFIED'}));expect(await owner.applyUnit('maker',{candidateId:c.candidateId,requestId})).toMatchObject({status:'COMMITTED',facts:outcome.facts});
+ }finally{await owner.close();}
+});
+
+test('a future evolution excludes ended Ward bindings through its restricted SQL guard',async()=>{
+ const e=await evolutionProtocol(),targetId=await f.newDepartment(),binding=await f.endpoint(targetId),entry=f.entry(binding),created=await f.apply(await f.input([entry])),replacement=await managerInSameCampus(binding),id=created.facts[0]!.id;
+ await f.apply(await f.input([{action:'REBIND',target:{owner:'care-organization/ward',id,expectedHead:'1'},binding:replacement,row:{...entry.row,managing_unit_id:replacement.unit.id,valid_from:'2099-06-01T00:00:00'},reason:'TEST future manager before Department rename',evidenceId:f.artifact.artifactId}]));
+ const owner=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>f.base.owner,()=>undefined,()=>f.owner));
+ try{
+  const value=await e.input();value.event.effective_at='2099-07-01T00:00:00';value.predecessors[0]!.id=targetId;for(const relation of value.relations){relation.from_target_id=targetId;relation.to_target_id=targetId;}const input=await owner.stage('maker',value);await owner.verify('reviewer',{requestId:randomUUID(),inputId:input.inputId,inputDigest:input.digest,reason:'TEST independent future rename',policyApproved:true,materialsAccepted:true,impactReviews:e.impactReviews});
+  const requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:input.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);const result=await owner.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
+  expect((await owner.listImpactCases('maker',{eventId:result.facts[0]!.id,campus:'NORTH'})).items.filter(item=>item.obligation.owner==='WARD')).toHaveLength(0);
+  expect((await owner.assessDepartmentChange('maker',{requestId:randomUUID(),reason:'TEST ended future reference is historical',target:{kind:'EVENT',id:result.facts[0]!.id,campus:'NORTH'}})).references.find(ref=>ref.owner==='WARD'&&ref.id===id)).toMatchObject({current:false,reason:'HISTORICAL_REFERENCE'});
  }finally{await owner.close();}
 });
 test('unrelated unreadable management does not poison the complete Department reference set',async()=>{
@@ -260,6 +289,20 @@ test('unrelated unreadable management does not poison the complete Department re
  peer(receipt.name,`DELETE FROM care_organization.access WHERE actor='maker' AND campus_id=${quote(b.binding.campus.id)}::uuid AND permission='READ';`);
  try{const report=await evolution.assessDepartmentChange('maker',{requestId:randomUUID(),reason:'TEST complete target reference set',target:{kind:'INPUT',id:i.inputId}});expect(report.references.filter(r=>r.owner==='WARD').map(r=>r.id)).toEqual([a.h.id]);}
  finally{peer(receipt.name,`INSERT INTO care_organization.access VALUES('maker',${quote(b.binding.campus.id)}::uuid,'NORTH','READ');`);await evolution.close();}
+});
+
+test.each([{year:'2026',month:'07',cases:0},{year:'2099',month:'07',cases:0},{year:'2099',month:'05',cases:1}])('ended Ward source references preserve history and only open live $year-$month obligations',async({year,month,cases})=>{
+ const a=await populated(),replacement=await managerInSameCampus(a.binding);
+ await f.apply(await f.input([{action:'REBIND',target:{owner:'care-organization/ward',id:a.h.id,expectedHead:'1'},binding:replacement,row:{...a.entry.row,managing_unit_id:replacement.unit.id,valid_from:`${year}-06-01T00:00:00`},reason:'TEST accepted management handoff',evidenceId:f.artifact.artifactId}]));
+ const j=await f.dep.newJob(),i=await f.lifecycle.stage('maker',{requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',profile:'CORE',commands:[{action:'SUSPEND',department:{owner:'department-master',id:a.d,expectedVersion:'1',expectedLifecycleHead:'0'},effectiveAt:`${year}-${month}-01T00:00:00`,reason:'TEST Department boundary around Ward handoff',evidenceId:f.dep.artifact.artifactId}],impacts:f.impacts.map(impact=>({...impact,determination:['IDENTIFIER','SOURCE_MAPPING','HIERARCHY','BUSINESS_UNIT','WARD'].includes(impact.domain)?'AFFECTED' as const:impact.determination}))});
+ await f.lifecycle.verify('reviewer',{requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST independent finite obligations',policyApproved:true,materialsAccepted:true,impactReviews:f.impactReviews});
+ const requestId=randomUUID(),candidate=await f.lifecycle.plan('maker',{inputId:i.inputId,requestId});await f.lifecycle.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await f.lifecycle.approveApplyUnit('reviewer',candidate);const result=await f.lifecycle.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(result.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');
+ const evolution=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>f.base.owner,()=>undefined,()=>f.owner));
+ try{
+  const opened=await evolution.listImpactCases('maker',{eventId:result.facts[0]!.id,campus:'NORTH'});expect(opened.items.filter(item=>item.obligation.owner==='WARD')).toHaveLength(cases);
+  const report=await evolution.assessDepartmentChange('maker',{requestId:randomUUID(),reason:'TEST historical reference remains visible',target:{kind:'EVENT',id:result.facts[0]!.id,campus:'NORTH'}}),reference=report.references.find(ref=>ref.owner==='WARD'&&ref.id===a.h.id)!;
+  expect(reference.current).toBe(cases===1);expect(reference.reason).toBe(cases===1?'REFERENCE_EXITED':'HISTORICAL_REFERENCE');expect(reference.originalPeriod.to).toBeNull();expect(reference.currentPeriod.to).toBe(`${year}-06-01T00:00:00.000000`);
+ }finally{await evolution.close();}
 });
 
 test('Ward references select the requested governance scope before authorizing objects',async()=>{

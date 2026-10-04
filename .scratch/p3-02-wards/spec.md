@@ -49,3 +49,8 @@ no following ticket. Preserve prior failures, user branches/stashes and source p
   merge, main fast-forward, verified branch/worktree cleanup and handoff update.
   PR31 review repairs use forward0168; installed0166/0167 and original accepted
   facts remain unchanged. Published review/CI outcomes are separate evidence.
+- 2026-10-05: Subsequent GitHub and independent Spec findings require forward0169
+  historical source-closing proof,0170 Ward event-window obligation projection,
+  and exact finite-end CLOSE in the Owner. Real past/future negative controls,
+  live future obligations and restricted-SQL evolution are verified separately;
+  original review/fixture failures remain preserved in publication evidence.

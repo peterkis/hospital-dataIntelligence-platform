@@ -55,7 +55,9 @@ export function openWard(connection:string,provider:KeyProviderPort,ports:WardUp
   }
   const touched=new Set<string>(),aliases=new Set<string>();
   for(const [index,entry] of input.entries.entries())try{await recoverable(s,async()=>{
-   const n=index+1,e=normalizeWardRow(entry.row,input.timePolicy),target='target' in entry?entry.target:null,h=target?await snapshot(s,actor,target.id):null,head=h?.versions.at(-1),at=h?wardAt(h,e.from):null,b=h?bindingAt(h,e.from):null;
+   const n=index+1,e=normalizeWardRow(entry.row,input.timePolicy),target='target' in entry?entry.target:null,h=target?await snapshot(s,actor,target.id):null,head=h?.versions.at(-1);
+   const at=h?(wardAt(h,e.from)??(entry.action==='CLOSE'?wardPeriods(h).find(p=>p.to===e.from)?.version??null:null)):null;
+   const b=h?(bindingAt(h,e.from)??(entry.action==='CLOSE'?bindingPeriods(h).find(p=>p.to===e.from)?.binding??null:null)):null;
    if(target){if(touched.has(target.id))throw new Error('BATCH_CONFLICT');touched.add(target.id);if(head?.number!==target.expectedHead)throw new Error('STALE_HEAD');if(h!.versions.some(v=>v.action==='CLOSE'&&(e.to===null||v.validFrom<e.to)))throw new Error('WARD_CLOSED');original.push(h!);}
    else{if(aliases.has(e.row.ward_id))throw new Error('BATCH_CONFLICT');aliases.add(e.row.ward_id);if((await sql<{r:boolean}>`select care_organization.ward_source_conflict(${actor},${e.row.source_system_id}::uuid,${e.row.ward_id}) r`.execute(s)).rows[0]!.r)throw new Error('WARD_SOURCE_ALREADY_REGISTERED');}
    if(h&&(e.row.ward_id!==h.versions[0]!.facts.source.sourceAlias||e.row.source_system_id!==h.versions[0]!.facts.source.sourceSystemId))throw new Error('WARD_SOURCE_IDENTITY_MISMATCH');

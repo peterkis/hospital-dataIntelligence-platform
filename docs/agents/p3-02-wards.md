@@ -100,6 +100,16 @@ accepted Unit relation, separately from current lifecycle coverage. For0167 Ward
 bindings whose top-level projection is empty, the reader exposes the exact parts
 already retained inside the original admitted pieces. It never rewrites the binding,
 its original digest or an existing frozen impact case.
+Forward169 locates the source-closing management version by the exact committed
+change rather than the binding head. A later historical handoff inside that old
+span therefore preserves the earlier committed proof; current remaining-period
+checks still belong to impact recheck.
+Forward170 preserves expired source bindings as history and projects Ward
+obligations against the Department event boundary in both the application and
+restricted SQL evolution guard. A handoff after that boundary still needs
+disposition; a handoff before it does not create a spurious OPEN case. Terminal
+CLOSE may use the property and management periods ending exactly at its boundary;
+it neither extends them nor allows reopening.
 
 ## Validation and operation
 

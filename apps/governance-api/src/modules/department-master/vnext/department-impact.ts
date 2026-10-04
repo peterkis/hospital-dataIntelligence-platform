@@ -97,5 +97,6 @@ export function projectImpactReference(ref:ImpactReference,effectiveAt:string,ch
    const active=ref.current&&ref.currentReferencesDepartment&&!['RETRACT','CLOSED','REVOKED'].includes(ref.currentAction)&&ref.currentTargetId===ref.departmentId&&(to===null||to>from);
    ref.change=active||ref.versionId!==ref.currentVersionId?'CHANGED':'UNCHANGED';ref.constraint='SATISFIED';ref.affectedSpans=[];
    ref.reason=!active?'HISTORICAL_REFERENCE':exitAt?'REFERENCE_EXITED':'LABEL_CHANGED';
+   if(ref.owner==='WARD')ref.current=active;
    if(active&&exitAt){ref.constraint='UNSATISFIED';ref.affectedSpans=[{from,to}];}
 }
