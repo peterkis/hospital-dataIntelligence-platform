@@ -5,7 +5,7 @@ import { Check } from 'typebox/value';
 import type { DB } from '../../platform/database/vnext-types.generated.js';
 import { ImportJobCommandSchema, type ImportJob, type ImportJobOutcome } from './import-job.js';
 import { protectedArtifacts, ProtectedReadSchema, type KeyProviderPort } from './protected-artifact.js';
-import type { ParserField, ParserResult, FileFormat,OrganizationSheet,OrganizationWorkbookResult,EvolutionSheet,EvolutionWorkbookResult } from './file-parser.js';
+import type { ParserField, ParserResult, FileFormat,OrganizationSheet,OrganizationWorkbookResult,EvolutionSheet,EvolutionWorkbookResult,HierarchySheet,HierarchyWorkbookResult } from './file-parser.js';
 import { issueWorkbook } from './issue-workbook.js';
 import {parseSignature} from './parse-provenance.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
@@ -40,6 +40,7 @@ async function runParser<T>(workerData:unknown):Promise<T> {
 export const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'])=>runParser<ParserResult>({bytes,format,fields,policy});
 export const parseOrganizationWorkbookBounded=(bytes:Uint8Array,organizationFields:Record<OrganizationSheet,ParserField[]>)=>runParser<OrganizationWorkbookResult>({bytes,organizationFields,policy:'STRICT_ORG_BUNDLE_V1'});
 export const parseEvolutionWorkbookBounded=(bytes:Uint8Array,evolutionFields:Record<EvolutionSheet,ParserField[]>)=>runParser<EvolutionWorkbookResult>({bytes,evolutionFields,policy:'STRICT_ORGANIZATION_EVOLUTION_V1'});
+export const parseHierarchyWorkbookBounded=(bytes:Uint8Array,hierarchyFields:Record<HierarchySheet,ParserField[]>)=>runParser<HierarchyWorkbookResult>({bytes,hierarchyFields,policy:'STRICT_HIERARCHY_CORE_V1'});
 
 /** Internal root-transaction seam used when a file receive must be linked to another Owner write. */
 function assertReceiveFileInput(input:ReceiveFileInput,bytes:Uint8Array){

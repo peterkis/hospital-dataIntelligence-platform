@@ -1,5 +1,5 @@
 import {createHash,createCipheriv,createDecipheriv,createHmac,randomBytes} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
 import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,type ApplyOwnerPort,type OwnerFact,type ImportJob,type ImportContractItem,type KeyProviderPort} from '../../governance-catalog/index.js';
@@ -29,7 +29,7 @@ const span=(value:RelationVersion):Span=>({from:stamp(value.valid_from),to:value
 const cleanSnapshot=(value:Snapshot):Snapshot=>({...value,lifecycle:value.lifecycle.map(v=>({...v,number:String(v.number),effective_at:stamp(v.effective_at),recorded_at:stamp(v.recorded_at)})),relations:value.relations.map(r=>({...r,versions:r.versions.map(v=>({...v,number:String(v.number),valid_from:stamp(v.valid_from),valid_to:v.valid_to===null?null:stamp(v.valid_to),recorded_at:stamp(v.recorded_at)}))}))});
 
 export function openDepartmentLifecycle(connection:string,provider?:KeyProviderPort){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const operating=openOperatingRelations(connection,provider),campuses=openCampus(connection,provider);
  const root=<T>(work:(s:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
  const record=async(s:Scope,actor:string,id:string,permission='READ')=>(await sql<{r:InputRecord}>`select department_master.lifecycle_input_read(${actor},${id}::uuid,${permission}) r`.execute(s)).rows[0]!.r;
@@ -202,6 +202,7 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
     else {await campuses.references.inTransaction(s).resolveCampusReference(actor,{references:[c.campus]});await sql`select organization_master.operating_pair(${actor},${c.subject.id}::uuid,${c.campus.id}::uuid,'RELATION')`.execute(s);if(c.department.owner==='department-master')await sql`select department_master.snapshot(${actor},${c.department.id}::uuid)`.execute(s);}
   }
  };
+ const stageInTransaction=async(s:Scope,actor:string,input:DepartmentLifecycleStageInput)=>{lifecycleCheck(DepartmentLifecycleStageSchema,input);input=structuredClone(input);await authorize(s,actor,input.campus,'WRITE');await referenceAccess(s,actor,input);if(input.profile!=='CORE')throw new Error('BLOCKED_DEPENDENCY');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,departmentIds:[...new Set(input.commands.map(c=>c.department.id))],...protect('DEPARTMENT_LIFECYCLE_INPUT_V1',input)});};
  return {
   authorizeEvolutionCampusChangesInTransaction:evolutionCampusAccess,
   async inspectEvolutionCampusChangesInTransaction(s:Scope,actor:string,input:EvolutionStoredStageInput){
@@ -226,7 +227,8 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
     }
    }return writes;
   },
-  async stage(actor:string,input:DepartmentLifecycleStageInput){lifecycleCheck(DepartmentLifecycleStageSchema,input);input=structuredClone(input);return root(async s=>{await authorize(s,actor,input.campus,'WRITE');await referenceAccess(s,actor,input);if(input.profile!=='CORE')throw new Error('BLOCKED_DEPENDENCY');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,departmentIds:[...new Set(input.commands.map(c=>c.department.id))],...protect('DEPARTMENT_LIFECYCLE_INPUT_V1',input)});});},
+  stage:(actor:string,input:DepartmentLifecycleStageInput)=>root(scope=>stageInTransaction(scope,actor,input)),
+  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:DepartmentLifecycleStageInput)=>stageInTransaction(scope,actor,input),authorizeCandidateAccess:(actor:string,input:{candidateId:string})=>coordinator.authorizeCandidateAccessInTransaction(scope,actor,input)}),
   async verify(actor:string,input:DepartmentLifecycleVerifyInput){lifecycleCheck(DepartmentLifecycleVerifySchema,input);input=structuredClone(input);return root(async s=>{const r=await record(s,actor,input.inputId,'VERIFY'),raw=unseal<DepartmentLifecycleStageInput>('DEPARTMENT_LIFECYCLE_INPUT_V1',r,DepartmentLifecycleStageSchema);await referenceAccess(s,actor,raw);const job=(await sql<{r:ImportJob}>`select governance_catalog.import_job_context(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:r.job_id})}::jsonb) r`.execute(s)).rows[0]!.r;for(const c of raw.commands)await material(s,actor,c.evidenceId,job,r.campus);return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...input,...protect('DEPARTMENT_LIFECYCLE_VERIFICATION_V1',input)});});},
   async plan(actor:string,input:{inputId:string;requestId:string}){lifecycleCheck(DepartmentLifecyclePlanSchema,input);const r=await root(async s=>{const r=await record(s,actor,input.inputId,'WRITE');if(await authorize(s,actor,r.campus,'WRITE')!==r.identity_code)throw new Error('MAKER_CHECKER_REQUIRED');return r;});return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   async readInput(actor:string,input:{inputId:string}){lifecycleCheck(DepartmentLifecycleInputSchema,input);return root(async s=>{const r=await record(s,actor,input.inputId),raw=unseal<DepartmentLifecycleStageInput>('DEPARTMENT_LIFECYCLE_INPUT_V1',r,DepartmentLifecycleStageSchema);await referenceAccess(s,actor,raw);const job=(await sql<{r:ImportJob}>`select governance_catalog.import_job_context(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:r.job_id})}::jsonb) r`.execute(s)).rows[0]!.r;for(const id of new Set([...raw.commands.map(c=>c.evidenceId),...raw.impacts.map(i=>i.evidenceId)]))await sql`select governance_catalog.registration_evidence_access(${actor},${id}::uuid,${job.contract.definition.sourceVersionId}::uuid,${r.campus})`.execute(s);return raw;});},

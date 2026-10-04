@@ -1,5 +1,5 @@
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {Type} from 'typebox';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
@@ -24,7 +24,7 @@ const query=Type.Object({id:Id,businessAt:Type.String(),recordAsOf:Type.Optional
 type Staged={inputId:string;revisionId:string;digest:string};
 
 export function openOrganizationIdentifiers(connection:string,provider?:KeyProviderPort,targetPort?:OrganizationMappingTargetPort){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const targets=targetPort??createOrganizationMappingTargets(connection,provider);
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async transaction=>{await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);return work(CatalogTransactionScope.from(transaction));});
  const recoverable=async<T>(s:Scope,work:()=>Promise<T>):Promise<T>=>{
@@ -180,8 +180,10 @@ export function openOrganizationIdentifiers(connection:string,provider?:KeyProvi
  };
  const ReadQuery=Type.Object({id:Id,campus:Type.Enum(['NORTH','SOUTH']),recordAsOf:Type.Optional(Type.String())},{additionalProperties:false});
  const visible=(v:OrganizationIdentifierVersion,at:string)=>v.action!=='RETRACT'&&stamp(v.valid_from)<=at&&(v.valid_to===null||at<stamp(v.valid_to));
+ const stageInTransaction=async(s:Scope,actor:string,raw:OrganizationIdentifierStageInput)=>{identifierCheck(OrganizationIdentifierStageSchema,raw);const input:OrganizationIdentifierStoredStageInput={...structuredClone(raw),entries:raw.entries.map((e,i)=>({...e,sourceRow:i+1}))};const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);};
  return {
-  async stage(actor:string,raw:OrganizationIdentifierStageInput){identifierCheck(OrganizationIdentifierStageSchema,raw);const input:OrganizationIdentifierStoredStageInput={...structuredClone(raw),entries:raw.entries.map((e,i)=>({...e,sourceRow:i+1}))};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);});},
+  stage:(actor:string,raw:OrganizationIdentifierStageInput)=>root(scope=>stageInTransaction(scope,actor,raw)),
+  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:OrganizationIdentifierStageInput)=>stageInTransaction(scope,actor,input),authorizeCandidateAccess:(actor:string,input:{candidateId:string})=>coordinator.authorizeCandidateAccessInTransaction(scope,actor,input)}),
   async receiveFile(actor:string,raw:OrganizationIdentifierReceiveInput,bytes:Uint8Array){identifierCheck(OrganizationIdentifierReceiveSchema,raw);const input=structuredClone(raw);if(input.job.input.kind!=='FILE'||input.job.input.format!=='XLSX'||input.job.input.parserPolicy!=='STRICT_ORGANIZATION_IDENTIFIER_V1')throw new Error('CLOSED_INPUT_REQUIRED');const received=await files.receiveFile(actor,{job:input.job,fileRequestId:input.fileRequestId,extension:'.xlsx',campus:input.campus,purpose:'IDENTITY_VERIFY',retentionSeconds:input.retentionSeconds},bytes);
    return root(async s=>{const j=await job(s,actor,received.job.id),content=await protectedArtifacts(s,provider).authorizeSensitiveRead(actor,{scope:'SYNTHETIC',campus:input.campus,purpose:'IDENTITY_VERIFY',requestId:input.requestId,artifactId:received.artifact.artifactId},{jobId:j.id,revisionId:j.currentRevisionId,kind:'RAW_FILE'});try{
     const parsed=await boundedParse(content,'XLSX',j.contract.definition.fields,'STRICT_ORGANIZATION_IDENTIFIER_V1'),failures:OrganizationIdentifierIssue[]=parsed.issues.map(i=>({row:parsed.cells.find(c=>c.sourceRow===i.row)?.row??i.row,field:'',code:i.code,status:'FAIL'})),entries:OrganizationIdentifierStoredStageInput['entries']=[];

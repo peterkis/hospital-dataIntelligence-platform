@@ -10,6 +10,7 @@ const functions=[
  'hierarchy_lifecycle(text,text,jsonb)',
  'hierarchy_authorize(text,uuid,text)',
  'hierarchy_read(text,text,jsonb)',
+ 'hierarchy_workspace_query(text,text,jsonb)',
 ];
 
 // Use the same required surface as provisioning, but never repair privileges

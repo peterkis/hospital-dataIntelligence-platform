@@ -107,6 +107,16 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
   return current;
  };
  return {
+  // Routing hints are authenticated metadata only; the selected Owner must authorize the candidate.
+  async candidateRoutingInTransaction(scope:CatalogTransactionScope,actor:string,input:{candidateId:string}){
+   check(Type.Object({candidateId:Id},{additionalProperties:false}),input);
+   const c=await record<Candidate>(scope,actor,'READ_CANDIDATE',input),unit=unseal(c);
+   return {atomicRule:unit.atomicRule,owners:[...new Set(unit.commands.map(command=>command.owner))]};
+  },
+  async authorizeCandidateAccessInTransaction(scope:CatalogTransactionScope,actor:string,input:{candidateId:string}){
+   check(Type.Object({candidateId:Id},{additionalProperties:false}),input);
+   try{await candidate(scope,actor,input.candidateId,'READ');}catch(error){throw failure(error);}
+  },
   async readApplyCandidateAccess(actor:string,input:{candidateId:string}){
    check(Type.Object({candidateId:Id},{additionalProperties:false}),input);input=structuredClone(input);
    try{

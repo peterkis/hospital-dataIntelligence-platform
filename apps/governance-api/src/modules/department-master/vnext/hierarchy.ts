@@ -1,11 +1,12 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
 import { Kysely, PostgresDialect, sql } from 'kysely';
-import { Pool, types } from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import { Type, type Static } from 'typebox';
 import { Check } from 'typebox/value';
 import type { DB } from '../../../platform/database/vnext-types.generated.js';
 import { localTime } from '../../organization-master/index.js';
-import { canonicalPlan, planBinding, type KeyProviderPort } from '../../governance-catalog/index.js';
+import { canonicalPlan, planBinding, CatalogTransactionScope, type KeyProviderPort } from '../../governance-catalog/index.js';
+import {partialEditingSchema} from './editing-schema.js';
 
 const closed = { additionalProperties: false } as const;
 export const HierarchyId = Type.String({ pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' });
@@ -107,12 +108,20 @@ export type HierarchyPublishInput = Static<typeof HierarchyPublishSchema>;
 export const HierarchySnapshotInputSchema = Type.Object({
   viewId: HierarchyId, version: Type.Optional(Type.String({ pattern: '^[1-9][0-9]*$', maxLength: 19 })),
 }, closed);
+export const HierarchyListSchema=Type.Object({after:Type.Optional(HierarchyId),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(HierarchyLocalTime)},closed);
+export const HierarchyCandidateListSchema=Type.Object({...HierarchyListSchema.properties,viewId:Type.Optional(HierarchyId)},closed);
+export const HierarchyHistorySchema=Type.Object({viewId:HierarchyId,afterVersion:Type.Optional(Type.String({pattern:'^[1-9][0-9]*$',maxLength:19})),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(HierarchyLocalTime)},closed);
+export const HierarchyWindowSchema=Type.Object({viewId:HierarchyId,validFrom:HierarchyLocalTime,validTo:HierarchyNullableLocalTime,recordAsOf:Type.Optional(HierarchyLocalTime)},closed);
+export const HierarchyDiffSchema=Type.Object({viewId:HierarchyId,fromVersion:Type.String({pattern:'^[1-9][0-9]*$',maxLength:19}),toVersion:Type.String({pattern:'^[1-9][0-9]*$',maxLength:19})},closed);
+export interface HierarchyViewSummary {viewId:string;viewCode:string;sourceClientKey:string;viewName:string|null;state:'DRAFT'|'PUBLISHED'|'CLOSED'|'REVOKED';version:string|null;versionId:string|null;canWrite:boolean;canReview:boolean;recordedAt:string}
+export interface HierarchyCandidateSummary {candidateId:string;viewId:string;requestId:string;digest:string;status:'VALIDATED'|'APPROVED'|'APPLIED'|'REJECTED';maker:string;approvedBy:string|null;recordedAt:string}
 export const HierarchyClosureSchema = Type.Object({
   requestId: HierarchyId, viewId: HierarchyId, expectedVersion: Type.String({ pattern: '^[1-9][0-9]*$' }),
   action: Type.Enum(['CLOSE','REVOKE']), reason: text(2000),
 }, closed);
 type ClosureInput = Static<typeof HierarchyClosureSchema>;
-interface ClosureResult { closureId: string; viewId: string; version: string; status: 'CLOSED'|'REVOKED'; recordedAt: string }
+export const HierarchyFrozenCandidateSchema=Type.Union([partialEditingSchema(HierarchyCandidateSchema),HierarchyClosureSchema]);
+export interface ClosureResult { closureId: string; viewId: string; version: string; status: 'CLOSED'|'REVOKED'; recordedAt: string }
 
 export type ValidatedHierarchyNode = HierarchyNodeInput & { readonly depth: number };
 export interface ForestValidation { readonly nodes: readonly ValidatedHierarchyNode[]; readonly digest: string }
@@ -267,19 +276,19 @@ function formatLocalDbTime(value: unknown): string {
 
 /** vNext database owner for ORG05/ORG06. All writes use complete candidates. */
 export function openHierarchy(connection: string, provider?: KeyProviderPort) {
-  const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: connection, max: 4, options: '-c timezone=Asia/Shanghai', types: { getTypeParser: (oid, format) => oid === 1114 ? (value: string) => value : types.getTypeParser(oid, format) } }) }) });
-  const root = <T>(work: (trx: Kysely<DB>) => Promise<T>) => db.transaction().execute(async trx => { await sql`select pg_advisory_xact_lock(901002)`.execute(trx); return work(trx); });
-  const authorize = async (trx: Kysely<DB>, actor: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.authorize(${actor},'HOSPITAL',${permission}) r`.execute(trx)).rows[0]!.r;
-  const authorizeView = async (trx: Kysely<DB>, actor: string, viewId: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.hierarchy_authorize(${actor},${viewId}::uuid,${permission}) r`.execute(trx)).rows[0]!.r;
-  const ownerRead = async <T>(trx: Kysely<DB>,actor:string,mode:'VIEW_FOR_WRITE'|'CANDIDATE'|'REQUEST'|'COMMITTED'|'SNAPSHOT',input:Record<string,string>):Promise<T> => (await sql<{result:T}>`select department_master.hierarchy_read(${actor},${mode},${JSON.stringify(input)}::jsonb) result`.execute(trx)).rows[0]!.result;
-  const readCandidate = async (trx: Kysely<DB>, actor: string, id: string): Promise<StoredCandidate> => {
+  const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: vnextPool(connection) }) });
+  const root = <T>(work: (trx: CatalogTransactionScope) => Promise<T>) => db.transaction().execute(async trx => { await sql`select pg_advisory_xact_lock(901002)`.execute(trx); return work(CatalogTransactionScope.from(trx)); });
+  const authorize = async (trx: CatalogTransactionScope, actor: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.authorize(${actor},'HOSPITAL',${permission}) r`.execute(trx)).rows[0]!.r;
+  const authorizeView = async (trx: CatalogTransactionScope, actor: string, viewId: string, permission: 'READ' | 'WRITE' | 'REVIEW') => (await sql<{ r: string }>`select department_master.hierarchy_authorize(${actor},${viewId}::uuid,${permission}) r`.execute(trx)).rows[0]!.r;
+  const ownerRead = async <T>(trx: CatalogTransactionScope,actor:string,mode:'VIEW_FOR_WRITE'|'CANDIDATE'|'REQUEST'|'COMMITTED'|'SNAPSHOT',input:Record<string,string>):Promise<T> => (await sql<{result:T}>`select department_master.hierarchy_read(${actor},${mode},${JSON.stringify(input)}::jsonb) result`.execute(trx)).rows[0]!.result;
+  const readCandidate = async (trx: CatalogTransactionScope, actor: string, id: string): Promise<StoredCandidate> => {
     await authorize(trx, actor, 'READ');
     const row = await ownerRead<StoredCandidate|null>(trx,actor,'CANDIDATE',{id});
     if (!row) throw new Error('NOT_FOUND');
     await authorizeView(trx,actor,row.viewId,'READ');
     return row;
   };
-  const snapshot = async (trx: Kysely<DB>, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
+  const snapshot = async (trx: CatalogTransactionScope, actor: string, viewId: string, version?: string): Promise<HierarchySnapshot | null> => {
     await authorizeView(trx, actor, viewId, 'READ');
     const data = await ownerRead<{version:Record<string,unknown>;nodes:Record<string,unknown>[]} | null>(trx,actor,'SNAPSHOT',{viewId,...(version === undefined ? {} : {version})});
     if (!data) return null;
@@ -303,29 +312,17 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
       nodes: rows.map(mapNode), contentDigest: String(v['content_digest']),
     };
   };
-  return {
-    async prepareHierarchyClosure(actor: string, input: ClosureInput): Promise<{candidateId:string;digest:string}> {
-      if (!Check(HierarchyClosureSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
-      const sealed = seal(input,provider);
-      return root(async trx => (await sql<{result:{candidateId:string;digest:string}}>`select department_master.hierarchy_lifecycle(${actor},'PREPARE',${JSON.stringify({payload:input,digest:sealed.digest,envelope:sealed.envelope,payloadDigest:createHash('sha256').update(canonicalPlan(input)).digest('hex')})}::jsonb) result`.execute(trx)).rows[0]!.result);
+  const transactionCommands=(run:typeof root)=>({
+    async authorizeCandidateAccess(actor:string,input:{candidateId:string}) {
+      if(!Check(Type.Object({candidateId:HierarchyId},closed),input))throw new Error('CLOSED_INPUT_REQUIRED');
+      await run(async scope=>{const record=await readCandidate(scope,actor,input.candidateId);const payload=unseal<HierarchyCandidateInput|ClosureInput>(record,provider);if(!Check(HierarchyFrozenCandidateSchema,payload))throw new Error('PAYLOAD_UNAVAILABLE');});
     },
-    async closeHierarchyView(actor: string, input: HierarchyPublishInput): Promise<ClosureResult> {
-      if (!Check(HierarchyPublishSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
-      return root(async trx => {
-        const candidate = await readCandidate(trx,actor,input.candidateId);
-        if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
-        const value = unseal<ClosureInput>(candidate,provider);
-        if (!Check(HierarchyClosureSchema,value) || canonicalPlan(value) !== canonicalPlan(candidate.payload)) throw new Error('STALE_VALIDATION');
-        return (await sql<{result:ClosureResult}>`select department_master.hierarchy_lifecycle(${actor},'APPLY',${JSON.stringify(input)}::jsonb) result`.execute(trx)).rows[0]!.result;
-      });
-    },
-    async validateForest(value: unknown) { return validateHierarchyForest(value); },
     async createHierarchyView(actor: string, input: CreateHierarchyViewInput): Promise<{ viewId: string; sourceClientKey: string; viewCode: string }> {
       if (!Check(CreateHierarchyViewSchema, input)) throw new Error('CLOSED_INPUT_REQUIRED');
       assertCoreProfile(input);
       const validFrom = normalizeTime(input.validFrom); const validTo = input.validTo === null ? null : normalizeTime(input.validTo); normalizeTime(input.recordedAt);
       if (validTo !== null && validTo <= validFrom) throw new Error('INVALID_BUSINESS_PERIOD');
-      return root(async trx => {
+      return run(async trx => {
         const result = (await sql<{ result: { viewId: string } }>`select department_master.hierarchy_create_view(${actor},${JSON.stringify({ ...input, validFrom, validTo, viewDigest: planBinding(provider,'HIERARCHY_VIEW_V1',input) })}::jsonb) result`.execute(trx)).rows[0]!.result;
         return { viewId: result.viewId, sourceClientKey: input.sourceClientKey, viewCode: input.viewCode };
       });
@@ -345,7 +342,7 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
           issues: [{ code: detail.message, ...(detail.nodeKey ? { nodeKey: detail.nodeKey } : {}), ...(detail.field ? { field: detail.field } : {}) }],
         };
       }
-      return root(async trx => {
+      return run(async trx => {
         const makerIdentity = await authorize(trx, actor, 'WRITE');
         const view = await ownerRead<{id:string}|null>(trx,actor,'VIEW_FOR_WRITE',{sourceClientKey:value.sourceClientKey});
         if (!view) throw new Error('BLOCKED_DEPENDENCY');
@@ -357,6 +354,32 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
         return { candidateId: id, digest: sealed.digest, decision: 'PASS' as const, issues: [] };
       });
     },
+  });
+  return {
+    async prepareHierarchyClosure(actor: string, input: ClosureInput): Promise<{candidateId:string;digest:string}> {
+      if (!Check(HierarchyClosureSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
+      const sealed = seal(input,provider);
+      return root(async trx => (await sql<{result:{candidateId:string;digest:string}}>`select department_master.hierarchy_lifecycle(${actor},'PREPARE',${JSON.stringify({payload:input,digest:sealed.digest,envelope:sealed.envelope,payloadDigest:createHash('sha256').update(canonicalPlan(input)).digest('hex')})}::jsonb) result`.execute(trx)).rows[0]!.result);
+    },
+    async closeHierarchyView(actor: string, input: HierarchyPublishInput): Promise<ClosureResult> {
+      if (!Check(HierarchyPublishSchema,input)) throw new Error('CLOSED_INPUT_REQUIRED');
+      return root(async trx => {
+        const candidate = await readCandidate(trx,actor,input.candidateId);
+        if (candidate.digest !== input.digest) throw new Error('STALE_VALIDATION');
+        const value = unseal<ClosureInput>(candidate,provider);
+        if (!Check(HierarchyClosureSchema,value) || canonicalPlan(value) !== canonicalPlan(candidate.payload)) throw new Error('STALE_VALIDATION');
+        return (await sql<{result:ClosureResult}>`select department_master.hierarchy_lifecycle(${actor},'APPLY',${JSON.stringify(input)}::jsonb) result`.execute(trx)).rows[0]!.result;
+      });
+    },
+    async validateForest(value: unknown) { return validateHierarchyForest(value); },
+    async listHierarchyViews(actor:string,input:Static<typeof HierarchyListSchema>){if(!Check(HierarchyListSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');if(input.recordAsOf)normalizeTime(input.recordAsOf);return root(async trx=>(await sql<{r:{items:HierarchyViewSummary[];nextCursor:string|null}}>`select department_master.hierarchy_workspace_query(${actor},'VIEWS',${JSON.stringify(input)}::jsonb) r`.execute(trx)).rows[0]!.r);},
+    async listHierarchyCandidates(actor:string,input:Static<typeof HierarchyCandidateListSchema>){if(!Check(HierarchyCandidateListSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');if(input.recordAsOf)normalizeTime(input.recordAsOf);return root(async trx=>(await sql<{r:{items:HierarchyCandidateSummary[];nextCursor:string|null}}>`select department_master.hierarchy_workspace_query(${actor},'CANDIDATES',${JSON.stringify(input)}::jsonb) r`.execute(trx)).rows[0]!.r);},
+    async hierarchyHistory(actor:string,input:Static<typeof HierarchyHistorySchema>){if(!Check(HierarchyHistorySchema,input)||input.afterVersion&&BigInt(input.afterVersion)>9223372036854775807n)throw new Error('CLOSED_INPUT_REQUIRED');if(input.recordAsOf)normalizeTime(input.recordAsOf);return root(async trx=>{const ids=(await sql<{r:{items:Array<{version:string;versionId:string}>;nextCursor:string|null}}>`select department_master.hierarchy_workspace_query(${actor},'HISTORY',${JSON.stringify(input)}::jsonb) r`.execute(trx)).rows[0]!.r;const items:HierarchySnapshot[]=[];for(const row of ids.items){const item=await snapshot(trx,actor,input.viewId,row.version);if(!item)throw new Error('NOT_FOUND');items.push(item);}return {items,nextCursor:ids.nextCursor};});},
+    async readHierarchyWindow(actor:string,input:Static<typeof HierarchyWindowSchema>){if(!Check(HierarchyWindowSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');normalizeTime(input.validFrom);if(input.validTo)normalizeTime(input.validTo);if(input.recordAsOf)normalizeTime(input.recordAsOf);return root(async trx=>{const selected=(await sql<{r:{version:string|null;viewState:'ACTIVE'|'CLOSED'|'REVOKED';selectionPolicy:'FROZEN_PUBLICATION_WINDOW_V1'}}>`select department_master.hierarchy_workspace_query(${actor},'WINDOW',${JSON.stringify(input)}::jsonb) r`.execute(trx)).rows[0]!.r;return {...selected,snapshot:selected.version===null?null:await snapshot(trx,actor,input.viewId,selected.version)};});},
+    async readHierarchyCandidate(actor:string,input:{candidateId:string}){if(!Check(Type.Object({candidateId:HierarchyId},closed),input))throw new Error('CLOSED_INPUT_REQUIRED');return root(async trx=>{const row=await readCandidate(trx,actor,input.candidateId),payload=unseal<HierarchyCandidateInput|ClosureInput>(row,provider);if(!Check(HierarchyFrozenCandidateSchema,payload))throw new Error('PAYLOAD_UNAVAILABLE');return {candidateId:row.id,viewId:row.viewId,digest:row.digest,maker:row.maker,approvedBy:row.approvedBy,requestId:row.requestId,status:row.status,currentSchema:Check(HierarchyCandidateSchema,payload)||Check(HierarchyClosureSchema,payload),payload};});},
+    async diffHierarchySnapshots(actor:string,input:Static<typeof HierarchyDiffSchema>){if(!Check(HierarchyDiffSchema,input)||[input.fromVersion,input.toVersion].some(version=>BigInt(version)>9223372036854775807n))throw new Error('CLOSED_INPUT_REQUIRED');return root(async trx=>{const before=await snapshot(trx,actor,input.viewId,input.fromVersion),after=await snapshot(trx,actor,input.viewId,input.toVersion);if(!before||!after)throw new Error('NOT_FOUND');return {before,after};});},
+    ...transactionCommands(root),
+    commandsInTransaction:(scope:CatalogTransactionScope)=>transactionCommands(work=>work(scope)),
     async approveHierarchyCandidate(actor: string, input: { candidateId: string; digest: string }): Promise<{ candidateId: string; approvedBy: string }> {
       if (!Check(HierarchyPublishSchema, { candidateId: input.candidateId, requestId: randomUUID(), digest: input.digest })) throw new Error('CLOSED_INPUT_REQUIRED');
       return root(async trx => {

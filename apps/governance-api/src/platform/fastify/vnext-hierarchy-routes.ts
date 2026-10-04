@@ -11,6 +11,7 @@ import {
   HierarchyId,
   HierarchyLocalTime,
   HierarchyNullableLocalTime,
+  HierarchyListSchema,HierarchyCandidateListSchema,HierarchyHistorySchema,HierarchyWindowSchema,HierarchyFrozenCandidateSchema,HierarchyDiffSchema,
   type openHierarchy,
 } from '../../modules/department-master/index.js';
 
@@ -62,10 +63,16 @@ export function registerHierarchyRoutes(app: FastifyInstance, context?: Hierarch
     });
   };
   route('views', 'createHierarchyView', CreateHierarchyViewSchema, Type.Object({ viewId: HierarchyId, sourceClientKey: Text, viewCode: Text }, closed), (owner, actor, input) => owner.createHierarchyView(actor, input));
+  route('views/list','listHierarchyViews',HierarchyListSchema,Type.Object({items:Type.Array(Type.Object({viewId:HierarchyId,viewCode:Text,sourceClientKey:Text,viewName:Type.Union([Text,Type.Null()]),state:Type.Enum(['DRAFT','PUBLISHED','CLOSED','REVOKED']),version:Type.Union([Text,Type.Null()]),versionId:Type.Union([HierarchyId,Type.Null()]),canWrite:Type.Boolean(),canReview:Type.Boolean(),recordedAt:HierarchyLocalTime},closed)),nextCursor:Type.Union([HierarchyId,Type.Null()])},closed),(owner,actor,input)=>owner.listHierarchyViews(actor,input));
+  route('candidates/list','listHierarchyCandidates',HierarchyCandidateListSchema,Type.Object({items:Type.Array(Type.Object({candidateId:HierarchyId,viewId:HierarchyId,requestId:HierarchyId,digest:Text,status:Type.Enum(['VALIDATED','APPROVED','APPLIED','REJECTED']),maker:Text,approvedBy:Type.Union([Text,Type.Null()]),recordedAt:HierarchyLocalTime},closed)),nextCursor:Type.Union([HierarchyId,Type.Null()])},closed),(owner,actor,input)=>owner.listHierarchyCandidates(actor,input));
+  route('history','hierarchyHistory',HierarchyHistorySchema,Type.Object({items:Type.Array(SnapshotResponse),nextCursor:Type.Union([Text,Type.Null()])},closed),(owner,actor,input)=>owner.hierarchyHistory(actor,input));
+  route('snapshots/window','readHierarchyWindow',HierarchyWindowSchema,Type.Object({version:Type.Union([Text,Type.Null()]),viewState:Type.Enum(['ACTIVE','CLOSED','REVOKED']),selectionPolicy:Type.Literal('FROZEN_PUBLICATION_WINDOW_V1'),snapshot:Type.Union([SnapshotResponse,Type.Null()])},closed),(owner,actor,input)=>owner.readHierarchyWindow(actor,input));
   route('candidates', 'importHierarchyCandidate', HierarchyCandidateSchema, CandidateResult, (owner, actor, input) => owner.importHierarchyCandidate(actor, input));
+  route('candidates/read','readHierarchyCandidate',Type.Object({candidateId:HierarchyId},closed),Type.Object({candidateId:HierarchyId,viewId:HierarchyId,digest:Text,maker:Text,approvedBy:Type.Union([Text,Type.Null()]),requestId:HierarchyId,status:Type.Enum(['VALIDATED','APPROVED','APPLIED','REJECTED']),currentSchema:Type.Boolean(),payload:HierarchyFrozenCandidateSchema},closed),(owner,actor,input)=>owner.readHierarchyCandidate(actor,input));
   route('candidates/approve', 'approveHierarchyCandidate', Type.Object({ candidateId: HierarchyId, digest: Type.String({ pattern: '^[a-f0-9]{64}$' }) }, closed), ApprovalResult, (owner, actor, input) => owner.approveHierarchyCandidate(actor, input));
   route('candidates/publish', 'publishHierarchySnapshot', HierarchyPublishSchema, SnapshotResponse, (owner, actor, input) => owner.publishHierarchySnapshot(actor, input));
   route('snapshots/read', 'readHierarchySnapshot', HierarchySnapshotInputSchema, Type.Union([SnapshotResponse, Type.Null()]), (owner, actor, input) => owner.readHierarchySnapshot(actor, input));
+  route('snapshots/diff','diffHierarchySnapshots',HierarchyDiffSchema,Type.Object({before:SnapshotResponse,after:SnapshotResponse},closed),(owner,actor,input)=>owner.diffHierarchySnapshots(actor,input));
   route('closures', 'prepareHierarchyClosure', HierarchyClosureSchema, Type.Object({candidateId:HierarchyId,digest:Text},closed), (owner,actor,input)=>owner.prepareHierarchyClosure(actor,input));
   route('closures/apply', 'closeHierarchyView', HierarchyPublishSchema, Type.Object({closureId:HierarchyId,viewId:HierarchyId,version:Text,status:Type.Enum(['CLOSED','REVOKED']),recordedAt:HierarchyLocalTime},closed), (owner,actor,input)=>owner.closeHierarchyView(actor,input));
 }

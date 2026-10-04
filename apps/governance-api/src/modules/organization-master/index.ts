@@ -1,6 +1,6 @@
 import {createRegistrationReader} from './registration.js';
 import {createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {Check} from 'typebox/value';
 import type {DB} from '../../platform/database/vnext-types.generated.js';
@@ -22,7 +22,7 @@ function safe(error:unknown):Error {return new Error(error instanceof Error&&saf
 function check<S>(schema:S,value:unknown){if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');}
 
 export function openOrganization(connectionString:string,provider?:KeyProviderPort){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connectionString)})});
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
  const record=(scope:Scope,actor:string,id:string,permission='READ')=>sql<{r:InputRecord}>`select organization_master.input_read(${actor},${id}::uuid,${permission}) r`.execute(scope).then(result=>{const r=result.rows[0]!.r;if(r.domain!==undefined&&r.domain!=='ORG01')throw new Error('ACCESS_DENIED');return r;});
  const snapshot=(scope:Scope,actor:string,id:string,campus:string)=>sql<{r:Snapshot}>`select organization_master.snapshot(${actor},${id}::uuid,${campus}) r`.execute(scope).then(r=>r.rows[0]!.r);

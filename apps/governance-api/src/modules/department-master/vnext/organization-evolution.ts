@@ -1,6 +1,6 @@
 import {openDepartmentLifecycle} from './department-lifecycle.js';
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {Type} from 'typebox';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
@@ -57,7 +57,7 @@ export function assertEvolutionApplyBinding(provider:KeyProviderPort|undefined,i
 }
 
 export function openOrganizationEvolutions(connection:string,provider?:KeyProviderPort,impactPorts:DepartmentImpactPorts=departmentImpactPorts){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(value:string)=>value:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const root=<T>(work:(s:Scope)=>Promise<T>)=>db.transaction().execute(async transaction=>{await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);return work(CatalogTransactionScope.from(transaction));});
  const authorize=async(s:Scope,actor:string,campus:string,permission:string)=>(await sql<{r:string}>`select department_master.evolution_authorize(${actor},${campus},${permission}) r`.execute(s)).rows[0]!.r;
  const record=async(s:Scope,actor:string,id:string,permission='READ_RESTRICTED')=>(await sql<{r:InputRecord}>`select department_master.evolution_input_read(${actor},${id}::uuid,${permission}) r`.execute(s)).rows[0]!.r;
@@ -286,8 +286,10 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   const aliasMap=[{dataset:'ORG26' as const,sourceClientKey:e.source_client_key,id:e.id,version:'1',sourceRow:e.source_row},...e.relations.map(relation=>({dataset:'ORG27' as const,sourceClientKey:relation.source_client_key,id:relation.id,version:'1',sourceRow:relation.source_row})),...[...new Map(e.relations.filter(relation=>relation.relation_kind==='SUCCESSION').map(relation=>[relation.to_department_id,{dataset:'ORG04' as const,sourceClientKey:relation.source_to_alias,id:relation.to_department_id,version:relation.toVersion,sourceRow:relation.toSourceRow}])).values()]];
   return {id:e.id,changeType:e.change_type,effectiveAt:stamp(e.effective_at),recordedAt:stamp(e.recorded_at),effective:stamp(e.effective_at)<=businessAt,sourceClientKey:e.source_client_key,aliasMap,facts:e.facts,predecessors,successors,relations:e.relations.map(relation=>({...relation,source_recorded_at:stamp(relation.source_recorded_at),recorded_at:stamp(relation.recorded_at)})),edges:e.relations.filter(relation=>relation.relation_kind==='SUCCESSION').map(relation=>({id:relation.id,from:relation.from_department_id,to:relation.to_department_id,transferScope:relation.transfer_scope,contextRule:relation.context_rule})),handoff:'NOT_EXECUTED' as const};
  };
-const stage=async(actor:string,raw:EvolutionStageInput)=>{check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');await authorizeInputSources(s,actor,input,true);return stageIn(s,actor,input);});};
+const stageInTransaction=async(s:Scope,actor:string,raw:EvolutionStageInput)=>{check(EvolutionStageSchema,raw);const input:EvolutionStoredStageInput={...structuredClone(raw),sourceRows:{event:1,relations:raw.relations.map((_,i)=>i+1),successors:raw.successors.map((_,i)=>i+1)}};const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');await authorizeInputSources(s,actor,input,true);return stageIn(s,actor,input);};
+const stage=(actor:string,raw:EvolutionStageInput)=>root(scope=>stageInTransaction(scope,actor,raw));
  return {
+  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:EvolutionStageInput)=>stageInTransaction(scope,actor,input),recordDisposition:(actor:string,input:import('./department-impact-contracts.js').RecordDispositionInput)=>impacts.recordDispositionInTransaction(scope,actor,input),authorizeCandidateAccess:(actor:string,input:{candidateId:string})=>coordinator.authorizeCandidateAccessInTransaction(scope,actor,input)}),
   async compensateEvolution(actor:string,input:EvolutionStageInput){if(!input.compensatesEvent)throw new Error('CLOSED_INPUT_REQUIRED');return stage(actor,input);},
   readDepartmentAssessment:impacts.readDepartmentAssessment,listDepartmentAssessments:impacts.listDepartmentAssessments,assessDepartmentChange:impacts.assessDepartmentChange,listImpactCases:impacts.listImpactCases,
   recordMigrationReceipt:impacts.recordMigrationReceipt,readMigrationHandoff:impacts.readMigrationHandoff,readImpactCase:impacts.readImpactCase,assignImpactCase:impacts.assignImpactCase,recordDisposition:impacts.recordDisposition,approveDisposition:impacts.approveDisposition,recheckImpact:impacts.recheckImpact,

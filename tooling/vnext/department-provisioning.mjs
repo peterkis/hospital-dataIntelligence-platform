@@ -17,6 +17,13 @@ export const DEPARTMENT_FUNCTIONS=Object.freeze([
  'mutate(text,text)',
  'committed_row(text,uuid,integer,text,uuid,bigint,text,timestamp,timestamp,jsonb)',
  'replacement_read(text,uuid,timestamp)',
+ 'workspace_authorize(text,jsonb,text)',
+ 'workspace_save(text,jsonb,text,jsonb)',
+ 'workspace_read(text,uuid)',
+ 'workspace_recover(text,uuid)',
+ 'workspace_list(text,uuid,integer)',
+ 'workspace_input_access(text,text,uuid,text)',
+ 'workspace_applications(text,uuid,integer,uuid)',
 ]);
 export const DEPARTMENT_ACCESS=Object.freeze([
  ['maker','NORTH','READ'],['maker','NORTH','WRITE'],['maker','NORTH','READ_RESTRICTED'],

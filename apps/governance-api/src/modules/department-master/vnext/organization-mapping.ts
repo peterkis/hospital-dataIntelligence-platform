@@ -1,5 +1,5 @@
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
-import {Pool,types} from 'pg';
+import {vnextPool} from '../../../platform/database/vnext-pool.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {Type} from 'typebox';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
@@ -24,7 +24,7 @@ const query=Type.Object({id:Id,businessAt:Type.String(),recordAsOf:Type.Optional
 type Staged={inputId:string;revisionId:string;digest:string};
 
 export function openOrganizationMappings(connection:string,provider?:KeyProviderPort,targetPort?:OrganizationMappingTargetPort){
- const db=new Kysely<DB>({dialect:new PostgresDialect({pool:new Pool({connectionString:connection,max:4,options:'-c timezone=Asia/Shanghai',types:{getTypeParser:(oid,format)=>oid===1114?(v:string)=>v:types.getTypeParser(oid,format)}})})});
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const targets=targetPort??createOrganizationMappingTargets(connection,provider);
  const root=<T>(work:(scope:Scope)=>Promise<T>)=>db.transaction().execute(async transaction=>{await sql`select pg_advisory_xact_lock(901002)`.execute(transaction);return work(CatalogTransactionScope.from(transaction));});
  const recoverable=async<T>(s:Scope,work:()=>Promise<T>):Promise<T>=>{
@@ -173,8 +173,10 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
  const stageIn=async(s:Scope,actor:string,input:OrganizationMappingStoredStageInput)=>{const namespaces=input.entries.map(e=>({source:e.row.from_system_id,entity:e.row.source_entity_type,context:e.row.source_context}));return mutate<Staged>(s,actor,{operation:'STAGE',...input,namespaces,...seal('ORG_MAPPING_INPUT_V1',input)});};
  const historyInTransaction=async(s:Scope,actor:string,id:string,at:string|null)=>{const h=await snapshot(s,actor,id),versions=h.versions.filter(v=>at===null||stamp(v.recorded_at)<=at);if(!versions.length)throw new Error('NOT_FOUND');return {...h,versions};};
  const history=async(actor:string,id:string,recordAsOf?:string)=>{mappingCheck(Id,id);const at=recordAsOf?localTime(recordAsOf):null;return root(async s=>{const h=await historyInTransaction(s,actor,id,at);for(const v of h.versions)await historyReferenceAccess(s,actor,h,v);return h;});};
+ const stageInTransaction=async(s:Scope,actor:string,raw:OrganizationMappingStageInput)=>{mappingCheck(OrganizationMappingStageSchema,raw);const input:OrganizationMappingStoredStageInput={...structuredClone(raw),entries:raw.entries.map((e,i)=>({...e,sourceRow:i+1}))};const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);};
  return {
-  async stage(actor:string,raw:OrganizationMappingStageInput){mappingCheck(OrganizationMappingStageSchema,raw);const input:OrganizationMappingStoredStageInput={...structuredClone(raw),entries:raw.entries.map((e,i)=>({...e,sourceRow:i+1}))};return root(async s=>{const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);});},
+  stage:(actor:string,raw:OrganizationMappingStageInput)=>root(scope=>stageInTransaction(scope,actor,raw)),
+  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:OrganizationMappingStageInput)=>stageInTransaction(scope,actor,input),authorizeCandidateAccess:(actor:string,input:{candidateId:string})=>coordinator.authorizeCandidateAccessInTransaction(scope,actor,input)}),
   async receiveFile(actor:string,raw:OrganizationMappingReceiveInput,bytes:Uint8Array){
    mappingCheck(OrganizationMappingReceiveSchema,raw);const input=structuredClone(raw);
    if(input.job.input.kind!=='FILE'||input.job.input.format!=='XLSX'||input.job.input.parserPolicy!=='STRICT_ORGANIZATION_MAPPING_V1')throw new Error('CLOSED_INPUT_REQUIRED');

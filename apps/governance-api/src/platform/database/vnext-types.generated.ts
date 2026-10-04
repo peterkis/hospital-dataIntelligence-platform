@@ -445,6 +445,20 @@ export interface DepartmentMasterVersion {
   valid_to: string | null;
 }
 
+export interface DepartmentMasterWorkspaceDraftRevision {
+  digest: string;
+  envelope: Json;
+  id: string;
+  identity_code: string;
+  maker: string;
+  metadata: Json;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+  state: string;
+  submission: Json | null;
+}
+
 export interface GovernanceCatalogApplyApproval {
   actor_code: string;
   candidate_id: string;
@@ -1155,6 +1169,7 @@ export interface DB {
   "department_master.replacement": DepartmentMasterReplacement;
   "department_master.verification": DepartmentMasterVerification;
   "department_master.version": DepartmentMasterVersion;
+  "department_master.workspace_draft_revision": DepartmentMasterWorkspaceDraftRevision;
   "governance_catalog.apply_approval": GovernanceCatalogApplyApproval;
   "governance_catalog.apply_candidate": GovernanceCatalogApplyCandidate;
   "governance_catalog.apply_commit": GovernanceCatalogApplyCommit;
