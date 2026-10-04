@@ -32,6 +32,7 @@ export interface ApplyOwnerPort {
  // FREEZE may retain an Owner-declared blocked observation for review. Omitted
  // means full admission; approval and apply never accept a freeze-only decision.
  validate(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,stage?:'FREEZE'):Promise<void>;
+ afterFreeze?(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,candidate:{candidateId:string;digest:string}):Promise<void>;
  apply(scope:CatalogTransactionScope,actor:string,command:OwnerCommand,resolved:ReadonlyMap<number,OwnerFact>,approval:{candidateId:string;digest:string}):Promise<{ok:true;fact:OwnerFact}|{ok:false}>;
  exactRead(scope:CatalogTransactionScope,actor:string,input:PlanOwnerUnitInput,fact:OwnerFact):Promise<OwnerFact|null>;
  beforeCommit?(scope:CatalogTransactionScope,actor:string,unit:ObservedOwnerUnit,approval:{candidateId:string;digest:string},facts:OwnerFact[]):Promise<void>;
@@ -41,7 +42,7 @@ interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 export interface UnitOutcome {status:'COMMITTED';candidateId:string;requestId:string;facts:OwnerFact[];recordedAt:string}
 const codes=new Set(['CAMPUS_RETIRED','CAMPUS_SUSPENDED','DISPOSITION_INCOMPLETE','DISPOSITION_ALREADY_COMPLETE','ACCESS_DENIED','NOT_FOUND','REQUEST_CONFLICT','STALE_VALIDATION','APPROVAL_REQUIRED','CANDIDATE_REVIEW_REQUIRED','MAKER_CHECKER_REQUIRED','BLOCKED_DEPENDENCY','KEY_UNAVAILABLE','CLOSED_INPUT_REQUIRED','PLAN_INPUT_LIMIT','INVALID_PLAN_TOKEN','OWNER_REJECTED','PAYLOAD_UNAVAILABLE','IDENTIFIER_CONFLICT','LICENSE_END_UNKNOWN','LICENSE_PERIOD_NOT_COVERED','LICENSE_ID_MISMATCH','PRIMARY_OPERATOR_CONFLICT','OPERATING_CLOSED','PAIR_PREAUTHORIZATION_REQUIRED','STALE_REVISION','BUNDLE_CONTEXT_REQUIRED','LEGAL_REVIEW_REQUIRED','BATCH_REJECTED','UNSUPPORTED_STATE_TRANSITION','PARENT_PERIOD_NOT_COVERED']);
 function failure(error:unknown):Error {
- const mappingCodes=['MAPPING_ALREADY_REGISTERED','MAPPING_IDENTITY_IMMUTABLE','MAPPING_RETRACTED','BATCH_CONFLICT','IDENTIFIER_IDENTITY_IMMUTABLE','IDENTIFIER_CLOSED','SOURCE_MAPPING_REQUIRED','IDENTIFIER_RESOLUTION_FORBIDDEN','SUCCESSION_SHAPE','SUCCESSION_SELF','SUCCESSION_CYCLE','CONTEXT_REQUIRED','LOCAL_TIME_REQUIRED'];
+ const mappingCodes=['LOCATION_CLOSED','LOCATION_CODE_CONFLICT','LOCATION_CAMPUS_MISMATCH','LOCATION_TYPE_INVALID','LOCATION_CYCLE','LOCATION_ROOT_CONFLICT','LOCATION_PARENT_IMMUTABLE','LOCATION_CLOSURE_EXPANSION','LOCATION_SPLIT_INVALID','FLOOR_LABEL_REQUIRED','ROOM_NUMBER_REQUIRED','ENUM_INVALID','REFERENCE_INVALID','MAPPING_ALREADY_REGISTERED','MAPPING_IDENTITY_IMMUTABLE','MAPPING_RETRACTED','BATCH_CONFLICT','IDENTIFIER_IDENTITY_IMMUTABLE','IDENTIFIER_CLOSED','SOURCE_MAPPING_REQUIRED','IDENTIFIER_RESOLUTION_FORBIDDEN','SUCCESSION_SHAPE','SUCCESSION_SELF','SUCCESSION_CYCLE','CONTEXT_REQUIRED','LOCAL_TIME_REQUIRED'];
  const code=typeof error==='object'&&error!==null&&'code' in error?error.code:null;
  const message=error instanceof Error?error.message:'';
  if((typeof code==='string'&&(/^08[A-Z0-9]{3}$/.test(code)||['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','57P01'].includes(code)))||
@@ -50,7 +51,7 @@ function failure(error:unknown):Error {
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 function bound(unit:ObservedOwnerUnit):void {
- const blockedOrganizationRevision=['ORG22_WHOLE_REVISION_V1','ORG23_WHOLE_REVISION_V1','ORG_EVOLUTION_WHOLE_EVENT_V1'].includes(unit.atomicRule)&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
+ const blockedOrganizationRevision=['ORG22_WHOLE_REVISION_V1','ORG23_WHOLE_REVISION_V1','ORG_EVOLUTION_WHOLE_EVENT_V1','ORG12_WHOLE_TREE_REVISION_V1'].includes(unit.atomicRule)&&Array.isArray(unit.basis['issues'])&&unit.basis['issues'].length>0;
  if(!unit.atomicRule||(unit.commands.length<1&&unit.atomicRule!=='ORG04_ROW_INDEPENDENT_V1'&&!blockedOrganizationRevision)||unit.commands.length>100||Buffer.byteLength(canonicalPlan(unit))>524288)throw new Error('PLAN_INPUT_LIMIT');
  const seen=new Set<number>();
  for(const c of unit.commands){
@@ -144,7 +145,9 @@ export function applyCoordinator(db:Kysely<DB>,provider?:KeyProviderPort,owner?:
     if(prior){await candidate(scope,actor,prior.candidateId,'WRITE');return prior;}
     const unit=await port().observe(scope,actor,input);bound(unit);await port().validate(scope,actor,unit,'FREEZE');
     const digest=planBinding(provider,'APPROVED_OWNER_UNIT_V1',unit);
-    return record<{candidateId:string;digest:string}>(scope,actor,'FREEZE',{input,digest,envelope:seal(unit,digest)});
+    const frozen=await record<{candidateId:string;digest:string}>(scope,actor,'FREEZE',{input,digest,envelope:seal(unit,digest)});
+    await port().afterFreeze?.(scope,actor,unit,frozen);
+    return frozen;
    });}catch(error){throw failure(error);}
   },
   async readApplyCandidate(actor:string,input:{candidateId:string}){

@@ -40,3 +40,5 @@ export {createDepartmentImpactClient} from './vnext-client.js';
 
 export {createDepartmentLifecycleClient} from './vnext-client.js';
 export {createDepartmentWorkspaceClient,type DepartmentWorkspaceDraft} from './vnext-client.js';
+
+export {createLocationClient,type LocationInput} from './vnext-client.js';

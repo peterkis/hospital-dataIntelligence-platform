@@ -343,7 +343,12 @@
     "vnext:p2-07:unit": "vitest run --config tooling/vnext/vitest.p2-07-unit.config.ts",
     "vnext:p2-07:restart": "node --import tsx tooling/vnext/p2-07-restart.mjs",
     "vnext:p2-07:browser": "node --import tsx tooling/vnext/p2-07-browser.mjs",
-    "vnext:p2-07:deploy": "node --import tsx tooling/vnext/p2-07-deploy.mjs"
+    "vnext:p2-07:deploy": "node --import tsx tooling/vnext/p2-07-deploy.mjs",
+    "vnext:p3-06:unit": "vitest run --config tooling/vnext/vitest.p3-06-unit.config.ts",
+    "vnext:p3-06:typecheck": "tsc -p tooling/vnext/tsconfig.p3-06.json",
+    "vnext:p3-06:validate": "node --import tsx tooling/vnext/p3-06-validate.mjs",
+    "vnext:p3-06:upgrade": "node --import tsx tooling/vnext/p3-06-validate.mjs --upgrade",
+    "vnext:p3-06:deploy": "node --import tsx tooling/vnext/p3-06-deploy.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

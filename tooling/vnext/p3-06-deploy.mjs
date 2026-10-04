@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {randomUUID} from 'node:crypto';
+import {prepareWorkspaceDeployment} from './p1-06-deployment.mjs';
+import {provisionLocation} from './p3-06-provisioning.mjs';
+import {locationFixture} from './p3-06-fixture.ts';
+import {startWorkbench} from './workbench-runtime.mjs';
+import {openCatalog} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+import {createLocationClient} from '../../packages/generated-api-client/src/index.ts';
+if(process.argv.length!==2)throw new Error('CLOSED_COMMAND_REQUIRED');
+const deployment=await prepareWorkspaceDeployment({evidenceTask:'p3-06'}),{receipt,connection,provider,evidence}=deployment;
+const service=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));
+provisionLocation(receipt,service.role,provider);
+const catalog=await openCatalog(connection,provider);let f,server;
+try{
+ f=await locationFixture(receipt,service.role,catalog,provider,connection);
+ const campusId=await f.newCampus(),input=await f.input(campusId,f.tree(campusId));
+ server=await startWorkbench({persistent:true,port:0});
+ const maker=createLocationClient(server.url,'maker'),reviewer=createLocationClient(server.url,'reviewer');
+ const staged=await maker.stage(input);assert.equal(staged.response.status,200);assert.ok(staged.data);
+ const verify=await reviewer.verify({requestId:randomUUID(),inputId:staged.data.inputId,inputDigest:staged.data.digest,evidenceId:f.artifact.artifactId,reason:'TEST POLICY ONLY persistent physical inventory',physicalFactsAccepted:true,policyVersion:'ORG12_CORE_V1'});assert.equal(verify.response.status,200);
+ const requestId=randomUUID(),planned=await maker.plan({inputId:staged.data.inputId,requestId});assert.equal(planned.response.status,200);assert.ok(planned.data);
+ assert.equal((await reviewer.review({candidateId:planned.data.candidateId})).response.status,200);assert.equal((await reviewer.approve(planned.data)).response.status,200);
+ const request={candidateId:planned.data.candidateId,requestId},applied=await maker.apply(request);assert.equal(applied.response.status,200);assert.equal(applied.data?.status,'COMMITTED');
+ assert.deepEqual((await maker.apply(request)).data,applied.data);assert.equal((await maker.reconcile(request)).data?.status,'MATCHED');
+ assert.equal((await maker.tree({campusId,businessAt:'2026-03-01T00:00:00'})).data?.items.length,4);
+ assert.equal((await createLocationClient(server.url,'outsider').tree({campusId})).response.status,403);
+ await deployment.complete();
+ const result={status:'PASS',gate:'P3-06_PERSISTENT_GENERATED_HTTP',databaseOid:receipt.oid,campusId,actualWorkbenchStartup:true,independentVerification:true,independentApproval:true,atomicApply:true,exactReplay:true,reconciliation:'MATCHED',treeNodes:4,unauthorizedDenied:true,candidateId:planned.data.candidateId,facts:applied.data?.status==='COMMITTED'?applied.data.facts:[],policy:'TEST POLICY ONLY',hospitalPolicy:'NOT_ADOPTED',FULL:'BLOCKED_DEPENDENCY',browser:'NOT_RUN',formalAcceptance:'NOT_RUN'};
+ writeFileSync(evidence+'.http.json',JSON.stringify(result,null,2),{flag:'wx'});console.log(JSON.stringify({status:'PASS',gate:result.gate,evidence:evidence+'.http.json'}));
+}finally{await server?.close();await f?.owner.close();await f?.campus.close();await catalog.close();}

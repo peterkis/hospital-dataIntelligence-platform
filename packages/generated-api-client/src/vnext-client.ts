@@ -285,3 +285,29 @@ export function createDepartmentLifecycleClient(baseUrl:string,actor:string){
   diffRelation:(body:operations['diffDepartmentCampusRelation']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/department-lifecycle/relations/diff',{body}),
  };
 }
+
+export type LocationInput=operations['stageLocationInput']['requestBody']['content']['application/json'];
+export function createLocationClient(baseUrl:string,actor:string){
+ const client=createVNextCatalogClient(baseUrl,actor);
+ return {
+  stage:(body:operations['stageLocationInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/inputs',{body}),
+  readInput:(body:operations['readLocationInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/inputs/read',{body}),
+  verify:(body:operations['verifyLocationInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/verify',{body}),
+  preview:(body:operations['previewLocationInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/preview',{body}),
+  plan:(body:operations['planLocationInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/plan',{body}),
+  review:(body:operations['reviewLocationCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/review',{body}),
+  approve:(body:operations['approveLocationCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/approve',{body}),
+  apply:(body:operations['applyLocationCandidate']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/apply',{body}),
+  resume:(body:operations['resumeLocationOutcome']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/resume',{body}),
+  reconcile:(body:operations['reconcileLocationOutcome']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/reconcile',{body}),
+  history:(body:operations['getLocationHistory']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/history',{body}),
+  query:(body:operations['getLocationAsOf']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/query',{body}),
+  exact:(body:operations['getLocationVersion']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/exact',{body}),
+  diff:(body:operations['diffLocationVersions']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/diff',{body}),
+  list:(body:operations['listLocations']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/list',{body}),
+  tree:(body:operations['getLocationTree']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/tree',{body}),
+  coverage:(body:operations['getLocationCoverage']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/coverage',{body}),
+  change:(body:operations['getLocationChange']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/changes',{body}),
+  file:(body:operations['receiveLocationFile']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/locations/files',{body}),
+ };
+}

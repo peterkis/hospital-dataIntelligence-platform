@@ -796,6 +796,84 @@ export interface GovernanceCatalogVersion {
   valid_to: string | null;
 }
 
+export interface LocationMasterAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface LocationMasterApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface LocationMasterChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: Generated<string>;
+  results: Json;
+  splits: Json;
+}
+
+export interface LocationMasterCode {
+  campus_id: string;
+  code: string;
+  location_id: string;
+}
+
+export interface LocationMasterInput {
+  campus_id: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface LocationMasterLocation {
+  campus_id: string;
+  id: Generated<string>;
+  scope: string;
+}
+
+export interface LocationMasterVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface LocationMasterVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  location_id: string;
+  number: Int8;
+  parent_id: string | null;
+  reason: string;
+  recorded_at: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface OrganizationMasterAccess {
   actor: string;
   campus: string;
@@ -1082,6 +1160,11 @@ export interface VnextControlDepartmentWriteAuthority {
   singleton: Generated<boolean>;
 }
 
+export interface VnextControlLocationWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlMigration {
   applied_at: Generated<string>;
   id: string;
@@ -1198,6 +1281,14 @@ export interface DB {
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
   "governance_catalog.validation_run": GovernanceCatalogValidationRun;
   "governance_catalog.version": GovernanceCatalogVersion;
+  "location_master.access": LocationMasterAccess;
+  "location_master.apply_binding": LocationMasterApplyBinding;
+  "location_master.change": LocationMasterChange;
+  "location_master.code": LocationMasterCode;
+  "location_master.input": LocationMasterInput;
+  "location_master.location": LocationMasterLocation;
+  "location_master.verification": LocationMasterVerification;
+  "location_master.version": LocationMasterVersion;
   "organization_master.access": OrganizationMasterAccess;
   "organization_master.bundle_administrator": OrganizationMasterBundleAdministrator;
   "organization_master.bundle_child": OrganizationMasterBundleChild;
@@ -1232,6 +1323,7 @@ export interface DB {
   "vnext_control.campus_write_authority": VnextControlCampusWriteAuthority;
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.department_write_authority": VnextControlDepartmentWriteAuthority;
+  "vnext_control.location_write_authority": VnextControlLocationWriteAuthority;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.object_grant": VnextControlObjectGrant;
   "vnext_control.operating_write_authority": VnextControlOperatingWriteAuthority;

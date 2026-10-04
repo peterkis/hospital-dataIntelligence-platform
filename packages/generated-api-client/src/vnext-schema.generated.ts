@@ -3652,6 +3652,310 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/locations/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageLocationInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/inputs/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readLocationInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyLocationInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewLocationInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planLocationInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewLocationCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveLocationCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyLocationCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeLocationOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcileLocationOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationAsOf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/exact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["diffLocationVersions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationTree"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationCoverage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/locations/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["receiveLocationFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4891,6 +5195,11 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
+                                    status: "LOCATION_CORE";
+                                } | {
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
                                     status: "ORGANIZATION_EVOLUTION_CORE";
                                 } | {
                                     field: string;
@@ -5102,6 +5411,11 @@ export interface operations {
                                     version: string;
                                 }[];
                                 references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "LOCATION_CORE";
+                                } | {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
@@ -5320,6 +5634,11 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
+                                    status: "LOCATION_CORE";
+                                } | {
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
                                     status: "ORGANIZATION_EVOLUTION_CORE";
                                 } | {
                                     field: string;
@@ -5510,6 +5829,11 @@ export interface operations {
                             field: string;
                             target: string;
                             /** @enum {string} */
+                            status: "LOCATION_CORE";
+                        } | {
+                            field: string;
+                            target: string;
+                            /** @enum {string} */
                             status: "ORGANIZATION_EVOLUTION_CORE";
                         } | {
                             field: string;
@@ -5609,6 +5933,11 @@ export interface operations {
                             version: string;
                         }[];
                         references: ({
+                            field: string;
+                            target: string;
+                            /** @enum {string} */
+                            status: "LOCATION_CORE";
+                        } | {
                             field: string;
                             target: string;
                             /** @enum {string} */
@@ -6983,7 +7312,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -7018,7 +7347,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -30594,7 +30923,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -30629,7 +30958,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -37012,6 +37341,11 @@ export interface operations {
                                         field: string;
                                         target: string;
                                         /** @enum {string} */
+                                        status: "LOCATION_CORE";
+                                    } | {
+                                        field: string;
+                                        target: string;
+                                        /** @enum {string} */
                                         status: "ORGANIZATION_EVOLUTION_CORE";
                                     } | {
                                         field: string;
@@ -38534,7 +38868,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -38569,7 +38903,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -39789,6 +40123,11 @@ export interface operations {
                                         version: string;
                                     }[];
                                     references: ({
+                                        field: string;
+                                        target: string;
+                                        /** @enum {string} */
+                                        status: "LOCATION_CORE";
+                                    } | {
                                         field: string;
                                         target: string;
                                         /** @enum {string} */
@@ -41699,7 +42038,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -41734,7 +42073,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -42175,7 +42514,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -42210,7 +42549,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -44556,6 +44895,11 @@ export interface operations {
                                     version: string;
                                 }[];
                                 references: ({
+                                    field: string;
+                                    target: string;
+                                    /** @enum {string} */
+                                    status: "LOCATION_CORE";
+                                } | {
                                     field: string;
                                     target: string;
                                     /** @enum {string} */
@@ -51081,6 +51425,2666 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageLocationInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    jobId: string;
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    campusId: string;
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    /** @enum {unknown} */
+                    timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                    entries: ({
+                        reason: string;
+                        evidenceId: string;
+                        row: {
+                            location_id: string;
+                            location_code: string;
+                            location_name: string;
+                            campus_id: string;
+                            parent_location_id: string;
+                            location_type: string;
+                            floor_label: string;
+                            room_number: string;
+                            address_detail: string;
+                            is_accessible: string;
+                            version_no: string;
+                            valid_from: string;
+                            valid_to: string;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string;
+                            recorded_at: string;
+                        };
+                        /** @enum {string} */
+                        action: "CREATE";
+                        parent: {
+                            /** @enum {string} */
+                            kind: "ALIAS";
+                            clientKey: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "EXISTING";
+                            reference: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                        } | null;
+                    } | {
+                        reason: string;
+                        evidenceId: string;
+                        row: {
+                            location_id: string;
+                            location_code: string;
+                            location_name: string;
+                            campus_id: string;
+                            parent_location_id: string;
+                            location_type: string;
+                            floor_label: string;
+                            room_number: string;
+                            address_detail: string;
+                            is_accessible: string;
+                            version_no: string;
+                            valid_from: string;
+                            valid_to: string;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string;
+                            recorded_at: string;
+                        };
+                        /** @enum {string} */
+                        action: "REVISE";
+                        target: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                    } | {
+                        reason: string;
+                        evidenceId: string;
+                        row: {
+                            location_id: string;
+                            location_code: string;
+                            location_name: string;
+                            campus_id: string;
+                            parent_location_id: string;
+                            location_type: string;
+                            floor_label: string;
+                            room_number: string;
+                            address_detail: string;
+                            is_accessible: string;
+                            version_no: string;
+                            valid_from: string;
+                            valid_to: string;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string;
+                            recorded_at: string;
+                        };
+                        /** @enum {string} */
+                        action: "MOVE_CONTAINMENT";
+                        target: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        parent: {
+                            /** @enum {string} */
+                            kind: "ALIAS";
+                            clientKey: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "EXISTING";
+                            reference: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                        } | null;
+                    } | {
+                        reason: string;
+                        evidenceId: string;
+                        row: {
+                            location_id: string;
+                            location_code: string;
+                            location_name: string;
+                            campus_id: string;
+                            parent_location_id: string;
+                            location_type: string;
+                            floor_label: string;
+                            room_number: string;
+                            address_detail: string;
+                            is_accessible: string;
+                            version_no: string;
+                            valid_from: string;
+                            valid_to: string;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string;
+                            recorded_at: string;
+                        };
+                        /** @enum {string} */
+                        action: "CLOSE";
+                        target: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                    } | {
+                        reason: string;
+                        evidenceId: string;
+                        row: {
+                            location_id: string;
+                            location_code: string;
+                            location_name: string;
+                            campus_id: string;
+                            parent_location_id: string;
+                            location_type: string;
+                            floor_label: string;
+                            room_number: string;
+                            address_detail: string;
+                            is_accessible: string;
+                            version_no: string;
+                            valid_from: string;
+                            valid_to: string;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string;
+                            recorded_at: string;
+                        };
+                        /** @enum {string} */
+                        action: "SPLIT";
+                        target: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            expectedVersion: string;
+                        };
+                        successors: {
+                            row: {
+                                location_id: string;
+                                location_code: string;
+                                location_name: string;
+                                campus_id: string;
+                                parent_location_id: string;
+                                location_type: string;
+                                floor_label: string;
+                                room_number: string;
+                                address_detail: string;
+                                is_accessible: string;
+                                version_no: string;
+                                valid_from: string;
+                                valid_to: string;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string;
+                                recorded_at: string;
+                            };
+                            parent: {
+                                /** @enum {string} */
+                                kind: "ALIAS";
+                                clientKey: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXISTING";
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                            } | null;
+                            evidenceId: string;
+                        }[];
+                    })[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        revisionId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    readLocationInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        campusId: string;
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries: ({
+                            reason: string;
+                            evidenceId: string;
+                            row: {
+                                location_id: string;
+                                location_code: string;
+                                location_name: string;
+                                campus_id: string;
+                                parent_location_id: string;
+                                location_type: string;
+                                floor_label: string;
+                                room_number: string;
+                                address_detail: string;
+                                is_accessible: string;
+                                version_no: string;
+                                valid_from: string;
+                                valid_to: string;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string;
+                                recorded_at: string;
+                            };
+                            /** @enum {string} */
+                            action: "CREATE";
+                            parent: {
+                                /** @enum {string} */
+                                kind: "ALIAS";
+                                clientKey: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXISTING";
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                            } | null;
+                        } | {
+                            reason: string;
+                            evidenceId: string;
+                            row: {
+                                location_id: string;
+                                location_code: string;
+                                location_name: string;
+                                campus_id: string;
+                                parent_location_id: string;
+                                location_type: string;
+                                floor_label: string;
+                                room_number: string;
+                                address_detail: string;
+                                is_accessible: string;
+                                version_no: string;
+                                valid_from: string;
+                                valid_to: string;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string;
+                                recorded_at: string;
+                            };
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                        } | {
+                            reason: string;
+                            evidenceId: string;
+                            row: {
+                                location_id: string;
+                                location_code: string;
+                                location_name: string;
+                                campus_id: string;
+                                parent_location_id: string;
+                                location_type: string;
+                                floor_label: string;
+                                room_number: string;
+                                address_detail: string;
+                                is_accessible: string;
+                                version_no: string;
+                                valid_from: string;
+                                valid_to: string;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string;
+                                recorded_at: string;
+                            };
+                            /** @enum {string} */
+                            action: "MOVE_CONTAINMENT";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            parent: {
+                                /** @enum {string} */
+                                kind: "ALIAS";
+                                clientKey: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXISTING";
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                            } | null;
+                        } | {
+                            reason: string;
+                            evidenceId: string;
+                            row: {
+                                location_id: string;
+                                location_code: string;
+                                location_name: string;
+                                campus_id: string;
+                                parent_location_id: string;
+                                location_type: string;
+                                floor_label: string;
+                                room_number: string;
+                                address_detail: string;
+                                is_accessible: string;
+                                version_no: string;
+                                valid_from: string;
+                                valid_to: string;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string;
+                                recorded_at: string;
+                            };
+                            /** @enum {string} */
+                            action: "CLOSE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                        } | {
+                            reason: string;
+                            evidenceId: string;
+                            row: {
+                                location_id: string;
+                                location_code: string;
+                                location_name: string;
+                                campus_id: string;
+                                parent_location_id: string;
+                                location_type: string;
+                                floor_label: string;
+                                room_number: string;
+                                address_detail: string;
+                                is_accessible: string;
+                                version_no: string;
+                                valid_from: string;
+                                valid_to: string;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string;
+                                recorded_at: string;
+                            };
+                            /** @enum {string} */
+                            action: "SPLIT";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            successors: {
+                                row: {
+                                    location_id: string;
+                                    location_code: string;
+                                    location_name: string;
+                                    campus_id: string;
+                                    parent_location_id: string;
+                                    location_type: string;
+                                    floor_label: string;
+                                    room_number: string;
+                                    address_detail: string;
+                                    is_accessible: string;
+                                    version_no: string;
+                                    valid_from: string;
+                                    valid_to: string;
+                                    record_status: string;
+                                    source_system_id: string;
+                                    source_record_id: string;
+                                    approval_ref: string;
+                                    recorded_at: string;
+                                };
+                                parent: {
+                                    /** @enum {string} */
+                                    kind: "ALIAS";
+                                    clientKey: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "EXISTING";
+                                    reference: {
+                                        /** @enum {string} */
+                                        owner: "location-master";
+                                        id: string;
+                                    };
+                                } | null;
+                                evidenceId: string;
+                            }[];
+                        })[];
+                        sourceArtifactId?: string;
+                        sourceRows?: number[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    verifyLocationInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    inputId: string;
+                    inputDigest: string;
+                    evidenceId: string;
+                    reason: string;
+                    physicalFactsAccepted: boolean;
+                    /** @enum {string} */
+                    policyVersion: "ORG12_CORE_V1";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        verificationId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    previewLocationInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        decision: "PASS" | "BLOCKED";
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        changes: {
+                            action: string;
+                            targetId: string | null;
+                            name: string;
+                            validFrom: string;
+                            validTo: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    planLocationInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    reviewLocationCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        unit: unknown;
+                        approvedBy: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    approveLocationCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    applyLocationCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        candidateId: string;
+                        requestId: string;
+                        facts: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG12";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeLocationOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": ({
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        candidateId: string;
+                        requestId: string;
+                        facts: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG12";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                    }) | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    reconcileLocationOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "MATCHED" | "MISMATCH";
+                        receiptId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getLocationHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        campusId: string;
+                        /** @enum {unknown} */
+                        scope: "NORTH" | "SOUTH";
+                        versions: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                locationCode: string;
+                                locationName: string;
+                                /** @enum {unknown} */
+                                locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floorLabel: string | null;
+                                roomNumber: string | null;
+                                addressDetail: string | null;
+                                isAccessible: ("Y" | "N") | null;
+                                parentId: string | null;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                                contractVersionId: string;
+                                dependencyEvidence: unknown;
+                            };
+                            reason: string;
+                            changeId: string | null;
+                        }[];
+                        codes: string[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getLocationAsOf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        campusId: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        state: "ACTIVE" | "CLOSED" | "NOT_EFFECTIVE";
+                        version: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                locationCode: string;
+                                locationName: string;
+                                /** @enum {unknown} */
+                                locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floorLabel: string | null;
+                                roomNumber: string | null;
+                                addressDetail: string | null;
+                                isAccessible: ("Y" | "N") | null;
+                                parentId: string | null;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                                contractVersionId: string;
+                                dependencyEvidence: unknown;
+                            };
+                            reason: string;
+                            changeId: string | null;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getLocationVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    version: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        number: string;
+                        /** @enum {unknown} */
+                        action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            locationCode: string;
+                            locationName: string;
+                            /** @enum {unknown} */
+                            locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                            floorLabel: string | null;
+                            roomNumber: string | null;
+                            addressDetail: string | null;
+                            isAccessible: ("Y" | "N") | null;
+                            parentId: string | null;
+                            source: {
+                                sourceAlias: string;
+                                sourceVersion: string;
+                                sourceSystemId: string;
+                                sourceRecordedAt: string;
+                                recordLocatorEvidence: {
+                                    inputId: string;
+                                    row: number;
+                                };
+                                recordStatus: string;
+                                approvalReference: string;
+                            };
+                            contractVersionId: string;
+                            dependencyEvidence: unknown;
+                        };
+                        reason: string;
+                        changeId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    diffLocationVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    fromVersion: string;
+                    toVersion: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        before: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                locationCode: string;
+                                locationName: string;
+                                /** @enum {unknown} */
+                                locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floorLabel: string | null;
+                                roomNumber: string | null;
+                                addressDetail: string | null;
+                                isAccessible: ("Y" | "N") | null;
+                                parentId: string | null;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                                contractVersionId: string;
+                                dependencyEvidence: unknown;
+                            };
+                            reason: string;
+                            changeId: string | null;
+                        };
+                        after: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                locationCode: string;
+                                locationName: string;
+                                /** @enum {unknown} */
+                                locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floorLabel: string | null;
+                                roomNumber: string | null;
+                                addressDetail: string | null;
+                                isAccessible: ("Y" | "N") | null;
+                                parentId: string | null;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                                contractVersionId: string;
+                                dependencyEvidence: unknown;
+                            };
+                            reason: string;
+                            changeId: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    listLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    campusId: string;
+                    after?: string;
+                    limit?: number;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            campusId: string;
+                            version: {
+                                id: string;
+                                number: string;
+                                /** @enum {unknown} */
+                                action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                facts: {
+                                    locationCode: string;
+                                    locationName: string;
+                                    /** @enum {unknown} */
+                                    locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                    floorLabel: string | null;
+                                    roomNumber: string | null;
+                                    addressDetail: string | null;
+                                    isAccessible: ("Y" | "N") | null;
+                                    parentId: string | null;
+                                    source: {
+                                        sourceAlias: string;
+                                        sourceVersion: string;
+                                        sourceSystemId: string;
+                                        sourceRecordedAt: string;
+                                        recordLocatorEvidence: {
+                                            inputId: string;
+                                            row: number;
+                                        };
+                                        recordStatus: string;
+                                        approvalReference: string;
+                                    };
+                                    contractVersionId: string;
+                                    dependencyEvidence: unknown;
+                                };
+                                reason: string;
+                                changeId: string | null;
+                            } | null;
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getLocationTree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    campusId: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        campusId: string;
+                        businessAt: string;
+                        items: {
+                            id: string;
+                            version: {
+                                id: string;
+                                number: string;
+                                /** @enum {unknown} */
+                                action: "CREATE" | "REVISE" | "MOVE_CONTAINMENT" | "CLOSE";
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                facts: {
+                                    locationCode: string;
+                                    locationName: string;
+                                    /** @enum {unknown} */
+                                    locationType: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                    floorLabel: string | null;
+                                    roomNumber: string | null;
+                                    addressDetail: string | null;
+                                    isAccessible: ("Y" | "N") | null;
+                                    parentId: string | null;
+                                    source: {
+                                        sourceAlias: string;
+                                        sourceVersion: string;
+                                        sourceSystemId: string;
+                                        sourceRecordedAt: string;
+                                        recordLocatorEvidence: {
+                                            inputId: string;
+                                            row: number;
+                                        };
+                                        recordStatus: string;
+                                        approvalReference: string;
+                                    };
+                                    contractVersionId: string;
+                                    dependencyEvidence: unknown;
+                                };
+                                reason: string;
+                                changeId: string | null;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getLocationCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        covered: boolean;
+                        parts: {
+                            from: string;
+                            to: string | null;
+                            version: string;
+                            versionId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getLocationChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        results: {
+                            /** @enum {string} */
+                            owner: "location-master";
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG12";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        splits: {
+                            predecessorId: string;
+                            predecessorVersion: string;
+                            predecessorVersionId: string;
+                            predecessorHeadVersion: string;
+                            successorId: string;
+                            effectiveAt: string;
+                            sourceRow: number;
+                        }[];
+                        recordedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    receiveLocationFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    input: {
+                        requestId: string;
+                        fileRequestId: string;
+                        job: {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
+                            };
+                            /** @enum {string} */
+                            action: "CREATE";
+                            contractId: string;
+                            contractVersionId: string;
+                            profile: "CORE" | "FULL";
+                        } | {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1";
+                            };
+                            /** @enum {string} */
+                            action: "REVISE";
+                            jobId: string;
+                            expectedCurrentRevision: string;
+                        };
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        campusId: string;
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        retentionSeconds: number;
+                        operations: ({
+                            /** @enum {string} */
+                            action: "CREATE";
+                            parent: {
+                                /** @enum {string} */
+                                kind: "ALIAS";
+                                clientKey: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXISTING";
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                            } | null;
+                            reason: string;
+                            evidenceId: string;
+                        } | {
+                            /** @enum {unknown} */
+                            action: "REVISE" | "CLOSE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            reason: string;
+                            evidenceId: string;
+                        } | {
+                            /** @enum {string} */
+                            action: "MOVE_CONTAINMENT";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                                expectedVersion: string;
+                            };
+                            parent: {
+                                /** @enum {string} */
+                                kind: "ALIAS";
+                                clientKey: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "EXISTING";
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                            } | null;
+                            reason: string;
+                            evidenceId: string;
+                        })[];
+                    };
+                    contentBase64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        jobId: string;
+                        revisionId: string;
+                        sourceArtifactId: string;
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        input: {
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        } | null;
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        validation: unknown;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
                     };
                 };
             };

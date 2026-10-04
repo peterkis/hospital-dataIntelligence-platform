@@ -1,0 +1,42 @@
+import type {FastifyInstance,FastifyRequest} from 'fastify';
+import {Type,type Static,type TSchema} from 'typebox';
+import {openLocation,LocationId,LocationTime,LocationStageSchema,LocationStoredStageSchema,LocationInputSchema,LocationPlanSchema,LocationVerifySchema,LocationReceiveSchema,LocationReadSchema,LocationHistorySchema,LocationExactSchema,LocationListSchema,LocationTreeSchema,LocationWindowSchema,LocationDiffSchema,LocationTypeSchema,locationCheck} from '../../modules/location-master/index.js';
+import {ApproveApplyUnitSchema,ApplyUnitSchema} from '../../modules/governance-catalog/index.js';
+import {LocationVersionNo} from '../../modules/location-master/index.js';
+const closed={additionalProperties:false} as const;
+const Text=Type.String(),End=Type.Union([LocationTime,Type.Null()]),NullableText=Type.Union([Text,Type.Null()]);
+const errors={400:Type.Object({code:Text,message:Text},closed),403:Type.Object({code:Text,message:Text},closed),404:Type.Object({code:Text,message:Text},closed),409:Type.Object({code:Text,message:Text},closed),503:Type.Object({code:Text,message:Text},closed)};
+const Source=Type.Object({sourceAlias:Text,sourceVersion:Text,sourceSystemId:LocationId,sourceRecordedAt:LocationTime,recordLocatorEvidence:Type.Object({inputId:LocationId,row:Type.Integer()},closed),recordStatus:Text,approvalReference:Text},closed);
+export const LocationFactsResponseSchema=Type.Object({locationCode:Text,locationName:Text,locationType:LocationTypeSchema,floorLabel:NullableText,roomNumber:NullableText,addressDetail:NullableText,isAccessible:Type.Union([Type.Enum(['Y','N']),Type.Null()]),parentId:Type.Union([LocationId,Type.Null()]),source:Source,contractVersionId:LocationId,dependencyEvidence:Type.Unknown()},closed);
+export const LocationVersionResponseSchema=Type.Object({id:LocationId,number:Text,action:Type.Enum(['CREATE','REVISE','MOVE_CONTAINMENT','CLOSE']),validFrom:LocationTime,validTo:End,recordedAt:LocationTime,facts:LocationFactsResponseSchema,reason:Text,changeId:Type.Union([LocationId,Type.Null()])},closed);
+const Version=Type.Union([LocationVersionResponseSchema,Type.Null()]);
+const History=Type.Object({id:LocationId,campusId:LocationId,scope:Type.Enum(['NORTH','SOUTH']),versions:Type.Array(LocationVersionResponseSchema),codes:Type.Array(Text)},closed);
+const Fact=Type.Object({owner:Type.Literal('location-master'),id:LocationId,version:Text,source:Type.Optional(Type.Object({dataset:Type.Literal('ORG12'),row:Type.Integer(),step:Text},closed))},closed);
+const Outcome=Type.Union([Type.Object({status:Type.Literal('COMMITTED'),candidateId:LocationId,requestId:LocationId,facts:Type.Array(Fact),recordedAt:LocationTime,responseStatus:Type.Optional(Type.Enum(['DELIVERED','POST_COMMIT_FAILED']))},closed),Type.Object({status:Type.Literal('COMMIT_UNKNOWN'),candidateId:LocationId,requestId:LocationId},closed)]);
+const Issue=Type.Object({row:Type.Integer(),field:Text,code:Text,status:Type.Enum(['FAIL','BLOCKED'])},closed);
+const Candidate=Type.Object({candidateId:LocationId},closed);
+type Owner=ReturnType<typeof openLocation>;
+export interface LocationHttpContext {owner:Owner;actor:(request:FastifyRequest)=>string}
+export function registerLocationRoutes(app:FastifyInstance,context?:LocationHttpContext){
+ const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handle:(owner:Owner,actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/locations/'+path,{preValidation:async r=>{locationCheck(body,r.body);},schema:{operationId,body,response:{200:response,...errors}}},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handle(context.owner,context.actor(r),r.body as Static<S>);});
+ route('inputs','stageLocationInput',LocationStageSchema,Type.Object({inputId:LocationId,revisionId:LocationId,digest:Text},closed),(o,a,b)=>o.stage(a,b));
+ route('inputs/read','readLocationInput',LocationInputSchema,LocationStoredStageSchema,(o,a,b)=>o.readInput(a,b));
+ route('verify','verifyLocationInput',LocationVerifySchema,Type.Object({verificationId:LocationId},closed),(o,a,b)=>o.verify(a,b));
+ route('preview','previewLocationInput',LocationInputSchema,Type.Object({decision:Type.Enum(['PASS','BLOCKED']),issues:Type.Array(Issue),changes:Type.Array(Type.Object({action:Text,targetId:Type.Union([LocationId,Type.Null()]),name:Text,validFrom:LocationTime,validTo:End},closed))},closed),(o,a,b)=>o.preview(a,b));
+ route('plan','planLocationInput',LocationPlanSchema,Type.Object({candidateId:LocationId,digest:Text},closed),(o,a,b)=>o.plan(a,b));
+ route('review','reviewLocationCandidate',Candidate,Type.Object({candidateId:LocationId,digest:Text,unit:Type.Unknown(),approvedBy:NullableText},closed),(o,a,b)=>o.readApplyCandidate(a,b));
+ route('approve','approveLocationCandidate',ApproveApplyUnitSchema,Type.Object({candidateId:LocationId,approvedBy:Text},closed),(o,a,b)=>o.approveApplyUnit(a,b));
+ route('apply','applyLocationCandidate',ApplyUnitSchema,Outcome,(o,a,b)=>o.applyUnit(a,b));
+ route('resume','resumeLocationOutcome',ApplyUnitSchema,Type.Union([Outcome,Type.Null()]),(o,a,b)=>o.resumeOutcome(a,b));
+ route('reconcile','reconcileLocationOutcome',ApplyUnitSchema,Type.Object({status:Type.Enum(['MATCHED','MISMATCH']),receiptId:LocationId},closed),(o,a,b)=>o.reconcileCommittedUnit(a,b));
+ route('history','getLocationHistory',LocationHistorySchema,History,(o,a,b)=>o.history(a,b));
+ route('query','getLocationAsOf',LocationReadSchema,Type.Object({id:LocationId,campusId:LocationId,head:Text,state:Type.Enum(['ACTIVE','CLOSED','NOT_EFFECTIVE']),version:Version},closed),(o,a,b)=>o.read(a,b));
+ route('exact','getLocationVersion',LocationExactSchema,LocationVersionResponseSchema,(o,a,b)=>o.exact(a,b));
+ route('diff','diffLocationVersions',LocationDiffSchema,Type.Object({id:LocationId,before:LocationVersionResponseSchema,after:LocationVersionResponseSchema},closed),(o,a,b)=>o.diff(a,b));
+ route('list','listLocations',LocationListSchema,Type.Object({items:Type.Array(Type.Object({id:LocationId,campusId:LocationId,version:Version},closed)),nextAfterId:Type.Union([LocationId,Type.Null()])},closed),(o,a,b)=>o.list(a,b));
+ route('tree','getLocationTree',LocationTreeSchema,Type.Object({campusId:LocationId,businessAt:LocationTime,items:Type.Array(Type.Object({id:LocationId,version:LocationVersionResponseSchema},closed))},closed),(o,a,b)=>o.tree(a,b));
+ route('coverage','getLocationCoverage',LocationWindowSchema,Type.Object({id:LocationId,covered:Type.Boolean(),parts:Type.Array(Type.Object({from:LocationTime,to:End,version:Text,versionId:LocationId},closed))},closed),(o,a,b)=>o.coverage(a,b));
+ route('changes','getLocationChange',LocationHistorySchema,Type.Object({id:LocationId,results:Type.Array(Fact),splits:Type.Array(Type.Object({predecessorId:LocationId,predecessorVersion:LocationVersionNo,predecessorVersionId:LocationId,predecessorHeadVersion:LocationVersionNo,successorId:LocationId,effectiveAt:LocationTime,sourceRow:Type.Integer()},closed)),recordedAt:LocationTime},closed),(o,a,b)=>o.readChange(a,b));
+ const FileBody=Type.Object({input:LocationReceiveSchema,contentBase64:Type.String({minLength:4,maxLength:1398104,pattern:'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'})},closed);
+ app.post<{Body:Static<typeof FileBody>}>('/api/vnext/locations/files',{bodyLimit:1500000,preValidation:async r=>{locationCheck(FileBody,r.body);},schema:{operationId:'receiveLocationFile',body:FileBody,response:{200:Type.Object({jobId:LocationId,revisionId:LocationId,sourceArtifactId:LocationId,structuralStatus:Type.Enum(['PARSED','REJECTED']),input:Type.Union([Type.Object({inputId:LocationId,revisionId:LocationId,digest:Text},closed),Type.Null()]),issues:Type.Array(Issue),validation:Type.Unknown()},closed),...errors}}},async r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');const bytes=Buffer.from(r.body.contentBase64,'base64');try{return await context.owner.receiveFile(context.actor(r),r.body.input,bytes);}finally{bytes.fill(0);}});
+}
