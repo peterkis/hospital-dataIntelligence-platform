@@ -180,6 +180,28 @@ test('a later attribute revision is allowed when an old floor period does not in
  expect((await f.owner.read('maker',{id:room.id,businessAt:'2026-05-01T00:00:00'})).version!.facts.locationName).toBe('TEST later rename');expect((await f.owner.read('maker',{id:room.id,businessAt:'2026-05-01T00:00:00'})).version!.facts.parentId).toBe(created.facts[0]!.id);
 });
 
+test('review regression: attribute revision after a bounded move uses the resumed parent',async()=>{
+ const {campusId,outcome,room}=await populated(),building=outcome.facts[1]!.id,newFloor=f.entry(campusId,'FLOOR','BOUNDED_FLOOR',null);if(newFloor.action!=='CREATE')throw new Error();newFloor.parent={kind:'EXISTING',reference:{owner:'location-master',id:building}};newFloor.row.parent_location_id=building;
+ const created=await f.apply(await f.input(campusId,[newFloor])),move=revision(room,'MOVE_CONTAINMENT','2027-01-01T00:00:00');if(move.action!=='MOVE_CONTAINMENT')throw new Error();move.parent={kind:'EXISTING',reference:{owner:'location-master',id:created.facts[0]!.id}};move.row.parent_location_id=created.facts[0]!.id;move.row.valid_to='2027-06-01T00:00:00';await f.apply(await f.input(campusId,[move]));
+ const current=await f.owner.history('maker',{id:room.id}),revise=revision(current,'REVISE','2028-01-01T00:00:00');revise.row.parent_location_id=room.versions[0]!.facts.parentId!;revise.row.location_name='TEST resumed floor rename';
+ const result=await f.apply(await f.input(campusId,[revise]));expect(result.status).toBe('COMMITTED');expect((await f.owner.read('maker',{id:room.id,businessAt:'2028-02-01T00:00:00'})).version!.facts.parentId).toBe(room.versions[0]!.facts.parentId);
+ expect((await f.owner.read('maker',{id:room.id,businessAt:'2027-03-01T00:00:00'})).version!.facts.parentId).toBe(created.facts[0]!.id);
+});
+
+test('review regression: protected grant revocation blocks input and frozen candidate release',async()=>{
+ const campusId=await f.newCampus(),value=await f.input(campusId,f.tree(campusId)),staged=await f.owner.stage('maker',value),request=await f.prepare(value);
+ const grants=peer(receipt.name,`SELECT coalesce(jsonb_agg(g),'[]')::text FROM vnext_control.protected_grant g WHERE actor_code IN ('maker','reviewer') AND dataset_id=${quote(f.dataset.id)}::uuid AND permission='READ';`);
+ peer(receipt.name,`DELETE FROM vnext_control.protected_grant WHERE actor_code IN ('maker','reviewer') AND dataset_id=${quote(f.dataset.id)}::uuid AND permission='READ';`);
+ try{await expect(f.owner.readInput('maker',{inputId:staged.inputId})).rejects.toThrow('ACCESS_DENIED');await expect(f.owner.readApplyCandidate('reviewer',{candidateId:request.candidateId})).rejects.toThrow('ACCESS_DENIED');}
+ finally{peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT * FROM jsonb_populate_recordset(NULL::vnext_control.protected_grant,${quote(grants)}::jsonb);`);}
+});
+
+test('approved room class includes physical WAREHOUSE splitting without inventory operations',async()=>{
+ const campusId=await f.newCampus(),entries=f.tree(campusId);entries[3]!.row.location_type='WAREHOUSE';entries[3]!.row.room_number='';const original=await f.apply(await f.input(campusId,entries)),warehouse=await f.owner.history('maker',{id:original.facts[3]!.id}),close=revision(warehouse,'CLOSE');if(close.action!=='CLOSE')throw new Error();const parent=warehouse.versions[0]!.facts.parentId!;
+ const successors=['WARE_A','WARE_B'].map(alias=>({row:{...f.row(campusId,'WAREHOUSE',alias,parent),valid_from:close.row.valid_from},parent:{kind:'EXISTING' as const,reference:{owner:'location-master' as const,id:parent}},evidenceId:f.artifact.artifactId}));
+ const result=await f.apply(await f.input(campusId,[{...close,action:'SPLIT',successors}]));expect(result.facts).toHaveLength(3);expect(result.facts.every(fact=>fact.owner==='location-master')).toBe(true);expect((await f.owner.tree('maker',{campusId,businessAt:'2026-04-01T00:00:00'})).items.filter(item=>item.version.facts.locationType==='WAREHOUSE')).toHaveLength(2);
+});
+
 test('restricted input and frozen candidate reads check currently retained exact source permissions',async()=>{
  const campusId=await f.newCampus(),value=await f.input(campusId,f.tree(campusId)),staged=await f.owner.stage('maker',value),request=await f.prepare(value);
  const grants=peer(receipt.name,`SELECT coalesce(jsonb_agg(g),'[]')::text FROM vnext_control.object_grant g WHERE actor_code IN ('maker','reviewer') AND object_id=${quote(f.source.id)}::uuid AND permission='READ';`);
