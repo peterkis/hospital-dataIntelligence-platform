@@ -6,6 +6,7 @@ import {CampusCoverageSchema,type CampusCoverageInput,CampusPinSchema,type Campu
 import {check,type Scope} from './input.js';
 export interface CampusEvent {id:string;number:number;action:CampusCommand['action'];valid_from:string;valid_to:string|null;recorded_at:string;input_id:string;facts:CampusFacts|null;state:'PLANNING'|'TRIAL_RUNNING'|'RUNNING'|'SUSPENDED'|'RETIRED'|null;planned_opening_at:string|null}
 export interface CampusSnapshot {id:string;scope:string;events:CampusEvent[]}
+export interface LocationCampusCoverage {campusId:string;scope:string;covered:boolean;segments:Array<{versionId:string;version:string;from:string;to:string|null}>;retiredAt:string|null}
 type Root=<T>(work:(scope:Scope)=>Promise<T>)=>Promise<T>;
 const stamp=(s:string)=>localTime(s.replace(' ','T'));
 const reference=(id:string)=>({owner:'organization-master/campus' as const,id});
@@ -36,6 +37,11 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
    if(!e)throw new Error('NOT_FOUND');return {...publicEvent(e),facts:e.facts!};
   };
   return {
+   async readLocationCampusCoverage(actor:string,input:{id:string;validFrom:string;validTo:string|null}){
+    check(Id,input.id);const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);
+    if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');
+    return run(actor,async scope=>(await sql<{r:LocationCampusCoverage}>`select organization_master.location_coverage(${actor},${input.id}::uuid,${from}::timestamp,${to}::timestamp) r`.execute(scope)).rows[0]!.r);
+   },
    async resolveCampusReference(actor:string,input:CampusResolveInput){
     check(CampusResolveSchema,input);input=structuredClone(input);unique(input.references);
     return run(actor,async(scope,observedAt)=>{

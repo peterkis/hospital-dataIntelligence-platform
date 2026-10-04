@@ -6,7 +6,7 @@ import {localTime,covered,subtract,intersect} from '../time.js';
 import {CampusCommandSchema,InputSchema,Id,type CampusCommand,type CampusFacts} from './contracts.js';
 import {campusInput,check,type Scope} from './input.js';
 export * from './contracts.js';
-export type {CampusEvent,CampusSnapshot,CampusReferencePort} from './reader.js';
+export type {CampusEvent,CampusSnapshot,CampusReferencePort,LocationCampusCoverage} from './reader.js';
 import {createCampusReader,campusOperationAt,type CampusEvent,type CampusSnapshot} from './reader.js';
 export * from './reference-contracts.js';
 const stamp=(s:string)=>localTime(s.replace(' ','T'));

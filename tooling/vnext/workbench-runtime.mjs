@@ -1,3 +1,5 @@
+import {openLocation} from '../../apps/governance-api/src/modules/location-master/index.ts';
+import {assertLocationProvisioned} from './p3-06-provisioning.mjs';
 import {assertDepartmentLifecycleProvisioned} from './department-lifecycle-provisioning.mjs';
 import {assertDepartmentImpactsProvisioned} from './department-impact-provisioning.mjs';
 import {openDepartment,openDepartmentWorkspace,openHierarchy,openOrganizationMappings,openOrganizationIdentifiers,openOrganizationEvolutions,openDepartmentLifecycle} from '../../apps/governance-api/src/modules/department-master/index.ts';
@@ -47,11 +49,12 @@ export async function startWorkbench({
   persistent = false,
   upgrade = false,
   finite = false,
+  port = 4317,
 } = {}) {
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -66,6 +69,7 @@ export async function startWorkbench({
     await identifiers?.close();
     await evolutions?.close();
     await departmentLifecycle?.close();
+    await location?.close();
     await catalog?.close();
     if (owned) {
       if (finite)
@@ -122,6 +126,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=122)await assertDepartmentImpactsProvisioned(connection);
     if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider);}
     if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider);}
+    if(persistent&&persistentPrefix>=150){await assertLocationProvisioned(connection,provider);location=openLocation(connection,provider,campus.references);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -184,6 +189,7 @@ export async function startWorkbench({
       evolutions?{owner:evolutions,actor:r=>syntheticActor(r.headers)}:undefined,
       departmentLifecycle?{owner:departmentLifecycle,actor:r=>syntheticActor(r.headers)}:undefined,
       departmentWorkspace?{owner:departmentWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
+      location?{owner:location,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),
@@ -200,7 +206,7 @@ export async function startWorkbench({
       app.get("/admin/vnext/" + path, (_req, reply) =>
         reply.sendFile("vnext.html"),
       );
-    await app.listen({ host: "127.0.0.1", port: 4317 });
+    const url=await app.listen({ host: "127.0.0.1", port });
     return {
       app,
       catalog,
@@ -209,7 +215,7 @@ export async function startWorkbench({
       receiptPath: owned?.receiptPath,
       setup,
       close,
-      url: "http://127.0.0.1:4317",
+      url,
       finite,
     };
   } catch (error) {

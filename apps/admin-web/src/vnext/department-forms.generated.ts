@@ -850,6 +850,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1083,6 +1089,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
                                     ]
                                   }
                                 ]
@@ -3085,6 +3097,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3318,6 +3336,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
                                     ]
                                   }
                                 ]
@@ -4359,6 +4383,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4592,6 +4622,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
                                     ]
                                   }
                                 ]
@@ -5402,6 +5438,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -5635,6 +5677,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_ORGANIZATION_IDENTIFIER_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_V1"
                                     ]
                                   }
                                 ]

@@ -3,7 +3,7 @@
   "defaultSchemas": [
     "__qualified_schema_only__"
   ],
-  "includePattern": "{vnext_control,governance_catalog,organization_master,department_master}.*",
+  "includePattern": "{vnext_control,governance_catalog,organization_master,department_master,location_master}.*",
   "dateParser": "string",
   "numericParser": "string",
   "typeMapping": {

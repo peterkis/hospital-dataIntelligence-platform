@@ -4,18 +4,21 @@
     "vnext_control": "catalog-control-plane",
     "governance_catalog": "governance-catalog",
     "organization_master": "organization-master",
-    "department_master": "department-master"
+    "department_master": "department-master",
+    "location_master": "location-master"
   },
   "publicOwner": "apps/governance-api/src/modules/governance-catalog/index.ts",
   "migrationRole": "postgres via fixed local WSL peer",
   "applicationRole": "hdi_prototype",
   "businessInstanceSchemas": [
     "organization_master",
-    "department_master"
+    "department_master",
+    "location_master"
   ],
   "domainOwners": {
     "organization_master": "apps/governance-api/src/modules/organization-master/index.ts",
-    "department_master": "apps/governance-api/src/modules/department-master/index.ts"
+    "department_master": "apps/governance-api/src/modules/department-master/index.ts",
+    "location_master": "apps/governance-api/src/modules/location-master/index.ts"
   },
   "operatingCapabilities": {
     "owner": "organization-master",
