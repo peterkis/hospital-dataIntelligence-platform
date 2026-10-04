@@ -50,3 +50,13 @@ new Nursing page and actual service restart retain their separate pending states
   unbounded windows retaining their obligations; startup gates pass210/210.
   Head addc5f7's 14 local regressions and both hosted CI workflows passed. The
   later head's upgrade/deployment, review and CI must still complete before merge.
+- 2026-10-05: PR30 review round3 found nullable nursing input fields were string
+  only. Direct HTTP and JSON-file REDs now reproduce the rejection. The input
+  TypeBox/OpenAPI/client admit null for care_level/office_phone; Nursing routes use
+  the shared exact TypeBox validator to prevent AJV null-to-empty coercion.
+  STRICT_NURSING_V1 JSON normalizes only those two null cells to blank text while
+  retaining original null lexemes and raw artifacts. Other fields/scalars/policies
+  remain strict. Fresh32/32, nursing unit8/8, parser62/62, typecheck and current
+  contract checks pass. No database migration is added beyond0165. Current-head
+  full regression, retained runtime verification and fourth external review/CI
+  remain merge gates; earlier fixture/coercion failures are retained separately.

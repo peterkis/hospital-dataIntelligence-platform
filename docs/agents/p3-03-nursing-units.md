@@ -27,8 +27,12 @@ withdrawal changes the current evaluation while earlier acceptance stays intact.
 
 All ORG09 15 fields are retained. Nursing ID is a source creation alias; source
 version, status, approval and recorded time are provenance. Source locators remain
-protected. care_level and office_phone are nullable text. Native API dates are
-Asia/Shanghai local with microseconds; source +08 conversion requires its exact
+protected. care_level and office_phone are nullable text.
+Direct JSON accepts literal null for those two fields and retains it in protected
+staged input. STRICT_NURSING_V1 file JSON normalizes those null values to its blank
+text-cell representation while retaining the original null lexemes/raw artifact;
+the Owner publishes null facts. Other fields/scalars and parser policies stay strict.
+Native API dates are Asia/Shanghai local with microseconds; source +08 conversion requires its exact
 published rule. ORG09_CORE_V1 is separate from FULL, which remains blocked.
 
 | Source field | Owner responsibility |

@@ -57394,8 +57394,8 @@ export interface operations {
                             nursing_name: string;
                             campus_id: string;
                             managing_org_id: string;
-                            care_level: string;
-                            office_phone: string;
+                            care_level: string | null;
+                            office_phone: string | null;
                             version_no: string;
                             valid_from: string;
                             valid_to: string;
@@ -57429,8 +57429,8 @@ export interface operations {
                             nursing_name: string;
                             campus_id: string;
                             managing_org_id: string;
-                            care_level: string;
-                            office_phone: string;
+                            care_level: string | null;
+                            office_phone: string | null;
                             version_no: string;
                             valid_from: string;
                             valid_to: string;
@@ -57470,8 +57470,8 @@ export interface operations {
                             nursing_name: string;
                             campus_id: string;
                             managing_org_id: string;
-                            care_level: string;
-                            office_phone: string;
+                            care_level: string | null;
+                            office_phone: string | null;
                             version_no: string;
                             valid_from: string;
                             valid_to: string;
@@ -57610,8 +57610,8 @@ export interface operations {
                                 nursing_name: string;
                                 campus_id: string;
                                 managing_org_id: string;
-                                care_level: string;
-                                office_phone: string;
+                                care_level: string | null;
+                                office_phone: string | null;
                                 version_no: string;
                                 valid_from: string;
                                 valid_to: string;
@@ -57645,8 +57645,8 @@ export interface operations {
                                 nursing_name: string;
                                 campus_id: string;
                                 managing_org_id: string;
-                                care_level: string;
-                                office_phone: string;
+                                care_level: string | null;
+                                office_phone: string | null;
                                 version_no: string;
                                 valid_from: string;
                                 valid_to: string;
@@ -57686,8 +57686,8 @@ export interface operations {
                                 nursing_name: string;
                                 campus_id: string;
                                 managing_org_id: string;
-                                care_level: string;
-                                office_phone: string;
+                                care_level: string | null;
+                                office_phone: string | null;
                                 version_no: string;
                                 valid_from: string;
                                 valid_to: string;

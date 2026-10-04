@@ -413,7 +413,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
   return tables;
 }
 
-function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<ParserResult,'issues'>>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false,rowIndependent=false){
+function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<ParserResult,'issues'>>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false,rowIndependent=false,nursingNullableText=false){
     for (const [index, source] of objects.entries()) {
       const obj=source.values;
       const row: Record<string,string> = Object.create(null); const rowNum = index + 1, sourceRow = physicalRows[index] ?? rowNum;
@@ -424,14 +424,15 @@ function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<P
         const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code];
         const text = typeof value==='string'?value:value?.lexeme??'';
+        const nullableNull=nursingNullableText&&format==='JSON'&&(f.code==='care_level'||f.code==='office_phone')&&typeof value!=='string'&&value?.lexeme==='null';
         result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]?.[column-1] ?? 'inlineStr' : format});
         rowCheck(()=>{
-          if(typeof value!=='string')fail('TEXT_CELL_REQUIRED',sourceRow,column);
+          if(typeof value!=='string'&&!nullableNull)fail('TEXT_CELL_REQUIRED',sourceRow,column);
           assertTextSafety(text,sourceRow,column);
           if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
           if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
         });
-        row[f.code] = text;
+        row[f.code] = nullableNull?'':text;
       }
       rowCheck(()=>{if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow);});
       if(rowIssues.length&&result.issues)for(const issue of rowIssues)result.issues.push({code:issue.code,row:issue.row,column:issue.column,...(issue.sheet?{sheet:issue.sheet}:{})});
@@ -458,7 +459,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',false,policy==='STRICT_DEPARTMENT_V1'||policy==='STRICT_ORGANIZATION_MAPPING_V1'||policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'||policy==='STRICT_LOCATION_V1'||policy==='STRICT_UNIT_V1'||policy==='STRICT_NURSING_V1');
+    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',false,policy==='STRICT_DEPARTMENT_V1'||policy==='STRICT_ORGANIZATION_MAPPING_V1'||policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'||policy==='STRICT_LOCATION_V1'||policy==='STRICT_UNIT_V1'||policy==='STRICT_NURSING_V1',policy==='STRICT_NURSING_V1');
     result.structuralStatus = 'PARSED';
   } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};

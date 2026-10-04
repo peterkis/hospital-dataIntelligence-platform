@@ -15,7 +15,9 @@ const Outcome=Type.Union([Type.Object({status:Type.Literal('COMMITTED'),candidat
 const Issue=Type.Object({row:Type.Integer(),field:Text,code:Text,status:Type.Enum(['FAIL','BLOCKED'])},closed),Candidate=Type.Object({candidateId:NursingId},closed);
 export interface NursingUnitHttpContext {owner:NursingUnitOwner;actor:(request:FastifyRequest)=>string}
 export function registerNursingUnitRoutes(app:FastifyInstance,context?:NursingUnitHttpContext){
- const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handle:(owner:NursingUnitOwner,actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/nursing-units/'+path,{preValidation:async r=>{nursingCheck(body,r.body);},schema:{operationId,body,response:{200:response,...errors}}},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handle(context.owner,context.actor(r),r.body as Static<S>);});
+ // The shared TypeBox check keeps exact raw input; AJV's default coercion would
+ // turn nullable text into empty strings before it reaches protected staging.
+ const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handle:(owner:NursingUnitOwner,actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/nursing-units/'+path,{validatorCompiler:({schema})=>input=>{try{nursingCheck(schema,input);return {value:input};}catch(error){return {error:error instanceof Error?error:new Error('CLOSED_INPUT_REQUIRED')};}},schema:{operationId,body,response:{200:response,...errors}}},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handle(context.owner,context.actor(r),r.body as Static<S>);});
  route('inputs','stageNursingUnitInput',NursingStageSchema,Type.Object({inputId:NursingId,revisionId:NursingId,digest:Text},closed),(o,a,b)=>o.stage(a,b));
  route('inputs/read','readNursingUnitInput',NursingInputSchema,NursingStoredStageSchema,(o,a,b)=>o.readInput(a,b));
  route('verify','verifyNursingUnitInput',NursingVerifySchema,Type.Object({verificationId:NursingId},closed),(o,a,b)=>o.verify(a,b));
