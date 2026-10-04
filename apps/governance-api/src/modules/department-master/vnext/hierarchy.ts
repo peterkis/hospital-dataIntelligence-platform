@@ -313,6 +313,10 @@ export function openHierarchy(connection: string, provider?: KeyProviderPort) {
     };
   };
   const transactionCommands=(run:typeof root)=>({
+    async authorizeCandidateAccess(actor:string,input:{candidateId:string}) {
+      if(!Check(Type.Object({candidateId:HierarchyId},closed),input))throw new Error('CLOSED_INPUT_REQUIRED');
+      await run(async scope=>{const record=await readCandidate(scope,actor,input.candidateId);const payload=unseal<HierarchyCandidateInput|ClosureInput>(record,provider);if(!Check(HierarchyFrozenCandidateSchema,payload))throw new Error('PAYLOAD_UNAVAILABLE');});
+    },
     async createHierarchyView(actor: string, input: CreateHierarchyViewInput): Promise<{ viewId: string; sourceClientKey: string; viewCode: string }> {
       if (!Check(CreateHierarchyViewSchema, input)) throw new Error('CLOSED_INPUT_REQUIRED');
       assertCoreProfile(input);

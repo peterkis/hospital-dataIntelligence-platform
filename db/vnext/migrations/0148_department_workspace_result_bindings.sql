@@ -3,11 +3,31 @@ SELECT pg_advisory_xact_lock(901002);
 -- Current authority and immutable result coordinates, without latest-result business admission.
 CREATE FUNCTION department_master.impact_result_access(p_actor text,p_ref jsonb,p_campus text) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE snapshot jsonb;v jsonb;outcome jsonb;expected_owner text;actual_scope text:=p_campus;h department_master.hierarchy_view_version;c jsonb;n record;relation_version department_master.campus_relation_version;complete boolean;
+DECLARE snapshot jsonb;v jsonb;outcome jsonb;expected_owner text;actual_scope text:=p_campus;h department_master.hierarchy_view_version;c jsonb;n record;relation_version department_master.campus_relation_version;complete boolean;resolved_id uuid;
 BEGIN
- IF p_ref->>'id' IS NULL OR p_ref->>'owner' IS NULL THEN RETURN;END IF;
- PERFORM department_master.evolution_authorize(p_actor,p_campus,'READ');
+ IF p_ref->>'owner' IS NULL THEN RETURN;END IF;
+ -- Complete proof admission waits for caller-entered coordinates; known partial
+ -- coordinates still resolve and authorize their actual original Owner objects.
  complete:=p_ref ?& ARRAY['id','owner','versionId','candidateId','requestId'];
+ IF p_ref->>'id' IS NULL AND p_ref->>'versionId' IS NOT NULL THEN
+  CASE p_ref->>'owner'
+   WHEN 'SOURCE_MAPPING' THEN SELECT mapping_id INTO resolved_id FROM department_master.organization_mapping_version WHERE id=(p_ref->>'versionId')::uuid;
+   WHEN 'IDENTIFIER' THEN SELECT identifier_id INTO resolved_id FROM department_master.organization_identifier_version WHERE id=(p_ref->>'versionId')::uuid;
+   WHEN 'HIERARCHY' THEN SELECT view_id INTO resolved_id FROM department_master.hierarchy_view_version WHERE id=(p_ref->>'versionId')::uuid;
+   WHEN 'CAMPUS_RELATION' THEN SELECT relation_id INTO resolved_id FROM department_master.campus_relation_version WHERE id=(p_ref->>'versionId')::uuid;
+   ELSE RAISE EXCEPTION 'CLOSED_INPUT_REQUIRED';
+  END CASE;
+  IF resolved_id IS NULL THEN RAISE EXCEPTION 'IMPACT_RESULT_MISMATCH';END IF;
+  p_ref:=p_ref||jsonb_build_object('id',resolved_id);
+ ELSIF p_ref->>'id' IS NULL AND p_ref->>'owner'='HIERARCHY' AND p_ref->>'candidateId' IS NOT NULL THEN
+  c:=department_master.hierarchy_read(p_actor,'CANDIDATE',jsonb_build_object('id',p_ref->>'candidateId'));
+  IF c IS NULL THEN RAISE EXCEPTION 'IMPACT_RESULT_MISMATCH';END IF;
+  p_ref:=p_ref||jsonb_build_object('id',c->>'viewId');
+ END IF;
+ -- Other candidate-only references are authorized by the original transaction-scoped
+ -- Owner coordinator, including its frozen input/target/source checks, before return.
+ IF p_ref->>'id' IS NULL THEN RETURN;END IF;
+ PERFORM department_master.evolution_authorize(p_actor,p_campus,'READ');
  CASE p_ref->>'owner'
  WHEN 'SOURCE_MAPPING' THEN
   snapshot:=department_master.mapping_snapshot(p_actor,(p_ref->>'id')::uuid);

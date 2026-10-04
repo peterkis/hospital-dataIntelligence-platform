@@ -537,6 +537,21 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
         },
       },
     });
+    for (const result of [
+      {
+        owner: "IDENTIFIER",
+        versionId: (
+          await identifier.history("maker", { id, campus: "NORTH" })
+        ).versions.at(-1)!.id,
+      },
+      { owner: "IDENTIFIER", candidateId: candidate.candidateId },
+    ])
+      requests.push({
+        requestId: randomUUID(),
+        kind: "IMPACT",
+        campus: "NORTH",
+        payload: { disposition: { kind: "CLOSE_RELATION", result } },
+      });
     for (const request of requests) {
       const written = await owner.saveDraft("maker", request);
       expect(
@@ -596,6 +611,24 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
           inputId: mappingStage.inputId,
           requestId: mappingRequest,
         });
+      const pendingOriginal = {
+        requestId: randomUUID(),
+        kind: "IMPACT" as const,
+        campus: "NORTH" as const,
+        payload: {
+          disposition: {
+            kind: "NEW_RELATION",
+            result: {
+              owner: "SOURCE_MAPPING",
+              candidateId: mappingCandidate.candidateId,
+            },
+          },
+        },
+      };
+      const pendingSaved = await owner.saveDraft("maker", pendingOriginal);
+      expect(
+        (await owner.readDraft("maker", { id: pendingSaved.id })).content,
+      ).toEqual(pendingOriginal);
       await mapping.readApplyCandidate("reviewer", {
         candidateId: mappingCandidate.candidateId,
       });
@@ -606,10 +639,21 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
       });
       if (mappingApplied.status !== "COMMITTED")
         throw new Error("COMMITTED_RESULT_REQUIRED");
-      return { mappingRequest, mappingCandidate, mappingApplied };
+      return {
+        mappingRequest,
+        mappingCandidate,
+        mappingApplied,
+        pendingOriginal,
+        pendingSaved,
+      };
     };
-    const { mappingRequest, mappingCandidate, mappingApplied } =
-      await commitMapping(row);
+    const {
+      mappingRequest,
+      mappingCandidate,
+      mappingApplied,
+      pendingOriginal,
+      pendingSaved,
+    } = await commitMapping(row);
     const mappingId = mappingApplied.facts[0]!.id;
     const completeResult = {
       owner: "SOURCE_MAPPING",
@@ -634,6 +678,21 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
       },
     };
     const completeSaved = await owner.saveDraft("maker", completeOriginal);
+    const versionOriginal = {
+      requestId: randomUUID(),
+      kind: "IMPACT" as const,
+      campus: "NORTH" as const,
+      payload: {
+        disposition: {
+          kind: "NEW_RELATION",
+          result: {
+            owner: "SOURCE_MAPPING",
+            versionId: completeResult.versionId,
+          },
+        },
+      },
+    };
+    const versionSaved = await owner.saveDraft("maker", versionOriginal);
     for (const key of ["versionId", "candidateId", "requestId"] as const) {
       const incorrect = {
         ...completeOriginal,
@@ -694,6 +753,8 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
       for (const draft of [
         { id: stored.id, requestId: original.requestId },
         { id: completeSaved.id, requestId: completeOriginal.requestId },
+        { id: pendingSaved.id, requestId: pendingOriginal.requestId },
+        { id: versionSaved.id, requestId: versionOriginal.requestId },
       ]) {
         expect
           .soft(
@@ -934,6 +995,22 @@ test("P2-07 SOUTH private impact draft authorizes its actual NORTH campus relati
       (await owner.recoverDraft("maker", { requestId: original.requestId }))
         ?.id,
     ).toBe(saved.id);
+    const partialRelations = [];
+    for (const result of [
+      { owner: "CAMPUS_RELATION", versionId: relation.versions.at(-1)!.id },
+      { owner: "CAMPUS_RELATION", candidateId: candidate.candidateId },
+    ]) {
+      const request = {
+        ...original,
+        requestId: randomUUID(),
+        payload: { disposition: { kind: "CLOSE_RELATION", result } },
+      };
+      const written = await owner.saveDraft("maker", request);
+      expect(
+        (await owner.readDraft("maker", { id: written.id })).content,
+      ).toEqual(request);
+      partialRelations.push({ id: written.id, requestId: request.requestId });
+    }
     peer(
       receipt.name,
       `DELETE FROM organization_master.operating_access WHERE actor='maker' AND subject_id=${quote(subject.id)}::uuid AND campus_id=${quote(campus.id)}::uuid AND permission='READ';`,
@@ -948,6 +1025,14 @@ test("P2-07 SOUTH private impact draft authorizes its actual NORTH campus relati
       await expect(
         owner.recoverDraft("maker", { requestId: original.requestId }),
       ).rejects.toThrow("ACCESS_DENIED");
+      for (const partial of partialRelations) {
+        await expect(
+          owner.readDraft("maker", { id: partial.id }),
+        ).rejects.toThrow("ACCESS_DENIED");
+        await expect(
+          owner.recoverDraft("maker", { requestId: partial.requestId }),
+        ).rejects.toThrow("ACCESS_DENIED");
+      }
     } finally {
       scenario.grantPair(subject.id, campus.id);
     }
@@ -1627,6 +1712,22 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
       "maker",
       publicationReference,
     );
+    const partialHierarchy = [];
+    for (const result of [
+      { owner: "HIERARCHY", versionId: frozen.view.versionId },
+      { owner: "HIERARCHY", candidateId: submission.candidateId },
+    ]) {
+      const original = {
+        ...publicationReference,
+        requestId: randomUUID(),
+        payload: { disposition: { kind: "NEW_RELATION", result } },
+      };
+      const written = await owner.saveDraft("maker", original);
+      expect(
+        (await owner.readDraft("maker", { id: written.id })).content,
+      ).toEqual(original);
+      partialHierarchy.push({ id: written.id, requestId: original.requestId });
+    }
     const groupRequest = {
       requestId: randomUUID(),
       kind: "HIERARCHY" as const,
@@ -1687,6 +1788,14 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
           version: frozen.view.version,
         }),
       ).rejects.toThrow("ACCESS_DENIED");
+      for (const partial of partialHierarchy) {
+        await expect(
+          owner.readDraft("maker", { id: partial.id }),
+        ).rejects.toThrow("ACCESS_DENIED");
+        await expect(
+          owner.recoverDraft("maker", { requestId: partial.requestId }),
+        ).rejects.toThrow("ACCESS_DENIED");
+      }
       expect
         .soft(
           await owner.readDraft("maker", { id: groupSaved.id }).then(
@@ -2046,6 +2155,28 @@ test("P2-07 private impact draft records one real disposition proposal without a
       requestId,
     });
     if (outcome.status !== "COMMITTED") throw new Error("COMMIT_REQUIRED");
+    const pendingEvolutionRelation = {
+      requestId: randomUUID(),
+      kind: "IMPACT" as const,
+      campus: "NORTH" as const,
+      payload: {
+        disposition: {
+          kind: "NEW_RELATION",
+          result: {
+            owner: "CAMPUS_RELATION",
+            candidateId: candidate.candidateId,
+          },
+        },
+      },
+    };
+    const pendingEvolutionSaved = await owner.saveDraft(
+      "maker",
+      pendingEvolutionRelation,
+    );
+    expect(
+      (await owner.readDraft("maker", { id: pendingEvolutionSaved.id }))
+        .content,
+    ).toEqual(pendingEvolutionRelation);
     const compensationRequest = randomUUID(),
       compensationDraft = await owner.saveDraft("maker", {
         requestId: compensationRequest,
@@ -2073,6 +2204,14 @@ test("P2-07 private impact draft records one real disposition proposal without a
           id: outcome.facts[0]!.id,
           campus: "NORTH",
           businessAt: "2026-06-01T00:00:00",
+        }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      await expect(
+        owner.readDraft("maker", { id: pendingEvolutionSaved.id }),
+      ).rejects.toThrow("ACCESS_DENIED");
+      await expect(
+        owner.recoverDraft("maker", {
+          requestId: pendingEvolutionRelation.requestId,
         }),
       ).rejects.toThrow("ACCESS_DENIED");
       expect

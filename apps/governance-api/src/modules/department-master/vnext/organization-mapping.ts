@@ -176,7 +176,7 @@ export function openOrganizationMappings(connection:string,provider?:KeyProvider
  const stageInTransaction=async(s:Scope,actor:string,raw:OrganizationMappingStageInput)=>{mappingCheck(OrganizationMappingStageSchema,raw);const input:OrganizationMappingStoredStageInput={...structuredClone(raw),entries:raw.entries.map((e,i)=>({...e,sourceRow:i+1}))};const j=await job(s,actor,input.jobId);if(j.currentRevisionId!==input.revisionId)throw new Error('STALE_REVISION');if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);};
  return {
   stage:(actor:string,raw:OrganizationMappingStageInput)=>root(scope=>stageInTransaction(scope,actor,raw)),
-  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:OrganizationMappingStageInput)=>stageInTransaction(scope,actor,input)}),
+  commandsInTransaction:(scope:Scope)=>({stage:(actor:string,input:OrganizationMappingStageInput)=>stageInTransaction(scope,actor,input),authorizeCandidateAccess:(actor:string,input:{candidateId:string})=>coordinator.authorizeCandidateAccessInTransaction(scope,actor,input)}),
   async receiveFile(actor:string,raw:OrganizationMappingReceiveInput,bytes:Uint8Array){
    mappingCheck(OrganizationMappingReceiveSchema,raw);const input=structuredClone(raw);
    if(input.job.input.kind!=='FILE'||input.job.input.format!=='XLSX'||input.job.input.parserPolicy!=='STRICT_ORGANIZATION_MAPPING_V1')throw new Error('CLOSED_INPUT_REQUIRED');

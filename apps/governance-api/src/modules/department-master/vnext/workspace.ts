@@ -11,6 +11,7 @@ import {
   protectedArtifacts,
   type KeyProviderPort,
   CatalogTransactionScope,
+  applyCoordinator,
 } from "../../governance-catalog/index.js";
 import { check, Id, StageSchema, type StageInput } from "./contracts.js";
 import { openDepartment } from "./index.js";
@@ -161,7 +162,12 @@ function metadata(
         ].includes(String(item["owner"]))
       ) {
         add(String(item["owner"]), item["id"]);
-        if (projection === 148 && typeof item["id"] === "string") {
+        if (
+          projection === 148 &&
+          ["id", "versionId", "candidateId", "requestId"].some(
+            (key) => typeof item[key] === "string",
+          )
+        ) {
           const result: Record<string, string> = {};
           for (const key of [
             "owner",
@@ -362,6 +368,64 @@ export function openDepartmentWorkspace(
     const h = bytes.toString("hex");
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
   };
+  const catalogCandidates = applyCoordinator(db, provider);
+  const authorizeResultCandidates = async (
+    scope: CatalogTransactionScope,
+    actor: string,
+    projection: ReturnType<typeof metadata>,
+  ) => {
+    for (const ref of projection.impactResults ?? []) {
+      const candidateId = ref["candidateId"];
+      if (!candidateId) continue;
+      const input = { candidateId };
+      switch (ref["owner"]) {
+        case "SOURCE_MAPPING":
+          await mapping
+            .commandsInTransaction(scope)
+            .authorizeCandidateAccess(actor, input);
+          break;
+        case "IDENTIFIER":
+          await identifier
+            .commandsInTransaction(scope)
+            .authorizeCandidateAccess(actor, input);
+          break;
+        case "HIERARCHY":
+          await hierarchy
+            .commandsInTransaction(scope)
+            .authorizeCandidateAccess(actor, input);
+          break;
+        case "CAMPUS_RELATION": {
+          const routing = await catalogCandidates.candidateRoutingInTransaction(
+            scope,
+            actor,
+            input,
+          );
+          if (
+            routing.atomicRule === "DEPARTMENT_LIFECYCLE_WHOLE_UNIT_V1" &&
+            routing.owners.every(
+              (owner) => owner === "department-master/lifecycle",
+            )
+          )
+            await lifecycle
+              .commandsInTransaction(scope)
+              .authorizeCandidateAccess(actor, input);
+          else if (
+            routing.atomicRule === "ORG_EVOLUTION_WHOLE_EVENT_V1" &&
+            routing.owners.every(
+              (owner) => owner === "department-master/organization-evolution",
+            )
+          )
+            await evolution
+              .commandsInTransaction(scope)
+              .authorizeCandidateAccess(actor, input);
+          else throw new Error("IMPACT_RESULT_MISMATCH");
+          break;
+        }
+        default:
+          throw new Error("CLOSED_INPUT_REQUIRED");
+      }
+    }
+  };
   const unseal = (record: Stored): SaveDepartmentDraft => {
     const bytes = authenticateRegistrationEvidence(
       {
@@ -409,16 +473,17 @@ export function openDepartmentWorkspace(
         ["DEPARTMENT_WORKSPACE_DRAFT_V1", digest],
         provider,
       );
-      return await root(
-        async (scope) =>
-          (
-            await sql<{
-              r: DepartmentDraftSaved;
-            }>`select department_master.workspace_save(${actor},${JSON.stringify({ ...input, state, metadata: metadata(input) })}::jsonb,${digest},${JSON.stringify(envelope)}::jsonb) r`.execute(
-              scope,
-            )
-          ).rows[0]!.r,
-      );
+      return await root(async (scope) => {
+        const projection = metadata(input);
+        await authorizeResultCandidates(scope, actor, projection);
+        return (
+          await sql<{
+            r: DepartmentDraftSaved;
+          }>`select department_master.workspace_save(${actor},${JSON.stringify({ ...input, state, metadata: projection })}::jsonb,${digest},${JSON.stringify(envelope)}::jsonb) r`.execute(
+            scope,
+          )
+        ).rows[0]!.r;
+      });
     } finally {
       bytes.fill(0);
     }
@@ -431,7 +496,9 @@ export function openDepartmentWorkspace(
     const content = unseal(record);
     // Known 0145 projections remain authentic, but current permissions use the
     // complete reference projection before any plaintext or replay is returned.
-    const current = JSON.stringify(metadata(content, record.submission));
+    const projection = metadata(content, record.submission);
+    await authorizeResultCandidates(scope, actor, projection);
+    const current = JSON.stringify(projection);
     await sql`select department_master.workspace_authorize(${actor},${current}::jsonb,'READ'),department_master.workspace_authorize(${actor},${current}::jsonb,'READ_RESTRICTED')`.execute(
       scope,
     );
