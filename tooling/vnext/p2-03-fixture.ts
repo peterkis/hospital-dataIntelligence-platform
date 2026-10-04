@@ -5,8 +5,8 @@ import {conditionMappings} from '../../apps/governance-api/src/modules/governanc
 import {departmentFixture} from './p2-01-fixture.js';
 import {peer,quote} from './lineage.mjs';
 
-export async function organizationMappingFixture(receipt:{name:string},catalog:Catalog,provider:KeyProviderPort,connection:string,departmentConstructor= openDepartment){
- const department=await departmentFixture(receipt,catalog,provider),owner=departmentConstructor(connection,provider);
+export async function organizationMappingFixture(receipt:{name:string},catalog:Catalog,provider:KeyProviderPort,connection:string,departmentConstructor= openDepartment,existingDepartment?:Awaited<ReturnType<typeof departmentFixture>>){
+ const department=existingDepartment??await departmentFixture(receipt,catalog,provider),owner=departmentConstructor(connection,provider);
  let targetId:string;
  try{
   const input=await department.input(),staged=await owner.stage('maker',input);

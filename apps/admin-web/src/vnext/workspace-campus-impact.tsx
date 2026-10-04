@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {createCampusClient,type VNextOperations as Operations} from '@hospital-data-intelligence/generated-api-client';
 import {textField,objectField,Group} from './workspace-fields.js';
 type Report=Operations['assessCampusImpact']['responses'][200]['content']['application/json'];
-const labels={NURSING_UNIT:'护理单元',BUSINESS_UNIT:'业务单元',LOCATION:'地点',ASSIGNMENT:'人员任职',CONSUMPTION:'在途消费'};
+const labels={WARD:'病区管理',NURSING_UNIT:'护理单元',BUSINESS_UNIT:'业务单元',LOCATION:'地点',ASSIGNMENT:'人员任职',CONSUMPTION:'在途消费'};
 export interface CampusImpactBinding {actor:string;id:string;from:string;to:string;digest:string}
 export function shouldInvalidateCampusImpact(previous:CampusImpactBinding,current:CampusImpactBinding){
  return previous.digest.length>0&&previous.digest===current.digest&&(

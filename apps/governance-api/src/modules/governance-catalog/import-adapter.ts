@@ -2,7 +2,7 @@
 export interface AdapterRequest {dataset:string;profile:'CORE'|'FULL';contractVersion:number;templateVersion?:string;parserPolicy?:string}
 export interface AdapterDescriptor {
  readonly dataset:string;readonly profile:'CORE'|'FULL';readonly owner:null|'organization-master'|'department-master'|'location-master'|'care-organization';
- readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1'|'ORG22_CORE_V1'|'ORG23_CORE_V1'|'ORG_EVOLUTION_CORE_V1'|'ORG12_CORE_V1'|'ORG07_CORE_V1'|'ORG09_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE'|'REGISTER'|'CORRECT'|'RETRACT'|'END'|'CHANGE'|'RENAME'|'SPLIT'|'MERGE'|'MOVE_CONTAINMENT'|'CLOSE'|'REBIND'|'SUSPEND')[];
+ readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1'|'ORG22_CORE_V1'|'ORG23_CORE_V1'|'ORG_EVOLUTION_CORE_V1'|'ORG12_CORE_V1'|'ORG07_CORE_V1'|'ORG08_CORE_V1'|'ORG09_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE'|'REGISTER'|'CORRECT'|'RETRACT'|'END'|'CHANGE'|'RENAME'|'SPLIT'|'MERGE'|'MOVE_CONTAINMENT'|'CLOSE'|'REBIND'|'SUSPEND')[];
  readonly capability:'NOT_READY'|'READY';
 }
 const datasets:ReadonlySet<string>=new Set([
@@ -14,6 +14,7 @@ const datasets:ReadonlySet<string>=new Set([
 export function selectImportAdapter(request:AdapterRequest):AdapterDescriptor {
  if(!datasets.has(request.dataset))throw new Error('UNKNOWN_ADAPTER');
  if(!['CORE','FULL'].includes(request.profile)||!Number.isSafeInteger(request.contractVersion)||request.contractVersion<1)throw new Error('INVALID_ADAPTER_REQUEST');
+ if(request.dataset==='ORG08'&&request.profile==='CORE'&&request.templateVersion==='ORG08_CORE_V1'&&request.parserPolicy==='STRICT_WARD_V1')return Object.freeze({dataset:'ORG08',profile:'CORE',owner:'care-organization',supportedContractRange:'ORG08_CORE_V1',allowedIntents:['CREATE','REVISE','REBIND','CLOSE'] as const,capability:'READY'});
  if(request.dataset==='ORG09'&&request.profile==='CORE'&&request.templateVersion==='ORG09_CORE_V1'&&request.parserPolicy==='STRICT_NURSING_V1')return Object.freeze({dataset:'ORG09',profile:'CORE',owner:'care-organization',supportedContractRange:'ORG09_CORE_V1',allowedIntents:['CREATE','REVISE','REBIND','SUSPEND'] as const,capability:'READY'});
  if(request.dataset==='ORG07'&&request.profile==='CORE'&&request.templateVersion==='ORG07_CORE_V1'&&request.parserPolicy==='STRICT_UNIT_V1')return Object.freeze({dataset:'ORG07',profile:'CORE',owner:'care-organization',supportedContractRange:'ORG07_CORE_V1',allowedIntents:['CREATE','REVISE','REBIND','CLOSE'] as const,capability:'READY'});
  if(request.dataset==='ORG12'&&request.profile==='CORE'&&request.templateVersion==='ORG12_CORE_V1'&&request.parserPolicy==='STRICT_LOCATION_V1')return Object.freeze({dataset:'ORG12',profile:'CORE',owner:'location-master',supportedContractRange:'ORG12_CORE_V1',allowedIntents:['CREATE','REVISE','MOVE_CONTAINMENT','CLOSE','SPLIT'] as const,capability:'READY'});
