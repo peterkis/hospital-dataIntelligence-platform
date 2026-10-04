@@ -1,0 +1,39 @@
+import type {FastifyInstance,FastifyRequest} from 'fastify';
+import {Type,type Static,type TSchema} from 'typebox';
+import {NursingId,NursingTime,NursingBindingSchema,NursingStageSchema,NursingStoredStageSchema,NursingInputSchema,NursingPlanSchema,NursingVerifySchema,NursingReceiveSchema,NursingReadSchema,NursingHistorySchema,NursingExactSchema,NursingListSchema,NursingWindowSchema,NursingDiffSchema,nursingCheck,type NursingUnitOwner} from '../../modules/care-organization/index.js';
+import {ApproveApplyUnitSchema,ApplyUnitSchema} from '../../modules/governance-catalog/index.js';
+const closed={additionalProperties:false} as const,Text=Type.String(),End=Type.Union([NursingTime,Type.Null()]),NullableText=Type.Union([Text,Type.Null()]);
+const errors={400:Type.Object({code:Text,message:Text},closed),403:Type.Object({code:Text,message:Text},closed),404:Type.Object({code:Text,message:Text},closed),409:Type.Object({code:Text,message:Text},closed),503:Type.Object({code:Text,message:Text},closed)};
+const Source=Type.Object({sourceAlias:Text,sourceVersion:Text,sourceSystemId:NursingId,sourceRecordedAt:NursingTime,recordLocatorEvidence:Type.Object({inputId:NursingId,row:Type.Integer()},closed),recordStatus:Text,approvalReference:Text},closed);
+const Facts=Type.Object({nursingCode:Text,nursingName:Text,careLevel:NullableText,officePhone:NullableText,responsibilityStatus:Type.Literal('PENDING'),source:Source,contractVersionId:NursingId,managementBasis:Type.Unknown()},closed);
+const Version=Type.Object({id:NursingId,number:Text,action:Type.Enum(['CREATE','REVISE','REBIND','SUSPEND']),validFrom:NursingTime,validTo:End,recordedAt:NursingTime,facts:Facts,reason:Text,changeId:NursingId},closed);
+const BindingVersion=Type.Object({id:NursingId,number:Text,validFrom:NursingTime,validTo:End,recordedAt:NursingTime,binding:NursingBindingSchema,dependencies:Type.Unknown(),changeId:NursingId},closed);
+const Read=Type.Object({id:NursingId,departmentId:NursingId,head:Text,state:Type.Enum(['ACTIVE','SUSPENDED','NOT_EFFECTIVE']),version:Type.Union([Version,Type.Null()]),binding:Type.Union([BindingVersion,Type.Null()]),clinicalReadiness:Type.Literal('NOT_READY'),reasons:Type.Array(Text)},closed);
+const History=Type.Object({id:NursingId,departmentId:NursingId,versions:Type.Array(Version),bindings:Type.Array(Type.Object({id:NursingId,campusId:NursingId,managingDepartmentId:NursingId,scope:Type.Enum(['NORTH','SOUTH']),versions:Type.Array(BindingVersion)},closed)),codes:Type.Array(Text)},closed);
+const Fact=Type.Object({owner:Type.Literal('care-organization/nursing'),id:NursingId,version:Text,source:Type.Optional(Type.Object({dataset:Type.Literal('ORG09'),row:Type.Integer(),step:Text},closed))},closed);
+const Outcome=Type.Union([Type.Object({status:Type.Literal('COMMITTED'),candidateId:NursingId,requestId:NursingId,facts:Type.Array(Fact),recordedAt:NursingTime,responseStatus:Type.Optional(Type.Enum(['DELIVERED','POST_COMMIT_FAILED']))},closed),Type.Object({status:Type.Literal('COMMIT_UNKNOWN'),candidateId:NursingId,requestId:NursingId},closed)]);
+const Issue=Type.Object({row:Type.Integer(),field:Text,code:Text,status:Type.Enum(['FAIL','BLOCKED'])},closed),Candidate=Type.Object({candidateId:NursingId},closed);
+export interface NursingUnitHttpContext {owner:NursingUnitOwner;actor:(request:FastifyRequest)=>string}
+export function registerNursingUnitRoutes(app:FastifyInstance,context?:NursingUnitHttpContext){
+ const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handle:(owner:NursingUnitOwner,actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/nursing-units/'+path,{preValidation:async r=>{nursingCheck(body,r.body);},schema:{operationId,body,response:{200:response,...errors}}},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handle(context.owner,context.actor(r),r.body as Static<S>);});
+ route('inputs','stageNursingUnitInput',NursingStageSchema,Type.Object({inputId:NursingId,revisionId:NursingId,digest:Text},closed),(o,a,b)=>o.stage(a,b));
+ route('inputs/read','readNursingUnitInput',NursingInputSchema,NursingStoredStageSchema,(o,a,b)=>o.readInput(a,b));
+ route('verify','verifyNursingUnitInput',NursingVerifySchema,Type.Object({verificationId:NursingId},closed),(o,a,b)=>o.verify(a,b));
+ route('preview','previewNursingUnitInput',NursingInputSchema,Type.Object({decision:Type.Enum(['PASS','BLOCKED']),issues:Type.Array(Issue),changes:Type.Array(Type.Object({action:Text,targetId:Type.Union([NursingId,Type.Null()]),name:Text,validFrom:NursingTime,validTo:End},closed))},closed),(o,a,b)=>o.preview(a,b));
+ route('plan','planNursingUnitInput',NursingPlanSchema,Type.Object({candidateId:NursingId,digest:Text},closed),(o,a,b)=>o.plan(a,b));
+ route('withdraw','withdrawNursingUnitInput',NursingPlanSchema,Type.Object({inputId:NursingId,status:Type.Literal('WITHDRAWN')},closed),(o,a,b)=>o.withdraw(a,b));
+ route('review','reviewNursingUnitCandidate',Candidate,Type.Unknown(),(o,a,b)=>o.readApplyCandidate(a,b));
+ route('approve','approveNursingUnitCandidate',ApproveApplyUnitSchema,Type.Unknown(),(o,a,b)=>o.approveApplyUnit(a,b));
+ route('apply','applyNursingUnitCandidate',ApplyUnitSchema,Outcome,(o,a,b)=>o.applyUnit(a,b));
+ route('resume','resumeNursingUnitOutcome',ApplyUnitSchema,Type.Union([Outcome,Type.Null()]),(o,a,b)=>o.resumeOutcome(a,b));
+ route('reconcile','reconcileNursingUnitOutcome',ApplyUnitSchema,Type.Unknown(),(o,a,b)=>o.reconcileCommittedUnit(a,b));
+ route('history','getNursingUnitHistory',NursingHistorySchema,History,(o,a,b)=>o.history(a,b));
+ route('query','getNursingUnitAsOf',NursingReadSchema,Read,(o,a,b)=>o.read(a,b));
+ route('exact','getNursingUnitVersion',NursingExactSchema,Version,(o,a,b)=>o.exact(a,b));
+ route('diff','diffNursingUnitVersions',NursingDiffSchema,Type.Object({id:NursingId,before:Version,after:Version},closed),(o,a,b)=>o.diff(a,b));
+ route('list','listNursingUnits',NursingListSchema,Type.Object({items:Type.Array(Read),nextAfterId:Type.Union([NursingId,Type.Null()])},closed),(o,a,b)=>o.list(a,b));
+ route('coverage','getNursingUnitCoverage',NursingWindowSchema,Type.Object({id:NursingId,covered:Type.Boolean(),parts:Type.Array(Type.Object({from:NursingTime,to:End,version:Text,versionId:NursingId},closed)),clinicalReadiness:Type.Literal('NOT_READY')},closed),(o,a,b)=>o.coverage(a,b));
+ route('evaluate','evaluateNursingUnitWindow',NursingWindowSchema,Type.Object({id:NursingId,coreCovered:Type.Boolean(),checks:Type.Array(Type.Union([Type.Object({from:NursingTime,to:End,status:Type.Literal('SATISFIED'),basis:Type.Unknown(),source:Type.Unknown()},closed),Type.Object({from:NursingTime,to:End,status:Type.Literal('NOT_SATISFIED'),reason:Text},closed)])),clinicalReadiness:Type.Literal('NOT_READY'),responsibility:Type.Literal('NOT_EVALUABLE'),clinicalCapability:Type.Literal('NOT_EVALUABLE')},closed),(o,a,b)=>o.evaluateWindow(a,b));
+ const FileBody=Type.Object({input:NursingReceiveSchema,contentBase64:Type.String({minLength:4,maxLength:1398104,pattern:'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'})},closed);
+ app.post<{Body:Static<typeof FileBody>}>('/api/vnext/nursing-units/files',{bodyLimit:1500000,preValidation:async r=>{nursingCheck(FileBody,r.body);},schema:{operationId:'receiveNursingUnitFile',body:FileBody,response:{200:Type.Object({jobId:NursingId,revisionId:NursingId,sourceArtifactId:NursingId,structuralStatus:Type.Enum(['PARSED','REJECTED']),input:Type.Union([Type.Object({inputId:NursingId,revisionId:NursingId,digest:Text},closed),Type.Null()]),issues:Type.Array(Issue),validation:Type.Unknown()},closed),...errors}}},async r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');const bytes=Buffer.from(r.body.contentBase64,'base64');try{return await context.owner.receiveFile(context.actor(r),r.body.input,bytes);}finally{bytes.fill(0);}});
+}

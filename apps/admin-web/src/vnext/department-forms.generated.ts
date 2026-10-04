@@ -862,6 +862,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1107,6 +1113,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -3121,6 +3133,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3366,6 +3384,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -4419,6 +4443,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4664,6 +4694,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -5486,6 +5522,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -5731,6 +5773,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -8109,7 +8157,8 @@ export const departmentForms = {
                           "IDENTIFIER",
                           "HIERARCHY",
                           "CAMPUS_RELATION",
-                          "BUSINESS_UNIT"
+                          "BUSINESS_UNIT",
+                          "NURSING_UNIT"
                         ]
                       },
                       "id": {
@@ -8169,7 +8218,8 @@ export const departmentForms = {
                           "IDENTIFIER",
                           "HIERARCHY",
                           "CAMPUS_RELATION",
-                          "BUSINESS_UNIT"
+                          "BUSINESS_UNIT",
+                          "NURSING_UNIT"
                         ]
                       },
                       "id": {
@@ -8237,7 +8287,8 @@ export const departmentForms = {
                                   "IDENTIFIER",
                                   "HIERARCHY",
                                   "CAMPUS_RELATION",
-                                  "BUSINESS_UNIT"
+                                  "BUSINESS_UNIT",
+                                  "NURSING_UNIT"
                                 ]
                               },
                               "id": {
@@ -11867,7 +11918,8 @@ export const departmentForms = {
                         "IDENTIFIER",
                         "HIERARCHY",
                         "CAMPUS_RELATION",
-                        "BUSINESS_UNIT"
+                        "BUSINESS_UNIT",
+                        "NURSING_UNIT"
                       ]
                     },
                     "id": {
@@ -11927,7 +11979,8 @@ export const departmentForms = {
                         "IDENTIFIER",
                         "HIERARCHY",
                         "CAMPUS_RELATION",
-                        "BUSINESS_UNIT"
+                        "BUSINESS_UNIT",
+                        "NURSING_UNIT"
                       ]
                     },
                     "id": {
@@ -11995,7 +12048,8 @@ export const departmentForms = {
                                 "IDENTIFIER",
                                 "HIERARCHY",
                                 "CAMPUS_RELATION",
-                                "BUSINESS_UNIT"
+                                "BUSINESS_UNIT",
+                                "NURSING_UNIT"
                               ]
                             },
                             "id": {
