@@ -52,9 +52,9 @@ test("P2-07 actual multi-Owner HTTP initialization stays within the unchanged ei
   expect(
     peer(
       receipt.name,
-      `SELECT has_function_privilege(${quote(role)},'governance_catalog.department_workspace_application(uuid,uuid)','EXECUTE'),has_function_privilege(${quote(role)},'governance_catalog.department_workspace_impact_access(text,uuid,text,text,uuid,text)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_impact_result_access(text,text,uuid,text)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_hierarchy_group_access(text,jsonb)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_department_version_access(text,jsonb)','EXECUTE');`,
+      `SELECT has_function_privilege(${quote(role)},'governance_catalog.department_workspace_application(uuid,uuid)','EXECUTE'),has_function_privilege(${quote(role)},'governance_catalog.department_workspace_impact_access(text,uuid,text,text,uuid,text)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_impact_result_access(text,text,uuid,text)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_hierarchy_group_access(text,jsonb)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.workspace_department_version_access(text,jsonb)','EXECUTE'),has_function_privilege(${quote(role)},'department_master.impact_result_access(text,jsonb,text)','EXECUTE');`,
     ).trim(),
-  ).toBe("f|f|f|f|f");
+  ).toBe("f|f|f|f|f|f");
   const server = await createDepartmentTestServer(connection, provider);
   try {
     const url = await server.app.listen({ host: "127.0.0.1", port: 0 }),
@@ -403,6 +403,59 @@ test("P2-07 partial fixed-owner and protected-evidence references cannot omit au
       .toBe("DENIED");
   }
 });
+test("P2-07 incomplete result and mapping discriminators remain saveable private drafts", async () => {
+  for (const input of [
+    {
+      kind: "IMPACT" as const,
+      payload: {
+        disposition: { kind: "CLOSE_RELATION", result: { id: randomUUID() } },
+      },
+    },
+    {
+      kind: "IMPACT" as const,
+      payload: {
+        disposition: {
+          kind: "NEW_RELATION",
+          oldRelation: { kind: "CLOSE", result: { id: randomUUID() } },
+        },
+      },
+    },
+    {
+      kind: "MAPPING" as const,
+      payload: { entries: [{ row: { target_id: randomUUID() } }] },
+    },
+  ]) {
+    const original = {
+      ...input,
+      campus: "NORTH" as const,
+      profile: "CORE" as const,
+      requestId: randomUUID(),
+      ...(input.kind === "MAPPING"
+        ? {
+            transport: {
+              contractId: domainFixture.contract.id,
+              contractVersionId: domainFixture.contract.versionId,
+            },
+          }
+        : {}),
+    };
+    const saved = await owner.saveDraft("maker", original);
+    expect((await owner.readDraft("maker", { id: saved.id })).content).toEqual(
+      original,
+    );
+    expect(
+      (await owner.recoverDraft("maker", { requestId: original.requestId }))
+        ?.id,
+    ).toBe(saved.id);
+    await expect(
+      owner.submitDraft("maker", {
+        id: saved.id,
+        expectedVersion: saved.version,
+        requestId: randomUUID(),
+      }),
+    ).rejects.toThrow("CLOSED_INPUT_REQUIRED");
+  }
+});
 test("P2-07 existing identifier and mapping result drafts follow exact Owner READ revocation", async () => {
   const receipt = JSON.parse(
     readFileSync(process.env["VNEXT_TEST_RECEIPT"]!, "utf8"),
@@ -445,7 +498,7 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
     if (applied.status !== "COMMITTED")
       throw new Error("COMMITTED_RESULT_REQUIRED");
     const id = applied.facts[0]!.id;
-    const requests = [
+    const requests: Array<Parameters<typeof owner.saveDraft>[1]> = [
       {
         requestId: randomUUID(),
         kind: "IDENTIFIER" as const,
@@ -465,6 +518,25 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
       },
     ];
     const saved = [];
+    requests.push({
+      requestId: randomUUID(),
+      kind: "IMPACT",
+      campus: "NORTH",
+      payload: {
+        disposition: {
+          kind: "CLOSE_RELATION",
+          result: {
+            owner: "IDENTIFIER",
+            id,
+            versionId: (
+              await identifier.history("maker", { id, campus: "NORTH" })
+            ).versions.at(-1)!.id,
+            candidateId: candidate.candidateId,
+            requestId,
+          },
+        },
+      },
+    });
     for (const request of requests) {
       const written = await owner.saveDraft("maker", request);
       expect(
@@ -500,40 +572,89 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
       row.row.from_system_id,
       row.row.source_context,
     );
-    const mappingStage = await mapping.stage(
-      "maker",
-      await domainFixture.mappingInput([row]),
-    );
-    await mapping.verify("reviewer", {
-      requestId: randomUUID(),
-      inputId: mappingStage.inputId,
-      inputDigest: mappingStage.digest,
-      rows: [
-        {
-          row: 1,
-          reason: "SYNTHETIC independent exact mapping",
-          evidenceId: row.evidenceId,
-          contextApproved: true,
-          sourceKeyReuse: false,
-        },
-      ],
-    });
-    const mappingRequest = randomUUID(),
-      mappingCandidate = await mapping.plan("maker", {
+    const commitMapping = async (value: typeof row) => {
+      const mappingStage = await mapping.stage(
+        "maker",
+        await domainFixture.mappingInput([value]),
+      );
+      await mapping.verify("reviewer", {
+        requestId: randomUUID(),
         inputId: mappingStage.inputId,
+        inputDigest: mappingStage.digest,
+        rows: [
+          {
+            row: 1,
+            reason: "SYNTHETIC independent exact mapping",
+            evidenceId: value.evidenceId,
+            contextApproved: true,
+            sourceKeyReuse: false,
+          },
+        ],
+      });
+      const mappingRequest = randomUUID(),
+        mappingCandidate = await mapping.plan("maker", {
+          inputId: mappingStage.inputId,
+          requestId: mappingRequest,
+        });
+      await mapping.readApplyCandidate("reviewer", {
+        candidateId: mappingCandidate.candidateId,
+      });
+      await mapping.approveApplyUnit("reviewer", mappingCandidate);
+      const mappingApplied = await mapping.applyUnit("maker", {
+        candidateId: mappingCandidate.candidateId,
         requestId: mappingRequest,
       });
-    await mapping.readApplyCandidate("reviewer", {
-      candidateId: mappingCandidate.candidateId,
-    });
-    await mapping.approveApplyUnit("reviewer", mappingCandidate);
-    const mappingApplied = await mapping.applyUnit("maker", {
+      if (mappingApplied.status !== "COMMITTED")
+        throw new Error("COMMITTED_RESULT_REQUIRED");
+      return { mappingRequest, mappingCandidate, mappingApplied };
+    };
+    const { mappingRequest, mappingCandidate, mappingApplied } =
+      await commitMapping(row);
+    const mappingId = mappingApplied.facts[0]!.id;
+    const completeResult = {
+      owner: "SOURCE_MAPPING",
+      id: mappingId,
+      versionId: (await mapping.history("maker", mappingId)).versions.at(-1)!
+        .id,
       candidateId: mappingCandidate.candidateId,
       requestId: mappingRequest,
-    });
-    if (mappingApplied.status !== "COMMITTED")
-      throw new Error("COMMITTED_RESULT_REQUIRED");
-    const mappingId = mappingApplied.facts[0]!.id;
+    };
+    expect(
+      peer(
+        receipt.name,
+        `SELECT governance_catalog.department_impact_committed_result('maker',${quote(mappingCandidate.candidateId)}::uuid,${quote(mappingRequest)}::uuid)->>'status';`,
+      ).trim(),
+    ).toBe("COMMITTED");
+    const completeOriginal = {
+      requestId: randomUUID(),
+      kind: "IMPACT" as const,
+      campus: "NORTH" as const,
+      payload: {
+        disposition: { kind: "CLOSE_RELATION", result: completeResult },
+      },
+    };
+    const completeSaved = await owner.saveDraft("maker", completeOriginal);
+    for (const key of ["versionId", "candidateId", "requestId"] as const) {
+      const incorrect = {
+        ...completeOriginal,
+        requestId: randomUUID(),
+        payload: {
+          disposition: {
+            kind: "CLOSE_RELATION",
+            result: { ...completeResult, [key]: randomUUID() },
+          },
+        },
+      };
+      expect
+        .soft(
+          await owner.saveDraft("maker", incorrect).then(
+            () => "ALLOWED",
+            () => "DENIED",
+          ),
+          key,
+        )
+        .toBe("DENIED");
+    }
     const original = {
       requestId: randomUUID(),
       kind: "IMPACT" as const,
@@ -549,6 +670,56 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
     expect((await owner.readDraft("maker", { id: stored.id })).content).toEqual(
       original,
     );
+    const targetGrants = peer(
+      receipt.name,
+      `SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM department_master.mapping_target_access g WHERE actor='maker' AND target_type=${quote(row.row.target_type)} AND target_id=${quote(row.row.target_id)}::uuid AND campus='NORTH';`,
+    ).trim();
+    peer(
+      receipt.name,
+      `DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type=${quote(row.row.target_type)} AND target_id=${quote(row.row.target_id)}::uuid AND campus='NORTH';`,
+    );
+    try {
+      expect(
+        peer(
+          receipt.name,
+          `SELECT department_master.mapping_snapshot('maker',${quote(mappingId)}::uuid)->>'id';`,
+        ).trim(),
+      ).toBe(mappingId);
+      expect(() =>
+        peer(
+          receipt.name,
+          `SELECT department_master.mapping_target_authorize('maker',${quote(row.row.target_type)},${quote(row.row.target_id)}::uuid,'NORTH');`,
+        ),
+      ).toThrow("ACCESS_DENIED");
+      for (const draft of [
+        { id: stored.id, requestId: original.requestId },
+        { id: completeSaved.id, requestId: completeOriginal.requestId },
+      ]) {
+        expect
+          .soft(
+            await owner.readDraft("maker", { id: draft.id }).then(
+              () => "ALLOWED",
+              (e: Error) => e.message,
+            ),
+          )
+          .toBe("ACCESS_DENIED");
+        expect
+          .soft(
+            await owner
+              .recoverDraft("maker", { requestId: draft.requestId })
+              .then(
+                () => "ALLOWED",
+                (e: Error) => e.message,
+              ),
+          )
+          .toBe("ACCESS_DENIED");
+      }
+    } finally {
+      peer(
+        receipt.name,
+        `INSERT INTO department_master.mapping_target_access SELECT * FROM jsonb_populate_recordset(NULL::department_master.mapping_target_access,${quote(targetGrants)}::jsonb) ON CONFLICT DO NOTHING;`,
+      );
+    }
     peer(
       receipt.name,
       `DELETE FROM department_master.mapping_access WHERE actor='maker' AND from_system_id=${quote(row.row.from_system_id)}::uuid AND entity_type=${quote(row.row.source_entity_type)} AND context=${quote(row.row.source_context)} AND campus='NORTH' AND permission='READ';`,
@@ -569,6 +740,30 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
         row.row.source_context,
       );
     }
+    await commitMapping({
+      ...row,
+      action: "CORRECT",
+      mapping: {
+        owner: "department-master/organization-mapping",
+        id: mappingId,
+        expectedHead: "1",
+      },
+      reason: "SYNTHETIC later accepted assertion",
+      row: { ...row.row, version_no: "2", recorded_at: "2026-04-01T00:00:00" },
+    });
+    expect(
+      (await mapping.history("maker", mappingId)).versions.at(-1)!.id,
+    ).not.toBe(completeResult.versionId);
+    expect(
+      (await owner.readDraft("maker", { id: completeSaved.id })).content,
+    ).toEqual(completeOriginal);
+    expect(
+      (
+        await owner.recoverDraft("maker", {
+          requestId: completeOriginal.requestId,
+        })
+      )?.content,
+    ).toEqual(completeOriginal);
   } finally {
     await identifier.close();
     await mapping.close();
@@ -721,7 +916,13 @@ test("P2-07 SOUTH private impact draft authorizes its actual NORTH campus relati
       payload: {
         disposition: {
           kind: "CLOSE_RELATION",
-          result: { owner: "CAMPUS_RELATION", id: relation.id },
+          result: {
+            owner: "CAMPUS_RELATION",
+            id: relation.id,
+            versionId: relation.versions.at(-1)!.id,
+            candidateId: candidate.candidateId,
+            requestId,
+          },
         },
       },
     };
@@ -1405,6 +1606,27 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
     expect(await owner.submitDraft("maker", request)).toEqual(submission);
     const frozen = versions.items[0]!,
       group = frozen.nodes[0]!;
+    const publicationReference = {
+      requestId: randomUUID(),
+      kind: "IMPACT" as const,
+      campus: "NORTH" as const,
+      payload: {
+        disposition: {
+          kind: "NEW_RELATION",
+          result: {
+            owner: "HIERARCHY",
+            id: submission.viewId,
+            versionId: frozen.view.versionId,
+            candidateId: submission.candidateId,
+            requestId: submission.publicationRequestId,
+          },
+        },
+      },
+    };
+    const publicationSaved = await owner.saveDraft(
+      "maker",
+      publicationReference,
+    );
     const groupRequest = {
       requestId: randomUUID(),
       kind: "HIERARCHY" as const,
@@ -1420,6 +1642,37 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
       },
     };
     const groupSaved = await owner.saveDraft("maker", groupRequest);
+    for (const nodes of [
+      [
+        {
+          nodeKind: "GROUP",
+          groupId: group.groupId,
+          groupVersionId: randomUUID(),
+        },
+      ],
+      [
+        {
+          nodeKind: "GROUP",
+          groupId: randomUUID(),
+          groupVersionId: randomUUID(),
+        },
+      ],
+    ]) {
+      expect
+        .soft(
+          await owner
+            .saveDraft("maker", {
+              ...groupRequest,
+              requestId: randomUUID(),
+              payload: { nodes },
+            })
+            .then(
+              () => "ALLOWED",
+              () => "DENIED",
+            ),
+        )
+        .toBe("DENIED");
+    }
     expect(
       (await owner.readDraft("maker", { id: groupSaved.id })).content,
     ).toEqual(groupRequest);
@@ -1500,6 +1753,16 @@ test("P2-07 private hierarchy draft submits through the independent snapshot Own
       digest: nextSubmission.digest,
       requestId: nextSubmission.publicationRequestId,
     });
+    expect(
+      (await owner.readDraft("maker", { id: publicationSaved.id })).content,
+    ).toEqual(publicationReference);
+    expect(
+      (
+        await owner.recoverDraft("maker", {
+          requestId: publicationReference.requestId,
+        })
+      )?.content,
+    ).toEqual(publicationReference);
     expect(
       await hierarchy.readHierarchySnapshot("reviewer", {
         viewId: submission.viewId,

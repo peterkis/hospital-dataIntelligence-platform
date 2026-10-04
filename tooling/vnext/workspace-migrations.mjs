@@ -64,6 +64,7 @@ const postWorkspaceMigrations = [
  '0145_hierarchy_workspace_queries',
  '0146_department_workspace_reference_authorization',
  '0147_department_workspace_complete_references',
+ '0148_department_workspace_result_bindings',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

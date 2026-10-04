@@ -6,6 +6,8 @@ import {
   dropValidationOwnerSession,
 } from "./validation-owner-session.mjs";
 import { migrate, readReceipt } from "./lineage.mjs";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { seed } from "./catalog-seed.mjs";
 import { grantDepartment } from "./p2-01-validate.mjs";
 import { grantOrganization } from "./p1-02-validate.mjs";
@@ -14,11 +16,28 @@ import { validateWorkspaceReferencesUpgrade } from "./p2-07-reference-upgrade.mj
 
 const args = process.argv.slice(2);
 if (args[0] === "--dispose-owned") {
-  if (args.length !== 2) throw new Error("CLOSED_COMMAND_REQUIRED");
+  if (args.length !== 2 && args.length !== 3)
+    throw new Error("CLOSED_COMMAND_REQUIRED");
   const prior = readReceipt(args[1]);
   if (prior.taskId !== "P2-07" || prior.purpose !== "TEMPORARY_VALIDATION")
     throw new Error("DISPOSAL_NOT_AUTHORIZED");
+  const owner = args[2]
+    ? {
+        receipt: JSON.parse(readFileSync(args[2], "utf8")),
+        receiptPath: resolve(args[2]),
+      }
+    : null;
+  if (
+    owner &&
+    (owner.receipt.taskId !== "P2-07" ||
+      owner.receipt.purpose !== "TEMPORARY_VALIDATION_OWNER" ||
+      owner.receipt.database !== prior.name ||
+      owner.receipt.databaseOid !== prior.oid ||
+      owner.receipt.databaseRequestId !== prior.requestId)
+  )
+    throw new Error("OWNER_DISPOSAL_NOT_AUTHORIZED");
   dropTemporary(prior);
+  if (owner) dropValidationOwnerSession(owner);
   process.exit(0);
 }
 if (

@@ -59,7 +59,7 @@ type StaticTemplate = Static<typeof HierarchyWorkspaceTemplateSchema>;
 function metadata(
   input: SaveDepartmentDraft,
   submission?: DepartmentDraftSubmission | null,
-  projection: 145 | 146 | 147 = 147,
+  projection: 145 | 146 | 147 | 148 = 148,
 ) {
   const legacyReferences = projection === 145;
   const references: Array<{ owner: string; id: string }> = [];
@@ -68,6 +68,7 @@ function metadata(
     contractVersionId?: string;
   }> = [];
   const groupRefs: Array<{ groupId?: string; groupVersionId?: string }> = [];
+  const impactResults: Array<Record<string, string>> = [];
   const departmentVersions: Array<{
     departmentId?: string;
     versionId: string;
@@ -105,7 +106,7 @@ function metadata(
     }
     if (!value || typeof value !== "object") return;
     const item = value as Record<string, unknown>;
-    if (projection === 147) {
+    if (projection >= 147) {
       const embedded = (key: string, owner: string) => {
         const ref = item[key];
         if (ref && typeof ref === "object")
@@ -133,6 +134,7 @@ function metadata(
       if (input.kind === "IMPACT") {
         const result = item["result"] as Record<string, unknown> | undefined;
         if (
+          projection === 147 &&
           result?.["id"] &&
           ![
             "SOURCE_MAPPING",
@@ -144,6 +146,7 @@ function metadata(
           throw new Error("CLOSED_INPUT_REQUIRED");
       }
       if (
+        projection === 147 &&
         typeof item["target_id"] === "string" &&
         !["ORG", "LEGAL", "CAMPUS"].includes(String(item["target_type"]))
       )
@@ -156,8 +159,21 @@ function metadata(
           "HIERARCHY",
           "CAMPUS_RELATION",
         ].includes(String(item["owner"]))
-      )
+      ) {
         add(String(item["owner"]), item["id"]);
+        if (projection === 148 && typeof item["id"] === "string") {
+          const result: Record<string, string> = {};
+          for (const key of [
+            "owner",
+            "id",
+            "versionId",
+            "candidateId",
+            "requestId",
+          ])
+            if (typeof item[key] === "string") result[key] = item[key];
+          impactResults.push(result);
+        }
+      }
       if (input.kind === "HIERARCHY")
         addContract(item["contractId"], item["contractVersionId"]);
       if (input.kind === "HIERARCHY") {
@@ -246,7 +262,7 @@ function metadata(
     Object.values(item).forEach(visit);
   };
   visit(input.payload);
-  if (projection === 147) {
+  if (projection >= 147) {
     if (input.transport)
       addContract(
         input.transport.contractId,
@@ -280,9 +296,10 @@ function metadata(
     schemes,
     hasAttachment: !!input.attachment,
     ...(input.transport ? { transport: input.transport } : {}),
-    ...(projection === 147 && contractRefs.length ? { contractRefs } : {}),
-    ...(projection === 147 && groupRefs.length ? { groupRefs } : {}),
-    ...(projection === 147 && departmentVersions.length
+    ...(projection >= 147 && contractRefs.length ? { contractRefs } : {}),
+    ...(projection >= 147 && groupRefs.length ? { groupRefs } : {}),
+    ...(projection === 148 && impactResults.length ? { impactResults } : {}),
+    ...(projection >= 147 && departmentVersions.length
       ? { departmentVersions }
       : {}),
   };
@@ -297,6 +314,7 @@ function metadataBinding(value: ReturnType<typeof metadata>): string {
     "contractRefs",
     "groupRefs",
     "departmentVersions",
+    "impactResults",
   ]) {
     const refs = projected[key];
     if (refs === undefined) continue;
@@ -360,7 +378,7 @@ export function openDepartmentWorkspace(
           state: record.state,
           input: content,
         }) !== record.digest ||
-        !([147, 146, 145] as const).some(
+        !([148, 147, 146, 145] as const).some(
           (projection) =>
             metadataBinding(
               metadata(content, record.submission, projection),

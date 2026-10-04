@@ -103,6 +103,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=112) for(const name of ['mapping_list','mapping_authorize','mapping_target_authorize','mapping_source','mapping_input_read','mapping_job_read','mapping_snapshot','mapping_find','mapping_mutate','mapping_resolution_required']) allowedRoutines.add('department_master.'+name);
     if(ledger.length>=144)for(const name of ['workspace_authorize','workspace_save','workspace_read','workspace_list','workspace_recover','workspace_input_access','workspace_applications'])allowedRoutines.add('department_master.'+name);
     if(ledger.length>=147)for(const name of ['workspace_impact_result_access','workspace_hierarchy_group_access','workspace_department_version_access'])allowedRoutines.add('department_master.'+name);
+    if(ledger.length>=148)allowedRoutines.add('department_master.impact_result_access');
     if(ledger.length>=144)for(const name of ['department_workspace_application','department_workspace_impact_access'])allowedRoutines.add('governance_catalog.'+name);
     if(ledger.length>=145)allowedRoutines.add('department_master.hierarchy_workspace_query');
     if(ledger.length>=113) allowedRoutines.add('department_master.mapping_snapshot_optional');

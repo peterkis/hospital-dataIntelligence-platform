@@ -21,12 +21,14 @@ import {
 import {
   openDepartmentWorkspace,
   openOrganizationEvolutions,
+  openOrganizationMappings,
 } from "../../apps/governance-api/src/modules/department-master/index.ts";
 import { evolutionFixture } from "./p2-05-fixture.ts";
 export async function validateWorkspaceReferencesUpgrade() {
   for (const [prefix, baseline] of [
     [145, "de8e22c9977421a1651cd5219505ae0f06cac93b"],
     [146, "46d2c299a6bd18952bafc0fb8908edc7d8f5b643"],
+    [147, "ee9d4a8f63ee269d57323ff41899c95e2cc18f13"],
   ])
     await validatePrefix(prefix, baseline);
 }
@@ -58,7 +60,7 @@ async function validatePrefix(prefix, baseline) {
     ),
     owned = createTemporary("P2-07"),
     provider = new LocalSyntheticKeyProvider();
-  let session, catalog, previous, current, evolution;
+  let session, catalog, previous, current, evolution, mapping;
   try {
     await migrate(owned.receipt, migrationFiles().slice(0, prefix));
     await seed(owned.receipt);
@@ -99,6 +101,65 @@ async function validatePrefix(prefix, baseline) {
     });
     assert.equal(outcome.status, "COMMITTED");
     previous = openPrevious(session.connectionString, provider);
+    mapping = openOrganizationMappings(session.connectionString, provider);
+    const mappingRow = fixture.entry(),
+      mappingInput = await mapping.stage(
+        "maker",
+        await fixture.mappingInput([mappingRow]),
+      );
+    await mapping.verify("reviewer", {
+      requestId: randomUUID(),
+      inputId: mappingInput.inputId,
+      inputDigest: mappingInput.digest,
+      rows: [
+        {
+          row: 1,
+          reason: "SYNTHETIC legacy result coordinates",
+          evidenceId: mappingRow.evidenceId,
+          contextApproved: true,
+          sourceKeyReuse: false,
+        },
+      ],
+    });
+    const mappingRequest = randomUUID(),
+      mappingCandidate = await mapping.plan("maker", {
+        inputId: mappingInput.inputId,
+        requestId: mappingRequest,
+      });
+    await mapping.readApplyCandidate("reviewer", {
+      candidateId: mappingCandidate.candidateId,
+    });
+    await mapping.approveApplyUnit("reviewer", mappingCandidate);
+    const mappingOutcome = await mapping.applyUnit("maker", {
+      candidateId: mappingCandidate.candidateId,
+      requestId: mappingRequest,
+    });
+    assert.equal(mappingOutcome.status, "COMMITTED");
+    const mappingId = mappingOutcome.facts[0].id;
+    const resultRequest = {
+      requestId: randomUUID(),
+      kind: "IMPACT",
+      campus: "NORTH",
+      payload: {
+        disposition: {
+          kind: "NEW_RELATION",
+          result: {
+            owner: "SOURCE_MAPPING",
+            id: mappingId,
+            versionId: (await mapping.history("maker", mappingId)).versions.at(
+              -1,
+            ).id,
+            candidateId: mappingCandidate.candidateId,
+            requestId: mappingRequest,
+          },
+        },
+      },
+    };
+    const resultSaved = await previous.saveDraft("maker", resultRequest);
+    assert.deepEqual(
+      (await previous.readDraft("maker", { id: resultSaved.id })).content,
+      resultRequest,
+    );
     const draft = {
       requestId: randomUUID(),
       kind: "EVOLUTION",
@@ -145,11 +206,17 @@ async function validatePrefix(prefix, baseline) {
       },
     };
     const reorderedSaved = await previous.saveDraft("maker", reorderedRequest);
-    // The old writer commits this valid payload but its old reader loses reference ordering.
-    await assert.rejects(
-      previous.readDraft("maker", { id: reorderedSaved.id }),
-      /PAYLOAD_UNAVAILABLE/,
-    );
+    // 0147 already repaired reference ordering; older writers still exhibit the RED.
+    if (prefix < 147)
+      await assert.rejects(
+        previous.readDraft("maker", { id: reorderedSaved.id }),
+        /PAYLOAD_UNAVAILABLE/,
+      );
+    else
+      assert.deepEqual(
+        (await previous.readDraft("maker", { id: reorderedSaved.id })).content,
+        reorderedRequest,
+      );
     await previous.close();
     previous = null;
     const before = await inspect(owned.receipt),
@@ -159,6 +226,49 @@ async function validatePrefix(prefix, baseline) {
     assert.deepEqual(after.ledger.slice(0, prefix), before.ledger);
     assert.equal(predecessorDigest(owned.receipt, tables), digest);
     current = openDepartmentWorkspace(session.connectionString, provider);
+    assert.deepEqual(
+      (await current.readDraft("maker", { id: resultSaved.id })).content,
+      resultRequest,
+    );
+    assert.equal(
+      (
+        await current.recoverDraft("maker", {
+          requestId: resultRequest.requestId,
+        })
+      ).id,
+      resultSaved.id,
+    );
+    const targetGrants = peer(
+      owned.receipt.name,
+      `SELECT coalesce(jsonb_agg(to_jsonb(g)),'[]')::text FROM department_master.mapping_target_access g WHERE actor='maker' AND target_type=${quote(mappingRow.row.target_type)} AND target_id=${quote(mappingRow.row.target_id)}::uuid AND campus='NORTH';`,
+    ).trim();
+    peer(
+      owned.receipt.name,
+      `DELETE FROM department_master.mapping_target_access WHERE actor='maker' AND target_type=${quote(mappingRow.row.target_type)} AND target_id=${quote(mappingRow.row.target_id)}::uuid AND campus='NORTH';`,
+    );
+    try {
+      assert.throws(
+        () =>
+          peer(
+            owned.receipt.name,
+            `SELECT department_master.mapping_target_authorize('maker',${quote(mappingRow.row.target_type)},${quote(mappingRow.row.target_id)}::uuid,'NORTH');`,
+          ),
+        /ACCESS_DENIED/,
+      );
+      await assert.rejects(
+        current.readDraft("maker", { id: resultSaved.id }),
+        /ACCESS_DENIED/,
+      );
+      await assert.rejects(
+        current.recoverDraft("maker", { requestId: resultRequest.requestId }),
+        /ACCESS_DENIED/,
+      );
+    } finally {
+      peer(
+        owned.receipt.name,
+        `INSERT INTO department_master.mapping_target_access SELECT * FROM jsonb_populate_recordset(NULL::department_master.mapping_target_access,${quote(targetGrants)}::jsonb) ON CONFLICT DO NOTHING;`,
+      );
+    }
     assert.deepEqual(
       (await current.readDraft("maker", { id: reorderedSaved.id })).content,
       reorderedRequest,
@@ -257,6 +367,7 @@ async function validatePrefix(prefix, baseline) {
           originalPrivateCiphertextAndRowsPreserved: true,
           originalRequestRecovery: true,
           currentReferencedOwnerPermission: true,
+          completeLegacyResultCoordinatesAndTargetAuthority: true,
         },
         null,
         2,
@@ -276,7 +387,27 @@ async function validatePrefix(prefix, baseline) {
     await previous?.close();
     await current?.close();
     await evolution?.close();
+    await mapping?.close();
     await catalog?.close();
+    writeFileSync(
+      ".runtime/vnext/p2-07/reference-close-" + prefix + ".json",
+      peer(
+        "postgres",
+        `SELECT coalesce(jsonb_agg(jsonb_build_object('pid',pid,'role',usename,'application',application_name,'state',state)),'[]')::text FROM pg_stat_activity WHERE datname=${quote(owned.receipt.name)};`,
+      ),
+    );
+    // Observe session closure before disposal; do not terminate unknown sessions.
+    // The original receipt and session disposal guards remain decisive.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (
+        peer(
+          "postgres",
+          `SELECT count(*) FROM pg_stat_activity WHERE datname=${quote(owned.receipt.name)};`,
+        ).trim() === "0"
+      )
+        break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     dropTemporary(owned.receipt);
     if (session) dropValidationOwnerSession(session);
   }
