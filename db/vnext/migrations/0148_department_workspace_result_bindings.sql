@@ -6,9 +6,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE snapshot jsonb;v jsonb;outcome jsonb;expected_owner text;actual_scope text:=p_campus;h department_master.hierarchy_view_version;c jsonb;n record;relation_version department_master.campus_relation_version;complete boolean;resolved_id uuid;
 BEGIN
  IF p_ref->>'owner' IS NULL THEN RETURN;END IF;
- -- Complete proof admission waits for caller-entered coordinates; known partial
- -- coordinates still resolve and authorize their actual original Owner objects.
- complete:=p_ref ?& ARRAY['id','owner','versionId','candidateId','requestId'];
+ -- Known partial coordinates resolve their actual original Owner objects.
  IF p_ref->>'id' IS NULL AND p_ref->>'versionId' IS NOT NULL THEN
   CASE p_ref->>'owner'
    WHEN 'SOURCE_MAPPING' THEN SELECT mapping_id INTO resolved_id FROM department_master.organization_mapping_version WHERE id=(p_ref->>'versionId')::uuid;
@@ -27,6 +25,7 @@ BEGIN
  -- Other candidate-only references are authorized by the original transaction-scoped
  -- Owner coordinator, including its frozen input/target/source checks, before return.
  IF p_ref->>'id' IS NULL THEN RETURN;END IF;
+ complete:=p_ref ?& ARRAY['id','owner','versionId','candidateId','requestId'];
  PERFORM department_master.evolution_authorize(p_actor,p_campus,'READ');
  CASE p_ref->>'owner'
  WHEN 'SOURCE_MAPPING' THEN

@@ -678,6 +678,37 @@ test("P2-07 existing identifier and mapping result drafts follow exact Owner REA
       },
     };
     const completeSaved = await owner.saveDraft("maker", completeOriginal);
+    const { id: inferredId, ...resolvedResult } = completeResult;
+    expect(inferredId).toBe(mappingId);
+    const inferredOriginal = {
+      ...completeOriginal,
+      requestId: randomUUID(),
+      payload: {
+        disposition: { kind: "CLOSE_RELATION", result: resolvedResult },
+      },
+    };
+    const inferredSaved = await owner.saveDraft("maker", inferredOriginal);
+    expect(
+      (await owner.readDraft("maker", { id: inferredSaved.id })).content,
+    ).toEqual(inferredOriginal);
+    const mismatchedInferred = {
+      ...inferredOriginal,
+      requestId: randomUUID(),
+      payload: {
+        disposition: {
+          kind: "CLOSE_RELATION",
+          result: { ...resolvedResult, requestId: randomUUID() },
+        },
+      },
+    };
+    expect
+      .soft(
+        await owner.saveDraft("maker", mismatchedInferred).then(
+          () => "ALLOWED",
+          () => "DENIED",
+        ),
+      )
+      .toBe("DENIED");
     const versionOriginal = {
       requestId: randomUUID(),
       kind: "IMPACT" as const,
