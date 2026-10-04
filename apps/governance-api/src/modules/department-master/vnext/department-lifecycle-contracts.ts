@@ -1,4 +1,5 @@
 import {Type,type Static} from 'typebox';
+export interface DepartmentUnitBindingInput {department:{owner:'department-master';id:string};campus:{owner:'organization-master/campus';id:string};subject:{owner:'organization-master';id:string};relation:{owner:'department-master/campus-relation';id:string;version:string;versionId:string};services:string[];validFrom:string;validTo:string|null;recordAsOf?:string}
 import {Id,check} from './contracts.js';
 import {EvolutionImpactSchema,EvolutionVerifySchema} from './organization-evolution-contracts.js';
 const Time=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'});

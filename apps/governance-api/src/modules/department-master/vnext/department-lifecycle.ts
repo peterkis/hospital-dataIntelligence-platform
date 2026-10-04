@@ -4,7 +4,7 @@ import {Kysely,PostgresDialect,sql} from 'kysely';
 import type {DB} from '../../../platform/database/vnext-types.generated.js';
 import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,type ApplyOwnerPort,type OwnerFact,type ImportJob,type ImportContractItem,type KeyProviderPort} from '../../governance-catalog/index.js';
 import {openOperatingRelations,openCampus,localTime,covered,intersect,subtract} from '../../organization-master/index.js';
-import {projectImpactReference,type DepartmentImpactContext} from './department-impact.js';
+import {projectImpactReference,type DepartmentImpactContext,departmentImpactPorts,type DepartmentImpactPorts} from './department-impact.js';
 import type {DepartmentAssessment,ImpactReference} from './department-impact-contracts.js';
 import {EVOLUTION_IMPACT_DOMAINS} from './organization-evolution-contracts.js';
 import type {DepartmentHistory,DepartmentReplacement} from './index.js';
@@ -28,7 +28,7 @@ const stamp=(value:string)=>localTime(value.replace(' ','T'));
 const span=(value:RelationVersion):Span=>({from:stamp(value.valid_from),to:value.valid_to===null?null:stamp(value.valid_to)});
 const cleanSnapshot=(value:Snapshot):Snapshot=>({...value,lifecycle:value.lifecycle.map(v=>({...v,number:String(v.number),effective_at:stamp(v.effective_at),recorded_at:stamp(v.recorded_at)})),relations:value.relations.map(r=>({...r,versions:r.versions.map(v=>({...v,number:String(v.number),valid_from:stamp(v.valid_from),valid_to:v.valid_to===null?null:stamp(v.valid_to),recorded_at:stamp(v.recorded_at)}))}))});
 
-export function openDepartmentLifecycle(connection:string,provider?:KeyProviderPort){
+export function openDepartmentLifecycle(connection:string,provider?:KeyProviderPort,impactPorts:DepartmentImpactPorts=departmentImpactPorts){
  const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const operating=openOperatingRelations(connection,provider),campuses=openCampus(connection,provider);
  const root=<T>(work:(s:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
@@ -165,14 +165,14 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
   for(const write of writes)if(write.kind==='RELATION'){const versions=states.get(write.departmentId)!.department.versions;const departmentParts=versions.flatMap((v,i)=>subtract({from:stamp(v.valid_from),to:v.valid_to===null?null:stamp(v.valid_to)},versions.slice(i+1).map(x=>({from:stamp(x.valid_from),to:x.valid_to===null?null:stamp(x.valid_to)}))).flatMap(p=>intersect(p,{from:write.validFrom,to:write.validTo})).map(p=>({...p,versionId:v.id,version:String(v.number)})));const prior=write.dependencies as {operating?:unknown};write.dependencies={operating:prior?.operating??write.dependencies,departmentParts};}
   if(writes.length>100)throw new Error('PLAN_INPUT_LIMIT');
   // Only implemented Owner references are evaluated. Unavailable domains remain explicit.
-  const references=(await sql<{r:ImpactReference[]}>`select department_master.impact_references(${actor},${JSON.stringify(r.department_ids)}::jsonb,${r.campus}) r`.execute(s)).rows[0]!.r;
+  const references=await impactPorts.references(s,actor,r.department_ids,r.campus);
   if(references.length>2000)throw new Error('PLAN_INPUT_LIMIT');
   const context=await impactContext(s,actor,id);
   for(const ref of references)projectImpactReference(ref,context.effectiveAt,context.changeType,states.get(ref.departmentId)?.replacement?stamp(states.get(ref.departmentId)!.replacement!.effective_at):null);
   if(new Set(input.impacts.map(i=>i.domain)).size!==9||new Set(verification.impactReviews.map(i=>i.domain)).size!==9||input.impacts.some(i=>i.determination==='UNKNOWN'||i.determination==='AFFECTED'&&!i.requiredAction.trim())||verification.impactReviews.some(i=>!i.ownerAttestationAccepted||!i.dispositionAccepted))throw new Error('BLOCKED_DEPENDENCY');
   for(const impact of input.impacts){materials.push(await material(s,actor,impact.evidenceId,job,r.campus));await material(s,r.verification!.actor,impact.evidenceId,job,r.campus);}
-  if(references.some(ref=>ref.owner!=='CAMPUS_RELATION'&&ref.constraint==='UNSATISFIED'&&!input.impacts.some(i=>i.domain===ref.owner&&i.determination==='AFFECTED')))throw new Error('IMPACT_DECLARATION_CONFLICT');
-  const contentBase={target:{kind:'INPUT' as const,id:r.id},departmentIds:[...r.department_ids].sort(),inputId:r.id,inputDigest:r.digest,campus:r.campus,changeType:context.changeType,effectiveAt:context.effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage:[...(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION'] as const).map(owner=>({owner,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const})),...(['PERSONNEL','BUSINESS_UNIT','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}))],references};
+  if(references.some(ref=>ref.owner!=='CAMPUS_RELATION'&&ref.owner!=='BUSINESS_UNIT'&&ref.constraint==='UNSATISFIED'&&!input.impacts.some(i=>i.domain===ref.owner&&i.determination==='AFFECTED')))throw new Error('IMPACT_DECLARATION_CONFLICT');
+  const contentBase={target:{kind:'INPUT' as const,id:r.id},departmentIds:[...r.department_ids].sort(),inputId:r.id,inputDigest:r.digest,campus:r.campus,changeType:context.changeType,effectiveAt:context.effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage:[...(['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','CAMPUS_RELATION'] as const).map(owner=>({owner,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const})),...(impactPorts.businessUnitsAvailable?[{owner:'BUSINESS_UNIT' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'BUSINESS_UNIT' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),...(['PERSONNEL','WARD','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}))],references};
   const content={...contentBase,dependencyDigest:createHash('sha256').update(canonicalPlan(contentBase)).digest('hex')};
   const transaction=(await sql<{id:string}>`select pg_current_xact_id()::text id`.execute(s)).rows[0]!.id,ticket=canonicalPlan({actor,transaction,operation:'LIFECYCLE_ASSESS',campus:r.campus,assessment:content}),key=Buffer.from(planBinding(provider,'DEPARTMENT_SQL_AUTHORITY_V1',{}),'hex');
   let reference:{id:string;digest:string};try{reference=(await sql<{r:{id:string;digest:string}}>`select governance_catalog.department_lifecycle_assessment(${ticket},${createHmac('sha256',key).update(ticket).digest('hex')}) r`.execute(s)).rows[0]!.r;}finally{key.fill(0);}
@@ -204,6 +204,13 @@ export function openDepartmentLifecycle(connection:string,provider?:KeyProviderP
  };
  const stageInTransaction=async(s:Scope,actor:string,input:DepartmentLifecycleStageInput)=>{lifecycleCheck(DepartmentLifecycleStageSchema,input);input=structuredClone(input);await authorize(s,actor,input.campus,'WRITE');await referenceAccess(s,actor,input);if(input.profile!=='CORE')throw new Error('BLOCKED_DEPENDENCY');return mutate<{inputId:string;revisionId:string;digest:string}>(s,actor,{operation:'STAGE',...input,departmentIds:[...new Set(input.commands.map(c=>c.department.id))],...protect('DEPARTMENT_LIFECYCLE_INPUT_V1',input)});};
  return {
+  async readUnitBindingCoverageInTransaction(s:Scope,actor:string,input:import('./department-lifecycle-contracts.js').DepartmentUnitBindingInput){
+   if(input.department.owner!=='department-master'||input.campus.owner!=='organization-master/campus'||input.subject.owner!=='organization-master'||input.relation.owner!=='department-master/campus-relation')throw new Error('REFERENCE_INVALID');
+   return (await sql<{r:{scope:'NORTH'|'SOUTH';department:unknown;relationId:string;relationVersion:string;relationVersionId:string}}> `select department_master.unit_binding_coverage(${actor},${input.department.id}::uuid,${input.relation.id}::uuid,${input.relation.version},${input.relation.versionId}::uuid,${input.campus.id}::uuid,${input.subject.id}::uuid,${JSON.stringify(input.services)}::jsonb,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${input.recordAsOf===undefined?null:localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;
+  },
+  async authorizeUnitReferenceInTransaction(s:Scope,actor:string,input:{department:{id:string};relation:{id:string;versionId:string;version:string};campus:{id:string};subject:{id:string}}){
+   await sql`select department_master.unit_reference_access(${actor},${input.department.id}::uuid,${input.relation.id}::uuid,${input.relation.version},${input.relation.versionId}::uuid,${input.campus.id}::uuid,${input.subject.id}::uuid)`.execute(s);
+  },
   authorizeEvolutionCampusChangesInTransaction:evolutionCampusAccess,
   async inspectEvolutionCampusChangesInTransaction(s:Scope,actor:string,input:EvolutionStoredStageInput){
    await evolutionCampusAccess(s,actor,input);const at=localTime(input.event.effective_at),writes:unknown[]=[],seen=new Set<string>();

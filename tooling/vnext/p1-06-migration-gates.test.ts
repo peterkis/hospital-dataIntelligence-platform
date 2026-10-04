@@ -30,6 +30,8 @@ vi.mock('./organization-evolution-provisioning.mjs',()=>({assertOrganizationEvol
 vi.mock('./department-impact-provisioning.mjs',()=>({assertDepartmentImpactsProvisioned:vi.fn(async()=>{state.events.push('impacts-provisioned');})}));
 vi.mock('./department-lifecycle-provisioning.mjs',()=>({assertDepartmentLifecycleProvisioned:vi.fn(async()=>{state.events.push('lifecycle-provisioned');})}));
 vi.mock('./p3-06-provisioning.mjs',()=>({assertLocationProvisioned:vi.fn(async()=>{state.events.push('location-provisioned');})}));
+vi.mock('./p3-01-provisioning.mjs',()=>({assertBusinessUnitProvisioned:vi.fn(async()=>{state.events.push('business-unit-provisioned');})}));
+vi.mock('../../apps/governance-api/src/modules/care-organization/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/care-organization/index.ts')>();return {...real,openBusinessUnit:vi.fn(()=>{state.events.push('business-unit');return {close:async()=>{}};})};});
 vi.mock('./hierarchy-provisioning.mjs',async importOriginal=>{
  const real=await importOriginal<typeof import('./hierarchy-provisioning.mjs')>();
  return {...real,assertHierarchyProvisioned:vi.fn(async()=>{state.events.push('hierarchy-provisioned');})};
@@ -81,7 +83,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -94,6 +96,7 @@ test('missing evolution provisioning prevents the repaired persistent service fr
  vi.mocked(assertOrganizationEvolutionsProvisioned).mockRejectedValueOnce(new Error('ORGANIZATION_EVOLUTION_PROVISIONING_REQUIRED'));
  await expect(startWorkbench({persistent:true})).rejects.toThrow('ORGANIZATION_EVOLUTION_PROVISIONING_REQUIRED');expect(state.events).not.toContain('listen');
 });
+test('missing business unit provisioning prevents listening before the new Owner is constructed',async()=>{const {assertBusinessUnitProvisioned}=await import('./p3-01-provisioning.mjs');vi.mocked(assertBusinessUnitProvisioned).mockRejectedValueOnce(new Error('BUSINESS_UNIT_OWNER_NOT_PROVISIONED'));await expect(startWorkbench({persistent:true})).rejects.toThrow('BUSINESS_UNIT_OWNER_NOT_PROVISIONED');expect(state.events).not.toContain('business-unit');expect(state.events).not.toContain('listen');});
 test('missing impact provisioning prevents persistent service from listening',async()=>{
  const {assertDepartmentImpactsProvisioned}=await import('./department-impact-provisioning.mjs');
  vi.mocked(assertDepartmentImpactsProvisioned).mockRejectedValueOnce(new Error('DEPARTMENT_IMPACT_PROVISIONING_REQUIRED'));
@@ -155,7 +158,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0151_location_interval_local_revision');
+ expect(files.at(-1)?.id).toBe('0161_business_unit_historical_list_and_campus_impact');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{

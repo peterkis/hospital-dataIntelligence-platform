@@ -68,6 +68,16 @@ const postWorkspaceMigrations = [
  '0149_location_master',
  '0150_location_contract_and_campus_coverage',
  '0151_location_interval_local_revision',
+ '0152_campus_business_unit',
+ '0153_business_unit_public_ports',
+ '0154_business_unit_references_and_withdrawal',
+ '0155_business_unit_historical_scope_and_property_stream',
+ '0156_business_unit_json_fact_comparison',
+ '0157_business_unit_extended_period_and_sql_guard',
+ '0158_business_unit_source_rule_integrity',
+ '0159_business_unit_expanded_write_budget',
+ '0160_business_unit_budget_binding',
+ '0161_business_unit_historical_list_and_campus_impact',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

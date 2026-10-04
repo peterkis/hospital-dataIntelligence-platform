@@ -1,0 +1,7 @@
+import {localTime,subtract,intersect} from '../organization-master/index.js';
+import type {UnitHistory,UnitVersion,UnitBindingHistory} from './contracts.js';
+export const knownUnit=(h:UnitHistory,asOf?:string):UnitHistory=>({...h,versions:h.versions.filter(v=>!asOf||v.recordedAt<=localTime(asOf)),bindings:h.bindings.map(b=>({...b,versions:b.versions.filter(v=>!asOf||v.recordedAt<=localTime(asOf))})).filter(b=>b.versions.length>0)});
+export function unitAt(h:UnitHistory,at:string):UnitVersion|null{at=localTime(at);if(h.versions.some(v=>v.action==='CLOSE'&&v.validFrom<=at))return null;return h.versions.filter(v=>v.action!=='CLOSE'&&v.action!=='REBIND'&&v.validFrom<=at&&(v.validTo===null||at<v.validTo)).at(-1)??null;}
+export function unitPeriods(h:UnitHistory){const close=h.versions.find(v=>v.action==='CLOSE');return h.versions.filter(v=>v.action!=='CLOSE'&&v.action!=='REBIND').flatMap(v=>subtract({from:v.validFrom,to:v.validTo},h.versions.filter(l=>l.action!=='REBIND'&&BigInt(l.number)>BigInt(v.number)).map(l=>({from:l.validFrom,to:l.validTo}))).flatMap(p=>close?intersect(p,{from:h.versions[0]!.validFrom,to:close.validFrom}):[p]).map(p=>({...p,version:v})));}
+export const bindingHead=(b:UnitBindingHistory)=>b.versions.at(-1)!;
+export function bindingAt(h:UnitHistory,at:string){const found=h.bindings.filter(b=>{const v=bindingHead(b);return v.validFrom<=at&&(v.validTo===null||at<v.validTo);});if(found.length>1)throw new Error('UNIT_BINDING_CONFLICT');return found[0]??null;}

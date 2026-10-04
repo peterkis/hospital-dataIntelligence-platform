@@ -5,7 +5,8 @@
     "governance_catalog": "governance-catalog",
     "organization_master": "organization-master",
     "department_master": "department-master",
-    "location_master": "location-master"
+    "location_master": "location-master",
+    "care_organization": "care-organization"
   },
   "publicOwner": "apps/governance-api/src/modules/governance-catalog/index.ts",
   "migrationRole": "postgres via fixed local WSL peer",
@@ -13,12 +14,14 @@
   "businessInstanceSchemas": [
     "organization_master",
     "department_master",
-    "location_master"
+    "location_master",
+    "care_organization"
   ],
   "domainOwners": {
     "organization_master": "apps/governance-api/src/modules/organization-master/index.ts",
     "department_master": "apps/governance-api/src/modules/department-master/index.ts",
-    "location_master": "apps/governance-api/src/modules/location-master/index.ts"
+    "location_master": "apps/governance-api/src/modules/location-master/index.ts",
+    "care_organization": "apps/governance-api/src/modules/care-organization/index.ts"
   },
   "operatingCapabilities": {
     "owner": "organization-master",

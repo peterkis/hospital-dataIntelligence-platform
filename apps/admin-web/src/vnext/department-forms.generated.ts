@@ -856,6 +856,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_LOCATION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1095,6 +1101,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_LOCATION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
                                     ]
                                   }
                                 ]
@@ -3103,6 +3115,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_LOCATION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3342,6 +3360,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_LOCATION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
                                     ]
                                   }
                                 ]
@@ -4389,6 +4413,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_LOCATION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4628,6 +4658,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_LOCATION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
                                     ]
                                   }
                                 ]
@@ -5444,6 +5480,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_LOCATION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -5683,6 +5725,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_LOCATION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_V1"
                                     ]
                                   }
                                 ]
@@ -8060,7 +8108,8 @@ export const departmentForms = {
                           "SOURCE_MAPPING",
                           "IDENTIFIER",
                           "HIERARCHY",
-                          "CAMPUS_RELATION"
+                          "CAMPUS_RELATION",
+                          "BUSINESS_UNIT"
                         ]
                       },
                       "id": {
@@ -8119,7 +8168,8 @@ export const departmentForms = {
                           "SOURCE_MAPPING",
                           "IDENTIFIER",
                           "HIERARCHY",
-                          "CAMPUS_RELATION"
+                          "CAMPUS_RELATION",
+                          "BUSINESS_UNIT"
                         ]
                       },
                       "id": {
@@ -8186,7 +8236,8 @@ export const departmentForms = {
                                   "SOURCE_MAPPING",
                                   "IDENTIFIER",
                                   "HIERARCHY",
-                                  "CAMPUS_RELATION"
+                                  "CAMPUS_RELATION",
+                                  "BUSINESS_UNIT"
                                 ]
                               },
                               "id": {
@@ -11815,7 +11866,8 @@ export const departmentForms = {
                         "SOURCE_MAPPING",
                         "IDENTIFIER",
                         "HIERARCHY",
-                        "CAMPUS_RELATION"
+                        "CAMPUS_RELATION",
+                        "BUSINESS_UNIT"
                       ]
                     },
                     "id": {
@@ -11874,7 +11926,8 @@ export const departmentForms = {
                         "SOURCE_MAPPING",
                         "IDENTIFIER",
                         "HIERARCHY",
-                        "CAMPUS_RELATION"
+                        "CAMPUS_RELATION",
+                        "BUSINESS_UNIT"
                       ]
                     },
                     "id": {
@@ -11941,7 +11994,8 @@ export const departmentForms = {
                                 "SOURCE_MAPPING",
                                 "IDENTIFIER",
                                 "HIERARCHY",
-                                "CAMPUS_RELATION"
+                                "CAMPUS_RELATION",
+                                "BUSINESS_UNIT"
                               ]
                             },
                             "id": {

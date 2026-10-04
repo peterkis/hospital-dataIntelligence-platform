@@ -248,7 +248,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   async exactRead(s,actor,input,fact){if(fact.owner!=='department-master/organization-evolution'||fact.version!=='1')return null;await snapshot(s,actor,fact.id,input.campus);return fact;},
  };
  let lifecycleOwner:ReturnType<typeof openDepartmentLifecycle>|undefined;
- const lifecycle=()=>lifecycleOwner??=openDepartmentLifecycle(connection,provider);
+ const lifecycle=()=>lifecycleOwner??=openDepartmentLifecycle(connection,provider,impactPorts);
  const impacts=departmentImpacts(root,async(s,actor,target)=>{
   const context=(await sql<{r:{owner:string;input_id:string}}>`select department_master.impact_change_context(${actor},${target.id}::uuid,${target.kind},${target.kind==='EVENT'?target.campus:null}) r`.execute(s)).rows[0]!.r;
   if(context.owner==='department-master/lifecycle')return lifecycle().impactContextInTransaction(s,actor,context.input_id);

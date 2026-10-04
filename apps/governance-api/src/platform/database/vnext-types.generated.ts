@@ -23,6 +23,107 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export interface CareOrganizationAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface CareOrganizationApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface CareOrganizationBindingVersion {
+  binding: Json;
+  binding_id: string;
+  change_id: string;
+  dependencies: Json;
+  id: Generated<string>;
+  number: Int8;
+  recorded_at: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface CareOrganizationCode {
+  code: string;
+  unit_id: string;
+}
+
+export interface CareOrganizationInput {
+  campus_ids: string[];
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface CareOrganizationUnit {
+  department_id: string;
+  id: Generated<string>;
+}
+
+export interface CareOrganizationUnitBinding {
+  campus_id: string;
+  id: Generated<string>;
+  scope: string;
+  subject_id: string;
+  unit_id: string;
+}
+
+export interface CareOrganizationVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface CareOrganizationVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  unit_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface DepartmentMasterAccess {
   actor: string;
   permission: string;
@@ -1217,7 +1318,23 @@ export interface VnextControlRequestIdentity {
   request_id: string;
 }
 
+export interface VnextControlUnitWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface DB {
+  "care_organization.access": CareOrganizationAccess;
+  "care_organization.apply_binding": CareOrganizationApplyBinding;
+  "care_organization.binding_version": CareOrganizationBindingVersion;
+  "care_organization.change": CareOrganizationChange;
+  "care_organization.code": CareOrganizationCode;
+  "care_organization.input": CareOrganizationInput;
+  "care_organization.unit": CareOrganizationUnit;
+  "care_organization.unit_binding": CareOrganizationUnitBinding;
+  "care_organization.verification": CareOrganizationVerification;
+  "care_organization.version": CareOrganizationVersion;
+  "care_organization.withdrawal": CareOrganizationWithdrawal;
   "department_master.access": DepartmentMasterAccess;
   "department_master.campus_relation": DepartmentMasterCampusRelation;
   "department_master.campus_relation_version": DepartmentMasterCampusRelationVersion;
@@ -1331,4 +1448,5 @@ export interface DB {
   "vnext_control.outcome": VnextControlOutcome;
   "vnext_control.protected_grant": VnextControlProtectedGrant;
   "vnext_control.request_identity": VnextControlRequestIdentity;
+  "vnext_control.unit_write_authority": VnextControlUnitWriteAuthority;
 }
