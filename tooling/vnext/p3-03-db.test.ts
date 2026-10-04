@@ -128,6 +128,14 @@ test('a future rebind retains the current manager obligation and serializes exac
  }finally{await app.close();await evolution.close();}
 });
 
+test('a future rebind fully masked by suspension is an empty historical Department impact reference over HTTP',async()=>{
+ const {h,entry}=await populated(),target=await f.endpoint();await f.apply(await f.input([revision(h,entry,'REBIND','2026-09-01T00:00:00',target)]));const scheduled=await f.owner.history('maker',{id:h.id});await f.apply(await f.input([revision(scheduled,entry,'SUSPEND','2026-06-01T00:00:00')]));
+ const j=await f.dep.newJob(),i=await f.lifecycle.stage('maker',{requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',profile:'CORE',commands:[{action:'SUSPEND',department:{owner:'department-master',id:target.department.id,expectedVersion:'1',expectedLifecycleHead:'0'},effectiveAt:'2026-08-01T00:00:00',reason:'TEST suspended before future management',evidenceId:f.dep.artifact.artifactId}],impacts:f.impacts}),evolution=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>f.base.owner,()=>f.owner));
+ const contexts:Parameters<typeof buildCatalogServer>=[catalog,'CONTROL_PLANE'];contexts[11]={owner:evolution,actor:r=>actor(r.headers)};const app=await buildCatalogServer(...contexts);
+ try{const url=await app.listen({host:'127.0.0.1',port:0}),result=await createDepartmentImpactClient(url,'maker').assess({requestId:randomUUID(),reason:'TEST masked future impact',target:{kind:'INPUT',id:i.inputId}});expect(result.response.status).toBe(200);const ref=result.data?.references.find(v=>v.owner==='NURSING_UNIT'&&v.id===h.id);expect(ref).toMatchObject({originalPeriod:{from:'2026-09-01T00:00:00.000000',to:null},currentPeriod:{from:'2026-09-01T00:00:00.000000',to:'2026-09-01T00:00:00.000000'},current:false,constraint:'SATISFIED',affectedSpans:[]});expect((await f.owner.history('maker',{id:h.id,recordAsOf:scheduled.versions.at(-1)!.recordedAt})).bindings).toEqual(scheduled.bindings);
+ }finally{await app.close();await evolution.close();}
+});
+
 test('an accepted source alias cannot register a second stable Nursing identity in another import job',async()=>{
  const {a,entry}=await populated(),duplicate=f.entry(a);duplicate.row.nursing_unit_id=entry.row.nursing_unit_id;await expect(f.apply(await f.input([duplicate]))).rejects.toThrow('NURSING_SOURCE_ALREADY_REGISTERED');expect((await f.owner.list('maker',{campus:'NORTH',departmentId:a.department.id})).items).toHaveLength(1);
 });

@@ -25,3 +25,20 @@ reconciliation and current-access rejection pass. Independent Spec/Standards rev
 final command receipts and exact local commit/tree are indexed in the ignored handoff.
 The coverage-specific AC portions, FULL, hospital policy adoption, formal acceptance,
 new Nursing page and actual service restart retain their separate pending states above.
+
+## Comments
+
+- 2026-10-04: The user authorized pushing, opening PR30, repeated `@codex review`
+  and repairs, merging only after current-head review/checks pass, fast-forwarding
+  local main, cleaning redundant branches/worktrees and updating the handoff.
+  This supersedes the original local-only stop instruction; adjacent tickets and
+  all pending acceptance boundaries remain unchanged.
+- PR30 review round 1 found a future binding fully masked by earlier suspension
+  exposed a reversed Department impact interval. A generated-client real HTTP RED
+  reproduces it. Forward migration0164 retains the original accepted interval,
+  exposes an empty current interval and marks the reference historical. Fresh and
+  populated0161 upgrade now pass29/29, and startup gates pass210/210. The original
+  head CI also exposed two legacy completed-disposition fixtures missing the new
+  NURSING_UNIT dependency; their input lists are extended without weakening the
+  disposition gate. Exact publication review/CI/deployment outcomes are recorded
+  in the ignored handoff rather than inferred from these implementation notes.

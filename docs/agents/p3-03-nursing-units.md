@@ -61,6 +61,10 @@ permissions. Unknown downstream domains never become zero-impact conclusions.
 Hospital-wide Department exits collect Nursing bindings across all governance
 scopes and authorize their actual campuses; an inaccessible scope blocks the
 assessment instead of producing a partial EVALUATED report.
+An earlier suspension can fully mask an already recorded future binding. Its
+original accepted interval remains immutable; its current impact interval is
+empty at the binding's start, and the reference is marked historical rather than
+current. This avoids a reversed interval without discarding accepted evidence.
 AC01 actual multi-ward coverage, AC04 actual coverage effects, and the coverage
 portion of AC05 stay NOT_RUN pending P3-05. This ticket's master-reference portion
 of AC05 and AC02/03 are exercised separately.
