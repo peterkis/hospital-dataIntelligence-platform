@@ -4,7 +4,7 @@ import {withCareOrganizationImpacts} from '../../apps/governance-api/src/composi
 import {peer,quote} from './lineage.mjs';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
-import {createNursingUnitClient,createDepartmentImpactClient,createVNextCatalogClient} from '../../packages/generated-api-client/src/index.js';
+import {createNursingUnitClient,createDepartmentImpactClient,createVNextCatalogClient,createCampusClient} from '../../packages/generated-api-client/src/index.js';
 import {ORG09_FIELDS,type NursingReceive} from '../../apps/governance-api/src/modules/care-organization/index.js';
 import {organizationWorkbook} from './organization-workbook-fixture.js';
 import {test,expect,afterAll} from 'vitest';
@@ -118,6 +118,14 @@ test('real Nursing Owner references participate in Department and Campus impact 
   const assessment=await evolution.assessDepartmentChange('maker',{requestId:randomUUID(),reason:'TEST finite unit impact',target:{kind:'INPUT',id:i.inputId}});
   expect(assessment.coverage).toContainEqual({owner:'NURSING_UNIT',status:'EVALUATED',reason:'OWNER_AVAILABLE'});expect(assessment.references).toContainEqual(expect.objectContaining({owner:'NURSING_UNIT',id:h.id,constraint:'UNSATISFIED'}));expect(assessment.coverage).toContainEqual({owner:'PERSONNEL',status:'NOT_EVALUABLE',reason:'OWNER_NOT_IMPLEMENTED'});
  }finally{await campus.close();await evolution.close();}
+});
+
+test('ended finite Campus impact windows retain historical nursing activity without outstanding obligations over HTTP',async()=>{
+ const {a,h}=await populated(),campus=openCampus(connection,provider,{owners:['NURSING_UNIT'],readInTransaction:f.owner.readCampusDependenciesInTransaction}),contexts:Parameters<typeof buildCatalogServer>=[catalog,'CONTROL_PLANE'];contexts[3]={owner:campus,actor:r=>actor(r.headers)};const app=await buildCatalogServer(...contexts);
+ try{const url=await app.listen({host:'127.0.0.1',port:0}),client=createCampusClient(url,'maker'),asOf=h.versions[0]!.recordedAt;
+  for(const [validTo,outstanding] of [[asOf,false],['2032-01-01T00:00:00',true],[null,true]] as const){const result=await client.assessImpact({id:a.campus.id,validFrom:'2026-01-01T00:00:00',validTo,asOf});expect(result.response.status).toBe(200);expect(result.data?.dependencies).toContainEqual(expect.objectContaining({owner:'NURSING_UNIT',id:h.id,active:true,outstanding}));}
+  const current=await client.assessImpact({id:a.campus.id,validFrom:'2026-01-01T00:00:00',validTo:'2026-06-01T00:00:00'});expect(current.response.status).toBe(200);expect(current.data?.dependencies).toContainEqual(expect.objectContaining({owner:'NURSING_UNIT',id:h.id,active:true,outstanding:false}));expect(await f.owner.history('maker',{id:h.id,recordAsOf:asOf})).toEqual(h);
+ }finally{await app.close();await campus.close();}
 });
 
 test('a future rebind retains the current manager obligation and serializes exact accepted versions over HTTP',async()=>{

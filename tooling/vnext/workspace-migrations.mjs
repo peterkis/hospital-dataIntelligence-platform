@@ -81,6 +81,7 @@ const postWorkspaceMigrations = [
  '0162_nursing_unit_core',
  '0163_nursing_unit_public_integration',
  '0164_nursing_masked_binding_impact_period',
+ '0165_nursing_ended_campus_impact_window',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

@@ -42,3 +42,11 @@ new Nursing page and actual service restart retain their separate pending states
   NURSING_UNIT dependency; their input lists are extended without weakening the
   disposition gate. Exact publication review/CI/deployment outcomes are recorded
   in the ignored handoff rather than inferred from these implementation notes.
+- 2026-10-05: PR30 review round2 identified outstanding nursing obligations after
+  a finite Campus assessment window has ended. A generated-client real HTTP RED
+  reproduces the equality boundary. Forward migration0165 preserves historical
+  activity while clearing outstanding obligations for ended windows and reuses
+  one observation time. Its fresh suite passes30/30, including future finite and
+  unbounded windows retaining their obligations; startup gates pass210/210.
+  Head addc5f7's 14 local regressions and both hosted CI workflows passed. The
+  later head's upgrade/deployment, review and CI must still complete before merge.
