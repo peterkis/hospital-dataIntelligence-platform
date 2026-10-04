@@ -48,7 +48,8 @@ function failure(error:unknown):Error {
  const message=error instanceof Error?error.message:'';
  if((typeof code==='string'&&(/^08[A-Z0-9]{3}$/.test(code)||['ECONNRESET','ECONNREFUSED','ETIMEDOUT','EPIPE','57P01'].includes(code)))||
   ['Connection terminated unexpectedly','Connection terminated','Connection terminated due to connection timeout'].includes(message))return new Error('TRANSPORT_FAILED');
- return new Error(codes.has(message)||mappingCodes.includes(message)||nursingCodes.includes(message)?message:'APPLY_FAILED');
+ const wardCodes=['WARD_CLOSED','WARD_CODE_CONFLICT','WARD_SOURCE_ALREADY_REGISTERED','WARD_SOURCE_IDENTITY_MISMATCH','WARD_SOURCE_NOT_ADMITTED','WARD_MANAGING_UNIT_NOT_ADMITTED','WARD_MANAGING_UNIT_CAMPUS_MISMATCH','WARD_CAMPUS_CHANGE_REQUIRES_LIFECYCLE','WARD_BINDING_CONFLICT','WARD_BINDING_REQUIRED','WARD_ANCHOR_MISMATCH','WARD_PERIOD_NOT_COVERED','WARD_REBIND_INVALID','WARD_REVISE_INVALID','WARD_CLOSURE_EXPANSION','WARD_CONTENT_CHANGED','RECEIVING_BASIS_REQUIRED','RECEIVING_PERIOD_NOT_COVERED','IMPACT_DECLARATION_CONFLICT'];
+ return new Error(codes.has(message)||mappingCodes.includes(message)||nursingCodes.includes(message)||wardCodes.includes(message)?message:'APPLY_FAILED');
 }
 function check<S>(schema:S,input:unknown):void {if(!Check(schema as never,input))throw new Error('CLOSED_INPUT_REQUIRED');}
 function bound(unit:ObservedOwnerUnit):void {

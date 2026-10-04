@@ -12,7 +12,7 @@ export interface ParserIssue { code: string; row: number; column: number; sheet?
 export type CanonicalRow = Record<string,string>;
 export interface RawCellProvenance {row:number;sourceRow:number;column:number;field:string;value:string;sourceType:'CSV'|'JSON'|XlsxCellType}
 export interface ParserResult {
-  policy: 'STRICT_V1' | 'STRICT_V2' | 'STRICT_DEPARTMENT_V1' | 'STRICT_ORGANIZATION_MAPPING_V1' | 'STRICT_ORGANIZATION_IDENTIFIER_V1' | 'STRICT_LOCATION_V1' | 'STRICT_UNIT_V1' | 'STRICT_NURSING_V1'; structuralStatus: 'PARSED' | 'REJECTED';
+  policy: 'STRICT_V1' | 'STRICT_V2' | 'STRICT_DEPARTMENT_V1' | 'STRICT_ORGANIZATION_MAPPING_V1' | 'STRICT_ORGANIZATION_IDENTIFIER_V1' | 'STRICT_LOCATION_V1' | 'STRICT_UNIT_V1' | 'STRICT_NURSING_V1' | 'STRICT_WARD_V1'; structuralStatus: 'PARSED' | 'REJECTED';
   manifest: { bomDetected: boolean; bomMembers:string[]; defaultRowsHidden:boolean; hiddenSheets: string[]; hiddenRows: number[]; hiddenColumns: string[] };
   rows: CanonicalRow[];
   cells: RawCellProvenance[];
@@ -249,7 +249,7 @@ function decodeXlsxText(value:string,row=0,column=0):string {
   assertTextSafety(decoded,row,column);return decoded;
 }
 interface XlsxTable {rows:string[][];sourceTypes:XlsxCellType[][];physicalRows:number[];issues:ParserIssue[]}
-function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'EVOLUTION'|'HIERARCHY'|'DEPARTMENT'|'MAPPING'|'IDENTIFIER'|'LOCATION'|'UNIT'|'NURSING'='GENERIC'): Map<string,XlsxTable> {
+function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:'GENERIC'|'ORGANIZATION'|'EVOLUTION'|'HIERARCHY'|'DEPARTMENT'|'MAPPING'|'IDENTIFIER'|'LOCATION'|'UNIT'|'NURSING' | 'WARD'='GENERIC'): Map<string,XlsxTable> {
   const files = unzip(bytes,mode!=='GENERIC');
   const worksheetParts=[...files.keys()].filter(name=>/^xl\/worksheets\//u.test(name));
   if(worksheetParts.length!==(mode==='HIERARCHY'?2:['ORGANIZATION','EVOLUTION'].includes(mode)?3:1))fail('SHEET_CONTRACT');
@@ -320,7 +320,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
   for(const entry of sheets.children)only(entry,[]);
   for(const s of sheets.children)if(s.attrs['state']!==undefined&&!['visible','hidden','veryHidden'].includes(s.attrs['state']))fail('XML_ATTRIBUTE_INVALID');
   manifest.hiddenSheets = sheets.children.filter(s => s.attrs['state']!==undefined && s.attrs['state'] !== 'visible').map(s => s.attrs['name'] ?? '');
-  const expected=mode==='DEPARTMENT'?['ORG04']:mode==='MAPPING'?['ORG22']:mode==='IDENTIFIER'?['ORG23']:mode==='NURSING'?['ORG09']:mode==='UNIT'?['ORG07']:mode==='LOCATION'?['ORG12']:mode==='ORGANIZATION'?['ORG01','ORG02','ORG03']:mode==='EVOLUTION'?['ORG26','ORG27','ORG04']:mode==='HIERARCHY'?['ORG05','ORG06']:['Data'];
+  const expected=mode==='DEPARTMENT'?['ORG04']:mode==='MAPPING'?['ORG22']:mode==='IDENTIFIER'?['ORG23']:mode==='WARD'?['ORG08']:mode==='NURSING'?['ORG09']:mode==='UNIT'?['ORG07']:mode==='LOCATION'?['ORG12']:mode==='ORGANIZATION'?['ORG01','ORG02','ORG03']:mode==='EVOLUTION'?['ORG26','ORG27','ORG04']:mode==='HIERARCHY'?['ORG05','ORG06']:['Data'];
   if(sheets.children.length!==expected.length||new Set(sheets.children.map(s=>s.attrs['name'])).size!==expected.length||sheets.children.some(s=>!expected.includes(s.attrs['name']??'')))fail('SHEET_CONTRACT',1,1,sheets.children.find(s=>!expected.includes(s.attrs['name']??''))?.attrs['name']??'workbook');
   const ids=new Set<number>();for(const sheet of sheets.children){const id=unsignedAttribute(sheet.attrs['sheetId'],true);if(ids.has(id))fail('SHEET_CONTRACT');ids.add(id);}
   const wr = get('xl/_rels/workbook.xml.rels','Relationships'); only(wr,['Relationship']);
@@ -413,7 +413,7 @@ function xlsxTables(bytes: Uint8Array, manifest: ParserResult['manifest'], mode:
   return tables;
 }
 
-function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<ParserResult,'issues'>>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false,rowIndependent=false,nursingNullableText=false){
+function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<ParserResult,'issues'>>,objects:SourceObject[],fields:ParserField[],physicalRows:number[],sourceTypes:XlsxCellType[][],format:FileFormat,optionalTime:boolean,offset=false,rowIndependent=false,nullableFields:readonly string[]=[],integerFields:readonly string[]=[]){
     for (const [index, source] of objects.entries()) {
       const obj=source.values;
       const row: Record<string,string> = Object.create(null); const rowNum = index + 1, sourceRow = physicalRows[index] ?? rowNum;
@@ -424,13 +424,14 @@ function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<P
         const column=source.columns.indexOf(f.code)+1;
         const value = obj[f.code];
         const text = typeof value==='string'?value:value?.lexeme??'';
-        const nullableNull=nursingNullableText&&format==='JSON'&&(f.code==='care_level'||f.code==='office_phone')&&typeof value!=='string'&&value?.lexeme==='null';
+        const nullableNull=nullableFields.includes(f.code)&&format==='JSON'&&typeof value!=='string'&&value?.lexeme==='null';
         result.cells.push({row:rowNum,sourceRow,column,field:f.code,value:text,sourceType:format === 'XLSX' ? sourceTypes[index]?.[column-1] ?? 'inlineStr' : format});
         rowCheck(()=>{
-          if(typeof value!=='string'&&!nullableNull)fail('TEXT_CELL_REQUIRED',sourceRow,column);
+          const sourceInteger=format==='JSON'&&integerFields.includes(f.code)&&/^[1-9][0-9]{0,9}$/u.test(text);
+          if(typeof value!=='string'&&!nullableNull&&!sourceInteger)fail('TEXT_CELL_REQUIRED',sourceRow,column);
           assertTextSafety(text,sourceRow,column);
           if (text !== text.trim()) fail('WHITESPACE_REJECTED',sourceRow,column);
-          if (f.type === 'datetime' && !(optionalTime && text==='')) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
+          if (f.type === 'datetime' && !(optionalTime && (text===''||nullableNull))) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
         });
         row[f.code] = nullableNull?'':text;
       }
@@ -440,8 +441,9 @@ function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<P
     }
 }
 
-export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[], policy: ParserResult['policy']='STRICT_V1'): ParserResult {
-  if(policy!=='STRICT_V1' && policy!=='STRICT_V2' && policy!=='STRICT_DEPARTMENT_V1' && policy!=='STRICT_ORGANIZATION_MAPPING_V1' && policy!=='STRICT_ORGANIZATION_IDENTIFIER_V1' && policy!=='STRICT_LOCATION_V1' && policy!=='STRICT_UNIT_V1' && policy!=='STRICT_NURSING_V1')throw new Error('PARSER_POLICY_REQUIRED');
+export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[], policy: ParserResult['policy']='STRICT_V1',sourcePlus08=false): ParserResult {
+  if(sourcePlus08&&policy!=='STRICT_WARD_V1')throw new Error('PARSER_POLICY_REQUIRED');
+  if(policy!=='STRICT_V1' && policy!=='STRICT_V2' && policy!=='STRICT_DEPARTMENT_V1' && policy!=='STRICT_ORGANIZATION_MAPPING_V1' && policy!=='STRICT_ORGANIZATION_IDENTIFIER_V1' && policy!=='STRICT_LOCATION_V1' && policy!=='STRICT_UNIT_V1' && policy!=='STRICT_NURSING_V1' && policy!=='STRICT_WARD_V1')throw new Error('PARSER_POLICY_REQUIRED');
   const result: ParserResult = { policy, structuralStatus:'REJECTED', manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
   try {
     if (!bytes.length) fail('EMPTY_FILE'); if (bytes.length > 1048576) fail('FILE_LIMIT');
@@ -449,8 +451,8 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
     let objects: SourceObject[];
     let physicalRows:number[]=[];let sourceTypes:XlsxCellType[][]=[];
     if (format === 'XLSX') {
-      const ownerRows=policy==='STRICT_DEPARTMENT_V1'||policy==='STRICT_ORGANIZATION_MAPPING_V1'||policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'||policy==='STRICT_LOCATION_V1'||policy==='STRICT_UNIT_V1'||policy==='STRICT_NURSING_V1';
-      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':policy==='STRICT_ORGANIZATION_MAPPING_V1'?'MAPPING':policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'?'IDENTIFIER':policy==='STRICT_NURSING_V1'?'NURSING':policy==='STRICT_UNIT_V1'?'UNIT':policy==='STRICT_LOCATION_V1'?'LOCATION':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':policy==='STRICT_ORGANIZATION_MAPPING_V1'?'ORG22':policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'?'ORG23':policy==='STRICT_NURSING_V1'?'ORG09':policy==='STRICT_UNIT_V1'?'ORG07':policy==='STRICT_LOCATION_V1'?'ORG12':'Data')!; physicalRows=table.physicalRows.slice(1);objects = tableObjects(table.rows,fields,[1,...physicalRows],ownerRows,table.issues);sourceTypes=table.sourceTypes.slice(1);result.issues.push(...table.issues);
+      const ownerRows=policy==='STRICT_DEPARTMENT_V1'||policy==='STRICT_ORGANIZATION_MAPPING_V1'||policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'||policy==='STRICT_LOCATION_V1'||policy==='STRICT_UNIT_V1'||(policy==='STRICT_NURSING_V1'||policy==='STRICT_WARD_V1');
+      const table = xlsxTables(bytes,result.manifest,policy==='STRICT_DEPARTMENT_V1'?'DEPARTMENT':policy==='STRICT_ORGANIZATION_MAPPING_V1'?'MAPPING':policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'?'IDENTIFIER':policy==='STRICT_WARD_V1'?'WARD':policy==='STRICT_NURSING_V1'?'NURSING':policy==='STRICT_UNIT_V1'?'UNIT':policy==='STRICT_LOCATION_V1'?'LOCATION':'GENERIC').get(policy==='STRICT_DEPARTMENT_V1'?'ORG04':policy==='STRICT_ORGANIZATION_MAPPING_V1'?'ORG22':policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'?'ORG23':policy==='STRICT_WARD_V1'?'ORG08':policy==='STRICT_NURSING_V1'?'ORG09':policy==='STRICT_UNIT_V1'?'ORG07':policy==='STRICT_LOCATION_V1'?'ORG12':'Data')!; physicalRows=table.physicalRows.slice(1);objects = tableObjects(table.rows,fields,[1,...physicalRows],ownerRows,table.issues);sourceTypes=table.sourceTypes.slice(1);result.issues.push(...table.issues);
     } else {
       let text = utf8(bytes); result.manifest.bomDetected = text.startsWith('\uFEFF'); if (result.manifest.bomDetected) text = text.slice(1);
       if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) fail('TEXT_CONTROL');
@@ -459,7 +461,7 @@ export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: Parser
       else return fail('FORMAT_UNSUPPORTED');
     }
     if (!objects.length) fail('NO_DATA');
-    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',false,policy==='STRICT_DEPARTMENT_V1'||policy==='STRICT_ORGANIZATION_MAPPING_V1'||policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'||policy==='STRICT_LOCATION_V1'||policy==='STRICT_UNIT_V1'||policy==='STRICT_NURSING_V1',policy==='STRICT_NURSING_V1');
+    appendObjects(result,objects,fields,physicalRows,sourceTypes,format,policy!=='STRICT_V1',sourcePlus08,policy==='STRICT_DEPARTMENT_V1'||policy==='STRICT_ORGANIZATION_MAPPING_V1'||policy==='STRICT_ORGANIZATION_IDENTIFIER_V1'||policy==='STRICT_LOCATION_V1'||policy==='STRICT_UNIT_V1'||(policy==='STRICT_NURSING_V1'||policy==='STRICT_WARD_V1'),policy==='STRICT_WARD_V1'?['managing_unit_id','admission_rule_ref','public_phone','valid_to','approval_ref']:policy==='STRICT_NURSING_V1'?['care_level','office_phone']:[],policy==='STRICT_WARD_V1'?['version_no']:[]);
     result.structuralStatus = 'PARSED';
   } catch (error) { result.rows = []; result.issues.push(error instanceof ParseFailure ? {code:error.code,row:error.row,column:error.column,...(error.sheet?{sheet:error.sheet}:{})} : {code:'PARSER_FAILED',row:0,column:0}); }
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) return {...result,structuralStatus:'REJECTED',rows:[],cells:[],issues:[{code:'RESULT_LIMIT',row:0,column:0}]};
@@ -514,6 +516,6 @@ function tableObjects(table: string[][], fields: ParserField[], physicalRows?:nu
 }
 
 if (!isMainThread && parentPort) {
-  try { parentPort.postMessage(workerData.policy==='STRICT_ORG_BUNDLE_V1'?parseOrganizationWorkbook(workerData.bytes,workerData.organizationFields):workerData.policy==='STRICT_ORGANIZATION_EVOLUTION_V1'?parseEvolutionWorkbook(workerData.bytes,workerData.evolutionFields):workerData.policy==='STRICT_HIERARCHY_CORE_V1'?parseHierarchyWorkbook(workerData.bytes,workerData.hierarchyFields):parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy)); }
+  try { parentPort.postMessage(workerData.policy==='STRICT_ORG_BUNDLE_V1'?parseOrganizationWorkbook(workerData.bytes,workerData.organizationFields):workerData.policy==='STRICT_ORGANIZATION_EVOLUTION_V1'?parseEvolutionWorkbook(workerData.bytes,workerData.evolutionFields):workerData.policy==='STRICT_HIERARCHY_CORE_V1'?parseHierarchyWorkbook(workerData.bytes,workerData.hierarchyFields):parseBytes(workerData.bytes,workerData.format,workerData.fields,workerData.policy,workerData.sourcePlus08===true)); }
   catch { parentPort.postMessage(null); }
 }

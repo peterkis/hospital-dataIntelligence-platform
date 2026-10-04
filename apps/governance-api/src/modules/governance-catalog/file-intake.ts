@@ -37,7 +37,7 @@ async function runParser<T>(workerData:unknown):Promise<T> {
   } finally { activeWorkers--; }
 }
 
-export const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'])=>runParser<ParserResult>({bytes,format,fields,policy});
+export const boundedParse=(bytes:Uint8Array,format:FileFormat,fields:ParserField[],policy:ParserResult['policy'],sourcePlus08=false)=>runParser<ParserResult>({bytes,format,fields,policy,sourcePlus08});
 export const parseOrganizationWorkbookBounded=(bytes:Uint8Array,organizationFields:Record<OrganizationSheet,ParserField[]>)=>runParser<OrganizationWorkbookResult>({bytes,organizationFields,policy:'STRICT_ORG_BUNDLE_V1'});
 export const parseEvolutionWorkbookBounded=(bytes:Uint8Array,evolutionFields:Record<EvolutionSheet,ParserField[]>)=>runParser<EvolutionWorkbookResult>({bytes,evolutionFields,policy:'STRICT_ORGANIZATION_EVOLUTION_V1'});
 export const parseHierarchyWorkbookBounded=(bytes:Uint8Array,hierarchyFields:Record<HierarchySheet,ParserField[]>)=>runParser<HierarchyWorkbookResult>({bytes,hierarchyFields,policy:'STRICT_HIERARCHY_CORE_V1'});

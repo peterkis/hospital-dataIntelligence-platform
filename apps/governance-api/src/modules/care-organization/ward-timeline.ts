@@ -1,0 +1,8 @@
+import {localTime,subtract,intersect} from '../organization-master/index.js';
+import type {WardHistory,WardVersion,WardBindingHistory} from './ward-contracts.js';
+export const knownWard=(h:WardHistory,asOf?:string):WardHistory=>({...h,versions:h.versions.filter(v=>!asOf||v.recordedAt<=localTime(asOf)),bindings:h.bindings.map(b=>({...b,versions:b.versions.filter(v=>!asOf||v.recordedAt<=localTime(asOf))})).filter(b=>b.versions.length>0)});
+export function wardAt(h:WardHistory,at:string):WardVersion|null{at=localTime(at);if(h.versions.some(v=>v.action==='CLOSE'&&v.validFrom<=at))return null;const latest=h.versions.filter(v=>v.action!=='CLOSE'&&v.action!=='REBIND'&&v.validFrom<=at).at(-1);return latest&&(latest.validTo===null||at<latest.validTo)?latest:null;}
+export function wardPeriods(h:WardHistory){const close=h.versions.find(v=>v.action==='CLOSE');return h.versions.filter(v=>v.action!=='CLOSE'&&v.action!=='REBIND').flatMap(v=>subtract({from:v.validFrom,to:v.validTo},h.versions.filter(l=>l.action!=='REBIND'&&BigInt(l.number)>BigInt(v.number)).map(l=>({from:l.validFrom,to:null}))).flatMap(p=>close?intersect(p,{from:h.versions[0]!.validFrom,to:close.validFrom}):[p]).map(p=>({...p,version:v})));}
+export const bindingHead=(b:WardBindingHistory)=>b.versions.at(-1)!;
+export function bindingPeriods(h:WardHistory){const core=wardPeriods(h);return h.bindings.flatMap(binding=>{const v=bindingHead(binding);return core.flatMap(p=>intersect({from:v.validFrom,to:v.validTo},p).map(span=>({...span,binding})));});}
+export function bindingAt(h:WardHistory,at:string){at=localTime(at);const found=bindingPeriods(h).filter(p=>p.from<=at&&(p.to===null||at<p.to)).map(p=>p.binding);if(found.length>1)throw new Error('WARD_BINDING_CONFLICT');return found[0]??null;}
