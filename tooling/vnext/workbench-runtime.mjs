@@ -1,5 +1,8 @@
 import {unitCapabilityUpstreamPorts} from '../../apps/governance-api/src/composition/unit-capability-dependencies.ts';
 import {assertUnitCapabilityProvisioned} from './p3-08-provisioning.mjs';
+import {assertSubjectsProvisioned} from './p3-09-provisioning.mjs';
+import {openSubjectCodes} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+import {openSubjectPermissions} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {wardUpstreamPorts} from '../../apps/governance-api/src/composition/ward-dependencies.ts';
 import {assertWardProvisioned} from './p3-02-provisioning.mjs';
 import {withCareOrganizationImpacts,nursingUpstreamPorts} from '../../apps/governance-api/src/composition/nursing-unit-dependencies.ts';
@@ -63,7 +66,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
-  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit, nursingUnit, ward, parameterValues, unitCapabilities;
+  let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit, nursingUnit, ward, parameterValues, unitCapabilities, subjectCodes, subjectPermissions;
   const close = async () => {
     await app?.close();
     await organization?.close();
@@ -80,6 +83,8 @@ export async function startWorkbench({
     await departmentLifecycle?.close();
     await location?.close();
     await unitCapabilities?.close();
+    await subjectPermissions?.close();
+    await subjectCodes?.close();
     await parameterValues?.close();
     await ward?.close();
     await nursingUnit?.close();
@@ -130,6 +135,7 @@ export async function startWorkbench({
     const organizationReady=persistent;
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
     if(persistent&&persistentPrefix>=174)await assertUnitCapabilityProvisioned(connection,provider);
+    if(persistent&&persistentPrefix>=178)await assertSubjectsProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=167)await assertWardProvisioned(connection,provider);
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider,{owners:['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY'],readInTransaction:(s,a,i)=>{if(!businessUnit)throw new Error('BLOCKED_DEPENDENCY');return Promise.all([businessUnit.readCampusDependenciesInTransaction(s,a,i),nursingUnit?.readCampusDependenciesInTransaction(s,a,i)??[],ward?.readCampusDependenciesInTransaction(s,a,i)??[],unitCapabilities?.readCampusDependenciesInTransaction(s,a,i)??[]]).then(parts=>parts.flat());;}});operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
@@ -147,6 +153,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=163){await assertNursingUnitProvisioned(connection,provider);nursingUnit=openNursingUnit(connection,provider,nursingUpstreamPorts);}
     if(persistent&&persistentPrefix>=167){ward=openWard(connection,provider,wardUpstreamPorts(businessUnit));}
     if(persistent&&persistentPrefix>=174){parameterValues=openParameterValues(connection);unitCapabilities=openUnitCapabilities(connection,provider,unitCapabilityUpstreamPorts(businessUnit,parameterValues));}
+    if(persistent&&persistentPrefix>=178){subjectCodes=openSubjectCodes(connection,provider);subjectPermissions=openSubjectPermissions(connection,provider,{operatingWindow:operating.evaluateOperatingWindowInTransaction});}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -215,6 +222,8 @@ export async function startWorkbench({
       ward?{owner:ward,actor:r=>syntheticActor(r.headers)}:undefined,
       parameterValues?{owner:parameterValues,actor:r=>syntheticActor(r.headers)}:undefined,
       unitCapabilities?{owner:unitCapabilities,actor:r=>syntheticActor(r.headers)}:undefined,
+      subjectCodes?{owner:subjectCodes,actor:r=>syntheticActor(r.headers)}:undefined,
+      subjectPermissions?{owner:subjectPermissions,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

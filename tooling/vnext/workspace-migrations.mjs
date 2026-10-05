@@ -92,6 +92,9 @@ const postWorkspaceMigrations = [
  '0173_capability_import_and_impact_integration',
  '0174_capability_finite_impacts',
  '0175_capability_dependency_and_parameter_window_repairs',
+ '0176_adopted_subject_codes',
+ '0177_subject_permissions_and_mappings',
+ '0178_subject_contract_and_public_integration',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

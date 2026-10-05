@@ -48,3 +48,6 @@ export {createBusinessUnitClient,type BusinessUnitInput} from './business-unit-c
 export {createWardClient,type WardInput} from './ward-client.js';
 export {createUnitCapabilityClient,type UnitCapabilityInput} from './unit-capability-client.js';
 export {createParameterValueClient} from './parameter-value-client.js';
+
+export * from './subject-permission-client.js';
+export * from './subject-code-client.js';

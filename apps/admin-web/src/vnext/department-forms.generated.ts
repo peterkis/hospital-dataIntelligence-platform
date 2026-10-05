@@ -880,6 +880,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1143,6 +1149,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
                                   }
                                 ]
@@ -3175,6 +3187,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3438,6 +3456,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
                                   }
                                 ]
@@ -4509,6 +4533,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4772,6 +4802,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
                                   }
                                 ]
@@ -5614,6 +5650,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -5877,6 +5919,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_CAPABILITY_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
                                   }
                                 ]

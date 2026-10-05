@@ -5220,6 +5220,310 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/subject-codes/command": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commandSubjectCodeSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-codes/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["querySubjectCodeSnapshots"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageSubjectPermissionInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/inputs/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readSubjectPermissionInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifySubjectPermissionInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewSubjectPermissionInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planSubjectPermissionInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewSubjectPermissionCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveSubjectPermissionCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applySubjectPermissionCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeSubjectPermissionOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcileSubjectPermissionOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawSubjectPermissionInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["querySubjectPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["historySubjectPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/exact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["exactSubjectPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/recheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recheckSubjectPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["evaluateSubjectPermissionWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["receiveSubjectPermissionFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8601,7 +8905,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -8636,7 +8940,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -32212,7 +32516,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -32247,7 +32551,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -40162,7 +40466,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -40197,7 +40501,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -43337,7 +43641,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -43372,7 +43676,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -43813,7 +44117,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -43848,7 +44152,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -55286,7 +55590,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -55321,7 +55625,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -57893,7 +58197,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -57928,7 +58232,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -60379,7 +60683,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -60414,7 +60718,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -62877,7 +63181,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -62912,7 +63216,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -66428,7 +66732,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -66463,7 +66767,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -66582,6 +66886,3794 @@ export interface operations {
                             target: {
                                 /** @enum {string} */
                                 owner: "care-organization/unit-capability";
+                                /** Format: uuid */
+                                id: string;
+                                expectedHead: string;
+                            };
+                        })[];
+                    };
+                    contentBase64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        jobId: string;
+                        /** Format: uuid */
+                        revisionId: string;
+                        /** Format: uuid */
+                        sourceArtifactId: string;
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        input: {
+                            /** Format: uuid */
+                            inputId: string;
+                            /** Format: uuid */
+                            revisionId: string;
+                            digest: string;
+                        } | null;
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        validation: unknown;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    commandSubjectCodeSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "CREATE";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    systemCode: string;
+                    reference: {
+                        /** @enum {string} */
+                        owner: "governance-catalog/subject-code";
+                        /** @enum {string} */
+                        dataset: "REF01";
+                        /** @enum {string} */
+                        namespace: "REF01.code_system_id";
+                        sourceAlias: string;
+                    };
+                    codeSystemName: string;
+                    namespaceUri: string;
+                    standardDocument: string;
+                    issuer: string;
+                    codeSystemVersion: string;
+                    /** Format: uuid */
+                    sourceId: string;
+                    /** Format: uuid */
+                    sourceVersionId: string;
+                    /** Format: uuid */
+                    evidenceId: string;
+                    sourcePage: string;
+                    sourceSummary: string;
+                    adoptedOn: string;
+                    /** @enum {string} */
+                    label: "TEST_POLICY_ONLY";
+                    validFrom: string;
+                    validTo: string | null;
+                    codes: {
+                        code: string;
+                        name: string;
+                        meaning: string;
+                        /** @enum {unknown} */
+                        status: "ACTIVE" | "RETIRED";
+                        replacement: string | null;
+                    }[];
+                } | {
+                    /** @enum {string} */
+                    action: "REVISE";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                    reference: {
+                        /** @enum {string} */
+                        owner: "governance-catalog/subject-code";
+                        /** @enum {string} */
+                        dataset: "REF01";
+                        /** @enum {string} */
+                        namespace: "REF01.code_system_id";
+                        sourceAlias: string;
+                    };
+                    codeSystemName: string;
+                    namespaceUri: string;
+                    standardDocument: string;
+                    issuer: string;
+                    codeSystemVersion: string;
+                    /** Format: uuid */
+                    sourceId: string;
+                    /** Format: uuid */
+                    sourceVersionId: string;
+                    /** Format: uuid */
+                    evidenceId: string;
+                    sourcePage: string;
+                    sourceSummary: string;
+                    adoptedOn: string;
+                    /** @enum {string} */
+                    label: "TEST_POLICY_ONLY";
+                    validFrom: string;
+                    validTo: string | null;
+                    codes: {
+                        code: string;
+                        name: string;
+                        meaning: string;
+                        /** @enum {unknown} */
+                        status: "ACTIVE" | "RETIRED";
+                        replacement: string | null;
+                    }[];
+                } | {
+                    /** @enum {string} */
+                    action: "APPROVE";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    target: string;
+                    /** Format: uuid */
+                    versionId: string;
+                    reviewDigest: string;
+                } | {
+                    /** @enum {string} */
+                    action: "VERIFY";
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    target: string;
+                    /** Format: uuid */
+                    versionId: string;
+                    reviewDigest: string;
+                    /** Format: uuid */
+                    evidenceId: string;
+                    sourceReviewed: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        head: string;
+                        systemCode: string;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "REVIEW" | "APPROVED";
+                        reviewDigest: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        sourceVerification: {
+                            /** Format: uuid */
+                            id: string;
+                            actor: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            sourceReviewed: boolean;
+                            recordedAt: string;
+                        } | null;
+                        reference: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** @enum {string} */
+                            dataset: "REF01";
+                            /** @enum {string} */
+                            namespace: "REF01.code_system_id";
+                            sourceAlias: string;
+                        };
+                        codeSystemName: string;
+                        namespaceUri: string;
+                        standardDocument: string;
+                        issuer: string;
+                        codeSystemVersion: string;
+                        /** Format: uuid */
+                        sourceId: string;
+                        /** Format: uuid */
+                        sourceVersionId: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        sourcePage: string;
+                        sourceSummary: string;
+                        adoptedOn: string;
+                        /** @enum {string} */
+                        label: "TEST_POLICY_ONLY";
+                        validFrom: string;
+                        validTo: string | null;
+                        codes: {
+                            code: string;
+                            name: string;
+                            meaning: string;
+                            /** @enum {unknown} */
+                            status: "ACTIVE" | "RETIRED";
+                            replacement: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    querySubjectCodeSnapshots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    versionId?: string;
+                    recordAsOf?: string;
+                    history?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        head: string;
+                        systemCode: string;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "REVIEW" | "APPROVED";
+                        reviewDigest: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        sourceVerification: {
+                            /** Format: uuid */
+                            id: string;
+                            actor: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            sourceReviewed: boolean;
+                            recordedAt: string;
+                        } | null;
+                        reference: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** @enum {string} */
+                            dataset: "REF01";
+                            /** @enum {string} */
+                            namespace: "REF01.code_system_id";
+                            sourceAlias: string;
+                        };
+                        codeSystemName: string;
+                        namespaceUri: string;
+                        standardDocument: string;
+                        issuer: string;
+                        codeSystemVersion: string;
+                        /** Format: uuid */
+                        sourceId: string;
+                        /** Format: uuid */
+                        sourceVersionId: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        sourcePage: string;
+                        sourceSummary: string;
+                        adoptedOn: string;
+                        /** @enum {string} */
+                        label: "TEST_POLICY_ONLY";
+                        validFrom: string;
+                        validTo: string | null;
+                        codes: {
+                            code: string;
+                            name: string;
+                            meaning: string;
+                            /** @enum {unknown} */
+                            status: "ACTIVE" | "RETIRED";
+                            replacement: string | null;
+                        }[];
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageSubjectPermissionInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    requestId: string;
+                    /** Format: uuid */
+                    jobId: string;
+                    /** Format: uuid */
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    /** @enum {unknown} */
+                    timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                    entries: ({
+                        row: {
+                            subject_license_id: string;
+                            target_type: string;
+                            target_id: string;
+                            code_system_id: string;
+                            code_system_version: string;
+                            subject_code: string;
+                            license_ref: string;
+                            permitted_scope: string | null;
+                            verifier: string;
+                            version_no: number | string;
+                            valid_from: string;
+                            valid_to: string | null;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        scope: {
+                            target: {
+                                /** @enum {string} */
+                                type: "LEGAL";
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "ORG";
+                                /** @enum {string} */
+                                owner: "department-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "UNIT";
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                        };
+                        adoption: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** Format: uuid */
+                            systemId: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: string;
+                            code: string;
+                        };
+                        context?: {
+                            departmentRelation: {
+                                /** @enum {string} */
+                                owner: "department-master/campus-relation";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        kind: "MAPPING";
+                        /** @enum {unknown} */
+                        semantic: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                        /** @enum {string} */
+                        action: "RECORD";
+                    } | {
+                        row: {
+                            subject_license_id: string;
+                            target_type: string;
+                            target_id: string;
+                            code_system_id: string;
+                            code_system_version: string;
+                            subject_code: string;
+                            license_ref: string;
+                            permitted_scope: string | null;
+                            verifier: string;
+                            version_no: number | string;
+                            valid_from: string;
+                            valid_to: string | null;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        scope: {
+                            target: {
+                                /** @enum {string} */
+                                type: "LEGAL";
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "ORG";
+                                /** @enum {string} */
+                                owner: "department-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "UNIT";
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                        };
+                        adoption: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** Format: uuid */
+                            systemId: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: string;
+                            code: string;
+                        };
+                        context?: {
+                            departmentRelation: {
+                                /** @enum {string} */
+                                owner: "department-master/campus-relation";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        kind: "MAPPING";
+                        /** @enum {unknown} */
+                        semantic: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                        /** @enum {unknown} */
+                        action: "REVISE" | "RETIRE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                            /** Format: uuid */
+                            id: string;
+                            expectedHead: string;
+                        };
+                    } | {
+                        row: {
+                            subject_license_id: string;
+                            target_type: string;
+                            target_id: string;
+                            code_system_id: string;
+                            code_system_version: string;
+                            subject_code: string;
+                            license_ref: string;
+                            permitted_scope: string | null;
+                            verifier: string;
+                            version_no: number | string;
+                            valid_from: string;
+                            valid_to: string | null;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        scope: {
+                            target: {
+                                /** @enum {string} */
+                                type: "LEGAL";
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "ORG";
+                                /** @enum {string} */
+                                owner: "department-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "UNIT";
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                        };
+                        adoption: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** Format: uuid */
+                            systemId: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: string;
+                            code: string;
+                        };
+                        context?: {
+                            departmentRelation: {
+                                /** @enum {string} */
+                                owner: "department-master/campus-relation";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        kind: "PERMISSION";
+                        license: {
+                            /** @enum {string} */
+                            owner: "organization-master/license";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            /** Format: uuid */
+                            versionId: string;
+                        };
+                        limitations: {
+                            /** @enum {string} */
+                            kind: "NO_ADDITIONAL_LIMITS";
+                        } | {
+                            /** @enum {string} */
+                            kind: "SERVICES_ONLY";
+                            services: string[];
+                        } | {
+                            /** @enum {string} */
+                            kind: "UNRESOLVED";
+                        };
+                        /** @enum {string} */
+                        action: "RECORD";
+                    } | {
+                        row: {
+                            subject_license_id: string;
+                            target_type: string;
+                            target_id: string;
+                            code_system_id: string;
+                            code_system_version: string;
+                            subject_code: string;
+                            license_ref: string;
+                            permitted_scope: string | null;
+                            verifier: string;
+                            version_no: number | string;
+                            valid_from: string;
+                            valid_to: string | null;
+                            record_status: string;
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        scope: {
+                            target: {
+                                /** @enum {string} */
+                                type: "LEGAL";
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "ORG";
+                                /** @enum {string} */
+                                owner: "department-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "UNIT";
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                        };
+                        adoption: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** Format: uuid */
+                            systemId: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            version: string;
+                            code: string;
+                        };
+                        context?: {
+                            departmentRelation: {
+                                /** @enum {string} */
+                                owner: "department-master/campus-relation";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        kind: "PERMISSION";
+                        license: {
+                            /** @enum {string} */
+                            owner: "organization-master/license";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            /** Format: uuid */
+                            versionId: string;
+                        };
+                        limitations: {
+                            /** @enum {string} */
+                            kind: "NO_ADDITIONAL_LIMITS";
+                        } | {
+                            /** @enum {string} */
+                            kind: "SERVICES_ONLY";
+                            services: string[];
+                        } | {
+                            /** @enum {string} */
+                            kind: "UNRESOLVED";
+                        };
+                        /** @enum {unknown} */
+                        action: "REVISE" | "RETIRE";
+                        target: {
+                            /** @enum {unknown} */
+                            owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                            /** Format: uuid */
+                            id: string;
+                            expectedHead: string;
+                        };
+                    })[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        inputId: string;
+                        /** Format: uuid */
+                        revisionId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readSubjectPermissionInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        requestId: string;
+                        /** Format: uuid */
+                        jobId: string;
+                        /** Format: uuid */
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries: ({
+                            row: {
+                                subject_license_id: string;
+                                target_type: string;
+                                target_id: string;
+                                code_system_id: string;
+                                code_system_version: string;
+                                subject_code: string;
+                                license_ref: string;
+                                permitted_scope: string | null;
+                                verifier: string;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "MAPPING";
+                            /** @enum {unknown} */
+                            semantic: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                            /** @enum {string} */
+                            action: "RECORD";
+                        } | {
+                            row: {
+                                subject_license_id: string;
+                                target_type: string;
+                                target_id: string;
+                                code_system_id: string;
+                                code_system_version: string;
+                                subject_code: string;
+                                license_ref: string;
+                                permitted_scope: string | null;
+                                verifier: string;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "MAPPING";
+                            /** @enum {unknown} */
+                            semantic: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                            /** @enum {unknown} */
+                            action: "REVISE" | "RETIRE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                /** Format: uuid */
+                                id: string;
+                                expectedHead: string;
+                            };
+                        } | {
+                            row: {
+                                subject_license_id: string;
+                                target_type: string;
+                                target_id: string;
+                                code_system_id: string;
+                                code_system_version: string;
+                                subject_code: string;
+                                license_ref: string;
+                                permitted_scope: string | null;
+                                verifier: string;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "PERMISSION";
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                            limitations: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind: "SERVICES_ONLY";
+                                services: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "UNRESOLVED";
+                            };
+                            /** @enum {string} */
+                            action: "RECORD";
+                        } | {
+                            row: {
+                                subject_license_id: string;
+                                target_type: string;
+                                target_id: string;
+                                code_system_id: string;
+                                code_system_version: string;
+                                subject_code: string;
+                                license_ref: string;
+                                permitted_scope: string | null;
+                                verifier: string;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                record_status: string;
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "PERMISSION";
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                            limitations: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind: "SERVICES_ONLY";
+                                services: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "UNRESOLVED";
+                            };
+                            /** @enum {unknown} */
+                            action: "REVISE" | "RETIRE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                /** Format: uuid */
+                                id: string;
+                                expectedHead: string;
+                            };
+                        })[];
+                        /** Format: uuid */
+                        sourceArtifactId?: string;
+                        sourceRows?: number[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    verifySubjectPermissionInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    requestId: string;
+                    /** Format: uuid */
+                    inputId: string;
+                    inputDigest: string;
+                    reason: string;
+                    /** @enum {string} */
+                    policyVersion: "ORG17_CORE_V1";
+                    rows: {
+                        row: number;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        classificationAccepted: boolean;
+                        scopeAccepted: boolean;
+                        adoptionConfirmed: boolean;
+                        limitationsConfirmed: boolean;
+                        license: {
+                            /** @enum {string} */
+                            owner: "organization-master/license";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            /** Format: uuid */
+                            versionId: string;
+                        } | null;
+                        /** @enum {unknown} */
+                        semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                        validFrom: string;
+                        validTo: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        verificationId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    previewSubjectPermissionInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        decision: "PASS" | "BLOCKED";
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        changes: {
+                            /** @enum {unknown} */
+                            kind: "MAPPING" | "PERMISSION";
+                            /** @enum {unknown} */
+                            action: "RECORD" | "REVISE" | "RETIRE";
+                            targetId: string | null;
+                            validFrom: string;
+                            validTo: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    planSubjectPermissionInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                    /** Format: uuid */
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    reviewSubjectPermissionCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveSubjectPermissionCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    applySubjectPermissionCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                        facts: {
+                            /** @enum {unknown} */
+                            owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG17";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeSubjectPermissionOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": ({
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                        facts: {
+                            /** @enum {unknown} */
+                            owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG17";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                    }) | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    reconcileSubjectPermissionOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawSubjectPermissionInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                    /** Format: uuid */
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    querySubjectPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {unknown} */
+                        kind: "MAPPING" | "PERMISSION";
+                        scope: {
+                            target: {
+                                /** @enum {string} */
+                                type: "LEGAL";
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "ORG";
+                                /** @enum {string} */
+                                owner: "department-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "UNIT";
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                        };
+                        head: string;
+                        /** @enum {unknown} */
+                        state: "ACTIVE" | "RETIRED" | "NOT_EFFECTIVE";
+                        version: {
+                            /** Format: uuid */
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "RECORD" | "REVISE" | "RETIRE";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                adoption: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/subject-code";
+                                    /** Format: uuid */
+                                    systemId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    version: string;
+                                    code: string;
+                                };
+                                context: {
+                                    departmentRelation: {
+                                        /** @enum {string} */
+                                        owner: "department-master/campus-relation";
+                                        /** Format: uuid */
+                                        id: string;
+                                        version: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                    };
+                                } | null;
+                                semantic: ("EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED") | null;
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                } | null;
+                                limitations: ({
+                                    /** @enum {string} */
+                                    kind: "NO_ADDITIONAL_LIMITS";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "SERVICES_ONLY";
+                                    services: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "UNRESOLVED";
+                                }) | null;
+                                verifierRole: string;
+                                /** Format: uuid */
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    digest: string;
+                                };
+                                dependencies: unknown;
+                                source: {
+                                    codeSystemId: string;
+                                    codeSystemVersion: string;
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    /** Format: uuid */
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                    licenseDocumentEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            changeId: string;
+                        };
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    historySubjectPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {unknown} */
+                        kind: "MAPPING" | "PERMISSION";
+                        scope: {
+                            target: {
+                                /** @enum {string} */
+                                type: "LEGAL";
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "ORG";
+                                /** @enum {string} */
+                                owner: "department-master";
+                                /** Format: uuid */
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "UNIT";
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                        };
+                        versions: {
+                            /** Format: uuid */
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "RECORD" | "REVISE" | "RETIRE";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                adoption: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/subject-code";
+                                    /** Format: uuid */
+                                    systemId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    version: string;
+                                    code: string;
+                                };
+                                context: {
+                                    departmentRelation: {
+                                        /** @enum {string} */
+                                        owner: "department-master/campus-relation";
+                                        /** Format: uuid */
+                                        id: string;
+                                        version: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                    };
+                                } | null;
+                                semantic: ("EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED") | null;
+                                license: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/license";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                } | null;
+                                limitations: ({
+                                    /** @enum {string} */
+                                    kind: "NO_ADDITIONAL_LIMITS";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "SERVICES_ONLY";
+                                    services: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "UNRESOLVED";
+                                }) | null;
+                                verifierRole: string;
+                                /** Format: uuid */
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    digest: string;
+                                };
+                                dependencies: unknown;
+                                source: {
+                                    codeSystemId: string;
+                                    codeSystemVersion: string;
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    /** Format: uuid */
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                    licenseDocumentEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            changeId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    exactSubjectPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    version: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        number: string;
+                        /** @enum {unknown} */
+                        action: "RECORD" | "REVISE" | "RETIRE";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            } | null;
+                            semantic: ("EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED") | null;
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            } | null;
+                            limitations: ({
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind: "SERVICES_ONLY";
+                                services: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "UNRESOLVED";
+                            }) | null;
+                            verifierRole: string;
+                            /** Format: uuid */
+                            contractVersionId: string;
+                            verificationBasis: {
+                                /** Format: uuid */
+                                id: string;
+                                digest: string;
+                            };
+                            dependencies: unknown;
+                            source: {
+                                codeSystemId: string;
+                                codeSystemVersion: string;
+                                sourceAlias: string;
+                                sourceVersion: string;
+                                /** Format: uuid */
+                                sourceSystemId: string;
+                                sourceRecordedAt: string;
+                                recordLocatorEvidence: {
+                                    /** Format: uuid */
+                                    inputId: string;
+                                    row: number;
+                                };
+                                recordStatus: string;
+                                approvalReference: string;
+                                licenseDocumentEvidence: {
+                                    /** Format: uuid */
+                                    inputId: string;
+                                    row: number;
+                                };
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        changeId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    recheckSubjectPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {unknown} */
+                        kind: "MAPPING" | "PERMISSION";
+                        /** @enum {unknown} */
+                        status: "SATISFIED" | "REVIEW_REQUIRED";
+                        reason: string;
+                        acceptedBasis: unknown;
+                        basis: unknown;
+                        cases: unknown[];
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    evaluateSubjectPermissionWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    scope: {
+                        target: {
+                            /** @enum {string} */
+                            type: "LEGAL";
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            /** Format: uuid */
+                            id: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "ORG";
+                            /** @enum {string} */
+                            owner: "department-master";
+                            /** Format: uuid */
+                            id: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "UNIT";
+                            /** @enum {string} */
+                            owner: "care-organization/unit";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        services: string[];
+                    };
+                    adoption: {
+                        /** @enum {string} */
+                        owner: "governance-catalog/subject-code";
+                        /** Format: uuid */
+                        systemId: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        version: string;
+                        code: string;
+                    };
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {unknown} */
+                    mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "SATISFIED" | "NOT_SATISFIED" | "REVIEW_REQUIRED";
+                        reason: string;
+                        recordAsOf: string;
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                        checks: {
+                            service: string;
+                            from: string;
+                            to: string | null;
+                            /** @enum {unknown} */
+                            status: "SATISFIED" | "NOT_SATISFIED" | "REVIEW_REQUIRED";
+                            reason: string;
+                            permissionId: string | null;
+                            version: string | null;
+                            acceptedBasis: unknown;
+                            basis: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    receiveSubjectPermissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    input: {
+                        /** Format: uuid */
+                        requestId: string;
+                        /** Format: uuid */
+                        fileRequestId: string;
+                        job: {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
+                            };
+                            /** @enum {string} */
+                            action: "CREATE";
+                            contractId: string;
+                            contractVersionId: string;
+                            profile: "CORE" | "FULL";
+                        } | {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
+                            };
+                            /** @enum {string} */
+                            action: "REVISE";
+                            jobId: string;
+                            expectedCurrentRevision: string;
+                        };
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        retentionSeconds: number;
+                        operations: ({
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "MAPPING";
+                            /** @enum {unknown} */
+                            semantic: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                            /** @enum {string} */
+                            action: "RECORD";
+                        } | {
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "MAPPING";
+                            /** @enum {unknown} */
+                            semantic: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                            /** @enum {unknown} */
+                            action: "REVISE" | "RETIRE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                /** Format: uuid */
+                                id: string;
+                                expectedHead: string;
+                            };
+                        } | {
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "PERMISSION";
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                            limitations: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind: "SERVICES_ONLY";
+                                services: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "UNRESOLVED";
+                            };
+                            /** @enum {string} */
+                            action: "RECORD";
+                        } | {
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            adoption: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                version: string;
+                                code: string;
+                            };
+                            context?: {
+                                departmentRelation: {
+                                    /** @enum {string} */
+                                    owner: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            kind: "PERMISSION";
+                            license: {
+                                /** @enum {string} */
+                                owner: "organization-master/license";
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                /** Format: uuid */
+                                versionId: string;
+                            };
+                            limitations: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind: "SERVICES_ONLY";
+                                services: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind: "UNRESOLVED";
+                            };
+                            /** @enum {unknown} */
+                            action: "REVISE" | "RETIRE";
+                            target: {
+                                /** @enum {unknown} */
+                                owner: "care-organization/subject-permission" | "care-organization/subject-mapping";
                                 /** Format: uuid */
                                 id: string;
                                 expectedHead: string;
