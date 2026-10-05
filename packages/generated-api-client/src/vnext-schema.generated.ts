@@ -4868,6 +4868,358 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/parameter-values/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commandParameterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/parameter-values/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getParameterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/parameter-values/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getParameterValueHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/parameter-values/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["evaluateParameterValueWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageUnitCapabilityInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/inputs/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readUnitCapabilityInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyUnitCapabilityInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewUnitCapabilityInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planUnitCapabilityInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawUnitCapabilityInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewUnitCapabilityCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveUnitCapabilityCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyUnitCapabilityCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeUnitCapabilityOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcileUnitCapabilityOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getUnitCapabilityAsOf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getUnitCapabilityHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/exact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getUnitCapabilityVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["diffUnitCapabilityVersions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listUnitCapabilities"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["evaluateUnitCapabilityWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/unit-capabilities/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["receiveUnitCapabilityFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6106,8 +6458,8 @@ export interface operations {
                                 references: ({
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "UNIT_CORE";
+                                    /** @enum {unknown} */
+                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -6330,8 +6682,8 @@ export interface operations {
                                 references: ({
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "UNIT_CORE";
+                                    /** @enum {unknown} */
+                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -6555,8 +6907,8 @@ export interface operations {
                                 references: ({
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "UNIT_CORE";
+                                    /** @enum {unknown} */
+                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -6755,8 +7107,8 @@ export interface operations {
                         references: ({
                             field: string;
                             target: string;
-                            /** @enum {string} */
-                            status: "UNIT_CORE";
+                            /** @enum {unknown} */
+                            status: "UNIT_CORE" | "CAPABILITY_CORE";
                         } | {
                             field: string;
                             target: string;
@@ -6867,8 +7219,8 @@ export interface operations {
                         references: ({
                             field: string;
                             target: string;
-                            /** @enum {string} */
-                            status: "UNIT_CORE";
+                            /** @enum {unknown} */
+                            status: "UNIT_CORE" | "CAPABILITY_CORE";
                         } | {
                             field: string;
                             target: string;
@@ -8249,7 +8601,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -8284,7 +8636,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -12749,7 +13101,7 @@ export interface operations {
                         assessmentDigest: string;
                         resolution: {
                             /** @enum {unknown} */
-                            owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                             /** @enum {unknown} */
                             status: "UNKNOWN" | "CLEAR";
                             /** @enum {string} */
@@ -13126,18 +13478,18 @@ export interface operations {
                         validTo: string | null;
                         dependencies: {
                             /** @enum {unknown} */
-                            owner: "RELATION" | "SCOPE" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                            owner: "RELATION" | "SCOPE" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                             id: string;
                             version: string;
                             active: boolean;
                             outstanding: boolean;
                         }[];
-                        unavailable: ("BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION")[];
+                        unavailable: ("BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION")[];
                         dispositions: {
                             eventId: string;
                             inputId: string;
                             /** @enum {unknown} */
-                            owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                             /** @enum {unknown} */
                             status: "UNKNOWN" | "CLEAR";
                             dependencyDigest: string;
@@ -13493,7 +13845,7 @@ export interface operations {
                             assessmentDigest: string;
                             resolution: {
                                 /** @enum {unknown} */
-                                owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                                 /** @enum {unknown} */
                                 status: "UNKNOWN" | "CLEAR";
                                 /** @enum {string} */
@@ -15342,7 +15694,7 @@ export interface operations {
                             assessmentDigest: string;
                             resolution: {
                                 /** @enum {unknown} */
-                                owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                owner: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                                 /** @enum {unknown} */
                                 status: "UNKNOWN" | "CLEAR";
                                 /** @enum {string} */
@@ -22534,7 +22886,7 @@ export interface operations {
                             assessmentDigest?: string;
                             resolution?: {
                                 /** @enum {unknown} */
-                                owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                                 /** @enum {unknown} */
                                 status?: "UNKNOWN" | "CLEAR";
                                 /** @enum {string} */
@@ -23616,7 +23968,7 @@ export interface operations {
                             assessmentDigest?: string;
                             resolution?: {
                                 /** @enum {unknown} */
-                                owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                                 /** @enum {unknown} */
                                 status?: "UNKNOWN" | "CLEAR";
                                 /** @enum {string} */
@@ -25190,7 +25542,7 @@ export interface operations {
                         assessmentDigest?: string;
                         resolution?: {
                             /** @enum {unknown} */
-                            owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                             /** @enum {unknown} */
                             status?: "UNKNOWN" | "CLEAR";
                             /** @enum {string} */
@@ -26424,7 +26776,7 @@ export interface operations {
                         assessmentDigest?: string;
                         resolution?: {
                             /** @enum {unknown} */
-                            owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                             /** @enum {unknown} */
                             status?: "UNKNOWN" | "CLEAR";
                             /** @enum {string} */
@@ -27507,7 +27859,7 @@ export interface operations {
                         assessmentDigest?: string;
                         resolution?: {
                             /** @enum {unknown} */
-                            owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                            owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                             /** @enum {unknown} */
                             status?: "UNKNOWN" | "CLEAR";
                             /** @enum {string} */
@@ -28618,7 +28970,7 @@ export interface operations {
                                 assessmentDigest?: string;
                                 resolution?: {
                                     /** @enum {unknown} */
-                                    owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
+                                    owner?: "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "LOCATION" | "ASSIGNMENT" | "CONSUMPTION";
                                     /** @enum {unknown} */
                                     status?: "UNKNOWN" | "CLEAR";
                                     /** @enum {string} */
@@ -31860,7 +32212,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -31895,7 +32247,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -32727,7 +33079,7 @@ export interface operations {
                                 contextEvidenceId?: string | null;
                                 impacts?: {
                                     /** @enum {unknown} */
-                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                     /** @enum {unknown} */
                                     determination?: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole?: string;
@@ -32851,7 +33203,7 @@ export interface operations {
                                 })[];
                                 impacts?: {
                                     /** @enum {unknown} */
-                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                     /** @enum {unknown} */
                                     determination?: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole?: string;
@@ -32894,7 +33246,7 @@ export interface operations {
                                     evidenceId?: string;
                                     result?: {
                                         /** @enum {unknown} */
-                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                         id?: string;
                                         versionId?: string;
                                         candidateId?: string;
@@ -32906,7 +33258,7 @@ export interface operations {
                                     evidenceId?: string;
                                     result?: {
                                         /** @enum {unknown} */
-                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                         id?: string;
                                         versionId?: string;
                                         candidateId?: string;
@@ -32920,7 +33272,7 @@ export interface operations {
                                         kind?: "CLOSE";
                                         result?: {
                                             /** @enum {unknown} */
-                                            owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                            owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                             id?: string;
                                             versionId?: string;
                                             candidateId?: string;
@@ -33734,7 +34086,7 @@ export interface operations {
                         contextEvidenceId?: string | null;
                         impacts?: {
                             /** @enum {unknown} */
-                            domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                            domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                             /** @enum {unknown} */
                             determination?: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                             ownerRole?: string;
@@ -33858,7 +34210,7 @@ export interface operations {
                         })[];
                         impacts?: {
                             /** @enum {unknown} */
-                            domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                            domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                             /** @enum {unknown} */
                             determination?: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                             ownerRole?: string;
@@ -33901,7 +34253,7 @@ export interface operations {
                             evidenceId?: string;
                             result?: {
                                 /** @enum {unknown} */
-                                owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 id?: string;
                                 versionId?: string;
                                 candidateId?: string;
@@ -33913,7 +34265,7 @@ export interface operations {
                             evidenceId?: string;
                             result?: {
                                 /** @enum {unknown} */
-                                owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 id?: string;
                                 versionId?: string;
                                 candidateId?: string;
@@ -33927,7 +34279,7 @@ export interface operations {
                                 kind?: "CLOSE";
                                 result?: {
                                     /** @enum {unknown} */
-                                    owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                    owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                     id?: string;
                                     versionId?: string;
                                     candidateId?: string;
@@ -34474,7 +34826,7 @@ export interface operations {
                                 contextEvidenceId?: string | null;
                                 impacts?: {
                                     /** @enum {unknown} */
-                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                     /** @enum {unknown} */
                                     determination?: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole?: string;
@@ -34598,7 +34950,7 @@ export interface operations {
                                 })[];
                                 impacts?: {
                                     /** @enum {unknown} */
-                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                    domain?: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                     /** @enum {unknown} */
                                     determination?: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole?: string;
@@ -34641,7 +34993,7 @@ export interface operations {
                                     evidenceId?: string;
                                     result?: {
                                         /** @enum {unknown} */
-                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                         id?: string;
                                         versionId?: string;
                                         candidateId?: string;
@@ -34653,7 +35005,7 @@ export interface operations {
                                     evidenceId?: string;
                                     result?: {
                                         /** @enum {unknown} */
-                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                        owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                         id?: string;
                                         versionId?: string;
                                         candidateId?: string;
@@ -34667,7 +35019,7 @@ export interface operations {
                                         kind?: "CLOSE";
                                         result?: {
                                             /** @enum {unknown} */
-                                            owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                            owner?: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                             id?: string;
                                             versionId?: string;
                                             candidateId?: string;
@@ -38277,8 +38629,8 @@ export interface operations {
                                     references: ({
                                         field: string;
                                         target: string;
-                                        /** @enum {string} */
-                                        status: "UNIT_CORE";
+                                        /** @enum {unknown} */
+                                        status: "UNIT_CORE" | "CAPABILITY_CORE";
                                     } | {
                                         field: string;
                                         target: string;
@@ -39810,7 +40162,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -39845,7 +40197,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -41067,8 +41419,8 @@ export interface operations {
                                     references: ({
                                         field: string;
                                         target: string;
-                                        /** @enum {string} */
-                                        status: "UNIT_CORE";
+                                        /** @enum {unknown} */
+                                        status: "UNIT_CORE" | "CAPABILITY_CORE";
                                     } | {
                                         field: string;
                                         target: string;
@@ -42985,7 +43337,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -43020,7 +43372,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -43421,7 +43773,7 @@ export interface operations {
                         contextEvidenceId: string | null;
                         impacts: {
                             /** @enum {unknown} */
-                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                             /** @enum {unknown} */
                             determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                             ownerRole: string;
@@ -43461,7 +43813,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -43496,7 +43848,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -43823,7 +44175,7 @@ export interface operations {
                     contextEvidenceId: string | null;
                     impacts: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                         /** @enum {unknown} */
                         determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                         ownerRole: string;
@@ -44122,7 +44474,7 @@ export interface operations {
                     contextEvidenceId: string | null;
                     impacts: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                         /** @enum {unknown} */
                         determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                         ownerRole: string;
@@ -44432,6 +44784,17 @@ export interface operations {
                         migrationEvidenceId: string | null;
                         contextEvidenceId: string | null;
                         impacts: {
+                            /** @enum {unknown} */
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
+                            /** @enum {unknown} */
+                            determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                            ownerRole: string;
+                            ownerSignatory: string;
+                            ownerDecisionRef: string;
+                            requiredAction: string;
+                            reason: string;
+                            evidenceId: string;
+                        }[] | {
                             /** @enum {unknown} */
                             domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
                             /** @enum {unknown} */
@@ -44759,6 +45122,17 @@ export interface operations {
                             contextEvidenceId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
+                                /** @enum {unknown} */
+                                determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                ownerDecisionRef: string;
+                                requiredAction: string;
+                                reason: string;
+                                evidenceId: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -44844,6 +45218,12 @@ export interface operations {
                             policyApproved: boolean;
                             materialsAccepted: boolean;
                             impactReviews: {
+                                /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
+                                ownerAttestationAccepted: boolean;
+                                dispositionAccepted: boolean;
+                                reason: string;
+                            }[] | {
                                 /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
                                 ownerAttestationAccepted: boolean;
@@ -45205,7 +45585,7 @@ export interface operations {
                     materialsAccepted: boolean;
                     impactReviews: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                         ownerAttestationAccepted: boolean;
                         dispositionAccepted: boolean;
                         reason: string;
@@ -45570,7 +45950,7 @@ export interface operations {
                             dependencyDigest: string;
                             coverage: {
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
                                 /** @enum {unknown} */
                                 status: "EVALUATED" | "NOT_EVALUABLE";
                                 /** @enum {unknown} */
@@ -45578,7 +45958,7 @@ export interface operations {
                             }[];
                             references: {
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 id: string;
                                 versionId: string;
                                 version: string;
@@ -45753,6 +46133,17 @@ export interface operations {
                             contextEvidenceId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
+                                /** @enum {unknown} */
+                                determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
+                                ownerRole: string;
+                                ownerSignatory: string;
+                                ownerDecisionRef: string;
+                                requiredAction: string;
+                                reason: string;
+                                evidenceId: string;
+                            }[] | {
+                                /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
@@ -45804,6 +46195,12 @@ export interface operations {
                             policyApproved: boolean;
                             materialsAccepted: boolean;
                             impactReviews: {
+                                /** @enum {unknown} */
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
+                                ownerAttestationAccepted: boolean;
+                                dispositionAccepted: boolean;
+                                reason: string;
+                            }[] | {
                                 /** @enum {unknown} */
                                 domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
                                 ownerAttestationAccepted: boolean;
@@ -45889,8 +46286,8 @@ export interface operations {
                                 references: ({
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "UNIT_CORE";
+                                    /** @enum {unknown} */
+                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -46053,7 +46450,7 @@ export interface operations {
                             verificationId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -46851,7 +47248,7 @@ export interface operations {
                             verificationId: string | null;
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -47349,7 +47746,7 @@ export interface operations {
                                 verificationId: string | null;
                                 impacts: {
                                     /** @enum {unknown} */
-                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                     /** @enum {unknown} */
                                     determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole: string;
@@ -47795,7 +48192,7 @@ export interface operations {
                         dependencyDigest: string;
                         coverage: {
                             /** @enum {unknown} */
-                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
                             /** @enum {unknown} */
                             status: "EVALUATED" | "NOT_EVALUABLE";
                             /** @enum {unknown} */
@@ -47803,7 +48200,7 @@ export interface operations {
                         }[];
                         references: {
                             /** @enum {unknown} */
-                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                             id: string;
                             versionId: string;
                             version: string;
@@ -48032,7 +48429,7 @@ export interface operations {
                         dependencyDigest: string;
                         coverage: {
                             /** @enum {unknown} */
-                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
                             /** @enum {unknown} */
                             status: "EVALUATED" | "NOT_EVALUABLE";
                             /** @enum {unknown} */
@@ -48040,7 +48437,7 @@ export interface operations {
                         }[];
                         references: {
                             /** @enum {unknown} */
-                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                             id: string;
                             versionId: string;
                             version: string;
@@ -48280,7 +48677,7 @@ export interface operations {
                             dependencyDigest: string;
                             coverage: {
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
                                 /** @enum {unknown} */
                                 status: "EVALUATED" | "NOT_EVALUABLE";
                                 /** @enum {unknown} */
@@ -48288,7 +48685,7 @@ export interface operations {
                             }[];
                             references: {
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 id: string;
                                 versionId: string;
                                 version: string;
@@ -48509,10 +48906,10 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "REFERENCE";
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 reference: {
                                     /** @enum {unknown} */
-                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                     id: string;
                                     versionId: string;
                                     version: string;
@@ -48755,10 +49152,10 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "REFERENCE";
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 reference: {
                                     /** @enum {unknown} */
-                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                     id: string;
                                     versionId: string;
                                     version: string;
@@ -48854,7 +49251,7 @@ export interface operations {
                                 evidenceId: string;
                                 result: {
                                     /** @enum {unknown} */
-                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                     id: string;
                                     versionId: string;
                                     candidateId: string;
@@ -48866,7 +49263,7 @@ export interface operations {
                                 evidenceId: string;
                                 result: {
                                     /** @enum {unknown} */
-                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                     id: string;
                                     versionId: string;
                                     candidateId: string;
@@ -48880,7 +49277,7 @@ export interface operations {
                                     kind: "CLOSE";
                                     result: {
                                         /** @enum {unknown} */
-                                        owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                        owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                         id: string;
                                         versionId: string;
                                         candidateId: string;
@@ -49258,7 +49655,7 @@ export interface operations {
                         evidenceId: string;
                         result: {
                             /** @enum {unknown} */
-                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                             id: string;
                             versionId: string;
                             candidateId: string;
@@ -49270,7 +49667,7 @@ export interface operations {
                         evidenceId: string;
                         result: {
                             /** @enum {unknown} */
-                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                            owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                             id: string;
                             versionId: string;
                             candidateId: string;
@@ -49284,7 +49681,7 @@ export interface operations {
                             kind: "CLOSE";
                             result: {
                                 /** @enum {unknown} */
-                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                 id: string;
                                 versionId: string;
                                 candidateId: string;
@@ -50275,7 +50672,7 @@ export interface operations {
                     })[];
                     impacts: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                         /** @enum {unknown} */
                         determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                         ownerRole: string;
@@ -50505,7 +50902,7 @@ export interface operations {
                         })[];
                         impacts: {
                             /** @enum {unknown} */
-                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                            domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                             /** @enum {unknown} */
                             determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                             ownerRole: string;
@@ -50616,7 +51013,7 @@ export interface operations {
                     materialsAccepted: boolean;
                     impactReviews: {
                         /** @enum {unknown} */
-                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                        domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                         ownerAttestationAccepted: boolean;
                         dispositionAccepted: boolean;
                         reason: string;
@@ -50951,7 +51348,7 @@ export interface operations {
                             })[];
                             impacts: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                 /** @enum {unknown} */
                                 determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                 ownerRole: string;
@@ -51066,7 +51463,7 @@ export interface operations {
                             materialsAccepted: boolean;
                             impactReviews: {
                                 /** @enum {unknown} */
-                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                 ownerAttestationAccepted: boolean;
                                 dispositionAccepted: boolean;
                                 reason: string;
@@ -51237,7 +51634,7 @@ export interface operations {
                                 dependencyDigest: string;
                                 coverage: {
                                     /** @enum {unknown} */
-                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "PERSONNEL" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "CONSUMER";
                                     /** @enum {unknown} */
                                     status: "EVALUATED" | "NOT_EVALUABLE";
                                     /** @enum {unknown} */
@@ -51245,7 +51642,7 @@ export interface operations {
                                 }[];
                                 references: {
                                     /** @enum {unknown} */
-                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD";
+                                    owner: "SOURCE_MAPPING" | "IDENTIFIER" | "HIERARCHY" | "CAMPUS_RELATION" | "BUSINESS_UNIT" | "NURSING_UNIT" | "WARD" | "UNIT_CAPABILITY";
                                     id: string;
                                     versionId: string;
                                     version: string;
@@ -51292,7 +51689,7 @@ export interface operations {
                                 sourceVersionId: string | null;
                                 impacts: {
                                     /** @enum {unknown} */
-                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD";
+                                    domain: "PERSONNEL" | "PATIENT" | "ACCOUNT" | "INVENTORY" | "FINANCE" | "SOURCE_MAPPING" | "HIERARCHY" | "CONSUMER" | "IDENTIFIER" | "WARD" | "UNIT_CAPABILITY";
                                     /** @enum {unknown} */
                                     determination: "AFFECTED" | "UNAFFECTED" | "UNKNOWN";
                                     ownerRole: string;
@@ -54889,7 +55286,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -54924,7 +55321,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -57496,7 +57893,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -57531,7 +57928,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -59982,7 +60379,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -60017,7 +60414,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -62480,7 +62877,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -62515,7 +62912,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -62670,6 +63067,3627 @@ export interface operations {
                     "application/json": {
                         code: string;
                         message: string;
+                    };
+                };
+            };
+        };
+    };
+    commandParameterValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    definitionVersionId: string;
+                    definitionDigest: string;
+                    value: {
+                        /** @enum {string} */
+                        type: "TEXT";
+                        value: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "INTEGER";
+                        value: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "DECIMAL";
+                        value: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "BOOLEAN";
+                        value: boolean;
+                    };
+                    /** @enum {unknown} */
+                    purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                    validFrom: string;
+                    validTo: string | null;
+                    /** Format: uuid */
+                    evidenceId: string;
+                    /** @enum {string} */
+                    action: "CREATE";
+                    applicability: {
+                        unit: {
+                            /** @enum {string} */
+                            owner: "care-organization/unit";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        services: string[];
+                        /** @enum {unknown} */
+                        capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                        /** @enum {unknown} */
+                        careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                    };
+                } | {
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** Format: uuid */
+                    definitionVersionId: string;
+                    definitionDigest: string;
+                    value: {
+                        /** @enum {string} */
+                        type: "TEXT";
+                        value: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "INTEGER";
+                        value: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "DECIMAL";
+                        value: string;
+                    } | {
+                        /** @enum {string} */
+                        type: "BOOLEAN";
+                        value: boolean;
+                    };
+                    /** @enum {unknown} */
+                    purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                    validFrom: string;
+                    validTo: string | null;
+                    /** Format: uuid */
+                    evidenceId: string;
+                    /** @enum {string} */
+                    action: "REVISE";
+                    /** Format: uuid */
+                    target: string;
+                    expectedHead: string;
+                } | {
+                    /** Format: uuid */
+                    requestId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    action: "APPROVE";
+                    /** Format: uuid */
+                    target: string;
+                    /** Format: uuid */
+                    versionId: string;
+                    reviewDigest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        parameterId: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        head: string;
+                        /** Format: uuid */
+                        definitionVersionId: string;
+                        definitionDigest: string;
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        value: {
+                            /** @enum {string} */
+                            type: "TEXT";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "INTEGER";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "DECIMAL";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "BOOLEAN";
+                            value: boolean;
+                        };
+                        /** @enum {unknown} */
+                        purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "APPROVED";
+                        reviewDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getParameterValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    versionId?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        parameterId: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        head: string;
+                        /** Format: uuid */
+                        definitionVersionId: string;
+                        definitionDigest: string;
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        value: {
+                            /** @enum {string} */
+                            type: "TEXT";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "INTEGER";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "DECIMAL";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "BOOLEAN";
+                            value: boolean;
+                        };
+                        /** @enum {unknown} */
+                        purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "APPROVED";
+                        reviewDigest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getParameterValueHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    versionId?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        parameterId: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        head: string;
+                        /** Format: uuid */
+                        definitionVersionId: string;
+                        definitionDigest: string;
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        value: {
+                            /** @enum {string} */
+                            type: "TEXT";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "INTEGER";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "DECIMAL";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "BOOLEAN";
+                            value: boolean;
+                        };
+                        /** @enum {unknown} */
+                        purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "APPROVED";
+                        reviewDigest: string;
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    evaluateParameterValueWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    versionId?: string;
+                    recordAsOf?: string;
+                    validFrom: string;
+                    validTo: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        item: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            parameterId: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            head: string;
+                            /** Format: uuid */
+                            definitionVersionId: string;
+                            definitionDigest: string;
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            value: {
+                                /** @enum {string} */
+                                type: "TEXT";
+                                value: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "INTEGER";
+                                value: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "DECIMAL";
+                                value: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "BOOLEAN";
+                                value: boolean;
+                            };
+                            /** @enum {unknown} */
+                            purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            recordedAt: string;
+                            approvedAt: string | null;
+                            /** @enum {unknown} */
+                            status: "DRAFT" | "APPROVED";
+                            reviewDigest: string;
+                        } | null;
+                        covered: boolean;
+                        currentDefinitionVersionId: string | null;
+                        /** @enum {unknown} */
+                        reason: "SATISFIED" | "PARAMETER_NOT_APPROVED" | "PARAMETER_PERIOD_NOT_COVERED" | "PARAMETER_ADOPTION_CHANGED";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    stageUnitCapabilityInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    requestId: string;
+                    /** Format: uuid */
+                    jobId: string;
+                    /** Format: uuid */
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    /** @enum {unknown} */
+                    timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                    entries: ({
+                        row: {
+                            capability_id: string;
+                            /** Format: uuid */
+                            unit_id: string;
+                            /** @enum {unknown} */
+                            capability_type: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            care_setting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            /** @enum {unknown} */
+                            enabled: "Y" | "N";
+                            rule_ref: string | null;
+                            approval_dept: string;
+                            version_no: string | number;
+                            valid_from: string;
+                            valid_to: string | null;
+                            /** @enum {unknown} */
+                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                            /** Format: uuid */
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        rule: {
+                            /** @enum {string} */
+                            kind: "NO_ADDITIONAL_RULE";
+                        } | {
+                            /** @enum {string} */
+                            kind: "BOOLEAN_GATE_V1";
+                            parameter: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/parameter-value";
+                                /** Format: uuid */
+                                parameterId: string;
+                                /** Format: uuid */
+                                valueId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                valueDigest: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        action: "GRANT";
+                    } | {
+                        row: {
+                            capability_id: string;
+                            /** Format: uuid */
+                            unit_id: string;
+                            /** @enum {unknown} */
+                            capability_type: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            care_setting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            /** @enum {unknown} */
+                            enabled: "Y" | "N";
+                            rule_ref: string | null;
+                            approval_dept: string;
+                            version_no: string | number;
+                            valid_from: string;
+                            valid_to: string | null;
+                            /** @enum {unknown} */
+                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                            /** Format: uuid */
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        rule: {
+                            /** @enum {string} */
+                            kind: "NO_ADDITIONAL_RULE";
+                        } | {
+                            /** @enum {string} */
+                            kind: "BOOLEAN_GATE_V1";
+                            parameter: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/parameter-value";
+                                /** Format: uuid */
+                                parameterId: string;
+                                /** Format: uuid */
+                                valueId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                valueDigest: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {unknown} */
+                        action: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                        target: {
+                            /** @enum {string} */
+                            owner: "care-organization/unit-capability";
+                            /** Format: uuid */
+                            id: string;
+                            expectedHead: string;
+                        };
+                    })[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        inputId: string;
+                        /** Format: uuid */
+                        revisionId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readUnitCapabilityInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        requestId: string;
+                        /** Format: uuid */
+                        jobId: string;
+                        /** Format: uuid */
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries: ({
+                            row: {
+                                capability_id: string;
+                                /** Format: uuid */
+                                unit_id: string;
+                                /** @enum {unknown} */
+                                capability_type: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                care_setting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                /** @enum {unknown} */
+                                enabled: "Y" | "N";
+                                rule_ref: string | null;
+                                approval_dept: string;
+                                version_no: string | number;
+                                valid_from: string;
+                                valid_to: string | null;
+                                /** @enum {unknown} */
+                                record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                /** Format: uuid */
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            rule: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind: "BOOLEAN_GATE_V1";
+                                parameter: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId: string;
+                                    /** Format: uuid */
+                                    valueId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    /** Format: uuid */
+                                    definitionVersionId: string;
+                                    definitionDigest: string;
+                                    valueDigest: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            action: "GRANT";
+                        } | {
+                            row: {
+                                capability_id: string;
+                                /** Format: uuid */
+                                unit_id: string;
+                                /** @enum {unknown} */
+                                capability_type: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                care_setting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                /** @enum {unknown} */
+                                enabled: "Y" | "N";
+                                rule_ref: string | null;
+                                approval_dept: string;
+                                version_no: string | number;
+                                valid_from: string;
+                                valid_to: string | null;
+                                /** @enum {unknown} */
+                                record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                /** Format: uuid */
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            rule: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind: "BOOLEAN_GATE_V1";
+                                parameter: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId: string;
+                                    /** Format: uuid */
+                                    valueId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    /** Format: uuid */
+                                    definitionVersionId: string;
+                                    definitionDigest: string;
+                                    valueDigest: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {unknown} */
+                            action: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            target: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit-capability";
+                                /** Format: uuid */
+                                id: string;
+                                expectedHead: string;
+                            };
+                        })[];
+                        /** Format: uuid */
+                        sourceArtifactId?: string;
+                        sourceRows?: number[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    verifyUnitCapabilityInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    requestId: string;
+                    /** Format: uuid */
+                    inputId: string;
+                    inputDigest: string;
+                    reason: string;
+                    /** @enum {string} */
+                    policyVersion: "ORG16_CORE_V1";
+                    rows: {
+                        row: number;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        classificationAccepted: boolean;
+                        scopeAccepted: boolean;
+                        rule: {
+                            /** @enum {string} */
+                            kind: "NO_ADDITIONAL_RULE";
+                        } | {
+                            /** @enum {string} */
+                            kind: "BOOLEAN_GATE_V1";
+                            parameter: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/parameter-value";
+                                /** Format: uuid */
+                                parameterId: string;
+                                /** Format: uuid */
+                                valueId: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                valueDigest: string;
+                            };
+                        };
+                        ruleConfirmed: boolean;
+                        validFrom: string;
+                        validTo: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        verificationId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    previewUnitCapabilityInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        decision: "PASS" | "BLOCKED";
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        changes: {
+                            action: string;
+                            targetId: string | null;
+                            validFrom: string;
+                            validTo: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    planUnitCapabilityInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                    /** Format: uuid */
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    withdrawUnitCapabilityInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    inputId: string;
+                    /** Format: uuid */
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    reviewUnitCapabilityCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    approveUnitCapabilityCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    applyUnitCapabilityCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                        facts: {
+                            /** @enum {string} */
+                            owner: "care-organization/unit-capability";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG16";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    resumeUnitCapabilityOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": ({
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                        facts: {
+                            /** @enum {string} */
+                            owner: "care-organization/unit-capability";
+                            /** Format: uuid */
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG16";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        /** Format: uuid */
+                        candidateId: string;
+                        /** Format: uuid */
+                        requestId: string;
+                    }) | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    reconcileUnitCapabilityOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getUnitCapabilityAsOf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        head: string;
+                        /** @enum {unknown} */
+                        state: "ACTIVE" | "DISABLED" | "SUSPENDED" | "ENDED" | "NOT_EFFECTIVE";
+                        version: {
+                            /** Format: uuid */
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "GRANT" | "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                approvalDepartment: string;
+                                initiallyEnabled: boolean;
+                                rule: {
+                                    /** @enum {string} */
+                                    kind: "NO_ADDITIONAL_RULE";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "BOOLEAN_GATE_V1";
+                                    parameter: {
+                                        /** @enum {string} */
+                                        owner: "governance-catalog/parameter-value";
+                                        /** Format: uuid */
+                                        parameterId: string;
+                                        /** Format: uuid */
+                                        valueId: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                        /** Format: uuid */
+                                        definitionVersionId: string;
+                                        definitionDigest: string;
+                                        valueDigest: string;
+                                    };
+                                };
+                                /** Format: uuid */
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: unknown;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    /** Format: uuid */
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            changeId: string;
+                        } | null;
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getUnitCapabilityHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {unknown} */
+                        scope: "NORTH" | "SOUTH";
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                        versions: {
+                            /** Format: uuid */
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "GRANT" | "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                approvalDepartment: string;
+                                initiallyEnabled: boolean;
+                                rule: {
+                                    /** @enum {string} */
+                                    kind: "NO_ADDITIONAL_RULE";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "BOOLEAN_GATE_V1";
+                                    parameter: {
+                                        /** @enum {string} */
+                                        owner: "governance-catalog/parameter-value";
+                                        /** Format: uuid */
+                                        parameterId: string;
+                                        /** Format: uuid */
+                                        valueId: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                        /** Format: uuid */
+                                        definitionVersionId: string;
+                                        definitionDigest: string;
+                                        valueDigest: string;
+                                    };
+                                };
+                                /** Format: uuid */
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: unknown;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    /** Format: uuid */
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            changeId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    getUnitCapabilityVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    recordAsOf?: string;
+                    version: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        number: string;
+                        /** @enum {unknown} */
+                        action: "GRANT" | "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            approvalDepartment: string;
+                            initiallyEnabled: boolean;
+                            rule: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind: "BOOLEAN_GATE_V1";
+                                parameter: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId: string;
+                                    /** Format: uuid */
+                                    valueId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    /** Format: uuid */
+                                    definitionVersionId: string;
+                                    definitionDigest: string;
+                                    valueDigest: string;
+                                };
+                            };
+                            /** Format: uuid */
+                            contractVersionId: string;
+                            verificationBasis: {
+                                /** Format: uuid */
+                                id: string;
+                                version: string;
+                                digest: string;
+                            };
+                            dependencies: unknown;
+                            source: {
+                                sourceAlias: string;
+                                sourceVersion: string;
+                                /** Format: uuid */
+                                sourceSystemId: string;
+                                sourceRecordedAt: string;
+                                recordLocatorEvidence: {
+                                    /** Format: uuid */
+                                    inputId: string;
+                                    row: number;
+                                };
+                                recordStatus: string;
+                                approvalReference: string;
+                            };
+                        };
+                        reason: string;
+                        /** Format: uuid */
+                        changeId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    diffUnitCapabilityVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    id: string;
+                    fromVersion: string;
+                    toVersion: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        before: {
+                            /** Format: uuid */
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "GRANT" | "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                approvalDepartment: string;
+                                initiallyEnabled: boolean;
+                                rule: {
+                                    /** @enum {string} */
+                                    kind: "NO_ADDITIONAL_RULE";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "BOOLEAN_GATE_V1";
+                                    parameter: {
+                                        /** @enum {string} */
+                                        owner: "governance-catalog/parameter-value";
+                                        /** Format: uuid */
+                                        parameterId: string;
+                                        /** Format: uuid */
+                                        valueId: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                        /** Format: uuid */
+                                        definitionVersionId: string;
+                                        definitionDigest: string;
+                                        valueDigest: string;
+                                    };
+                                };
+                                /** Format: uuid */
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: unknown;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    /** Format: uuid */
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            changeId: string;
+                        };
+                        after: {
+                            /** Format: uuid */
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "GRANT" | "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                approvalDepartment: string;
+                                initiallyEnabled: boolean;
+                                rule: {
+                                    /** @enum {string} */
+                                    kind: "NO_ADDITIONAL_RULE";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "BOOLEAN_GATE_V1";
+                                    parameter: {
+                                        /** @enum {string} */
+                                        owner: "governance-catalog/parameter-value";
+                                        /** Format: uuid */
+                                        parameterId: string;
+                                        /** Format: uuid */
+                                        valueId: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                        /** Format: uuid */
+                                        definitionVersionId: string;
+                                        definitionDigest: string;
+                                        valueDigest: string;
+                                    };
+                                };
+                                /** Format: uuid */
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: unknown;
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    /** Format: uuid */
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        /** Format: uuid */
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            changeId: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listUnitCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** Format: uuid */
+                    campusId?: string;
+                    /** Format: uuid */
+                    unitId?: string;
+                    /** Format: uuid */
+                    after?: string;
+                    limit?: number;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            head: string;
+                            /** @enum {unknown} */
+                            state: "ACTIVE" | "DISABLED" | "SUSPENDED" | "ENDED" | "NOT_EFFECTIVE";
+                            version: {
+                                /** Format: uuid */
+                                id: string;
+                                number: string;
+                                /** @enum {unknown} */
+                                action: "GRANT" | "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                facts: {
+                                    approvalDepartment: string;
+                                    initiallyEnabled: boolean;
+                                    rule: {
+                                        /** @enum {string} */
+                                        kind: "NO_ADDITIONAL_RULE";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "BOOLEAN_GATE_V1";
+                                        parameter: {
+                                            /** @enum {string} */
+                                            owner: "governance-catalog/parameter-value";
+                                            /** Format: uuid */
+                                            parameterId: string;
+                                            /** Format: uuid */
+                                            valueId: string;
+                                            /** Format: uuid */
+                                            versionId: string;
+                                            /** Format: uuid */
+                                            definitionVersionId: string;
+                                            definitionDigest: string;
+                                            valueDigest: string;
+                                        };
+                                    };
+                                    /** Format: uuid */
+                                    contractVersionId: string;
+                                    verificationBasis: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        version: string;
+                                        digest: string;
+                                    };
+                                    dependencies: unknown;
+                                    source: {
+                                        sourceAlias: string;
+                                        sourceVersion: string;
+                                        /** Format: uuid */
+                                        sourceSystemId: string;
+                                        sourceRecordedAt: string;
+                                        recordLocatorEvidence: {
+                                            /** Format: uuid */
+                                            inputId: string;
+                                            row: number;
+                                        };
+                                        recordStatus: string;
+                                        approvalReference: string;
+                                    };
+                                };
+                                reason: string;
+                                /** Format: uuid */
+                                changeId: string;
+                            } | null;
+                            /** @enum {string} */
+                            clinicalReadiness: "NOT_READY";
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    evaluateUnitCapabilityWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    applicability: {
+                        unit: {
+                            /** @enum {string} */
+                            owner: "care-organization/unit";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        campus: {
+                            /** @enum {string} */
+                            owner: "organization-master/campus";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        subject: {
+                            /** @enum {string} */
+                            owner: "organization-master";
+                            /** Format: uuid */
+                            id: string;
+                        };
+                        services: string[];
+                        /** @enum {unknown} */
+                        capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                        /** @enum {unknown} */
+                        careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                    };
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {unknown} */
+                    mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                        recordAsOf: string;
+                        /** @enum {unknown} */
+                        status: "SATISFIED" | "NOT_SATISFIED";
+                        checks: {
+                            service: string;
+                            from: string;
+                            to: string | null;
+                            /** @enum {unknown} */
+                            status: "SATISFIED" | "NOT_SATISFIED";
+                            reason: string;
+                            capabilityId: string | null;
+                            versionId: string | null;
+                            acceptedBasis: unknown;
+                            basis: unknown;
+                        }[];
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    receiveUnitCapabilityFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    input: {
+                        /** Format: uuid */
+                        requestId: string;
+                        /** Format: uuid */
+                        fileRequestId: string;
+                        job: {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                            };
+                            /** @enum {string} */
+                            action: "CREATE";
+                            contractId: string;
+                            contractVersionId: string;
+                            profile: "CORE" | "FULL";
+                        } | {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1";
+                            };
+                            /** @enum {string} */
+                            action: "REVISE";
+                            jobId: string;
+                            expectedCurrentRevision: string;
+                        };
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        retentionSeconds: number;
+                        operations: ({
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            rule: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind: "BOOLEAN_GATE_V1";
+                                parameter: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId: string;
+                                    /** Format: uuid */
+                                    valueId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    /** Format: uuid */
+                                    definitionVersionId: string;
+                                    definitionDigest: string;
+                                    valueDigest: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {string} */
+                            action: "GRANT";
+                        } | {
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            rule: {
+                                /** @enum {string} */
+                                kind: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind: "BOOLEAN_GATE_V1";
+                                parameter: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId: string;
+                                    /** Format: uuid */
+                                    valueId: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    /** Format: uuid */
+                                    definitionVersionId: string;
+                                    definitionDigest: string;
+                                    valueDigest: string;
+                                };
+                            };
+                            reason: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            /** @enum {unknown} */
+                            action: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            target: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit-capability";
+                                /** Format: uuid */
+                                id: string;
+                                expectedHead: string;
+                            };
+                        })[];
+                    };
+                    contentBase64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        jobId: string;
+                        /** Format: uuid */
+                        revisionId: string;
+                        /** Format: uuid */
+                        sourceArtifactId: string;
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        input: {
+                            /** Format: uuid */
+                            inputId: string;
+                            /** Format: uuid */
+                            revisionId: string;
+                            digest: string;
+                        } | null;
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        validation: unknown;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
                     };
                 };
             };

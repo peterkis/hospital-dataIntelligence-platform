@@ -46,4 +46,21 @@
     "profile": "CORE",
     "FULL": "BLOCKED_DEPENDENCY"
   }
+,
+  "unitCapabilities": {
+    "owner": "care-organization",
+    "writeAuthority": "vnext_control.capability_write_authority",
+    "publicPort": "apps/governance-api/src/modules/care-organization/index.ts",
+    "schemaPrefix": 174,
+    "inputProfile": "ORG16_CORE_V1",
+    "filePolicy": "STRICT_CAPABILITY_V1",
+    "FULL": "BLOCKED_DEPENDENCY"
+  },
+  "parameterValues": {
+    "owner": "governance-catalog",
+    "publicPort": "apps/governance-api/src/modules/governance-catalog/index.ts",
+    "schemaPrefix": 171,
+    "executionPolicy": "BOOLEAN_GATE_V1",
+    "policy": "TEST POLICY ONLY"
+  }
 }

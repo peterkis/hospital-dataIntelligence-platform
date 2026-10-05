@@ -8,10 +8,10 @@ export const Facts=Type.Object({campusCode:Type.String({minLength:1,maxLength:64
 export const Target=Type.Object({owner:Type.Literal('organization-master/campus'),id:Id,expectedVersion:Type.String({pattern:'^[1-9][0-9]*$'})},closed);
 const CampusSource=Type.Object({...Source.properties,recordedAt:Type.Union([Time,Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?\\+08:00$'})])},closed);
 const common={source:CampusSource,evidence:Id,sourceOperationStatus:Type.Enum(['PLANNING','TRIAL_RUNNING','RUNNING','SUSPENDED','RETIRED']),validFrom:Time,validTo:Type.Union([Time,Type.Null()])};
-export const DispositionOwner=Type.Enum(['BUSINESS_UNIT','NURSING_UNIT','WARD','LOCATION','ASSIGNMENT','CONSUMPTION']);
+export const DispositionOwner=Type.Enum(['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','LOCATION','ASSIGNMENT','CONSUMPTION']);
 const Digest=Type.String({pattern:'^[a-f0-9]{64}$'});
 export const CampusImpactSchema=Type.Object({id:Id,validFrom:Time,validTo:Type.Union([Time,Type.Null()]),asOf:Type.Optional(Time)},closed);
-export const CampusImpactResultSchema=Type.Object({campusId:Id,campusHead:Type.String(),validFrom:Time,validTo:Type.Union([Time,Type.Null()]),dependencies:Type.Array(Type.Object({owner:Type.Enum(['RELATION','SCOPE','BUSINESS_UNIT','NURSING_UNIT','WARD']),id:Id,version:Type.String(),active:Type.Boolean(),outstanding:Type.Boolean()},closed)),unavailable:Type.Array(DispositionOwner),dispositions:Type.Array(Type.Object({eventId:Id,inputId:Id,owner:DispositionOwner,status:Type.Enum(['UNKNOWN','CLEAR']),dependencyDigest:Digest},closed)),completed:Type.Boolean(),digest:Digest,dependencyDigest:Digest},closed);
+export const CampusImpactResultSchema=Type.Object({campusId:Id,campusHead:Type.String(),validFrom:Time,validTo:Type.Union([Time,Type.Null()]),dependencies:Type.Array(Type.Object({owner:Type.Enum(['RELATION','SCOPE','BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY']),id:Id,version:Type.String(),active:Type.Boolean(),outstanding:Type.Boolean()},closed)),unavailable:Type.Array(DispositionOwner),dispositions:Type.Array(Type.Object({eventId:Id,inputId:Id,owner:DispositionOwner,status:Type.Enum(['UNKNOWN','CLEAR']),dependencyDigest:Digest},closed)),completed:Type.Boolean(),digest:Digest,dependencyDigest:Digest},closed);
 export type CampusImpact=Static<typeof CampusImpactResultSchema>;
 export const CampusCommandSchema=Type.Union([
  Type.Object({...common,action:Type.Literal('CREATE'),facts:Facts},closed),
