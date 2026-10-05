@@ -100,6 +100,10 @@ admission dependencies.
 Retirement also freezes the exact relation context from the declaration, including
 an ORG Department-campus reference. Fabricated context is rejected before planning;
 a valid closure retains the original reference in its immutable history.
+Current-interval reassessment obtains the next approved business start through the
+catalog-owned internal `subject_code_next_approved_start` SQL interface. The permission
+module reads no catalog storage tables for that lookup. The helper is not granted to
+runtime roles; approval/reassessment calls it inside the existing authorized flow.
 Unsupported raw target types, including UNKNOWN and FULL, preserve the input and
 report BLOCKED_DEPENDENCY; supported types that disagree with scope remain mismatches.
 

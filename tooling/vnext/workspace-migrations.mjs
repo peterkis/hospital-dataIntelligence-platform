@@ -100,6 +100,7 @@ const postWorkspaceMigrations = [
  '0181_subject_replacement_review',
  '0182_subject_retirement_period',
  '0183_subject_retirement_context',
+ '0184_subject_catalog_interval_interface',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

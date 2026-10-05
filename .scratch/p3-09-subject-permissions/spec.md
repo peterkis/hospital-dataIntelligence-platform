@@ -142,3 +142,16 @@ preservation, task typecheck and230 startup/migration tests pass. Unaffected roo
 typecheck/build results remain pinned to c007fcb; final published-head CI is separate.
 Retained OID206108 forward deployment to0183 passes original data/key preservation,
 actual Workbench/API startup and wrapper cleanup. No additional acceptance claim.
+
+PR33's eighth hosted review identified a direct catalog-table lookup inside the
+permission module's current-interval reassessment. Forward migration0184 extracts
+the unchanged lookup to the governance-catalog-owned internal SQL interface
+subject_code_next_approved_start and replaces the care-organization query with that
+call. The helper checks catalog READ authority and remains ungranted to runtime roles.
+The routine allowlist recognizes it only at prefix184. Existing real backdated
+approval/interval regressions remain the behavior evidence for this refactor.
+Fresh/codegen and populated0175 upgrade pass56/56 each, with predecessor preservation;
+startup/migration unit230 passes. Owner/API TypeScript files are unchanged, so their
+prior pinned checks are retained instead of repeating unrelated validation.
+Retained OID206108 deployment to0184 preserves original data/keys and passes actual
+Workbench/API startup with wrapper cleanup. Installed0001–0183 bytes are unchanged.
