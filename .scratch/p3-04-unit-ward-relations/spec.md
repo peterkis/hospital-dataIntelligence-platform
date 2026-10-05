@@ -70,3 +70,7 @@ Q09/A019 only claim this ticket's portion; previous pending evidence is preserve
   retaining protected payloads and replay digests; END keeps approved rule bytes.
   Real generated HTTP and explicitly selected prior synthetic END evidence cover
   this repair. Installed0186–0189 are unchanged.
+- Later hosted review required preserving participant order in protected evidence
+  and distinguishing empty sharing-rule text from native null. Comparison copies
+  alone normalize order/time. New source facts preserve the empty value; legacy
+  END uses authenticated original source evidence to retain accepted old content.

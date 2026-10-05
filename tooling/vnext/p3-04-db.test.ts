@@ -17,6 +17,23 @@ const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,receipt=JSON.parse(r
 let catalog:Catalog,f:Awaited<ReturnType<typeof unitWardFixture>>;
 beforeAll(async()=>{const provider=validationKeys(receipt),pool=new Pool({connectionString:connection,max:1});try{catalog=await openCatalog(connection,provider);const role=(await pool.query('select current_user r')).rows[0].r;f=await unitWardFixture(receipt,role,catalog,provider,connection,process.env['VNEXT_P3_04_UPGRADED']==='1');}finally{await pool.end();}});
 afterAll(async()=>{await f?.close();await catalog?.close();});
+test('review repair: protected staging retains participant order and exact request replay',async()=>{
+ const a=await f.endpoint(),b=await f.sameWard(a),rule=f.shared([a.unit.id,b.unit.id]);if(rule.kind!=='SHARED_BOUNDARY')throw new Error('TEST_RULE_REQUIRED');rule.participants.reverse();const e=f.entry(a),v=await f.input([{...e,rule,row:{...e.row,relation_type:'共享',sharing_rule:'TEST source participant order'}}]),staged=await f.owner.stage('maker',v);
+ expect((await f.owner.readInput('maker',{inputId:staged.inputId})).entries[0]!.rule).toEqual(rule);expect(await f.owner.stage('maker',v)).toEqual(staged);
+ await expect(f.owner.stage('maker',{...v,entries:v.entries.map(entry=>({...entry,rule:{...rule,participants:[...rule.participants].reverse()}}))})).rejects.toThrow('REQUEST_CONFLICT');
+});
+test('review repair: independent verification retains its participant-order evidence',async()=>{
+ const a=await f.endpoint(),b=await f.sameWard(a),rule=f.shared([a.unit.id,b.unit.id]),e=f.entry(a),v=await f.input([{...e,rule,row:{...e.row,relation_type:'共享',sharing_rule:'TEST reviewer participant order'}}]),staged=await f.owner.stage('maker',v),verification=f.verification(v,staged);
+ for(const row of verification.rows)if(row.rule.kind==='SHARED_BOUNDARY')row.rule={...row.rule,participants:[...row.rule.participants].reverse()};const checked=await f.owner.verify('reviewer',verification);expect(await f.owner.verify('reviewer',verification)).toEqual(checked);
+ await expect(f.owner.verify('reviewer',{...verification,rows:verification.rows.map(row=>({...row,rule}))})).rejects.toThrow('REQUEST_CONFLICT');
+ expect((await f.owner.preview('maker',{inputId:staged.inputId})).decision).toBe('PASS');
+});
+test('review repair: empty sharing-rule source text remains distinct from native null through publication and END',async()=>{
+ const a=await f.endpoint(),e=f.entry(a),entry={...e,row:{...e.row,sharing_rule:''}},out=await f.apply(await f.input([entry])),id=out.facts[0]!.id,original=await f.owner.exact('maker',{id,version:'1'});
+ expect(original.facts.sharingRule).toBe('');await f.apply(await f.input([{...entry,action:'END',target:{owner:'care-organization/unit-ward-relation',id,expectedHead:'1'},endAt:'2026-03-01T00:00:00',row:{...entry.row,record_status:'RETIRED'}}]));expect((await f.owner.history('maker',{id})).versions.at(-1)!.facts.sharingRule).toBe('');expect(await f.owner.exact('maker',{id,version:'1'})).toEqual(original);
+ const b=await f.endpoint(),nativeEntry=f.entry(b),native=await f.apply(await f.input([nativeEntry])),nativeId=native.facts[0]!.id;expect((await f.owner.exact('maker',{id:nativeId,version:'1'})).facts.sharingRule).toBeNull();
+ await expect(f.prepare(await f.input([{...nativeEntry,action:'END',target:{owner:'care-organization/unit-ward-relation',id:nativeId,expectedHead:'1'},endAt:nativeEntry.row.valid_from,row:{...nativeEntry.row,sharing_rule:'',record_status:'RETIRED'}}]))).rejects.toThrow('UNIT_WARD_CONTENT_CHANGED');expect((await f.owner.history('maker',{id:nativeId})).versions).toHaveLength(1);
+});
 test.each(['participants','window'] as const)('review repair: differing shared %s block Owner and independently signed restricted SQL admission',async difference=>{
  const a=await f.endpoint(),b=await f.sameWard(a),extra=await f.sameWard(a),ea=f.entry(a),eb=f.entry(b),first=f.shared([a.unit.id,b.unit.id]);
  if(first.kind!=='SHARED_BOUNDARY')throw new Error('TEST_RULE_REQUIRED');

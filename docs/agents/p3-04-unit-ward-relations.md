@@ -32,7 +32,12 @@ Independent verification compares staged and reviewed governed rules through
 the same normalized time and participant set. Stored input and all14 source
 fields retain their original evidence form and signed replay digests. Legacy
 rules use the same semantic comparison; END retains the exact original approved
-rule in its formal fact and earlier history.
+rule in its formal fact and earlier history. Participant order is retained in
+protected staging/verification evidence; normalization sorts comparison copies.
+An explicitly empty `sharing_rule` source string stays distinct from native null.
+For an old accepted null-collapse, END verifies the authenticated original empty
+source field and preserves its accepted formal content. Native-null source fields
+cannot be changed to empty text during END.
 
 ## Source fields and API
 
