@@ -46,3 +46,5 @@ export {createNursingUnitClient,type NursingUnitInput} from './nursing-unit-clie
 export {createBusinessUnitClient,type BusinessUnitInput} from './business-unit-client.js';
 
 export {createWardClient,type WardInput} from './ward-client.js';
+export {createUnitCapabilityClient,type UnitCapabilityInput} from './unit-capability-client.js';
+export {createParameterValueClient} from './parameter-value-client.js';

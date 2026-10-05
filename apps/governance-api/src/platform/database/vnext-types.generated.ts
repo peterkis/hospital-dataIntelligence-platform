@@ -50,6 +50,88 @@ export interface CareOrganizationBindingVersion {
   valid_to: string | null;
 }
 
+export interface CareOrganizationCapability {
+  applicability: Json;
+  campus_id: string;
+  id: Generated<string>;
+  scope: string;
+  source_alias: string;
+  source_system_id: string;
+  subject_id: string;
+  unit_id: string;
+}
+
+export interface CareOrganizationCapabilityAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface CareOrganizationCapabilityApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface CareOrganizationCapabilityChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface CareOrganizationCapabilityInput {
+  campus_ids: string[];
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface CareOrganizationCapabilityVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface CareOrganizationCapabilityVersion {
+  action: string;
+  capability_id: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationCapabilityWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface CareOrganizationChange {
   candidate_id: string;
   digest: string;
@@ -972,6 +1054,37 @@ export interface GovernanceCatalogParameterGrant {
   permission: string;
 }
 
+export interface GovernanceCatalogParameterValue {
+  id: Generated<string>;
+  parameter_id: string;
+  scope_context: Json;
+  scope_digest: string;
+}
+
+export interface GovernanceCatalogParameterValueApproval {
+  actor: string;
+  identity_code: string;
+  recorded_at: string;
+  review_digest: string;
+  version_id: string;
+}
+
+export interface GovernanceCatalogParameterValueVersion {
+  definition_digest: string;
+  definition_version_id: string;
+  evidence_id: string;
+  id: Generated<string>;
+  maker_identity: string;
+  number: Int8;
+  purpose: string;
+  recorded_at: string;
+  review_digest: string;
+  valid_from: string;
+  valid_to: string | null;
+  value: Json;
+  value_id: string;
+}
+
 export interface GovernanceCatalogParameterVersion {
   campus: string;
   definition: Json;
@@ -1448,6 +1561,11 @@ export interface VnextControlCampusWriteAuthority {
   singleton: Generated<boolean>;
 }
 
+export interface VnextControlCapabilityWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlCreationPolicy {
   campus: string;
   creator_actor: string;
@@ -1539,6 +1657,14 @@ export interface DB {
   "care_organization.access": CareOrganizationAccess;
   "care_organization.apply_binding": CareOrganizationApplyBinding;
   "care_organization.binding_version": CareOrganizationBindingVersion;
+  "care_organization.capability": CareOrganizationCapability;
+  "care_organization.capability_access": CareOrganizationCapabilityAccess;
+  "care_organization.capability_apply_binding": CareOrganizationCapabilityApplyBinding;
+  "care_organization.capability_change": CareOrganizationCapabilityChange;
+  "care_organization.capability_input": CareOrganizationCapabilityInput;
+  "care_organization.capability_verification": CareOrganizationCapabilityVerification;
+  "care_organization.capability_version": CareOrganizationCapabilityVersion;
+  "care_organization.capability_withdrawal": CareOrganizationCapabilityWithdrawal;
   "care_organization.change": CareOrganizationChange;
   "care_organization.code": CareOrganizationCode;
   "care_organization.input": CareOrganizationInput;
@@ -1623,6 +1749,9 @@ export interface DB {
   "governance_catalog.parameter": GovernanceCatalogParameter;
   "governance_catalog.parameter_approval": GovernanceCatalogParameterApproval;
   "governance_catalog.parameter_grant": GovernanceCatalogParameterGrant;
+  "governance_catalog.parameter_value": GovernanceCatalogParameterValue;
+  "governance_catalog.parameter_value_approval": GovernanceCatalogParameterValueApproval;
+  "governance_catalog.parameter_value_version": GovernanceCatalogParameterValueVersion;
   "governance_catalog.parameter_version": GovernanceCatalogParameterVersion;
   "governance_catalog.parse_provenance": GovernanceCatalogParseProvenance;
   "governance_catalog.protected_artifact": GovernanceCatalogProtectedArtifact;
@@ -1672,6 +1801,7 @@ export interface DB {
   "vnext_control.audit_stream_grant": VnextControlAuditStreamGrant;
   "vnext_control.bundle_write_authority": VnextControlBundleWriteAuthority;
   "vnext_control.campus_write_authority": VnextControlCampusWriteAuthority;
+  "vnext_control.capability_write_authority": VnextControlCapabilityWriteAuthority;
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.department_write_authority": VnextControlDepartmentWriteAuthority;
   "vnext_control.location_write_authority": VnextControlLocationWriteAuthority;

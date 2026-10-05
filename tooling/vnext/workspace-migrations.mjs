@@ -87,6 +87,10 @@ const postWorkspaceMigrations = [
  '0168_ward_accepted_impact_evidence',
  '0169_ward_historical_rebind_evidence',
  '0170_ward_ended_management_references',
+ '0171_scoped_parameter_values',
+ '0172_unit_capabilities',
+ '0173_capability_import_and_impact_integration',
+ '0174_capability_finite_impacts',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

@@ -17,12 +17,12 @@ export const DepartmentLifecycleCommandSchema=Type.Union([
  Type.Object({...common,action:Type.Enum(['REVISE','END']),relation:RelationTarget,services:Services,validFrom:Time,validTo:Type.Union([Time,Type.Null()])},closed),
  Type.Object({...common,action:Type.Literal('MOVE'),relation:RelationTarget,destination:Endpoint,services:Services,effectiveAt:Time},closed),
 ]);
-export const DepartmentLifecycleStageSchema=Type.Object({requestId:Id,jobId:Id,revisionId:Id,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),commands:Type.Array(DepartmentLifecycleCommandSchema,{minItems:1,maxItems:100}),impacts:Type.Array(EvolutionImpactSchema,{minItems:10,maxItems:10})},closed);
-export const DepartmentLifecycleStoredStageSchema=Type.Object({...DepartmentLifecycleStageSchema.properties,impacts:Type.Array(EvolutionImpactSchema,{minItems:9,maxItems:10})},closed);
+export const DepartmentLifecycleStageSchema=Type.Object({requestId:Id,jobId:Id,revisionId:Id,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),commands:Type.Array(DepartmentLifecycleCommandSchema,{minItems:1,maxItems:100}),impacts:Type.Array(EvolutionImpactSchema,{minItems:11,maxItems:11})},closed);
+export const DepartmentLifecycleStoredStageSchema=Type.Object({...DepartmentLifecycleStageSchema.properties,impacts:Type.Array(EvolutionImpactSchema,{minItems:9,maxItems:11})},closed);
 export type DepartmentLifecycleCommand=Static<typeof DepartmentLifecycleCommandSchema>;
 export type DepartmentLifecycleStageInput=Static<typeof DepartmentLifecycleStageSchema>;
 export const DepartmentLifecycleVerifySchema=Type.Object({requestId:Id,inputId:Id,inputDigest:Type.String({pattern:'^[a-f0-9]{64}$'}),reason:Text,policyApproved:Type.Boolean(),materialsAccepted:Type.Boolean(),impactReviews:EvolutionVerifySchema.properties.impactReviews},closed);
-export const DepartmentLifecycleStoredVerifySchema=Type.Object({...DepartmentLifecycleVerifySchema.properties,impactReviews:Type.Array(EvolutionVerifySchema.properties.impactReviews.items,{minItems:9,maxItems:10})},closed);
+export const DepartmentLifecycleStoredVerifySchema=Type.Object({...DepartmentLifecycleVerifySchema.properties,impactReviews:Type.Array(EvolutionVerifySchema.properties.impactReviews.items,{minItems:9,maxItems:11})},closed);
 export type DepartmentLifecycleVerifyInput=Static<typeof DepartmentLifecycleVerifySchema>;
 export const DepartmentAdmissionSchema=Type.Object({id:Id,validFrom:Time,validTo:Type.Union([Time,Type.Null()]),recordAsOf:Type.Optional(Time)},closed);
 export type DepartmentAdmissionInput=Static<typeof DepartmentAdmissionSchema>;

@@ -1,4 +1,5 @@
 import { Kysely, PostgresDialect, sql } from 'kysely';
+export * from './parameter-values.js';
 import {vnextPool} from '../../platform/database/vnext-pool.js';
 import { protectedArtifacts, type KeyProviderPort } from './protected-artifact.js';
 import { fileIntake } from './file-intake.js';

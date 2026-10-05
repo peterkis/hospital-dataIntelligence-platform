@@ -47,7 +47,7 @@ test('P1-07 AC01: approved RESUME restores the same campus after temporary suspe
 test('P1-07 retirement preserves identity and unknown dependencies prevent disposition completion',async()=>{
  const a=await apply(create());
  const assessment=await org.assessCampusImpact('maker',{id:a.id,validFrom:common.validFrom,validTo:null});
- expect(assessment.unavailable).toEqual(['BUSINESS_UNIT','NURSING_UNIT','WARD','LOCATION','ASSIGNMENT','CONSUMPTION']);
+ expect(assessment.unavailable).toEqual(['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','LOCATION','ASSIGNMENT','CONSUMPTION']);
  const retired=await apply({...common,action:'RETIRE',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO_EXIT',assessmentDigest:assessment.digest,plan:{responsibleOwner:'DEMO_OFFICE',dueAt:'2027-01-01T00:00:00',actions:'Owner分别关闭关系并核验在途'}});
  expect(retired.id).toBe(a.id);
  expect(await org.references.read('maker',{id:a.id})).toMatchObject({operationStatus:'RETIRED'});
@@ -69,20 +69,20 @@ async function retireNode(){const a=await apply(create());return apply({...commo
 
 test('manual declarations remain NOT_EVALUABLE and complete only the explicitly reviewed synthetic disposition',async()=>{
  let a=await retireNode();const before=await org.references.history('maker',a.id);
- for(const owner of ['BUSINESS_UNIT','NURSING_UNIT','WARD','LOCATION','ASSIGNMENT','CONSUMPTION'] as const){
+ for(const owner of ['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','LOCATION','ASSIGNMENT','CONSUMPTION'] as const){
   a=await apply({...common,action:'RECORD_DISPOSITION',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO_MANUAL_VERIFIED',assessmentDigest:(await impact(a.id)).digest,resolution:{owner,status:'CLEAR',scope:'SYNTHETIC'}});
  }
  const pending=await prepare({...common,action:'COMPLETE_DISPOSITION',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO_COMPLETE',assessmentDigest:(await impact(a.id)).digest});
  const result=await org.applyUnit('maker',pending,async()=>{throw new Error('DEMO_ACK_LOST');});
  expect(result).toMatchObject({status:'COMMITTED',responseStatus:'POST_COMMIT_FAILED'});
  expect(await org.resumeOutcome('maker',pending)).toMatchObject({status:'COMMITTED',facts:result.status==='COMMITTED'?result.facts:[]});
- const report=await impact(a.id);expect(report.completed).toBe(true);expect(report.unavailable).toHaveLength(6);
+ const report=await impact(a.id);expect(report.completed).toBe(true);expect(report.unavailable).toHaveLength(7);
  expect((await org.references.history('maker',a.id,before.operations.at(-1)!.recordedAt)).head).toBe('2');
 });
 
 test('an UNKNOWN consumption declaration supersedes an earlier CLEAR and blocks closure',async()=>{
  let a=await retireNode();
- for(const owner of ['BUSINESS_UNIT','NURSING_UNIT','WARD','LOCATION','ASSIGNMENT','CONSUMPTION','CONSUMPTION'] as const){
+ for(const owner of ['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','LOCATION','ASSIGNMENT','CONSUMPTION','CONSUMPTION'] as const){
   const previous=await impact(a.id),status=owner==='CONSUMPTION'&&previous.dispositions.some(d=>d.owner===owner)?'UNKNOWN':'CLEAR';
   a=await apply({...common,action:'RECORD_DISPOSITION',target:target(a),evidence:artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'DEMO_RECHECK',assessmentDigest:previous.digest,resolution:{owner,status,scope:'SYNTHETIC'}});
  }
@@ -132,7 +132,7 @@ test('existing operating dependencies remain history; stale candidate/new expans
  const after=await x.campus.assessCampusImpact('maker',{id:node.id,validFrom:common.validFrom,validTo:null});expect(after.dependencies).toHaveLength(2);expect(after.dependencies.every(d=>d.active&&d.outstanding===false)).toBe(true);
  expect((await x.operating.read('maker',{kind:'RELATION',id:relation.id,mode:'EXACT',version:'1'}))[0]?.facts).toMatchObject({role:'OPERATOR'});
  let current={id:node.id,version:(await x.campus.references.read('maker',{id:node.id})).head};
- for(const owner of ['BUSINESS_UNIT','NURSING_UNIT','WARD','LOCATION','ASSIGNMENT','CONSUMPTION'] as const){
+ for(const owner of ['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','LOCATION','ASSIGNMENT','CONSUMPTION'] as const){
   const report=await x.campus.assessCampusImpact('maker',{id:node.id,validFrom:common.validFrom,validTo:null});
   current=await x.campusApply({...x.common,action:'RECORD_DISPOSITION',target:target(current),sourceOperationStatus:'RETIRED',evidence:x.artifact.artifactId,reason:'DEMO_RECHECK',assessmentDigest:report.digest,resolution:{owner,status:'CLEAR',scope:'SYNTHETIC'}});
  }
@@ -159,7 +159,7 @@ test('future retirement rejects an opening planned at or after the retirement bo
 test('real HTTP serializes retirement/impact and current grants forbid unauthorized creation and replay',async()=>{
  const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,{owner:org,actor:r=>actor(r.headers)});await app.listen({host:'127.0.0.1',port:0});
  try{const address=app.server.address();if(!address||typeof address==='string')throw new Error();const base=`http://127.0.0.1:${address.port}`,client=createCampusClient(base,'maker');
- const retired=await retireNode();expect((await client.getCampusAsOf({id:retired.id})).data?.operationStatus).toBe('RETIRED');expect((await client.assessImpact({id:retired.id,validFrom:common.validFrom,validTo:null})).data?.unavailable).toHaveLength(6);
+ const retired=await retireNode();expect((await client.getCampusAsOf({id:retired.id})).data?.operationStatus).toBe('RETIRED');expect((await client.assessImpact({id:retired.id,validFrom:common.validFrom,validTo:null})).data?.unavailable).toHaveLength(7);
  expect((await createCampusClient(base,'outsider').assessImpact({id:retired.id,validFrom:common.validFrom,validTo:null})).response.status).toBe(403);
  const c=create();const inputValue=input(c);const staged=await org.stage('maker',inputValue);const candidate=await org.plan('maker',{inputId:staged.inputId,requestId:randomUUID()});
  await expect(org.approveApplyUnit('maker-alias',candidate)).rejects.toThrow();

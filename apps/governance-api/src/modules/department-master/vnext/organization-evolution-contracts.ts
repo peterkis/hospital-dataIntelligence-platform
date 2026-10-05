@@ -21,7 +21,8 @@ export const ORG26_FIELDS=Object.keys(EvolutionEventRowSchema.properties) as Arr
 export const ORG27_FIELDS=Object.keys(EvolutionRelationRowSchema.properties) as Array<keyof ORG27Row>;
 const LEGACY_EVOLUTION_IMPACT_DOMAINS=['PERSONNEL','PATIENT','ACCOUNT','INVENTORY','FINANCE','SOURCE_MAPPING','HIERARCHY','CONSUMER'] as const;
 const PRIOR_EVOLUTION_IMPACT_DOMAINS=[...LEGACY_EVOLUTION_IMPACT_DOMAINS,'IDENTIFIER'] as const;
-export const EVOLUTION_IMPACT_DOMAINS=[...PRIOR_EVOLUTION_IMPACT_DOMAINS,'WARD'] as const;
+const WARD_EVOLUTION_IMPACT_DOMAINS=[...PRIOR_EVOLUTION_IMPACT_DOMAINS,'WARD'] as const;
+export const EVOLUTION_IMPACT_DOMAINS=[...WARD_EVOLUTION_IMPACT_DOMAINS,'UNIT_CAPABILITY'] as const;
 export const EvolutionImpactSchema=Type.Object({
  domain:Type.Enum(EVOLUTION_IMPACT_DOMAINS),determination:Type.Enum(['AFFECTED','UNAFFECTED','UNKNOWN']),
  ownerRole:required(160),ownerSignatory:required(160),ownerDecisionRef:required(256),requiredAction:text(),reason:required(),evidenceId:Id,
@@ -37,11 +38,11 @@ const fields={
  rename:Type.Union([Type.Object({name:required(160),shortName:text(160)},closed),Type.Null()]),
  contracts:CompanionContracts,sourceSystemId:Id,decisionEvidenceId:Id,
  migrationEvidenceId:Type.Union([Id,Type.Null()]),contextEvidenceId:Type.Union([Id,Type.Null()]),
- impacts:Type.Array(EvolutionImpactSchema,{minItems:10,maxItems:10}),
+ impacts:Type.Array(EvolutionImpactSchema,{minItems:11,maxItems:11}),
 };
 export const EvolutionStageSchema=Type.Object(fields,closed);
 export const EvolutionStoredStageSchema=Type.Object({...fields,
- impacts:Type.Union([fields.impacts,Type.Array(Type.Object({...EvolutionImpactSchema.properties,domain:Type.Enum(PRIOR_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:9,maxItems:9}),Type.Array(Type.Object({...EvolutionImpactSchema.properties,domain:Type.Enum(LEGACY_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:8,maxItems:8})]),
+ impacts:Type.Union([fields.impacts,Type.Array(Type.Object({...EvolutionImpactSchema.properties,domain:Type.Enum(WARD_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:10,maxItems:10}),Type.Array(Type.Object({...EvolutionImpactSchema.properties,domain:Type.Enum(PRIOR_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:9,maxItems:9}),Type.Array(Type.Object({...EvolutionImpactSchema.properties,domain:Type.Enum(LEGACY_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:8,maxItems:8})]),
  sourceArtifactId:Type.Optional(Id),
  sourceRows:Type.Object({event:Type.Integer({minimum:1,maximum:1048576}),relations:Type.Array(Type.Integer({minimum:1,maximum:1048576}),{maxItems:100}),successors:Type.Array(Type.Integer({minimum:1,maximum:1048576}),{maxItems:100})},closed),
 },closed);
@@ -55,9 +56,9 @@ export const EvolutionReceiveSchema=Type.Object({
 export type EvolutionReceiveInput=Static<typeof EvolutionReceiveSchema>;
 export const EvolutionTemplateSchema=Type.Object({campus:Type.Enum(['NORTH','SOUTH']),contractId:Id,contractVersionId:Id,contracts:CompanionContracts},closed);
 export type EvolutionTemplateInput=Static<typeof EvolutionTemplateSchema>;
-export const EvolutionVerifySchema=Type.Object({impactAssessment:Type.Optional(Type.Object({id:Id,digest:Type.String({pattern:'^[a-f0-9]{64}$'})},closed)),requestId:Id,inputId:Id,inputDigest:Type.String({pattern:'^[a-f0-9]{64}$'}),reason:required(),policyApproved:Type.Boolean(),materialsAccepted:Type.Boolean(),impactReviews:Type.Array(Type.Object({domain:Type.Enum(EVOLUTION_IMPACT_DOMAINS),ownerAttestationAccepted:Type.Boolean(),dispositionAccepted:Type.Boolean(),reason:required()},closed),{minItems:10,maxItems:10})},closed);
+export const EvolutionVerifySchema=Type.Object({impactAssessment:Type.Optional(Type.Object({id:Id,digest:Type.String({pattern:'^[a-f0-9]{64}$'})},closed)),requestId:Id,inputId:Id,inputDigest:Type.String({pattern:'^[a-f0-9]{64}$'}),reason:required(),policyApproved:Type.Boolean(),materialsAccepted:Type.Boolean(),impactReviews:Type.Array(Type.Object({domain:Type.Enum(EVOLUTION_IMPACT_DOMAINS),ownerAttestationAccepted:Type.Boolean(),dispositionAccepted:Type.Boolean(),reason:required()},closed),{minItems:11,maxItems:11})},closed);
 export const EvolutionStoredVerifySchema=Type.Object({...EvolutionVerifySchema.properties,
- impactReviews:Type.Union([EvolutionVerifySchema.properties.impactReviews,Type.Array(Type.Object({...EvolutionVerifySchema.properties.impactReviews.items.properties,domain:Type.Enum(PRIOR_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:9,maxItems:9}),Type.Array(Type.Object({...EvolutionVerifySchema.properties.impactReviews.items.properties,domain:Type.Enum(LEGACY_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:8,maxItems:8})]),
+ impactReviews:Type.Union([EvolutionVerifySchema.properties.impactReviews,Type.Array(Type.Object({...EvolutionVerifySchema.properties.impactReviews.items.properties,domain:Type.Enum(WARD_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:10,maxItems:10}),Type.Array(Type.Object({...EvolutionVerifySchema.properties.impactReviews.items.properties,domain:Type.Enum(PRIOR_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:9,maxItems:9}),Type.Array(Type.Object({...EvolutionVerifySchema.properties.impactReviews.items.properties,domain:Type.Enum(LEGACY_EVOLUTION_IMPACT_DOMAINS)},closed),{minItems:8,maxItems:8})]),
 },closed);
 export type EvolutionVerifyInput=Static<typeof EvolutionVerifySchema>;
 

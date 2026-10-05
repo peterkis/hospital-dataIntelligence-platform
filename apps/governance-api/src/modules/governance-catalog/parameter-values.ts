@@ -1,0 +1,51 @@
+import {Type,type Static} from 'typebox';
+import {Check} from 'typebox/value';
+import {Kysely,PostgresDialect,sql} from 'kysely';
+import {vnextPool} from '../../platform/database/vnext-pool.js';
+import type {DB} from '../../platform/database/vnext-types.generated.js';
+import {CatalogTransactionScope} from './transaction-scope.js';
+
+const closed={additionalProperties:false} as const;
+const Id=Type.String({format:'uuid'}),Time=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'}),End=Type.Union([Time,Type.Null()]);
+const Text=Type.String({minLength:1,maxLength:2000,pattern:'\\S'}),Digest=Type.String({pattern:'^[a-f0-9]{64}$'});
+export const CAPABILITY_TYPES=['REGISTER','ORDER','EXECUTE','CONSULT','ADMIT','DISPENSE','REPORT'] as const;
+export const CAPABILITY_CARE_SETTINGS=['OUTPATIENT','INPATIENT','EMERGENCY','EXAMINATION','DAYCARE','INTERNET'] as const;
+export const CapabilityScopeSchema=Type.Object({unit:Type.Object({owner:Type.Literal('care-organization/unit'),id:Id},closed),campus:Type.Object({owner:Type.Literal('organization-master/campus'),id:Id},closed),subject:Type.Object({owner:Type.Literal('organization-master'),id:Id},closed),services:Type.Array(Type.String({minLength:1,maxLength:64}),{minItems:1,maxItems:100,uniqueItems:true}),capabilityType:Type.Enum(CAPABILITY_TYPES),careSetting:Type.Enum(CAPABILITY_CARE_SETTINGS)},closed);
+export type CapabilityScope=Static<typeof CapabilityScopeSchema>;
+export const ParameterValueSchema=Type.Union([
+ Type.Object({type:Type.Literal('TEXT'),value:Type.String({maxLength:256})},closed),
+ Type.Object({type:Type.Literal('INTEGER'),value:Type.String({pattern:'^-?(0|[1-9][0-9]*)$',maxLength:256})},closed),
+ Type.Object({type:Type.Literal('DECIMAL'),value:Type.String({pattern:'^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$',maxLength:256})},closed),
+ Type.Object({type:Type.Literal('BOOLEAN'),value:Type.Boolean()},closed),
+]);
+const Common={requestId:Id,reason:Text},Revision={definitionVersionId:Id,definitionDigest:Digest,value:ParameterValueSchema,purpose:Type.Enum(['METADATA','BOOLEAN_GATE_V1']),validFrom:Time,validTo:End,evidenceId:Id};
+export const ParameterValueCommandSchema=Type.Union([
+ Type.Object({...Common,...Revision,action:Type.Literal('CREATE'),applicability:CapabilityScopeSchema},closed),
+ Type.Object({...Common,...Revision,action:Type.Literal('REVISE'),target:Id,expectedHead:Type.String({pattern:'^[1-9][0-9]*$'})},closed),
+ Type.Object({...Common,action:Type.Literal('APPROVE'),target:Id,versionId:Id,reviewDigest:Digest},closed),
+]);
+export type ParameterValueCommand=Static<typeof ParameterValueCommandSchema>;
+export const ParameterValueReadSchema=Type.Object({id:Id,versionId:Type.Optional(Id),recordAsOf:Type.Optional(Time)},closed);
+export const ParameterValueWindowSchema=Type.Object({...ParameterValueReadSchema.properties,validFrom:Time,validTo:End},closed);
+export const ParameterValueItemSchema=Type.Object({id:Id,parameterId:Id,versionId:Id,head:Type.String(),definitionVersionId:Id,definitionDigest:Digest,applicability:CapabilityScopeSchema,value:ParameterValueSchema,purpose:Type.Enum(['METADATA','BOOLEAN_GATE_V1']),validFrom:Time,validTo:End,evidenceId:Id,recordedAt:Time,approvedAt:End,status:Type.Enum(['DRAFT','APPROVED']),reviewDigest:Digest},closed);
+export type ParameterValueItem=Static<typeof ParameterValueItemSchema>;
+export const ParameterValueWindowResultSchema=Type.Object({item:Type.Union([ParameterValueItemSchema,Type.Null()]),covered:Type.Boolean(),currentDefinitionVersionId:Type.Union([Id,Type.Null()]),reason:Type.Enum(['SATISFIED','PARAMETER_NOT_APPROVED','PARAMETER_PERIOD_NOT_COVERED','PARAMETER_ADOPTION_CHANGED'])},closed);
+export type ParameterValueWindowResult=Static<typeof ParameterValueWindowResultSchema>;
+const check=(schema:unknown,value:unknown)=>{if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');};
+
+export function openParameterValues(connection:string){
+ const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
+ const root=<T>(work:(s:CatalogTransactionScope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
+ const read=(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueReadSchema>,history=false)=>(sql<{r:ParameterValueItem[]}>`select governance_catalog.parameter_value_read(${actor},${JSON.stringify(input)}::jsonb,${history}) r`.execute(s)).then(r=>r.rows[0]!.r);
+ const evaluate=(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueWindowSchema>)=>(sql<{r:ParameterValueWindowResult}>`select governance_catalog.parameter_value_evaluate(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s)).then(r=>r.rows[0]!.r);
+ return {
+  async command(actor:string,input:ParameterValueCommand){check(ParameterValueCommandSchema,input);return root(async s=>(await sql<{r:ParameterValueItem}>`select governance_catalog.parameter_value_command(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s)).rows[0]!.r);},
+  async read(actor:string,input:Static<typeof ParameterValueReadSchema>){check(ParameterValueReadSchema,input);return root(async s=>{const rows=await read(s,actor,input);if(!rows.length)throw new Error('NOT_FOUND');return rows[0]!;});},
+  async history(actor:string,input:Static<typeof ParameterValueReadSchema>){check(ParameterValueReadSchema,input);return root(s=>read(s,actor,input,true));},
+  async evaluateWindow(actor:string,input:Static<typeof ParameterValueWindowSchema>){check(ParameterValueWindowSchema,input);return root(s=>evaluate(s,actor,input));},
+  async authorizeReferenceInTransaction(s:CatalogTransactionScope,actor:string,id:string){check(Id,id);await sql`select governance_catalog.parameter_value_access(${actor},${id}::uuid,'READ')`.execute(s);},
+  async evaluateWindowInTransaction(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueWindowSchema>){check(ParameterValueWindowSchema,input);return evaluate(s,actor,input);},
+  async close(){await db.destroy();},
+ };
+}
+export type ParameterValueOwner=ReturnType<typeof openParameterValues>;
