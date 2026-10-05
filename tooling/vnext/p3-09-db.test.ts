@@ -177,7 +177,12 @@ test('Department permission uses an exact public Department-campus relation',asy
  const b=await base.endpoint(await base.newDepartment()),scope:SubjectScope={target:{type:'ORG',owner:'department-master',id:b.department.id},subject:b.subject,campus:b.campus,services:b.services};grant(scope,'PERMISSION');
  const w=await base.operating.operating.evaluateOperatingWindow('maker',{subject:b.subject,campus:b.campus,services:b.services,validFrom:'2026-01-01T00:00:00',validTo:null});
  const entry:SubjectEntry={...permissionTemplate,scope,context:{departmentRelation:b.relation},license:w.services[0]!.segments[0]!.license,row:{...permissionTemplate.row,subject_license_id:randomUUID(),target_type:'ORG',target_id:b.department.id}};
- expect((await apply(await input([entry]))).facts[0]!.owner).toBe('care-organization/subject-permission');
+ const out=await apply(await input([entry])),id=out.facts[0]!.id;expect(out.facts[0]!.owner).toBe('care-organization/subject-permission');
+ const close:SubjectEntry={...entry,action:'RETIRE',target:{owner:'care-organization/subject-permission',id,expectedHead:'1'},row:{...entry.row,valid_from:'2026-04-01T00:00:00',record_status:'RETIRED'}};
+ const fabricated=await input([{...close,context:{departmentRelation:{...b.relation,id:randomUUID(),versionId:randomUUID()}}}]),i=await permissions.stage('maker',fabricated);await permissions.verify('reviewer',verification(fabricated,i));
+ expect((await permissions.preview('maker',{inputId:i.inputId})).issues.some(issue=>issue.code==='SUBJECT_RETIREMENT_EXPANSION')).toBe(true);
+ await expect(permissions.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow('SUBJECT_RETIREMENT_EXPANSION');expect((await permissions.history('maker',{id})).versions).toHaveLength(1);
+ await apply(await input([close]));expect((await permissions.history('maker',{id})).versions[1]!.facts.context).toEqual(entry.context);
 });
 
 test('unresolved limits and FULL retain raw inputs and cannot plan publication',async()=>{

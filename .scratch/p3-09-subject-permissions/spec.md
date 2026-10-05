@@ -129,3 +129,16 @@ Final fresh/codegen and populated0175 upgrade pass56/56 each, with old ledger/ta
 preservation; task and root typechecks, build and230 startup/migration tests pass.
 Installed bytes0001–0181 are preserved. Retained OID206108 deployment to0182 passes
 original data/key preservation and actual Workbench/API smoke; wrapper cleanup passes.
+
+PR33's seventh hosted review identified a retirement context omitted from the
+declaration comparison. RETIRE now preserves facts.context, including the exact
+Department-campus reference, in both the Owner and forward migration0183 SQL guard.
+The existing real Department permission regression first reproduces a fabricated
+relation accepted at preview, then requires rejection with unchanged history and
+confirms a legitimate closure retains the original relation context. This follow-up
+adds no ticket or domain beyond P3-09; installed0001–0182 bytes are preserved.
+Fresh/codegen and populated0175 upgrade pass56/56 each; predecessor ledger/table
+preservation, task typecheck and230 startup/migration tests pass. Unaffected root
+typecheck/build results remain pinned to c007fcb; final published-head CI is separate.
+Retained OID206108 forward deployment to0183 passes original data/key preservation,
+actual Workbench/API startup and wrapper cleanup. No additional acceptance claim.

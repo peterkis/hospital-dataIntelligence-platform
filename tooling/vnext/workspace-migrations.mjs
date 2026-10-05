@@ -99,6 +99,7 @@ const postWorkspaceMigrations = [
  '0180_subject_unchanged_successor_coverage',
  '0181_subject_replacement_review',
  '0182_subject_retirement_period',
+ '0183_subject_retirement_context',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

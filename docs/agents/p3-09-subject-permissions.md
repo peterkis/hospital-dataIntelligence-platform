@@ -97,6 +97,9 @@ create an input in JSON, CSV or XLSX. Retirement may close at either declaration
 boundary or within the declared interval; it cannot precede the start or exceed a
 finite end. Owner and SQL enforce these bounds without consulting expired upstream
 admission dependencies.
+Retirement also freezes the exact relation context from the declaration, including
+an ORG Department-campus reference. Fabricated context is rejected before planning;
+a valid closure retains the original reference in its immutable history.
 Unsupported raw target types, including UNKNOWN and FULL, preserve the input and
 report BLOCKED_DEPENDENCY; supported types that disagree with scope remain mismatches.
 
