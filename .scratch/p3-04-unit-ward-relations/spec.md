@@ -78,3 +78,6 @@ Q09/A019 only claim this ticket's portion; previous pending evidence is preserve
   Campus binding/window and END verification coverage of the retained source row.
   Unit Owner reference association and forward0190 guard both new admission and
   signed SQL; END's safe-shrink rule remains separate from period attestation.
+- Final participant-pin review requires restricted SQL to compare every frozen
+  participant binding basis at the apply R. Forward0191 returns STALE_VALIDATION
+  after a same-campus binding successor, preserving original candidate evidence.

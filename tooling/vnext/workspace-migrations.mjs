@@ -107,6 +107,7 @@ const postWorkspaceMigrations = [
  '0188_unit_ward_finite_impacts',
  '0189_unit_ward_shared_boundary_agreement',
  '0190_unit_ward_participant_campus',
+ '0191_unit_ward_participant_pins',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
