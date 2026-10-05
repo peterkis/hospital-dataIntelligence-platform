@@ -262,6 +262,105 @@ export interface CareOrganizationNursingWithdrawal {
   request_id: string;
 }
 
+export interface CareOrganizationSubjectAccess {
+  actor: string;
+  campus_id: string;
+  kind: string;
+  permission: string;
+  subject_id: string;
+  target_id: string;
+  target_type: string;
+}
+
+export interface CareOrganizationSubjectApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface CareOrganizationSubjectChange {
+  candidate_id: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface CareOrganizationSubjectInput {
+  contexts: Json;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface CareOrganizationSubjectRelation {
+  id: Generated<string>;
+  kind: string;
+  scope: Json;
+  source_alias: string;
+  source_system_id: string;
+}
+
+export interface CareOrganizationSubjectRelationVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  relation_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationSubjectReviewCase {
+  accepted_version_id: string;
+  blocking: boolean;
+  code_version_id: string;
+  id: Generated<string>;
+  reason: string;
+  recorded_at: Generated<string>;
+  relation_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationSubjectReviewResolution {
+  case_id: string;
+  recorded_at: string;
+  relation_version_id: string;
+}
+
+export interface CareOrganizationSubjectVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface CareOrganizationSubjectWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface CareOrganizationUnit {
   department_id: string;
   id: Generated<string>;
@@ -1181,6 +1280,55 @@ export interface GovernanceCatalogSourceSnapshot {
   source_key: string;
 }
 
+export interface GovernanceCatalogSubjectCodeAccess {
+  actor: string;
+  permission: string;
+}
+
+export interface GovernanceCatalogSubjectCodeApproval {
+  actor: string;
+  identity_code: string;
+  recorded_at: Generated<string>;
+  verification_id: string;
+  version_id: string;
+}
+
+export interface GovernanceCatalogSubjectCodeOutcome {
+  digest: string;
+  identity_code: string;
+  request_id: string;
+  result: Json;
+}
+
+export interface GovernanceCatalogSubjectCodeSystem {
+  id: Generated<string>;
+  namespace_uri: string;
+  source_alias: string;
+  source_system_id: string;
+  system_code: string;
+}
+
+export interface GovernanceCatalogSubjectCodeVerification {
+  actor: string;
+  evidence_id: string;
+  id: Generated<string>;
+  identity_code: string;
+  recorded_at: Generated<string>;
+  source_reviewed: boolean;
+  version_id: string;
+}
+
+export interface GovernanceCatalogSubjectCodeVersion {
+  id: Generated<string>;
+  maker_identity: string;
+  metadata: Json;
+  number: Int8;
+  reason: string;
+  recorded_at: Generated<string>;
+  review_digest: string;
+  system_id: string;
+}
+
 export interface GovernanceCatalogValidationRun {
   contract_version_id: string;
   decision: string;
@@ -1643,6 +1791,11 @@ export interface VnextControlRequestIdentity {
   request_id: string;
 }
 
+export interface VnextControlSubjectWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlUnitWriteAuthority {
   key_hex: string;
   singleton: Generated<boolean>;
@@ -1679,6 +1832,16 @@ export interface DB {
   "care_organization.nursing_verification": CareOrganizationNursingVerification;
   "care_organization.nursing_version": CareOrganizationNursingVersion;
   "care_organization.nursing_withdrawal": CareOrganizationNursingWithdrawal;
+  "care_organization.subject_access": CareOrganizationSubjectAccess;
+  "care_organization.subject_apply_binding": CareOrganizationSubjectApplyBinding;
+  "care_organization.subject_change": CareOrganizationSubjectChange;
+  "care_organization.subject_input": CareOrganizationSubjectInput;
+  "care_organization.subject_relation": CareOrganizationSubjectRelation;
+  "care_organization.subject_relation_version": CareOrganizationSubjectRelationVersion;
+  "care_organization.subject_review_case": CareOrganizationSubjectReviewCase;
+  "care_organization.subject_review_resolution": CareOrganizationSubjectReviewResolution;
+  "care_organization.subject_verification": CareOrganizationSubjectVerification;
+  "care_organization.subject_withdrawal": CareOrganizationSubjectWithdrawal;
   "care_organization.unit": CareOrganizationUnit;
   "care_organization.unit_binding": CareOrganizationUnitBinding;
   "care_organization.verification": CareOrganizationVerification;
@@ -1759,6 +1922,12 @@ export interface DB {
   "governance_catalog.quality_issue": GovernanceCatalogQualityIssue;
   "governance_catalog.source_assessment": GovernanceCatalogSourceAssessment;
   "governance_catalog.source_snapshot": GovernanceCatalogSourceSnapshot;
+  "governance_catalog.subject_code_access": GovernanceCatalogSubjectCodeAccess;
+  "governance_catalog.subject_code_approval": GovernanceCatalogSubjectCodeApproval;
+  "governance_catalog.subject_code_outcome": GovernanceCatalogSubjectCodeOutcome;
+  "governance_catalog.subject_code_system": GovernanceCatalogSubjectCodeSystem;
+  "governance_catalog.subject_code_verification": GovernanceCatalogSubjectCodeVerification;
+  "governance_catalog.subject_code_version": GovernanceCatalogSubjectCodeVersion;
   "governance_catalog.validation_run": GovernanceCatalogValidationRun;
   "governance_catalog.version": GovernanceCatalogVersion;
   "location_master.access": LocationMasterAccess;
@@ -1813,6 +1982,7 @@ export interface DB {
   "vnext_control.outcome": VnextControlOutcome;
   "vnext_control.protected_grant": VnextControlProtectedGrant;
   "vnext_control.request_identity": VnextControlRequestIdentity;
+  "vnext_control.subject_write_authority": VnextControlSubjectWriteAuthority;
   "vnext_control.unit_write_authority": VnextControlUnitWriteAuthority;
   "vnext_control.ward_write_authority": VnextControlWardWriteAuthority;
 }
