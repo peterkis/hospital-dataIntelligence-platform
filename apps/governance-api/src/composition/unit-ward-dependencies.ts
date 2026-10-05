@@ -1,0 +1,5 @@
+import type {BusinessUnitOwner,WardOwner,UnitWardUpstreamPorts} from '../modules/care-organization/index.js';
+export function unitWardUpstreamPorts(units:BusinessUnitOwner,wards:WardOwner):UnitWardUpstreamPorts{return {
+ async referenceAccess(s,a,b){const unit=await units.authorizeManagementReferenceInTransaction(s,a,{id:b.unit.id,campusId:b.campus.id});await wards.authorizeRelationReferenceInTransaction(s,a,{id:b.ward.id,campusId:b.campus.id});return unit;},
+ async admit(s,a,b,from,to,r){const unit=await units.evaluateManagementWindowInTransaction(s,a,{id:b.unit.id,campusId:b.campus.id,validFrom:from,validTo:to,recordAsOf:r}),ward=await wards.evaluateRelationWindowInTransaction(s,a,{id:b.ward.id,campusId:b.campus.id,unitId:b.unit.id,purpose:b.purpose,validFrom:from,validTo:to,recordAsOf:r});return {unit,ward};},
+};}

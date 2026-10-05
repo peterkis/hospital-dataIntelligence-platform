@@ -1,0 +1,9 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {Pool} from 'pg';
+import {openCatalog} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import {validationKeys} from './p3-04-validation-keys.mjs';
+import {pathToFileURL} from 'node:url';
+import {withP304Predecessor} from './p3-04-predecessor.mjs';
+const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,receiptPath=process.env['VNEXT_TEST_RECEIPT']!,receipt=JSON.parse(readFileSync(receiptPath,'utf8')),provider=validationKeys(receipt),catalog=await openCatalog(connection,provider),pool=new Pool({connectionString:connection,max:1});
+try{const role=(await pool.query('select current_user r')).rows[0].r;await withP304Predecessor(async(directory:string)=>{const {wardFixture}=await import(pathToFileURL(directory+'/tooling/vnext/p3-02-fixture.ts').href),{capabilityFixture}=await import(pathToFileURL(directory+'/tooling/vnext/p3-08-fixture.ts').href);let wards,capabilities;try{wards=await wardFixture(receipt,role,catalog,provider,connection);const binding=await wards.endpoint(),out=await wards.apply(await wards.input([wards.entry(binding)])),history=await wards.owner.history('maker',{id:out.facts[0]!.id});capabilities=await capabilityFixture(receipt,role,catalog,provider,connection,wards.base);const scope=await capabilities.endpoint(),cap=await capabilities.apply(await capabilities.input([capabilities.entry(scope)])),capHistory=await capabilities.owner.history('maker',{id:cap.facts[0]!.id});writeFileSync(receiptPath+'.p3-04-predecessor.json',JSON.stringify({ward:history,capability:capHistory},null,2),{flag:'wx'});console.log(JSON.stringify({gate:'P3_04_POPULATED_0185',status:'PASS',realWard:history.id,realCapability:capHistory.id,realOwners:true,sourceBaseline:'ab6e8002fa2792dca52539b877fa144240fd2631'}));}finally{await capabilities?.close();await wards?.close();}});
+}finally{await pool.end();await catalog.close();}

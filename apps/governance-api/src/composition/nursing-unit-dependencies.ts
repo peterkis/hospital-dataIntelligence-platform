@@ -1,6 +1,6 @@
 import {sql} from 'kysely';
 import {localTime} from '../modules/organization-master/index.js';
-import type {NursingUpstreamPorts,NursingUnitOwner,BusinessUnitOwner,WardOwner,CapabilityOwner} from '../modules/care-organization/index.js';
+import type {NursingUpstreamPorts,NursingUnitOwner,BusinessUnitOwner,WardOwner,CapabilityOwner,UnitWardOwner} from '../modules/care-organization/index.js';
 import {departmentImpactPorts,type DepartmentImpactPorts,type ImpactReference} from '../modules/department-master/index.js';
 
 export const nursingUpstreamPorts:NursingUpstreamPorts={
@@ -13,11 +13,12 @@ export const nursingUpstreamPorts:NursingUpstreamPorts={
  },
 };
 
-export function withCareOrganizationImpacts(units:()=>BusinessUnitOwner|undefined,nursing:()=>NursingUnitOwner|undefined,wards:()=>WardOwner|undefined=()=>undefined,capabilities:()=>CapabilityOwner|undefined=()=>undefined):DepartmentImpactPorts{
- return {get businessUnitsAvailable(){return units()!==undefined;},get nursingUnitsAvailable(){return nursing()!==undefined;},get wardsAvailable(){return wards()!==undefined;},get capabilitiesAvailable(){return capabilities()!==undefined;},replacement:departmentImpactPorts.replacement,
-  async references(s,a,ids,campus){return [...await departmentImpactPorts.references(s,a,ids,campus),...await units()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await nursing()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await wards()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await capabilities()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[]];},
+export function withCareOrganizationImpacts(units:()=>BusinessUnitOwner|undefined,nursing:()=>NursingUnitOwner|undefined,wards:()=>WardOwner|undefined=()=>undefined,capabilities:()=>CapabilityOwner|undefined=()=>undefined,relations:()=>UnitWardOwner|undefined=()=>undefined):DepartmentImpactPorts{
+ return {get businessUnitsAvailable(){return units()!==undefined;},get nursingUnitsAvailable(){return nursing()!==undefined;},get wardsAvailable(){return wards()!==undefined;},get capabilitiesAvailable(){return capabilities()!==undefined;},get unitWardRelationsAvailable(){return relations()!==undefined;},replacement:departmentImpactPorts.replacement,
+  async references(s,a,ids,campus){return [...await departmentImpactPorts.references(s,a,ids,campus),...await units()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await nursing()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await wards()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await capabilities()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[],...await relations()?.readDepartmentReferencesInTransaction(s,a,ids,campus)??[]];},
   async referenceAccess(s,a,ref:ImpactReference,campus){
-   if(ref.owner==='UNIT_CAPABILITY'){const o=capabilities();if(!o)throw new Error('BLOCKED_DEPENDENCY');await o.authorizeReferenceInTransaction(s,a,ref);}
+   if(ref.owner==='UNIT_WARD_RELATION'){const o=relations();if(!o)throw new Error('BLOCKED_DEPENDENCY');await o.authorizeReferenceInTransaction(s,a,ref);}
+   else if(ref.owner==='UNIT_CAPABILITY'){const o=capabilities();if(!o)throw new Error('BLOCKED_DEPENDENCY');await o.authorizeReferenceInTransaction(s,a,ref);}
    else if(ref.owner==='WARD'){const o=wards();if(!o)throw new Error('BLOCKED_DEPENDENCY');await o.authorizeReferenceInTransaction(s,a,ref);}
    else if(ref.owner==='NURSING_UNIT'){const o=nursing();if(!o)throw new Error('BLOCKED_DEPENDENCY');await o.authorizeReferenceInTransaction(s,a,ref);}
    else if(ref.owner==='BUSINESS_UNIT'){const o=units();if(!o)throw new Error('BLOCKED_DEPENDENCY');await o.authorizeReferenceInTransaction(s,a,ref);}

@@ -376,7 +376,13 @@
     "vnext:p3-09:validate": "node --import tsx tooling/vnext/p3-09-validate.mjs",
     "vnext:p3-09:typecheck": "tsc -p tooling/vnext/tsconfig.p3-09.json",
     "vnext:p3-09:upgrade": "node --import tsx tooling/vnext/p3-09-validate.mjs --upgrade",
-    "vnext:p3-09:deploy": "node --import tsx tooling/vnext/p3-09-deploy.mjs"
+    "vnext:p3-09:deploy": "node --import tsx tooling/vnext/p3-09-deploy.mjs",
+    "vnext:p3-04:unit": "vitest run --config tooling/vnext/vitest.p3-04-unit.config.ts",
+    "vnext:p3-04:typecheck": "tsc -p tooling/vnext/tsconfig.p3-04.json",
+    "vnext:p3-04:validate": "node --import tsx tooling/vnext/p3-04-validate.mjs",
+    "vnext:p3-04:upgrade": "node --import tsx tooling/vnext/p3-04-validate.mjs --upgrade",
+    "vnext:p3-04:deploy": "node --import tsx tooling/vnext/p3-04-deploy.mjs",
+    "vnext:p3-04:preservation": "node --import tsx tooling/vnext/p3-04-preservation.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

@@ -374,6 +374,88 @@ export interface CareOrganizationUnitBinding {
   unit_id: string;
 }
 
+export interface CareOrganizationUnitWard {
+  applicability: Json;
+  campus_id: string;
+  id: Generated<string>;
+  scope: string;
+  source_alias: string;
+  source_system_id: string;
+  unit_id: string;
+  ward_id: string;
+}
+
+export interface CareOrganizationUnitWardAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface CareOrganizationUnitWardApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface CareOrganizationUnitWardChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface CareOrganizationUnitWardInput {
+  campus_ids: string[];
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface CareOrganizationUnitWardVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface CareOrganizationUnitWardVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  unit_ward_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface CareOrganizationUnitWardWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface CareOrganizationVerification {
   actor: string;
   digest: string;
@@ -1796,6 +1878,11 @@ export interface VnextControlSubjectWriteAuthority {
   singleton: Generated<boolean>;
 }
 
+export interface VnextControlUnitWardWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlUnitWriteAuthority {
   key_hex: string;
   singleton: Generated<boolean>;
@@ -1844,6 +1931,14 @@ export interface DB {
   "care_organization.subject_withdrawal": CareOrganizationSubjectWithdrawal;
   "care_organization.unit": CareOrganizationUnit;
   "care_organization.unit_binding": CareOrganizationUnitBinding;
+  "care_organization.unit_ward": CareOrganizationUnitWard;
+  "care_organization.unit_ward_access": CareOrganizationUnitWardAccess;
+  "care_organization.unit_ward_apply_binding": CareOrganizationUnitWardApplyBinding;
+  "care_organization.unit_ward_change": CareOrganizationUnitWardChange;
+  "care_organization.unit_ward_input": CareOrganizationUnitWardInput;
+  "care_organization.unit_ward_verification": CareOrganizationUnitWardVerification;
+  "care_organization.unit_ward_version": CareOrganizationUnitWardVersion;
+  "care_organization.unit_ward_withdrawal": CareOrganizationUnitWardWithdrawal;
   "care_organization.verification": CareOrganizationVerification;
   "care_organization.version": CareOrganizationVersion;
   "care_organization.ward_access": CareOrganizationWardAccess;
@@ -1983,6 +2078,7 @@ export interface DB {
   "vnext_control.protected_grant": VnextControlProtectedGrant;
   "vnext_control.request_identity": VnextControlRequestIdentity;
   "vnext_control.subject_write_authority": VnextControlSubjectWriteAuthority;
+  "vnext_control.unit_ward_write_authority": VnextControlUnitWardWriteAuthority;
   "vnext_control.unit_write_authority": VnextControlUnitWriteAuthority;
   "vnext_control.ward_write_authority": VnextControlWardWriteAuthority;
 }

@@ -102,6 +102,9 @@ const postWorkspaceMigrations = [
  '0183_subject_retirement_context',
  '0184_subject_catalog_interval_interface',
  '0185_subject_admission_label_notices',
+ '0186_unit_ward_relations',
+ '0187_unit_ward_public_integration',
+ '0188_unit_ward_finite_impacts',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

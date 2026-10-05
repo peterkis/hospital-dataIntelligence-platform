@@ -886,6 +886,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1155,6 +1161,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
                                     ]
                                   }
                                 ]
@@ -3193,6 +3205,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3462,6 +3480,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
                                     ]
                                   }
                                 ]
@@ -4539,6 +4563,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4808,6 +4838,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
                                     ]
                                   }
                                 ]
@@ -5368,7 +5404,8 @@ export const departmentForms = {
                         "CONSUMER",
                         "IDENTIFIER",
                         "WARD",
-                        "UNIT_CAPABILITY"
+                        "UNIT_CAPABILITY",
+                        "UNIT_WARD_RELATION"
                       ]
                     },
                     "determination": {
@@ -5413,8 +5450,8 @@ export const departmentForms = {
                   },
                   "additionalProperties": false
                 },
-                "minItems": 11,
-                "maxItems": 11
+                "minItems": 12,
+                "maxItems": 12
               },
               "requestId": {
                 "type": "string",
@@ -5655,6 +5692,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
                                     ]
                                   }
                                 ]
@@ -5925,6 +5968,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_SUBJECT_PERMISSION_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_UNIT_WARD_V1"
                                     ]
                                   }
                                 ]
@@ -6744,7 +6793,8 @@ export const departmentForms = {
                     "CONSUMER",
                     "IDENTIFIER",
                     "WARD",
-                    "UNIT_CAPABILITY"
+                    "UNIT_CAPABILITY",
+                    "UNIT_WARD_RELATION"
                   ]
                 },
                 "determination": {
@@ -6789,8 +6839,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 11,
-            "maxItems": 11
+            "minItems": 12,
+            "maxItems": 12
           }
         },
         "additionalProperties": false
@@ -7506,7 +7556,8 @@ export const departmentForms = {
                     "CONSUMER",
                     "IDENTIFIER",
                     "WARD",
-                    "UNIT_CAPABILITY"
+                    "UNIT_CAPABILITY",
+                    "UNIT_WARD_RELATION"
                   ]
                 },
                 "determination": {
@@ -7551,8 +7602,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 11,
-            "maxItems": 11
+            "minItems": 12,
+            "maxItems": 12
           }
         },
         "additionalProperties": false
@@ -7685,7 +7736,8 @@ export const departmentForms = {
                     "CONSUMER",
                     "IDENTIFIER",
                     "WARD",
-                    "UNIT_CAPABILITY"
+                    "UNIT_CAPABILITY",
+                    "UNIT_WARD_RELATION"
                   ]
                 },
                 "ownerAttestationAccepted": {
@@ -7703,8 +7755,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 11,
-            "maxItems": 11
+            "minItems": 12,
+            "maxItems": 12
           }
         },
         "additionalProperties": false
@@ -8312,7 +8364,8 @@ export const departmentForms = {
                           "BUSINESS_UNIT",
                           "NURSING_UNIT",
                           "WARD",
-                          "UNIT_CAPABILITY"
+                          "UNIT_CAPABILITY",
+                          "UNIT_WARD_RELATION"
                         ]
                       },
                       "id": {
@@ -8375,7 +8428,8 @@ export const departmentForms = {
                           "BUSINESS_UNIT",
                           "NURSING_UNIT",
                           "WARD",
-                          "UNIT_CAPABILITY"
+                          "UNIT_CAPABILITY",
+                          "UNIT_WARD_RELATION"
                         ]
                       },
                       "id": {
@@ -8446,7 +8500,8 @@ export const departmentForms = {
                                   "BUSINESS_UNIT",
                                   "NURSING_UNIT",
                                   "WARD",
-                                  "UNIT_CAPABILITY"
+                                  "UNIT_CAPABILITY",
+                                  "UNIT_WARD_RELATION"
                                 ]
                               },
                               "id": {
@@ -9223,7 +9278,8 @@ export const departmentForms = {
                     "CONSUMER",
                     "IDENTIFIER",
                     "WARD",
-                    "UNIT_CAPABILITY"
+                    "UNIT_CAPABILITY",
+                    "UNIT_WARD_RELATION"
                   ]
                 },
                 "determination": {
@@ -9268,8 +9324,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 11,
-            "maxItems": 11
+            "minItems": 12,
+            "maxItems": 12
           }
         },
         "additionalProperties": false
@@ -9351,7 +9407,8 @@ export const departmentForms = {
                     "CONSUMER",
                     "IDENTIFIER",
                     "WARD",
-                    "UNIT_CAPABILITY"
+                    "UNIT_CAPABILITY",
+                    "UNIT_WARD_RELATION"
                   ]
                 },
                 "ownerAttestationAccepted": {
@@ -9369,8 +9426,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 11,
-            "maxItems": 11
+            "minItems": 12,
+            "maxItems": 12
           }
         },
         "additionalProperties": false
@@ -11406,7 +11463,8 @@ export const departmentForms = {
                   "CONSUMER",
                   "IDENTIFIER",
                   "WARD",
-                  "UNIT_CAPABILITY"
+                  "UNIT_CAPABILITY",
+                  "UNIT_WARD_RELATION"
                 ]
               },
               "determination": {
@@ -11451,8 +11509,8 @@ export const departmentForms = {
             },
             "additionalProperties": false
           },
-          "minItems": 11,
-          "maxItems": 11
+          "minItems": 12,
+          "maxItems": 12
         }
       },
       "additionalProperties": false
@@ -11954,7 +12012,8 @@ export const departmentForms = {
                   "CONSUMER",
                   "IDENTIFIER",
                   "WARD",
-                  "UNIT_CAPABILITY"
+                  "UNIT_CAPABILITY",
+                  "UNIT_WARD_RELATION"
                 ]
               },
               "determination": {
@@ -11999,8 +12058,8 @@ export const departmentForms = {
             },
             "additionalProperties": false
           },
-          "minItems": 11,
-          "maxItems": 11
+          "minItems": 12,
+          "maxItems": 12
         }
       },
       "additionalProperties": false
@@ -12087,7 +12146,8 @@ export const departmentForms = {
                         "BUSINESS_UNIT",
                         "NURSING_UNIT",
                         "WARD",
-                        "UNIT_CAPABILITY"
+                        "UNIT_CAPABILITY",
+                        "UNIT_WARD_RELATION"
                       ]
                     },
                     "id": {
@@ -12150,7 +12210,8 @@ export const departmentForms = {
                         "BUSINESS_UNIT",
                         "NURSING_UNIT",
                         "WARD",
-                        "UNIT_CAPABILITY"
+                        "UNIT_CAPABILITY",
+                        "UNIT_WARD_RELATION"
                       ]
                     },
                     "id": {
@@ -12221,7 +12282,8 @@ export const departmentForms = {
                                 "BUSINESS_UNIT",
                                 "NURSING_UNIT",
                                 "WARD",
-                                "UNIT_CAPABILITY"
+                                "UNIT_CAPABILITY",
+                                "UNIT_WARD_RELATION"
                               ]
                             },
                             "id": {
