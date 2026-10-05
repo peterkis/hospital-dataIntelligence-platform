@@ -100,7 +100,7 @@ npm.cmd run prototype:db:with -- vnext:workbench:persistent
 Fresh validation owns a temporary receipt database. Upgrade uses an offline
 archive of the pinned predecessor source to create real Ward/Capability facts
 at0185, then checks unchanged predecessor rows/ledger and Ward public history
-after0186–0188. The archive's package loader overlay changes only module loading;
+after0186–0189. The archive's package loader overlay changes only module loading;
 domain source remains unmodified. Both runners verify generated database types
 and database authority, then dispose their owned databases, roles and keys.
 Success requires DATABASE_SESSION_READY, target exit0 and cleanupPassed=true.
@@ -109,7 +109,7 @@ Deploy forward-upgrades the retained receipt database, preserves OID206108,
 prior rows, ledger and key bytes, provisions the new finite functions, and starts
 the real workbench before testing generated HTTP through independent approval,
 shared publication, END, original B/R reads, exact recovery and MATCHED. Startup
-requires the complete checksummed0188 chain and the exact UnitWard authority
+requires the complete checksummed0189 chain and the exact UnitWard authority
 before Owner construction/listen. Never print connection strings or secret files.
 Installed migration bytes are immutable; subsequent repairs are forward-only.
 
@@ -122,4 +122,7 @@ in ignored `.runtime/vnext/p3-04/handoff.md`. Q09/A019 cover only this ticket's
 ORG10 relationship portion. Hospital policy NOT_ADOPTED, clinical NOT_READY,
 FULL BLOCKED_DEPENDENCY; browser, full restart, capacity and formal acceptance
 NOT_RUN. Inherited P0-02 browser and other pending evidence remain pending.
-Local completion only; no fetch/push/PR or automatic next ticket.
+The user authorized publication through PR34, hosted Codex review/fix/review,
+exact-head merge, local main fast-forward and selective cleanup. The publication
+handoff records that lifecycle separately from the original local evidence.
+No automatic next ticket.

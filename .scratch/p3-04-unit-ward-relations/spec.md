@@ -4,7 +4,9 @@ Status: ready-for-human
 
 Authority: user-approved plan and implementation request in this chat.
 Baseline: ab6e8002fa2792dca52539b877fa144240fd2631; predecessor0185;
-retained receipt OID206108. Only P3-04, local-only, no fetch/push/PR.
+retained receipt OID206108. Only P3-04. The2026-10-06 user request additionally
+authorizes push/PR, hosted Codex review/fix/review, exact-head merge, local main
+fast-forward, selective branch/worktree cleanup and publication handoff update.
 
 Pre-agreed public test seams: care-organization UnitWardRelation Owner,
 generated-client real loopback HTTP, and controlled SQL called by the restricted
@@ -22,6 +24,8 @@ to ADMISSION, 管理 to MANAGEMENT; primary uniqueness is Ward×purpose. Managem
 must match the Ward Owner's approved management throughout the interval. Ward
 remains the management authority. Sharing has no percentage calculation: exact
 rule version/material/window must cover every participating admission Unit.
+Overlapping admission declarations must agree on the complete participant set
+and rule business window; local timestamp precision and list order are equivalent.
 Compare existing histories plus the batch's final projection. Adding an uncovered
 participant requires same-revision repair of affected old relations. Unknown is
 review-required, never ALLOW. END is non-expanding and remains possible after
@@ -53,3 +57,11 @@ Q09/A019 only claim this ticket's portion; previous pending evidence is preserve
   Current unit matrix500 passed with one inherited P1-03 failure reproduced on
   baseline; inherited layout lockfile and retired generic DB check remain bounded
   exceptions. No push/PR/next ticket; hospital/formal acceptance remains pending.
+- 2026-10-06 publication: PR34 hosted review identified incomplete peer sharing
+  agreement and lost UnitWard errors in the coordinator. Forward0189 preserves
+  installed0186–0188; real Owner, generated HTTP and independently signed SQL
+  regressions cover complete sharing boundaries and409/503 domain responses.
+  Current campus disposition callers also declare UNIT_WARD_RELATION explicitly.
+  Exact published review/CI/merge/cleanup evidence belongs in the ignored
+  publication-handoff.md; this authorization supersedes the earlier local-only
+  delivery fence. Hospital policy and formal acceptance bounds are unchanged.

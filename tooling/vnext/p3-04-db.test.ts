@@ -17,6 +17,30 @@ const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,receipt=JSON.parse(r
 let catalog:Catalog,f:Awaited<ReturnType<typeof unitWardFixture>>;
 beforeAll(async()=>{const provider=validationKeys(receipt),pool=new Pool({connectionString:connection,max:1});try{catalog=await openCatalog(connection,provider);const role=(await pool.query('select current_user r')).rows[0].r;f=await unitWardFixture(receipt,role,catalog,provider,connection,process.env['VNEXT_P3_04_UPGRADED']==='1');}finally{await pool.end();}});
 afterAll(async()=>{await f?.close();await catalog?.close();});
+test.each(['participants','window'] as const)('review repair: differing shared %s block Owner and independently signed restricted SQL admission',async difference=>{
+ const a=await f.endpoint(),b=await f.sameWard(a),extra=await f.sameWard(a),ea=f.entry(a),eb=f.entry(b),first=f.shared([a.unit.id,b.unit.id]);
+ if(first.kind!=='SHARED_BOUNDARY')throw new Error('TEST_RULE_REQUIRED');
+ const second={...first,...(difference==='participants'?{participants:[...first.participants,extra.unit.id].sort()}:{validTo:'2026-04-01T00:00:00'})};
+ const entry=(e:typeof ea,rule:typeof first)=>({...e,rule,row:{...e.row,valid_to:'2026-03-01T00:00:00',relation_type:'共享' as const,sharing_rule:'TEST complete governed boundary'}});
+ const q1=await f.prepare(await f.input([entry(ea,first)])),q2=await f.prepare(await f.input([entry(eb,second)])),candidate=await f.owner.readApplyCandidate('reviewer',{candidateId:q2.candidateId});
+ await f.owner.applyUnit('maker',q1);
+ await expect(f.owner.applyUnit('maker',q2)).rejects.toThrow('STALE_VALIDATION');
+ const value=candidate.unit.commands[0]!.value,pool=new Pool({connectionString:connection,max:1}),client=await pool.connect(),key=Buffer.from(planBinding(validationKeys(receipt),'UNIT_WARD_SQL_AUTHORITY_V1',{}),'hex');
+ try{await client.query('BEGIN');const transaction=(await client.query('select pg_current_xact_id()::text v')).rows[0].v,point=(await client.query('select care_organization.unit_ward_record_time() r')).rows[0].r,ticket=canonicalPlan({operation:'APPLY',actor:'maker',transaction,inputId:value['inputId'],writes:JSON.parse(value['writes']!),writeIndex:1,writesDigest:value['writesDigest'],candidateId:q2.candidateId,digest:candidate.digest,...point});await expect(client.query('select care_organization.unit_ward_mutate($1,$2)',[ticket,createHmac('sha256',key).update(ticket).digest('hex')])).rejects.toMatchObject({message:'SHARING_POLICY_CONFLICT'});}finally{await client.query('ROLLBACK');client.release();await pool.end();key.fill(0);}
+ expect(await f.owner.resumeOutcome('maker',q2)).toBeNull();expect((await f.owner.list('maker',{campus:'NORTH',wardId:a.ward.id})).items).toHaveLength(1);
+ const combined=await f.input([entry(eb,second),{...entry(ea,first),action:'REVISE',target:{owner:'care-organization/unit-ward-relation',id:(await f.owner.list('maker',{campus:'NORTH',wardId:a.ward.id})).items[0]!.id,expectedHead:'1'}}]);
+ await expect(f.prepare(combined)).rejects.toThrow('SHARING_POLICY_CONFLICT');
+});
+test('review repair: equivalent participant order and local time precision preserve shared admission',async()=>{
+ const a=await f.endpoint(),b=await f.sameWard(a),rule=f.shared([a.unit.id,b.unit.id]);if(rule.kind!=='SHARED_BOUNDARY')throw new Error('TEST_RULE_REQUIRED');
+ const other={...rule,participants:[...rule.participants].reverse(),validFrom:rule.validFrom+'.000000'},entries=[f.entry(a),f.entry(b)].map((e,i)=>({...e,rule:i?other:rule,row:{...e.row,relation_type:'共享' as const,sharing_rule:'TEST equivalent boundary'}}));
+ expect((await f.apply(await f.input(entries))).facts).toHaveLength(2);
+});
+test.each([['primary',409,'UNIT_WARD_PRIMARY_CONFLICT'],['duplicate',409,'UNIT_WARD_DUPLICATE_RELATION'],['review',503,'SHARING_REVIEW_REQUIRED']] as const)('review repair: generated real HTTP plan preserves %s status and finite code',async(kind,status,code)=>{
+ const a=await f.endpoint(),b=kind==='duplicate'?a:await f.sameWard(a),rule=f.shared([a.unit.id,b.unit.id]),entries=[f.entry(a),f.entry(b)].map(e=>({...e,rule:kind==='primary'?rule:e.rule,row:{...e.row,is_primary:kind==='primary'?'Y' as const:'N' as const,sharing_rule:kind==='primary'?'TEST sharing primary':null}})),v=await f.input(entries);
+ const app=await buildCatalogServer(catalog,'CONTROL_PLANE',undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,{owner:f.owner,actor:r=>actor(r.headers)}),url=await app.listen({host:'127.0.0.1',port:0});
+ try{const maker=createUnitWardClient(url,'maker'),reviewer=createUnitWardClient(url,'reviewer'),staged=await maker.stage({...v,entries:v.entries.map(e=>({...e,row:{...e.row,version_no:Number(e.row.version_no)}}))});expect(staged.response.status).toBe(200);expect((await reviewer.verify(f.verification(v,staged.data!))).response.status).toBe(200);const planned=await maker.plan({inputId:staged.data!.inputId,requestId:randomUUID()});expect(planned.response.status).toBe(status);expect(planned.error).toEqual(expect.objectContaining({code}));expect((await f.owner.list('maker',{campus:'NORTH',wardId:a.ward.id})).items).toHaveLength(0);}finally{await app.close();}
+});
 test('a reviewed admission relation is published through the real Owner and keeps its source identity separate',async()=>{
  const s=await f.endpoint(),entry=f.entry(s),out=await f.apply(await f.input([entry])),id=out.facts[0]!.id;
  expect(id).not.toBe(entry.row.unit_ward_rel_id);expect((await f.owner.read('maker',{id,businessAt:'2026-02-01T00:00:00'})).state).toBe('ACTIVE');expect((await f.owner.history('maker',{id})).versions[0]!.facts.source.sourceVersion).toBe('9');
