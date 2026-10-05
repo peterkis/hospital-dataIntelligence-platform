@@ -85,3 +85,14 @@ fails with SUBJECT_CODE_PERIOD_NOT_COVERED and then permits the independently
 approved extension without changing the pin or its exact history. Fresh and
 populated0175 upgrade now pass38/38 each; startup/migration230 and task typecheck
 pass. Installed bytes0001-0179 and original evidence remain unchanged.
+
+PR33's third hosted review identified four further contract/ADR gaps. ADR0074 is
+enforced by LOCAL-only new requests and rejection of offset-bearing ORG17 times;
+protected originals and legacy policy labels remain readable without conversion.
+ADR0038 replacement changes now enter the material digest and create persistent
+TARGET_REPLACEMENT_CHANGED cases through forward migration0181. UNKNOWN/FULL
+source targets report BLOCKED_DEPENDENCY, and JSON version_no must be a native
+integer; textual CSV/XLSX cells remain supported. Real public HTTP/Owner regressions
+reproduce all four findings. Final fresh and populated0175 upgrade pass45/45 each;
+parser62, startup230, contract verification, root typecheck/build pass. Installed
+bytes0001-0180 and original evidence remain unchanged. No later ticket is executed.

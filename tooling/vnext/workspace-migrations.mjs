@@ -97,6 +97,7 @@ const postWorkspaceMigrations = [
  '0178_subject_contract_and_public_integration',
  '0179_subject_review_current_interval',
  '0180_subject_unchanged_successor_coverage',
+ '0181_subject_replacement_review',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

@@ -16,7 +16,8 @@ to make a source alias or source version equal a platform UUID or numeric head.
 Approval never rewrites an old exact snapshot. Current admission compares the
 individual accepted code's meaning/status against every relevant approved current
 snapshot throughout the requested B interval at R. An unrelated new code keeps the
-original pin; retired, missing or changed meanings require review. An unchanged approved
+original pin; retired, missing, changed meanings or changed replacements require
+blocking review, including replacement changes on an otherwise ACTIVE code. An unchanged approved
 successor can carry the original pin beyond its finite end: every current segment
 must supply its own snapshot and source-period coverage. The accepted snapshot's
 business start still bounds how early that pin can be used. A changed label
@@ -77,10 +78,15 @@ apply,resume,reconcile,withdraw,query,history,exact,recheck,evaluate,files}`. Ge
 clients are `createSubjectCodeClient` and `createSubjectPermissionClient`.
 ORG17 files use `ORG17_CORE_V1` / `STRICT_SUBJECT_PERMISSION_V1`. CSV/JSON/XLSX pass
 through the existing bounded parser, protected original store and immutable
-validation reports. JSON keeps native null and integer source versions. Blank
+validation reports. JSON requires native null and integer source versions; digit
+strings for version_no cannot stage. CSV/XLSX textual version cells remain supported. Blank
 CSV/XLSX valid_to becomes null only under the published `SUBJECT_EMPTY_END_V1` rule.
-Explicit +08:00 conversion requires `SUBJECT_SOURCE_PLUS08_V1`; original timestamps
-remain in the protected input. Malformed files retain their original but cannot plan.
+All new commands and ORG17 time fields require Asia/Shanghai local strings without
+Z or offsets, per ADR0074. No offset-stripping or conversion policy is available.
+Invalid files retain their protected originals without a publishable input. Legacy
+policy labels remain readable in stored evidence; current normalization rejects them.
+Unsupported raw target types, including UNKNOWN and FULL, preserve the input and
+report BLOCKED_DEPENDENCY; supported types that disagree with scope remain mismatches.
 
 Run database checks through the repository wrapper; never print credentials or keys:
 

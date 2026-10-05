@@ -208113,9 +208113,9 @@
                     ]
                   },
                   "timePolicy": {
+                    "type": "string",
                     "enum": [
-                      "LOCAL",
-                      "SOURCE_PLUS08_TO_LOCAL"
+                      "LOCAL"
                     ]
                   },
                   "entries": {
@@ -217547,9 +217547,9 @@
                         ]
                       },
                       "timePolicy": {
+                        "type": "string",
                         "enum": [
-                          "LOCAL",
-                          "SOURCE_PLUS08_TO_LOCAL"
+                          "LOCAL"
                         ]
                       },
                       "retentionSeconds": {

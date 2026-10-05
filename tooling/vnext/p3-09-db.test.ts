@@ -83,7 +83,7 @@ test('a verified diagnostic permission is atomically published and evaluated thr
  const evaluation=await send('evaluate','maker',{scope,adoption,validFrom:'2026-02-01T00:00:00',validTo:'2026-03-01T00:00:00',mode:'CURRENT_ADMISSION'});expect(evaluation.status).toBe('SATISFIED');expect(evaluation.clinicalReadiness).toBe('NOT_READY');
 });
 async function input(entries:SubjectEntry[]):Promise<SubjectStage>{const j=await subjectContract.newJob();return {requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',profile:'CORE',timePolicy:'LOCAL',entries};}
-function verification(value:SubjectStage,i:{inputId:string;digest:string}):SubjectVerification{return {requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST independent full source review',policyVersion:'ORG17_CORE_V1',rows:value.entries.map((e,index)=>({row:index+1,evidenceId:e.evidenceId,classificationAccepted:true,scopeAccepted:true,adoptionConfirmed:true,limitationsConfirmed:true,license:e.kind==='PERMISSION'?e.license:null,...(e.kind==='MAPPING'?{semantic:e.semantic}:{}),validFrom:e.row.valid_from,validTo:e.row.valid_to}))};}
+function verification(value:Pick<SubjectStage,'entries'>,i:{inputId:string;digest:string}):SubjectVerification{return {requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST independent full source review',policyVersion:'ORG17_CORE_V1',rows:value.entries.map((e,index)=>({row:index+1,evidenceId:e.evidenceId,classificationAccepted:true,scopeAccepted:true,adoptionConfirmed:true,limitationsConfirmed:true,license:e.kind==='PERMISSION'?e.license:null,...(e.kind==='MAPPING'?{semantic:e.semantic}:{}),validFrom:e.row.valid_from,validTo:e.row.valid_to}))};}
 async function prepare(value:SubjectStage){const i=await permissions.stage('maker',value);await permissions.verify('reviewer',verification(value,i));const preview=await permissions.preview('maker',{inputId:i.inputId});expect(preview.issues).toEqual([]);const requestId=randomUUID(),candidate=await permissions.plan('maker',{inputId:i.inputId,requestId});await permissions.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await permissions.approveApplyUnit('reviewer',candidate);return {candidateId:candidate.candidateId,requestId};}
 async function apply(value:SubjectStage){const out=await permissions.applyUnit('maker',await prepare(value));if(out.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');return out;}
 function grant(scope:SubjectScope,kind:'MAPPING'|'PERMISSION') {peer(receipt.name,"INSERT INTO care_organization.subject_access SELECT a,"+quote(scope.subject.id)+"::uuid,"+quote(scope.campus.id)+"::uuid,"+quote(scope.target.type)+","+quote(scope.target.id)+"::uuid,"+quote(kind)+",p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED','VERIFY','REVIEW']) p ON CONFLICT DO NOTHING;");}
@@ -101,6 +101,11 @@ test('ORG17 file intake keeps native null and source integers without granting a
  const original=await permissions.readInput('maker',{inputId:result.input!.inputId});expect(original.entries[0]!.row.version_no).toBe(123);expect(original.entries[0]!.row.valid_to).toBeNull();expect(original.sourceArtifactId).toBe(result.sourceArtifactId);
  expect((await permissions.preview('maker',{inputId:result.input!.inputId})).issues.some(i=>i.code==='LEGAL_REVIEW_REQUIRED')).toBe(true);
 });
+test('JSON imports reject string source versions while retaining the protected original',async()=>{
+ const {row,...operation}=permissionTemplate,result=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_STRING_VERSION',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format:'JSON',parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},Buffer.from(JSON.stringify([{...row,subject_license_id:randomUUID(),version_no:'123'}])));
+ expect(result.input).toBeNull();expect(result.issues.some(i=>i.field==='version_no'&&i.code==='JSON_INTEGER_REQUIRED')).toBe(true);expect(result.sourceArtifactId).toBeTruthy();
+});
+
 test.each(['JSON','CSV','XLSX'] as const)('%s imported service sets can be revised and retired through direct commands regardless of order',async format=>{
  const x=base.operating,subject=await x.createSubject(),campus=await x.createCampus();await x.activateCampus(campus);x.grantPair(subject.id,campus.id);
  const services=['DEMO_MEDICAL_B','DEMO_MEDICAL_A'],license=await x.addLicense(subject),checked=await x.verifyScope(subject,campus,license,services);
@@ -175,9 +180,9 @@ test('unresolved limits and FULL retain raw inputs and cannot plan publication',
  await expect(permissions.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow();
 });
 
-test('a bad second row blocks the whole revision and preserves both originals',async()=>{
- const value=await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID()}},{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID(),target_type:'UNKNOWN'}}]);
- const i=await permissions.stage('maker',value);await permissions.verify('reviewer',verification(value,i));expect((await permissions.preview('maker',{inputId:i.inputId})).issues.some(e=>e.row===2&&e.code==='SUBJECT_SCOPE_MISMATCH')).toBe(true);
+test.each(['UNKNOWN','FULL'])('%s in a second source row blocks the whole revision as an unsupported dependency and preserves both originals',async targetType=>{
+ const value=await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID()}},{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID(),target_type:targetType}}]);
+ const i=await permissions.stage('maker',value);await permissions.verify('reviewer',verification(value,i));expect((await permissions.preview('maker',{inputId:i.inputId})).issues.some(e=>e.row===2&&e.code==='BLOCKED_DEPENDENCY')).toBe(true);
  await expect(permissions.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow();expect((await permissions.readInput('maker',{inputId:i.inputId})).entries).toHaveLength(2);
  expect(peer(receipt.name,"SELECT count(*) FROM care_organization.subject_change WHERE input_id="+quote(i.inputId)+"::uuid;")).toBe('0');
 });
@@ -209,12 +214,25 @@ test('generated clients publish and read typed results through real HTTP with cu
  expect((await createSubjectPermissionClient(url,'outsider').query({id})).response.status).toBe(403);
 });
 
-test.each(['CSV','XLSX'] as const)('%s import records explicit blank-end conversion and preserves source +08 timestamps',async format=>{
- const {row,...operation}=permissionTemplate,original={...row,subject_license_id:randomUUID(),version_no:'123',permitted_scope:'',valid_from:row.valid_from+'+08:00',valid_to:'',recorded_at:row.recorded_at+'+08:00'},fields=ORG17_FIELDS.map(String),values=fields.map(f=>String(original[f as keyof typeof original]??''));
+test('offset-bearing row times cannot activate an alternate HTTP staging policy',async()=>{
+ const value=await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID(),valid_from:permissionTemplate.row.valid_from+'+08:00',recorded_at:permissionTemplate.row.recorded_at+'+08:00'}}]);
+ const response=await fetch(url+'/api/vnext/subject-permissions/inputs',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({...value,timePolicy:'SOURCE_PLUS08_TO_LOCAL'})});
+ expect(response.status).toBe(400);
+});
+
+test.each(['CSV','XLSX'] as const)('%s import records explicit blank-end conversion and preserves source local timestamps',async format=>{
+ const {row,...operation}=permissionTemplate,original={...row,subject_license_id:randomUUID(),version_no:'123',permitted_scope:'',valid_from:row.valid_from,valid_to:'',recorded_at:row.recorded_at},fields=ORG17_FIELDS.map(String),values=fields.map(f=>String(original[f as keyof typeof original]??''));
  const bytes=format==='CSV'?Buffer.from([fields.join(','),values.join(',')].join('\n')):organizationWorkbook({ORG17:[fields,values]});
- const result=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'SOURCE_PLUS08_TO_LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_SUBJECT_FILE',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format,parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},bytes);
+ const result=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_SUBJECT_FILE',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format,parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},bytes);
  expect(result.issues).toEqual([]);if(!result.input)throw new Error('INTAKE_FAILED');const stored=await permissions.readInput('maker',{inputId:result.input.inputId});expect(stored.entries[0]!.row.valid_from).toBe(original.valid_from);expect(stored.entries[0]!.row.valid_to).toBeNull();
  const checked:SubjectVerification={...verification({...stored,entries:stored.entries},result.input),rows:[{...verification(stored,result.input).rows[0]!,validFrom:row.valid_from,validTo:null}]};await permissions.verify('reviewer',checked);expect((await permissions.preview('maker',{inputId:result.input.inputId})).issues).toEqual([]);
+});
+
+test.each(['JSON','CSV','XLSX'] as const)('%s rejects offset-bearing source times and retains the original file',async format=>{
+ const {row,...operation}=permissionTemplate,original={...row,subject_license_id:randomUUID(),valid_from:row.valid_from+'+08:00',recorded_at:row.recorded_at+'+08:00'},fields=ORG17_FIELDS.map(String),values=fields.map(f=>String(original[f as keyof typeof original]??''));
+ const bytes=format==='JSON'?Buffer.from(JSON.stringify([original])):format==='CSV'?Buffer.from([fields.join(','),values.join(',')].join('\n')):organizationWorkbook({ORG17:[fields,values]});
+ const result=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_OFFSET_FILE',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format,parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},bytes);
+ expect(result.input).toBeNull();expect(result.issues.some(i=>i.code==='LOCAL_TIME_REQUIRED')).toBe(true);expect(result.sourceArtifactId).toBeTruthy();
 });
 
 test('malformed JSON keeps the original file and never creates a publishable input',async()=>{
@@ -325,6 +343,20 @@ test('an unchanged finite successor carries the original code pin while expiry s
  const overrun=await input([{...entry,action:'REVISE',target:{owner:'care-organization/subject-permission',id:h.id,expectedHead:'2'},row:{...entry.row,valid_to:'2026-07-01T00:00:00'}}]),i=await permissions.stage('maker',overrun);await permissions.verify('reviewer',verification(overrun,i));
  expect((await permissions.preview('maker',{inputId:i.inputId})).issues).toMatchObject([{code:'SUBJECT_CODE_PERIOD_NOT_COVERED'}]);
  expect(successor.head).toBe('2');
+});
+
+test('replacement changes open persistent blocking review without changing the accepted code pin',async()=>{
+ const old=(await codes.read('maker',{id:draftId,versionId:draftVersionId}))[0]!,{id,versionId,head,systemCode,status,reviewDigest,recordedAt,approvedAt,sourceVerification,...fields}=old;
+ async function approve(d:Awaited<ReturnType<typeof codes.command>>){await codes.command('reviewer',{action:'VERIFY',requestId:randomUUID(),reason:'TEST replacement source independently read',target:d.id,versionId:d.versionId,reviewDigest:d.reviewDigest,evidenceId:d.evidenceId,sourceReviewed:true});return codes.command('reviewer',{action:'APPROVE',requestId:randomUUID(),reason:'TEST replacement source approved',target:d.id,versionId:d.versionId,reviewDigest:d.reviewDigest});}
+ const first=await approve(await codes.command('maker',{...fields,action:'CREATE',requestId:randomUUID(),reason:'TEST replacement initial source',systemCode:'TEST_REPLACEMENT',namespaceUri:'urn:hdip:test:replacement',reference:{...fields.reference,sourceAlias:'TEST_REF01_REPLACEMENT'}}));
+ const adoption={...permissionTemplate.adoption,systemId:first.id,versionId:first.versionId,version:first.head},entry={...permissionTemplate,adoption,row:{...permissionTemplate.row,subject_license_id:randomUUID(),code_system_id:'TEST_REF01_REPLACEMENT'}},out=await apply(await input([entry])),relationId=out.facts[0]!.id;
+ const changed=await approve(await codes.command('maker',{...fields,action:'REVISE',requestId:randomUUID(),reason:'TEST active code replacement changed',target:first.id,expectedHead:'1',namespaceUri:first.namespaceUri,reference:first.reference,codes:first.codes.map(c=>c.code==='TEST_A'?{...c,replacement:'TEST_B'}:c)}));
+ expect((await permissions.recheck('maker',{id:relationId}))).toMatchObject({status:'REVIEW_REQUIRED',cases:[{reason:'TARGET_REPLACEMENT_CHANGED',blocking:true,status:'OPEN'}]});
+ expect((await permissions.evaluateWindow('maker',{scope:licensedScope,adoption,validFrom:'2026-02-01T00:00:00',validTo:'2026-03-01T00:00:00',mode:'CURRENT_ADMISSION'})).status).toBe('REVIEW_REQUIRED');
+ const restored=await approve(await codes.command('maker',{...fields,action:'REVISE',requestId:randomUUID(),reason:'TEST restored replacement does not auto-close review',target:first.id,expectedHead:changed.head,namespaceUri:first.namespaceUri,reference:first.reference,codes:first.codes}));
+ expect((await permissions.recheck('maker',{id:relationId})).status).toBe('REVIEW_REQUIRED');expect((await permissions.history('maker',{id:relationId})).versions[0]!.facts.adoption).toEqual(adoption);
+ await apply(await input([{...entry,adoption:{...adoption,versionId:restored.versionId,version:restored.head},action:'REVISE',target:{owner:'care-organization/subject-permission',id:relationId,expectedHead:'1'}}]));
+ expect((await permissions.recheck('maker',{id:relationId}))).toMatchObject({status:'SATISFIED',cases:[{reason:'TARGET_REPLACEMENT_CHANGED',status:'RESOLVED'}]});
 });
 
 test('restricted SQL cannot read raw tables, forge signed commands or bypass current source coverage',async()=>{

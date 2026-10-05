@@ -444,7 +444,7 @@ function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<P
 }
 
 export function parseBytes(bytes: Uint8Array, format: FileFormat, fields: ParserField[], policy: ParserResult['policy']='STRICT_V1',sourcePlus08=false): ParserResult {
-  if(sourcePlus08&&policy!=='STRICT_WARD_V1'&&policy!=='STRICT_CAPABILITY_V1'&&policy!=='STRICT_SUBJECT_PERMISSION_V1')throw new Error('PARSER_POLICY_REQUIRED');
+  if(sourcePlus08&&policy!=='STRICT_WARD_V1'&&policy!=='STRICT_CAPABILITY_V1')throw new Error('PARSER_POLICY_REQUIRED');
   if(policy!=='STRICT_V1' && policy!=='STRICT_V2' && policy!=='STRICT_DEPARTMENT_V1' && policy!=='STRICT_ORGANIZATION_MAPPING_V1' && policy!=='STRICT_ORGANIZATION_IDENTIFIER_V1' && policy!=='STRICT_LOCATION_V1' && policy!=='STRICT_UNIT_V1' && policy!=='STRICT_NURSING_V1' && policy!=='STRICT_WARD_V1'&&policy!=='STRICT_CAPABILITY_V1'&&policy!=='STRICT_SUBJECT_PERMISSION_V1')throw new Error('PARSER_POLICY_REQUIRED');
   const result: ParserResult = { policy, structuralStatus:'REJECTED', manifest:{bomDetected:false,bomMembers:[],defaultRowsHidden:false,hiddenSheets:[],hiddenRows:[],hiddenColumns:[]},rows:[],cells:[],issues:[] };
   if(policy==='STRICT_CAPABILITY_V1'||policy==='STRICT_SUBJECT_PERMISSION_V1')result.nativeRows=[];

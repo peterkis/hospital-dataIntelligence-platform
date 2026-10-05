@@ -67425,8 +67425,8 @@ export interface operations {
                     campus: "NORTH" | "SOUTH";
                     /** @enum {unknown} */
                     profile: "CORE" | "FULL";
-                    /** @enum {unknown} */
-                    timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                    /** @enum {string} */
+                    timePolicy: "LOCAL";
                     entries: ({
                         row: {
                             subject_license_id: string;
@@ -70353,8 +70353,8 @@ export interface operations {
                         };
                         /** @enum {unknown} */
                         campus: "NORTH" | "SOUTH";
-                        /** @enum {unknown} */
-                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        /** @enum {string} */
+                        timePolicy: "LOCAL";
                         retentionSeconds: number;
                         operations: ({
                             scope: {
