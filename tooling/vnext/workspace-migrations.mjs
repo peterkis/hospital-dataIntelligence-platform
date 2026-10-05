@@ -91,6 +91,7 @@ const postWorkspaceMigrations = [
  '0172_unit_capabilities',
  '0173_capability_import_and_impact_integration',
  '0174_capability_finite_impacts',
+ '0175_capability_dependency_and_parameter_window_repairs',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

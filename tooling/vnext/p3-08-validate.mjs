@@ -8,7 +8,7 @@ import {predecessorTables,predecessorDigest} from './p1-02-preservation.mjs';
 import {grantOrganization} from './p1-02-validate.mjs';
 import {grantDepartment} from './p2-01-validate.mjs';
 import {removeValidationKeys} from './p3-08-validation-keys.mjs';
-const args=process.argv.slice(2);if(args.some(a=>!['--upgrade','--generate','--ddl-only','--authorization-review','--review-fixes','--http-review'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
+const args=process.argv.slice(2);if(args.some(a=>!['--upgrade','--generate','--ddl-only','--authorization-review','--review-fixes','--http-review','--review-issues'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
 const owned=createTemporary('P3-08');let session;
 try{
  let before,tables,digest;
@@ -27,7 +27,7 @@ try{
  else{
   session??=await createValidationOwnerSession(owned.receipt);grantOrganization(owned.receipt,session.receipt.role);grantDepartment(owned.receipt,session.receipt.role);
   peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION governance_catalog.operating_catalog(text,jsonb,timestamp,timestamp,timestamp),governance_catalog.department_lifecycle_assessment(text,text) TO ${session.receipt.role};`);
-  const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config','tooling/vnext/vitest.p3-08-db.config.ts',...(args.includes('--http-review')?['-t','generated clients publish through real HTTP']:args.includes('--review-fixes')?['-t','parameter read grants apply independently|restricted parameter command rejects null|blank manual end time']:args.includes('--authorization-review')?['-t','parameter read grants apply independently']:[])],{env:{...process.env,VNEXT_P3_08_UPGRADED:before?'1':'0',VNEXT_VALIDATION_OWNER_URL:session.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P3-08'},stdio:'inherit',windowsHide:true});process.exitCode=run.status??1;
+  const run=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--config',args.includes('--review-issues')?'tooling/vnext/vitest.p3-08-review-db.config.ts':'tooling/vnext/vitest.p3-08-db.config.ts',...(args.includes('--http-review')?['-t','generated clients publish through real HTTP']:args.includes('--review-fixes')?['-t','parameter read grants apply independently|restricted parameter command rejects null|blank manual end time']:args.includes('--authorization-review')?['-t','parameter read grants apply independently']:[])],{env:{...process.env,VNEXT_P3_08_UPGRADED:before?'1':'0',VNEXT_VALIDATION_OWNER_URL:session.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P3-08'},stdio:'inherit',windowsHide:true});process.exitCode=run.status??1;
  }
  console.log(JSON.stringify({gate:'P3-08',mode:before?'0170_TO_CURRENT':'FRESH',migrationCount:(await inspect(owned.receipt)).ledger.length,exit:process.exitCode??0}));
 }catch(error){session??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(session)dropValidationOwnerSession(session);removeValidationKeys(owned.receipt);}

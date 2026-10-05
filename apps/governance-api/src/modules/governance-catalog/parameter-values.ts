@@ -43,7 +43,7 @@ export function openParameterValues(connection:string){
   async read(actor:string,input:Static<typeof ParameterValueReadSchema>){check(ParameterValueReadSchema,input);return root(async s=>{const rows=await read(s,actor,input);if(!rows.length)throw new Error('NOT_FOUND');return rows[0]!;});},
   async history(actor:string,input:Static<typeof ParameterValueReadSchema>){check(ParameterValueReadSchema,input);return root(s=>read(s,actor,input,true));},
   async evaluateWindow(actor:string,input:Static<typeof ParameterValueWindowSchema>){check(ParameterValueWindowSchema,input);return root(s=>evaluate(s,actor,input));},
-  async authorizeReferenceInTransaction(s:CatalogTransactionScope,actor:string,id:string){check(Id,id);await sql`select governance_catalog.parameter_value_access(${actor},${id}::uuid,'READ')`.execute(s);},
+  async authorizeReferenceInTransaction(s:CatalogTransactionScope,actor:string,id:string,versionId:string){check(Id,id);check(Id,versionId);await read(s,actor,{id,versionId});},
   async evaluateWindowInTransaction(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueWindowSchema>){check(ParameterValueWindowSchema,input);return evaluate(s,actor,input);},
   async close(){await db.destroy();},
  };

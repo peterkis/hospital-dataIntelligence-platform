@@ -33,7 +33,7 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
  const material=async(s:Scope,actor:string,id:string,c:ImportContractItem,campus:string)=>{const proof=(await sql<{r:Parameters<typeof authenticateRegistrationEvidence>[0]}>`select governance_catalog.registration_evidence(${actor},${id}::uuid,${c.definition.sourceVersionId}::uuid,${campus}) r`.execute(s)).rows[0]!.r;const bytes=authenticateRegistrationEvidence(proof,provider);try{return {id,digest:planBinding(provider,'CAPABILITY_EVIDENCE_V1',bytes.toString('base64'))};}finally{bytes.fill(0);}};
 
  const referenceAccess=async(s:Scope,actor:string,input:CapabilityStoredStage,c:ImportContractItem,extra:readonly string[]=[])=>{
-  for(const e of input.entries){await ports.referenceAccess(s,actor,e.applicability);if('target' in e)await snapshotVersion(s,actor,e.target.id,e.target.expectedHead);if(e.rule.kind==='BOOLEAN_GATE_V1')await ports.parameters.authorizeReferenceInTransaction(s,actor,e.rule.parameter.valueId);}
+  for(const e of input.entries){await ports.referenceAccess(s,actor,e.applicability);if('target' in e)await snapshotVersion(s,actor,e.target.id,e.target.expectedHead);if(e.rule.kind==='BOOLEAN_GATE_V1')await ports.parameters.authorizeReferenceInTransaction(s,actor,e.rule.parameter.valueId,e.rule.parameter.versionId);}
   for(const id of new Set(input.entries.map(e=>e.row.source_system_id)))await sql`select governance_catalog.capability_source_reference(${actor},${id}::uuid,${c.definition.sourceVersionId}::uuid)`.execute(s);
   for(const id of new Set([...input.entries.map(e=>e.evidenceId),...(input.sourceArtifactId?[input.sourceArtifactId]:[]),...extra]))await sql`select governance_catalog.registration_evidence_access(${actor},${id}::uuid,${c.definition.sourceVersionId}::uuid,${input.campus})`.execute(s);
  };
@@ -95,7 +95,7 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
     if(!covered([{from:c.validFrom,to:c.validTo}],from,to))throw new Error('BLOCKED_DEPENDENCY');
     for(const field of ['capability_type','care_setting','enabled','record_status'] as const){const codes=c.definition.codeSets.find(x=>x.field===field);if(!codes||codes.status!=='SYNTHETIC_ADOPTED'||!codes.codes.includes(e.row[field])||!covered([{from:codes.validFrom,to:codes.validTo}],from,to))throw new Error('BLOCKED_DEPENDENCY');}
     const source=(await sql<{r:unknown}>`select governance_catalog.capability_source_coverage(${actor},${e.row.source_system_id}::uuid,${from}::timestamp,${to}::timestamp,${now}::timestamp) r`.execute(s)).rows[0]!.r;
-    const deps=await admission(s,actor,applicability,entry.rule,from,to,now);facts.dependencies=deps;dependencies.push(source,deps);
+    const deps=await admission(s,actor,applicability,entry.rule,from,to,now);facts.dependencies={...deps,source};dependencies.push(source,deps);
    }
    writes.push({key:target?.id??'alias:'+e.row.source_system_id+':'+e.row.capability_id,targetId:target?.id??null,expectedHead:target?.expectedHead??null,action:entry.action,validFrom:from,validTo:entry.action==='GRANT'||entry.action==='REVISE'?to:null,applicability,facts,reason:entry.reason,sourceRow:input.sourceRows?.[index]??n,scope:r.scope});
   });}catch(error){if(error instanceof Error&&['ACCESS_DENIED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE'].includes(error.message))throw error;issue(index+1,'',error instanceof Error?error.message:'CLOSED_INPUT_REQUIRED');}
@@ -128,7 +128,7 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
    for(const h of matches)for(const p of capabilityPieces(h,{from,to})){try{
     if(p.state!=='ACTIVE')throw new Error('CAPABILITY_'+p.state);
     const basis=await recoverable(s,()=>admission(s,actor,h.applicability,p.version.facts.rule,p.from,p.to,r));
-    await recoverable(s,async()=>sql`select governance_catalog.capability_source_coverage(${actor},${p.version.facts.source.sourceSystemId}::uuid,${p.from}::timestamp,${p.to}::timestamp,${r}::timestamp)`.execute(s));successful.push(p);checks.push({service,from:p.from,to:p.to,status:'SATISFIED',reason:'SATISFIED',capabilityId:h.id,versionId:p.version.id,acceptedBasis:p.version.facts.dependencies,basis});
+    const source=await recoverable(s,async()=>(await sql<{r:unknown}>`select governance_catalog.capability_source_coverage(${actor},${p.version.facts.source.sourceSystemId}::uuid,${p.from}::timestamp,${p.to}::timestamp,${r}::timestamp) r`.execute(s)).rows[0]!.r);successful.push(p);checks.push({service,from:p.from,to:p.to,status:'SATISFIED',reason:'SATISFIED',capabilityId:h.id,versionId:p.version.id,acceptedBasis:p.version.facts.dependencies,basis:{...basis,source}});
    }catch(error){if(error instanceof Error&&error.message==='ACCESS_DENIED')throw error;checks.push({service,from:p.from,to:p.to,status:'NOT_SATISFIED',reason:error instanceof Error?error.message:'BLOCKED_DEPENDENCY',capabilityId:h.id,versionId:p.version.id,acceptedBasis:p.version.facts.dependencies,basis:null});}}
    for(const gap of subtract({from,to},successful))if(!checks.some(c=>c.service===service&&c.status==='NOT_SATISFIED'&&covered([c],gap.from,gap.to)))checks.push({service,...gap,status:'NOT_SATISFIED',reason:'CAPABILITY_WINDOW_GAP',capabilityId:null,versionId:null,acceptedBasis:null,basis:null});
   }
