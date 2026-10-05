@@ -255,6 +255,13 @@ test.each(['JSON','CSV','XLSX'] as const)('%s rejects offset-bearing source time
  expect(result.input).toBeNull();expect(result.issues.some(i=>i.code==='LOCAL_TIME_REQUIRED')).toBe(true);expect(result.sourceArtifactId).toBeTruthy();
 });
 
+test.each(['JSON','CSV','XLSX'] as const)('%s reversed periods retain originals without staging an input',async format=>{
+ const {row,...operation}=permissionTemplate,original={...row,subject_license_id:randomUUID(),valid_from:'2026-04-01T00:00:00',valid_to:'2026-03-01T00:00:00'},fields=ORG17_FIELDS.map(String),values=fields.map(f=>String(original[f as keyof typeof original]??''));
+ const bytes=format==='JSON'?Buffer.from(JSON.stringify([original])):format==='CSV'?Buffer.from([fields.join(','),values.join(',')].join('\n')):organizationWorkbook({ORG17:[fields,values]});
+ const result=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_REVERSED_FILE_PERIOD',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format,parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},bytes);
+ expect(result.input).toBeNull();expect(result.issues.some(i=>i.code==='INVALID_BUSINESS_PERIOD')).toBe(true);expect(result.sourceArtifactId).toBeTruthy();
+});
+
 test('malformed JSON keeps the original file and never creates a publishable input',async()=>{
  const {row,...operation}=permissionTemplate,result=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_BAD_SUBJECT_FILE',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format:'JSON',parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},Buffer.from('[{"subject_license_id":"a","subject_license_id":"b"}]'));
  expect(result.structuralStatus).toBe('REJECTED');expect(result.input).toBeNull();expect(result.sourceArtifactId).toBeTruthy();expect(result.issues.length).toBeGreaterThan(0);
@@ -377,6 +384,13 @@ test('replacement changes open persistent blocking review without changing the a
  expect((await permissions.recheck('maker',{id:relationId})).status).toBe('REVIEW_REQUIRED');expect((await permissions.history('maker',{id:relationId})).versions[0]!.facts.adoption).toEqual(adoption);
  await apply(await input([{...entry,adoption:{...adoption,versionId:restored.versionId,version:restored.head},action:'REVISE',target:{owner:'care-organization/subject-permission',id:relationId,expectedHead:'1'}}]));
  expect((await permissions.recheck('maker',{id:relationId}))).toMatchObject({status:'SATISFIED',cases:[{reason:'TARGET_REPLACEMENT_CHANGED',status:'RESOLVED'}]});
+});
+
+test.each(['2026-02-01T00:00:00','2026-07-01T00:00:00'])('retirement at %s cannot leave its declared business interval',async boundary=>{
+ const entry={...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID(),valid_from:'2026-03-01T00:00:00',valid_to:'2026-06-01T00:00:00'}},published=await apply(await input([entry])),id=published.facts[0]!.id;
+ const value=await input([{...entry,action:'RETIRE',target:{owner:'care-organization/subject-permission',id,expectedHead:'1'},row:{...entry.row,valid_from:boundary,valid_to:null,record_status:'RETIRED'}}]),i=await permissions.stage('maker',value);await permissions.verify('reviewer',verification(value,i));
+ expect((await permissions.preview('maker',{inputId:i.inputId})).issues.some(issue=>issue.code==='SUBJECT_RETIREMENT_EXPANSION')).toBe(true);
+ await expect(permissions.plan('maker',{inputId:i.inputId,requestId:randomUUID()})).rejects.toThrow('SUBJECT_RETIREMENT_EXPANSION');expect((await permissions.history('maker',{id})).versions).toHaveLength(1);
 });
 
 test('restricted SQL cannot read raw tables, forge signed commands or bypass current source coverage',async()=>{

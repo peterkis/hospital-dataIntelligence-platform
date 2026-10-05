@@ -117,3 +117,15 @@ limitation arrays as well as fixed scope services for file and direct commands.
 Real Owner regressions reproduce both findings, including JSON/CSV/XLSX retirement
 with reordered limitation services. Final fresh and populated0175 upgrade pass51/51
 each; task/root typechecks and build pass with preservation. No DDL is added.
+
+PR33's sixth hosted review identified file periods being staged before interval
+normalization and retirement boundaries outside the original declaration. File
+receiving now normalizes each row before staging while preserving rejected originals.
+Retirement cannot precede the declaration start or exceed its finite end; forward
+migration0182 applies the same SQL guard without rewriting any installed migration
+or historical declaration. Public Owner regressions reproduce JSON/CSV/XLSX inverted
+periods and both out-of-bounds retirement dates. This follow-up remains within P3-09.
+Final fresh/codegen and populated0175 upgrade pass56/56 each, with old ledger/table
+preservation; task and root typechecks, build and230 startup/migration tests pass.
+Installed bytes0001–0181 are preserved. Retained OID206108 deployment to0182 passes
+original data/key preservation and actual Workbench/API smoke; wrapper cleanup passes.

@@ -92,6 +92,11 @@ File operations and stored evidence retain their textual-cell schema. Their
 receiving/normalization gates enforce the same time and JSON native-type rules.
 Invalid files retain their protected originals without a publishable input. Legacy
 policy labels remain readable in stored evidence; current normalization rejects them.
+File rows are calendar/period-normalized before staging, so inverted intervals cannot
+create an input in JSON, CSV or XLSX. Retirement may close at either declaration
+boundary or within the declared interval; it cannot precede the start or exceed a
+finite end. Owner and SQL enforce these bounds without consulting expired upstream
+admission dependencies.
 Unsupported raw target types, including UNKNOWN and FULL, preserve the input and
 report BLOCKED_DEPENDENCY; supported types that disagree with scope remain mismatches.
 
