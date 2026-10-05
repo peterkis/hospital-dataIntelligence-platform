@@ -154,6 +154,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=171)for(const name of ['scope_access','access','read','command','evaluate'])allowedRoutines.add('governance_catalog.parameter_value_'+name);
     if(ledger.length>=178)allowedRoutines.add('care_organization.subject_owner_ready');
     if(ledger.length>=184)allowedRoutines.add('governance_catalog.subject_code_next_approved_start');
+    if(ledger.length>=185)allowedRoutines.add('governance_catalog.subject_code_label_changes');
     if(ledger.length>=177)for(const name of ['subject_profile_coverage','subject_license_coverage'])allowedRoutines.add('organization_master.'+name);
     if(ledger.length>=177)for(const name of ['subject_review_spans','subject_review_gate','subject_audit_access','subject_authorize','subject_input_read','subject_job_read','subject_record_time','subject_target_coverage','subject_admission','subject_snapshot','subject_snapshot_version','subject_scope_histories','subject_source_conflict','subject_mutate','subject_reassess_code','subject_review_cases'])allowedRoutines.add('care_organization.'+name);
     if(ledger.length>=176)for(const name of ['subject_audit_access','subject_attest','subject_code_authorize','subject_code_command','subject_code_read','subject_code_coverage'])allowedRoutines.add('governance_catalog.'+name);

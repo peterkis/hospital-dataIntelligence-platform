@@ -22,6 +22,10 @@ successor can carry the original pin beyond its finite end: every current segmen
 must supply its own snapshot and source-period coverage. The accepted snapshot's
 business start still bounds how early that pin can be used. A changed label
 creates an informational review case, without replacing the code automatically.
+When RECORD/REVISE accepts an older pin after a label change is already approved,
+publication captures the current label differences for that declared interval as
+nonblocking cases. Revision resolves prior cases before capturing its new notices;
+the accepted pin, admission basis shape and material coverage rules are unchanged.
 New cases are limited to the released snapshot's current interval at its approval
 R: a previously approved snapshot with a later business start takes precedence.
 An expired current snapshot leaves a gap instead of restoring an earlier snapshot.

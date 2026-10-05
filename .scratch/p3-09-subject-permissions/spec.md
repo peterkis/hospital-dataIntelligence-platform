@@ -155,3 +155,16 @@ startup/migration unit230 passes. Owner/API TypeScript files are unchanged, so t
 prior pinned checks are retained instead of repeating unrelated validation.
 Retained OID206108 deployment to0184 preserves original data/keys and passes actual
 Workbench/API startup with wrapper cleanup. Installed0001–0183 bytes are unchanged.
+
+PR33's ninth hosted review identified label notices missing when an older pin is
+accepted after its label has already changed. Forward migration0185 adds a private
+catalog interface for current label-difference intervals and records nonblocking
+cases within RECORD/REVISE publication, after prior case resolutions. Coverage's
+existing dependency shape and material admission rules are retained. The real Owner
+regression first reproduces an empty case set, then checks exact March/April notice
+periods, revision resolutions and new notices, unchanged pins and SATISFIED coverage.
+Fresh/codegen and populated0175 upgrade57/57 each, task typecheck and230 startup/
+migration checks pass. Old ledger/table preservation passes; installed0001–0184
+bytes remain unchanged. Retained deployment follows its separate receipt-owned gate.
+Retained OID206108 deployment to0185 passes original data/key preservation and actual
+Workbench/API startup; all database wrappers close with cleanupPassed=true.
