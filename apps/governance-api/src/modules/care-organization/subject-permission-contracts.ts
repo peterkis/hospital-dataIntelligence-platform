@@ -34,10 +34,17 @@ export const SubjectEntrySchema=Type.Union([
  Type.Object({...Permission,action:Type.Literal('RECORD')},closed),Type.Object({...Permission,action:Type.Enum(['REVISE','RETIRE']),target:Target},closed),
 ]);
 export type SubjectEntry=Static<typeof SubjectEntrySchema>;
-export const SubjectStageSchema=Type.Object({requestId:SubjectId,jobId:SubjectId,revisionId:SubjectId,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),timePolicy:Type.Literal('LOCAL'),entries:Type.Array(SubjectEntrySchema,{minItems:1,maxItems:100})},closed);
+export const SubjectDirectRowSchema=Type.Object({...SubjectRowSchema.properties,version_no:Type.Integer({minimum:1,maximum:2147483647}),valid_from:SubjectTime,valid_to:SubjectEnd,recorded_at:SubjectTime},closed);
+const DirectMapping={...Mapping,row:SubjectDirectRowSchema},DirectPermission={...Permission,row:SubjectDirectRowSchema};
+export const SubjectDirectEntrySchema=Type.Union([
+ Type.Object({...DirectMapping,action:Type.Literal('RECORD')},closed),Type.Object({...DirectMapping,action:Type.Enum(['REVISE','RETIRE']),target:Target},closed),
+ Type.Object({...DirectPermission,action:Type.Literal('RECORD')},closed),Type.Object({...DirectPermission,action:Type.Enum(['REVISE','RETIRE']),target:Target},closed),
+]);
+export type SubjectDirectEntry=Static<typeof SubjectDirectEntrySchema>;
+export const SubjectStageSchema=Type.Object({requestId:SubjectId,jobId:SubjectId,revisionId:SubjectId,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),timePolicy:Type.Literal('LOCAL'),entries:Type.Array(SubjectDirectEntrySchema,{minItems:1,maxItems:100})},closed);
 // Legacy policy labels remain readable as protected source evidence, but cannot
 // enter a new command or pass current normalization/admission.
-export const SubjectStoredStageSchema=Type.Object({...SubjectStageSchema.properties,timePolicy:Type.Enum(['LOCAL','SOURCE_PLUS08_TO_LOCAL']),sourceArtifactId:Type.Optional(SubjectId),sourceRows:Type.Optional(Type.Array(Type.Integer({minimum:1,maximum:1048576}),{minItems:1,maxItems:100}))},closed);
+export const SubjectStoredStageSchema=Type.Object({...SubjectStageSchema.properties,timePolicy:Type.Enum(['LOCAL','SOURCE_PLUS08_TO_LOCAL']),entries:Type.Array(SubjectEntrySchema,{minItems:1,maxItems:100}),sourceArtifactId:Type.Optional(SubjectId),sourceRows:Type.Optional(Type.Array(Type.Integer({minimum:1,maximum:1048576}),{minItems:1,maxItems:100}))},closed);
 export type SubjectStage=Static<typeof SubjectStageSchema>;export type SubjectStoredStage=Static<typeof SubjectStoredStageSchema>;
 export const SubjectReceiveSchema=Type.Object({requestId:SubjectId,fileRequestId:SubjectId,job:ImportJobCommandSchema,campus:SubjectStageSchema.properties.campus,timePolicy:SubjectStageSchema.properties.timePolicy,retentionSeconds:Type.Integer({minimum:1,maximum:2592000}),operations:Type.Array(Type.Union([Type.Omit(SubjectEntrySchema.anyOf[0],['row']),Type.Omit(SubjectEntrySchema.anyOf[1],['row']),Type.Omit(SubjectEntrySchema.anyOf[2],['row']),Type.Omit(SubjectEntrySchema.anyOf[3],['row'])]),{minItems:1,maxItems:100})},closed);
 export type SubjectReceive=Static<typeof SubjectReceiveSchema>;

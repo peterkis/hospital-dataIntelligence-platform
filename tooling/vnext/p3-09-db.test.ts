@@ -1,4 +1,4 @@
-import {openSubjectPermissions,type SubjectScope,type SubjectStage,type SubjectEntry,type SubjectVerification} from '../../apps/governance-api/src/modules/care-organization/index.js';
+import {openSubjectPermissions,type SubjectScope,type SubjectStage,type SubjectStoredStage,type SubjectDirectEntry as SubjectEntry,type SubjectVerification} from '../../apps/governance-api/src/modules/care-organization/index.js';
 import {peer,quote} from './lineage.mjs';
 import {provisionSubjects} from './p3-09-provisioning.mjs';
 import {openSubjectCodes} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
@@ -83,7 +83,7 @@ test('a verified diagnostic permission is atomically published and evaluated thr
  const evaluation=await send('evaluate','maker',{scope,adoption,validFrom:'2026-02-01T00:00:00',validTo:'2026-03-01T00:00:00',mode:'CURRENT_ADMISSION'});expect(evaluation.status).toBe('SATISFIED');expect(evaluation.clinicalReadiness).toBe('NOT_READY');
 });
 async function input(entries:SubjectEntry[]):Promise<SubjectStage>{const j=await subjectContract.newJob();return {requestId:randomUUID(),jobId:j.id,revisionId:j.revisionId,campus:'NORTH',profile:'CORE',timePolicy:'LOCAL',entries};}
-function verification(value:Pick<SubjectStage,'entries'>,i:{inputId:string;digest:string}):SubjectVerification{return {requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST independent full source review',policyVersion:'ORG17_CORE_V1',rows:value.entries.map((e,index)=>({row:index+1,evidenceId:e.evidenceId,classificationAccepted:true,scopeAccepted:true,adoptionConfirmed:true,limitationsConfirmed:true,license:e.kind==='PERMISSION'?e.license:null,...(e.kind==='MAPPING'?{semantic:e.semantic}:{}),validFrom:e.row.valid_from,validTo:e.row.valid_to}))};}
+function verification(value:Pick<SubjectStoredStage,'entries'>,i:{inputId:string;digest:string}):SubjectVerification{return {requestId:randomUUID(),inputId:i.inputId,inputDigest:i.digest,reason:'TEST independent full source review',policyVersion:'ORG17_CORE_V1',rows:value.entries.map((e,index)=>({row:index+1,evidenceId:e.evidenceId,classificationAccepted:true,scopeAccepted:true,adoptionConfirmed:true,limitationsConfirmed:true,license:e.kind==='PERMISSION'?e.license:null,...(e.kind==='MAPPING'?{semantic:e.semantic}:{}),validFrom:e.row.valid_from,validTo:e.row.valid_to}))};}
 async function prepare(value:SubjectStage){const i=await permissions.stage('maker',value);await permissions.verify('reviewer',verification(value,i));const preview=await permissions.preview('maker',{inputId:i.inputId});expect(preview.issues).toEqual([]);const requestId=randomUUID(),candidate=await permissions.plan('maker',{inputId:i.inputId,requestId});await permissions.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await permissions.approveApplyUnit('reviewer',candidate);return {candidateId:candidate.candidateId,requestId};}
 async function apply(value:SubjectStage){const out=await permissions.applyUnit('maker',await prepare(value));if(out.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');return out;}
 function grant(scope:SubjectScope,kind:'MAPPING'|'PERMISSION') {peer(receipt.name,"INSERT INTO care_organization.subject_access SELECT a,"+quote(scope.subject.id)+"::uuid,"+quote(scope.campus.id)+"::uuid,"+quote(scope.target.type)+","+quote(scope.target.id)+"::uuid,"+quote(kind)+",p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED','VERIFY','REVIEW']) p ON CONFLICT DO NOTHING;");}
@@ -217,6 +217,18 @@ test('generated clients publish and read typed results through real HTTP with cu
 test('offset-bearing row times cannot activate an alternate HTTP staging policy',async()=>{
  const value=await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID(),valid_from:permissionTemplate.row.valid_from+'+08:00',recorded_at:permissionTemplate.row.recorded_at+'+08:00'}}]);
  const response=await fetch(url+'/api/vnext/subject-permissions/inputs',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({...value,timePolicy:'SOURCE_PLUS08_TO_LOCAL'})});
+ expect(response.status).toBe(400);
+});
+
+test.each(['valid_from','valid_to','recorded_at'] as const)('direct LOCAL JSON staging rejects offsets in %s at the HTTP boundary',async field=>{
+ const row={...permissionTemplate.row,subject_license_id:randomUUID(),[field]:'2026-02-01T00:00:00+08:00'},value=await input([{...permissionTemplate,row}]);
+ const response=await fetch(url+'/api/vnext/subject-permissions/inputs',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(value)});
+ expect(response.status).toBe(400);
+});
+
+test('direct JSON staging rejects string versions at the HTTP boundary',async()=>{
+ const value=await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID()}}]);
+ const response=await fetch(url+'/api/vnext/subject-permissions/inputs',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({...value,entries:value.entries.map(e=>({...e,row:{...e.row,version_no:'123'}}))})});
  expect(response.status).toBe(400);
 });
 

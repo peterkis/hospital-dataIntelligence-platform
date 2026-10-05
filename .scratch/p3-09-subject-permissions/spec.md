@@ -96,3 +96,14 @@ integer; textual CSV/XLSX cells remain supported. Real public HTTP/Owner regress
 reproduce all four findings. Final fresh and populated0175 upgrade pass45/45 each;
 parser62, startup230, contract verification, root typecheck/build pass. Installed
 bytes0001-0180 and original evidence remain unchanged. No later ticket is executed.
+
+PR33's fourth hosted review identified direct LOCAL staging accepting raw offsets
+and direct JSON staging accepting digit-string versions despite the repaired file
+path. Direct requests now use SubjectDirectRowSchema/SubjectDirectEntrySchema,
+including native version_no and strict local-time fields, with calendar/period
+normalization before persistence. Stored/file row schemas remain broad enough to
+read preserved originals and textual CSV/XLSX cells. Real HTTP regressions reproduce
+all three offending time fields and string versions; final fresh and populated0175
+upgrade pass49/49 each. Task/root typechecks, generated contract verification and
+build pass; previous data/ledger evidence is preserved.
+No additional DDL or next-ticket scope is introduced.

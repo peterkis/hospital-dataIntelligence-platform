@@ -208212,28 +208212,19 @@
                                   "pattern": "\\S"
                                 },
                                 "version_no": {
-                                  "anyOf": [
-                                    {
-                                      "type": "integer",
-                                      "minimum": 1,
-                                      "maximum": 2147483647
-                                    },
-                                    {
-                                      "type": "string",
-                                      "pattern": "^[1-9][0-9]{0,9}$"
-                                    }
-                                  ]
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 2147483647
                                 },
                                 "valid_from": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 },
                                 "valid_to": {
                                   "anyOf": [
                                     {
                                       "type": "string",
-                                      "maxLength": 40
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                     },
                                     {
                                       "type": "null"
@@ -208269,8 +208260,7 @@
                                 },
                                 "recorded_at": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 }
                               },
                               "additionalProperties": false
@@ -208622,28 +208612,19 @@
                                   "pattern": "\\S"
                                 },
                                 "version_no": {
-                                  "anyOf": [
-                                    {
-                                      "type": "integer",
-                                      "minimum": 1,
-                                      "maximum": 2147483647
-                                    },
-                                    {
-                                      "type": "string",
-                                      "pattern": "^[1-9][0-9]{0,9}$"
-                                    }
-                                  ]
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 2147483647
                                 },
                                 "valid_from": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 },
                                 "valid_to": {
                                   "anyOf": [
                                     {
                                       "type": "string",
-                                      "maxLength": 40
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                     },
                                     {
                                       "type": "null"
@@ -208679,8 +208660,7 @@
                                 },
                                 "recorded_at": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 }
                               },
                               "additionalProperties": false
@@ -209057,28 +209037,19 @@
                                   "pattern": "\\S"
                                 },
                                 "version_no": {
-                                  "anyOf": [
-                                    {
-                                      "type": "integer",
-                                      "minimum": 1,
-                                      "maximum": 2147483647
-                                    },
-                                    {
-                                      "type": "string",
-                                      "pattern": "^[1-9][0-9]{0,9}$"
-                                    }
-                                  ]
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 2147483647
                                 },
                                 "valid_from": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 },
                                 "valid_to": {
                                   "anyOf": [
                                     {
                                       "type": "string",
-                                      "maxLength": 40
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                     },
                                     {
                                       "type": "null"
@@ -209114,8 +209085,7 @@
                                 },
                                 "recorded_at": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 }
                               },
                               "additionalProperties": false
@@ -209551,28 +209521,19 @@
                                   "pattern": "\\S"
                                 },
                                 "version_no": {
-                                  "anyOf": [
-                                    {
-                                      "type": "integer",
-                                      "minimum": 1,
-                                      "maximum": 2147483647
-                                    },
-                                    {
-                                      "type": "string",
-                                      "pattern": "^[1-9][0-9]{0,9}$"
-                                    }
-                                  ]
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 2147483647
                                 },
                                 "valid_from": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 },
                                 "valid_to": {
                                   "anyOf": [
                                     {
                                       "type": "string",
-                                      "maxLength": 40
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                     },
                                     {
                                       "type": "null"
@@ -209608,8 +209569,7 @@
                                 },
                                 "recorded_at": {
                                   "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 40
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$"
                                 }
                               },
                               "additionalProperties": false

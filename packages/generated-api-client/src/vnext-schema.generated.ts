@@ -67438,7 +67438,7 @@ export interface operations {
                             license_ref: string;
                             permitted_scope: string | null;
                             verifier: string;
-                            version_no: number | string;
+                            version_no: number;
                             valid_from: string;
                             valid_to: string | null;
                             record_status: string;
@@ -67525,7 +67525,7 @@ export interface operations {
                             license_ref: string;
                             permitted_scope: string | null;
                             verifier: string;
-                            version_no: number | string;
+                            version_no: number;
                             valid_from: string;
                             valid_to: string | null;
                             record_status: string;
@@ -67619,7 +67619,7 @@ export interface operations {
                             license_ref: string;
                             permitted_scope: string | null;
                             verifier: string;
-                            version_no: number | string;
+                            version_no: number;
                             valid_from: string;
                             valid_to: string | null;
                             record_status: string;
@@ -67724,7 +67724,7 @@ export interface operations {
                             license_ref: string;
                             permitted_scope: string | null;
                             verifier: string;
-                            version_no: number | string;
+                            version_no: number;
                             valid_from: string;
                             valid_to: string | null;
                             record_status: string;

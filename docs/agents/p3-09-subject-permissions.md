@@ -83,6 +83,10 @@ strings for version_no cannot stage. CSV/XLSX textual version cells remain suppo
 CSV/XLSX valid_to becomes null only under the published `SUBJECT_EMPTY_END_V1` rule.
 All new commands and ORG17 time fields require Asia/Shanghai local strings without
 Z or offsets, per ADR0074. No offset-stripping or conversion policy is available.
+Direct JSON staging uses a separate strict row schema with native integers and
+local-time fields; calendar/period validation runs before any input is written.
+File operations and stored evidence retain their textual-cell schema. Their
+receiving/normalization gates enforce the same time and JSON native-type rules.
 Invalid files retain their protected originals without a publishable input. Legacy
 policy labels remain readable in stored evidence; current normalization rejects them.
 Unsupported raw target types, including UNKNOWN and FULL, preserve the input and
