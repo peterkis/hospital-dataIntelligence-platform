@@ -28,6 +28,11 @@ window. All overlapping admission declarations must agree on that rule and cover
 every participating Unit. Existing histories and the final batch projection are
 checked together. Adding an uncovered participant requires repair of affected
 old declarations in the same revision. UNKNOWN remains review-required.
+Independent verification compares staged and reviewed governed rules through
+the same normalized time and participant set. Stored input and all14 source
+fields retain their original evidence form and signed replay digests. Legacy
+rules use the same semantic comparison; END retains the exact original approved
+rule in its formal fact and earlier history.
 
 ## Source fields and API
 
@@ -112,6 +117,10 @@ shared publication, END, original B/R reads, exact recovery and MATCHED. Startup
 requires the complete checksummed0189 chain and the exact UnitWard authority
 before Owner construction/listen. Never print connection strings or secret files.
 Installed migration bytes are immutable; subsequent repairs are forward-only.
+An explicit `--prior-http=` argument may select an existing owned P3-04 synthetic
+`deployment-<timestamp>.http.json` under the ticket's runtime directory. Deploy
+then verifies END against its old unpadded approved sharing rule and unchanged
+exact version/history. No previous relationship is selected when the flag is absent.
 
 Preservation also checks the original0185 deployment snapshot after any retained
 deployment retries: every original row hash, the original ledger prefix and key

@@ -65,3 +65,8 @@ Q09/A019 only claim this ticket's portion; previous pending evidence is preserve
   Exact published review/CI/merge/cleanup evidence belongs in the ignored
   publication-handoff.md; this authorization supersedes the earlier local-only
   delivery fence. Hospital policy and formal acceptance bounds are unchanged.
+- Follow-up hosted review found independently reviewed equivalent timestamp
+  precision was rejected. Normalize staged/reviewed windows for semantic comparison,
+  retaining protected payloads and replay digests; END keeps approved rule bytes.
+  Real generated HTTP and explicitly selected prior synthetic END evidence cover
+  this repair. Installed0186–0189 are unchanged.
