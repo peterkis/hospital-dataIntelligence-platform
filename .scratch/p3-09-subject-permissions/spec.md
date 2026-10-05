@@ -107,3 +107,13 @@ all three offending time fields and string versions; final fresh and populated01
 upgrade pass49/49 each. Task/root typechecks, generated contract verification and
 build pass; previous data/ledger evidence is preserved.
 No additional DDL or next-ticket scope is introduced.
+
+PR33's fifth hosted review identified verification calendars/periods being checked
+after immutable evidence persistence and limitation service arrays retaining input
+order. Verification now validates both local timestamps and a positive finite
+interval before persistence; failed evidence leaves the input unverified and valid
+evidence can be recorded afterwards. Shared staging canonicalizes SERVICES_ONLY
+limitation arrays as well as fixed scope services for file and direct commands.
+Real Owner regressions reproduce both findings, including JSON/CSV/XLSX retirement
+with reordered limitation services. Final fresh and populated0175 upgrade pass51/51
+each; task/root typechecks and build pass with preservation. No DDL is added.

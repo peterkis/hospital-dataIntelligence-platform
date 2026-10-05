@@ -47,7 +47,10 @@ candidate, independent approval, expected heads and atomic Apply with audit and
 durable outcome. Source identifiers are never platform identities. REVISE preserves
 the relationship's fixed scope and business start. Explicit service sets are sorted
 before both file and direct inputs are staged, so receiving order cannot change
-that fixed scope. The newest declaration supplies
+that fixed scope. SERVICES_ONLY limitation service arrays use the same canonical
+set ordering, so reordering cannot be treated as retirement expansion. Independent
+verification validates actual calendars and its full positive period before writing
+immutable evidence. The newest declaration supplies
 the entire period; expiry never falls back to an old open version. RETIRE permanently
 closes the relation and may only shorten a previous closure. Its non-expanding path
 requires current authorization/evidence/approval but remains available after upstream

@@ -87,6 +87,14 @@ function verification(value:Pick<SubjectStoredStage,'entries'>,i:{inputId:string
 async function prepare(value:SubjectStage){const i=await permissions.stage('maker',value);await permissions.verify('reviewer',verification(value,i));const preview=await permissions.preview('maker',{inputId:i.inputId});expect(preview.issues).toEqual([]);const requestId=randomUUID(),candidate=await permissions.plan('maker',{inputId:i.inputId,requestId});await permissions.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await permissions.approveApplyUnit('reviewer',candidate);return {candidateId:candidate.candidateId,requestId};}
 async function apply(value:SubjectStage){const out=await permissions.applyUnit('maker',await prepare(value));if(out.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');return out;}
 function grant(scope:SubjectScope,kind:'MAPPING'|'PERMISSION') {peer(receipt.name,"INSERT INTO care_organization.subject_access SELECT a,"+quote(scope.subject.id)+"::uuid,"+quote(scope.campus.id)+"::uuid,"+quote(scope.target.type)+","+quote(scope.target.id)+"::uuid,"+quote(kind)+",p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['READ','WRITE','READ_RESTRICTED','VERIFY','REVIEW']) p ON CONFLICT DO NOTHING;");}
+
+test.each(['CALENDAR','ORDER'] as const)('%s invalid verification periods fail before immutable evidence is written',async kind=>{
+ const value=await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID()}}]),i=await permissions.stage('maker',value),proof=verification(value,i);
+ if(kind==='CALENDAR')proof.rows[0]!.validFrom='2026-02-30T00:00:00';else{proof.rows[0]!.validFrom='2026-04-01T00:00:00';proof.rows[0]!.validTo='2026-03-01T00:00:00';}
+ await expect(permissions.verify('reviewer',proof)).rejects.toThrow();
+ expect((await permissions.preview('maker',{inputId:i.inputId})).issues.some(issue=>issue.code==='LEGAL_REVIEW_REQUIRED')).toBe(true);
+ await permissions.verify('reviewer',verification(value,i));expect((await permissions.preview('maker',{inputId:i.inputId})).issues).toEqual([]);
+});
 test.each(['EQUIVALENT','NARROWER','BROADER','RELATED'] as const)('%s semantic evidence remains separate from a license',async semantic=>{
  grant(licensedScope,'MAPPING');const p=permissionTemplate,entry:SubjectEntry={kind:'MAPPING',action:'RECORD',scope:p.scope,adoption:{...p.adoption,code:'TEST_B'},semantic,row:{...p.row,subject_license_id:randomUUID(),subject_code:'TEST_B'},reason:'TEST independently interpreted '+semantic,evidenceId:p.evidenceId},out=await apply(await input([entry]));
  expect(out.facts[0]!.owner).toBe('care-organization/subject-mapping');expect((await permissions.history('maker',{id:out.facts[0]!.id})).versions[0]!.facts.semantic).toBe(semantic);
@@ -111,7 +119,7 @@ test.each(['JSON','CSV','XLSX'] as const)('%s imported service sets can be revis
  const services=['DEMO_MEDICAL_B','DEMO_MEDICAL_A'],license=await x.addLicense(subject),checked=await x.verifyScope(subject,campus,license,services);
  await x.operatingApply({...x.common,...x.endpoints(subject,campus),action:'ESTABLISH',evidence:x.artifact.artifactId,facts:{role:'OPERATOR',primary:'Y',relationTypeText:'TEST two-service operator',catalog:x.codeSet.reference,services,scopeTargets:[checked],licenseScopeText:'TEST POLICY ONLY'}});
  const scope:SubjectScope={target:{type:'LEGAL',owner:'organization-master',id:subject.id},...x.endpoints(subject,campus),services};grant(scope,'PERMISSION');
- const entry={...permissionTemplate,scope,license,row:{...permissionTemplate.row,subject_license_id:randomUUID(),target_type:'LEGAL' as const,target_id:subject.id}}, {row,...operation}=entry;
+ const entry={...permissionTemplate,scope,license,limitations:{kind:'SERVICES_ONLY' as const,services:[...services]},row:{...permissionTemplate.row,subject_license_id:randomUUID(),target_type:'LEGAL' as const,target_id:subject.id,permitted_scope:'TEST services A and B'}}, {row,...operation}=entry;
  const fields=ORG17_FIELDS.map(String),values=fields.map(f=>String(row[f as keyof typeof row]??'')),bytes=format==='JSON'?Buffer.from(JSON.stringify([row])):format==='CSV'?Buffer.from([fields.join(','),values.join(',')].join('\n')):organizationWorkbook({ORG17:[fields,values]});
  const received=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_UNORDERED_SERVICE_FILE',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format,parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},bytes);
  expect(received.issues).toEqual([]);if(!received.input)throw new Error('INTAKE_FAILED');
@@ -119,7 +127,7 @@ test.each(['JSON','CSV','XLSX'] as const)('%s imported service sets can be revis
  const requestId=randomUUID(),candidate=await permissions.plan('maker',{inputId:received.input.inputId,requestId});await permissions.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await permissions.approveApplyUnit('reviewer',candidate);
  const published=await permissions.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(published.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');const targetId=published.facts[0]!.id;
  await apply(await input([{...entry,action:'REVISE',target:{owner:'care-organization/subject-permission',id:targetId,expectedHead:'1'},row:{...row,version_no:2,valid_to:'2026-06-01T00:00:00'}}]));
- await apply(await input([{...entry,action:'RETIRE',target:{owner:'care-organization/subject-permission',id:targetId,expectedHead:'2'},row:{...row,version_no:3,valid_from:'2026-05-01T00:00:00',valid_to:null,record_status:'RETIRED'}}]));
+ await apply(await input([{...entry,limitations:{kind:'SERVICES_ONLY',services:[...services].sort()},action:'RETIRE',target:{owner:'care-organization/subject-permission',id:targetId,expectedHead:'2'},row:{...row,version_no:3,valid_from:'2026-05-01T00:00:00',valid_to:null,record_status:'RETIRED'}}]));
  const h=await permissions.history('maker',{id:targetId});expect(h.scope.services).toEqual(['DEMO_MEDICAL_A','DEMO_MEDICAL_B']);expect(h.versions.map(v=>v.action)).toEqual(['RECORD','REVISE','RETIRE']);
 });
 
