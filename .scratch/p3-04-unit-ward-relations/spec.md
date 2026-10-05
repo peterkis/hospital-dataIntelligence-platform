@@ -81,3 +81,7 @@ Q09/A019 only claim this ticket's portion; previous pending evidence is preserve
 - Final participant-pin review requires restricted SQL to compare every frozen
   participant binding basis at the apply R. Forward0191 returns STALE_VALIDATION
   after a same-campus binding successor, preserving original candidate evidence.
+- Participant coverage follows effective Unit/binding periods, including permanent
+  closure masks over future bindings. Raw accepted binding pins remain immutable;
+  pre-closure half-open coverage and safe END remain usable. Forward0192 repairs
+  the independent restricted-SQL guard.
