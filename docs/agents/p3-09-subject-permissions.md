@@ -18,6 +18,9 @@ individual accepted code's meaning/status against every relevant approved curren
 snapshot throughout the requested B interval at R. An unrelated new code keeps the
 original pin; retired, missing or changed meanings require review. A changed label
 creates an informational review case, without replacing the code automatically.
+New cases are limited to the released snapshot's current interval at its approval
+R: a previously approved snapshot with a later business start takes precedence.
+An expired current snapshot leaves a gap instead of restoring an earlier snapshot.
 An unresolved blocking case continues to gate admission even if a later snapshot
 restores an earlier meaning. An explicit independently checked relationship revision
 resolves cases; the case set is included in the frozen candidate so a plan prepared
@@ -38,7 +41,9 @@ REGISTER, source approval, matching names and source version numbers confer no g
 RECORD/REVISE/RETIRE use protected input, independent human verification, a frozen
 candidate, independent approval, expected heads and atomic Apply with audit and
 durable outcome. Source identifiers are never platform identities. REVISE preserves
-the relationship's fixed scope and business start. The newest declaration supplies
+the relationship's fixed scope and business start. Explicit service sets are sorted
+before both file and direct inputs are staged, so receiving order cannot change
+that fixed scope. The newest declaration supplies
 the entire period; expiry never falls back to an old open version. RETIRE permanently
 closes the relation and may only shorten a previous closure. Its non-expanding path
 requires current authorization/evidence/approval but remains available after upstream

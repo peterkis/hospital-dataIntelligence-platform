@@ -59,3 +59,19 @@ Human authority is still required for real hospital standard/policy adoption and
 the deferred FULL/P5/P7 gates. This status does not claim clinical or production
 readiness. One local completion commit and exact ignored handoff close this ticket;
 no push/fetch or subsequent ticket execution is authorized by this completion.
+
+2026-10-05 publication follow-up: the user subsequently authorized pushing,
+creating a PR, requesting hosted @codex review, repairing and repeating review
+until findings are resolved, then merging, fast-forwarding local main and safely
+cleaning redundant branches/worktrees. This supersedes the local-only publication
+fence above; it does not authorize the next ticket or real hospital policy adoption.
+
+PR33's first hosted review identified backdated snapshot cases extending beyond
+their current-version interval and inconsistent file/direct service-set ordering.
+Forward migration0179 clips new cases at the next already-approved later business
+start known at approval R. Both staging paths now canonicalize explicit service
+sets. Real public Owner regressions reproduce the failures and cover JSON/CSV/XLSX
+publication, direct revision and retirement; final fresh and populated0175 upgrade
+runs pass37/37 each, with predecessor ledger and table preservation. Root build,
+typechecks and230 startup/migration regression checks pass.
+Installed migration bytes0001-0178 and original evidence remain unchanged.

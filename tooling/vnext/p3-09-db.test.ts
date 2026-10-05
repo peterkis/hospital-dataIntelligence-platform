@@ -101,6 +101,23 @@ test('ORG17 file intake keeps native null and source integers without granting a
  const original=await permissions.readInput('maker',{inputId:result.input!.inputId});expect(original.entries[0]!.row.version_no).toBe(123);expect(original.entries[0]!.row.valid_to).toBeNull();expect(original.sourceArtifactId).toBe(result.sourceArtifactId);
  expect((await permissions.preview('maker',{inputId:result.input!.inputId})).issues.some(i=>i.code==='LEGAL_REVIEW_REQUIRED')).toBe(true);
 });
+test.each(['JSON','CSV','XLSX'] as const)('%s imported service sets can be revised and retired through direct commands regardless of order',async format=>{
+ const x=base.operating,subject=await x.createSubject(),campus=await x.createCampus();await x.activateCampus(campus);x.grantPair(subject.id,campus.id);
+ const services=['DEMO_MEDICAL_B','DEMO_MEDICAL_A'],license=await x.addLicense(subject),checked=await x.verifyScope(subject,campus,license,services);
+ await x.operatingApply({...x.common,...x.endpoints(subject,campus),action:'ESTABLISH',evidence:x.artifact.artifactId,facts:{role:'OPERATOR',primary:'Y',relationTypeText:'TEST two-service operator',catalog:x.codeSet.reference,services,scopeTargets:[checked],licenseScopeText:'TEST POLICY ONLY'}});
+ const scope:SubjectScope={target:{type:'LEGAL',owner:'organization-master',id:subject.id},...x.endpoints(subject,campus),services};grant(scope,'PERMISSION');
+ const entry={...permissionTemplate,scope,license,row:{...permissionTemplate.row,subject_license_id:randomUUID(),target_type:'LEGAL' as const,target_id:subject.id}}, {row,...operation}=entry;
+ const fields=ORG17_FIELDS.map(String),values=fields.map(f=>String(row[f as keyof typeof row]??'')),bytes=format==='JSON'?Buffer.from(JSON.stringify([row])):format==='CSV'?Buffer.from([fields.join(','),values.join(',')].join('\n')):organizationWorkbook({ORG17:[fields,values]});
+ const received=await permissions.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),retentionSeconds:7200,campus:'NORTH',timePolicy:'LOCAL',job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_UNORDERED_SERVICE_FILE',profile:'CORE',contractId:subjectContract.contract.id,contractVersionId:subjectContract.contract.versionId,input:{kind:'FILE',format,parserPolicy:'STRICT_SUBJECT_PERMISSION_V1'}},operations:[operation]},bytes);
+ expect(received.issues).toEqual([]);if(!received.input)throw new Error('INTAKE_FAILED');
+ const stored=await permissions.readInput('maker',{inputId:received.input.inputId});await permissions.verify('reviewer',verification(stored,received.input));
+ const requestId=randomUUID(),candidate=await permissions.plan('maker',{inputId:received.input.inputId,requestId});await permissions.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await permissions.approveApplyUnit('reviewer',candidate);
+ const published=await permissions.applyUnit('maker',{candidateId:candidate.candidateId,requestId});if(published.status!=='COMMITTED')throw new Error('COMMIT_UNKNOWN');const targetId=published.facts[0]!.id;
+ await apply(await input([{...entry,action:'REVISE',target:{owner:'care-organization/subject-permission',id:targetId,expectedHead:'1'},row:{...row,version_no:2,valid_to:'2026-06-01T00:00:00'}}]));
+ await apply(await input([{...entry,action:'RETIRE',target:{owner:'care-organization/subject-permission',id:targetId,expectedHead:'2'},row:{...row,version_no:3,valid_from:'2026-05-01T00:00:00',valid_to:null,record_status:'RETIRED'}}]));
+ const h=await permissions.history('maker',{id:targetId});expect(h.scope.services).toEqual(['DEMO_MEDICAL_A','DEMO_MEDICAL_B']);expect(h.versions.map(v=>v.action)).toEqual(['RECORD','REVISE','RETIRE']);
+});
+
 test('retirement of an adopted target opens review while the original exact mapping remains unchanged',async()=>{
  const original=await permissions.history('maker',{id:mappingSamples[0]!.id}),old=(await codes.read('maker',{id:draftId,versionId:draftVersionId}))[0]!;
  const response=await fetch(url+'/api/vnext/subject-codes/command',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify({action:'REVISE',requestId:randomUUID(),reason:'TEST target retirement, no automatic replacement',target:draftId,expectedHead:'1',sourceId:old.sourceId,sourceVersionId:old.sourceVersionId,evidenceId:old.evidenceId,reference:old.reference,codeSystemName:old.codeSystemName,namespaceUri:old.namespaceUri,standardDocument:old.standardDocument,issuer:old.issuer,codeSystemVersion:old.codeSystemVersion,sourcePage:'TEST page 2',sourceSummary:'TEST POLICY ONLY TEST_B retired; TEST_A unchanged; TEST_C added',adoptedOn:'2026-10-05',label:'TEST_POLICY_ONLY',validFrom:old.validFrom,validTo:null,codes:[old.codes[0],{...old.codes[1],status:'RETIRED',replacement:'TEST_C'},{code:'TEST_C',name:'TEST replacement C',meaning:'TEST_C_MEANING',status:'ACTIVE',replacement:null}]})});
@@ -274,6 +291,22 @@ test('a period-limited blocking case masks only its interval while an independen
  await apply(await input([{...permissionTemplate,row:{...permissionTemplate.row,subject_license_id:randomUUID(),valid_from:'2026-03-01T00:00:00',valid_to:'2026-04-01T00:00:00'}}]));
  expect((await permissions.recheck('maker',{id:a.facts[0]!.id})).status).toBe('REVIEW_REQUIRED');
  const result=await permissions.evaluateWindow('maker',{scope:licensedScope,adoption:permissionTemplate.adoption,validFrom:'2026-01-01T00:00:00',validTo:'2026-06-01T00:00:00',mode:'CURRENT_ADMISSION'});expect(result.status).toBe('SATISFIED');expect(result.checks.some(c=>c.permissionId===a.facts[0]!.id&&c.from==='2026-01-01T00:00:00.000000'&&c.to==='2026-03-01T00:00:00.000000'&&c.status==='SATISFIED')).toBe(true);
+});
+
+test('a backdated snapshot opens review only before a later-effective approved snapshot takes precedence',async()=>{
+ const old=(await codes.read('maker',{id:draftId,versionId:draftVersionId}))[0]!,{id,versionId,head,systemCode,status,reviewDigest,recordedAt,approvedAt,sourceVerification,...fields}=old;
+ async function approve(d:Awaited<ReturnType<typeof codes.command>>){
+  await codes.command('reviewer',{action:'VERIFY',requestId:randomUUID(),reason:'TEST backdated source independently read',target:d.id,versionId:d.versionId,reviewDigest:d.reviewDigest,evidenceId:d.evidenceId,sourceReviewed:true});
+  return codes.command('reviewer',{action:'APPROVE',requestId:randomUUID(),reason:'TEST backdated source approved',target:d.id,versionId:d.versionId,reviewDigest:d.reviewDigest});
+ }
+ const first=await approve(await codes.command('maker',{...fields,action:'CREATE',requestId:randomUUID(),reason:'TEST isolated backdated source',systemCode:'TEST_BACKDATED',namespaceUri:'urn:hdip:test:backdated',reference:{...fields.reference,sourceAlias:'TEST_REF01_BACKDATED'}}));
+ const adoption={...permissionTemplate.adoption,systemId:first.id,versionId:first.versionId,version:first.head},out=await apply(await input([{...permissionTemplate,adoption,row:{...permissionTemplate.row,subject_license_id:randomUUID(),code_system_id:'TEST_REF01_BACKDATED'}}]));
+ await approve(await codes.command('maker',{...fields,action:'REVISE',requestId:randomUUID(),reason:'TEST later-effective unchanged source',target:first.id,expectedHead:'1',namespaceUri:first.namespaceUri,reference:first.reference,validFrom:'2026-04-01T00:00:00'}));
+ await approve(await codes.command('maker',{...fields,action:'REVISE',requestId:randomUUID(),reason:'TEST newly approved backdated retirement',target:first.id,expectedHead:'2',namespaceUri:first.namespaceUri,reference:first.reference,validFrom:'2026-03-01T00:00:00',codes:first.codes.map(c=>c.code==='TEST_A'?{...c,status:'RETIRED',replacement:null}:c)}));
+ const query={scope:licensedScope,adoption,mode:'CURRENT_ADMISSION' as const};
+ expect((await permissions.evaluateWindow('maker',{...query,validFrom:'2026-03-01T00:00:00',validTo:'2026-04-01T00:00:00'})).status).toBe('REVIEW_REQUIRED');
+ expect((await permissions.evaluateWindow('maker',{...query,validFrom:'2026-04-01T00:00:00',validTo:'2026-06-01T00:00:00'})).status).toBe('SATISFIED');
+ expect((await permissions.recheck('maker',{id:out.facts[0]!.id})).cases).toMatchObject([{reason:'TARGET_RETIRED',validFrom:'2026-03-01T00:00:00.000000',validTo:'2026-04-01T00:00:00.000000'}]);
 });
 
 test('restricted SQL cannot read raw tables, forge signed commands or bypass current source coverage',async()=>{
