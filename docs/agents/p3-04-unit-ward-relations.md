@@ -28,6 +28,11 @@ window. All overlapping admission declarations must agree on that rule and cover
 every participating Unit. Existing histories and the final batch projection are
 checked together. Adding an uncovered participant requires repair of affected
 old declarations in the same revision. UNKNOWN remains review-required.
+Every declared sharing participant has approved Unit bindings covering the
+declared Campus and relation window at the same R, including extra listed Units.
+Unit Owner reference checks and restricted SQL enforce this association. END
+verification covers the retained source-row declaration period; endAt remains
+the separately checked non-expanding boundary.
 Independent verification compares staged and reviewed governed rules through
 the same normalized time and participant set. Stored input and all14 source
 fields retain their original evidence form and signed replay digests. Legacy
@@ -110,7 +115,7 @@ npm.cmd run prototype:db:with -- vnext:workbench:persistent
 Fresh validation owns a temporary receipt database. Upgrade uses an offline
 archive of the pinned predecessor source to create real Ward/Capability facts
 at0185, then checks unchanged predecessor rows/ledger and Ward public history
-after0186–0189. The archive's package loader overlay changes only module loading;
+after0186–0190. The archive's package loader overlay changes only module loading;
 domain source remains unmodified. Both runners verify generated database types
 and database authority, then dispose their owned databases, roles and keys.
 Success requires DATABASE_SESSION_READY, target exit0 and cleanupPassed=true.
@@ -119,7 +124,7 @@ Deploy forward-upgrades the retained receipt database, preserves OID206108,
 prior rows, ledger and key bytes, provisions the new finite functions, and starts
 the real workbench before testing generated HTTP through independent approval,
 shared publication, END, original B/R reads, exact recovery and MATCHED. Startup
-requires the complete checksummed0189 chain and the exact UnitWard authority
+requires the complete checksummed0190 chain and the exact UnitWard authority
 before Owner construction/listen. Never print connection strings or secret files.
 Installed migration bytes are immutable; subsequent repairs are forward-only.
 An explicit `--prior-http=` argument may select an existing owned P3-04 synthetic

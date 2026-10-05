@@ -43,7 +43,7 @@ export function openUnitWardRelations(connection:string,provider:KeyProviderPort
   for(const e of input.entries){normalizeUnitWardRow(e.row,'LOCAL');normalizedRule(e.rule);if(e.action==='END')localTime(e.endAt);}
   return mutate<Staged>(s,actor,{operation:'STAGE',requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,campus:input.campus,campusIds:[...new Set(input.entries.map(e=>e.applicability.campus.id))].sort(),...sealed('UNIT_WARD_INPUT_V1',input)});
  };
- const admission=(s:Scope,actor:string,a:UnitWardWindow['applicability'],_rule:UnitWardRule,from:string,to:string|null,r:string)=>ports.admit(s,actor,a,from,to,r);
+ const admission=(s:Scope,actor:string,a:UnitWardWindow['applicability'],rule:UnitWardRule,from:string,to:string|null,r:string)=>ports.admit(s,actor,a,from,to,r,rule);
  const scopedHistories=async(s:Scope,actor:string,a:UnitWardWindow['applicability'],r:string)=>(await sql<{r:UnitWardHistory[]}>`select care_organization.unit_ward_scope_histories(${actor},${JSON.stringify(a)}::jsonb,${r}::timestamp) r`.execute(s)).rows[0]!.r;
  const inspectInput=async(s:Scope,actor:string,id:string)=>{
   const r=await record(s,actor,id),input=unseal<UnitWardStoredStage>('UNIT_WARD_INPUT_V1',r,UnitWardStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract,now=(await publicationTime(s)).recordAt,issues:UnitWardIssue[]=[],writes:UnitWardWrite[]=[],materials:Array<{id:string;digest:string}>=[],dependencies:unknown[]=[],original:UnitWardHistory[]=[];
@@ -66,7 +66,7 @@ export function openUnitWardRelations(connection:string,provider:KeyProviderPort
    else{const alias=e.row.source_system_id+'|'+e.row.unit_ward_rel_id;if(aliases.has(alias))throw new Error('BATCH_CONFLICT');aliases.add(alias);if((await sql<{r:boolean}>`select care_organization.unit_ward_source_conflict(${actor},${e.row.source_system_id}::uuid,${e.row.unit_ward_rel_id}) r`.execute(s)).rows[0]!.r)throw new Error('UNIT_WARD_SOURCE_ALREADY_REGISTERED');}
    const ending=entry.action==='END',checked=verification?.rows.find(v=>v.row===n);
    if(verification&&(!checked||!checked.classificationAccepted||!checked.scopeAccepted||!checked.ruleConfirmed||!sameRule(checked.rule,entry.rule)))throw new Error('SHARING_REVIEW_REQUIRED');
-   if(checked&&!ending&&!covered([{from:localTime(checked.validFrom),to:checked.validTo===null?null:localTime(checked.validTo)}],e.from,e.to))throw new Error('UNIT_WARD_REVIEW_PERIOD_NOT_COVERED');
+   if(checked&&!covered([{from:localTime(checked.validFrom),to:checked.validTo===null?null:localTime(checked.validTo)}],e.from,e.to))throw new Error('UNIT_WARD_REVIEW_PERIOD_NOT_COVERED');
    if(!e.row.approval_ref?.trim())throw new Error('BLOCKED_DEPENDENCY');
    materials.push(await material(s,actor,entry.evidenceId,c,r.scope));if(checked){materials.push(await material(s,actor,checked.evidenceId,c,r.scope));await material(s,r.verification!.actor,checked.evidenceId,c,r.scope);}
    const facts:UnitWardFacts={relationType:e.row.relation_type,isPrimary:e.row.is_primary==='Y',sharingRule:e.row.sharing_rule??null,rule:entry.rule,contractVersionId:c.versionId,verificationBasis:{id:r.verification?.id??'',version:String(r.verification?.number??0),digest:r.digest},dependencies:d?.facts.dependencies??null,source:{sourceAlias:e.row.unit_ward_rel_id,sourceVersion:String(e.row.version_no),sourceSystemId:e.row.source_system_id,sourceRecordedAt:e.sourceRecordedAt,recordLocatorEvidence:{inputId:r.id,row:input.sourceRows?.[index]??n},recordStatus:e.row.record_status,approvalReference:e.row.approval_ref}};

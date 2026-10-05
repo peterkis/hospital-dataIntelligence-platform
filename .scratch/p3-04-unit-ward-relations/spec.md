@@ -74,3 +74,7 @@ Q09/A019 only claim this ticket's portion; previous pending evidence is preserve
   and distinguishing empty sharing-rule text from native null. Comparison copies
   alone normalize order/time. New source facts preserve the empty value; legacy
   END uses authenticated original source evidence to retain accepted old content.
+- Further hosted review required validating every declared sharing participant's
+  Campus binding/window and END verification coverage of the retained source row.
+  Unit Owner reference association and forward0190 guard both new admission and
+  signed SQL; END's safe-shrink rule remains separate from period attestation.
