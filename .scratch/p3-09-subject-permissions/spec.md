@@ -75,3 +75,13 @@ publication, direct revision and retirement; final fresh and populated0175 upgra
 runs pass37/37 each, with predecessor ledger and table preservation. Root build,
 typechecks and230 startup/migration regression checks pass.
 Installed migration bytes0001-0178 and original evidence remain unchanged.
+
+PR33's second hosted review identified finite accepted snapshots rejecting later
+unchanged approved successors. Forward migration0180 retains the original pin and
+checks each actual current snapshot and its source for the full requested period;
+the pin cannot be used before its business start, changed meanings still require
+review and successor expiry leaves a gap. The real public Owner regression first
+fails with SUBJECT_CODE_PERIOD_NOT_COVERED and then permits the independently
+approved extension without changing the pin or its exact history. Fresh and
+populated0175 upgrade now pass38/38 each; startup/migration230 and task typecheck
+pass. Installed bytes0001-0179 and original evidence remain unchanged.

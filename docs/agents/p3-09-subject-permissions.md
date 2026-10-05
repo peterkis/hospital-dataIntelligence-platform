@@ -16,7 +16,10 @@ to make a source alias or source version equal a platform UUID or numeric head.
 Approval never rewrites an old exact snapshot. Current admission compares the
 individual accepted code's meaning/status against every relevant approved current
 snapshot throughout the requested B interval at R. An unrelated new code keeps the
-original pin; retired, missing or changed meanings require review. A changed label
+original pin; retired, missing or changed meanings require review. An unchanged approved
+successor can carry the original pin beyond its finite end: every current segment
+must supply its own snapshot and source-period coverage. The accepted snapshot's
+business start still bounds how early that pin can be used. A changed label
 creates an informational review case, without replacing the code automatically.
 New cases are limited to the released snapshot's current interval at its approval
 R: a previously approved snapshot with a later business start takes precedence.

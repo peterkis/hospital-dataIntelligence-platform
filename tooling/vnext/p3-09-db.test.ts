@@ -309,6 +309,24 @@ test('a backdated snapshot opens review only before a later-effective approved s
  expect((await permissions.recheck('maker',{id:out.facts[0]!.id})).cases).toMatchObject([{reason:'TARGET_RETIRED',validFrom:'2026-03-01T00:00:00.000000',validTo:'2026-04-01T00:00:00.000000'}]);
 });
 
+test('an unchanged finite successor carries the original code pin while expiry still leaves a coverage gap',async()=>{
+ const old=(await codes.read('maker',{id:draftId,versionId:draftVersionId}))[0]!,{id,versionId,head,systemCode,status,reviewDigest,recordedAt,approvedAt,sourceVerification,...fields}=old;
+ async function approve(d:Awaited<ReturnType<typeof codes.command>>){
+  await codes.command('reviewer',{action:'VERIFY',requestId:randomUUID(),reason:'TEST finite source independently read',target:d.id,versionId:d.versionId,reviewDigest:d.reviewDigest,evidenceId:d.evidenceId,sourceReviewed:true});
+  return codes.command('reviewer',{action:'APPROVE',requestId:randomUUID(),reason:'TEST finite source approved',target:d.id,versionId:d.versionId,reviewDigest:d.reviewDigest});
+ }
+ const first=await approve(await codes.command('maker',{...fields,action:'CREATE',requestId:randomUUID(),reason:'TEST finite accepted source',systemCode:'TEST_SUCCESSOR',namespaceUri:'urn:hdip:test:successor',reference:{...fields.reference,sourceAlias:'TEST_REF01_SUCCESSOR'},validTo:'2026-04-01T00:00:00'}));
+ const adoption={...permissionTemplate.adoption,systemId:first.id,versionId:first.versionId,version:first.head},entry={...permissionTemplate,adoption,row:{...permissionTemplate.row,subject_license_id:randomUUID(),code_system_id:'TEST_REF01_SUCCESSOR',valid_to:'2026-04-01T00:00:00'}},initial=await apply(await input([entry]));
+ const successor=await approve(await codes.command('maker',{...fields,action:'REVISE',requestId:randomUUID(),reason:'TEST same code finite successor and unrelated addition',target:first.id,expectedHead:'1',namespaceUri:first.namespaceUri,reference:first.reference,validFrom:'2026-04-01T00:00:00',validTo:'2026-06-01T00:00:00',codes:[...first.codes,{code:'TEST_C',name:'TEST unrelated successor addition',meaning:'TEST_C_MEANING',status:'ACTIVE',replacement:null}]}));
+ await apply(await input([{...entry,action:'REVISE',target:{owner:'care-organization/subject-permission',id:initial.facts[0]!.id,expectedHead:'1'},row:{...entry.row,valid_to:'2026-06-01T00:00:00'}}]));
+ const h=await permissions.history('maker',{id:initial.facts[0]!.id});expect(h.versions[1]!.facts.adoption).toEqual(adoption);expect(h.versions[1]!.validTo).toBe('2026-06-01T00:00:00.000000');
+ expect((await codes.read('maker',{id:first.id,versionId:first.versionId}))[0]!.validTo).toBe('2026-04-01T00:00:00');
+ expect((await permissions.evaluateWindow('maker',{scope:licensedScope,adoption,validFrom:'2026-04-01T00:00:00',validTo:'2026-06-01T00:00:00',mode:'CURRENT_ADMISSION'})).status).toBe('SATISFIED');
+ const overrun=await input([{...entry,action:'REVISE',target:{owner:'care-organization/subject-permission',id:h.id,expectedHead:'2'},row:{...entry.row,valid_to:'2026-07-01T00:00:00'}}]),i=await permissions.stage('maker',overrun);await permissions.verify('reviewer',verification(overrun,i));
+ expect((await permissions.preview('maker',{inputId:i.inputId})).issues).toMatchObject([{code:'SUBJECT_CODE_PERIOD_NOT_COVERED'}]);
+ expect(successor.head).toBe('2');
+});
+
 test('restricted SQL cannot read raw tables, forge signed commands or bypass current source coverage',async()=>{
  const pool=new Pool({connectionString:connection,max:1});try{
   await expect(pool.query('select * from care_organization.subject_relation_version')).rejects.toThrow(/permission denied/);
