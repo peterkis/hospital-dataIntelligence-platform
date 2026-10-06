@@ -1,3 +1,5 @@
+import {assertUnitWardProvisioned} from './p3-04-provisioning.mjs';
+import {unitWardUpstreamPorts} from '../../apps/governance-api/src/composition/unit-ward-dependencies.ts';
 import {unitCapabilityUpstreamPorts} from '../../apps/governance-api/src/composition/unit-capability-dependencies.ts';
 import {assertUnitCapabilityProvisioned} from './p3-08-provisioning.mjs';
 import {assertSubjectsProvisioned} from './p3-09-provisioning.mjs';
@@ -7,7 +9,7 @@ import {wardUpstreamPorts} from '../../apps/governance-api/src/composition/ward-
 import {assertWardProvisioned} from './p3-02-provisioning.mjs';
 import {withCareOrganizationImpacts,nursingUpstreamPorts} from '../../apps/governance-api/src/composition/nursing-unit-dependencies.ts';
 import {assertNursingUnitProvisioned} from './p3-03-provisioning.mjs';
-import {openBusinessUnit,openNursingUnit,openWard,openUnitCapabilities} from '../../apps/governance-api/src/modules/care-organization/index.ts';
+import {openBusinessUnit,openNursingUnit,openWard,openUnitCapabilities,openUnitWardRelations} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {assertBusinessUnitProvisioned} from './p3-01-provisioning.mjs';
 import {openLocation} from '../../apps/governance-api/src/modules/location-master/index.ts';
 import {assertLocationProvisioned} from './p3-06-provisioning.mjs';
@@ -66,6 +68,7 @@ export async function startWorkbench({
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
   const owned = persistent ? null : createTemporary("P0-09");
   const receipt = owned?.receipt ?? readReceipt();
+  let unitWard;
   let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit, nursingUnit, ward, parameterValues, unitCapabilities, subjectCodes, subjectPermissions;
   const close = async () => {
     await app?.close();
@@ -83,6 +86,7 @@ export async function startWorkbench({
     await departmentLifecycle?.close();
     await location?.close();
     await unitCapabilities?.close();
+    await unitWard?.close();
     await subjectPermissions?.close();
     await subjectCodes?.close();
     await parameterValues?.close();
@@ -135,9 +139,10 @@ export async function startWorkbench({
     const organizationReady=persistent;
     const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
     if(persistent&&persistentPrefix>=174)await assertUnitCapabilityProvisioned(connection,provider);
+    if(persistent&&persistentPrefix>=188)await assertUnitWardProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=178)await assertSubjectsProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=167)await assertWardProvisioned(connection,provider);
-    if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider,{owners:['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY'],readInTransaction:(s,a,i)=>{if(!businessUnit)throw new Error('BLOCKED_DEPENDENCY');return Promise.all([businessUnit.readCampusDependenciesInTransaction(s,a,i),nursingUnit?.readCampusDependenciesInTransaction(s,a,i)??[],ward?.readCampusDependenciesInTransaction(s,a,i)??[],unitCapabilities?.readCampusDependenciesInTransaction(s,a,i)??[]]).then(parts=>parts.flat());;}});operating=openOperatingRelations(connection,provider);}
+    if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider,{owners:['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','UNIT_WARD_RELATION'],readInTransaction:(s,a,i)=>{if(!businessUnit)throw new Error('BLOCKED_DEPENDENCY');return Promise.all([businessUnit.readCampusDependenciesInTransaction(s,a,i),nursingUnit?.readCampusDependenciesInTransaction(s,a,i)??[],ward?.readCampusDependenciesInTransaction(s,a,i)??[],unitCapabilities?.readCampusDependenciesInTransaction(s,a,i)??[],unitWard?.readCampusDependenciesInTransaction(s,a,i)??[]]).then(parts=>parts.flat());;}});operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     if(persistent&&persistentPrefix>=144)departmentWorkspace=openDepartmentWorkspace(connection,provider);
@@ -146,13 +151,14 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
     if(persistent&&persistentPrefix>=116){await assertOrganizationIdentifiersProvisioned(connection,provider);identifiers=openOrganizationIdentifiers(connection,provider);}
     if(persistent&&persistentPrefix>=122)await assertDepartmentImpactsProvisioned(connection);
-    if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities));}
-    if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities));}
+    if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities,()=>unitWard));}
+    if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities,()=>unitWard));}
     if(persistent&&persistentPrefix>=150){await assertLocationProvisioned(connection,provider);location=openLocation(connection,provider,campus.references);}
-    if(persistent&&persistentPrefix>=154){await assertBusinessUnitProvisioned(connection,provider);businessUnit=openBusinessUnit(connection,provider,{departmentCoverage:departmentLifecycle.readUnitBindingCoverageInTransaction,referenceAccess:departmentLifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction});}
+    if(persistent&&persistentPrefix>=154){await assertBusinessUnitProvisioned(connection,provider);businessUnit=openBusinessUnit(connection,provider,{departmentCoverage:departmentLifecycle.readUnitBindingCoverageInTransaction,departmentBoundaries:departmentLifecycle.readUnitBindingBoundariesInTransaction,referenceAccess:departmentLifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction});}
     if(persistent&&persistentPrefix>=163){await assertNursingUnitProvisioned(connection,provider);nursingUnit=openNursingUnit(connection,provider,nursingUpstreamPorts);}
     if(persistent&&persistentPrefix>=167){ward=openWard(connection,provider,wardUpstreamPorts(businessUnit));}
     if(persistent&&persistentPrefix>=174){parameterValues=openParameterValues(connection);unitCapabilities=openUnitCapabilities(connection,provider,unitCapabilityUpstreamPorts(businessUnit,parameterValues));}
+    if(persistent&&persistentPrefix>=188){unitWard=openUnitWardRelations(connection,provider,unitWardUpstreamPorts(businessUnit,ward));}
     if(persistent&&persistentPrefix>=178){subjectCodes=openSubjectCodes(connection,provider);subjectPermissions=openSubjectPermissions(connection,provider,{operatingWindow:operating.evaluateOperatingWindowInTransaction});}
     catalog = await openCatalog(connection, provider);
     let setup;
@@ -224,6 +230,7 @@ export async function startWorkbench({
       unitCapabilities?{owner:unitCapabilities,actor:r=>syntheticActor(r.headers)}:undefined,
       subjectCodes?{owner:subjectCodes,actor:r=>syntheticActor(r.headers)}:undefined,
       subjectPermissions?{owner:subjectPermissions,actor:r=>syntheticActor(r.headers)}:undefined,
+      unitWard?{owner:unitWard,actor:r=>syntheticActor(r.headers)}:undefined,
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

@@ -96,9 +96,7 @@ export function DepartmentQueries({
               const client = createVNextCatalogClient(location.origin, actor),
                 output = await value(
                   client.POST(
-                    departmentForms.operations[operation].path as Parameters<
-                      typeof client.POST
-                    >[0],
+                    departmentForms.operations[operation].path,
                     { body: body as never },
                   ),
                 );

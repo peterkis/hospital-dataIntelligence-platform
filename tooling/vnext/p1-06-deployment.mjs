@@ -11,13 +11,17 @@ import {assertHierarchyProvisioned,grantHierarchyFunctions} from './hierarchy-pr
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
- if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-07','p2-08','p3-06','p3-01','p3-02','p3-03','p3-08','p3-09'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
+ if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-07','p2-08','p3-06','p3-01','p3-02','p3-03','p3-08','p3-09','p3-04'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
  const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();
  if(evidenceTask==='p3-08'&&before.ledger.length<170)throw new Error('P3_02_CURRENT_DEPLOYMENT_REQUIRED');
+ if(evidenceTask==='p3-04'&&before.ledger.length<185)throw new Error('P3_09_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-09'&&before.ledger.length<175)throw new Error('P3_08_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-02'&&before.ledger.length<165)throw new Error('P3_03_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-03'&&before.ledger.length<161)throw new Error('P3_01_CURRENT_DEPLOYMENT_REQUIRED');
  const prefix=workspaceDeploymentPrefix(files,before.ledger,reuseExisting);
+ // Only exclude newly introduced columns when comparing an older schema.
+ // Once194 is installed, verification pins participate in full row preservation.
+ if(evidenceTask==='p3-04'&&prefix<194)addedColumns={...addedColumns,'care_organization.unit_ward_apply_binding':['verification_id','verification_number','verification_digest']};
  if(evidenceTask==='p3-01'&&prefix<151)throw new Error('P3_06_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-06'&&prefix<148)throw new Error('P2_07_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p2-01'&&prefix<83)throw new Error('P1_07_REPAIRED_DEPLOYMENT_REQUIRED');

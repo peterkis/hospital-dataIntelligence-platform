@@ -315,9 +315,7 @@ export function DepartmentDomainWorkspace({
   const execute = (operation: Operation, body: Record<string, unknown>) =>
     value(
       client.POST(
-        departmentForms.operations[operation].path as Parameters<
-          typeof client.POST
-        >[0],
+        departmentForms.operations[operation].path,
         { body: body as never },
       ),
     );

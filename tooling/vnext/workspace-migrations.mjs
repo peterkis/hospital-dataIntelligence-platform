@@ -102,6 +102,17 @@ const postWorkspaceMigrations = [
  '0183_subject_retirement_context',
  '0184_subject_catalog_interval_interface',
  '0185_subject_admission_label_notices',
+ '0186_unit_ward_relations',
+ '0187_unit_ward_public_integration',
+ '0188_unit_ward_finite_impacts',
+ '0189_unit_ward_shared_boundary_agreement',
+ '0190_unit_ward_participant_campus',
+ '0191_unit_ward_participant_pins',
+ '0192_unit_ward_participant_lifecycle',
+ '0193_unit_ward_current_evidence_authority',
+ '0194_unit_ward_verification_pins',
+ '0195_unit_ward_validation_port',
+ '0196_unit_ward_source_windows',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

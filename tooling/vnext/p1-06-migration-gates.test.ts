@@ -34,8 +34,9 @@ vi.mock('./p3-01-provisioning.mjs',()=>({assertBusinessUnitProvisioned:vi.fn(asy
 vi.mock('./p3-03-provisioning.mjs',()=>({assertNursingUnitProvisioned:vi.fn(async()=>{state.events.push('nursing-unit-provisioned');})}));
 vi.mock('./p3-08-provisioning.mjs',()=>({assertUnitCapabilityProvisioned:vi.fn(async()=>{state.events.push('capability-provisioned');})}));
 vi.mock('./p3-09-provisioning.mjs',()=>({assertSubjectsProvisioned:vi.fn(async()=>{state.events.push('subjects-provisioned');})}));
+vi.mock('./p3-04-provisioning.mjs',()=>({assertUnitWardProvisioned:vi.fn(async()=>{state.events.push('unit-ward-provisioned');})}));
 vi.mock('./p3-02-provisioning.mjs',()=>({assertWardProvisioned:vi.fn(async()=>{state.events.push('ward-provisioned');})}));
-vi.mock('../../apps/governance-api/src/modules/care-organization/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/care-organization/index.ts')>();return {...real,openBusinessUnit:vi.fn(()=>{state.events.push('business-unit');return {close:async()=>{}};}),openNursingUnit:vi.fn(()=>{state.events.push('nursing-unit');return {close:async()=>{}};}),openUnitCapabilities:vi.fn(()=>{state.events.push('unit-capability');return {close:async()=>{}};}),openWard:vi.fn(()=>{state.events.push('ward');return {close:async()=>{}};})};});
+vi.mock('../../apps/governance-api/src/modules/care-organization/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/care-organization/index.ts')>();return {...real,openUnitWardRelations:vi.fn(()=>{state.events.push('unit-ward');return {close:async()=>{}};}),openBusinessUnit:vi.fn(()=>{state.events.push('business-unit');return {close:async()=>{}};}),openNursingUnit:vi.fn(()=>{state.events.push('nursing-unit');return {close:async()=>{}};}),openUnitCapabilities:vi.fn(()=>{state.events.push('unit-capability');return {close:async()=>{}};}),openWard:vi.fn(()=>{state.events.push('ward');return {close:async()=>{}};})};});
 vi.mock('./hierarchy-provisioning.mjs',async importOriginal=>{
  const real=await importOriginal<typeof import('./hierarchy-provisioning.mjs')>();
  return {...real,assertHierarchyProvisioned:vi.fn(async()=>{state.events.push('hierarchy-provisioned');})};
@@ -87,7 +88,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -163,7 +164,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0185_subject_admission_label_notices');
+ expect(files.at(-1)?.id).toBe('0196_unit_ward_source_windows');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{
@@ -199,4 +200,8 @@ test('missing capability authority prevents business Owner construction and list
 test('missing subject authority prevents the new Owner from being served',async()=>{
  const {assertSubjectsProvisioned}=await import('./p3-09-provisioning.mjs');vi.mocked(assertSubjectsProvisioned).mockRejectedValueOnce(new Error('SUBJECT_OWNER_NOT_PROVISIONED'));
  await expect(startWorkbench({persistent:true})).rejects.toThrow('SUBJECT_OWNER_NOT_PROVISIONED');expect(state.events).not.toContain('listen');expect(state.events).not.toContain('organization');
+});
+test('missing Unit Ward authority prevents business Owner construction and listening',async()=>{
+ const {assertUnitWardProvisioned}=await import('./p3-04-provisioning.mjs');vi.mocked(assertUnitWardProvisioned).mockRejectedValueOnce(new Error('UNIT_WARD_OWNER_NOT_PROVISIONED'));
+ await expect(startWorkbench({persistent:true})).rejects.toThrow('UNIT_WARD_OWNER_NOT_PROVISIONED');expect(state.events).not.toContain('listen');expect(state.events).not.toContain('organization');
 });

@@ -51,3 +51,5 @@ export {createParameterValueClient} from './parameter-value-client.js';
 
 export * from './subject-permission-client.js';
 export * from './subject-code-client.js';
+
+export {createUnitWardClient} from './unit-ward-client.js';

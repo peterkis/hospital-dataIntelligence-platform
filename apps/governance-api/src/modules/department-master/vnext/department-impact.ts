@@ -11,7 +11,7 @@ import {ReadDepartmentAssessmentSchema,ListDepartmentAssessmentsSchema,type Read
 
 export interface DepartmentImpactContext {inputId:string;inputDigest:string;profile:string;campus:'NORTH'|'SOUTH';departmentIds:string[];effectiveAt:string;changeType:DepartmentAssessment['changeType']}
 export interface DepartmentImpactPorts {
- businessUnitsAvailable?:boolean;nursingUnitsAvailable?:boolean;wardsAvailable?:boolean;capabilitiesAvailable?:boolean;
+ businessUnitsAvailable?:boolean;nursingUnitsAvailable?:boolean;wardsAvailable?:boolean;capabilitiesAvailable?:boolean;unitWardRelationsAvailable?:boolean;
  references(scope:CatalogTransactionScope,actor:string,departments:string[],campus:string):Promise<ImpactReference[]>;
  referenceAccess(scope:CatalogTransactionScope,actor:string,reference:ImpactReference,campus:string):Promise<void>;
  replacement(scope:CatalogTransactionScope,actor:string,departmentId:string):Promise<string|null>;
@@ -51,7 +51,7 @@ export function departmentImpacts(
    ...(ports.businessUnitsAvailable?[{owner:'BUSINESS_UNIT' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'BUSINESS_UNIT' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
    ...(ports.nursingUnitsAvailable?[{owner:'NURSING_UNIT' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'NURSING_UNIT' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
    ...(ports.wardsAvailable?[{owner:'WARD' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'WARD' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),...(ports.capabilitiesAvailable?[{owner:'UNIT_CAPABILITY' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'UNIT_CAPABILITY' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
-   ...(['PERSONNEL','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
+   ...(ports.unitWardRelationsAvailable?[{owner:'UNIT_WARD_RELATION' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'UNIT_WARD_RELATION' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),...(['PERSONNEL','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
   ];
   const basis:Omit<DepartmentAssessment,'dependencyDigest'>={target,departmentIds:[...context.departmentIds].sort(),inputId:context.inputId,inputDigest:context.inputDigest,campus:context.campus,changeType,effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage,references};
   const assessment={...basis,dependencyDigest:createHash('sha256').update(canonicalPlan(basis)).digest('hex')};
@@ -97,6 +97,6 @@ export function projectImpactReference(ref:ImpactReference,effectiveAt:string,ch
    const active=ref.current&&ref.currentReferencesDepartment&&!['RETRACT','CLOSED','REVOKED'].includes(ref.currentAction)&&ref.currentTargetId===ref.departmentId&&(to===null||to>from);
    ref.change=active||ref.versionId!==ref.currentVersionId?'CHANGED':'UNCHANGED';ref.constraint='SATISFIED';ref.affectedSpans=[];
    ref.reason=!active?'HISTORICAL_REFERENCE':exitAt?'REFERENCE_EXITED':'LABEL_CHANGED';
-   if((ref.owner==='WARD'||ref.owner==='UNIT_CAPABILITY'))ref.current=active;
+   if((ref.owner==='WARD'||ref.owner==='UNIT_CAPABILITY'||ref.owner==='UNIT_WARD_RELATION'))ref.current=active;
    if(active&&exitAt){ref.constraint='UNSATISFIED';ref.affectedSpans=[{from,to}];}
 }
