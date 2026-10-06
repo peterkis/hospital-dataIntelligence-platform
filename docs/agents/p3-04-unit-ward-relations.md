@@ -119,7 +119,7 @@ npm.cmd run prototype:db:with -- vnext:workbench:persistent
 Fresh validation owns a temporary receipt database. Upgrade uses an offline
 archive of the pinned predecessor source to create real Ward/Capability facts
 at0185, then checks unchanged predecessor rows/ledger and Ward public history
-after0186–0192. The archive's package loader overlay changes only module loading;
+after0186–0196. The archive's package loader overlay changes only module loading;
 domain source remains unmodified. Both runners verify generated database types
 and database authority, then dispose their owned databases, roles and keys.
 Success requires DATABASE_SESSION_READY, target exit0 and cleanupPassed=true.
@@ -128,7 +128,7 @@ Deploy forward-upgrades the retained receipt database, preserves OID206108,
 prior rows, ledger and key bytes, provisions the new finite functions, and starts
 the real workbench before testing generated HTTP through independent approval,
 shared publication, END, original B/R reads, exact recovery and MATCHED. Startup
-requires the complete checksummed0192 chain and the exact UnitWard authority
+requires the complete checksummed0196 chain and the exact UnitWard authority
 before Owner construction/listen. Never print connection strings or secret files.
 Installed migration bytes are immutable; subsequent repairs are forward-only.
 An explicit `--prior-http=` argument may select an existing owned P3-04 synthetic
@@ -149,3 +149,39 @@ The user authorized publication through PR34, hosted Codex review/fix/review,
 exact-head merge, local main fast-forward and selective cleanup. The publication
 handoff records that lifecycle separately from the original local evidence.
 No automatic next ticket.
+
+## Independent review repairs
+
+Forward0193 rechecks current Care protected-evidence access for the original maker
+and approver at SQL Apply/recovery. Forward0194 freezes the actual independent
+verification ID, number and digest and compares the latest verification at new
+Apply, including its current verifier authority and identity. A later negative
+verification invalidates the old uncommitted candidate. Existing committed
+outcomes recover before this freshness check; accepted facts are never backfilled.
+Old unsubmitted bindings without complete pins require a new candidate.
+
+Forward0195 moves the private Care input existence check behind a finite Care
+query. Forward0196 provides authorized source-window boundaries. Current window
+evaluation splits at effective Unit, Ward, Department, operating and source
+boundaries using one R, retaining successful subintervals and whole-window
+constraints. History comparisons normalize only the requested R, preserving
+original evidence precision. Evolution validation and verification reject a
+known unsatisfied UNIT_WARD_RELATION impact declared UNAFFECTED.
+
+UnitWard HTTP parses raw decoded JSON keys before JSON.parse and rejects duplicate
+keys, including escaped aliases, within its route scope. File errors use actual
+source-row/column provenance, including reordered CSV/JSON/XLSX fields; structural
+errors without a field coordinate keep an empty field.
+
+After interrupted validation, use the exact owned database receipt:
+
+```powershell
+npm.cmd run prototype:db:with -- vnext:p3-04:validate --dispose .runtime/vnext/fresh/hdi_mc_vnext_<16hex>.json
+```
+
+Recovery validates the database request and associated role receipts/OIDs. It
+handles both a present database and an already-disposed database with a surviving
+role, checks ownership of remaining keys, and emits PASS only after all associated
+roles and keys are removed. Repeating cleanup is safe; unrelated resources remain.
+Missing or inconsistent ownership evidence blocks cleanup rather than guessing.
+Focused review regressions run through the same owned runner with --astra-review.

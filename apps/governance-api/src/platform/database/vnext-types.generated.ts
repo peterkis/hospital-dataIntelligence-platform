@@ -396,6 +396,9 @@ export interface CareOrganizationUnitWardApplyBinding {
   candidate_digest: string;
   candidate_id: string;
   input_id: string;
+  verification_digest: string | null;
+  verification_id: string | null;
+  verification_number: Int8 | null;
   writes_digest: string;
   writes_hash: string;
 }

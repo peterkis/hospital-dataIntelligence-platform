@@ -19,6 +19,9 @@ export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTa
  if(evidenceTask==='p3-02'&&before.ledger.length<165)throw new Error('P3_03_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-03'&&before.ledger.length<161)throw new Error('P3_01_CURRENT_DEPLOYMENT_REQUIRED');
  const prefix=workspaceDeploymentPrefix(files,before.ledger,reuseExisting);
+ // Only exclude newly introduced columns when comparing an older schema.
+ // Once194 is installed, verification pins participate in full row preservation.
+ if(evidenceTask==='p3-04'&&prefix<194)addedColumns={...addedColumns,'care_organization.unit_ward_apply_binding':['verification_id','verification_number','verification_digest']};
  if(evidenceTask==='p3-01'&&prefix<151)throw new Error('P3_06_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-06'&&prefix<148)throw new Error('P2_07_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p2-01'&&prefix<83)throw new Error('P1_07_REPAIRED_DEPLOYMENT_REQUIRED');

@@ -170,6 +170,8 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=188){for(const n of ['department_references','reference_access','campus_dependencies','impact_result'])allowedRoutines.add('care_organization.unit_ward_'+n);allowedRoutines.add('organization_master.campus_impact_with_unit_ward');}
     if(ledger.length>=190)allowedRoutines.add('care_organization.unit_ward_participant_campus_guard');
     if(ledger.length>=191)allowedRoutines.add('care_organization.unit_ward_participant_pins');
+    if(ledger.length>=195)allowedRoutines.add('care_organization.unit_ward_validation_ready');
+    if(ledger.length>=196)allowedRoutines.add('governance_catalog.unit_ward_source_windows');
     if(routines.length!==allowedRoutines.size||routines.some(row=>!allowedRoutines.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const extraTypes=(await pool.query("select count(*) as count from pg_type t join pg_namespace n on n.oid=t.typnamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') and t.typrelid=0 and t.typelem=0")).rows[0].count;
     if(Number(extraTypes))throw new Error('UNKNOWN_SCHEMA_OBJECT');

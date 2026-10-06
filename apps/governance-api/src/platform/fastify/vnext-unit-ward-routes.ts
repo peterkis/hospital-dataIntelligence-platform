@@ -2,6 +2,7 @@ import type {FastifyInstance,FastifyRequest} from 'fastify';
 import {Type,type Static,type TSchema} from 'typebox';
 import {unitWardCheck,UnitWardId,UnitWardTime,UnitWardStageSchema,UnitWardDirectStageSchema,UnitWardStoredStageSchema,UnitWardInputSchema,UnitWardPlanSchema,UnitWardVerifySchema,UnitWardReceiveSchema,UnitWardReadSchema,UnitWardHistorySchema,UnitWardExactSchema,UnitWardListSchema,UnitWardWindowSchema,UnitWardDiffSchema,UnitWardRuleSchema,UnitWardScopeSchema,type UnitWardOwner} from '../../modules/care-organization/index.js';
 import {ApproveApplyUnitSchema,ApplyUnitSchema} from '../../modules/governance-catalog/index.js';
+import {parseStrictJson} from './strict-json.js';
 const closed={additionalProperties:false} as const,Text=Type.String(),End=Type.Union([UnitWardTime,Type.Null()]);
 const ErrorSchema=Type.Object({code:Text,message:Text,field:Type.Optional(Text)},closed),errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,503:ErrorSchema};
 const Source=Type.Object({sourceAlias:Text,sourceVersion:Text,sourceSystemId:UnitWardId,sourceRecordedAt:UnitWardTime,recordLocatorEvidence:Type.Object({inputId:UnitWardId,row:Type.Integer()},closed),recordStatus:Text,approvalReference:Text},closed);
@@ -14,6 +15,12 @@ const Outcome=Type.Union([Type.Object({status:Type.Literal('COMMITTED'),candidat
 const Issue=Type.Object({row:Type.Integer(),field:Text,code:Text,status:Type.Enum(['FAIL','BLOCKED'])},closed),Candidate=Type.Object({candidateId:UnitWardId},closed);
 export interface UnitWardHttpContext {owner:UnitWardOwner;actor:(request:FastifyRequest)=>string}
 export function registerUnitWardRoutes(app:FastifyInstance,context?:UnitWardHttpContext){
+ app.register(async scoped=>{
+  scoped.removeContentTypeParser('application/json');scoped.addContentTypeParser('application/json',{parseAs:'string'},(_request,body,done)=>{try{if(typeof body!=='string')throw new Error('CLOSED_INPUT_REQUIRED');done(null,parseStrictJson(body));}catch{done(new Error('CLOSED_INPUT_REQUIRED'));}});
+  registerStrictUnitWardRoutes(scoped,context);
+ });
+}
+function registerStrictUnitWardRoutes(app:FastifyInstance,context?:UnitWardHttpContext){
  const route=<S extends TSchema>(path:string,operationId:string,body:S,response:TSchema,handle:(owner:UnitWardOwner,actor:string,input:Static<S>)=>Promise<unknown>)=>app.post<{Body:Static<S>}>('/api/vnext/unit-ward-relations/'+path,{validatorCompiler:({schema})=>input=>{try{unitWardCheck(schema,input);return {value:input};}catch(error){return {error:error instanceof Error?error:new Error('CLOSED_INPUT_REQUIRED')};}},schema:{operationId,body,response:{200:response,...errors}}},r=>{if(!context)throw new Error('BLOCKED_DEPENDENCY');return handle(context.owner,context.actor(r),r.body as Static<S>);});
  route('inputs','stageUnitWardInput',UnitWardDirectStageSchema,Type.Object({inputId:UnitWardId,revisionId:UnitWardId,digest:Text},closed),(o,a,b)=>o.stage(a,b));
  route('inputs/read','readUnitWardInput',UnitWardInputSchema,UnitWardStoredStageSchema,(o,a,b)=>o.readInput(a,b));

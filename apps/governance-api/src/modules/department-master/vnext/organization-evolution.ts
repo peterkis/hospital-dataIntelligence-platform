@@ -217,7 +217,7 @@ export function openOrganizationEvolutions(connection:string,provider?:KeyProvid
   const expandedCount=evolutionExpandedWriteCount(input);
   if(expandedCount>100)issue('event','PLAN_INPUT_LIMIT','FAIL');
   const assessment=issues.every(item=>item.code==='LEGAL_REVIEW_REQUIRED')?await impacts.observe(s,actor,{kind:'INPUT',id:r.id}):null;
-  for(const domain of ['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','WARD'] as const){
+  for(const domain of ['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','WARD','UNIT_WARD_RELATION'] as const){
    if(assessment?.references.some(ref=>ref.owner===domain&&ref.constraint==='UNSATISFIED')&&input.impacts.find(impact=>impact.domain===domain)?.determination!=='AFFECTED')issue('impacts','IMPACT_DECLARATION_CONFLICT');
   }
   if(verification&&!verification.impactAssessment)issue('impacts','IMPACT_ASSESSMENT_REQUIRED');
@@ -359,7 +359,7 @@ const stage=(actor:string,raw:EvolutionStageInput)=>root(scope=>stageInTransacti
    // A complete negative review must still be recorded so it invalidates any
    // earlier approval. inspectInput prevents it from authorizing application.
    if(new Set(input.impactReviews.map(x=>x.domain)).size!==EVOLUTION_IMPACT_DOMAINS.length||EVOLUTION_IMPACT_DOMAINS.some(domain=>!input.impactReviews.some(x=>x.domain===domain)))throw new Error('LEGAL_REVIEW_REQUIRED');
-   if(current.references.some(ref=>['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','WARD'].includes(ref.owner)&&ref.constraint==='UNSATISFIED'&&raw.impacts.find(impact=>impact.domain===ref.owner)?.determination!=='AFFECTED'))throw new Error('IMPACT_DECLARATION_CONFLICT');
+   if(current.references.some(ref=>['SOURCE_MAPPING','IDENTIFIER','HIERARCHY','WARD','UNIT_WARD_RELATION'].includes(ref.owner)&&ref.constraint==='UNSATISFIED'&&raw.impacts.find(impact=>impact.domain===ref.owner)?.determination!=='AFFECTED'))throw new Error('IMPACT_DECLARATION_CONFLICT');
    if(current.dependencyDigest!==assessment.dependencyDigest||input.impactAssessment&&(input.impactAssessment.id!==assessment.assessmentId||input.impactAssessment.digest!==assessment.dependencyDigest))throw new Error('STALE_VALIDATION');
    const verified={...input,impactAssessment:{id:assessment.assessmentId,digest:assessment.dependencyDigest}};
    return mutate<{verificationId:string}>(s,actor,{operation:'VERIFY',...verified,...seal('EVOLUTION_VERIFICATION_V1',verified)});

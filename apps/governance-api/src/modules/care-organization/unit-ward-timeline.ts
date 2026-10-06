@@ -1,7 +1,7 @@
 import {intersect,covered,localTime} from '../organization-master/index.js';
 import type {UnitWardHistory,UnitWardRule} from './unit-ward-contracts.js';
 const sharedBoundary=(r:Extract<UnitWardRule,{kind:'SHARED_BOUNDARY'}>)=>JSON.stringify([r.ruleReference,r.ruleVersion,r.evidenceId,[...r.participants].sort(),localTime(r.validFrom),r.validTo===null?null:localTime(r.validTo)]);
-export const knownUnitWard=(h:UnitWardHistory,r?:string):UnitWardHistory=>({...h,versions:h.versions.filter(v=>!r||v.recordedAt<=r)});
+export const knownUnitWard=(h:UnitWardHistory,r?:string):UnitWardHistory=>{const at=r?localTime(r):undefined;return {...h,versions:h.versions.filter(v=>!at||v.recordedAt<=at)};};
 export const declaration=(h:UnitWardHistory)=>h.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE').at(-1)??null;
 export const unitWardEnd=(h:UnitWardHistory)=>h.versions.filter(v=>v.action==='END').map(v=>v.validFrom).sort()[0]??null;
 export function unitWardReserved(h:UnitWardHistory){const d=declaration(h);if(!d)return [];const end=unitWardEnd(h),to=d.validTo===null?end:end===null?d.validTo:d.validTo<end?d.validTo:end;return to!==null&&to<=d.validFrom?[]:[{from:d.validFrom,to}];}

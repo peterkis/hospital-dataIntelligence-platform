@@ -109,6 +109,10 @@ const postWorkspaceMigrations = [
  '0190_unit_ward_participant_campus',
  '0191_unit_ward_participant_pins',
  '0192_unit_ward_participant_lifecycle',
+ '0193_unit_ward_current_evidence_authority',
+ '0194_unit_ward_verification_pins',
+ '0195_unit_ward_validation_port',
+ '0196_unit_ward_source_windows',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);
