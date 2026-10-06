@@ -116,6 +116,12 @@ npm.cmd run prototype:db:with -- vnext:p3-04:preservation
 npm.cmd run prototype:db:with -- vnext:workbench:persistent
 ```
 
+The two read-only raw-JSON HTTP regressions share one real loopback Catalog
+server. Its beforeAll startup has a local 30-second limit and afterAll closes it
+within a local 10-second limit. The request tests retain Vitest's default
+5-second budget; workspace defaults and retries are unchanged. Run the original
+vnext:p3-04:unit command above without diagnostic timeout overrides.
+
 Fresh validation owns a temporary receipt database. Upgrade uses an offline
 archive of the pinned predecessor source to create real Ward/Capability facts
 at0185, then checks unchanged predecessor rows/ledger and Ward public history
