@@ -14,11 +14,10 @@ export function disposeUnitWardValidation(receipt){
  if(!isDeepStrictEqual(persisted,receipt)||!isDeepStrictEqual(intent,expectedIntent))throw new Error('DISPOSAL_NOT_AUTHORIZED');
  const roleNames=new Set(readdirSync(directory).filter(name=>/^hdi_validation_[a-f0-9]{16}\.json(?:\.intent)?$/.test(name)).map(name=>name.replace(/\.intent$/,''))),sessions=[];
  for(const name of roleNames){
-  const rolePath=resolve(directory,name),intentPath=rolePath+'.intent',roleIntent=readReceipt(existsSync(intentPath)?intentPath:rolePath);
-  if(roleIntent.database!==receipt.name)continue;
-  if(roleIntent.taskId!=='P3-04'||roleIntent.purpose!=='TEMPORARY_VALIDATION_OWNER'||roleIntent.databaseOid!==receipt.oid||roleIntent.databaseRequestId!==receipt.requestId||!existsSync(rolePath)||!existsSync(intentPath))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
-  const roleReceipt=readReceipt(rolePath);
-  if(!isDeepStrictEqual(roleIntent,(({roleOid,...rest})=>rest)(roleReceipt))||!/^\d+$/.test(roleReceipt.roleOid))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
+  const rolePath=resolve(directory,name),intentPath=rolePath+'.intent',roleIntent=existsSync(intentPath)?readReceipt(intentPath):null,roleReceipt=existsSync(rolePath)?readReceipt(rolePath):null;
+  if(roleIntent?.database!==receipt.name&&roleReceipt?.database!==receipt.name)continue;
+  if(!roleIntent||!roleReceipt||roleIntent.taskId!=='P3-04'||roleIntent.purpose!=='TEMPORARY_VALIDATION_OWNER'||roleIntent.databaseOid!==receipt.oid||roleIntent.databaseRequestId!==receipt.requestId)throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
+  if(!isDeepStrictEqual(roleIntent,(({roleOid,...rest})=>rest)(roleReceipt))||roleReceipt.role+'.json'!==name||!/^\d+$/.test(roleReceipt.roleOid))throw new Error('OWNER_DISPOSAL_NOT_AUTHORIZED');
   sessions.push({receipt:roleReceipt,receiptPath:rolePath});
  }
  const keys=resolve(root,'.runtime/vnext/p3-04',receipt.name+'.secret.json');
