@@ -892,6 +892,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1167,6 +1173,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -3211,6 +3223,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3486,6 +3504,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -4569,6 +4593,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4844,6 +4874,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -5405,7 +5441,8 @@ export const departmentForms = {
                         "IDENTIFIER",
                         "WARD",
                         "UNIT_CAPABILITY",
-                        "UNIT_WARD_RELATION"
+                        "UNIT_WARD_RELATION",
+                        "WARD_NURSING_COVERAGE"
                       ]
                     },
                     "determination": {
@@ -5450,8 +5487,8 @@ export const departmentForms = {
                   },
                   "additionalProperties": false
                 },
-                "minItems": 12,
-                "maxItems": 12
+                "minItems": 13,
+                "maxItems": 13
               },
               "requestId": {
                 "type": "string",
@@ -5698,6 +5735,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -5974,6 +6017,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_UNIT_WARD_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_WARD_NURSING_V1"
                                     ]
                                   }
                                 ]
@@ -6794,7 +6843,8 @@ export const departmentForms = {
                     "IDENTIFIER",
                     "WARD",
                     "UNIT_CAPABILITY",
-                    "UNIT_WARD_RELATION"
+                    "UNIT_WARD_RELATION",
+                    "WARD_NURSING_COVERAGE"
                   ]
                 },
                 "determination": {
@@ -6839,8 +6889,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 12,
-            "maxItems": 12
+            "minItems": 13,
+            "maxItems": 13
           }
         },
         "additionalProperties": false
@@ -7557,7 +7607,8 @@ export const departmentForms = {
                     "IDENTIFIER",
                     "WARD",
                     "UNIT_CAPABILITY",
-                    "UNIT_WARD_RELATION"
+                    "UNIT_WARD_RELATION",
+                    "WARD_NURSING_COVERAGE"
                   ]
                 },
                 "determination": {
@@ -7602,8 +7653,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 12,
-            "maxItems": 12
+            "minItems": 13,
+            "maxItems": 13
           }
         },
         "additionalProperties": false
@@ -7737,7 +7788,8 @@ export const departmentForms = {
                     "IDENTIFIER",
                     "WARD",
                     "UNIT_CAPABILITY",
-                    "UNIT_WARD_RELATION"
+                    "UNIT_WARD_RELATION",
+                    "WARD_NURSING_COVERAGE"
                   ]
                 },
                 "ownerAttestationAccepted": {
@@ -7755,8 +7807,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 12,
-            "maxItems": 12
+            "minItems": 13,
+            "maxItems": 13
           }
         },
         "additionalProperties": false
@@ -8365,7 +8417,8 @@ export const departmentForms = {
                           "NURSING_UNIT",
                           "WARD",
                           "UNIT_CAPABILITY",
-                          "UNIT_WARD_RELATION"
+                          "UNIT_WARD_RELATION",
+                          "WARD_NURSING_COVERAGE"
                         ]
                       },
                       "id": {
@@ -8429,7 +8482,8 @@ export const departmentForms = {
                           "NURSING_UNIT",
                           "WARD",
                           "UNIT_CAPABILITY",
-                          "UNIT_WARD_RELATION"
+                          "UNIT_WARD_RELATION",
+                          "WARD_NURSING_COVERAGE"
                         ]
                       },
                       "id": {
@@ -8501,7 +8555,8 @@ export const departmentForms = {
                                   "NURSING_UNIT",
                                   "WARD",
                                   "UNIT_CAPABILITY",
-                                  "UNIT_WARD_RELATION"
+                                  "UNIT_WARD_RELATION",
+                                  "WARD_NURSING_COVERAGE"
                                 ]
                               },
                               "id": {
@@ -9279,7 +9334,8 @@ export const departmentForms = {
                     "IDENTIFIER",
                     "WARD",
                     "UNIT_CAPABILITY",
-                    "UNIT_WARD_RELATION"
+                    "UNIT_WARD_RELATION",
+                    "WARD_NURSING_COVERAGE"
                   ]
                 },
                 "determination": {
@@ -9324,8 +9380,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 12,
-            "maxItems": 12
+            "minItems": 13,
+            "maxItems": 13
           }
         },
         "additionalProperties": false
@@ -9408,7 +9464,8 @@ export const departmentForms = {
                     "IDENTIFIER",
                     "WARD",
                     "UNIT_CAPABILITY",
-                    "UNIT_WARD_RELATION"
+                    "UNIT_WARD_RELATION",
+                    "WARD_NURSING_COVERAGE"
                   ]
                 },
                 "ownerAttestationAccepted": {
@@ -9426,8 +9483,8 @@ export const departmentForms = {
               },
               "additionalProperties": false
             },
-            "minItems": 12,
-            "maxItems": 12
+            "minItems": 13,
+            "maxItems": 13
           }
         },
         "additionalProperties": false
@@ -11464,7 +11521,8 @@ export const departmentForms = {
                   "IDENTIFIER",
                   "WARD",
                   "UNIT_CAPABILITY",
-                  "UNIT_WARD_RELATION"
+                  "UNIT_WARD_RELATION",
+                  "WARD_NURSING_COVERAGE"
                 ]
               },
               "determination": {
@@ -11509,8 +11567,8 @@ export const departmentForms = {
             },
             "additionalProperties": false
           },
-          "minItems": 12,
-          "maxItems": 12
+          "minItems": 13,
+          "maxItems": 13
         }
       },
       "additionalProperties": false
@@ -12013,7 +12071,8 @@ export const departmentForms = {
                   "IDENTIFIER",
                   "WARD",
                   "UNIT_CAPABILITY",
-                  "UNIT_WARD_RELATION"
+                  "UNIT_WARD_RELATION",
+                  "WARD_NURSING_COVERAGE"
                 ]
               },
               "determination": {
@@ -12058,8 +12117,8 @@ export const departmentForms = {
             },
             "additionalProperties": false
           },
-          "minItems": 12,
-          "maxItems": 12
+          "minItems": 13,
+          "maxItems": 13
         }
       },
       "additionalProperties": false
@@ -12147,7 +12206,8 @@ export const departmentForms = {
                         "NURSING_UNIT",
                         "WARD",
                         "UNIT_CAPABILITY",
-                        "UNIT_WARD_RELATION"
+                        "UNIT_WARD_RELATION",
+                        "WARD_NURSING_COVERAGE"
                       ]
                     },
                     "id": {
@@ -12211,7 +12271,8 @@ export const departmentForms = {
                         "NURSING_UNIT",
                         "WARD",
                         "UNIT_CAPABILITY",
-                        "UNIT_WARD_RELATION"
+                        "UNIT_WARD_RELATION",
+                        "WARD_NURSING_COVERAGE"
                       ]
                     },
                     "id": {
@@ -12283,7 +12344,8 @@ export const departmentForms = {
                                 "NURSING_UNIT",
                                 "WARD",
                                 "UNIT_CAPABILITY",
-                                "UNIT_WARD_RELATION"
+                                "UNIT_WARD_RELATION",
+                                "WARD_NURSING_COVERAGE"
                               ]
                             },
                             "id": {

@@ -113,6 +113,9 @@ const postWorkspaceMigrations = [
  '0194_unit_ward_verification_pins',
  '0195_unit_ward_validation_port',
  '0196_unit_ward_source_windows',
+ '0197_ward_nursing_coverages',
+ '0198_ward_nursing_public_integration',
+ '0199_ward_nursing_finite_impacts',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

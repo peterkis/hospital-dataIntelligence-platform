@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {prepareWorkspaceDeployment} from './p1-06-deployment.mjs';
+import {readReceipt,inspect,checkPrefix,migrationFiles} from './lineage.mjs';
+import {provisionWardNursing,assertWardNursingProvisioned} from './p3-05-provisioning.mjs';
+import {startWorkbench} from './workbench-runtime.mjs';
+import {wardNursingFixture} from './p3-05-fixture.ts';
+import {createWardNursingCoverageClient} from '../../packages/generated-api-client/src/index.ts';
+import {ORG11_FIELDS} from '../../apps/governance-api/src/modules/care-organization/index.ts';
+
+if(process.argv.length!==2)throw new Error('CLOSED_COMMAND_REQUIRED');
+// Check the authoritative retained identity before the deployment helper mutates it.
+const retained=readReceipt();assert.equal(retained.oid,'206108','P3_05_RETAINED_RECEIPT_REQUIRED');
+const preflight=await inspect(retained),files=migrationFiles();assert.ok(checkPrefix(files,preflight.ledger)>=196,'P3_04_CURRENT_DEPLOYMENT_REQUIRED');
+const deployment=await prepareWorkspaceDeployment({evidenceTask:'p3-05'}),{receipt,connection,provider,evidence}=deployment;
+const service=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));let server,fixture;
+const success=response=>{assert.equal(response.response.status,200,response.error?.code);assert.ok(response.data);return response.data;};
+try{
+ provisionWardNursing(receipt,service.role,provider);await assertWardNursingProvisioned(connection,provider);
+ server=await startWorkbench({persistent:true,port:0});
+ fixture=await wardNursingFixture(receipt,service.role,server.catalog,provider,connection,true);
+ const maker=createWardNursingCoverageClient(server.url,'maker'),reviewer=createWardNursingCoverageClient(server.url,'reviewer');
+ const transactions=[];
+ const publish=async(input,transform=verification=>verification)=>{
+  const staged=success(await maker.stage(input));
+  assert.deepEqual(success(await maker.readInput({inputId:staged.inputId})),input);
+  success(await reviewer.verify(transform(fixture.verification(input,staged))));
+  const preview=success(await maker.preview({inputId:staged.inputId}));assert.equal(preview.decision,'PASS',preview.issues.map(i=>i.code).join(','));
+  const requestId=randomUUID(),planned=success(await maker.plan({inputId:staged.inputId,requestId}));
+  success(await reviewer.review({candidateId:planned.candidateId}));success(await reviewer.approve(planned));
+  const request={candidateId:planned.candidateId,requestId},applied=success(await maker.apply(request));assert.equal(applied.status,'COMMITTED');
+  const {responseStatus,...durable}=applied;assert.equal(responseStatus,'DELIVERED');
+  assert.deepEqual(success(await maker.resume(request)),durable);assert.equal(success(await maker.reconcile(request)).status,'MATCHED');assert.deepEqual(success(await maker.apply(request)),applied);
+  transactions.push({kind:input.kind,request,inputId:staged.inputId,recordedAt:applied.recordedAt,facts:applied.facts,replay:true,resume:true,reconciliation:'MATCHED'});
+  return applied;
+ };
+ const a=await fixture.endpoint(),b=await fixture.sameWard(a),scopeInput=await fixture.scopeInput(a),scopeOut=await publish(scopeInput);
+ assert.equal(scopeOut.facts.length,1);assert.equal(scopeOut.facts[0].owner,'care-organization/ward-nursing-scope');
+ const scopeSet=success(await maker.scopeDefinition({id:scopeOut.facts[0].id}));assert.equal(scopeSet.version,'1');assert.deepEqual(scopeSet.partitions.map(p=>p.sourceAlias),['A','B']);assert.equal(new Set(scopeSet.partitions.map(p=>p.id)).size,2);
+ const left=fixture.entry(a,fixture.partition(scopeSet,[0])),right=fixture.entry(b,fixture.partition(scopeSet,[1]));
+ assert.equal(ORG11_FIELDS.length,14);assert.deepEqual(Object.keys(left.row).sort(),[...ORG11_FIELDS].sort());assert.deepEqual(Object.keys(right.row).sort(),[...ORG11_FIELDS].sort());
+ const created=await publish(await fixture.input([left,right]));assert.equal(created.facts.length,2);
+ const sourceId=created.facts[0].id,rightId=created.facts[1].id,queryRequest={id:sourceId,businessAt:'2026-02-01T00:00:00',recordAsOf:created.recordedAt};
+ const original=success(await maker.exact({id:sourceId,version:'1'})),historical=success(await maker.query(queryRequest));assert.equal(historical.state,'ACTIVE');assert.deepEqual(original.facts.coverageScope,left.coverage);
+ const evaluation=success(await maker.evaluate({applicability:{ward:a.ward,campus:a.campus,purpose:a.purpose},coverage:{kind:'WHOLE_WARD'},validFrom:'2026-01-01T00:00:00',validTo:'2026-03-01T00:00:00',mode:'CURRENT_ADMISSION'}));
+ assert.equal(evaluation.declaredCovered,true);assert.equal(evaluation.primaryCovered,true);assert.equal(evaluation.currentAdmissionCovered,true);assert.equal(evaluation.status,'SATISFIED');
+ const successor=await fixture.sameWard(a),cutover='2026-04-01T00:00:00.000001',incomingBase=fixture.entry(successor,left.coverage),incoming={...incomingBase,row:{...incomingBase.row,valid_from:cutover,handover_rule_ref:'TEST_NURSING_HANDOVER'}};
+ const end=(entry,id,head,at)=>({...entry,action:'END',target:{owner:'care-organization/ward-nursing-coverage',id,expectedHead:head},endAt:at,row:{...entry.row,record_status:'RETIRED'}});
+ const handover=await publish(await fixture.input([end(left,sourceId,'1',cutover),incoming]),verification=>({...verification,rows:verification.rows.map(row=>row.row===2?{...row,handover:{kind:'CONFIRMED_HANDOVER',source:{owner:'care-organization/ward-nursing-coverage',id:sourceId,expectedHead:'1'},successorSourceAlias:incoming.row.ward_nursing_rel_id,successorNursing:successor.nursing,coverage:incoming.coverage,cutover,ruleReference:'TEST_NURSING_HANDOVER',ruleVersion:'TEST_POLICY_ONLY_1',evidenceId:fixture.artifact.artifactId,confirmed:true}}:row)}));
+ assert.equal(handover.facts.length,2);const successorId=handover.facts[1].id;
+ assert.equal(success(await maker.query({id:sourceId,businessAt:cutover})).state,'ENDED');const effectiveHandover=success(await maker.query({id:successorId,businessAt:cutover}));assert.equal(effectiveHandover.state,'ACTIVE');assert.equal(effectiveHandover.handoverStatus,'CONFIRMED_EFFECTIVE');const scheduledHandover=success(await maker.query({id:successorId,businessAt:'2026-04-01T00:00:00.000000'}));assert.equal(scheduledHandover.state,'NOT_EFFECTIVE');assert.equal(scheduledHandover.handoverStatus,'CONFIRMED_SCHEDULED');
+ assert.deepEqual(success(await maker.query(queryRequest)),historical);assert.deepEqual(success(await maker.exact({id:sourceId,version:'1'})),original);
+ const standaloneEnd=await publish(await fixture.input([end(right,rightId,'1','2026-05-01T00:00:00.000001')]));
+ assert.equal(success(await maker.query({id:rightId,businessAt:'2026-05-01T00:00:00.000000'})).state,'ACTIVE');const standaloneEndQuery=success(await maker.query({id:rightId,businessAt:'2026-05-01T00:00:00.000001'}));assert.equal(standaloneEndQuery.state,'ENDED');assert.equal(standaloneEndQuery.handoverStatus,'NOT_COMPLETED');
+ const sourceHistory=success(await maker.history({id:sourceId})),successorHistory=success(await maker.history({id:successorId})),endedHistory=success(await maker.history({id:rightId}));
+ assert.equal(sourceHistory.versions.length,2);assert.equal(sourceHistory.versions[1].action,'END');assert.equal(successorHistory.versions[0].facts.handover.kind,'CONFIRMED_HANDOVER');assert.equal(endedHistory.versions[1].action,'END');assert.equal(endedHistory.versions[0].facts.handover.kind,'NO_HANDOVER_REQUIRED');
+ const outsider=createWardNursingCoverageClient(server.url,'outsider');assert.equal((await outsider.query({id:sourceId})).response.status,403);assert.equal((await outsider.scopeDefinition({id:scopeSet.id})).response.status,403);
+ const final=await inspect(receipt);assert.equal(final.identity.oid,'206108');assert.equal(checkPrefix(migrationFiles(),final.ledger),migrationFiles().length);
+ await deployment.complete();
+ const httpEvidence={gate:'P3_05_PERSISTENT_HTTP',status:'PASS',oid:receipt.oid,currentPrefix:final.ledger.length,actualWorkbenchStartup:true,generatedClientRealLoopback:true,scopeSet,transactions,protectedInput:true,all14Fields:true,independentVerification:true,independentApproval:true,createdFacts:created.facts,handoverFacts:handover.facts,endedFacts:standaloneEnd.facts,handoverQueries:{scheduled:scheduledHandover,effective:effectiveHandover,standaloneEnd:standaloneEndQuery},originalQuery:{request:queryRequest,response:historical},originalExactVersion:original,sourceHistory,successorHistory,endedHistory,originalHistoryPreserved:true,exactReplay:true,resume:true,reconciliation:'MATCHED',unauthorizedRead:403,policy:'TEST POLICY ONLY',hospitalPolicy:'NOT_ADOPTED',FULL:'BLOCKED_DEPENDENCY',clinicalReadiness:'NOT_READY',browser:'NOT_RUN',fullRestart:'NOT_RUN',capacity:'NOT_RUN',formalAcceptance:'NOT_RUN'};
+ writeFileSync(evidence+'.http.json',JSON.stringify(httpEvidence,null,2),{flag:'wx'});
+ console.log(JSON.stringify({gate:httpEvidence.gate,status:'PASS',evidence:evidence+'.http.json'}));
+}finally{await fixture?.close();await server?.close();}

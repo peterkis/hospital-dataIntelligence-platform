@@ -11,3 +11,8 @@ export * from './subject-permission-contracts.js';
 export {openSubjectPermissions,type SubjectPermissionOwner} from './subject-permission-owner.js';
 export * from './unit-ward-contracts.js';
 export {openUnitWardRelations,type UnitWardOwner} from './unit-ward-owner.js';
+
+export * from './ward-nursing-contracts.js';
+export {openWardNursingCoverage,type WardNursingOwner} from './ward-nursing-owner.js';
+
+export type {WardNursingEndpointImpact,WardNursingEndpointImpactInput} from './ward-nursing-impacts.js';

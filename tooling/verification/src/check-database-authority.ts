@@ -5,6 +5,8 @@ import { dirname, extname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
+// Reuse the locked parser workspace; the root TypeScript 7 compiler has no parser API.
+import ts from '../../openapi-generator/node_modules/typescript/lib/typescript.js';
 
 interface TableOwnership {
   readonly schemas: Readonly<Record<string, string>>;
@@ -117,32 +119,7 @@ export async function runDatabaseAuthorityCheck(): Promise<void> {
 
   // Source ownership spans both runtimes; database/type verification above remains
   // bound to the legacy lineage. vNext has its own receipt-bound live checker.
-  const vnextOwnership = JSON.parse(readFileSync(join(ROOT, 'db/vnext/table-ownership.json'), 'utf8')) as TableOwnership & { lineage: string };
-  assert.equal(vnextOwnership.lineage, 'HDIP-MC-VNEXT');
-  const ownerByModule = new Map(
-    Object.entries({ ...ownership.schemas, ...vnextOwnership.schemas }).map(([schema, module]) => [module, schema]),
-  );
-  for (const entry of readdirSync(MODULES, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const ownedSchema = ownerByModule.get(entry.name);
-    assert.ok(ownedSchema, `Module has no declared schema ownership: ${entry.name}`);
-    for (const file of collectTypeScriptFiles(join(MODULES, entry.name))) {
-      const content = readFileSync(file, 'utf8');
-      const patterns = [
-        /\.(?:selectFrom|innerJoin|leftJoin|rightJoin|fullJoin|insertInto|updateTable|deleteFrom)\(['"]([a-z_]+)\./gu,
-        /\b(?:from|join|insert\s+into|update|delete\s+from)\s+([a-z_]+)\./giu,
-      ];
-      for (const pattern of patterns) {
-        for (const match of content.matchAll(pattern)) {
-          assert.equal(
-            match[1],
-            ownedSchema,
-            `Cross-module SQL access in ${relative(ROOT, file)}: ${match[1]} is not owned by ${entry.name}`,
-          );
-        }
-      }
-    }
-  }
+  runSourceDatabaseAuthorityCheck();
 
   runDatabaseTypeVerification({
     repositoryRoot: ROOT,
@@ -159,6 +136,74 @@ export async function runDatabaseAuthorityCheck(): Promise<void> {
     schemaFingerprint,
     status: 'PASSED',
   })}\n`);
+}
+
+export function runSourceDatabaseAuthorityCheck(): void {
+  const ownership = JSON.parse(
+    readFileSync(join(ROOT, 'db/table-ownership.json'), 'utf8'),
+  ) as TableOwnership;
+  const vnextOwnership = JSON.parse(readFileSync(join(ROOT, 'db/vnext/table-ownership.json'), 'utf8')) as TableOwnership & { lineage: string };
+  assert.equal(vnextOwnership.lineage, 'HDIP-MC-VNEXT');
+  const ownerByModule = new Map(
+    Object.entries({ ...ownership.schemas, ...vnextOwnership.schemas }).map(([schema, module]) => [module, schema]),
+  );
+  for (const entry of readdirSync(MODULES, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const ownedSchema = ownerByModule.get(entry.name);
+    assert.ok(ownedSchema, `Module has no declared schema ownership: ${entry.name}`);
+    for (const file of collectTypeScriptFiles(join(MODULES, entry.name))) {
+      const content = readFileSync(file, 'utf8');
+      assertModuleDatabaseAuthority({fileName:file,moduleName:entry.name,ownedSchema,source:content});
+    }
+  }
+}
+
+export function assertModuleDatabaseAuthority(input: {
+  readonly fileName: string;
+  readonly moduleName: string;
+  readonly ownedSchema: string;
+  readonly source: string;
+}): void {
+  const source = withoutTypeScriptComments(input.fileName, input.source);
+  const patterns = [
+    /\.(?:selectFrom|innerJoin|leftJoin|rightJoin|fullJoin|insertInto|updateTable|deleteFrom)\(['"]([a-z_]+)\./gu,
+    /\b(?:from|join|insert\s+into|update|delete\s+from)\s+([a-z_]+)\./giu,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      assert.equal(
+        match[1],
+        input.ownedSchema,
+        `Cross-module SQL access in ${relative(ROOT, input.fileName)}: ${match[1]} is not owned by ${input.moduleName}`,
+      );
+    }
+  }
+}
+
+function withoutTypeScriptComments(fileName: string, source: string): string {
+  const parsed = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const comments = new Map<number, ts.CommentRange>();
+  const visit = (node: ts.Node): void => {
+    const start = node.getStart(parsed);
+    // Only parser-bounded token trivia is a TS comment. The same characters in
+    // strings or raw template portions remain part of the SQL ownership scan.
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(source, node.getFullStart()) ?? []),
+      ...(ts.getTrailingCommentRanges(source, node.getFullStart()) ?? []),
+    ]) {
+      if (range.end <= start) comments.set(range.pos, range);
+    }
+    for (const child of node.getChildren(parsed)) visit(child);
+  };
+  visit(parsed);
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const range of [...comments.values()].sort((left, right) => left.pos - right.pos)) {
+    parts.push(source.slice(cursor, range.pos), source.slice(range.pos, range.end).replace(/[^\r\n]/g, ' '));
+    cursor = range.end;
+  }
+  parts.push(source.slice(cursor));
+  return parts.join('');
 }
 
 export function assertMigrationDateTimeTypesAllowed(fileName: string, source: string): void {

@@ -109,3 +109,35 @@ commit/tree. Do not infer PASS from script availability or this design. Original
 failures and subsequent GREEN are retained; actual restart, Nursing browser and
 formal hospital acceptance are separately NOT_RUN. Hospital policy NOT_ADOPTED;
 TEST POLICY ONLY is the synthetic contract adoption.
+
+## P3-05 follow-on coverage evidence
+
+The original P3-03 NOT_RUN table above remains the P3-03 delivery snapshot.
+P3-05 adds the following executable synthetic CORE assertions in
+`tooling/vnext/p3-05-extended-db.test.ts`; its expanded test inventory and current
+execution requirements are tracked in [the P3-05 runbook](p3-05-ward-nursing-coverage.md).
+Use `npm.cmd run prototype:db:with -- vnext:p3-05:validate` or the populated0196
+`vnext:p3-05:upgrade` wrapper entry. Actual completion requires the candidate's
+full logs, target exit0 and `cleanupPassed=true`; this appendix records scope and
+assertions rather than a final PASS.
+
+| Original acceptance portion | Exact P3-05 test / follow-on assertion |
+| --- | --- |
+| AC01 actual multi-ward configuration | `one Nursing identity may cover multiple Wards in its campus but cannot cross campus by assertion`: one Nursing ID publishes two real Ward coverage facts in its Campus and lists both. |
+| AC04 actual coverage suspension effect | `Nursing pause preserves declared primary coverage and history while precise current-admission gaps block expansion and allow END`: SUSPEND retains the accepted coverage and primary reservation, reports exact current gaps and UNSATISFIED endpoint impacts, retains old-R admission, and permits independently approved END. `same-set scope and period reduction remains possible after Nursing suspension without rewriting the old accepted declaration` adds safe subset/period reduction. |
+| AC05 actual coverage campus consistency | The same multi-Ward test rejects an existing Nursing ID asserted into a foreign Ward/Campus as `CROSS_CAMPUS_POLICY_REQUIRED`; `actual HTTP closed typed anchors reject wrong Owner, unsupported purpose and extraneous fields` separately checks public typed-anchor closure. |
+
+`generated endpoint impacts retain original scope and digest while finite reduction,
+END and cancellation change only current obligations` additionally preserves the
+original accepted pins/scope/digest while projecting finite and empty current
+windows. These follow-on assertions do not alter P3-03's original NOT_RUN entries,
+frozen source materials or their machine gates. Q09/A019 may record only the
+actually evidenced ORG11 relationship portion; hospital policy NOT_ADOPTED,
+clinical NOT_READY, FULL BLOCKED_DEPENDENCY and separate browser/restart/capacity/
+formal acceptance boundaries remain in force.
+
+The finite Scope follow-on assertion is `a finite approved scope set preserves
+covered primary partition prefixes in a longer whole-Ward request`: complete
+Jan–Mar primary partitions must retain their covered prefix while a Jan–Apr
+whole-Ward request reports only the Mar–Apr suffix as a gap. Its actual result
+requires the P3-05 candidate's generated HTTP log; no result is recorded here.

@@ -11,7 +11,7 @@ import {ReadDepartmentAssessmentSchema,ListDepartmentAssessmentsSchema,type Read
 
 export interface DepartmentImpactContext {inputId:string;inputDigest:string;profile:string;campus:'NORTH'|'SOUTH';departmentIds:string[];effectiveAt:string;changeType:DepartmentAssessment['changeType']}
 export interface DepartmentImpactPorts {
- businessUnitsAvailable?:boolean;nursingUnitsAvailable?:boolean;wardsAvailable?:boolean;capabilitiesAvailable?:boolean;unitWardRelationsAvailable?:boolean;
+ businessUnitsAvailable?:boolean;nursingUnitsAvailable?:boolean;wardsAvailable?:boolean;capabilitiesAvailable?:boolean;unitWardRelationsAvailable?:boolean;wardNursingCoveragesAvailable?:boolean;
  references(scope:CatalogTransactionScope,actor:string,departments:string[],campus:string):Promise<ImpactReference[]>;
  referenceAccess(scope:CatalogTransactionScope,actor:string,reference:ImpactReference,campus:string):Promise<void>;
  replacement(scope:CatalogTransactionScope,actor:string,departmentId:string):Promise<string|null>;
@@ -51,7 +51,8 @@ export function departmentImpacts(
    ...(ports.businessUnitsAvailable?[{owner:'BUSINESS_UNIT' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'BUSINESS_UNIT' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
    ...(ports.nursingUnitsAvailable?[{owner:'NURSING_UNIT' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'NURSING_UNIT' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
    ...(ports.wardsAvailable?[{owner:'WARD' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'WARD' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),...(ports.capabilitiesAvailable?[{owner:'UNIT_CAPABILITY' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'UNIT_CAPABILITY' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
-   ...(ports.unitWardRelationsAvailable?[{owner:'UNIT_WARD_RELATION' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'UNIT_WARD_RELATION' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),...(['PERSONNEL','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
+   ...(ports.unitWardRelationsAvailable?[{owner:'UNIT_WARD_RELATION' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'UNIT_WARD_RELATION' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),
+   ...(ports.wardNursingCoveragesAvailable?[{owner:'WARD_NURSING_COVERAGE' as const,status:'EVALUATED' as const,reason:'OWNER_AVAILABLE' as const}]:[{owner:'WARD_NURSING_COVERAGE' as const,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const}]),...(['PERSONNEL','PATIENT','ACCOUNT','INVENTORY','FINANCE','CONSUMER'] as const).map(owner=>({owner,status:'NOT_EVALUABLE' as const,reason:'OWNER_NOT_IMPLEMENTED' as const})),
   ];
   const basis:Omit<DepartmentAssessment,'dependencyDigest'>={target,departmentIds:[...context.departmentIds].sort(),inputId:context.inputId,inputDigest:context.inputDigest,campus:context.campus,changeType,effectiveAt,ruleVersion:'DEPARTMENT_IMPACT_V1' as const,coverage,references};
   const assessment={...basis,dependencyDigest:createHash('sha256').update(canonicalPlan(basis)).digest('hex')};
@@ -93,10 +94,10 @@ export function departmentImpacts(
 export function projectImpactReference(ref:ImpactReference,effectiveAt:string,changeType:DepartmentAssessment['changeType'],replacementAt:string|null):void{
    const exitAt=['SPLIT','MERGE','SUSPEND','DEPRECATE'].includes(changeType)?effectiveAt:replacementAt;
    const boundary=exitAt??effectiveAt;
-   const from=ref.currentPeriod.from>boundary?ref.currentPeriod.from:boundary,to=ref.currentPeriod.to;
-   const active=ref.current&&ref.currentReferencesDepartment&&!['RETRACT','CLOSED','REVOKED'].includes(ref.currentAction)&&ref.currentTargetId===ref.departmentId&&(to===null||to>from);
+   const periods=(ref.currentPeriods??[ref.currentPeriod]).map(p=>({from:p.from>boundary?p.from:boundary,to:p.to})).filter(p=>p.to===null||p.to>p.from);
+   const active=ref.current&&ref.currentReferencesDepartment&&!['RETRACT','CLOSED','REVOKED'].includes(ref.currentAction)&&ref.currentTargetId===ref.departmentId&&periods.length>0;
    ref.change=active||ref.versionId!==ref.currentVersionId?'CHANGED':'UNCHANGED';ref.constraint='SATISFIED';ref.affectedSpans=[];
    ref.reason=!active?'HISTORICAL_REFERENCE':exitAt?'REFERENCE_EXITED':'LABEL_CHANGED';
-   if((ref.owner==='WARD'||ref.owner==='UNIT_CAPABILITY'||ref.owner==='UNIT_WARD_RELATION'))ref.current=active;
-   if(active&&exitAt){ref.constraint='UNSATISFIED';ref.affectedSpans=[{from,to}];}
+   if((ref.owner==='WARD'||ref.owner==='UNIT_CAPABILITY'||ref.owner==='UNIT_WARD_RELATION'||ref.owner==='WARD_NURSING_COVERAGE'))ref.current=active;
+   if(active&&exitAt){ref.constraint='UNSATISFIED';ref.affectedSpans=periods;}
 }

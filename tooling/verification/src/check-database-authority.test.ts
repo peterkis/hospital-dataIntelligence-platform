@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DATABASE_AUTHORITY_VERIFY_SCRIPT,
   DATABASE_AUTHORITY_WORKSPACE,
+  assertModuleDatabaseAuthority,
   assertMigrationDateTimeTypesAllowed,
   databaseAuthorityChildEnvironment,
   findForbiddenDatabaseColumns,
@@ -20,6 +21,39 @@ import { loadPodmanRuntimeAuthority } from './runtime/podman-runtime-authority.j
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const canonicalDatabaseUrl =
   'postgresql://hdi_phase01:synthetic-password@127.0.0.1:55432/hdi_phase01';
+
+describe('TypeScript SQL module ownership', () => {
+  const check = (source:string) => assertModuleDatabaseAuthority({
+    fileName:resolve(repositoryRoot,'apps/governance-api/src/modules/organization-master/example.ts'),
+    moduleName:'organization-master',ownedSchema:'organization_master',source,
+  });
+
+  it('ignores English SQL-like text in TypeScript line, block and trailing comments', () => {
+    expect(() => check(`
+      // their exact contracts and governance dimensions cannot disappear from auth.
+      const owned = db.selectFrom('organization_master.campus');
+      owned.execute(/* FROM auth.account is only a TypeScript comment. */);
+      // FROM auth.account at the end of the file.
+    `)).not.toThrow();
+  });
+
+  it('excludes actual TypeScript comments inside template interpolation', () => {
+    expect(() => check('const owned = sql`SELECT ${1 /* cannot disappear from auth. */} FROM organization_master.campus`;'))
+      .not.toThrow();
+  });
+
+  it.each([
+    ['Kysely access', 'db.selectFrom("auth.account");'],
+    ['SQL template', 'sql`SELECT * FROM auth.account`;'],
+    ['literal SQL', 'const query = "SELECT * FROM auth.account";'],
+    ['string block-comment delimiters around a real call', 'const prefix = "/*"; db.selectFrom("auth.account"); const suffix = "*/";'],
+    ['template block-comment delimiters around real SQL', 'const prefix = `/*`; sql`SELECT * FROM auth.account`; const suffix = `*/`;'],
+    ['string line-comment delimiter before a real call', 'const marker = "//"; db.selectFrom("auth.account");'],
+    ['template interpolation comment before real foreign SQL', 'sql`SELECT ${1 /* FROM price_list.entry */} FROM auth.account`;'],
+  ])('rejects %s without stripping string or template contents', (_case, source) => {
+    expect(() => check(source)).toThrow(/auth is not owned by organization-master/u);
+  });
+});
 
 describe('database local date-time type authority', () => {
   it.each([

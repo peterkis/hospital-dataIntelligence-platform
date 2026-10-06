@@ -35,8 +35,9 @@ vi.mock('./p3-03-provisioning.mjs',()=>({assertNursingUnitProvisioned:vi.fn(asyn
 vi.mock('./p3-08-provisioning.mjs',()=>({assertUnitCapabilityProvisioned:vi.fn(async()=>{state.events.push('capability-provisioned');})}));
 vi.mock('./p3-09-provisioning.mjs',()=>({assertSubjectsProvisioned:vi.fn(async()=>{state.events.push('subjects-provisioned');})}));
 vi.mock('./p3-04-provisioning.mjs',()=>({assertUnitWardProvisioned:vi.fn(async()=>{state.events.push('unit-ward-provisioned');})}));
+vi.mock('./p3-05-provisioning.mjs',()=>({provisionWardNursing:vi.fn(()=>{state.events.push('ward-nursing-provision');}),assertWardNursingProvisioned:vi.fn(async()=>{state.events.push('ward-nursing-provisioned');})}));
 vi.mock('./p3-02-provisioning.mjs',()=>({assertWardProvisioned:vi.fn(async()=>{state.events.push('ward-provisioned');})}));
-vi.mock('../../apps/governance-api/src/modules/care-organization/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/care-organization/index.ts')>();return {...real,openUnitWardRelations:vi.fn(()=>{state.events.push('unit-ward');return {close:async()=>{}};}),openBusinessUnit:vi.fn(()=>{state.events.push('business-unit');return {close:async()=>{}};}),openNursingUnit:vi.fn(()=>{state.events.push('nursing-unit');return {close:async()=>{}};}),openUnitCapabilities:vi.fn(()=>{state.events.push('unit-capability');return {close:async()=>{}};}),openWard:vi.fn(()=>{state.events.push('ward');return {close:async()=>{}};})};});
+vi.mock('../../apps/governance-api/src/modules/care-organization/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/care-organization/index.ts')>();return {...real,openWardNursingCoverage:vi.fn(()=>{state.events.push('ward-nursing');return {close:async()=>{}};}),openUnitWardRelations:vi.fn(()=>{state.events.push('unit-ward');return {close:async()=>{}};}),openBusinessUnit:vi.fn(()=>{state.events.push('business-unit');return {close:async()=>{}};}),openNursingUnit:vi.fn(()=>{state.events.push('nursing-unit');return {close:async()=>{}};}),openUnitCapabilities:vi.fn(()=>{state.events.push('unit-capability');return {close:async()=>{}};}),openWard:vi.fn(()=>{state.events.push('ward');return {close:async()=>{}};})};});
 vi.mock('./hierarchy-provisioning.mjs',async importOriginal=>{
  const real=await importOriginal<typeof import('./hierarchy-provisioning.mjs')>();
  return {...real,assertHierarchyProvisioned:vi.fn(async()=>{state.events.push('hierarchy-provisioned');})};
@@ -94,7 +95,7 @@ for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120
 });
 test('complete checksummed release enables workspace and takes one ledger snapshot',async()=>{
  const runtime=await startWorkbench({persistent:true});
- try{expect(state.events[0]).toBe('inspect');expect(state.events.filter(v=>v==='inspect')).toHaveLength(1);expect(state.events).toContain('workspace');expect(state.events).toContain('workspace-routes');expect(state.events.indexOf('evolution-provisioned')).toBeLessThan(state.events.indexOf('listen'));expect(state.events.at(-1)).toBe('listen');}finally{await runtime.close();}
+ try{expect(state.events[0]).toBe('inspect');expect(state.events.filter(v=>v==='inspect')).toHaveLength(1);expect(state.events).toContain('workspace');expect(state.events).toContain('workspace-routes');expect(state.events.indexOf('evolution-provisioned')).toBeLessThan(state.events.indexOf('listen'));expect(state.events).toContain('ward-nursing-provisioned');expect(state.events).toContain('ward-nursing');expect(state.events.indexOf('ward-nursing-provisioned')).toBeLessThan(state.events.indexOf('ward-nursing'));expect(state.events.indexOf('ward-nursing')).toBeLessThan(state.events.indexOf('listen'));expect(state.events.at(-1)).toBe('listen');}finally{await runtime.close();}
 });
 test('missing evolution provisioning prevents the repaired persistent service from listening',async()=>{
  const {assertOrganizationEvolutionsProvisioned}=await import('./organization-evolution-provisioning.mjs');
@@ -164,7 +165,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0196_unit_ward_source_windows');
+ expect(files.at(-1)?.id).toBe('0199_ward_nursing_finite_impacts');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{
@@ -204,4 +205,12 @@ test('missing subject authority prevents the new Owner from being served',async(
 test('missing Unit Ward authority prevents business Owner construction and listening',async()=>{
  const {assertUnitWardProvisioned}=await import('./p3-04-provisioning.mjs');vi.mocked(assertUnitWardProvisioned).mockRejectedValueOnce(new Error('UNIT_WARD_OWNER_NOT_PROVISIONED'));
  await expect(startWorkbench({persistent:true})).rejects.toThrow('UNIT_WARD_OWNER_NOT_PROVISIONED');expect(state.events).not.toContain('listen');expect(state.events).not.toContain('organization');
+});
+
+test('missing Ward Nursing authority prevents business Owner construction and listening',async()=>{
+ const {assertWardNursingProvisioned}=await import('./p3-05-provisioning.mjs');
+ vi.mocked(assertWardNursingProvisioned).mockRejectedValueOnce(new Error('WARD_NURSING_OWNER_NOT_PROVISIONED'));
+ await expect(startWorkbench({persistent:true})).rejects.toThrow('WARD_NURSING_OWNER_NOT_PROVISIONED');
+ expect(assertWardNursingProvisioned).toHaveBeenCalledTimes(1);
+ expect(state.events).not.toContain('organization');expect(state.events).not.toContain('business-unit');expect(state.events).not.toContain('ward-nursing');expect(state.events).not.toContain('catalog');expect(state.events).not.toContain('listen');
 });
