@@ -213,6 +213,11 @@ test.each(['CSV','JSON','XLSX'] as const)('astra review F6: %s reordered file re
  expect(received.input).toBeNull();expect(received.issues).toContainEqual(expect.objectContaining({row:format==='JSON'?1:2,field:'valid_from',code:'LOCAL_TIME_REQUIRED'}));
  const retained=await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:received.validation.run.runId});expect(retained.evaluation.issues).toContainEqual(expect.objectContaining({field:'valid_from',code:'LOCAL_TIME_REQUIRED'}));expect(retained.evaluation.decision).toBe('FAIL');
 });
+test('astra review F6: coordinate-less missing-field errors retain an empty field in public and saved reports',async()=>{
+ const s=await f.endpoint(),e=f.entry(s),{unit_id:_unit,ward_id:_ward,...row}=e.row,{row:_row,...operation}=e,bytes=Buffer.from(JSON.stringify([row]));
+ const received=await f.owner.receiveFile('maker',{requestId:randomUUID(),fileRequestId:randomUUID(),job:{action:'CREATE',scope:'SYNTHETIC',requestId:randomUUID(),reason:'TEST_MISSING_FIELD_COORDINATES',profile:'CORE',contractId:f.contract!.id,contractVersionId:f.contract!.versionId,input:{kind:'FILE',format:'JSON',parserPolicy:'STRICT_UNIT_WARD_V1'}},campus:'NORTH',timePolicy:'LOCAL',retentionSeconds:7200,operations:[operation]},bytes),expected=[{row:1,field:'',code:'FIELD_CONTRACT'},{row:1,field:'',code:'TEXT_CELL_REQUIRED'},{row:1,field:'',code:'TEXT_CELL_REQUIRED'}];
+ expect(received.input).toBeNull();expect(received.issues.map(({row,field,code})=>({row,field,code}))).toEqual(expected);const saved=await catalog.explainIssue('maker',{scope:'SYNTHETIC',campus:'NORTH',purpose:'IDENTITY_VERIFY',runId:received.validation.run.runId});expect(saved.evaluation.issues.map(({row,field,code})=>({row,field,code}))).toEqual(expected);
+});
 test.each([false,true])('astra review F7: --dispose removes the exact owned role with database already disposed=%s',async alreadyDisposed=>{
  const owned=createTemporary('P3-04');let session:Awaited<ReturnType<typeof createValidationOwnerSession>>|undefined;
  try{await migrate(owned.receipt,migrationFiles().slice(0,2));session=await createValidationOwnerSession(owned.receipt);validationKeys(owned.receipt);if(alreadyDisposed)dropTemporary(owned.receipt);
