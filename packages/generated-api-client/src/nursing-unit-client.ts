@@ -7,6 +7,7 @@ export function createNursingUnitClient(baseUrl:string,actor:string){
   stage:(body:operations['stageNursingUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/inputs',{body}),
   readInput:(body:operations['readNursingUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/inputs/read',{body}),
   verify:(body:operations['verifyNursingUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/verify',{body}),
+  confirmCoverageHandover:(body:operations['confirmNursingCoverageHandover']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/handover/confirm',{body}),
   preview:(body:operations['previewNursingUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/preview',{body}),
   plan:(body:operations['planNursingUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/plan',{body}),
   withdraw:(body:operations['withdrawNursingUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/nursing-units/withdraw',{body}),

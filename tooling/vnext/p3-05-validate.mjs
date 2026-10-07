@@ -13,7 +13,7 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {disposeWardNursingValidation} from './p3-05-disposal.mjs';
 const args=process.argv.slice(2);if(args[0]==='--dispose'){
  if(args.length!==2||!/^\.runtime\/vnext\/fresh\/hdi_mc_vnext_[a-f0-9]{16}\.json$/.test(args[1]))throw new Error('CLOSED_COMMAND_REQUIRED');const previous=JSON.parse(readFileSync(args[1],'utf8'));console.log(JSON.stringify(disposeWardNursingValidation(previous)));process.exit(0);
-}if(args.some(a=>!['--generate','--upgrade'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
+}if(args.some(a=>!['--generate','--upgrade','--handover'].includes(a)))throw new Error('CLOSED_COMMAND_REQUIRED');
 const owned=createTemporary('P3-05');let session;
 const run=(command,environment={})=>spawnSync(process.execPath,command,{env:{...process.env,...environment},stdio:'inherit',windowsHide:true});
 const grant=()=>{grantOrganization(owned.receipt,session.receipt.role);grantDepartment(owned.receipt,session.receipt.role);peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION governance_catalog.operating_catalog(text,jsonb,timestamp,timestamp,timestamp),governance_catalog.department_lifecycle_assessment(text,text) TO ${session.receipt.role};`);};
@@ -41,10 +41,11 @@ try{
  session??=await createValidationOwnerSession(owned.receipt);grant();
  if(args.includes('--generate'))assert.equal(spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-generate',owned.receiptPath],{stdio:'inherit',windowsHide:true}).status,0);
  for(const command of [['tooling/vnext/managed.mjs','types-verify',owned.receiptPath],['tooling/vnext/authority.mjs',owned.receiptPath]])assert.equal(run(command).status,0);
- for(const suite of ['tooling/vnext/p3-05-db.test.ts','tooling/vnext/p3-05-extended-db.test.ts']){
+ const suites=args.includes('--handover')?['tooling/vnext/p3-05-handover-db.test.ts']:['tooling/vnext/p3-05-db.test.ts','tooling/vnext/p3-05-extended-db.test.ts','tooling/vnext/p3-05-handover-db.test.ts'];
+ for(const suite of suites){
   const result=spawnSync(process.execPath,['node_modules/vitest/vitest.mjs','run',suite,'--config','tooling/vnext/vitest.p3-05-db.config.ts','--reporter=verbose'],{env:{...process.env,...environment(),VNEXT_P3_05_UPGRADED:before?'1':'0'},stdio:'inherit',windowsHide:true});
   if(result.status!==0){process.exitCode=result.status??1;break;}
  }
  process.exitCode??=0;
- console.log(JSON.stringify({gate:'P3-05',mode:before?'0196_TO_CURRENT':'FRESH',migrations:(await inspect(owned.receipt)).ledger.length,exit:process.exitCode}));
+ console.log(JSON.stringify({gate:'P3-05',mode:before?'0196_TO_CURRENT':'FRESH',suites:args.includes('--handover')?'HANDOVER_FOCUSED':'CORE_EXTENDED_HANDOVER',migrations:(await inspect(owned.receipt)).ledger.length,exit:process.exitCode}));
 }catch(error){session??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(session)dropValidationOwnerSession(session);removeValidationKeys(owned.receipt);}

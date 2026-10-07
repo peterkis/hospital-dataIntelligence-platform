@@ -18,6 +18,8 @@
 | `npm.cmd run vnext:p3-05:typecheck` | 票内 TypeScript 编译检查；退出 0。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-05:validate` | 创建自有临时库，安装完整当前迁移，核对生成 DB 类型及数据库权限，执行 Owner/HTTP/受限 SQL 矩阵，再处置自有库、角色和密钥。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-05:upgrade` | 用本地 Git 对象的离线归档及原始 Catalog/Owner 在 0196 建立真实 Ward、Nursing、UnitWard 事实，再升级；逐项核对旧行、旧账本、密钥、公共历史、精确版本及原 B/R 查询。 |
+| `npm.cmd run prototype:db:with -- vnext:p3-05:handover` | 专项真实 Owner、生成 HTTP 与受限 SQL 护理确认权限反例；这是专项检查，不替代完整矩阵。 |
+| `npm.cmd run prototype:db:with -- vnext:p3-05:handover:upgrade` | 准确 b6515b22/0199 离线源码提交无新确认依据的旧交接并冻结待发候选，升级0200；核对旧行、账本、密钥、历史/B-R/Apply/resume/MATCHED 原样及无回填，旧待发候选须补确认并重新冻结。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-05:regression` | 顺序运行脚本内的全部受影响检查，分别保留日志；全部退出 0 才是完整回归通过。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-05:deploy` | 保留库前向升级、角色配置、实际工作台启动；生成客户端通过真实 loopback HTTP 完成 Scope 注册、互斥分区覆盖、确认交接、独立 END、历史读取及恢复核验。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-05:preservation` | 只读比对原 0196 部署快照；每个原始行哈希及其重复数量、旧账本、密钥字节和 OID 均须保留。 |
@@ -68,8 +70,9 @@ npm.cmd run prototype:db:with -- vnext:p3-05:validate --dispose .runtime/vnext/f
 [core](../../tooling/vnext/p3-05-db.test.ts) 和
 [extended](../../tooling/vnext/p3-05-extended-db.test.ts)，配置为
 [vitest.p3-05-db.config.ts](../../tooling/vnext/vitest.p3-05-db.config.ts)。
-下列 core 8、extended 56 是当前测试定义的展开数量，不是通过数。
-完整结论须关联当前候选 SHA/tree、两套 verbose 日志和包装器最终记录；
+同时执行 [handover](../../tooling/vnext/p3-05-handover-db.test.ts) 的护理确认专项。
+下列 core 8、extended 56、handover 9 是当前测试定义的展开数量，不是通过数。
+完整结论须关联当前候选 SHA/tree、三套 verbose 日志和包装器最终记录；
 升级保留、部署、回归及静态检查各自提供独立证据。
 
 | 核心编号 | core 中的实际测试名称 | 对应要求与补充扩展编号 |
@@ -144,6 +147,27 @@ Type.Omit 的闭合选项须显式保留，ScopeSet响应同样闭合；OpenAPI�
 官方单向生成器更新。实际413 HTTP与500源码分支/声明核对分开记录，静态声明
 不是已运行500业务错误的证明。生成物正文与全部变更应独立读取，生成器一致性
 PASS也不能替代该静态审阅。
+
+护理确认由 `POST /api/vnext/nursing-units/handover/confirm` 的护理 Owner 独立处理，
+生成客户端调用 `confirmCoverageHandover`。请求绑定已接收覆盖输入的 ID、摘要、
+原输入行及完整交接，返回不可变确认 ID/摘要；覆盖核验在 CONFIRMED_HANDOVER
+中引用 `nursingConfirmation`。确认须护理 REVIEW、当前 HUMAN、与输入提交人底层
+身份分离；护理 READ 和覆盖 VERIFY 均不足以签认。新 Apply 在同一事务重新核验
+确认人的当前权限、身份、准确依据与材料。0200 为前向迁移，旧已提交事实及原
+结果不补写确认，恢复仍按当前调用方访问权检查。待发布旧候选需补确认并重建
+冻结候选。单独安全 END 不要求新的护理交接确认。
+
+| 护理确认专项 | 实际动作与断言 |
+| --- | --- |
+| H01 | 覆盖 VERIFY 加护理 READ 无法确认及提交切换；旧关系保持单版本。 |
+| H02 | 覆盖核验 `confirmed:true` 无护理依据拒绝；受限签名 SQL 缺依据亦拒绝。 |
+| H03 | 真实护理 HTTP 准确确认、同授权核验人组合角色、原子 END/CREATE；撤护理 REVIEW 后已提交结果恢复及安全 END 可用。 |
+| H04 | 同底层人账号别名及实际 SERVICE 身份拒绝护理确认，恢复 HUMAN 后正向确认。 |
+| H05 | 批准冻结后撤护理 REVIEW，Owner 与受限签名 SQL 均整批拒绝，无结果及半个切换。 |
+| H06 | 独立护理确认人仅持护理 REVIEW 与准确读取权限；仅该人变 SERVICE 后拒绝，覆盖核验人仍 HUMAN。 |
+| H07 | 错原输入行、接收方、输入、摘要及篡改确认依据拒绝，正确依据正向提交。 |
+| H08 | 真实 XLSX CREATE 在输入首行时仍按原核验行绑定；END 排序及物理源行不改确认语义。内部 helper/base 与确认表的实际应用/PUBLIC 权限拒绝。 |
+| H09 | 已独立 END 的当前头允许同点再次 END 加准确确认的原子接替；不得延后历史最早 END，原 CREATE/END 精确事实保留。 |
 
 矩阵之外仍须单独核对 fresh/真实 populated0196 upgrade 的生成类型与数据库权限、
 根 typecheck/build、契约、模块边界、完整启动及受影响回归；保留部署必须另取

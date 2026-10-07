@@ -202,6 +202,26 @@ export interface CareOrganizationNursingCode {
   unit_id: string;
 }
 
+export interface CareOrganizationNursingHandoverConfirmation {
+  actor: string;
+  binding: Json;
+  campus_id: string;
+  digest: string;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  material_digest: string;
+  material_fingerprint: string;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  scope: string;
+  source_nursing_id: string;
+  source_version_id: string;
+  successor_nursing_id: string;
+  ward_id: string;
+}
+
 export interface CareOrganizationNursingInput {
   campus_ids: string[];
   digest: string;
@@ -2020,6 +2040,7 @@ export interface DB {
   "care_organization.nursing_binding_version": CareOrganizationNursingBindingVersion;
   "care_organization.nursing_change": CareOrganizationNursingChange;
   "care_organization.nursing_code": CareOrganizationNursingCode;
+  "care_organization.nursing_handover_confirmation": CareOrganizationNursingHandoverConfirmation;
   "care_organization.nursing_input": CareOrganizationNursingInput;
   "care_organization.nursing_unit": CareOrganizationNursingUnit;
   "care_organization.nursing_unit_binding": CareOrganizationNursingUnitBinding;

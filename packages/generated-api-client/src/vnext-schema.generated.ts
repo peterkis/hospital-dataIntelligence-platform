@@ -4308,6 +4308,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/nursing-units/handover/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmNursingCoverageHandover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/nursing-units/preview": {
         parameters: {
             query?: never;
@@ -59342,6 +59358,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -59546,6 +59586,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -59633,6 +59697,180 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    confirmNursingCoverageHandover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    inputId: string;
+                    inputDigest: string;
+                    row: number;
+                    handover: {
+                        /** @enum {string} */
+                        kind: "CONFIRMED_HANDOVER";
+                        source: {
+                            /** @enum {string} */
+                            owner: "care-organization/ward-nursing-coverage";
+                            id: string;
+                            expectedHead: string;
+                        };
+                        successorSourceAlias: string;
+                        successorNursing: {
+                            /** @enum {string} */
+                            owner: "care-organization/nursing";
+                            id: string;
+                        };
+                        coverage: {
+                            /** @enum {string} */
+                            kind: "WHOLE_WARD";
+                        } | {
+                            /** @enum {string} */
+                            kind: "PARTITIONS";
+                            scopeSetId: string;
+                            version: string;
+                            partitionIds: string[];
+                        };
+                        cutover: string;
+                        ruleReference: string;
+                        ruleVersion: string;
+                        evidenceId: string;
+                        /** @enum {boolean} */
+                        confirmed: true;
+                    };
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        confirmationId: string;
+                        digest: string;
+                        recordedAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -59747,6 +59985,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -59826,6 +60088,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -59928,6 +60214,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -60003,6 +60313,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -60090,6 +60424,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -60213,6 +60571,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -60325,6 +60707,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -60401,6 +60807,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -60564,6 +60994,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -60715,6 +61169,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -60824,6 +61302,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -60980,6 +61482,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -61150,6 +61676,30 @@ export interface operations {
                 };
             };
             /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -61239,6 +61789,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -61351,6 +61925,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -61587,6 +62185,30 @@ export interface operations {
             };
             /** @description Default Response */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -75288,6 +75910,10 @@ export interface operations {
                             ruleVersion: string;
                             evidenceId: string;
                             confirmed: boolean;
+                            nursingConfirmation?: {
+                                id: string;
+                                digest: string;
+                            };
                         } | {
                             /** @enum {string} */
                             kind: "UNKNOWN";
@@ -76550,6 +77176,10 @@ export interface operations {
                                     ruleVersion: string;
                                     evidenceId: string;
                                     confirmed: boolean;
+                                    nursingConfirmation?: {
+                                        id: string;
+                                        digest: string;
+                                    };
                                 } | {
                                     /** @enum {string} */
                                     kind: "UNKNOWN";
@@ -76804,6 +77434,10 @@ export interface operations {
                                     ruleVersion: string;
                                     evidenceId: string;
                                     confirmed: boolean;
+                                    nursingConfirmation?: {
+                                        id: string;
+                                        digest: string;
+                                    };
                                 } | {
                                     /** @enum {string} */
                                     kind: "UNKNOWN";
@@ -77032,6 +77666,10 @@ export interface operations {
                                 ruleVersion: string;
                                 evidenceId: string;
                                 confirmed: boolean;
+                                nursingConfirmation?: {
+                                    id: string;
+                                    digest: string;
+                                };
                             } | {
                                 /** @enum {string} */
                                 kind: "UNKNOWN";
@@ -77261,6 +77899,10 @@ export interface operations {
                                     ruleVersion: string;
                                     evidenceId: string;
                                     confirmed: boolean;
+                                    nursingConfirmation?: {
+                                        id: string;
+                                        digest: string;
+                                    };
                                 } | {
                                     /** @enum {string} */
                                     kind: "UNKNOWN";
@@ -77370,6 +78012,10 @@ export interface operations {
                                     ruleVersion: string;
                                     evidenceId: string;
                                     confirmed: boolean;
+                                    nursingConfirmation?: {
+                                        id: string;
+                                        digest: string;
+                                    };
                                 } | {
                                     /** @enum {string} */
                                     kind: "UNKNOWN";
@@ -77629,6 +78275,10 @@ export interface operations {
                                         ruleVersion: string;
                                         evidenceId: string;
                                         confirmed: boolean;
+                                        nursingConfirmation?: {
+                                            id: string;
+                                            digest: string;
+                                        };
                                     } | {
                                         /** @enum {string} */
                                         kind: "UNKNOWN";
@@ -77855,6 +78505,10 @@ export interface operations {
                                 ruleVersion: string;
                                 evidenceId: string;
                                 confirmed: boolean;
+                                nursingConfirmation?: {
+                                    id: string;
+                                    digest: string;
+                                };
                             } | {
                                 /** @enum {string} */
                                 kind: "UNKNOWN";

@@ -4,9 +4,10 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {prepareWorkspaceDeployment} from './p1-06-deployment.mjs';
 import {readReceipt,inspect,checkPrefix,migrationFiles} from './lineage.mjs';
 import {provisionWardNursing,assertWardNursingProvisioned} from './p3-05-provisioning.mjs';
+import {provisionNursingUnit,assertNursingUnitProvisioned} from './p3-03-provisioning.mjs';
 import {startWorkbench} from './workbench-runtime.mjs';
 import {wardNursingFixture} from './p3-05-fixture.ts';
-import {createWardNursingCoverageClient} from '../../packages/generated-api-client/src/index.ts';
+import {createWardNursingCoverageClient,createNursingUnitClient} from '../../packages/generated-api-client/src/index.ts';
 import {ORG11_FIELDS} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 
 if(process.argv.length!==2)throw new Error('CLOSED_COMMAND_REQUIRED');
@@ -17,15 +18,23 @@ const deployment=await prepareWorkspaceDeployment({evidenceTask:'p3-05'}),{recei
 const service=JSON.parse(readFileSync('.runtime/vnext/p0-09/owner-service.json','utf8'));let server,fixture;
 const success=response=>{assert.equal(response.response.status,200,response.error?.code);assert.ok(response.data);return response.data;};
 try{
+ provisionNursingUnit(receipt,service.role,provider);await assertNursingUnitProvisioned(connection,provider);
  provisionWardNursing(receipt,service.role,provider);await assertWardNursingProvisioned(connection,provider);
  server=await startWorkbench({persistent:true,port:0});
  fixture=await wardNursingFixture(receipt,service.role,server.catalog,provider,connection,true);
  const maker=createWardNursingCoverageClient(server.url,'maker'),reviewer=createWardNursingCoverageClient(server.url,'reviewer');
+ const nursingReviewer=createNursingUnitClient(server.url,'reviewer');
  const transactions=[];
  const publish=async(input,transform=verification=>verification)=>{
   const staged=success(await maker.stage(input));
   assert.deepEqual(success(await maker.readInput({inputId:staged.inputId})),input);
-  success(await reviewer.verify(transform(fixture.verification(input,staged))));
+  const verification=transform(fixture.verification(input,staged));
+  for(const row of verification.rows)if(row.handover.kind==='CONFIRMED_HANDOVER'){
+   const {nursingConfirmation:_legacy,...handover}=row.handover;
+   const confirmation=success(await nursingReviewer.confirmCoverageHandover({requestId:randomUUID(),inputId:staged.inputId,inputDigest:staged.digest,row:row.row,handover,reason:'TEST Nursing Owner confirms responsibility handover through generated HTTP client'}));
+   row.handover={...handover,nursingConfirmation:{id:confirmation.confirmationId,digest:confirmation.digest}};
+  }
+  success(await reviewer.verify(verification));
   const preview=success(await maker.preview({inputId:staged.inputId}));assert.equal(preview.decision,'PASS',preview.issues.map(i=>i.code).join(','));
   const requestId=randomUUID(),planned=success(await maker.plan({inputId:staged.inputId,requestId}));
   success(await reviewer.review({candidateId:planned.candidateId}));success(await reviewer.approve(planned));

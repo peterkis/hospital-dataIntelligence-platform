@@ -165,7 +165,7 @@ test('owner receipt identity mismatch cannot grant functions',async()=>{
 test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
- expect(files.at(-1)?.id).toBe('0199_ward_nursing_finite_impacts');
+ expect(files.at(-1)?.id).toBe('0200_nursing_owner_handover_confirmation');
 });
 
 test('0080 replaces the installed 0061 suspension guard rather than the obsolete 0057 body',()=>{
