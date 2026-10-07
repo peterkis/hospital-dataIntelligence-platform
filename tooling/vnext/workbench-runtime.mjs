@@ -63,7 +63,9 @@ import {grantHierarchyFunctions,assertHierarchyProvisioned} from './hierarchy-pr
 import {openOrganization,openCampus,openOperatingRelations,openOrganizationImport,openOrganizationWorkspace} from '../../apps/governance-api/src/modules/organization-master/index.ts';
 import {actor as syntheticActor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
 
-
+/**
+ * @param {{persistent?: boolean, upgrade?: boolean, finite?: boolean, port?: number, validationContext?: unknown}} [options]
+ */
 export async function startWorkbench({
   persistent = false,
   upgrade = false,

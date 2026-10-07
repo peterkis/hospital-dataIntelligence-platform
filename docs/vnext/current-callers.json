@@ -60,6 +60,11 @@
         "path": "tooling/vnext/p3-07-extended-db.test.ts",
         "operations": ["stageLocationUseInput", "readLocationUseInput", "verifyLocationUseInput", "previewLocationUseInput", "planLocationUseInput", "reviewLocationUseCandidate", "approveLocationUseCandidate", "applyLocationUseCandidate", "resumeLocationUseOutcome", "reconcileLocationUseOutcome", "getLocationUseAsOf", "getLocationUseHistory", "getLocationUseVersion", "receiveLocationUseFile", "commandLocationUsageType", "readLocationUsageType", "historyLocationUsageType", "listLocationUsageTypes"],
         "ownerReadAssertions": [{"ownerMethod": "location-master/location-use.list", "correspondingOperation": "listLocationUses", "transport": "OWNER_IN_PROCESS"}]
+      },
+      {
+        "path": "tooling/vnext/p3-07-review1-db.test.ts",
+        "operations": ["stageLocationUseInput","readLocationUseInput","verifyLocationUseInput","previewLocationUseInput","planLocationUseInput","reviewLocationUseCandidate","approveLocationUseCandidate","applyLocationUseCandidate","getLocationUseVersion","receiveLocationUseFile","evaluateLocationUseWindow"],
+        "ownerReadAssertions": [{"ownerMethod":"location-master/location-use.list","correspondingOperation":"listLocationUses","transport":"OWNER_IN_PROCESS"},{"ownerMethod":"location-master/location-use.resumeOutcome","correspondingOperation":"resumeLocationUseOutcome","transport":"OWNER_IN_PROCESS"},{"ownerMethod":"location-master/location-use.evaluateWindow","correspondingOperation":"evaluateLocationUseWindow","transport":"OWNER_IN_PROCESS"}]
       }
     ],
     "responseBasisProjection": {"format": "OWNER_BASIS_JSON_V1", "canonicalJson": "Exact canonicalPlan of the internal Owner basis; public projections do not become transaction inputs."}

@@ -447,7 +447,7 @@ function appendObjects(result:Pick<ParserResult,'rows'|'cells'> & Partial<Pick<P
           if (f.type === 'datetime' && !(optionalTime && (text===''||nullableNull))) {try{parseLocalDateTime(offset?text.replace(/\+08:00$/u,''):text);}catch{fail('LOCAL_TIME_REQUIRED',sourceRow,column);}}
         });
         row[f.code] = nullableNull?'':text;
-        nativeRow[f.code]=nullableNull?null:nativeNumber&&integerValue!==null?integerValue:text;
+        nativeRow[f.code]=nullableNull?null:format==='JSON'&&nativeNumber&&integerValue!==null?integerValue:text;
       }
       rowCheck(()=>{if (Object.values(row).every(v=>v==='')) fail('EMPTY_ROW',sourceRow);});
       if(rowIssues.length&&result.issues)for(const issue of rowIssues)result.issues.push({code:issue.code,row:issue.row,column:issue.column,...(issue.sheet?{sheet:issue.sheet}:{})});
