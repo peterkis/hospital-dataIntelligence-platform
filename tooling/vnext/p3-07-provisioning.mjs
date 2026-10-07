@@ -8,6 +8,7 @@ locationUseFunctions.push('location_master.usage_type_require_enabled(text,jsonb
 // Nursing's existing public complete-window getter delegates this actorful port.
 locationUseFunctions.push('care_organization.ward_nursing_master_window(text,text,uuid,uuid,timestamp,timestamp,timestamp)');
 locationUseFunctions.push('governance_catalog.unit_ward_source_windows(text,uuid,timestamp,timestamp,timestamp)');
+locationUseFunctions.push('governance_catalog.usage_type_evidence_context(text,uuid,uuid)');
 export function provisionLocationUse(receipt,role,provider){
  if(!/^hdi_(?:validation|owner)_[a-f0-9]{16}$/.test(role))throw new Error('ROLE_INVALID');const key=planBinding(provider,'LOCATION_USE_SQL_AUTHORITY_V1',{});
  peer(receipt.name,identitySQL(receipt)+`BEGIN;SELECT pg_advisory_xact_lock(901002);INSERT INTO vnext_control.location_use_write_authority VALUES(true,${quote(key)}) ON CONFLICT DO NOTHING;DO $$BEGIN IF NOT EXISTS(SELECT 1 FROM vnext_control.location_use_write_authority WHERE key_hex=${quote(key)}) THEN RAISE EXCEPTION 'KEY_RECEIPT_MISMATCH';END IF;END $$;COMMIT;`,{sensitive:true});

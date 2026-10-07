@@ -121,6 +121,7 @@ const postWorkspaceMigrations = [
  '0202_location_use_relations',
  '0203_location_use_public_integration',
  '0204_department_location_use_source_boundaries',
+ '0205_location_usage_type_evidence_campus',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

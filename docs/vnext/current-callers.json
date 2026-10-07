@@ -80,6 +80,11 @@
         "path": "tooling/vnext/p3-07-upgrade0203-fixture.ts",
         "operations": [],
         "ownerWorkflowAssertions": [{"owner":"location-master/location-use","correspondingOperations":["stageLocationUseInput","verifyLocationUseInput","previewLocationUseInput","planLocationUseInput","reviewLocationUseCandidate","approveLocationUseCandidate","applyLocationUseCandidate","resumeLocationUseOutcome","reconcileLocationUseOutcome","getLocationUseAsOf","getLocationUseHistory","getLocationUseVersion","evaluateLocationUseWindow"],"transport":"ARCHIVED_OWNER_IN_PROCESS_THEN_CURRENT_OWNER_IN_PROCESS"},{"owner":"location-master/usage-type","correspondingOperations":["commandLocationUsageType","readLocationUsageType","historyLocationUsageType"],"transport":"ARCHIVED_OWNER_IN_PROCESS_THEN_CURRENT_OWNER_IN_PROCESS"}]
+      },
+      {
+        "path": "tooling/vnext/p3-07-review3-db.test.ts",
+        "operations": ["commandLocationUsageType","readLocationUsageType","historyLocationUsageType","readLocationUsageTypeMaterial"],
+        "ownerReadAssertions": [{"ownerMethod":"location-master/usage-type.list","correspondingOperation":"listLocationUsageTypes","transport":"OWNER_IN_PROCESS"},{"ownerMethod":"location-master/usage-type.readMaterial","correspondingOperation":"readLocationUsageTypeMaterial","transport":"OWNER_IN_PROCESS"}]
       }
     ],
     "responseBasisProjection": {"format": "OWNER_BASIS_JSON_V1", "canonicalJson": "Exact canonicalPlan of the internal Owner basis; public projections do not become transaction inputs."}

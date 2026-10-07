@@ -17,6 +17,11 @@
 步骤。操作无法发布草稿或夹带内容修改。响应丢失时使用页面保存的原请求恢复；改载荷
 必须用新请求。身份切换后旧身份响应不得更新当前界面。内容历史与启停历史可查询。
 
+全院用途可使用NORTH或SOUTH的受保护材料。Catalog从材料的不可变元数据解析准确
+院区，并核验当前材料、用途、来源版本和院区读取权限；字典权限不替代材料权限。
+历史及原请求重放只核验元数据访问权，查看实际字节仍执行原保留期限、加密绑定和
+读取审计。每份内容和核验材料独立解析院区；关系材料继续要求与声明院区准确一致。
+
 历史查询可指定业务时点B和记录时点R，页面将这种查询作为只读视图。内容按R选择完整
 版本，适用期间仍明确返回；`enabled` 是该B/R下的启停状态，`applicableAtBusinessTime`
 表示显式B是否处于该内容期间，未指定B时为null。它们不代替完整窗口的来源及其他依赖
@@ -61,7 +66,7 @@ ORG13 使用独立 ORG13_CORE_V1 / STRICT_LOCATION_USE_V1。保留原文件、15
 | `npm.cmd run vnext:p3-07:typecheck` | 本票Owner、客户端、页面和验证代码类型检查。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:validate --generate` | 自有fresh库完整迁移、DB类型生成、Owner/HTTP/受限SQL专项矩阵。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:upgrade` | 准确基线归档的原Owner建立真实0200旧事实，再前向升级、核对行及重复数量、列、账本、密钥、历史和原结果。 |
-| `npm.cmd run prototype:db:with -- vnext:p3-07:validate --upgrade-from-203` | 准确已发布0203源码通过原Owner建立用途及地点使用事实，再升级0204并保全已安装前缀、事实、密钥、历史和结果。 |
+| `npm.cmd run prototype:db:with -- vnext:p3-07:validate --upgrade-from-203` | 准确已发布0203源码通过原Owner建立用途及地点使用事实，再升级0205并保全已安装前缀、事实、密钥、历史和结果；原NORTH核验可在升级后按原摘要审批。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:regression` | 顺序执行脚本内完整受影响检查，保留逐项原始结果。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:browser` | 提供自有真实库/工作台，由实际浏览器完成字典流程及两个视口验收。READY不是浏览器通过。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:deploy` | 最终候选通过后，唯一保留库前向升级、保全与真实启动/生成客户端HTTP。 |
@@ -76,7 +81,7 @@ DATABASE_SESSION_CLOSED 的 cleanupPassed=true。环境安装失败不计领域R
 
 仅部署 `.runtime/vnext/creation.json` 中的 `hdi_mc_vnext_a7049c9e5c2a4364`，
 OID206108、HDIP-MC-VNEXT谱系、准确已安装前缀及其校验和必须先现场核对。
-初次部署0200→0203；审查修复通过新增0204前向升级，0001–0203保持原字节。
+初次部署0200→0203；审查修复追加0204科室边界与0205字典材料院区，0001–0204保持原字节。
 复用原Owner角色和密钥；部署前快照需保存全部旧行哈希及重复数量、列、账本和密钥摘要。
 部署后新增事实允许追加，旧事实不得丢失。新迁移在实际保留库安装后不得改字节；
 后续修复继续追加迁移。

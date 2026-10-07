@@ -192,6 +192,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=202)for(const name of ['use_envelope_guard','use_unit_current_shape'])allowedRoutines.add('location_master.'+name);
     if(ledger.length>=202){for(const name of ['use_department_version_reference','use_binding_reference_access'])allowedRoutines.add('department_master.'+name);for(const name of ['use_license_reference_access','use_operating_reference_access'])allowedRoutines.add('organization_master.'+name);for(const name of ['use_master_reference_access','use_unit_basis_access','use_ward_basis_access','use_nursing_basis_access'])allowedRoutines.add('care_organization.'+name);allowedRoutines.add('location_master.use_basis_access');}
     if(ledger.length>=202)allowedRoutines.add('location_master.use_ancestor_windows');
+    if(ledger.length>=205)allowedRoutines.add('governance_catalog.usage_type_evidence_context');
     if(routines.length!==allowedRoutines.size||routines.some(row=>!allowedRoutines.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const extraTypes=(await pool.query("select count(*) as count from pg_type t join pg_namespace n on n.oid=t.typnamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') and t.typrelid=0 and t.typelem=0")).rows[0].count;
     if(Number(extraTypes))throw new Error('UNKNOWN_SCHEMA_OBJECT');
