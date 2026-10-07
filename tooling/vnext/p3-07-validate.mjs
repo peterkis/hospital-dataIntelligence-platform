@@ -10,7 +10,8 @@ import {migrate,migrationFiles,inspect,peer,quote,identitySQL} from './lineage.m
 import {seed} from './catalog-seed.mjs';
 import {grantOrganization} from './p1-02-validate.mjs';
 import {grantDepartment} from './p2-01-validate.mjs';
-import {removeValidationKeys} from './p3-07-validation-keys.mjs';
+import {validationKeys,removeValidationKeys} from './p3-07-validation-keys.mjs';
+import {provisionLocationUse} from './p3-07-provisioning.mjs';
 import {withP307Predecessor,p307PredecessorBaseline} from './p3-07-predecessor.mjs';
 import {withP307Predecessor0203,p307Predecessor0203Baseline} from './p3-07-predecessor0203.mjs';
 import {disposeOwnedValidationDatabase} from './owned-validation-disposal.mjs';
@@ -46,6 +47,7 @@ try{
  await migrate(owned.receipt);await seed(owned.receipt);
  if(before){const oldPrefix=upgradeFrom203?203:200,oldTag=String(oldPrefix).padStart(4,'0'),after=await inspect(owned.receipt);assert.deepEqual(after.ledger.slice(0,oldPrefix),before.ledger);assert.deepEqual(rowHashes(tables),originalRows);const current=columns();for(const column of oldColumns)assert.ok(current.some(item=>JSON.stringify(item)===JSON.stringify(column)),'ORIGINAL_COLUMN_CHANGED');assert.equal(keyDigest(),keysBefore);
   writeFileSync(owned.receiptPath+'.p3-07-upgrade'+oldTag+'.json',JSON.stringify({gate:'P3_07_POPULATED_'+oldTag+'_UPGRADE',status:'PASS',baseline:upgradeFrom203?p307Predecessor0203Baseline:p307PredecessorBaseline,oid:owned.receipt.oid,predecessorPrefix:oldPrefix,currentPrefix:after.ledger.length,oldLedgerPreserved:true,originalRowsAndMultiplicityPreserved:true,allOriginalColumnsPreserved:true,keyBytesPreserved:true,tablesChecked:tables.length,rowsChecked:Object.values(originalRows).reduce((sum,rows)=>sum+rows.length,0),originalRowHashes:originalRows,oldColumns,keyDigest:keysBefore,predecessorEvidence:owned.receiptPath+'.p3-07-predecessor'+oldTag+'.json',policy:'TEST POLICY ONLY',hospitalPolicy:'NOT_ADOPTED',clinicalReadiness:'NOT_READY',formalAcceptance:'NOT_RUN'},null,2),{flag:'wx'});
+  if(upgradeFrom203)provisionLocationUse(owned.receipt,session.receipt.role,validationKeys(owned.receipt));
   assert.equal(run(['--import','tsx',upgradeFrom203?'tooling/vnext/p3-07-upgrade0203-fixture.ts':'tooling/vnext/p3-07-upgrade-fixture.ts','--verify'],environment()).status,0,'P3_07_ORIGINAL_RECOVERY_FAILED');
  }
  session??=await createValidationOwnerSession(owned.receipt);grant();
