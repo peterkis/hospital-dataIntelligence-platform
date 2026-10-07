@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+import {createTemporary} from './fresh.mjs';
+import {createValidationOwnerSession,dropValidationOwnerSession} from './validation-owner-session.mjs';
+import {migrate,migrationFiles,inspect,peer,quote,identitySQL} from './lineage.mjs';
+import {seed} from './catalog-seed.mjs';
+import {grantOrganization} from './p1-02-validate.mjs';
+import {grantDepartment} from './p2-01-validate.mjs';
+import {removeValidationKeys} from './p3-07-validation-keys.mjs';
+import {withP307Predecessor,p307PredecessorBaseline} from './p3-07-predecessor.mjs';
+import {disposeOwnedValidationDatabase} from './owned-validation-disposal.mjs';
+if(process.argv[2]==='--dispose'){
+ if(process.argv.length!==4||!/^\.runtime\/vnext\/fresh\/hdi_mc_vnext_[a-f0-9]{16}\.json$/.test(process.argv[3]))throw new Error('CLOSED_COMMAND_REQUIRED');
+ const receipt=JSON.parse(readFileSync(process.argv[3],'utf8'));if(receipt.taskId!=='P3-07')throw new Error('DISPOSAL_NOT_AUTHORIZED');disposeOwnedValidationDatabase(receipt);removeValidationKeys(receipt);process.exit(0);
+}
+const args=process.argv.slice(2);if(args.some(a=>!['--generate','--upgrade','--dictionary-only','--signed-only','--approval-only','--dictionary-business-only','--end-edges-only','--http-precision-only'].includes(a))||args.includes('--dictionary-only')&&args.includes('--signed-only')||args.includes('--upgrade')&&(args.includes('--dictionary-only')||args.includes('--signed-only')))throw new Error('CLOSED_COMMAND_REQUIRED');
+const focusFlags=['--dictionary-only','--signed-only','--approval-only','--dictionary-business-only','--end-edges-only','--http-precision-only'].filter(flag=>args.includes(flag));if(focusFlags.length>1||focusFlags.length&&args.includes('--upgrade'))throw new Error('CLOSED_COMMAND_REQUIRED');
+const owned=createTemporary('P3-07');let session;
+const run=(command,environment={})=>spawnSync(process.execPath,command,{env:{...process.env,...environment},stdio:'inherit',windowsHide:true});
+const environment=()=>({VNEXT_VALIDATION_OWNER_URL:session.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P3-07'});
+const grant=()=>{grantOrganization(owned.receipt,session.receipt.role);grantDepartment(owned.receipt,session.receipt.role);peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION governance_catalog.operating_catalog(text,jsonb,timestamp,timestamp,timestamp),governance_catalog.department_lifecycle_assessment(text,text) TO ${session.receipt.role};`);};
+const rowHashes=tables=>{const queries=tables.map(table=>{if(!/^(vnext_control|governance_catalog|organization_master|department_master|location_master|care_organization)\.[a-z_]+$/.test(table))throw new Error('PRESERVATION_TABLE_INVALID');return `SELECT ${quote(table)} name,coalesce(jsonb_agg(encode(sha256(convert_to(to_jsonb(o)::text,'UTF8')),'hex') ORDER BY to_jsonb(o)::text),'[]') hashes FROM ${table} o`;});return JSON.parse(peer(owned.receipt.name,'\\set QUIET on\n'+identitySQL(owned.receipt)+`SELECT jsonb_object_agg(name,hashes)::text FROM (${queries.join(' UNION ALL ')}) original_rows;`));};
+const keyDigest=()=>createHash('sha256').update(readFileSync('.runtime/vnext/p3-07/'+owned.receipt.name+'.secret.json')).digest('hex');
+const columns=()=>JSON.parse(peer(owned.receipt.name,"\\set QUIET on\n"+identitySQL(owned.receipt)+"SELECT coalesce(jsonb_agg(jsonb_build_object('table',n.nspname||'.'||c.relname,'column',a.attname,'type',pg_catalog.format_type(a.atttypid,a.atttypmod),'nullable',NOT a.attnotnull) ORDER BY n.nspname,c.relname,a.attnum),'[]')::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped;"));
+try{
+ let before,tables,originalRows,oldColumns,keysBefore;
+ if(args.includes('--upgrade')){
+  await withP307Predecessor(async directory=>{const archived=await import(pathToFileURL(resolve(directory,'tooling/vnext/lineage.mjs')).href),files=archived.migrationFiles();assert.equal(files.length,200);assert.deepEqual(files.map(({id,sha256})=>({id,sha256})),migrationFiles().slice(0,200).map(({id,sha256})=>({id,sha256})));for(const path of ['tooling/vnext/catalog-seed.mjs','tooling/vnext/contract-seed.mjs'])assert.ok(readFileSync(path).equals(readFileSync(resolve(directory,path))),'PREDECESSOR_SEED_DRIFT');await migrate(owned.receipt,files);},owned.receipt);
+  await seed(owned.receipt);session=await createValidationOwnerSession(owned.receipt);grant();
+  assert.equal(run(['--import','tsx','tooling/vnext/p3-07-upgrade-fixture.ts'],environment()).status,0,'P3_07_PREDECESSOR_FIXTURE_FAILED');
+  before=await inspect(owned.receipt);tables=before.tables.filter(table=>table!=='vnext_control.migration');originalRows=rowHashes(tables);oldColumns=columns();keysBefore=keyDigest();
+ }
+ await migrate(owned.receipt);await seed(owned.receipt);
+ if(before){const after=await inspect(owned.receipt);assert.deepEqual(after.ledger.slice(0,200),before.ledger);assert.deepEqual(rowHashes(tables),originalRows);const current=columns();for(const column of oldColumns)assert.ok(current.some(item=>JSON.stringify(item)===JSON.stringify(column)),'ORIGINAL_COLUMN_CHANGED');assert.equal(keyDigest(),keysBefore);
+  writeFileSync(owned.receiptPath+'.p3-07-upgrade0200.json',JSON.stringify({gate:'P3_07_POPULATED_0200_UPGRADE',status:'PASS',baseline:p307PredecessorBaseline,oid:owned.receipt.oid,predecessorPrefix:200,currentPrefix:after.ledger.length,oldLedgerPreserved:true,originalRowsAndMultiplicityPreserved:true,allOriginalColumnsPreserved:true,keyBytesPreserved:true,tablesChecked:tables.length,rowsChecked:Object.values(originalRows).reduce((sum,rows)=>sum+rows.length,0),originalRowHashes:originalRows,oldColumns,keyDigest:keysBefore,predecessorEvidence:owned.receiptPath+'.p3-07-predecessor0200.json',policy:'TEST POLICY ONLY',hospitalPolicy:'NOT_ADOPTED',clinicalReadiness:'NOT_READY',formalAcceptance:'NOT_RUN'},null,2),{flag:'wx'});
+  assert.equal(run(['--import','tsx','tooling/vnext/p3-07-upgrade-fixture.ts','--verify'],environment()).status,0,'P3_07_ORIGINAL_RECOVERY_FAILED');
+ }
+ session??=await createValidationOwnerSession(owned.receipt);grant();
+ if(args.includes('--generate'))assert.equal(run(['tooling/vnext/managed.mjs','types-generate',owned.receiptPath]).status,0);
+ for(const command of [['tooling/vnext/managed.mjs','types-verify',owned.receiptPath],['tooling/vnext/authority.mjs',owned.receiptPath]])assert.equal(run(command).status,0);
+ const dictionaryOnly=args.includes('--dictionary-only'),signedOnly=args.includes('--signed-only'),approvalOnly=args.includes('--approval-only'),businessOnly=args.includes('--dictionary-business-only'),endEdgesOnly=args.includes('--end-edges-only'),httpPrecisionOnly=args.includes('--http-precision-only'),focused=dictionaryOnly||signedOnly||approvalOnly||businessOnly||endEdgesOnly||httpPrecisionOnly;if([dictionaryOnly,signedOnly,approvalOnly,businessOnly,endEdgesOnly,httpPrecisionOnly].filter(Boolean).length>1||focused&&args.includes('--upgrade'))throw new Error('CLOSED_COMMAND_REQUIRED');const result=run(['node_modules/vitest/vitest.mjs','run',...(dictionaryOnly?['tooling/vnext/p3-07-db.test.ts']:signedOnly?['tooling/vnext/p3-07-extended-db.test.ts','-t','restricted signed SQL rejects changed writes, write index and frozen digest without publishing facts']:approvalOnly?['tooling/vnext/p3-07-extended-db.test.ts','-t','actual generated HTTP .* preserves optional source approval exactly']:businessOnly?['tooling/vnext/p3-07-extended-db.test.ts','-t','public dictionary B/R']:endEdgesOnly?['tooling/vnext/p3-07-relations-db.test.ts','-t','END edge:']:httpPrecisionOnly?['tooling/vnext/p3-07-extended-db.test.ts','-t','raw HTTP native version precision']:[]),'--config','tooling/vnext/vitest.p3-07-db.config.ts','--reporter=verbose'],{...environment(),VNEXT_P3_07_UPGRADED:before?'1':'0'});process.exitCode=result.status??1;
+ console.log(JSON.stringify({gate:focused?'P3_07_FINITE_FOCUSED':'P3-07',scope:dictionaryOnly?'DICTIONARY_BASIC_ONLY':signedOnly?'SIGNED_SQL_BINDING_CASE_ONLY':approvalOnly?'OPTIONAL_SOURCE_APPROVAL_ONLY':businessOnly?'DICTIONARY_PUBLIC_BUSINESS_RECORD_TIME_ONLY':endEdgesOnly?'LOCATION_USE_END_EDGES_ONLY':httpPrecisionOnly?'RAW_HTTP_NATIVE_INTEGER_PRECISION_ONLY':'FULL_MATRIX',omitted:focused?['RELATION_CORE','OTHER_FILES_HTTP_AUTHORIZATION','DICTIONARY_WINDOWS','DEPENDENCY_WINDOWS']:[],mode:before?'POPULATED_0200_TO_CURRENT':'FRESH',migrations:(await inspect(owned.receipt)).ledger.length,exit:process.exitCode}));
+}catch(error){session??=error.ownerSession;process.exitCode=1;console.error(JSON.stringify({gate:'P3_07_PRIMARY_FAILURE',code:/^[A-Z][A-Z0-9_]+$/.test(error.message)?error.message:'P3_07_VALIDATION_FAILED'}));}finally{disposeOwnedValidationDatabase(owned.receipt);if(session)dropValidationOwnerSession(session);removeValidationKeys(owned.receipt);}

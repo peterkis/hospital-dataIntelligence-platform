@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { buildCatalogServer } from "../../apps/governance-api/src/composition/build-vnext-catalog.ts";
-import { verifyCurrentContract } from "./current-contract.mjs";
+import { verifyCurrentContract,verifyVNextCallerRegistration } from "./current-contract.mjs";
 import { departmentUiContract } from "./department-ui-contract.mjs";
 const args = process.argv.slice(2);
 if (args.length > 1 || (args.length === 1 && args[0] !== "--check"))
@@ -14,6 +14,7 @@ const app = await buildCatalogServer();
 await app.ready();
 const current = app.swagger(),
   directory = resolve(".runtime/vnext/current-contract", randomUUID());
+verifyVNextCallerRegistration(current,JSON.parse(readFileSync('docs/vnext/current-callers.json','utf8')),path=>existsSync(resolve(path)));
 const uiPath = "apps/admin-web/src/vnext/department-forms.generated.ts",
   ui = departmentUiContract(current);
 if (verify) {

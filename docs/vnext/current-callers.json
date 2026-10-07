@@ -33,5 +33,35 @@
     "apps/sim-consumer/src",
     "tooling/prototype"
   ],
-  "observedAtHead": "b84ebca6a1eb277172531014e1fe11e03db7e7b4"
+  "observedAtHead": "b84ebca6a1eb277172531014e1fe11e03db7e7b4",
+  "vNextCurrentCallers": {
+    "ticket": "P3-07",
+    "baseline": "cb7cbfecf692bdfbac8f017bd570ac1b31256123",
+    "contract": "contracts/openapi/vnext-catalog.openapi.json",
+    "generatedSchema": "packages/generated-api-client/src/vnext-schema.generated.ts",
+    "callers": [
+      {
+        "path": "apps/admin-web/src/vnext/location-usage-types.tsx",
+        "operations": ["commandLocationUsageType", "readLocationUsageType", "historyLocationUsageType", "listLocationUsageTypes", "permissionsLocationUsageTypes", "readLocationUsageTypeMaterial"]
+      },
+      {
+        "path": "packages/generated-api-client/src/location-use-client.ts",
+        "operations": ["commandLocationUsageType", "readLocationUsageType", "historyLocationUsageType", "listLocationUsageTypes", "permissionsLocationUsageTypes", "readLocationUsageTypeMaterial", "stageLocationUseInput", "readLocationUseInput", "verifyLocationUseInput", "previewLocationUseInput", "planLocationUseInput", "withdrawLocationUseInput", "reviewLocationUseCandidate", "approveLocationUseCandidate", "applyLocationUseCandidate", "resumeLocationUseOutcome", "reconcileLocationUseOutcome", "getLocationUseAsOf", "getLocationUseHistory", "getLocationUseVersion", "diffLocationUseVersions", "listLocationUses", "evaluateLocationUseWindow", "receiveLocationUseFile"]
+      },
+      {
+        "path": "tooling/vnext/p3-07-http.ts",
+        "operations": ["commandLocationUsageType", "readLocationUsageType", "historyLocationUsageType", "listLocationUsageTypes", "stageLocationUseInput", "readLocationUseInput", "verifyLocationUseInput", "previewLocationUseInput", "planLocationUseInput", "reviewLocationUseCandidate", "approveLocationUseCandidate", "applyLocationUseCandidate", "resumeLocationUseOutcome", "reconcileLocationUseOutcome", "getLocationUseAsOf", "getLocationUseHistory", "getLocationUseVersion", "listLocationUses", "evaluateLocationUseWindow"]
+      },
+      {"path": "tooling/vnext/workbench-runtime.mjs", "operations": []},
+      {"path": "tooling/vnext/p3-07-browser.mjs", "operations": []},
+      {"path": "tooling/vnext/p3-07-deploy.mjs", "operations": []},
+      {"path": "tooling/vnext/p3-07-purpose-samples.ts", "operations": ["commandLocationUsageType", "listLocationUsageTypes"]},
+      {
+        "path": "tooling/vnext/p3-07-extended-db.test.ts",
+        "operations": ["stageLocationUseInput", "readLocationUseInput", "verifyLocationUseInput", "previewLocationUseInput", "planLocationUseInput", "reviewLocationUseCandidate", "approveLocationUseCandidate", "applyLocationUseCandidate", "resumeLocationUseOutcome", "reconcileLocationUseOutcome", "getLocationUseAsOf", "getLocationUseHistory", "getLocationUseVersion", "receiveLocationUseFile", "commandLocationUsageType", "readLocationUsageType", "historyLocationUsageType", "listLocationUsageTypes"],
+        "ownerReadAssertions": [{"ownerMethod": "location-master/location-use.list", "correspondingOperation": "listLocationUses", "transport": "OWNER_IN_PROCESS"}]
+      }
+    ],
+    "responseBasisProjection": {"format": "OWNER_BASIS_JSON_V1", "canonicalJson": "Exact canonicalPlan of the internal Owner basis; public projections do not become transaction inputs."}
+  }
 }

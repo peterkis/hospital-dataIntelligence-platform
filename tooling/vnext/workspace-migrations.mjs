@@ -117,6 +117,9 @@ const postWorkspaceMigrations = [
  '0198_ward_nursing_public_integration',
  '0199_ward_nursing_finite_impacts',
  '0200_nursing_owner_handover_confirmation',
+ '0201_location_usage_types',
+ '0202_location_use_relations',
+ '0203_location_use_public_integration',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

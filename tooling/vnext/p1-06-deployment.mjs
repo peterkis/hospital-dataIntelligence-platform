@@ -11,10 +11,11 @@ import {assertHierarchyProvisioned,grantHierarchyFunctions} from './hierarchy-pr
 
 /** Persistent deployment retains the receipt-owned database and every predecessor fact. */
 export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTask='p1-06',addedColumns={}}={}) {
- if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-07','p2-08','p3-06','p3-01','p3-02','p3-03','p3-08','p3-09','p3-04','p3-05'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
+ if(!['p1-06','p1-07','p2-01','p2-03','p2-04','p2-05','p2-06','p2-07','p2-08','p3-06','p3-01','p3-02','p3-03','p3-08','p3-09','p3-04','p3-05','p3-07'].includes(evidenceTask))throw new Error('CLOSED_COMMAND_REQUIRED');
  const receipt=readReceipt(),before=await inspect(receipt),files=migrationFiles();
  if(evidenceTask==='p3-08'&&before.ledger.length<170)throw new Error('P3_02_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-05'&&before.ledger.length<196)throw new Error('P3_04_CURRENT_DEPLOYMENT_REQUIRED');
+ if(evidenceTask==='p3-07'&&before.ledger.length<200)throw new Error('P3_05_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-04'&&before.ledger.length<185)throw new Error('P3_09_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-09'&&before.ledger.length<175)throw new Error('P3_08_CURRENT_DEPLOYMENT_REQUIRED');
  if(evidenceTask==='p3-02'&&before.ledger.length<165)throw new Error('P3_03_CURRENT_DEPLOYMENT_REQUIRED');
@@ -62,7 +63,10 @@ export async function prepareWorkspaceDeployment({reuseExisting=false,evidenceTa
  writeFileSync(evidence+'.migration.json',JSON.stringify({status:'PASS',mode:reuseExisting?'VERIFY_EXISTING':'FORWARD_UPGRADE',oid:after.identity.oid,previousPrefix:prefix,currentPrefix:after.ledger.length,priorRowsAndKeysPreserved:true},null,2),{flag:'wx'});
  return {receipt,connection,provider:organizationKeys(receipt),evidence,async complete(){
   const final=await inspect(receipt),retained=rowHashes();assert.equal(final.identity.oid,before.identity.oid);assert.deepEqual(final.ledger,after.ledger);assert.equal(keyDigest(),keysBefore);
-  for(const table of tables){const current=new Set(retained[table]);assert.ok(rowsBefore[table].every(hash=>current.has(hash)),'Previous rows changed: '+table);}
+  for(const table of tables){
+   const counts=new Map();for(const hash of retained[table])counts.set(hash,(counts.get(hash)??0)+1);
+   for(const hash of rowsBefore[table]){const available=counts.get(hash)??0;assert.ok(available>0,'Previous rows or duplicate counts changed: '+table);counts.set(hash,available-1);}
+  }
   writeFileSync(evidence+'.preservation.json',JSON.stringify({status:'PASS',oid:final.identity.oid,ledgerPreserved:true,priorRowsAndKeysPreserved:true,browserAcceptance:'SEE_SEPARATE_BROWSER_EVIDENCE',restart:'NOT_RUN',formalAcceptance:'NOT_RUN'},null,2),{flag:'wx'});
   console.log(JSON.stringify({status:'PERSISTENT_WORKSPACE_PRESERVATION_PASSED',evidence:evidence+'.preservation.json'}));
  }};

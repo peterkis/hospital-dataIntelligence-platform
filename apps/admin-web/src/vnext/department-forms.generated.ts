@@ -898,6 +898,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -1179,6 +1185,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
                                     ]
                                   }
                                 ]
@@ -3229,6 +3241,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -3510,6 +3528,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
                                     ]
                                   }
                                 ]
@@ -4599,6 +4623,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -4880,6 +4910,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
                                     ]
                                   }
                                 ]
@@ -5742,6 +5778,12 @@ export const departmentForms = {
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
+                                    ]
                                   }
                                 ]
                               }
@@ -6023,6 +6065,12 @@ export const departmentForms = {
                                     "type": "string",
                                     "enum": [
                                       "STRICT_WARD_NURSING_V1"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "STRICT_LOCATION_USE_V1"
                                     ]
                                   }
                                 ]

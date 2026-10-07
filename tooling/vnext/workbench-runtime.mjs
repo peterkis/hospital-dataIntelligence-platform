@@ -13,7 +13,10 @@ import {withCareOrganizationImpacts,nursingUpstreamPorts} from '../../apps/gover
 import {assertNursingUnitProvisioned} from './p3-03-provisioning.mjs';
 import {openBusinessUnit,openNursingUnit,openWard,openUnitCapabilities,openUnitWardRelations,openWardNursingCoverage} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {assertBusinessUnitProvisioned} from './p3-01-provisioning.mjs';
-import {openLocation} from '../../apps/governance-api/src/modules/location-master/index.ts';
+import {openLocation,openLocationUsageTypes,openLocationUse} from '../../apps/governance-api/src/modules/location-master/index.ts';
+import {locationUseUpstreamPorts} from '../../apps/governance-api/src/composition/location-use-dependencies.ts';
+import {assertLocationUseProvisioned} from './p3-07-provisioning.mjs';
+import pg from 'pg';
 import {assertLocationProvisioned} from './p3-06-provisioning.mjs';
 import {assertDepartmentLifecycleProvisioned} from './department-lifecycle-provisioning.mjs';
 import {assertDepartmentImpactsProvisioned} from './department-impact-provisioning.mjs';
@@ -66,15 +69,25 @@ export async function startWorkbench({
   upgrade = false,
   finite = false,
   port = 4317,
+  validationContext,
 } = {}) {
+  if(validationContext&&(persistent||upgrade||finite))throw new Error('VALIDATION_CONTEXT_EXCLUSIVE');
   if (persistent && finite) throw new Error("FINITE_OWNER_TEMPORARY_ONLY");
-  const owned = persistent ? null : createTemporary("P0-09");
-  const receipt = owned?.receipt ?? readReceipt();
+  const owned = persistent||validationContext ? null : createTemporary("P0-09");
+  const receipt = validationContext?.receipt??owned?.receipt ?? readReceipt();
+  if(validationContext){
+    if(receipt.purpose!=='TEMPORARY_VALIDATION'||!/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name))throw new Error('TEMPORARY_VALIDATION_REQUIRED');
+    if(JSON.stringify(readReceipt(resolve(root,'.runtime/vnext/fresh',receipt.name+'.json')))!==JSON.stringify(receipt))throw new Error('RECEIPT_IDENTITY_MISMATCH');
+    if(!/^hdi_validation_[a-f0-9]{16}$/u.test(decodeURIComponent(new URL(validationContext.connection).username)))throw new Error('TEMPORARY_VALIDATION_OWNER_REQUIRED');
+  }
   let unitWard;
   let wardNursing;
+  let locationUsageTypes,locationUse;
   let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit, nursingUnit, ward, parameterValues, unitCapabilities, subjectCodes, subjectPermissions;
   const close = async () => {
     await app?.close();
+    await locationUse?.close();
+    await locationUsageTypes?.close();
     await organization?.close();
     await campus?.close();
     await operating?.close();
@@ -111,8 +124,9 @@ export async function startWorkbench({
   try {
     // Inspect once, before loading credentials/keys, constructing Owners or
     // listening. Never expose workspace routes backed by unrepaired SQL.
-    const persistentPrefix = persistent
-      ? workspaceStartupPrefix(migrationFiles(), (await inspect(receipt)).ledger)
+    const suppliedInspection=validationContext?await inspect(receipt):null;
+    const persistentPrefix = persistent||validationContext
+      ? workspaceStartupPrefix(migrationFiles(), (suppliedInspection??await inspect(receipt)).ledger)
       : 0;
     if (owned) {
       if (upgrade) {
@@ -136,15 +150,23 @@ export async function startWorkbench({
       );
       if (types.status !== 0) throw new Error("WORKBENCH_TYPES_FAILED");
     }
-    const connection = owned
+    const connection = validationContext?.connection??(owned
       ? session.connectionString
-      : await ownerServiceConnection();
+      : await ownerServiceConnection());
     // An installed persistent Owner must never silently fall back to fresh keys.
     const organizationReady=persistent;
-    const provider = organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider();
+    const provider = validationContext?.provider??(organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider());
+    if(validationContext){
+      const connectionCheck=new pg.Pool({connectionString:connection,max:1});
+      try{await connectionCheck.query(identitySQL(receipt));assert.deepEqual((await connectionCheck.query('select id,sha256 from vnext_control.migration order by id')).rows,suppliedInspection.ledger);}
+      finally{await connectionCheck.end();}
+      await assertLocationUseProvisioned(connection,provider);
+      if(!validationContext.locationUse?.usageTypes)throw new Error('BLOCKED_DEPENDENCY');
+    }
     if(persistent&&persistentPrefix>=174)await assertUnitCapabilityProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=188)await assertUnitWardProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=198)await assertWardNursingProvisioned(connection,provider);
+    if(persistent&&persistentPrefix>=201)await assertLocationUseProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=178)await assertSubjectsProvisioned(connection,provider);
     if(persistent&&persistentPrefix>=167)await assertWardProvisioned(connection,provider);
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider,{owners:['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','UNIT_WARD_RELATION','WARD_NURSING_COVERAGE'],readInTransaction:(s,a,i)=>{if(!businessUnit)throw new Error('BLOCKED_DEPENDENCY');return Promise.all([businessUnit.readCampusDependenciesInTransaction(s,a,i),nursingUnit?.readCampusDependenciesInTransaction(s,a,i)??[],ward?.readCampusDependenciesInTransaction(s,a,i)??[],unitCapabilities?.readCampusDependenciesInTransaction(s,a,i)??[],unitWard?.readCampusDependenciesInTransaction(s,a,i)??[],wardNursing?.readCampusDependenciesInTransaction(s,a,i)??[]]).then(parts=>parts.flat());;}});operating=openOperatingRelations(connection,provider);}
@@ -165,6 +187,8 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=174){parameterValues=openParameterValues(connection);unitCapabilities=openUnitCapabilities(connection,provider,unitCapabilityUpstreamPorts(businessUnit,parameterValues));}
     if(persistent&&persistentPrefix>=188){unitWard=openUnitWardRelations(connection,provider,unitWardUpstreamPorts(businessUnit,ward));}
     if(persistent&&persistentPrefix>=198){wardNursing=openWardNursingCoverage(connection,provider,wardNursingUpstreamPorts(ward,nursingUnit,businessUnit));}
+    if(persistent&&persistentPrefix>=201){locationUsageTypes=openLocationUsageTypes(connection,provider);}
+    if(persistent&&persistentPrefix>=203){if(!location||!departmentLifecycle||!businessUnit||!ward||!nursingUnit||!locationUsageTypes)throw new Error('BLOCKED_DEPENDENCY');locationUse=openLocationUse(connection,provider,locationUseUpstreamPorts(location,departmentLifecycle,businessUnit,ward,nursingUnit),locationUsageTypes);}
     if(persistent&&persistentPrefix>=178){subjectCodes=openSubjectCodes(connection,provider);subjectPermissions=openSubjectPermissions(connection,provider,{operatingWindow:operating.evaluateOperatingWindowInTransaction});}
     catalog = await openCatalog(connection, provider);
     let setup;
@@ -238,6 +262,7 @@ export async function startWorkbench({
       subjectPermissions?{owner:subjectPermissions,actor:r=>syntheticActor(r.headers)}:undefined,
       unitWard?{owner:unitWard,actor:r=>syntheticActor(r.headers)}:undefined,
       wardNursing?{owner:wardNursing,actor:r=>syntheticActor(r.headers)}:undefined,
+      validationContext?.locationUse??(locationUsageTypes?{owner:locationUse,usageTypes:locationUsageTypes,actor:r=>syntheticActor(r.headers)}:undefined),
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),
@@ -250,10 +275,12 @@ export async function startWorkbench({
       "imports",
       "organizations",
       "departments",
+      "location-usage-types",
     ])
       app.get("/admin/vnext/" + path, (_req, reply) =>
         reply.sendFile("vnext.html"),
       );
+    if(validationContext?.beforeListen)await validationContext.beforeListen(app);
     const url=await app.listen({ host: "127.0.0.1", port });
     return {
       app,

@@ -6148,6 +6148,390 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/location-usage-types/command": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commandLocationUsageType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-usage-types/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["permissionsLocationUsageTypes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-usage-types/material": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readLocationUsageTypeMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-usage-types/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readLocationUsageType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-usage-types/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["historyLocationUsageType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-usage-types/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listLocationUsageTypes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stageLocationUseInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/inputs/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readLocationUseInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyLocationUseInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewLocationUseInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["planLocationUseInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdrawLocationUseInput"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewLocationUseCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveLocationUseCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyLocationUseCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeLocationUseOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcileLocationUseOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationUseAsOf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationUseHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/exact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getLocationUseVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["diffLocationUseVersions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listLocationUses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["evaluateLocationUseWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/location-uses/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["receiveLocationUseFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7391,8 +7775,8 @@ export interface operations {
                                 } | {
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "LOCATION_CORE";
+                                    /** @enum {unknown} */
+                                    status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -7615,8 +7999,8 @@ export interface operations {
                                 } | {
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "LOCATION_CORE";
+                                    /** @enum {unknown} */
+                                    status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -7840,8 +8224,8 @@ export interface operations {
                                 } | {
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "LOCATION_CORE";
+                                    /** @enum {unknown} */
+                                    status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -8040,8 +8424,8 @@ export interface operations {
                         } | {
                             field: string;
                             target: string;
-                            /** @enum {string} */
-                            status: "LOCATION_CORE";
+                            /** @enum {unknown} */
+                            status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                         } | {
                             field: string;
                             target: string;
@@ -8152,8 +8536,8 @@ export interface operations {
                         } | {
                             field: string;
                             target: string;
-                            /** @enum {string} */
-                            status: "LOCATION_CORE";
+                            /** @enum {unknown} */
+                            status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                         } | {
                             field: string;
                             target: string;
@@ -9529,7 +9913,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -9564,7 +9948,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -33140,7 +33524,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -33175,7 +33559,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -39562,8 +39946,8 @@ export interface operations {
                                     } | {
                                         field: string;
                                         target: string;
-                                        /** @enum {string} */
-                                        status: "LOCATION_CORE";
+                                        /** @enum {unknown} */
+                                        status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                                     } | {
                                         field: string;
                                         target: string;
@@ -41090,7 +41474,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -41125,7 +41509,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -42352,8 +42736,8 @@ export interface operations {
                                     } | {
                                         field: string;
                                         target: string;
-                                        /** @enum {string} */
-                                        status: "LOCATION_CORE";
+                                        /** @enum {unknown} */
+                                        status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                                     } | {
                                         field: string;
                                         target: string;
@@ -44265,7 +44649,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -44300,7 +44684,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -44741,7 +45125,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -44776,7 +45160,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -47314,8 +47698,8 @@ export interface operations {
                                 } | {
                                     field: string;
                                     target: string;
-                                    /** @enum {string} */
-                                    status: "LOCATION_CORE";
+                                    /** @enum {unknown} */
+                                    status: "LOCATION_CORE" | "LOCATION_USE_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -56339,7 +56723,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -56374,7 +56758,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -58946,7 +59330,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -58981,7 +59365,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -62014,7 +62398,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -62049,7 +62433,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -64536,7 +64920,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -64571,7 +64955,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -68087,7 +68471,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -68122,7 +68506,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -71664,7 +72048,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -71699,7 +72083,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -74692,7 +75076,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -74727,7 +75111,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -79048,7 +79432,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "CREATE";
@@ -79083,7 +79467,7 @@ export interface operations {
                                 /** @enum {string} */
                                 kind: "FILE";
                                 format: "CSV" | "JSON" | "XLSX";
-                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
                             };
                             /** @enum {string} */
                             action: "REVISE";
@@ -79411,6 +79795,6087 @@ export interface operations {
                         code: string;
                         message: string;
                         field?: string;
+                    };
+                };
+            };
+        };
+    };
+    commandLocationUsageType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    reason: string;
+                    code: string;
+                    name: string;
+                    meaning: string;
+                    description: string | null;
+                    validFrom: string;
+                    validTo: string | null;
+                    sourceId: string;
+                    sourceVersionId: string;
+                    evidenceId: string;
+                    /** @enum {string} */
+                    action: "CREATE";
+                } | {
+                    requestId: string;
+                    reason: string;
+                    code: string;
+                    name: string;
+                    meaning: string;
+                    description: string | null;
+                    validFrom: string;
+                    validTo: string | null;
+                    sourceId: string;
+                    sourceVersionId: string;
+                    evidenceId: string;
+                    target: string;
+                    expectedHead: string;
+                    /** @enum {string} */
+                    action: "REVISE";
+                } | {
+                    requestId: string;
+                    reason: string;
+                    target: string;
+                    expectedHead: string;
+                    /** @enum {string} */
+                    action: "VERIFY";
+                    versionId: string;
+                    reviewDigest: string;
+                    evidenceId: string;
+                    meaningAccepted: boolean;
+                } | {
+                    requestId: string;
+                    reason: string;
+                    target: string;
+                    expectedHead: string;
+                    /** @enum {string} */
+                    action: "APPROVE";
+                    versionId: string;
+                    reviewDigest: string;
+                } | {
+                    requestId: string;
+                    reason: string;
+                    target: string;
+                    expectedHead: string;
+                    /** @enum {unknown} */
+                    action: "ENABLE" | "DISABLE";
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        name: string;
+                        meaning: string;
+                        description: string | null;
+                        validFrom: string;
+                        validTo: string | null;
+                        sourceId: string;
+                        sourceVersionId: string;
+                        evidenceId: string;
+                        id: string;
+                        versionId: string;
+                        version: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "REVIEW" | "APPROVED";
+                        enabled: boolean;
+                        applicableAtBusinessTime: boolean | null;
+                        reviewDigest: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        verification: {
+                            id: string;
+                            actor: string;
+                            identity: string;
+                            evidenceId: string;
+                            meaningAccepted: boolean;
+                            recordedAt: string;
+                        } | null;
+                        events: {
+                            id: string;
+                            sequence: string;
+                            /** @enum {unknown} */
+                            action: "ENABLE" | "DISABLE";
+                            actor: string;
+                            identity: string;
+                            recordedAt: string;
+                            reason: string;
+                            requestId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    permissionsLocationUsageTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        read: boolean;
+                        write: boolean;
+                        verify: boolean;
+                        review: boolean;
+                        human: boolean;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readLocationUsageTypeMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    sourceVersionId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        bytesBase64: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readLocationUsageType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    versionId?: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        name: string;
+                        meaning: string;
+                        description: string | null;
+                        validFrom: string;
+                        validTo: string | null;
+                        sourceId: string;
+                        sourceVersionId: string;
+                        evidenceId: string;
+                        id: string;
+                        versionId: string;
+                        version: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "REVIEW" | "APPROVED";
+                        enabled: boolean;
+                        applicableAtBusinessTime: boolean | null;
+                        reviewDigest: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        verification: {
+                            id: string;
+                            actor: string;
+                            identity: string;
+                            evidenceId: string;
+                            meaningAccepted: boolean;
+                            recordedAt: string;
+                        } | null;
+                        events: {
+                            id: string;
+                            sequence: string;
+                            /** @enum {unknown} */
+                            action: "ENABLE" | "DISABLE";
+                            actor: string;
+                            identity: string;
+                            recordedAt: string;
+                            reason: string;
+                            requestId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    historyLocationUsageType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        name: string;
+                        meaning: string;
+                        description: string | null;
+                        validFrom: string;
+                        validTo: string | null;
+                        sourceId: string;
+                        sourceVersionId: string;
+                        evidenceId: string;
+                        id: string;
+                        versionId: string;
+                        version: string;
+                        head: string;
+                        /** @enum {unknown} */
+                        status: "DRAFT" | "REVIEW" | "APPROVED";
+                        enabled: boolean;
+                        applicableAtBusinessTime: boolean | null;
+                        reviewDigest: string;
+                        recordedAt: string;
+                        approvedAt: string | null;
+                        verification: {
+                            id: string;
+                            actor: string;
+                            identity: string;
+                            evidenceId: string;
+                            meaningAccepted: boolean;
+                            recordedAt: string;
+                        } | null;
+                        events: {
+                            id: string;
+                            sequence: string;
+                            /** @enum {unknown} */
+                            action: "ENABLE" | "DISABLE";
+                            actor: string;
+                            identity: string;
+                            recordedAt: string;
+                            reason: string;
+                            requestId: string;
+                        }[];
+                    }[];
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listLocationUsageTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    after?: string;
+                    limit?: number;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            code: string;
+                            name: string;
+                            meaning: string;
+                            description: string | null;
+                            validFrom: string;
+                            validTo: string | null;
+                            sourceId: string;
+                            sourceVersionId: string;
+                            evidenceId: string;
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            head: string;
+                            /** @enum {unknown} */
+                            status: "DRAFT" | "REVIEW" | "APPROVED";
+                            enabled: boolean;
+                            applicableAtBusinessTime: boolean | null;
+                            reviewDigest: string;
+                            recordedAt: string;
+                            approvedAt: string | null;
+                            verification: {
+                                id: string;
+                                actor: string;
+                                identity: string;
+                                evidenceId: string;
+                                meaningAccepted: boolean;
+                                recordedAt: string;
+                            } | null;
+                            events: {
+                                id: string;
+                                sequence: string;
+                                /** @enum {unknown} */
+                                action: "ENABLE" | "DISABLE";
+                                actor: string;
+                                identity: string;
+                                recordedAt: string;
+                                reason: string;
+                                requestId: string;
+                            }[];
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    stageLocationUseInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    jobId: string;
+                    revisionId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    /** @enum {unknown} */
+                    timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                    entries: ({
+                        row: {
+                            object_location_rel_id: string;
+                            /** @enum {unknown} */
+                            target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                            target_id: string;
+                            location_id: string;
+                            usage_type: string;
+                            /** @enum {unknown} */
+                            is_primary: "Y" | "N";
+                            sharing_description: string | null;
+                            version_no: number;
+                            valid_from: string;
+                            valid_to: string | null;
+                            /** @enum {unknown} */
+                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        applicability: {
+                            /** @enum {unknown} */
+                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "department-master";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/ward";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            location: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                            };
+                        };
+                        usageType: {
+                            /** @enum {string} */
+                            owner: "location-master/usage-type";
+                            id: string;
+                            versionId: string;
+                            version: string;
+                        };
+                        policy: {
+                            /** @enum {unknown} */
+                            kind: "SHARED" | "EXCLUSIVE";
+                            /** @enum {string} */
+                            version: "WHOLE_LOCATION_V1";
+                        };
+                        evidenceId: string;
+                        reason: string;
+                        /** @enum {string} */
+                        action: "CREATE";
+                    } | {
+                        row: {
+                            object_location_rel_id: string;
+                            /** @enum {unknown} */
+                            target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                            target_id: string;
+                            location_id: string;
+                            usage_type: string;
+                            /** @enum {unknown} */
+                            is_primary: "Y" | "N";
+                            sharing_description: string | null;
+                            version_no: number;
+                            valid_from: string;
+                            valid_to: string | null;
+                            /** @enum {unknown} */
+                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        applicability: {
+                            /** @enum {unknown} */
+                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "department-master";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/ward";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            location: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                            };
+                        };
+                        usageType: {
+                            /** @enum {string} */
+                            owner: "location-master/usage-type";
+                            id: string;
+                            versionId: string;
+                            version: string;
+                        };
+                        policy: {
+                            /** @enum {unknown} */
+                            kind: "SHARED" | "EXCLUSIVE";
+                            /** @enum {string} */
+                            version: "WHOLE_LOCATION_V1";
+                        };
+                        evidenceId: string;
+                        reason: string;
+                        /** @enum {string} */
+                        action: "REVISE";
+                        target: {
+                            /** @enum {string} */
+                            owner: "location-master/location-use";
+                            id: string;
+                            expectedHead: string;
+                        };
+                    } | {
+                        row: {
+                            object_location_rel_id: string;
+                            /** @enum {unknown} */
+                            target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                            target_id: string;
+                            location_id: string;
+                            usage_type: string;
+                            /** @enum {unknown} */
+                            is_primary: "Y" | "N";
+                            sharing_description: string | null;
+                            version_no: number;
+                            valid_from: string;
+                            valid_to: string | null;
+                            /** @enum {unknown} */
+                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                            source_system_id: string;
+                            source_record_id: string;
+                            approval_ref: string | null;
+                            recorded_at: string;
+                        };
+                        applicability: {
+                            /** @enum {unknown} */
+                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "department-master";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/ward";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            location: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                            };
+                        };
+                        usageType: {
+                            /** @enum {string} */
+                            owner: "location-master/usage-type";
+                            id: string;
+                            versionId: string;
+                            version: string;
+                        };
+                        policy: {
+                            /** @enum {unknown} */
+                            kind: "SHARED" | "EXCLUSIVE";
+                            /** @enum {string} */
+                            version: "WHOLE_LOCATION_V1";
+                        };
+                        evidenceId: string;
+                        reason: string;
+                        /** @enum {string} */
+                        action: "END";
+                        target: {
+                            /** @enum {string} */
+                            owner: "location-master/location-use";
+                            id: string;
+                            expectedHead: string;
+                        };
+                        endAt: string;
+                    })[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        revisionId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readLocationUseInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries: ({
+                            row: {
+                                object_location_rel_id: string;
+                                /** @enum {unknown} */
+                                target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                target_id: string;
+                                location_id: string;
+                                usage_type: string;
+                                /** @enum {unknown} */
+                                is_primary: "Y" | "N";
+                                sharing_description: string | null;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                /** @enum {unknown} */
+                                record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId: string;
+                            reason: string;
+                            /** @enum {string} */
+                            action: "CREATE";
+                        } | {
+                            row: {
+                                object_location_rel_id: string;
+                                /** @enum {unknown} */
+                                target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                target_id: string;
+                                location_id: string;
+                                usage_type: string;
+                                /** @enum {unknown} */
+                                is_primary: "Y" | "N";
+                                sharing_description: string | null;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                /** @enum {unknown} */
+                                record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId: string;
+                            reason: string;
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master/location-use";
+                                id: string;
+                                expectedHead: string;
+                            };
+                        } | {
+                            row: {
+                                object_location_rel_id: string;
+                                /** @enum {unknown} */
+                                target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                target_id: string;
+                                location_id: string;
+                                usage_type: string;
+                                /** @enum {unknown} */
+                                is_primary: "Y" | "N";
+                                sharing_description: string | null;
+                                version_no: number | string;
+                                valid_from: string;
+                                valid_to: string | null;
+                                /** @enum {unknown} */
+                                record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id: string;
+                                source_record_id: string;
+                                approval_ref: string | null;
+                                recorded_at: string;
+                            };
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId: string;
+                            reason: string;
+                            /** @enum {string} */
+                            action: "END";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master/location-use";
+                                id: string;
+                                expectedHead: string;
+                            };
+                            endAt: string;
+                        })[];
+                        sourceArtifactId?: string;
+                        sourceRows?: number[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    verifyLocationUseInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    inputId: string;
+                    inputDigest: string;
+                    reason: string;
+                    /** @enum {string} */
+                    policyVersion: "ORG13_CORE_V1";
+                    rows: {
+                        row: number;
+                        evidenceId: string;
+                        classificationAccepted: boolean;
+                        scopeAccepted: boolean;
+                        policyAccepted: boolean;
+                        policy: {
+                            /** @enum {unknown} */
+                            kind: "SHARED" | "EXCLUSIVE";
+                            /** @enum {string} */
+                            version: "WHOLE_LOCATION_V1";
+                        };
+                        validFrom: string;
+                        validTo: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        verificationId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    previewLocationUseInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        decision: "PASS" | "BLOCKED";
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        changes: {
+                            action: string;
+                            targetId: string | null;
+                            validFrom: string;
+                            validTo: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    planLocationUseInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    withdrawLocationUseInput: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        inputId: string;
+                        /** @enum {string} */
+                        status: "WITHDRAWN";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    reviewLocationUseCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        digest: string;
+                        unit: {
+                            input: {
+                                requestId: string;
+                                jobId: string;
+                                revisionId: string;
+                                /** @enum {string} */
+                                scope: "SYNTHETIC";
+                                campus: "NORTH" | "SOUTH";
+                                purpose: "IDENTITY_VERIFY" | "CONTACT_VERIFY" | "HR_RESTRICTED";
+                            };
+                            /** @enum {string} */
+                            atomicRule: "ORG13_WHOLE_REVISION_V1";
+                            basis: {
+                                input: {
+                                    requestId: string;
+                                    jobId: string;
+                                    revisionId: string;
+                                    /** @enum {unknown} */
+                                    campus: "NORTH" | "SOUTH";
+                                    /** @enum {unknown} */
+                                    profile: "CORE" | "FULL";
+                                    /** @enum {unknown} */
+                                    timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    entries: ({
+                                        row: {
+                                            object_location_rel_id: string;
+                                            /** @enum {unknown} */
+                                            target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                            target_id: string;
+                                            location_id: string;
+                                            usage_type: string;
+                                            /** @enum {unknown} */
+                                            is_primary: "Y" | "N";
+                                            sharing_description: string | null;
+                                            version_no: number | string;
+                                            valid_from: string;
+                                            valid_to: string | null;
+                                            /** @enum {unknown} */
+                                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                            source_system_id: string;
+                                            source_record_id: string;
+                                            approval_ref: string | null;
+                                            recorded_at: string;
+                                        };
+                                        applicability: {
+                                            /** @enum {unknown} */
+                                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                            target: {
+                                                /** @enum {string} */
+                                                owner: "department-master";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/unit";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/ward";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/nursing";
+                                                id: string;
+                                            };
+                                            campus: {
+                                                /** @enum {string} */
+                                                owner: "organization-master/campus";
+                                                id: string;
+                                            };
+                                            location: {
+                                                /** @enum {string} */
+                                                owner: "location-master";
+                                                id: string;
+                                            };
+                                            usageType: {
+                                                /** @enum {string} */
+                                                owner: "location-master/usage-type";
+                                                id: string;
+                                            };
+                                        };
+                                        usageType: {
+                                            /** @enum {string} */
+                                            owner: "location-master/usage-type";
+                                            id: string;
+                                            versionId: string;
+                                            version: string;
+                                        };
+                                        policy: {
+                                            /** @enum {unknown} */
+                                            kind: "SHARED" | "EXCLUSIVE";
+                                            /** @enum {string} */
+                                            version: "WHOLE_LOCATION_V1";
+                                        };
+                                        evidenceId: string;
+                                        reason: string;
+                                        /** @enum {string} */
+                                        action: "CREATE";
+                                    } | {
+                                        row: {
+                                            object_location_rel_id: string;
+                                            /** @enum {unknown} */
+                                            target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                            target_id: string;
+                                            location_id: string;
+                                            usage_type: string;
+                                            /** @enum {unknown} */
+                                            is_primary: "Y" | "N";
+                                            sharing_description: string | null;
+                                            version_no: number | string;
+                                            valid_from: string;
+                                            valid_to: string | null;
+                                            /** @enum {unknown} */
+                                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                            source_system_id: string;
+                                            source_record_id: string;
+                                            approval_ref: string | null;
+                                            recorded_at: string;
+                                        };
+                                        applicability: {
+                                            /** @enum {unknown} */
+                                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                            target: {
+                                                /** @enum {string} */
+                                                owner: "department-master";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/unit";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/ward";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/nursing";
+                                                id: string;
+                                            };
+                                            campus: {
+                                                /** @enum {string} */
+                                                owner: "organization-master/campus";
+                                                id: string;
+                                            };
+                                            location: {
+                                                /** @enum {string} */
+                                                owner: "location-master";
+                                                id: string;
+                                            };
+                                            usageType: {
+                                                /** @enum {string} */
+                                                owner: "location-master/usage-type";
+                                                id: string;
+                                            };
+                                        };
+                                        usageType: {
+                                            /** @enum {string} */
+                                            owner: "location-master/usage-type";
+                                            id: string;
+                                            versionId: string;
+                                            version: string;
+                                        };
+                                        policy: {
+                                            /** @enum {unknown} */
+                                            kind: "SHARED" | "EXCLUSIVE";
+                                            /** @enum {string} */
+                                            version: "WHOLE_LOCATION_V1";
+                                        };
+                                        evidenceId: string;
+                                        reason: string;
+                                        /** @enum {string} */
+                                        action: "REVISE";
+                                        target: {
+                                            /** @enum {string} */
+                                            owner: "location-master/location-use";
+                                            id: string;
+                                            expectedHead: string;
+                                        };
+                                    } | {
+                                        row: {
+                                            object_location_rel_id: string;
+                                            /** @enum {unknown} */
+                                            target_type: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                            target_id: string;
+                                            location_id: string;
+                                            usage_type: string;
+                                            /** @enum {unknown} */
+                                            is_primary: "Y" | "N";
+                                            sharing_description: string | null;
+                                            version_no: number | string;
+                                            valid_from: string;
+                                            valid_to: string | null;
+                                            /** @enum {unknown} */
+                                            record_status: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                            source_system_id: string;
+                                            source_record_id: string;
+                                            approval_ref: string | null;
+                                            recorded_at: string;
+                                        };
+                                        applicability: {
+                                            /** @enum {unknown} */
+                                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                            target: {
+                                                /** @enum {string} */
+                                                owner: "department-master";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/unit";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/ward";
+                                                id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner: "care-organization/nursing";
+                                                id: string;
+                                            };
+                                            campus: {
+                                                /** @enum {string} */
+                                                owner: "organization-master/campus";
+                                                id: string;
+                                            };
+                                            location: {
+                                                /** @enum {string} */
+                                                owner: "location-master";
+                                                id: string;
+                                            };
+                                            usageType: {
+                                                /** @enum {string} */
+                                                owner: "location-master/usage-type";
+                                                id: string;
+                                            };
+                                        };
+                                        usageType: {
+                                            /** @enum {string} */
+                                            owner: "location-master/usage-type";
+                                            id: string;
+                                            versionId: string;
+                                            version: string;
+                                        };
+                                        policy: {
+                                            /** @enum {unknown} */
+                                            kind: "SHARED" | "EXCLUSIVE";
+                                            /** @enum {string} */
+                                            version: "WHOLE_LOCATION_V1";
+                                        };
+                                        evidenceId: string;
+                                        reason: string;
+                                        /** @enum {string} */
+                                        action: "END";
+                                        target: {
+                                            /** @enum {string} */
+                                            owner: "location-master/location-use";
+                                            id: string;
+                                            expectedHead: string;
+                                        };
+                                        endAt: string;
+                                    })[];
+                                    sourceArtifactId?: string;
+                                    sourceRows?: number[];
+                                };
+                                inputDigest: string;
+                                contract: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    versionId: string;
+                                    version: number;
+                                    /** Format: uuid */
+                                    datasetVersionId: string;
+                                    head: string;
+                                    /** @enum {unknown} */
+                                    status: "DRAFT" | "APPROVED" | "PUBLISHED" | "RETIRED";
+                                    recordedAt: string;
+                                    reviewDigest: string;
+                                    /** @enum {string} */
+                                    adapterReadiness: "NOT_READY";
+                                    dataset: string;
+                                    /** @enum {unknown} */
+                                    profile: "CORE" | "FULL";
+                                    definition: {
+                                        ruleVersion: string;
+                                        templateVersion: string;
+                                        sourceVersionId: string | null;
+                                        fields: {
+                                            code: string;
+                                            /** @enum {unknown} */
+                                            type: "id" | "text" | "date" | "datetime" | "integer" | "decimal" | "code";
+                                            /** @enum {unknown} */
+                                            required: "R" | "C" | "O";
+                                            /** @enum {unknown} */
+                                            privacy: "INTERNAL" | "RESTRICTED" | "HIGH_RESTRICTED";
+                                            /** @enum {unknown} */
+                                            condition: "ALWAYS" | "OPTIONAL" | "UNRESOLVED" | "MANUAL_EVIDENCE" | "EVALUATED";
+                                            enumValues: string[];
+                                        }[];
+                                        businessKey?: string[];
+                                        codeSets: {
+                                            field: string;
+                                            codeSystem: string;
+                                            version: string;
+                                            /** @enum {unknown} */
+                                            status: "CANDIDATE" | "SYNTHETIC_ADOPTED";
+                                            codes: string[];
+                                            validFrom: string;
+                                            validTo: string | null;
+                                            /** Format: uuid */
+                                            sourceVersionId: string;
+                                        }[];
+                                        rules: {
+                                            id: string;
+                                            field: string;
+                                            text: string;
+                                            /** @enum {unknown} */
+                                            status: "UNRESOLVED" | "MACHINE" | "MANUAL_EVIDENCE";
+                                            version: string;
+                                        }[];
+                                        references: ({
+                                            field: string;
+                                            target: string;
+                                            /** @enum {unknown} */
+                                            status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {unknown} */
+                                            status: "LOCATION_CORE" | "LOCATION_USE_CORE";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {string} */
+                                            status: "ORGANIZATION_EVOLUTION_CORE";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {string} */
+                                            status: "ORGANIZATION_MAPPING_CORE";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {string} */
+                                            status: "ORGANIZATION_IDENTIFIER_CORE";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {string} */
+                                            status: "DEPARTMENT_CORE";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {string} */
+                                            status: "ORG_BUNDLE";
+                                        } | {
+                                            /** @enum {string} */
+                                            field: "is_primary_operator";
+                                            /** @enum {string} */
+                                            target: "enum:yes_no";
+                                            /** @enum {string} */
+                                            status: "ADOPTED_CODESET";
+                                        } | {
+                                            field: string;
+                                            target: string;
+                                            /** @enum {string} */
+                                            status: "BLOCKED_DEPENDENCY";
+                                        } | {
+                                            field: string;
+                                            /** @enum {string} */
+                                            target: "GOV09.config_id";
+                                            /** @enum {string} */
+                                            status: "DECLARED_PARAMETER";
+                                            /** Format: uuid */
+                                            parameterVersionId: string;
+                                            parameterDigest: string;
+                                        })[];
+                                    };
+                                    schemas: {
+                                        /** @enum {string} */
+                                        format: "OWNER_BASIS_JSON_V1";
+                                        canonicalJson: string;
+                                    };
+                                    semanticsDigest: string;
+                                    validFrom: string;
+                                    validTo: string | null;
+                                    sourceDraftDigest: string;
+                                    sourcePolicies: {
+                                        /** @enum {string} */
+                                        format: "OWNER_BASIS_JSON_V1";
+                                        canonicalJson: string;
+                                    };
+                                };
+                                verificationId: string | null;
+                                verificationDigest: string | null;
+                                issues: {
+                                    row: number;
+                                    field: string;
+                                    code: string;
+                                    /** @enum {unknown} */
+                                    status: "FAIL" | "BLOCKED";
+                                }[];
+                                heads: {
+                                    id: string;
+                                    /** @enum {unknown} */
+                                    scope: "NORTH" | "SOUTH";
+                                    applicability: {
+                                        /** @enum {unknown} */
+                                        targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target: {
+                                            /** @enum {string} */
+                                            owner: "department-master";
+                                            id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner: "care-organization/unit";
+                                            id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner: "care-organization/ward";
+                                            id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner: "care-organization/nursing";
+                                            id: string;
+                                        };
+                                        campus: {
+                                            /** @enum {string} */
+                                            owner: "organization-master/campus";
+                                            id: string;
+                                        };
+                                        location: {
+                                            /** @enum {string} */
+                                            owner: "location-master";
+                                            id: string;
+                                        };
+                                        usageType: {
+                                            /** @enum {string} */
+                                            owner: "location-master/usage-type";
+                                            id: string;
+                                        };
+                                    };
+                                    versions: {
+                                        id: string;
+                                        number: string;
+                                        /** @enum {unknown} */
+                                        action: "CREATE" | "REVISE" | "END";
+                                        validFrom: string;
+                                        validTo: string | null;
+                                        recordedAt: string;
+                                        facts: {
+                                            isPrimary: boolean;
+                                            sharingDescription: string | null;
+                                            policy: {
+                                                /** @enum {unknown} */
+                                                kind: "SHARED" | "EXCLUSIVE";
+                                                /** @enum {string} */
+                                                version: "WHOLE_LOCATION_V1";
+                                            };
+                                            usageType: {
+                                                /** @enum {string} */
+                                                owner: "location-master/usage-type";
+                                                id: string;
+                                                versionId: string;
+                                                version: string;
+                                            };
+                                            usageCode: string;
+                                            contractVersionId: string;
+                                            verificationBasis: {
+                                                id: string;
+                                                version: string;
+                                                digest: string;
+                                            };
+                                            dependencies: {
+                                                /** @enum {string} */
+                                                format: "OWNER_BASIS_JSON_V1";
+                                                canonicalJson: string;
+                                            };
+                                            source: {
+                                                sourceAlias: string;
+                                                sourceVersion: string;
+                                                sourceSystemId: string;
+                                                sourceRecordedAt: string;
+                                                recordLocatorEvidence: {
+                                                    inputId: string;
+                                                    row: number;
+                                                };
+                                                recordStatus: string;
+                                                approvalReference: string | null;
+                                            };
+                                        };
+                                        reason: string;
+                                        changeId: string;
+                                    }[];
+                                }[];
+                                materials: {
+                                    id: string;
+                                    digest: string;
+                                }[];
+                                dependencies: {
+                                    /** @enum {string} */
+                                    format: "OWNER_BASIS_JSON_V1";
+                                    canonicalJson: string;
+                                }[];
+                            };
+                            commands: {
+                                /** @enum {string} */
+                                owner: "location-master/location-use";
+                                row: number;
+                                /** @enum {unknown} */
+                                intent: "CREATE" | "REVISE";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "location-master/location-use";
+                                    id: string;
+                                    version: string;
+                                    source?: {
+                                        /** @enum {string} */
+                                        dataset: "ORG13";
+                                        row: number;
+                                        step: string;
+                                    };
+                                } | null;
+                                aliases: number[];
+                                value: {
+                                    inputId: string;
+                                    writes?: string;
+                                    writeIndex: string;
+                                    writesDigest: string;
+                                };
+                            }[];
+                            diff: {
+                                action: string;
+                                targetId: string | null;
+                                from: string;
+                                to: string | null;
+                            }[];
+                        };
+                        approvedBy: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    approveLocationUseCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    digest: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidateId: string;
+                        approvedBy: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    applyLocationUseCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        candidateId: string;
+                        requestId: string;
+                        facts: {
+                            /** @enum {string} */
+                            owner: "location-master/location-use";
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG13";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    resumeLocationUseOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": ({
+                        /** @enum {string} */
+                        status: "COMMITTED";
+                        candidateId: string;
+                        requestId: string;
+                        facts: {
+                            /** @enum {string} */
+                            owner: "location-master/location-use";
+                            id: string;
+                            version: string;
+                            source?: {
+                                /** @enum {string} */
+                                dataset: "ORG13";
+                                row: number;
+                                step: string;
+                            };
+                        }[];
+                        recordedAt: string;
+                        /** @enum {unknown} */
+                        responseStatus?: "DELIVERED" | "POST_COMMIT_FAILED";
+                    } | {
+                        /** @enum {string} */
+                        status: "COMMIT_UNKNOWN";
+                        candidateId: string;
+                        requestId: string;
+                    }) | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    reconcileLocationUseOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    candidateId: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        status: "MATCHED" | "MISMATCH";
+                        receiptId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getLocationUseAsOf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        applicability: {
+                            /** @enum {unknown} */
+                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "department-master";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/ward";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            location: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                            };
+                        };
+                        head: string;
+                        /** @enum {unknown} */
+                        state: "ACTIVE" | "ENDED" | "NOT_EFFECTIVE";
+                        version: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                isPrimary: boolean;
+                                sharingDescription: string | null;
+                                policy: {
+                                    /** @enum {unknown} */
+                                    kind: "SHARED" | "EXCLUSIVE";
+                                    /** @enum {string} */
+                                    version: "WHOLE_LOCATION_V1";
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                    versionId: string;
+                                    version: string;
+                                };
+                                usageCode: string;
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: {
+                                    /** @enum {string} */
+                                    format: "OWNER_BASIS_JSON_V1";
+                                    canonicalJson: string;
+                                };
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string | null;
+                                };
+                            };
+                            reason: string;
+                            changeId: string;
+                        } | null;
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getLocationUseHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {unknown} */
+                        scope: "NORTH" | "SOUTH";
+                        applicability: {
+                            /** @enum {unknown} */
+                            targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                            target: {
+                                /** @enum {string} */
+                                owner: "department-master";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/ward";
+                                id: string;
+                            } | {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                id: string;
+                            };
+                            location: {
+                                /** @enum {string} */
+                                owner: "location-master";
+                                id: string;
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                            };
+                        };
+                        versions: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                isPrimary: boolean;
+                                sharingDescription: string | null;
+                                policy: {
+                                    /** @enum {unknown} */
+                                    kind: "SHARED" | "EXCLUSIVE";
+                                    /** @enum {string} */
+                                    version: "WHOLE_LOCATION_V1";
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                    versionId: string;
+                                    version: string;
+                                };
+                                usageCode: string;
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: {
+                                    /** @enum {string} */
+                                    format: "OWNER_BASIS_JSON_V1";
+                                    canonicalJson: string;
+                                };
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string | null;
+                                };
+                            };
+                            reason: string;
+                            changeId: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getLocationUseVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    recordAsOf?: string;
+                    version: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        number: string;
+                        /** @enum {unknown} */
+                        action: "CREATE" | "REVISE" | "END";
+                        validFrom: string;
+                        validTo: string | null;
+                        recordedAt: string;
+                        facts: {
+                            isPrimary: boolean;
+                            sharingDescription: string | null;
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            usageCode: string;
+                            contractVersionId: string;
+                            verificationBasis: {
+                                id: string;
+                                version: string;
+                                digest: string;
+                            };
+                            dependencies: {
+                                /** @enum {string} */
+                                format: "OWNER_BASIS_JSON_V1";
+                                canonicalJson: string;
+                            };
+                            source: {
+                                sourceAlias: string;
+                                sourceVersion: string;
+                                sourceSystemId: string;
+                                sourceRecordedAt: string;
+                                recordLocatorEvidence: {
+                                    inputId: string;
+                                    row: number;
+                                };
+                                recordStatus: string;
+                                approvalReference: string | null;
+                            };
+                        };
+                        reason: string;
+                        changeId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    diffLocationUseVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    fromVersion: string;
+                    toVersion: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        before: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                isPrimary: boolean;
+                                sharingDescription: string | null;
+                                policy: {
+                                    /** @enum {unknown} */
+                                    kind: "SHARED" | "EXCLUSIVE";
+                                    /** @enum {string} */
+                                    version: "WHOLE_LOCATION_V1";
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                    versionId: string;
+                                    version: string;
+                                };
+                                usageCode: string;
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: {
+                                    /** @enum {string} */
+                                    format: "OWNER_BASIS_JSON_V1";
+                                    canonicalJson: string;
+                                };
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string | null;
+                                };
+                            };
+                            reason: string;
+                            changeId: string;
+                        };
+                        after: {
+                            id: string;
+                            number: string;
+                            /** @enum {unknown} */
+                            action: "CREATE" | "REVISE" | "END";
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            facts: {
+                                isPrimary: boolean;
+                                sharingDescription: string | null;
+                                policy: {
+                                    /** @enum {unknown} */
+                                    kind: "SHARED" | "EXCLUSIVE";
+                                    /** @enum {string} */
+                                    version: "WHOLE_LOCATION_V1";
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                    versionId: string;
+                                    version: string;
+                                };
+                                usageCode: string;
+                                contractVersionId: string;
+                                verificationBasis: {
+                                    id: string;
+                                    version: string;
+                                    digest: string;
+                                };
+                                dependencies: {
+                                    /** @enum {string} */
+                                    format: "OWNER_BASIS_JSON_V1";
+                                    canonicalJson: string;
+                                };
+                                source: {
+                                    sourceAlias: string;
+                                    sourceVersion: string;
+                                    sourceSystemId: string;
+                                    sourceRecordedAt: string;
+                                    recordLocatorEvidence: {
+                                        inputId: string;
+                                        row: number;
+                                    };
+                                    recordStatus: string;
+                                    approvalReference: string | null;
+                                };
+                            };
+                            reason: string;
+                            changeId: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    listLocationUses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    campusId?: string;
+                    targetId?: string;
+                    locationId?: string;
+                    usageTypeId?: string;
+                    after?: string;
+                    limit?: number;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            head: string;
+                            /** @enum {unknown} */
+                            state: "ACTIVE" | "ENDED" | "NOT_EFFECTIVE";
+                            version: {
+                                id: string;
+                                number: string;
+                                /** @enum {unknown} */
+                                action: "CREATE" | "REVISE" | "END";
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                facts: {
+                                    isPrimary: boolean;
+                                    sharingDescription: string | null;
+                                    policy: {
+                                        /** @enum {unknown} */
+                                        kind: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version: "WHOLE_LOCATION_V1";
+                                    };
+                                    usageType: {
+                                        /** @enum {string} */
+                                        owner: "location-master/usage-type";
+                                        id: string;
+                                        versionId: string;
+                                        version: string;
+                                    };
+                                    usageCode: string;
+                                    contractVersionId: string;
+                                    verificationBasis: {
+                                        id: string;
+                                        version: string;
+                                        digest: string;
+                                    };
+                                    dependencies: {
+                                        /** @enum {string} */
+                                        format: "OWNER_BASIS_JSON_V1";
+                                        canonicalJson: string;
+                                    };
+                                    source: {
+                                        sourceAlias: string;
+                                        sourceVersion: string;
+                                        sourceSystemId: string;
+                                        sourceRecordedAt: string;
+                                        recordLocatorEvidence: {
+                                            inputId: string;
+                                            row: number;
+                                        };
+                                        recordStatus: string;
+                                        approvalReference: string | null;
+                                    };
+                                };
+                                reason: string;
+                                changeId: string;
+                            } | null;
+                            /** @enum {string} */
+                            clinicalReadiness: "NOT_READY";
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    evaluateLocationUseWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    /** @enum {unknown} */
+                    mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {unknown} */
+                        mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                        recordAsOf: string;
+                        declarationCovered: boolean;
+                        primaryCovered: boolean;
+                        currentAdmissionCovered: boolean;
+                        declarationGaps: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                        primaryGaps: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                        currentGaps: {
+                            from: string;
+                            to: string | null;
+                        }[];
+                        checks: {
+                            from: string;
+                            to: string | null;
+                            /** @enum {unknown} */
+                            status: "SATISFIED" | "NOT_SATISFIED";
+                            reason: string;
+                            acceptedBasis: {
+                                /** @enum {string} */
+                                format: "OWNER_BASIS_JSON_V1";
+                                canonicalJson: string;
+                            };
+                            basis: {
+                                /** @enum {string} */
+                                format: "OWNER_BASIS_JSON_V1";
+                                canonicalJson: string;
+                            };
+                            dependencyChecks: {
+                                /** @enum {unknown} */
+                                owner: "LOCATION" | "ORGANIZATION" | "USAGE_TYPE" | "SOURCE";
+                                /** @enum {unknown} */
+                                status: "SATISFIED" | "NOT_SATISFIED";
+                                reason: string;
+                                basisChanged: boolean;
+                                basis: {
+                                    /** @enum {string} */
+                                    format: "OWNER_BASIS_JSON_V1";
+                                    canonicalJson: string;
+                                };
+                            }[];
+                        }[];
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                        /** @enum {string} */
+                        moving: "NOT_EVALUABLE";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    receiveLocationUseFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    input: {
+                        requestId: string;
+                        fileRequestId: string;
+                        job: {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                            };
+                            /** @enum {string} */
+                            action: "CREATE";
+                            contractId: string;
+                            contractVersionId: string;
+                            profile: "CORE" | "FULL";
+                        } | {
+                            scope: "BASELINE" | "SYNTHETIC";
+                            requestId: string;
+                            reason: string;
+                            input: {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                /** @enum {string} */
+                                format: "XLSX";
+                                /** @enum {string} */
+                                parserPolicy: "STRICT_ORG_BUNDLE_V1";
+                                manifestDigest: string;
+                                contractsDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "METADATA_ONLY";
+                                declaredSha256: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "FILE";
+                                format: "CSV" | "JSON" | "XLSX";
+                                parserPolicy: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                            };
+                            /** @enum {string} */
+                            action: "REVISE";
+                            jobId: string;
+                            expectedCurrentRevision: string;
+                        };
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        /** @enum {unknown} */
+                        timePolicy: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        retentionSeconds: number;
+                        operations: ({
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId: string;
+                            reason: string;
+                            /** @enum {string} */
+                            action: "CREATE";
+                        } | {
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId: string;
+                            reason: string;
+                            /** @enum {string} */
+                            action: "REVISE";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master/location-use";
+                                id: string;
+                                expectedHead: string;
+                            };
+                        } | {
+                            applicability: {
+                                /** @enum {unknown} */
+                                targetType: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target: {
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner: "care-organization/nursing";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                location: {
+                                    /** @enum {string} */
+                                    owner: "location-master";
+                                    id: string;
+                                };
+                                usageType: {
+                                    /** @enum {string} */
+                                    owner: "location-master/usage-type";
+                                    id: string;
+                                };
+                            };
+                            usageType: {
+                                /** @enum {string} */
+                                owner: "location-master/usage-type";
+                                id: string;
+                                versionId: string;
+                                version: string;
+                            };
+                            policy: {
+                                /** @enum {unknown} */
+                                kind: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId: string;
+                            reason: string;
+                            /** @enum {string} */
+                            action: "END";
+                            target: {
+                                /** @enum {string} */
+                                owner: "location-master/location-use";
+                                id: string;
+                                expectedHead: string;
+                            };
+                            endAt: string;
+                        })[];
+                    };
+                    contentBase64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        jobId: string;
+                        revisionId: string;
+                        sourceArtifactId: string;
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        input: {
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        } | null;
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        validation: {
+                            run: {
+                                runId: string;
+                                jobId: string;
+                                revisionId: string;
+                                parseArtifactId: string;
+                                sourceArtifactId: string;
+                                parserPolicy: string;
+                                contractVersionId: string;
+                                ruleVersion: string;
+                                interpretationPolicy: string;
+                                /** @enum {unknown} */
+                                decision: "PASS" | "FAIL" | "BLOCKED";
+                                issueCount: number;
+                                resultArtifactId: string;
+                                recordedAt: string;
+                                /** @enum {unknown} */
+                                adapterReadiness: "NOT_READY" | "READY";
+                                /** @enum {string} */
+                                securityScan: "NOT_RUN";
+                                qualityCandidateDigest?: string | null;
+                                qualityEligibilityDigest?: string | null;
+                                qualityResolutionDigest?: string | null;
+                            };
+                            evaluation: {
+                                /** @enum {unknown} */
+                                decision: "PASS" | "FAIL" | "BLOCKED";
+                                issues: {
+                                    rule: string;
+                                    layer: number;
+                                    row: number;
+                                    field: string;
+                                    /** @enum {unknown} */
+                                    status: "PASS" | "FAIL" | "UNKNOWN" | "NOT_EVALUATED";
+                                    code: string;
+                                }[];
+                                layers: {
+                                    layer: number;
+                                    /** @enum {unknown} */
+                                    status: "PASS" | "FAIL" | "UNKNOWN" | "NOT_EVALUATED" | "NOT_RUN";
+                                }[];
+                                evidenceRequirements: {
+                                    rule: string;
+                                    requirementId: string;
+                                    row: number;
+                                    field: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                    details?: {
+                                        evidenceOwner: string;
+                                        requiredEvidence: string;
+                                        sourceDataset: string;
+                                        sourceField: string;
+                                        sourceText: string;
+                                        sourceVersion: string;
+                                        inputs: string[];
+                                        dispositionReason: string;
+                                        whenTrue: string;
+                                        whenFalse: string;
+                                        whenUnknown: string;
+                                    };
+                                }[];
+                                dependencies: {
+                                    target: string;
+                                    /** @enum {unknown} */
+                                    status: "NOT_READY" | "OBSERVED";
+                                    scope: string;
+                                    identity: string;
+                                    version: string | null;
+                                    periods: {
+                                        from: string;
+                                        to: string | null;
+                                    }[];
+                                }[];
+                                /** @enum {string} */
+                                interpretationPolicy: "EXACT_TEXT_V1";
+                                executionCoverage?: {
+                                    /** @enum {string} */
+                                    version: "RULE_EXECUTION_V1";
+                                    checks: {
+                                        rule: string;
+                                        layer: number;
+                                        field: string;
+                                        /** @enum {unknown} */
+                                        status: "PASS" | "FAIL" | "UNKNOWN" | "NOT_EVALUATED" | "NOT_RUN";
+                                        code: string;
+                                        rows: number[];
+                                    }[];
+                                };
+                                /** @enum {unknown} */
+                                deduplicationPolicy?: "EXACT_ROW_V1" | "DECLARED_KEY_V2";
+                                duplicates?: {
+                                    row: number;
+                                    duplicateOf: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                        budget?: {
+                            /** @enum {unknown} */
+                            kind: "REFERENCE_COUNT" | "ASSESSMENT_BYTES";
+                            observed: number;
+                            limit: number;
+                        };
                     };
                 };
             };

@@ -2,7 +2,7 @@
 export interface AdapterRequest {dataset:string;profile:'CORE'|'FULL';contractVersion:number;templateVersion?:string;parserPolicy?:string}
 export interface AdapterDescriptor {
  readonly dataset:string;readonly profile:'CORE'|'FULL';readonly owner:null|'organization-master'|'department-master'|'location-master'|'care-organization';
- readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1'|'ORG22_CORE_V1'|'ORG23_CORE_V1'|'ORG_EVOLUTION_CORE_V1'|'ORG12_CORE_V1'|'ORG07_CORE_V1'|'ORG08_CORE_V1'|'ORG09_CORE_V1'|'ORG10_CORE_V1'|'ORG11_CORE_V1'|'ORG16_CORE_V1'|'ORG17_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE'|'REGISTER'|'CORRECT'|'RETRACT'|'END'|'CHANGE'|'RENAME'|'SPLIT'|'MERGE'|'MOVE_CONTAINMENT'|'CLOSE'|'REBIND'|'SUSPEND'|'GRANT'|'ACTIVATE'|'RESUME'|'RECORD'|'RETIRE')[];
+ readonly supportedContractRange:null|'ORG_BUNDLE_CORE_V1'|'ORG04_CORE_V1'|'ORG22_CORE_V1'|'ORG23_CORE_V1'|'ORG_EVOLUTION_CORE_V1'|'ORG12_CORE_V1'|'ORG07_CORE_V1'|'ORG08_CORE_V1'|'ORG09_CORE_V1'|'ORG10_CORE_V1'|'ORG11_CORE_V1'|'ORG13_CORE_V1'|'ORG16_CORE_V1'|'ORG17_CORE_V1';readonly allowedIntents:readonly ('CREATE'|'REVISE'|'REGISTER'|'CORRECT'|'RETRACT'|'END'|'CHANGE'|'RENAME'|'SPLIT'|'MERGE'|'MOVE_CONTAINMENT'|'CLOSE'|'REBIND'|'SUSPEND'|'GRANT'|'ACTIVATE'|'RESUME'|'RECORD'|'RETIRE')[];
  readonly capability:'NOT_READY'|'READY';
 }
 const datasets:ReadonlySet<string>=new Set([
@@ -14,6 +14,7 @@ const datasets:ReadonlySet<string>=new Set([
 export function selectImportAdapter(request:AdapterRequest):AdapterDescriptor {
  if(!datasets.has(request.dataset))throw new Error('UNKNOWN_ADAPTER');
  if(!['CORE','FULL'].includes(request.profile)||!Number.isSafeInteger(request.contractVersion)||request.contractVersion<1)throw new Error('INVALID_ADAPTER_REQUEST');
+ if(request.dataset==='ORG13'&&request.profile==='CORE'&&request.templateVersion==='ORG13_CORE_V1'&&request.parserPolicy==='STRICT_LOCATION_USE_V1')return Object.freeze({dataset:'ORG13',profile:'CORE',owner:'location-master',supportedContractRange:'ORG13_CORE_V1',allowedIntents:['CREATE','REVISE','END'] as const,capability:'READY'});
  if(request.dataset==='ORG11'&&request.profile==='CORE'&&request.templateVersion==='ORG11_CORE_V1'&&request.parserPolicy==='STRICT_WARD_NURSING_V1')return Object.freeze({dataset:'ORG11',profile:'CORE',owner:'care-organization',supportedContractRange:'ORG11_CORE_V1',allowedIntents:['CREATE','REVISE','END'] as const,capability:'READY'});
  if(request.dataset==='ORG10'&&request.profile==='CORE'&&request.templateVersion==='ORG10_CORE_V1'&&request.parserPolicy==='STRICT_UNIT_WARD_V1')return Object.freeze({dataset:'ORG10',profile:'CORE',owner:'care-organization',supportedContractRange:'ORG10_CORE_V1',allowedIntents:['CREATE','REVISE','END'] as const,capability:'READY'});
  if(request.dataset==='ORG17'&&request.profile==='CORE'&&request.templateVersion==='ORG17_CORE_V1'&&request.parserPolicy==='STRICT_SUBJECT_PERMISSION_V1')return Object.freeze({dataset:'ORG17',profile:'CORE',owner:'care-organization',supportedContractRange:'ORG17_CORE_V1',allowedIntents:['RECORD','REVISE','RETIRE'] as const,capability:'READY'});

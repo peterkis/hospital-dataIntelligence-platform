@@ -1,0 +1,2 @@
+import {defineConfig} from 'vitest/config';
+export default defineConfig({test:{include:['tooling/vnext/p3-07-db.test.ts','tooling/vnext/p3-07-relations-db.test.ts','tooling/vnext/p3-07-extended-db.test.ts','tooling/vnext/p3-07-dictionary-window-db.test.ts','tooling/vnext/p3-07-dependency-window-db.test.ts'],fileParallelism:false,testTimeout:120000,hookTimeout:120000}});

@@ -15,7 +15,7 @@ export const ContractDefinitionSchema=Type.Object({
   rules:Type.Array(Type.Object({id:Token,field:Type.String(),text:Type.String({minLength:1,maxLength:2000}),status:values('UNRESOLVED','MACHINE','MANUAL_EVIDENCE'),version:Token},{additionalProperties:false}),{maxItems:100}),
   references:Type.Array(Type.Union([
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Enum(['UNIT_CORE','CAPABILITY_CORE'])},{additionalProperties:false}),
-    Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('LOCATION_CORE')},{additionalProperties:false}),
+    Type.Object({field:Type.String(),target:Type.String(),status:Type.Enum(['LOCATION_CORE','LOCATION_USE_CORE'])},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('ORGANIZATION_EVOLUTION_CORE')},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('ORGANIZATION_MAPPING_CORE')},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('ORGANIZATION_IDENTIFIER_CORE')},{additionalProperties:false}),

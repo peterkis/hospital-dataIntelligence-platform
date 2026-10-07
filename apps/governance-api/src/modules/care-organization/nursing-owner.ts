@@ -116,7 +116,7 @@ export function openNursingUnit(connection:string,provider:KeyProviderPort,ports
   async readCoverageBoundariesInTransaction(s:Scope,actor:string,input:{id:string;recordAsOf:string}){
    const h=await historyIn(s,actor,input.id,input.recordAsOf),points=[...h.versions.flatMap(v=>[v.validFrom,v.validTo]),...h.bindings.flatMap(b=>b.versions.flatMap(v=>[v.validFrom,v.validTo]))].filter((v):v is string=>v!==null);
    if(ports.boundaries)for(const b of h.bindings)for(const v of b.versions)points.push(...await ports.boundaries(s,actor,{...v.binding,validFrom:v.validFrom,validTo:v.validTo,recordAsOf:input.recordAsOf}));
-   return {points,sourceIds:[...new Set(h.versions.map(v=>v.facts.source.sourceSystemId))]};
+   return {points,sourceIds:[...new Set(h.versions.map(v=>v.facts.source.sourceSystemId))],departmentWindows:bindingPeriods(h).map(p=>({id:bindingHead(p.binding).binding.department.id,from:p.from,to:p.to}))};
   },
   async readDepartmentReferencesInTransaction(s:Scope,actor:string,ids:string[],campus:string){return (await sql<{r:ImpactReference[]}>`select care_organization.nursing_department_references(${actor},${JSON.stringify(ids)}::jsonb,${campus}) r`.execute(s)).rows[0]!.r;},
   async authorizeReferenceInTransaction(s:Scope,actor:string,ref:ImpactReference){await sql`select care_organization.nursing_reference_access(${actor},${JSON.stringify(ref)}::jsonb,'READ')`.execute(s);},
