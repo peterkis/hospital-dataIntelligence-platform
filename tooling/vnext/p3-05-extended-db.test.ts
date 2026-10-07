@@ -83,6 +83,94 @@ test('a finite approved scope set preserves covered primary partition prefixes i
   for(const [index,fact] of published.facts.entries())expect(evaluation.checks).toContainEqual(expect.objectContaining({partitionId:set.partitions[index]!.id,relationId:fact.id,from:'2026-01-01T00:00:00.000000',to:'2026-03-01T00:00:00.000000',status:'SATISFIED'}));
 });
 
+test('R1: explicit PARTITIONS finite scope prefix remains in a longer current window',async()=>{
+  const a=await f.endpoint(),scopeInput=await f.scopeInput(a),end='2026-03-01T00:00:00';
+  if(scopeInput.kind!=='SCOPE_DEFINITION')throw new Error('TEST_SCOPE_DEFINITION_REQUIRED');
+  scopeInput.definition.validTo=end;
+  const registered=await f.apply(scopeInput),set=await f.owner.readScopeDefinition('maker',{id:registered.facts[0]!.id});
+  const coverage=f.partition(set,[0]),entry=f.entry(a,coverage);entry.row.valid_to=end;
+  const published=await f.apply(await f.input([entry]));
+  const response=await createWardNursingCoverageClient(url,'maker').evaluate({...window(a),coverage});
+  expect(response.response.status,JSON.stringify(response.error)).toBe(200);
+  const evaluation=response.data!;
+  expect(evaluation).toMatchObject({declaredCovered:false,primaryCovered:false,currentAdmissionCovered:false,status:'NOT_SATISFIED'});
+  for(const name of ['declaredGaps','primaryGaps','currentGaps'] as const)expect(evaluation[name]).toEqual([{partitionId:set.partitions[0]!.id,from:'2026-03-01T00:00:00.000000',to:'2026-04-01T00:00:00.000000'}]);
+  expect(evaluation.checks).toContainEqual(expect.objectContaining({partitionId:set.partitions[0]!.id,relationId:published.facts[0]!.id,from:'2026-01-01T00:00:00.000000',to:'2026-03-01T00:00:00.000000',status:'SATISFIED'}));
+});
+
+test.each([
+  ['CURRENT_ADMISSION','FINITE'],['CURRENT_ADMISSION','UNBOUNDED'],
+  ['HISTORICAL','FINITE'],['HISTORICAL','UNBOUNDED'],
+] as const)('R1: explicit PARTITIONS %s %s windows retain microsecond prefixes and definition gaps',async(mode,bound)=>{
+  const a=await f.endpoint(),scopeInput=await f.scopeInput(a),start='2026-02-01T00:00:00.000001',endAt='2026-03-01T00:00:00.000001';
+  if(scopeInput.kind!=='SCOPE_DEFINITION')throw new Error('TEST_SCOPE_DEFINITION_REQUIRED');
+  scopeInput.definition.validFrom=start;scopeInput.definition.validTo=endAt;
+  const registered=await f.apply(scopeInput),set=await f.owner.readScopeDefinition('maker',{id:registered.facts[0]!.id}),coverage=f.partition(set,[0]),entry=f.entry(a,coverage);
+  entry.row.valid_from=start;entry.row.valid_to=endAt;
+  const published=await f.apply(await f.input([entry])),relationId=published.facts[0]!.id;
+  if(mode==='HISTORICAL')await f.apply(await f.input([end(entry,relationId,'1','2026-02-15T00:00:00')]));
+  const client=createWardNursingCoverageClient(url,'maker'),request={...window(a,mode),coverage,validTo:bound==='FINITE'?'2026-04-01T00:00:00.000000':null,...(mode==='HISTORICAL'?{recordAsOf:published.recordedAt}:{})};
+  const response=await client.evaluate(request);expect(response.response.status,JSON.stringify(response.error)).toBe(200);
+  const evaluation=response.data!;
+  expect(evaluation).toMatchObject({declaredCovered:false,primaryCovered:false,currentAdmissionCovered:false,status:'NOT_SATISFIED'});
+  for(const name of ['declaredGaps','primaryGaps','currentGaps'] as const)expect(evaluation[name]).toEqual([
+    {partitionId:set.partitions[0]!.id,from:'2026-01-01T00:00:00.000000',to:start},
+    {partitionId:set.partitions[0]!.id,from:endAt,to:request.validTo},
+  ]);
+  expect(evaluation.checks).toContainEqual(expect.objectContaining({partitionId:set.partitions[0]!.id,relationId,from:start,to:endAt,status:'SATISFIED'}));
+  const lastMicrosecond=await client.evaluate({...request,validFrom:'2026-03-01T00:00:00.000000',validTo:endAt});
+  expect(lastMicrosecond.response.status,JSON.stringify(lastMicrosecond.error)).toBe(200);
+  expect(lastMicrosecond.data).toMatchObject({declaredCovered:true,primaryCovered:true,currentAdmissionCovered:true,status:'SATISFIED',declaredGaps:[],primaryGaps:[],currentGaps:[]});
+  const outside=await client.evaluate({...request,validFrom:endAt,validTo:'2026-03-01T00:00:00.000002'});
+  expect(outside.response.status,JSON.stringify(outside.error)).toBe(200);
+  for(const name of ['declaredGaps','primaryGaps','currentGaps'] as const)expect(outside.data![name]).toEqual([{partitionId:set.partitions[0]!.id,from:endAt,to:'2026-03-01T00:00:00.000002'}]);
+  expect(outside.data!.checks).toEqual([{partitionId:set.partitions[0]!.id,from:endAt,to:'2026-03-01T00:00:00.000002',status:'NOT_SATISFIED',reason:'SCOPE_BASIS_MISMATCH',relationId:null,acceptedBasis:null,basis:null}]);
+});
+
+test('R1: explicit PARTITIONS read identity still rejects wrong Ward, version, members and current access',async()=>{
+  const a=await f.endpoint(),other=await f.endpoint(),scopeInput=await f.scopeInput(a);
+  if(scopeInput.kind!=='SCOPE_DEFINITION')throw new Error('TEST_SCOPE_DEFINITION_REQUIRED');
+  scopeInput.definition.validTo='2026-03-01T00:00:00';
+  const registered=await f.apply(scopeInput),set=await f.owner.readScopeDefinition('maker',{id:registered.facts[0]!.id}),coverage=f.partition(set,[0]);
+  if(coverage.kind!=='PARTITIONS')throw new Error('TEST_PARTITION_SCOPE_REQUIRED');
+  const client=createWardNursingCoverageClient(url,'maker');
+  for(const mode of ['CURRENT_ADMISSION','HISTORICAL'] as const){
+    const request={...window(a,mode),coverage,...(mode==='HISTORICAL'?{recordAsOf:registered.recordedAt}:{})};
+    const wrongWard=await client.evaluate({...request,applicability:window(other).applicability});
+    expect(wrongWard.response.status).toBe(400);expect(wrongWard.error?.code).toBe('SCOPE_BASIS_MISMATCH');
+    for(const invalid of [{...coverage,version:'2'},{...coverage,partitionIds:[randomUUID()]},{...coverage,scopeSetId:randomUUID()}]){
+      const rejected=await client.evaluate({...request,coverage:invalid});
+      expect(rejected.response.status).toBe(400);expect(rejected.error?.code).toBe('UNKNOWN_COVERAGE_SCOPE');
+    }
+    const outsider=await createWardNursingCoverageClient(url,'outsider').evaluate(request);expect(outsider.response.status).toBe(403);
+  }
+});
+
+test('R1: finite PARTITIONS reads do not relax full-period revision or restricted SQL admission',async()=>{
+  const a=await f.endpoint(),scopeInput=await f.scopeInput(a),endAt='2026-03-01T00:00:00';
+  if(scopeInput.kind!=='SCOPE_DEFINITION')throw new Error('TEST_SCOPE_DEFINITION_REQUIRED');scopeInput.definition.validTo=endAt;
+  const registered=await f.apply(scopeInput),set=await f.owner.readScopeDefinition('maker',{id:registered.facts[0]!.id}),coverage=f.partition(set,[0]),entry=f.entry(a,coverage);
+  entry.row.valid_to=endAt;const published=await f.apply(await f.input([entry])),id=published.facts[0]!.id,original=await f.owner.exact('maker',{id,version:'1'});
+  const value=await f.input([{...entry,action:'REVISE',target:{owner:'care-organization/ward-nursing-coverage',id,expectedHead:'1'},row:{...entry.row,valid_to:'2026-04-01T00:00:00'}}]),staged=await f.owner.stage('maker',value);
+  await f.owner.verify('reviewer',f.verification(value,staged));
+  expect((await f.owner.preview('maker',{inputId:staged.inputId})).issues).toContainEqual(expect.objectContaining({code:'SCOPE_BASIS_MISMATCH'}));
+  await expect(f.owner.plan('maker',{inputId:staged.inputId,requestId:randomUUID()})).rejects.toThrow('SCOPE_BASIS_MISMATCH');
+  const pool=new Pool({connectionString:connection,max:1});
+  try {await expect(pool.query('select care_organization.ward_nursing_scope_validate($1,$2::jsonb,$3::jsonb,$4::timestamp,$5::timestamp,$6::timestamp)',['maker',JSON.stringify(a),JSON.stringify(coverage),'2026-01-01T00:00:00','2026-04-01T00:00:00',published.recordedAt])).rejects.toThrow('SCOPE_BASIS_MISMATCH');}
+  finally {await pool.end();}
+  expect(await f.owner.exact('maker',{id,version:'1'})).toEqual(original);expect((await f.owner.history('maker',{id})).versions).toHaveLength(1);
+});
+
+test('R1: whole-Ward coverage cannot extend an explicit partition past its frozen definition',async()=>{
+  const a=await f.endpoint(),scopeInput=await f.scopeInput(a);
+  if(scopeInput.kind!=='SCOPE_DEFINITION')throw new Error('TEST_SCOPE_DEFINITION_REQUIRED');scopeInput.definition.validTo='2026-03-01T00:00:00';
+  const registered=await f.apply(scopeInput),set=await f.owner.readScopeDefinition('maker',{id:registered.facts[0]!.id});
+  await f.apply(await f.input([f.entry(a)]));
+  const response=await createWardNursingCoverageClient(url,'maker').evaluate({...window(a),coverage:f.partition(set,[0])});expect(response.response.status,JSON.stringify(response.error)).toBe(200);
+  for(const name of ['declaredGaps','primaryGaps','currentGaps'] as const)expect(response.data![name]).toEqual([{partitionId:set.partitions[0]!.id,from:'2026-03-01T00:00:00.000000',to:'2026-04-01T00:00:00.000000'}]);
+  expect(response.data!.checks).toContainEqual(expect.objectContaining({partitionId:set.partitions[0]!.id,from:'2026-01-01T00:00:00.000000',to:'2026-03-01T00:00:00.000000',status:'SATISFIED'}));
+});
+
 test.each(['MACRO','FORMULA','HIDDEN','EXTERNAL'] as const)('actual XLSX %s barrier retains rejected evidence and publishes no coverage',async barrier=>{
   const a=await f.endpoint(),entry=f.entry(a),bytes=workbookBarrier(coverageFile([entry.row],'XLSX'),barrier),received=await createWardNursingCoverageClient(url,'maker').file({input:coverageFileRequest(f,[entry],'XLSX'),contentBase64:bytes.toString('base64')});
   expect(received.response.status,JSON.stringify(received.error)).toBe(200);expect(received.data).toMatchObject({structuralStatus:'REJECTED',input:null});

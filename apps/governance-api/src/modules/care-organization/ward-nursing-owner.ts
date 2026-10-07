@@ -137,15 +137,25 @@ export function openWardNursingCoverage(connection:string,provider:KeyProviderPo
   const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');if(input.mode==='CURRENT_ADMISSION'&&input.recordAsOf)throw new Error('CURRENT_RECORD_TIME_REQUIRED');
   const r=input.mode==='HISTORICAL'&&input.recordAsOf?localTime(input.recordAsOf):(await publicationTime(s)).recordAt,a=input.applicability;await ports.referenceAccess(s,actor,a);
   const all=(await scopedHistories(s,actor,a,r)).map(h=>knownWardNursing(h,r)),matches=all.filter(h=>!('nursing' in a)||!a.nursing||h.applicability.nursing.id===a.nursing.id),set=input.coverage.kind==='PARTITIONS'?await scopeSet(s,actor,input.coverage.scopeSetId,r):await scopeForWard(s,actor,a.ward.id,r);
-  if(input.coverage.kind==='PARTITIONS')await scopeBasis(s,actor,a,input.coverage,from,to,r);
+   if(input.coverage.kind==='PARTITIONS'){
+    if(!set)throw new Error('UNKNOWN_COVERAGE_SCOPE');
+    // Read identity against its approved period; assess the requested window separately.
+    await scopeBasis(s,actor,a,input.coverage,set.validFrom,set.validTo,r);
+   }
   const requestPeriod={from,to},definitionPeriods=set?intersect(requestPeriod,{from:set.validFrom,to:set.validTo}):[];
-  const cells:Array<{partitionId:string|null;from:string;to:string|null}>=input.coverage.kind==='PARTITIONS'
-   ?input.coverage.partitionIds.map(partitionId=>({partitionId,...requestPeriod}))
-   :set?[...definitionPeriods.flatMap(period=>set.partitions.map(partition=>({partitionId:partition.id,...period}))),...subtract(requestPeriod,definitionPeriods).map(period=>({partitionId:null,...period}))]
-    :[{partitionId:null,...requestPeriod}];
+   const cells:Array<{partitionId:string|null;from:string;to:string|null;scopeAvailable:boolean}>=input.coverage.kind==='PARTITIONS'
+    ?input.coverage.partitionIds.flatMap(partitionId=>[...definitionPeriods.map(period=>({partitionId,...period,scopeAvailable:true})),...subtract(requestPeriod,definitionPeriods).map(period=>({partitionId,...period,scopeAvailable:false}))])
+    :set?[...definitionPeriods.flatMap(period=>set.partitions.map(partition=>({partitionId:partition.id,...period,scopeAvailable:true}))),...subtract(requestPeriod,definitionPeriods).map(period=>({partitionId:null,...period,scopeAvailable:true}))]
+     :[{partitionId:null,...requestPeriod,scopeAvailable:true}];
   const checks:Array<{partitionId:string|null;from:string;to:string|null;status:'SATISFIED'|'NOT_SATISFIED';reason:string;relationId:string|null;acceptedBasis:unknown;basis:unknown}>=[],declaredGaps:Array<{partitionId:string|null;from:string;to:string|null}>=[],primaryGaps:Array<{partitionId:string|null;from:string;to:string|null}>=[],currentGaps:Array<{partitionId:string|null;from:string;to:string|null}>=[];let wholeWindowFailure=false;
   for(const cell of cells){
    const {partitionId}=cell;
+    if(!cell.scopeAvailable){
+     const gap={partitionId,from:cell.from,to:cell.to};
+     declaredGaps.push(gap);primaryGaps.push(gap);currentGaps.push(gap);
+     checks.push({...gap,status:'NOT_SATISFIED',reason:'SCOPE_BASIS_MISMATCH',relationId:null,acceptedBasis:null,basis:null});
+     continue;
+    }
    const declared:Array<{from:string;to:string|null}>=[],primary:Array<{from:string;to:string|null}>=[],successful:Array<{from:string;to:string|null}>=[];
    for(const h of matches){const d=declaration(h);if(!d)continue;const c=d.facts.coverageScope;if(c.kind==='PARTITIONS'&&(partitionId===null||!c.partitionIds.includes(partitionId)||c.scopeSetId!==set?.id))continue;
     for(const span of wardNursingReserved(h).flatMap(p=>intersect(p,cell))){declared.push(span);if(d.facts.isPrimary)primary.push(span);let points:string[]=[];
@@ -155,7 +165,7 @@ export function openWardNursingCoverage(connection:string,provider:KeyProviderPo
      for(const [index,start] of starts.entries()){const piece={from:start,to:starts[index+1]??span.to};try{const violations=sharingIssues(all);if(violations.length)throw new Error(violations[0]);const scope=await recoverable(s,()=>scopeBasis(s,actor,h.applicability,c,piece.from,piece.to,r)),upstream=await recoverable(s,()=>admission(s,actor,h.applicability,d.facts.rule,piece.from,piece.to,r)),source=await recoverable(s,async()=>(await sql<{r:unknown}>`select governance_catalog.ward_nursing_source_coverage(${actor},${d.facts.source.sourceSystemId}::uuid,${piece.from}::timestamp,${piece.to}::timestamp,${r}::timestamp) r`.execute(s)).rows[0]!.r);successful.push(piece);checks.push({partitionId,...piece,status:'SATISFIED',reason:'SATISFIED',relationId:h.id,acceptedBasis:d.facts.dependencies,basis:{upstream,source,scope}});}catch(error){if(error instanceof Error&&error.message==='ACCESS_DENIED')throw error;checks.push({partitionId,...piece,status:'NOT_SATISFIED',reason:error instanceof Error?error.message:'BLOCKED_DEPENDENCY',relationId:h.id,acceptedBasis:d.facts.dependencies,basis:null});}}
     }
    }
-   declaredGaps.push(...subtract(cell,declared).map(p=>({partitionId,...p})));primaryGaps.push(...subtract(cell,primary).map(p=>({partitionId,...p})));currentGaps.push(...subtract(cell,successful).map(p=>({partitionId,...p})));
+    declaredGaps.push(...subtract(cell,declared).map(({from,to})=>({partitionId,from,to})));primaryGaps.push(...subtract(cell,primary).map(({from,to})=>({partitionId,from,to})));currentGaps.push(...subtract(cell,successful).map(({from,to})=>({partitionId,from,to})));
   }
   // Cell boundaries must not let separately admitted fragments replace the full-period basis.
   for(const h of matches){const d=declaration(h);if(!d)continue;for(const span of wardNursingReserved(h).flatMap(period=>intersect(period,requestPeriod))){

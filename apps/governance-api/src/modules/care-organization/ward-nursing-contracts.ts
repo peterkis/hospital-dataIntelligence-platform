@@ -17,7 +17,7 @@ export const CoverageScopeSchema=Type.Union([
 export type CoverageScope=Static<typeof CoverageScopeSchema>;
 export const WardNursingScopeSchema=Type.Object({ward:ref('care-organization/ward'),nursing:ref('care-organization/nursing'),campus:ref('organization-master/campus'),purpose:Type.Literal('NURSING_COVERAGE')},closed);
 export type WardNursingScope=Static<typeof WardNursingScopeSchema>;
-export const WardScopeAnchorSchema=Type.Omit(WardNursingScopeSchema,['nursing']);
+export const WardScopeAnchorSchema=Type.Omit(WardNursingScopeSchema,['nursing'],closed);
 export type WardScopeAnchor=Static<typeof WardScopeAnchorSchema>;
 export const WardNursingRuleSchema=Type.Union([
  Type.Object({kind:Type.Literal('NO_SHARING_REQUIRED')},closed),
@@ -68,7 +68,7 @@ export const WardNursingDiffSchema=Type.Object({id:WardNursingId,fromVersion:War
 export const WardNursingListSchema=Type.Object({campus:Type.Enum(['NORTH','SOUTH']),campusId:Type.Optional(WardNursingId),nursingId:Type.Optional(WardNursingId),wardId:Type.Optional(WardNursingId),after:Type.Optional(WardNursingId),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),businessAt:Type.Optional(WardNursingTime),recordAsOf:Type.Optional(WardNursingTime)},closed);
 export const WardNursingWindowSchema=Type.Object({applicability:Type.Object({...WardScopeAnchorSchema.properties,nursing:Type.Optional(WardNursingScopeSchema.properties.nursing)},closed),coverage:CoverageScopeSchema,validFrom:WardNursingTime,validTo:End,mode:Type.Enum(['CURRENT_ADMISSION','HISTORICAL']),recordAsOf:Type.Optional(WardNursingTime)},closed);
 export type WardNursingWindow=Static<typeof WardNursingWindowSchema>;
-export const WardNursingReceiveSchema=Type.Object({requestId:WardNursingId,fileRequestId:WardNursingId,job:ImportJobCommandSchema,campus:StageCommon.campus,timePolicy:StageCommon.timePolicy,retentionSeconds:Type.Integer({minimum:1,maximum:2592000}),operations:Type.Array(Type.Union([Type.Omit(WardNursingEntrySchema.anyOf[0],['row']),Type.Omit(WardNursingEntrySchema.anyOf[1],['row']),Type.Omit(WardNursingEntrySchema.anyOf[2],['row'])]),{minItems:1,maxItems:100})},closed);
+export const WardNursingReceiveSchema=Type.Object({requestId:WardNursingId,fileRequestId:WardNursingId,job:ImportJobCommandSchema,campus:StageCommon.campus,timePolicy:StageCommon.timePolicy,retentionSeconds:Type.Integer({minimum:1,maximum:2592000}),operations:Type.Array(Type.Union([Type.Omit(WardNursingEntrySchema.anyOf[0],['row'],closed),Type.Omit(WardNursingEntrySchema.anyOf[1],['row'],closed),Type.Omit(WardNursingEntrySchema.anyOf[2],['row'],closed)]),{minItems:1,maxItems:100})},closed);
 export type WardNursingReceive=Static<typeof WardNursingReceiveSchema>;
 export interface ApprovedScopeSet {id:string;version:'1';scope:'NORTH'|'SOUTH';applicability:WardScopeAnchor;partitions:Array<{id:string;sourceAlias:string;name:string;boundary:string}>;validFrom:string;validTo:string|null;recordedAt:string;sourceAlias:string;verificationBasis:unknown;changeId:string}
 export interface WardNursingFacts {coverageScope:CoverageScope;coverageSource:string;isPrimary:boolean;handoverRuleReference:string|null;rule:WardNursingRule;handover:NursingHandover;contractVersionId:string;verificationBasis:{id:string;version:string;digest:string};dependencies:unknown;source:{sourceAlias:string;sourceVersion:string;sourceSystemId:string;sourceRecordedAt:string;recordLocatorEvidence:{inputId:string;row:number};recordStatus:string;approvalReference:string}}

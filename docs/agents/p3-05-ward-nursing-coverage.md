@@ -68,7 +68,7 @@ npm.cmd run prototype:db:with -- vnext:p3-05:validate --dispose .runtime/vnext/f
 [core](../../tooling/vnext/p3-05-db.test.ts) 和
 [extended](../../tooling/vnext/p3-05-extended-db.test.ts)，配置为
 [vitest.p3-05-db.config.ts](../../tooling/vnext/vitest.p3-05-db.config.ts)。
-下列 core 8、extended 48 是当前测试定义的展开数量，不是通过数。
+下列 core 8、extended 56 是当前测试定义的展开数量，不是通过数。
 完整结论须关联当前候选 SHA/tree、两套 verbose 日志和包装器最终记录；
 升级保留、部署、回归及静态检查各自提供独立证据。
 
@@ -84,7 +84,7 @@ npm.cmd run prototype:db:with -- vnext:p3-05:validate --dispose .runtime/vnext/f
 | C08 | `current underlying identity, source aliases and exact durable replay govern the public Owner` | 同人别名分离；真实 authority fixture 切为 SERVICE 后 Owner 核验/审阅/审批及受限 SQL VERIFY/REVIEW 拒绝，恢复 HUMAN 后继续同候选；准确重放、resume、MATCHED 与 outsider 拒绝。补充 E06–E10、E15。 |
 
 下表名称与 extended 源码一致；`%s` 和 `${identity} ${permission}` 按列中参数
-展开，32 个定义共 48 个用例。工程验证使用真实 Owner、生成客户端 loopback
+展开，37 个定义共 56 个用例。工程验证使用真实 Owner、生成客户端 loopback
 HTTP，以及实际受限应用角色的签名 SQL；SQL 探测回滚，不代替实际 Apply。
 
 | 编号 | extended 中的实际测试名称 | 展开数 / 验证面 |
@@ -121,6 +121,11 @@ HTTP，以及实际受限应用角色的签名 SQL；SQL 探测回滚，不代�
 | E30 | `cancellation at a future %s primary-marker start leaves zero responsibility and permits later ordinary initial coverage` | 2：Y/N；起点取消后零责任及后续初始覆盖。 |
 | E31 | `full-window %s source gaps use current exact versions without older-open fallback and preserve historical admission` | 2：LEAF/PARENT；准确当前来源/父版本与旧 R。 |
 | E32 | `a finite approved scope set preserves covered primary partition prefixes in a longer whole-Ward request` | 1：Jan–Mar 完整主分区仍保留 SATISFIED 前缀；Jan–Apr 整病区请求的三类 gap 只覆盖 Mar–Apr 后缀。 |
+| E33 | `R1: explicit PARTITIONS finite scope prefix remains in a longer current window` | 1：真实生成 HTTP 的显式分区长窗口保留 Jan–Mar 前缀，三类 gap 仅为 Mar–Apr；对应 PR35 外部审查 R1。 |
+| E34 | `R1: explicit PARTITIONS %s %s windows retain microsecond prefixes and definition gaps` | 4：CURRENT_ADMISSION/HISTORICAL × FINITE/UNBOUNDED；定义之前与之后的缺口、最后一微秒及结束切点；历史 R 在后续 END 后仍保留原声明。 |
+| E35 | `R1: explicit PARTITIONS read identity still rejects wrong Ward, version, members and current access` | 1：两种模式均拒绝错误 Ward、版本、未知集合/分区及当前无权人员。 |
+| E36 | `R1: finite PARTITIONS reads do not relax full-period revision or restricted SQL admission` | 1：超出定义期间的 REVISE/plan 仍阻断；实际受限 SQL 的完整窗口约束保持；旧事实/版本不变。 |
+| E37 | `R1: whole-Ward coverage cannot extend an explicit partition past its frozen definition` | 1：全病区声明仍不能使已失效冻结定义的显式分区在定义之外满足。 |
 
 E10 的准确内部签名为 `care_organization.ward_nursing_reserved(uuid,timestamp)`、
 `care_organization.ward_nursing_state(uuid,timestamp,timestamp)` 和
@@ -128,7 +133,17 @@ E10 的准确内部签名为 `care_organization.ward_nursing_reserved(uuid,times
 直接内部授予后，逐项要求 `has_function_privilege(current_user,signature,'EXECUTE')=false`。
 E25 的同 Owner/别 Ward 普通 CREATE proof 反例须关联新增断言及其实际日志；
 此映射不登记其结果。E32 同样须验证真实生成 HTTP 的完整前缀和准确后缀，
-不能把有限 Scope 不覆盖整个请求窗口解释成整窗无覆盖。
+不能把有限 Scope 不覆盖整个请求窗口解释成整窗无覆盖。显式 PARTITIONS
+读取先在定义自身的批准期间内核验准确身份、版本、成员、Ward/Campus 与访问权，
+随后按请求窗口与定义期间的交集评估；定义之外保留指定分区 ID 的明确缺口。
+这不放宽写入：CREATE/扩张等仍调用原 SQL 完整期间包含约束。
+
+无数据库 unit 还覆盖范围登记 applicability 与 CREATE/REVISE/END 文件操作的
+未知属性拒绝、真实请求超限413，以及共享错误处理器413/500的公开Schema声明。
+Type.Omit 的闭合选项须显式保留，ScopeSet响应同样闭合；OpenAPI与客户端只由
+官方单向生成器更新。实际413 HTTP与500源码分支/声明核对分开记录，静态声明
+不是已运行500业务错误的证明。生成物正文与全部变更应独立读取，生成器一致性
+PASS也不能替代该静态审阅。
 
 矩阵之外仍须单独核对 fresh/真实 populated0196 upgrade 的生成类型与数据库权限、
 根 typecheck/build、契约、模块边界、完整启动及受影响回归；保留部署必须另取
