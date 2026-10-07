@@ -7,13 +7,16 @@ import {localTime,covered,intersect,subtract} from '../organization-master/index
 import {NursingId,NursingStoredStageSchema,NursingStageSchema,NursingInputSchema,NursingPlanSchema,NursingVerifySchema,NursingReceiveSchema,NursingHistorySchema,NursingReadSchema,NursingListSchema,NursingExactSchema,NursingWindowSchema,NursingDiffSchema,ORG09_FIELDS,nursingCheck,normalizeNursingRow,type NursingStage,type NursingStoredStage,type NursingVerification,type NursingReceive,type NursingHistory,type NursingFacts,type NursingWrite,type NursingIssue,type NursingUpstreamPorts,type NursingBindingInput} from './nursing-contracts.js';
 import {nursingAt,nursingPeriods,knownNursing,bindingAt,bindingHead,bindingPeriods} from './nursing-timeline.js';
 import type {ImpactReference} from '../department-master/index.js';
+import {nursingHandover} from './nursing-handover.js';
+import {NursingHandoverConfirmSchema,type NursingHandoverConfirm,type NursingHandoverConfirmationBasis,type NursingHandoverBinding} from './nursing-handover-contracts.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 interface InputRecord {id:string;revision:string;job_id:string;job_revision:string;identity_code:string;withdrawn?:boolean;digest:string;campus_ids:string[];scope:'NORTH'|'SOUTH';envelope:Envelope;verification:null|{id:string;number:string;actor:string;identity_code:string;digest:string;envelope:Envelope}}
 type Staged={inputId:string;revisionId:string;digest:string};
 const verificationCoversRows=(rows:NursingVerification['rows'],count:number)=>rows.length===count&&new Set(rows.map(v=>v.row)).size===count&&rows.every(v=>v.row>=1&&v.row<=count);
 
-export function openNursingUnit(connection:string,provider:KeyProviderPort,ports:NursingUpstreamPorts){
+export function openNursingUnit(connection:string,provider:KeyProviderPort,ports:NursingUpstreamPorts,coverage?:{wardNursingCoveragesAvailable():boolean}){
+ const handover=nursingHandover(provider);
  const db=new Kysely<DB>({dialect:new PostgresDialect({pool:vnextPool(connection)})});
  const root=<T>(work:(s:Scope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
  const clock=async(s:Scope)=>(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(s)).rows[0]!.v;
@@ -104,8 +107,17 @@ export function openNursingUnit(connection:string,provider:KeyProviderPort,ports
  };
  const coordinator=applyCoordinator(db,provider,port),files=fileIntake(db,provider);
  const historyIn=async(s:Scope,actor:string,id:string,asOf?:string)=>{const h=knownNursing(await snapshot(s,actor,id,asOf),asOf);if(!h.versions.length)throw new Error('NOT_FOUND');return h;};
- const readIn=async(s:Scope,actor:string,input:{id:string;businessAt?:string;recordAsOf?:string})=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),at=input.businessAt?localTime(input.businessAt):await clock(s),v=nursingAt(h,at),binding=bindingAt(h,at);return {id:h.id,departmentId:binding?.versions.at(-1)?.binding.department.id??h.departmentId,head:h.versions.at(-1)!.number,state:v?'ACTIVE' as const:h.versions.some(v=>v.action==='SUSPEND'&&v.validFrom<=at)?'SUSPENDED' as const:'NOT_EFFECTIVE' as const,version:v,binding:v&&binding?bindingHead(binding):null,clinicalReadiness:'NOT_READY' as const,reasons:['RESPONSIBILITY_NOT_IMPLEMENTED','NURSING_COVERAGE_NOT_IMPLEMENTED','CLINICAL_CAPABILITY_NOT_IMPLEMENTED','OPERATING_PERMISSION_NOT_EVALUABLE']};};
+ const readIn=async(s:Scope,actor:string,input:{id:string;businessAt?:string;recordAsOf?:string})=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),at=input.businessAt?localTime(input.businessAt):await clock(s),v=nursingAt(h,at),binding=bindingAt(h,at);return {id:h.id,departmentId:binding?.versions.at(-1)?.binding.department.id??h.departmentId,head:h.versions.at(-1)!.number,state:v?'ACTIVE' as const:h.versions.some(v=>v.action==='SUSPEND'&&v.validFrom<=at)?'SUSPENDED' as const:'NOT_EFFECTIVE' as const,version:v,binding:v&&binding?bindingHead(binding):null,clinicalReadiness:'NOT_READY' as const,reasons:['RESPONSIBILITY_NOT_IMPLEMENTED',coverage?.wardNursingCoveragesAvailable()?'NURSING_COVERAGE_INDEPENDENT_ASSESSMENT_REQUIRED':'NURSING_COVERAGE_NOT_IMPLEMENTED','CLINICAL_CAPABILITY_NOT_IMPLEMENTED','OPERATING_PERMISSION_NOT_EVALUABLE']};};
  return {
+  async confirmCoverageHandover(actor:string,input:NursingHandoverConfirm){nursingCheck(NursingHandoverConfirmSchema,input);input=structuredClone(input);return root(s=>handover.confirm(s,actor,input));},
+  readHandoverConfirmationInTransaction(s:Scope,actor:string,basis:NursingHandoverConfirmationBasis,expected:NursingHandoverBinding){return handover.read(s,actor,basis,expected);},
+  async authorizeCoverageReferenceInTransaction(s:Scope,actor:string,input:{id:string;campusId:string}){await snapshot(s,actor,input.id);return (await sql<{r:{scope:'NORTH'|'SOUTH'}}>`select organization_master.campus_snapshot(${actor},${input.campusId}::uuid) r`.execute(s)).rows[0]!.r;},
+  async evaluateCoverageWindowInTransaction(s:Scope,actor:string,input:{id:string;campusId:string;validFrom:string;validTo:string|null;recordAsOf:string}){return (await sql<{r:unknown}>`select care_organization.ward_nursing_master_window(${actor},'NURSING',${input.id}::uuid,${input.campusId}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;},
+  async readCoverageBoundariesInTransaction(s:Scope,actor:string,input:{id:string;recordAsOf:string}){
+   const h=await historyIn(s,actor,input.id,input.recordAsOf),points=[...h.versions.flatMap(v=>[v.validFrom,v.validTo]),...h.bindings.flatMap(b=>b.versions.flatMap(v=>[v.validFrom,v.validTo]))].filter((v):v is string=>v!==null);
+   if(ports.boundaries)for(const b of h.bindings)for(const v of b.versions)points.push(...await ports.boundaries(s,actor,{...v.binding,validFrom:v.validFrom,validTo:v.validTo,recordAsOf:input.recordAsOf}));
+   return {points,sourceIds:[...new Set(h.versions.map(v=>v.facts.source.sourceSystemId))]};
+  },
   async readDepartmentReferencesInTransaction(s:Scope,actor:string,ids:string[],campus:string){return (await sql<{r:ImpactReference[]}>`select care_organization.nursing_department_references(${actor},${JSON.stringify(ids)}::jsonb,${campus}) r`.execute(s)).rows[0]!.r;},
   async authorizeReferenceInTransaction(s:Scope,actor:string,ref:ImpactReference){await sql`select care_organization.nursing_reference_access(${actor},${JSON.stringify(ref)}::jsonb,'READ')`.execute(s);},
   async readCampusDependenciesInTransaction(s:Scope,actor:string,input:{id:string;validFrom:string;validTo:string|null;asOf?:string}){return (await sql<{r:Array<{owner:'NURSING_UNIT';id:string;version:string;active:boolean;outstanding:boolean}>}>`select care_organization.nursing_campus_dependencies(${actor},${input.id}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${input.asOf?localTime(input.asOf):null}::timestamp) r`.execute(s)).rows[0]!.r;},

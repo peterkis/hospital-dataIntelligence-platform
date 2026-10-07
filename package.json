@@ -382,7 +382,17 @@
     "vnext:p3-04:validate": "node --import tsx tooling/vnext/p3-04-validate.mjs",
     "vnext:p3-04:upgrade": "node --import tsx tooling/vnext/p3-04-validate.mjs --upgrade",
     "vnext:p3-04:deploy": "node --import tsx tooling/vnext/p3-04-deploy.mjs",
-    "vnext:p3-04:preservation": "node --import tsx tooling/vnext/p3-04-preservation.mjs"
+    "vnext:p3-04:preservation": "node --import tsx tooling/vnext/p3-04-preservation.mjs",
+    "vnext:p3-05:unit": "vitest run --config tooling/vnext/vitest.p3-05-unit.config.ts",
+    "vnext:p3-05:typecheck": "tsc -p tooling/vnext/tsconfig.p3-05.json",
+    "vnext:p3-05:validate": "node --import tsx tooling/vnext/p3-05-validate.mjs",
+    "vnext:p3-05:upgrade": "node --import tsx tooling/vnext/p3-05-validate.mjs --upgrade",
+    "vnext:p3-05:handover": "node --import tsx tooling/vnext/p3-05-validate.mjs --handover",
+    "vnext:p3-05:handover:upgrade": "node --import tsx tooling/vnext/p3-05-handover-upgrade.mjs",
+    "vnext:p3-05:authority": "node --import tsx tooling/vnext/p3-05-authority.mjs",
+    "vnext:p3-05:regression": "node --import tsx tooling/vnext/p3-05-regression.mjs",
+    "vnext:p3-05:deploy": "node --import tsx tooling/vnext/p3-05-deploy.mjs",
+    "vnext:p3-05:preservation": "node --import tsx tooling/vnext/p3-05-preservation.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

@@ -1,9 +1,9 @@
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import {Type,type Static,type TSchema} from 'typebox';
-import {NursingId,NursingTime,NursingBindingSchema,NursingStageSchema,NursingStoredStageSchema,NursingInputSchema,NursingPlanSchema,NursingVerifySchema,NursingReceiveSchema,NursingReadSchema,NursingHistorySchema,NursingExactSchema,NursingListSchema,NursingWindowSchema,NursingDiffSchema,nursingCheck,type NursingUnitOwner} from '../../modules/care-organization/index.js';
+import {NursingId,NursingTime,NursingBindingSchema,NursingStageSchema,NursingStoredStageSchema,NursingInputSchema,NursingPlanSchema,NursingVerifySchema,NursingReceiveSchema,NursingReadSchema,NursingHistorySchema,NursingExactSchema,NursingListSchema,NursingWindowSchema,NursingDiffSchema,NursingHandoverConfirmSchema,NursingHandoverConfirmationSchema,nursingCheck,type NursingUnitOwner} from '../../modules/care-organization/index.js';
 import {ApproveApplyUnitSchema,ApplyUnitSchema} from '../../modules/governance-catalog/index.js';
 const closed={additionalProperties:false} as const,Text=Type.String(),End=Type.Union([NursingTime,Type.Null()]),NullableText=Type.Union([Text,Type.Null()]);
-const errors={400:Type.Object({code:Text,message:Text},closed),403:Type.Object({code:Text,message:Text},closed),404:Type.Object({code:Text,message:Text},closed),409:Type.Object({code:Text,message:Text},closed),503:Type.Object({code:Text,message:Text},closed)};
+const errors={400:Type.Object({code:Text,message:Text},closed),403:Type.Object({code:Text,message:Text},closed),404:Type.Object({code:Text,message:Text},closed),409:Type.Object({code:Text,message:Text},closed),413:Type.Object({code:Text,message:Text},closed),500:Type.Object({code:Text,message:Text},closed),503:Type.Object({code:Text,message:Text},closed)};
 const Source=Type.Object({sourceAlias:Text,sourceVersion:Text,sourceSystemId:NursingId,sourceRecordedAt:NursingTime,recordLocatorEvidence:Type.Object({inputId:NursingId,row:Type.Integer()},closed),recordStatus:Text,approvalReference:Text},closed);
 const Facts=Type.Object({nursingCode:Text,nursingName:Text,careLevel:NullableText,officePhone:NullableText,responsibilityStatus:Type.Literal('PENDING'),source:Source,contractVersionId:NursingId,managementBasis:Type.Unknown()},closed);
 const Version=Type.Object({id:NursingId,number:Text,action:Type.Enum(['CREATE','REVISE','REBIND','SUSPEND']),validFrom:NursingTime,validTo:End,recordedAt:NursingTime,facts:Facts,reason:Text,changeId:NursingId},closed);
@@ -21,6 +21,7 @@ export function registerNursingUnitRoutes(app:FastifyInstance,context?:NursingUn
  route('inputs','stageNursingUnitInput',NursingStageSchema,Type.Object({inputId:NursingId,revisionId:NursingId,digest:Text},closed),(o,a,b)=>o.stage(a,b));
  route('inputs/read','readNursingUnitInput',NursingInputSchema,NursingStoredStageSchema,(o,a,b)=>o.readInput(a,b));
  route('verify','verifyNursingUnitInput',NursingVerifySchema,Type.Object({verificationId:NursingId},closed),(o,a,b)=>o.verify(a,b));
+ route('handover/confirm','confirmNursingCoverageHandover',NursingHandoverConfirmSchema,NursingHandoverConfirmationSchema,(o,a,b)=>o.confirmCoverageHandover(a,b));
  route('preview','previewNursingUnitInput',NursingInputSchema,Type.Object({decision:Type.Enum(['PASS','BLOCKED']),issues:Type.Array(Issue),changes:Type.Array(Type.Object({action:Text,targetId:Type.Union([NursingId,Type.Null()]),name:Text,validFrom:NursingTime,validTo:End},closed))},closed),(o,a,b)=>o.preview(a,b));
  route('plan','planNursingUnitInput',NursingPlanSchema,Type.Object({candidateId:NursingId,digest:Text},closed),(o,a,b)=>o.plan(a,b));
  route('withdraw','withdrawNursingUnitInput',NursingPlanSchema,Type.Object({inputId:NursingId,status:Type.Literal('WITHDRAWN')},closed),(o,a,b)=>o.withdraw(a,b));

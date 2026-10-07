@@ -24,3 +24,19 @@ test('closed inputs reject client dependency lists and non-simulated receipt cla
  const receipt={requestId:randomUUID(),reason:'TEST',caseId:randomUUID(),campus:'NORTH',expectedHead:'0',proposalEventId:randomUUID(),consumerActor:'synthetic',outcome:'SIMULATED_COMPLETED',receiptRef:'TEST',simulated:true};
  expect(Check(RecordMigrationReceiptSchema,receipt)).toBe(true);expect(Check(RecordMigrationReceiptSchema,{...receipt,simulated:false})).toBe(false);expect(Check(RecordMigrationReceiptSchema,{...receipt,outcome:'COMPLETED'})).toBe(false);
 });
+
+test('Ward nursing obligations preserve disjoint binding windows and frozen accepted pins',()=>{
+ const ref=reference(null);ref.owner='WARD_NURSING_COVERAGE';ref.referenceRole='OWNER';
+ ref.currentPeriods=[{from:'2027-02-01T00:00:00.000000',to:'2027-03-01T00:00:00.000000'},{from:'2027-06-01T00:00:00.000001',to:null}];
+ const original=structuredClone({pins:ref.acceptedVersions,period:ref.originalPeriod,digest:ref.originalDigest});
+ projectImpactReference(ref,T,'SUSPEND',null);
+ expect(ref.current).toBe(true);expect(ref.constraint).toBe('UNSATISFIED');expect(ref.affectedSpans).toEqual(ref.currentPeriods);
+ expect({pins:ref.acceptedVersions,period:ref.originalPeriod,digest:ref.originalDigest}).toEqual(original);
+});
+
+test('cancelled and ended Ward nursing windows do not create obligations from their envelope',()=>{
+ for(const periods of [[],[{from:T,to:T}],[{from:'2026-01-01T00:00:00.000000',to:T}]]){
+  const ref=reference(null);ref.owner='WARD_NURSING_COVERAGE';ref.currentPeriods=periods;
+  projectImpactReference(ref,T,'SPLIT',null);expect(ref.current).toBe(false);expect(ref.constraint).toBe('SATISFIED');expect(ref.affectedSpans).toEqual([]);
+ }
+});

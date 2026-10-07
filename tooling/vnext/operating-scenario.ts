@@ -3,21 +3,23 @@ import {randomUUID} from 'node:crypto';
 import {openOrganization,openCampus,openOperatingRelations,type OrganizationCommand,type CampusCommand,type OperatingCommand} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import type {Catalog,KeyProviderPort,OwnerFact} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {fixture} from './protected-fixture.js';
-import {peer,quote} from './lineage.mjs';
+import {peer,quote,readReceipt} from './lineage.mjs';
 import {provisionCampusAuthority} from './campus-authority.mjs';
 import {provisionOperatingAuthority} from './operating-authority.mjs';
 import {operatingCodeSet} from './operating-fixture.js';
 interface Governed<T> {stage(actor:string,input:T):Promise<{inputId:string;revisionId:string}>;plan(actor:string,input:{inputId:string;requestId:string}):Promise<{candidateId:string;digest:string}>;readApplyCandidate(actor:string,input:{candidateId:string}):Promise<unknown>;approveApplyUnit(actor:string,input:{candidateId:string;digest:string}):Promise<unknown>;applyUnit(actor:string,input:{candidateId:string;requestId:string}):Promise<{status:string;facts?:OwnerFact[]}>}
 export async function prepare<T>(owner:Governed<T>,input:T){const staged=await owner.stage('maker',input),requestId=randomUUID(),candidate=await owner.plan('maker',{inputId:staged.inputId,requestId});await owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await owner.approveApplyUnit('reviewer',candidate);return {candidateId:candidate.candidateId,requestId};}
 export async function commit<T>(owner:Governed<T>,input:T){const result=await owner.applyUnit('maker',await prepare(owner,input));if(result.status!=='COMMITTED'||!result.facts?.[0])throw new Error('FIXTURE_NOT_COMMITTED');return result.facts[0];}
-export async function operatingScenario(receipt:{name:string},connection:string,provider:KeyProviderPort,catalog:Catalog,reusePublishedServiceCatalog=false){
+export async function operatingScenario(receipt:{name:string;oid?:string},connection:string,provider:KeyProviderPort,catalog:Catalog,reusePublishedServiceCatalog=false){
+ const retained=reusePublishedServiceCatalog&&receipt.oid!==undefined?readReceipt():undefined;
+ const reusePublishedTransport=!!retained&&receipt.name===retained.name&&receipt.oid===retained.oid;
  provisionCampusAuthority(receipt,provider);provisionOperatingAuthority(receipt,provider);
  const org=openOrganization(connection,provider),campus=openCampus(connection,provider),operating=openOperatingRelations(connection,provider);
  try{
- const f=await fixture(catalog,{textField:true,ruleVersion:'ORG03_TRANSPORT_V1'}),job=await catalog.importJobCommand('maker',{...f.create,requestId:randomUUID()});
+ const f=await fixture(catalog,{textField:true,ruleVersion:'ORG03_TRANSPORT_V1',reusePublishedContract:reusePublishedTransport}),job=await catalog.importJobCommand('maker',{...f.create,requestId:randomUUID()});
  peer(receipt.name,`INSERT INTO vnext_control.protected_grant SELECT a,${quote(f.dataset.id)}::uuid,s,'IDENTITY_VERIFY',p FROM unnest(ARRAY['maker','maker-alias','reviewer']) a CROSS JOIN unnest(ARRAY['NORTH','SOUTH']) s CROSS JOIN unnest(ARRAY['READ','STORE']) p ON CONFLICT DO NOTHING;`);
  const artifact=await catalog.storeProtectedArtifact('maker',{scope:'SYNTHETIC',requestId:randomUUID(),jobId:job.id,revisionId:job.revisionId,campus:'NORTH',purpose:'IDENTITY_VERIFY',kind:'RAW_CELL',retentionSeconds:3600},Buffer.from('DEMO_ORG03_LEGAL_SCOPE_EVIDENCE'));
- const source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(v=>v.kind==='SOURCE'&&v.status==='PUBLISHED'&&v.validTo===null)!;
+ const source=(await catalog.read('maker',{scope:'SYNTHETIC'})).items.find(v=>v.kind==='SOURCE'&&v.status==='PUBLISHED'&&v.validTo===null&&(!reusePublishedTransport||v.versionId===f.sourceVersionId))!;
  const common={validFrom:'2026-01-01T00:00:00',validTo:null,source:{systemId:source.id,versionId:source.versionId,alias:'DEMO_ORG03',versionNo:1,recordLocator:'DEMO_ORG03_ROW',recordedAt:'2026-01-01T00:00:00',recordStatus:'PUBLISHED' as const,approvalRef:'DEMO_OFFICE_APPROVAL'}};
  const input={jobId:job.id,revisionId:job.revisionId,campus:'NORTH' as const,purpose:'IDENTITY_VERIFY' as const};
  const orgApply=(command:OrganizationCommand)=>commit(org,{...input,requestId:randomUUID(),command});

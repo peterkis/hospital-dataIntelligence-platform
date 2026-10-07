@@ -202,6 +202,26 @@ export interface CareOrganizationNursingCode {
   unit_id: string;
 }
 
+export interface CareOrganizationNursingHandoverConfirmation {
+  actor: string;
+  binding: Json;
+  campus_id: string;
+  digest: string;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  material_digest: string;
+  material_fingerprint: string;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  scope: string;
+  source_nursing_id: string;
+  source_version_id: string;
+  successor_nursing_id: string;
+  ward_id: string;
+}
+
 export interface CareOrganizationNursingInput {
   campus_ids: string[];
   digest: string;
@@ -538,6 +558,105 @@ export interface CareOrganizationWardInput {
   request_id: string;
   revision: Generated<string>;
   scope: string;
+}
+
+export interface CareOrganizationWardNursing {
+  applicability: Json;
+  campus_id: string;
+  id: Generated<string>;
+  nursing_unit_id: string;
+  scope: string;
+  source_alias: string;
+  source_system_id: string;
+  ward_id: string;
+}
+
+export interface CareOrganizationWardNursingAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface CareOrganizationWardNursingApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  verification_digest: string;
+  verification_id: string;
+  verification_number: Int8;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface CareOrganizationWardNursingChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface CareOrganizationWardNursingInput {
+  campus_ids: string[];
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface CareOrganizationWardNursingScopeSet {
+  campus_id: string;
+  change_id: string;
+  id: Generated<string>;
+  partitions: Json;
+  recorded_at: string;
+  scope: string;
+  source_alias: string;
+  valid_from: string;
+  valid_to: string | null;
+  verification_basis: Json;
+  ward_id: string;
+}
+
+export interface CareOrganizationWardNursingVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
+export interface CareOrganizationWardNursingVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  valid_from: string;
+  valid_to: string | null;
+  ward_nursing_id: string;
+}
+
+export interface CareOrganizationWardNursingWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
 }
 
 export interface CareOrganizationWardUnit {
@@ -1891,6 +2010,11 @@ export interface VnextControlUnitWriteAuthority {
   singleton: Generated<boolean>;
 }
 
+export interface VnextControlWardNursingWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlWardWriteAuthority {
   key_hex: string;
   singleton: Generated<boolean>;
@@ -1916,6 +2040,7 @@ export interface DB {
   "care_organization.nursing_binding_version": CareOrganizationNursingBindingVersion;
   "care_organization.nursing_change": CareOrganizationNursingChange;
   "care_organization.nursing_code": CareOrganizationNursingCode;
+  "care_organization.nursing_handover_confirmation": CareOrganizationNursingHandoverConfirmation;
   "care_organization.nursing_input": CareOrganizationNursingInput;
   "care_organization.nursing_unit": CareOrganizationNursingUnit;
   "care_organization.nursing_unit_binding": CareOrganizationNursingUnitBinding;
@@ -1950,6 +2075,15 @@ export interface DB {
   "care_organization.ward_change": CareOrganizationWardChange;
   "care_organization.ward_code": CareOrganizationWardCode;
   "care_organization.ward_input": CareOrganizationWardInput;
+  "care_organization.ward_nursing": CareOrganizationWardNursing;
+  "care_organization.ward_nursing_access": CareOrganizationWardNursingAccess;
+  "care_organization.ward_nursing_apply_binding": CareOrganizationWardNursingApplyBinding;
+  "care_organization.ward_nursing_change": CareOrganizationWardNursingChange;
+  "care_organization.ward_nursing_input": CareOrganizationWardNursingInput;
+  "care_organization.ward_nursing_scope_set": CareOrganizationWardNursingScopeSet;
+  "care_organization.ward_nursing_verification": CareOrganizationWardNursingVerification;
+  "care_organization.ward_nursing_version": CareOrganizationWardNursingVersion;
+  "care_organization.ward_nursing_withdrawal": CareOrganizationWardNursingWithdrawal;
   "care_organization.ward_unit": CareOrganizationWardUnit;
   "care_organization.ward_unit_binding": CareOrganizationWardUnitBinding;
   "care_organization.ward_verification": CareOrganizationWardVerification;
@@ -2083,5 +2217,6 @@ export interface DB {
   "vnext_control.subject_write_authority": VnextControlSubjectWriteAuthority;
   "vnext_control.unit_ward_write_authority": VnextControlUnitWardWriteAuthority;
   "vnext_control.unit_write_authority": VnextControlUnitWriteAuthority;
+  "vnext_control.ward_nursing_write_authority": VnextControlWardNursingWriteAuthority;
   "vnext_control.ward_write_authority": VnextControlWardWriteAuthority;
 }

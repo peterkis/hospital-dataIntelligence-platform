@@ -93,7 +93,7 @@ export function departmentImpactCases(ports:CasePorts){
     const reference=current.references.find(ref=>ref.owner===original.owner&&ref.id===original.id&&ref.versionId===original.versionId&&ref.departmentId===original.departmentId&&ref.referenceRole===original.referenceRole);
     if(!reference)throw new Error('BLOCKED_DEPENDENCY');
     if(reference.currentReferencesDepartment&&!['RETRACT','CLOSED','REVOKED'].includes(reference.currentAction)&&reference.currentTargetId===original.departmentId){
-     remainingSpans=detail.item.obligation.affectedSpans.flatMap(span=>intersect(span,reference.currentPeriod));
+     remainingSpans=detail.item.obligation.affectedSpans.flatMap(span=>(reference.currentPeriods??[reference.currentPeriod]).flatMap(period=>intersect(span,period)));
     }
     if(proposal.disposition.kind==='NEW_RELATION'){
      const replacement=await result(scope,actor,input.campus,proposal.disposition.result,detail.item.id);
