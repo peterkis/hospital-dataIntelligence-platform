@@ -94,7 +94,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;state.rowSnapshots=[];
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -171,7 +171,7 @@ test('both gates use the same exact ordered and checksummed release',()=>{
  expect(workspaceStartupPrefix(files,ledger())).toBe(files.length);expect(workspaceDeploymentPrefix(files,ledger(),true)).toBe(files.length);
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
  expect(files[199]?.id).toBe('0200_nursing_owner_handover_confirmation');
- expect(files.at(-1)?.id).toBe('0203_location_use_public_integration');
+ expect(files.at(-1)?.id).toBe('0204_department_location_use_source_boundaries');
 });
 
 test('the original 200 migration bytes match the approved P3-05 Git tree',()=>{

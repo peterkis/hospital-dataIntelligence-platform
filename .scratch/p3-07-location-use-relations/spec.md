@@ -20,3 +20,7 @@ One receipt-bound durable DB, OID206108; old0001–0200 migrations byte unchange
 Hospital policy NOT_ADOPTED, clinical NOT_READY, ORG13-FULL BLOCKED_DEPENDENCY; organization-space page, full restart, capacity and formal acceptance NOT_RUN. Frozen old failures, handoffs, source pack and attachments preserved.
 
 One local completion commit and ignored .runtime/vnext/p3-07 handoff; no fetch/push/PR/merge or P3-10/P3-11 implementation.
+
+Additional authority, user instruction in this chat, 2026-10-07: publish the branch and PR, request `@codex review`, diagnose and repair findings, then push and repeat review until all actionable findings are resolved. Merge, main fast-forward, cleanup and later tickets remain outside this authorization.
+
+The first installed P3-07 prefix is 0203. Review repairs must preserve all0001–0203 bytes and use forward migrations. Department boundary reads authorize only sources contributing effective property/lifecycle periods inside the requested B/R window, preserving that Owner's existing finite-version fallback and terminal replacement behavior. The separate location-use permanent-END/latest-finite rules remain unchanged. Validate real populated0203→0204 preservation in addition to the original0200 predecessor upgrade.

@@ -56,6 +56,9 @@ test('D01: independently approved purpose is readable and enables new codes with
   await owner.command('reviewer',{action:'VERIFY',requestId:randomUUID(),reason:'TEST independently checked source and meaning',target:draft.id,expectedHead:draft.head,versionId:draft.versionId,reviewDigest:draft.reviewDigest,evidenceId:base.artifact.artifactId,meaningAccepted:true});
   const approved=await owner.command('reviewer',{action:'APPROVE',requestId:randomUUID(),reason:'TEST independent purpose approval',target:draft.id,expectedHead:draft.head,versionId:draft.versionId,reviewDigest:draft.reviewDigest});
   expect(await owner.read('maker',{id:approved.id})).toMatchObject({id:approved.id,code:request.code,name:'科研办公',status:'APPROVED',enabled:true});
-  expect((await owner.list('maker',{limit:100})).items).toContainEqual(expect.objectContaining({id:approved.id,code:request.code,status:'APPROVED'}));
+  const first=await owner.list('maker',{limit:100}),items=[...first.items],pages=[{count:first.items.length,nextAfterId:first.nextAfterId}];let after=first.nextAfterId;
+  while(after!==null){const page=await owner.list('maker',{after,limit:100});items.push(...page.items);pages.push({count:page.items.length,nextAfterId:page.nextAfterId});after=page.nextAfterId;}
+  console.log(JSON.stringify({gate:'P3_07_DICTIONARY_LIST_PAGINATION',limit:100,totalRows:items.length,pages,targetId:approved.id}));
+  expect(items).toContainEqual(expect.objectContaining({id:approved.id,code:request.code,status:'APPROVED'}));
  }finally{await owner.close();}
 });

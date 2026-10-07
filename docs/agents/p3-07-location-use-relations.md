@@ -35,6 +35,11 @@ CREATE 建立稳定身份，REVISE 追加同一固定元组/起点的完整声�
 重新评价依赖；既往停用区间保留。纯期间收缩和END保留原接受依据，仍要求当前权限、
 期待版本、理由和独立审批。查询分别呈现原接受依据、当前复核与完整窗口缺口。
 
+科室边界读取先按同一R的有效属性、生命周期及请求B期间筛选实际贡献的来源，再检查
+来源权限。无关历史来源不能阻断当前窗口；仍在贡献的历史来源继续要求当前权限。
+沿用Department已有的有限版本回退规则，并保留暂停、恢复和替换终止边界。这不会改变
+地点使用关系的最新有限声明和永久END规则。
+
 ORG13 使用独立 ORG13_CORE_V1 / STRICT_LOCATION_USE_V1。保留原文件、15字段、原词元、
 物理行号与转换依据。用途是准确稳定编码，不接受名称或模糊匹配。JSON要求原生数字
 版号和null结束边界；CSV/XLSX版号及空结束仅按准确已发布转换规则处理。XLSX数字
@@ -56,6 +61,7 @@ ORG13 使用独立 ORG13_CORE_V1 / STRICT_LOCATION_USE_V1。保留原文件、15
 | `npm.cmd run vnext:p3-07:typecheck` | 本票Owner、客户端、页面和验证代码类型检查。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:validate --generate` | 自有fresh库完整迁移、DB类型生成、Owner/HTTP/受限SQL专项矩阵。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:upgrade` | 准确基线归档的原Owner建立真实0200旧事实，再前向升级、核对行及重复数量、列、账本、密钥、历史和原结果。 |
+| `npm.cmd run prototype:db:with -- vnext:p3-07:validate --upgrade-from-203` | 准确已发布0203源码通过原Owner建立用途及地点使用事实，再升级0204并保全已安装前缀、事实、密钥、历史和结果。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:regression` | 顺序执行脚本内完整受影响检查，保留逐项原始结果。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:browser` | 提供自有真实库/工作台，由实际浏览器完成字典流程及两个视口验收。READY不是浏览器通过。 |
 | `npm.cmd run prototype:db:with -- vnext:p3-07:deploy` | 最终候选通过后，唯一保留库前向升级、保全与真实启动/生成客户端HTTP。 |
@@ -69,7 +75,8 @@ DATABASE_SESSION_CLOSED 的 cleanupPassed=true。环境安装失败不计领域R
 ## 保留库与恢复
 
 仅部署 `.runtime/vnext/creation.json` 中的 `hdi_mc_vnext_a7049c9e5c2a4364`，
-OID206108、HDIP-MC-VNEXT谱系及0200正确校验和前缀必须先现场核对。
+OID206108、HDIP-MC-VNEXT谱系、准确已安装前缀及其校验和必须先现场核对。
+初次部署0200→0203；审查修复通过新增0204前向升级，0001–0203保持原字节。
 复用原Owner角色和密钥；部署前快照需保存全部旧行哈希及重复数量、列、账本和密钥摘要。
 部署后新增事实允许追加，旧事实不得丢失。新迁移在实际保留库安装后不得改字节；
 后续修复继续追加迁移。
@@ -81,4 +88,5 @@ OID206108、HDIP-MC-VNEXT谱系及0200正确校验和前缀必须先现场核对
 
 医院政策NOT_ADOPTED、临床NOT_READY、ORG13-FULL BLOCKED_DEPENDENCY。
 组织空间整页、完整服务重启、容量和正式医院验收NOT_RUN；P3-10/P3-11不在本票。
-完成本地提交和ignored交接后停止，不push、不创建PR、不合并。
+初次实施在本地提交和ignored交接后停止。用户随后明确授权push、PR及循环`@codex review`
+与修复；本轮按该授权完成发布审查后停止，不合并、不快进main、不清理或进入后票。
