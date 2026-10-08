@@ -392,7 +392,15 @@
     "vnext:p3-05:authority": "node --import tsx tooling/vnext/p3-05-authority.mjs",
     "vnext:p3-05:regression": "node --import tsx tooling/vnext/p3-05-regression.mjs",
     "vnext:p3-05:deploy": "node --import tsx tooling/vnext/p3-05-deploy.mjs",
-    "vnext:p3-05:preservation": "node --import tsx tooling/vnext/p3-05-preservation.mjs"
+    "vnext:p3-05:preservation": "node --import tsx tooling/vnext/p3-05-preservation.mjs",
+    "vnext:p3-07:validate": "node --import tsx tooling/vnext/p3-07-validate.mjs",
+    "vnext:p3-07:upgrade": "node --import tsx tooling/vnext/p3-07-validate.mjs --upgrade",
+    "vnext:p3-07:unit": "vitest run --config tooling/vnext/vitest.p3-07-unit.config.ts",
+    "vnext:p3-07:typecheck": "tsc -p tooling/vnext/tsconfig.p3-07.json",
+    "vnext:p3-07:authority": "node --import tsx tooling/vnext/p3-07-authority.mjs",
+    "vnext:p3-07:regression": "node tooling/vnext/p3-07-regression.mjs",
+    "vnext:p3-07:browser": "node --import tsx tooling/vnext/p3-07-browser.mjs",
+    "vnext:p3-07:deploy": "node --import tsx tooling/vnext/p3-07-deploy.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

@@ -55,3 +55,4 @@ export * from './subject-code-client.js';
 export {createUnitWardClient} from './unit-ward-client.js';
 
 export {createWardNursingCoverageClient} from './ward-nursing-client.js';
+export * from './location-use-client.js';

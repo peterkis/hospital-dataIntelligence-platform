@@ -116,7 +116,32 @@ export function openNursingUnit(connection:string,provider:KeyProviderPort,ports
   async readCoverageBoundariesInTransaction(s:Scope,actor:string,input:{id:string;recordAsOf:string}){
    const h=await historyIn(s,actor,input.id,input.recordAsOf),points=[...h.versions.flatMap(v=>[v.validFrom,v.validTo]),...h.bindings.flatMap(b=>b.versions.flatMap(v=>[v.validFrom,v.validTo]))].filter((v):v is string=>v!==null);
    if(ports.boundaries)for(const b of h.bindings)for(const v of b.versions)points.push(...await ports.boundaries(s,actor,{...v.binding,validFrom:v.validFrom,validTo:v.validTo,recordAsOf:input.recordAsOf}));
-   return {points,sourceIds:[...new Set(h.versions.map(v=>v.facts.source.sourceSystemId))]};
+   return {points,sourceIds:[...new Set(h.versions.map(v=>v.facts.source.sourceSystemId))],departmentWindows:bindingPeriods(h).map(p=>({id:bindingHead(p.binding).binding.department.id,from:p.from,to:p.to}))};
+  },
+  async readLocationUseBoundariesInTransaction(s:Scope,actor:string,input:{id:string;campusId:string;validFrom:string;validTo:string|null;recordAsOf:string}){
+   nursingCheck(NursingId,input.campusId);nursingCheck(NursingWindowSchema,{id:input.id,validFrom:input.validFrom,validTo:input.validTo,recordAsOf:input.recordAsOf});
+   const r=localTime(input.recordAsOf),requested={from:localTime(input.validFrom),to:input.validTo===null?null:localTime(input.validTo)};
+   if(requested.to!==null&&requested.to<=requested.from)throw new Error('INVALID_BUSINESS_PERIOD');
+   const h=await historyIn(s,actor,input.id,r),bindings=h.bindings.map(bindingHead),points=[...h.versions.flatMap(v=>[v.validFrom,v.validTo]),...bindings.flatMap(v=>[v.validFrom,v.validTo])].filter((v):v is string=>v!==null),
+    sources=new Map<string,{id:string;from:string;to:string|null}>(),departments=new Map<string,{id:string;from:string;to:string|null}>();
+   // Match ward_nursing_master_window: a later declaration masks the prior one
+   // from its start permanently, including after a finite successor has ended.
+   for(const property of h.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE')){
+    const periods=subtract({from:localTime(property.validFrom),to:property.validTo===null?null:localTime(property.validTo)},h.versions.filter(v=>v.action!=='REBIND'&&BigInt(v.number)>BigInt(property.number)).map(v=>({from:localTime(v.validFrom),to:null})));
+    for(const period of periods)for(const binding of bindings)for(const overlap of intersect(period,{from:localTime(binding.validFrom),to:binding.validTo===null?null:localTime(binding.validTo)}))for(const part of intersect(overlap,requested)){
+     if(binding.binding.campus.id!==input.campusId)throw new Error('CROSS_CAMPUS_POLICY_REQUIRED');
+     points.push(part.from,...(part.to===null?[]:[part.to]));
+     const source={id:property.facts.source.sourceSystemId,...part},department={id:binding.binding.department.id,...part};
+     sources.set(JSON.stringify(source),source);departments.set(JSON.stringify(department),department);
+    }
+   }
+   // Filter by the caller's B/R window before authorizing Source references.
+   // Historical sources that contribute no interval must not deny this read.
+   for(const source of sources.values()){
+    const spans=(await sql<{r:Array<{from:string;to:string|null}>}>`select governance_catalog.use_source_windows(${actor},${source.id}::uuid,${source.from}::timestamp,${source.to}::timestamp,${r}::timestamp) r`.execute(s)).rows[0]!.r;
+    points.push(...spans.flatMap(span=>[span.from,span.to]).filter((v):v is string=>v!==null));
+   }
+   return {points:[...new Set(points.map(localTime).filter(point=>point>=requested.from&&(requested.to===null||point<=requested.to)))].sort(),departmentWindows:[...departments.values()]};
   },
   async readDepartmentReferencesInTransaction(s:Scope,actor:string,ids:string[],campus:string){return (await sql<{r:ImpactReference[]}>`select care_organization.nursing_department_references(${actor},${JSON.stringify(ids)}::jsonb,${campus}) r`.execute(s)).rows[0]!.r;},
   async authorizeReferenceInTransaction(s:Scope,actor:string,ref:ImpactReference){await sql`select care_organization.nursing_reference_access(${actor},${JSON.stringify(ref)}::jsonb,'READ')`.execute(s);},

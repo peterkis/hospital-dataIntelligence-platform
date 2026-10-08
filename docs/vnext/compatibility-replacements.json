@@ -34,5 +34,11 @@
     "oldConstraint": "Upgrade every retained evidence database in place",
     "replacement": "Independent empty receipt-owned vNext database; native versioned SQL authority retained; old database untouched; migration/seed/codegen for new schema must be delivered by first DDL ticket",
     "semanticTests": ["tooling/vnext/baseline.test.mjs"]
+  },
+  {
+    "id": "workspace-release-0200-prefix",
+    "oldConstraint": "Workspace startup and its current-release test end at the P3-05 migration prefix 0200",
+    "replacement": "P3-07 adds 0201-0203 and updates the exact current release manifest; predecessor 0200 remains a supported forward-upgrade input. Startup requires the entire ordered checksummed release and current provisioning before Owner construction. Preserve every byte of 0001-0200 and predecessor rows including duplicate counts.",
+    "semanticTests": ["tooling/vnext/p1-06-migration-gates.test.ts", "tooling/vnext/p3-07-db.test.ts", "tooling/vnext/p3-07-http.ts"]
   }
 ]

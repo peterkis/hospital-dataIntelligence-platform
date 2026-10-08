@@ -1616,6 +1616,149 @@ export interface LocationMasterLocation {
   scope: string;
 }
 
+export interface LocationMasterUsageType {
+  code: string;
+  id: Generated<string>;
+  meaning: string;
+}
+
+export interface LocationMasterUsageTypeAccess {
+  actor: string;
+  permission: string;
+}
+
+export interface LocationMasterUsageTypeAction {
+  action: string;
+  actor: string;
+  digest: string;
+  id: Generated<string>;
+  identity_code: string;
+  reason: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  result: Json | null;
+  sequence: Int8;
+  usage_type_id: string;
+}
+
+export interface LocationMasterUsageTypeApproval {
+  actor: string;
+  identity_code: string;
+  recorded_at: Generated<string>;
+  verification_id: string;
+  version_id: string;
+}
+
+export interface LocationMasterUsageTypeVerification {
+  actor: string;
+  evidence_id: string;
+  id: Generated<string>;
+  identity_code: string;
+  material_digest: string;
+  meaning_accepted: boolean;
+  recorded_at: Generated<string>;
+  sequence: Int8;
+  version_id: string;
+}
+
+export interface LocationMasterUsageTypeVersion {
+  content: Json;
+  id: Generated<string>;
+  maker_identity: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  review_digest: string;
+  usage_type_id: string;
+}
+
+export interface LocationMasterUseAccess {
+  actor: string;
+  campus_id: string;
+  permission: string;
+  scope: string;
+}
+
+export interface LocationMasterUseApplyBinding {
+  candidate_digest: string;
+  candidate_id: string;
+  input_id: string;
+  verification_digest: string;
+  verification_id: string;
+  verification_number: Int8;
+  writes_digest: string;
+  writes_hash: string;
+}
+
+export interface LocationMasterUseChange {
+  candidate_id: string;
+  digest: string;
+  id: Generated<string>;
+  input_id: string;
+  recorded_at: string;
+  results: Json;
+}
+
+export interface LocationMasterUseInput {
+  campus_ids: string[];
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  job_id: string;
+  job_revision: string;
+  maker: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  scope: string;
+}
+
+export interface LocationMasterUseRelation {
+  applicability: Json;
+  campus_id: string;
+  id: Generated<string>;
+  location_id: string;
+  scope: string;
+  source_alias: string;
+  source_system_id: string;
+  target_id: string;
+  target_type: string;
+  usage_type_id: string;
+}
+
+export interface LocationMasterUseVerification {
+  actor: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+  rows: Json;
+}
+
+export interface LocationMasterUseVersion {
+  action: string;
+  change_id: string;
+  facts: Json;
+  id: Generated<string>;
+  number: Int8;
+  reason: string;
+  recorded_at: string;
+  use_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}
+
+export interface LocationMasterUseWithdrawal {
+  actor: string;
+  input_id: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface LocationMasterVerification {
   actor: string;
   digest: string;
@@ -1933,6 +2076,11 @@ export interface VnextControlDepartmentWriteAuthority {
   singleton: Generated<boolean>;
 }
 
+export interface VnextControlLocationUseWriteAuthority {
+  key_hex: string;
+  singleton: Generated<boolean>;
+}
+
 export interface VnextControlLocationWriteAuthority {
   key_hex: string;
   singleton: Generated<boolean>;
@@ -2168,6 +2316,20 @@ export interface DB {
   "location_master.code": LocationMasterCode;
   "location_master.input": LocationMasterInput;
   "location_master.location": LocationMasterLocation;
+  "location_master.usage_type": LocationMasterUsageType;
+  "location_master.usage_type_access": LocationMasterUsageTypeAccess;
+  "location_master.usage_type_action": LocationMasterUsageTypeAction;
+  "location_master.usage_type_approval": LocationMasterUsageTypeApproval;
+  "location_master.usage_type_verification": LocationMasterUsageTypeVerification;
+  "location_master.usage_type_version": LocationMasterUsageTypeVersion;
+  "location_master.use_access": LocationMasterUseAccess;
+  "location_master.use_apply_binding": LocationMasterUseApplyBinding;
+  "location_master.use_change": LocationMasterUseChange;
+  "location_master.use_input": LocationMasterUseInput;
+  "location_master.use_relation": LocationMasterUseRelation;
+  "location_master.use_verification": LocationMasterUseVerification;
+  "location_master.use_version": LocationMasterUseVersion;
+  "location_master.use_withdrawal": LocationMasterUseWithdrawal;
   "location_master.verification": LocationMasterVerification;
   "location_master.version": LocationMasterVersion;
   "organization_master.access": OrganizationMasterAccess;
@@ -2205,6 +2367,7 @@ export interface DB {
   "vnext_control.capability_write_authority": VnextControlCapabilityWriteAuthority;
   "vnext_control.creation_policy": VnextControlCreationPolicy;
   "vnext_control.department_write_authority": VnextControlDepartmentWriteAuthority;
+  "vnext_control.location_use_write_authority": VnextControlLocationUseWriteAuthority;
   "vnext_control.location_write_authority": VnextControlLocationWriteAuthority;
   "vnext_control.migration": VnextControlMigration;
   "vnext_control.nursing_write_authority": VnextControlNursingWriteAuthority;
