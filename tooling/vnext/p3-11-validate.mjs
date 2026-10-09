@@ -37,6 +37,13 @@ try{
  await migrate(owned.receipt,args.includes('--diagnose-port')?migrationFiles().slice(0,243):args.includes('--baseline-205')?migrationFiles().slice(0,205):migrationFiles());await seed(owned.receipt);
  if(before){assert.deepEqual((await inspect(owned.receipt)).ledger.slice(0,205),before.ledger);assert.equal(predecessorDigest(owned.receipt,tables),digest);console.log(JSON.stringify({gate:'P3-11_UPGRADE',prefix:205,status:'PRESERVED'}));}
  if(preservation)assertP311Preserved(preservation,captureP311Preservation(owned.receipt,await inspect(owned.receipt),keyPath),{exactRows:true});
+  if(before){
+   // The archived0205 application role cannot already hold EXECUTE on a new0251
+   // reader. Grant only that new port; every original ACL remains preserved.
+   assert.match(session.receipt.role,/^hdi_validation_[a-f0-9]{16}$/u);
+   peer(owned.receipt.name,`GRANT EXECUTE ON FUNCTION care_organization.ward_nursing_handover_successors_at(text,uuid,timestamp) TO ${session.receipt.role};`);
+   console.log(JSON.stringify({gate:'P3_11_NEW_READER_UPGRADE_GRANT',function:'care_organization.ward_nursing_handover_successors_at(text,uuid,timestamp)',originalAclScope:'UNCHANGED'}));
+  }
  if(before)assert.equal(spawnSync(process.execPath,['--import','tsx','tooling/vnext/p3-11-upgrade-fixture.ts','--verify'],{env:{...process.env,VNEXT_VALIDATION_OWNER_URL:session.connectionString,VNEXT_TEST_RECEIPT:owned.receiptPath,VNEXT_CONNECTION_STEP:'P3-11'},stdio:'inherit',windowsHide:true}).status,0);
  if(args.includes('--generate'))assert.equal(spawnSync(process.execPath,['tooling/vnext/managed.mjs','types-generate',owned.receiptPath],{stdio:'inherit',windowsHide:true}).status,0);
  for(const command of args.includes('--baseline-205')||args.includes('--diagnose-port')?[]:[['tooling/vnext/managed.mjs','types-verify',owned.receiptPath],['tooling/vnext/authority.mjs',owned.receiptPath]])assert.equal(spawnSync(process.execPath,command,{stdio:'inherit',windowsHide:true}).status,0);
