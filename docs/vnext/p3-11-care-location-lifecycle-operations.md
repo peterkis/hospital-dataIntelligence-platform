@@ -28,6 +28,8 @@
 
 退出后的病区院区和护理科室展示保留退出点前最后已生效的准确归属；预排在退出点或之后的绑定不能改变该展示。该历史归属不构成有效绑定或准入，不按对象初始字段覆盖已生效的搬迁。
 
+护理单元可在内容及绑定的准确有限结束点追加永久CLOSE，无需提前一微秒。CLOSE专用依据选择优先使用切点仍有效的绑定；没有当前绑定时，仅使用准确结束于切点的唯一绑定，保留原接受版本及B/R。该选择不延长声明，不允许更晚切点借用过期绑定，也不改变普通读取、SUSPEND和RESUME的半开区间规则。关闭仍需当前权限、材料、准确期待头、属性/归属不变及独立核验审批；上游已退役不把合法收缩改为扩张准入。
+
 护理单元直接科室活动的影响报告按完整 SUSPEND/RESUME 期间计算，保留暂停中段的缺口。准确且仍为当前头的原 SUSPEND 回执可以证明该活动窗口已收缩；显式恢复后该回执不再是当前处置证明，新活动重新纳入依赖报告。这不证明独立护理覆盖、地点使用或能力关系已结束。
 
 同院区换地点只结束旧地点使用并建立新使用，组织和逻辑科室 ID 不变。跨院区组织重新绑定必须显式处置来源范围的关系、能力及许可，并重新核验目标范围；物理地点 ID 保留在原院区。没有人员写入命令。
@@ -64,6 +66,8 @@ npm.cmd run prototype:db:with -- vnext:p3-11:authority
 npm.cmd run prototype:db:with -- vnext:p3-11:regression
 npm.cmd run prototype:db:with -- vnext:p3-11:deploy
 ```
+
+准确有限终点关闭专项为`npm.cmd run prototype:db:with -- vnext:p3-11:validate --nursing-close-boundary`。其selector SKIP不计PASS；IR-01仅修复Nursing Owner的关闭依据选择，无DDL修改，已安装0001–0252保持原字节。
 
 成功同时要求 READY、目标 exit0、CLOSED 和 `cleanupPassed=true`。环境失败和领域反例保留原记录。长命令用 cmd.exe 重定向日志，避免 PowerShell 收集大输出。编译和数据库测试串行执行，避免本机内存压力影响证据。
 

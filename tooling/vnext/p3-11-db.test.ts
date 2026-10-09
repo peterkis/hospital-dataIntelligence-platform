@@ -15,7 +15,7 @@ import {openCampus} from '../../apps/governance-api/src/modules/organization-mas
 import {openLocation} from '../../apps/governance-api/src/modules/location-master/index.js';
 import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
 import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
-import {createWardNursingCoverageClient} from '../../packages/generated-api-client/src/index.js';
+import {createWardNursingCoverageClient,createNursingUnitClient,createCareLocationLifecycleClient} from '../../packages/generated-api-client/src/index.js';
 
 const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!;
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
@@ -28,12 +28,13 @@ const wards=await wardFixture(receipt,role,catalog,provider,connection,true);
 peer(receipt.name,`GRANT EXECUTE ON FUNCTION care_organization.lifecycle_record(text,text),care_organization.lifecycle_dependencies(text,text,uuid,timestamp,timestamp,timestamp) TO ${role};`);
 const nursingCoverage=await wardNursingFixture(receipt,role,catalog,provider,connection,true,wards);
 const httpContexts:Parameters<typeof buildCatalogServer>=[catalog,'CONTROL_PLANE'];httpContexts[23]={owner:nursingCoverage.owner,actor:r=>actor(r.headers)};
-const httpApp=await buildCatalogServer(...httpContexts);await httpApp.listen({host:'127.0.0.1',port:0});
-const coverageClient=createWardNursingCoverageClient(httpApp.listeningOrigin,'maker');
 const httpSuccess=<T>(result:{response:Response;data?:T;error?:{code:string}})=>{expect(result.response.status,result.error?.code).toBe(200);if(!result.data)throw new Error('HTTP_DATA_REQUIRED');return result.data;};
 const campusReader=openCampus(connection,provider),locations=openLocation(connection,provider,campusReader.references);
 peer(receipt.name,`GRANT USAGE ON SCHEMA location_master TO ${role};GRANT EXECUTE ON FUNCTION location_master.lifecycle_dependencies(text,text,uuid,timestamp,timestamp,timestamp) TO ${role};`);
 const bundle=openCareLocationLifecycle(connection,provider,{UNIT:f.base.owner,NURSING:f.owner,WARD:wards.owner,WARD_NURSING:nursingCoverage.owner,LOCATION:locations});
+httpContexts[16]={owner:f.owner,actor:r=>actor(r.headers)};httpContexts[25]={owner:bundle,actor:r=>actor(r.headers)};
+const httpApp=await buildCatalogServer(...httpContexts);await httpApp.listen({host:'127.0.0.1',port:0});
+const coverageClient=createWardNursingCoverageClient(httpApp.listeningOrigin,'maker'),nursingClient=createNursingUnitClient(httpApp.listeningOrigin,'maker');
 peer(receipt.name,`GRANT EXECUTE ON FUNCTION care_organization.ward_nursing_scope_reserve(text,text),care_organization.ward_nursing_scope_proposal_read(text,uuid) TO ${role};`);
 peer(receipt.name,`GRANT EXECUTE ON FUNCTION care_organization.ward_nursing_scope_version_read(text,uuid,bigint,timestamp) TO ${role};`);
 const originalQuery=Client.prototype.query;
@@ -51,6 +52,93 @@ Client.prototype.query=(function(this:Client,config:string|QueryConfig,...args:u
 }) as typeof Client.prototype.query;
 afterAll(async()=>{await httpApp.close();await nursingCoverage.close();await bundle.close();await locations.close();await campusReader.close();await wards.close();await f.close();await catalog.close();});
 afterAll(()=>{Client.prototype.query=originalQuery;});
+
+test.each(['2026-12-31T23:59:59.999999','2027-01-01T00:00:00.000000'])('IR01 finite Nursing close retains exact accepted period at %s',async(cutover)=>{
+ const finish='2027-01-01T00:00:00.000000',binding=await f.endpoint(),entry=f.entry(binding);
+ if(entry.action!=='CREATE')throw new Error('TEST_CREATION_REQUIRED');
+ entry.row.valid_to=finish;
+ const created=await f.apply(await f.input([entry])),id=created.facts[0]!.id,original=await f.owner.history('maker',{id}),{binding:_binding,...accepted}=entry;
+ const close={...accepted,action:'CLOSE' as const,target:{owner:'care-organization/nursing' as const,id,expectedHead:'1'},row:{...entry.row,record_status:'RETIRED' as const,valid_from:cutover,valid_to:''}};
+ const closed=await f.apply(await f.input([close]));
+ expect(closed.facts[0]!.id).toBe(id);
+ expect(await f.owner.read('maker',{id,businessAt:cutover})).toMatchObject({state:'CLOSED'});
+ expect(httpSuccess(await nursingClient.query({id,businessAt:cutover}))).toMatchObject({state:'CLOSED'});
+ expect(httpSuccess(await nursingClient.query({id,businessAt:finish,recordAsOf:created.recordedAt}))).toMatchObject({state:'NOT_EFFECTIVE'});
+ expect(httpSuccess(await nursingClient.query({id,businessAt:'2026-12-31T23:59:59.999999',recordAsOf:created.recordedAt}))).toMatchObject({state:'ACTIVE'});
+ expect(await f.owner.history('maker',{id,recordAsOf:created.recordedAt})).toEqual(original);
+ expect((await f.owner.history('maker',{id})).bindings).toEqual(original.bindings);
+ expect(await f.owner.reconcileCommittedUnit('maker',{candidateId:closed.candidateId,requestId:closed.requestId})).toMatchObject({status:'MATCHED'});
+ const resume={...close,action:'RESUME' as const,target:{...close.target,expectedHead:'2'},row:{...close.row,record_status:'ACTIVE' as const}};
+ await expect(f.prepare(await f.input([resume]))).rejects.toThrow('NURSING_CLOSED');
+});
+
+test('IR01 accurate endpoint closure through generated HTTP remains safe after upstream retirement and preserves current authority',async()=>{
+ const T='2027-01-01T00:00:00.000001',binding=await f.endpoint(),entry=f.entry(binding);
+ if(entry.action!=='CREATE')throw new Error('TEST_CREATION_REQUIRED');
+ entry.row.valid_to=T;
+ const created=await f.apply(await f.input([entry])),id=created.facts[0]!.id,original=await f.owner.history('maker',{id}),{binding:_binding,...accepted}=entry,op=f.base.operating;
+ const assessment=await op.campus.assessCampusImpact('maker',{id:binding.campus.id,validFrom:T,validTo:null});
+ await op.campusApply({...op.common,action:'RETIRE',validFrom:T,target:{owner:'organization-master/campus',id:binding.campus.id,expectedVersion:'1'},evidence:op.artifact.artifactId,sourceOperationStatus:'RETIRED',reason:'TEST finite Nursing expiry safe closure',assessmentDigest:assessment.digest,plan:{responsibleOwner:'TEST',dueAt:'2028-01-01T00:00:00',actions:'TEST retain old Nursing evidence and close explicitly'}});
+ const expansion=f.entry(binding);expansion.row.valid_from=T;
+ await expect(f.prepare(await f.input([expansion]))).rejects.toThrow('NURSING_CAMPUS_NOT_ADMITTED');
+ const close={...accepted,action:'CLOSE' as const,target:{owner:'care-organization/nursing' as const,id,expectedHead:'1'},row:{...entry.row,record_status:'RETIRED' as const,valid_from:T,valid_to:''}},data=await f.input([close]),reviewNursing=createNursingUnitClient(httpApp.listeningOrigin,'reviewer');
+ const native=httpSuccess(await nursingClient.stage(data));httpSuccess(await reviewNursing.verify(f.verification(data,native)));
+ expect(httpSuccess(await nursingClient.preview({inputId:native.inputId}))).toMatchObject({decision:'PASS'});
+ const maker=createCareLocationLifecycleClient(httpApp.listeningOrigin,'maker'),reviewer=createCareLocationLifecycleClient(httpApp.listeningOrigin,'reviewer'),alias=createCareLocationLifecycleClient(httpApp.listeningOrigin,'maker-alias');
+ const root=httpSuccess(await maker.stage({requestId:randomUUID(),campus:'NORTH',policy:'TEST_POLICY_ONLY',kind:'CLOSE',cutover:T,reason:'TEST exact expiry no admission expansion',members:[{owner:'NURSING',...native,contractVersionId:f.contract!.versionId}]}));
+ httpSuccess(await reviewer.verify({requestId:randomUUID(),inputId:root.inputId,inputDigest:root.digest,reason:'TEST independent exact endpoint closure',policy:'TEST_POLICY_ONLY'}));
+ const requestId=randomUUID(),candidate=httpSuccess(await maker.plan({inputId:root.inputId,requestId}));httpSuccess(await reviewer.review({candidateId:candidate.candidateId}));
+ peer(receipt.name,`INSERT INTO care_organization.nursing_access VALUES('maker-alias','${binding.campus.id}'::uuid,'NORTH','REVIEW') ON CONFLICT DO NOTHING;`);
+ expect((await alias.approve(candidate)).error).toMatchObject({code:'MAKER_CHECKER_REQUIRED'});
+ httpSuccess(await reviewer.approve(candidate));const request={candidateId:candidate.candidateId,requestId};
+ for(const [who,permission] of [['maker','WRITE'],['reviewer','REVIEW']] as const){
+  peer(receipt.name,`DELETE FROM care_organization.nursing_access WHERE actor='${who}' AND campus_id='${binding.campus.id}'::uuid AND permission='${permission}';`);
+  try{const result=await maker.apply(request);expect(result.response.status).toBe(403);expect(result.error).toMatchObject({code:'ACCESS_DENIED'});expect(await f.owner.history('maker',{id})).toEqual(original);}
+  finally{peer(receipt.name,`INSERT INTO care_organization.nursing_access VALUES('${who}','${binding.campus.id}'::uuid,'NORTH','${permission}') ON CONFLICT DO NOTHING;`);}
+ }
+ const outcome=httpSuccess(await maker.apply(request));expect(outcome).toMatchObject({status:'COMMITTED',facts:[{id}]});
+ expect(httpSuccess(await maker.resume(request))).toMatchObject({status:'COMMITTED'});expect(httpSuccess(await maker.reconcile(request))).toMatchObject({status:'MATCHED'});
+ expect(httpSuccess(await nursingClient.query({id,businessAt:T}))).toMatchObject({state:'CLOSED'});
+ expect(httpSuccess(await nursingClient.query({id,businessAt:T,recordAsOf:created.recordedAt}))).toMatchObject({state:'NOT_EFFECTIVE'});
+ expect(httpSuccess(await nursingClient.history({id,recordAsOf:created.recordedAt}))).toEqual(original);
+ expect((await f.owner.history('maker',{id})).bindings).toEqual(original.bindings);
+ const resume={...close,action:'RESUME' as const,target:{...close.target,expectedHead:'2'},row:{...close.row,record_status:'ACTIVE' as const}};
+ const resumed=httpSuccess(await nursingClient.stage(await f.input([resume])));expect(httpSuccess(await nursingClient.preview({inputId:resumed.inputId}))).toMatchObject({decision:'BLOCKED',issues:expect.arrayContaining([expect.objectContaining({code:'NURSING_CLOSED'})])});
+});
+
+test('IR01 expiry evidence does not authorize later closure, changed facts, stale heads or boundary resume and suspension',async()=>{
+ const T='2027-01-01T00:00:00.000000',binding=await f.endpoint(),entry=f.entry(binding);
+ if(entry.action!=='CREATE')throw new Error('TEST_CREATION_REQUIRED');
+ entry.row.valid_to=T;
+ const created=await f.apply(await f.input([entry])),id=created.facts[0]!.id,{binding:_binding,...accepted}=entry;
+ await f.apply(await f.input([{...accepted,action:'REVISE',target:{owner:'care-organization/nursing',id,expectedHead:'1'},row:{...entry.row,valid_from:'2026-06-01T00:00:00.000000'}}]));
+ const original=await f.owner.history('maker',{id}),close={...accepted,action:'CLOSE' as const,target:{owner:'care-organization/nursing' as const,id,expectedHead:'2'},row:{...entry.row,record_status:'RETIRED' as const,valid_from:T,valid_to:''}};
+ await expect(f.prepare(await f.input([{...close,row:{...close.row,valid_from:'2027-01-01T00:00:00.000001'}}]))).rejects.toThrow('NURSING_SUSPENSION_EXPANSION');
+ await expect(f.prepare(await f.input([{...close,row:{...close.row,nursing_name:'TEST changed at expiry'}}]))).rejects.toThrow('NURSING_CONTENT_CHANGED');
+ await expect(f.prepare(await f.input([{...close,target:{...close.target,expectedHead:'1'}}]))).rejects.toThrow('STALE_HEAD');
+ await expect(f.prepare(await f.input([{...close,action:'SUSPEND',row:{...close.row,record_status:'SUSPENDED'}}]))).rejects.toThrow('NURSING_SUSPENSION_EXPANSION');
+ expect(await f.owner.history('maker',{id})).toEqual(original);
+ await f.apply(await f.input([{...close,action:'SUSPEND',row:{...close.row,record_status:'SUSPENDED',valid_from:'2026-12-31T23:59:59.999999'}}]));
+ const suspended=await f.owner.history('maker',{id});
+ await expect(f.prepare(await f.input([{...close,action:'RESUME',target:{...close.target,expectedHead:'3'},row:{...close.row,record_status:'ACTIVE'}}]))).rejects.toThrow('NURSING_BINDING_REQUIRED');
+ expect(await f.owner.history('maker',{id})).toEqual(suspended);
+});
+
+test('IR01 closure at adjacent binding boundary uses the current accepted affiliation instead of the ending predecessor',async()=>{
+ const T='2027-01-01T00:00:00.000001',binding=await f.endpoint(),entry=f.entry(binding);
+ if(entry.action!=='CREATE')throw new Error('TEST_CREATION_REQUIRED');
+ entry.row.valid_to='2028-01-01T00:00:00.000001';
+ const created=await f.apply(await f.input([entry])),id=created.facts[0]!.id,next=await f.endpoint(),{binding:_old,...accepted}=entry;
+ const rebind={...accepted,action:'REBIND' as const,target:{owner:'care-organization/nursing' as const,id,expectedHead:'1'},binding:next,row:{...entry.row,campus_id:next.campus.id,managing_org_id:next.department.id,valid_from:T}};
+ const rebound=await f.apply(await f.input([rebind])),original=await f.owner.history('maker',{id}),{binding:_next,...current}=rebind;
+ const close={...current,action:'CLOSE' as const,target:{...current.target,expectedHead:'2'},row:{...current.row,record_status:'RETIRED' as const,valid_to:''}};
+ await expect(f.prepare(await f.input([{...close,row:{...close.row,campus_id:binding.campus.id,managing_org_id:binding.department.id}}]))).rejects.toThrow('NURSING_ANCHOR_MISMATCH');
+ const closed=await f.apply(await f.input([close]));expect(closed.facts[0]!.id).toBe(id);
+ expect(await f.owner.read('maker',{id,businessAt:T})).toMatchObject({state:'CLOSED'});
+ expect(await f.owner.read('maker',{id,businessAt:T,recordAsOf:rebound.recordedAt})).toMatchObject({state:'ACTIVE',departmentId:next.department.id});
+ expect((await f.owner.history('maker',{id})).bindings).toEqual(original.bindings);
+ expect(await f.owner.reconcileCommittedUnit('maker',{candidateId:closed.candidateId,requestId:closed.requestId})).toMatchObject({status:'MATCHED'});
+});
 
 test.each([{kind:'NURSING',finite:true},{kind:'NURSING',finite:false},{kind:'WARD',finite:true},{kind:'WARD',finite:false}] as const)('endpoint impacts retain exact pause, resume and subsequent pause through generated HTTP: %j',async({kind,finite})=>{
  const coverage=nursingCoverage,a=await coverage.endpoint(),entry=coverage.entry(a,{kind:'WHOLE_WARD'});await coverage.apply(await coverage.input([entry]));

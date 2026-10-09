@@ -6,7 +6,7 @@ import type {DB} from '../../platform/database/vnext-types.generated.js';
 import {CatalogTransactionScope,applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,fileIntake,boundedParse,recordOwnerFileValidation,type ApplyOwnerPort,type OwnerFact,type ImportJob,type ImportContractItem,type KeyProviderPort,type ValidationEvaluation} from '../governance-catalog/index.js';
 import {localTime,covered,intersect,subtract} from '../organization-master/index.js';
 import {NursingId,NursingStoredStageSchema,NursingStageSchema,NursingInputSchema,NursingPlanSchema,NursingVerifySchema,NursingReceiveSchema,NursingHistorySchema,NursingReadSchema,NursingListSchema,NursingExactSchema,NursingWindowSchema,NursingDiffSchema,ORG09_FIELDS,nursingCheck,normalizeNursingRow,type NursingStage,type NursingStoredStage,type NursingVerification,type NursingReceive,type NursingHistory,type NursingFacts,type NursingWrite,type NursingIssue,type NursingUpstreamPorts,type NursingBindingInput} from './nursing-contracts.js';
-import {nursingAt,nursingContentAt,nursingPeriods,knownNursing,bindingAt,declaredBindingAt,bindingHead,bindingPeriods} from './nursing-timeline.js';
+import {nursingAt,nursingContentAt,nursingClosureBasis,nursingPeriods,knownNursing,bindingAt,declaredBindingAt,bindingHead,bindingPeriods} from './nursing-timeline.js';
 import type {ImpactReference} from '../department-master/index.js';
 import {nursingHandover} from './nursing-handover.js';
 import {NursingHandoverConfirmSchema,type NursingHandoverConfirm,type NursingHandoverConfirmationBasis,type NursingHandoverBinding} from './nursing-handover-contracts.js';
@@ -58,7 +58,9 @@ export function openNursingUnit(connection:string,provider:KeyProviderPort,ports
   }
   const touched=new Set<string>(),aliases=new Set<string>();
   for(const [index,entry] of input.entries.entries())try{await recoverable(s,async()=>{
-   const n=index+1,e=normalizeNursingRow(entry.row,input.timePolicy),target='target' in entry?entry.target:null,h=target?await snapshot(s,actor,target.id):null,head=h?.versions.at(-1),at=h?((entry.action==='RESUME'||entry.action==='CLOSE')?nursingContentAt(h,e.from):nursingAt(h,e.from)):null,b=h?((entry.action==='RESUME'||entry.action==='CLOSE')?h.bindings.find(b=>bindingHead(b).validFrom<=e.from&&(bindingHead(b).validTo===null||e.from<bindingHead(b).validTo!)):bindingAt(h,e.from)):null;
+    const n=index+1,e=normalizeNursingRow(entry.row,input.timePolicy),target='target' in entry?entry.target:null,h=target?await snapshot(s,actor,target.id):null,head=h?.versions.at(-1),close=h&&entry.action==='CLOSE'?nursingClosureBasis(h,e.from):null;
+    const at=h?(entry.action==='CLOSE'?close!.version:entry.action==='RESUME'?nursingContentAt(h,e.from):nursingAt(h,e.from)):null;
+    const b=h?(entry.action==='CLOSE'?close!.binding:entry.action==='RESUME'?h.bindings.find(b=>bindingHead(b).validFrom<=e.from&&(bindingHead(b).validTo===null||e.from<bindingHead(b).validTo!)):bindingAt(h,e.from)):null;
    if(target){if(touched.has(target.id))throw new Error('BATCH_CONFLICT');touched.add(target.id);if(head?.number!==target.expectedHead)throw new Error('STALE_HEAD');if(h!.versions.some(v=>v.action==='CLOSE'))throw new Error('NURSING_CLOSED');if(entry.action==='SUSPEND'?careState(h!.versions,e.from)!=='ACTIVE':entry.action!=='RESUME'&&entry.action!=='CLOSE'&&!careWindowOpen(h!.versions,e.from,e.to))throw new Error('NURSING_SUSPENDED');original.push(h!);}
    else{if(aliases.has(e.row.nursing_unit_id))throw new Error('BATCH_CONFLICT');aliases.add(e.row.nursing_unit_id);if((await sql<{r:boolean}>`select care_organization.nursing_source_conflict(${actor},${e.row.source_system_id}::uuid,${e.row.nursing_unit_id}) r`.execute(s)).rows[0]!.r)throw new Error('NURSING_SOURCE_ALREADY_REGISTERED');}
    const closing=entry.action==='SUSPEND'||entry.action==='CLOSE',checked=verification?.rows.find(v=>v.row===n);

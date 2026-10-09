@@ -19,4 +19,6 @@ query、list和窗口中的交接状态与专用回执共用该准确确认关�
 
 安全关闭和处置结案分别表达。失效上游不阻断合法非扩张收尾，但未处置、未知在途和未接入Owner不构成结案。人员、床位、患者和外部消费保持NOT_EVALUABLE；该票证明无人员写入路径，实际Assignment前后对照留人员阶段。只为TEST POLICY ONLY合成CORE，院方政策NOT_ADOPTED、临床NOT_READY，FULL和正式验收另行治理。
 
+护理单元永久关闭可引用准确结束于关闭切点的已接受内容和绑定。内容按原CLOSE SQL的准确结束点规则选取；绑定优先取该切点仍有效的绑定，只有不存在当前绑定时才取准确结束于该点的唯一绑定。该规则只选择非扩张关闭依据，不延长原有效期，不回退到更早已过期绑定，也不放宽查询、SUSPEND或RESUME的半开区间准入。当前权限、材料、独立核验/审批、期待头、属性和归属保持及永久终态守卫保留；旧B/R和绑定版本不改写。
+
 窗口`handovers[].confirmation`保留关系CREATE/REVISE中原接受的incoming交接声明，作为原接受依据。未END时`status`评价该接收声明；已END时`status`评价准确outgoing交接是否完成。该原声明不充当后来交出的证明；准确已接受END、切换点和全部后继通过`getWardNursingHandoverReceipt`读取。两个字段分工由公开TypeBox描述明确，原事实不改写。
