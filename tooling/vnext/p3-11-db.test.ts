@@ -13,6 +13,9 @@ import {openOrganizationEvolutions} from '../../apps/governance-api/src/modules/
 import {withCareOrganizationImpacts} from '../../apps/governance-api/src/composition/nursing-unit-dependencies.js';
 import {openCampus} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import {openLocation} from '../../apps/governance-api/src/modules/location-master/index.js';
+import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
+import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
+import {createWardNursingCoverageClient} from '../../packages/generated-api-client/src/index.js';
 
 const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!;
 const receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8'));
@@ -24,6 +27,10 @@ const f=await nursingFixture(receipt,role,catalog,provider,connection,warm);
 const wards=await wardFixture(receipt,role,catalog,provider,connection,true);
 peer(receipt.name,`GRANT EXECUTE ON FUNCTION care_organization.lifecycle_record(text,text),care_organization.lifecycle_dependencies(text,text,uuid,timestamp,timestamp,timestamp) TO ${role};`);
 const nursingCoverage=await wardNursingFixture(receipt,role,catalog,provider,connection,true,wards);
+const httpContexts:Parameters<typeof buildCatalogServer>=[catalog,'CONTROL_PLANE'];httpContexts[23]={owner:nursingCoverage.owner,actor:r=>actor(r.headers)};
+const httpApp=await buildCatalogServer(...httpContexts);await httpApp.listen({host:'127.0.0.1',port:0});
+const coverageClient=createWardNursingCoverageClient(httpApp.listeningOrigin,'maker');
+const httpSuccess=<T>(result:{response:Response;data?:T;error?:{code:string}})=>{expect(result.response.status,result.error?.code).toBe(200);if(!result.data)throw new Error('HTTP_DATA_REQUIRED');return result.data;};
 const campusReader=openCampus(connection,provider),locations=openLocation(connection,provider,campusReader.references);
 peer(receipt.name,`GRANT USAGE ON SCHEMA location_master TO ${role};GRANT EXECUTE ON FUNCTION location_master.lifecycle_dependencies(text,text,uuid,timestamp,timestamp,timestamp) TO ${role};`);
 const bundle=openCareLocationLifecycle(connection,provider,{UNIT:f.base.owner,NURSING:f.owner,WARD:wards.owner,WARD_NURSING:nursingCoverage.owner,LOCATION:locations});
@@ -42,8 +49,47 @@ Client.prototype.query=(function(this:Client,config:string|QueryConfig,...args:u
  });
  return result;
 }) as typeof Client.prototype.query;
-afterAll(async()=>{await nursingCoverage.close();await bundle.close();await locations.close();await campusReader.close();await wards.close();await f.close();await catalog.close();});
+afterAll(async()=>{await httpApp.close();await nursingCoverage.close();await bundle.close();await locations.close();await campusReader.close();await wards.close();await f.close();await catalog.close();});
 afterAll(()=>{Client.prototype.query=originalQuery;});
+
+test.each([{kind:'NURSING',finite:true},{kind:'NURSING',finite:false},{kind:'WARD',finite:true},{kind:'WARD',finite:false}] as const)('endpoint impacts retain exact pause, resume and subsequent pause through generated HTTP: %j',async({kind,finite})=>{
+ const coverage=nursingCoverage,a=await coverage.endpoint(),entry=coverage.entry(a,{kind:'WHOLE_WARD'});await coverage.apply(await coverage.input([entry]));
+ const id=kind==='NURSING'?a.nursing.id:a.ward.id;
+ const command=await (async()=>{
+  if(kind==='NURSING'){
+   const native=coverage.nursing,h=await native.owner.history('maker',{id}),facts=h.versions[0]!.facts,seed=native.entry({department:{owner:'department-master',id:h.departmentId},campus:a.campus});if(seed.action!=='CREATE')throw new Error('TEST_CREATE_REQUIRED');const {binding:_,...accepted}=seed;
+   return async(action:'SUSPEND'|'RESUME',expectedHead:string,from:string,to:string|null)=>native.apply(await native.input([{...accepted,action,target:{owner:'care-organization/nursing',id,expectedHead},row:{...seed.row,nursing_unit_id:facts.source.sourceAlias,nursing_code:facts.nursingCode,nursing_name:facts.nursingName,care_level:facts.careLevel??'',office_phone:facts.officePhone??'',record_status:action==='SUSPEND'?'SUSPENDED':'ACTIVE',valid_from:from,valid_to:to??''}}]));
+  }
+  const h=await wards.owner.history('maker',{id}),facts=h.versions[0]!.facts,seed=wards.entry({unit:{owner:'care-organization/unit',id:h.bindings[0]!.managingUnitId},campus:a.campus});if(seed.action!=='CREATE')throw new Error('TEST_CREATE_REQUIRED');const {binding:_,...accepted}=seed;
+  return async(action:'SUSPEND'|'RESUME',expectedHead:string,from:string,to:string|null)=>wards.apply(await wards.input([{...accepted,action,target:{owner:'care-organization/ward',id,expectedHead},row:{...seed.row,ward_id:facts.source.sourceAlias,ward_code:facts.wardCode,ward_name:facts.wardName,ward_type:facts.wardType,public_phone:facts.publicPhone,admission_rule_ref:facts.admissionRuleReference,record_status:action==='SUSPEND'?'SUSPENDED':'ACTIVE',valid_from:from,valid_to:to}}]));
+ })();
+ const request={kind,id,validFrom:'2026-01-01T00:00:00.000001',validTo:null},S='2026-06-01T00:00:00.000001',T='2026-07-01T00:00:00.000002',E='2028-01-01T00:00:00.999999',U='2026-08-01T00:00:00.000003';
+ const suspended=await command('SUSPEND','1',S,null);
+ let currentRecord=suspended.recordedAt;
+ const expectLifecycle=async(expected:unknown[])=>{const atRecord={...request,recordAsOf:currentRecord},direct=await coverage.owner.evaluateEndpointImpacts('maker',atRecord),http=httpSuccess(await coverageClient.evaluateEndpointImpacts(atRecord));expect(http).toEqual(direct);expect(direct.items).toHaveLength(1);expect(direct.items[0]!.lifecycle).toMatchObject(expected);};
+ const finish=finite?E:null;
+ await expectLifecycle([{action:'SUSPEND',from:S,to:null}]);currentRecord=(await command('RESUME','2',T,finish)).recordedAt;
+ await expectLifecycle([{action:'SUSPEND',from:S,to:null},{action:'RESUME',from:T,to:finish}]);
+ expect(kind==='NURSING'?await coverage.nursing.owner.read('maker',{id,businessAt:U}):await wards.owner.read('maker',{id,businessAt:U})).toMatchObject({state:'ACTIVE'});
+ currentRecord=(await command('SUSPEND','3',U,null)).recordedAt;
+ await expectLifecycle([{action:'SUSPEND',from:S,to:null},{action:'RESUME',from:T,to:finish},{action:'SUSPEND',from:U,to:null}]);
+ expect(httpSuccess(await coverageClient.evaluateEndpointImpacts({...request,recordAsOf:suspended.recordedAt}))).toMatchObject({items:[{lifecycle:[{action:'SUSPEND',from:S,to:null}]}]});
+});
+
+test('unended coverage has a closed NOT_COMPLETED HTTP receipt at its original R',async()=>{
+ const coverage=nursingCoverage,a=await coverage.endpoint(),created=await coverage.apply(await coverage.input([coverage.entry(a,{kind:'WHOLE_WARD'})])),id=created.facts[0]!.id;
+ const receipt=httpSuccess(await coverageClient.handoverReceipt({id,recordAsOf:created.recordedAt,businessAt:'2026-06-01T00:00:00.000001'}));
+ expect(receipt).toEqual({source:{id,head:'1'},cutover:null,status:'NOT_COMPLETED',successors:[],clinicalReadiness:'NOT_READY'});
+ const malformedContexts:Parameters<typeof buildCatalogServer>=[...httpContexts];
+ malformedContexts[23]={owner:{...coverage.owner,handoverReceipt:async(...args)=>({...await coverage.owner.handoverReceipt(...args),undeclared:'TEST_RESPONSE_ONLY'}),evaluateEndpointImpacts:async(...args)=>({...await coverage.owner.evaluateEndpointImpacts(...args),undeclared:'TEST_RESPONSE_ONLY'})},actor:r=>actor(r.headers)};
+ const malformedApp=await buildCatalogServer(...malformedContexts);await malformedApp.listen({host:'127.0.0.1',port:0});
+ try{const client=createWardNursingCoverageClient(malformedApp.listeningOrigin,'maker');
+  for(const response of [await client.handoverReceipt({id,recordAsOf:created.recordedAt}),await client.evaluateEndpointImpacts({kind:'NURSING',id:a.nursing.id,validFrom:'2026-01-01T00:00:00.000001',validTo:null})]){
+   expect(response.response.status).toBe(500);expect(response.error).toMatchObject({code:'OWNER_RESPONSE_INVALID'});expect(JSON.stringify(response.error)).not.toContain('TEST_RESPONSE_ONLY');
+  }
+ }finally{await malformedApp.close();}
+
+});
 
 test('AC05 an explicitly approved Nursing resume retains the suspended identity and the old suspension history',async()=>{
  const binding=await f.endpoint(),entry=f.entry(binding),created=await f.apply(await f.input([entry])),id=created.facts[0]!.id;
@@ -209,6 +255,23 @@ test.each([{start:'2026-01-01T00:00:00',finish:null},{start:'2028-01-01T00:00:00
  for(const [index,e] of [left,right].entries())v.rows[index+1]!.handover={kind:'CONFIRMED_HANDOVER',source:{owner:'care-organization/ward-nursing-coverage',id,expectedHead:'1'},successorSourceAlias:e.row.ward_nursing_rel_id,successorNursing:e.applicability.nursing,coverage:e.coverage,cutover:K,ruleReference:'TEST_CROSS_SCOPE',ruleVersion:'TEST_POLICY_ONLY_1',evidenceId:f.artifact.artifactId,confirmed:true,partitionPlan:plan};await f.owner.verify('reviewer',await f.confirmHandover(v));
  const root=await bundle.stage('maker',{requestId:randomUUID(),campus:'NORTH',kind:'MOVE',policy:'TEST_POLICY_ONLY',cutover:T,reason:'TEST all occupied source scopes and target responsibilities mapped',members:[{owner:'WARD_NURSING',...cs,contractVersionId:f.contract!.versionId},{owner:'WARD_NURSING',...ref},{owner:'WARD',...ws,contractVersionId:wards.contract!.versionId},{owner:'NURSING',...ns,contractVersionId:f.nursing.contract!.versionId}]});await bundle.verify('reviewer',{requestId:randomUUID(),inputId:root.inputId,inputDigest:root.digest,reason:'TEST independent complete mapped cross-campus responsibility',policy:'TEST_POLICY_ONLY'});const requestId=randomUUID(),candidate=await bundle.plan('maker',{inputId:root.inputId,requestId});await bundle.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await bundle.approveApplyUnit('reviewer',candidate);const result=await bundle.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error('TEST_COMMITTED_REQUIRED');expect(result.facts).toHaveLength(6);
  expect(await f.owner.read('maker',{id,businessAt:K,recordAsOf:created.recordedAt})).toMatchObject({state:'ACTIVE',applicability:{campus:a.campus}});expect(await f.owner.evaluateWindow('maker',{applicability:{ward:a.ward,campus:target.campus,purpose:a.purpose},coverage:{kind:'WHOLE_WARD'},validFrom:K,validTo:finish,mode:'CURRENT_ADMISSION'})).toMatchObject({declaredCovered:true,primaryCovered:true,currentAdmissionCovered:true});expect(await bundle.reconcileCommittedUnit('maker',{candidateId:candidate.candidateId,requestId})).toMatchObject({status:'MATCHED'});
+  const source=(await f.owner.history('maker',{id})).versions.at(-1)!,successorFacts=result.facts.filter(f=>f.owner==='care-organization/ward-nursing-coverage'&&f.version==='1');
+   const expectedReceipt={source:{id,versionId:source.id,version:source.number,expectedHead:'1'},cutover:K,status:'CONFIRMED_EFFECTIVE',successors:expect.arrayContaining(successorFacts.map(f=>expect.objectContaining({id:f.id,version:'1'}))),clinicalReadiness:'NOT_READY'};
+   expect(await f.owner.handoverReceipt('maker',{id,businessAt:K,recordAsOf:result.recordedAt})).toMatchObject(expectedReceipt);
+   expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:K,recordAsOf:result.recordedAt}))).toMatchObject(expectedReceipt);
+  expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:K,recordAsOf:created.recordedAt}))).toMatchObject({status:'NOT_COMPLETED',successors:[]});
+   expect(httpSuccess(await coverageClient.query({id,businessAt:K,recordAsOf:result.recordedAt}))).toMatchObject({state:'ENDED',handoverStatus:'CONFIRMED_EFFECTIVE'});
+   const listing=httpSuccess(await coverageClient.list({campus:'NORTH',campusId:a.campus.id,wardId:a.ward.id,businessAt:K,recordAsOf:result.recordedAt}));
+   expect(listing.items.find(item=>item.id===id)).toMatchObject({handoverStatus:'CONFIRMED_EFFECTIVE'});
+   expect(httpSuccess(await coverageClient.evaluate({applicability:{ward:a.ward,campus:a.campus,purpose:a.purpose},coverage:whole,validFrom:K,validTo:finish,mode:'HISTORICAL',recordAsOf:result.recordedAt})).handovers.find(item=>item.relationId===id)).toMatchObject({status:'CONFIRMED_EFFECTIVE'});
+   peer(receipt.name,`DELETE FROM care_organization.ward_nursing_access WHERE actor='maker' AND campus_id='${target.campus.id}'::uuid AND scope='NORTH' AND permission='READ';`);
+   try{
+    for(const response of [await coverageClient.handoverReceipt({id,businessAt:K,recordAsOf:result.recordedAt}),await coverageClient.query({id,businessAt:K,recordAsOf:result.recordedAt}),await coverageClient.list({campus:'NORTH',campusId:a.campus.id,wardId:a.ward.id,businessAt:K,recordAsOf:result.recordedAt}),await coverageClient.evaluate({applicability:{ward:a.ward,campus:a.campus,purpose:a.purpose},coverage:whole,validFrom:K,validTo:finish,mode:'HISTORICAL',recordAsOf:result.recordedAt})]){
+     expect(response.response.status).toBe(403);expect(response.error).toMatchObject({code:'ACCESS_DENIED'});
+    }
+    expect(httpSuccess(await coverageClient.query({id,businessAt:K,recordAsOf:created.recordedAt}))).toMatchObject({state:'ACTIVE',handoverStatus:'NOT_REQUIRED'});
+   }finally{peer(receipt.name,`INSERT INTO care_organization.ward_nursing_access VALUES('maker','${target.campus.id}'::uuid,'NORTH','READ');`);}
+
 });
 
 test.each([{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:false,safeEnded:false,extendFinish:false,lateCutover:false},{start:'2028-01-01T00:00:00.000001',end:'2029-01-01T00:00:00.000001',omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:false,safeEnded:false,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:true,dropPrimary:false,single:false,scheduledEnd:false,safeEnded:false,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:true,single:false,scheduledEnd:false,safeEnded:false,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:true,scheduledEnd:false,safeEnded:false,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:true,safeEnded:false,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:false,safeEnded:true,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:true,safeEnded:true,extendFinish:false,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:true,safeEnded:true,extendFinish:true,lateCutover:false},{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary:false,single:false,scheduledEnd:false,safeEnded:true,extendFinish:false,lateCutover:true}])('scope repartition atomically transfers the complete responsibility map, including finite future declarations: %j',async({start,end:finish,omitSuccessor,dropPrimary,single,scheduledEnd,safeEnded,extendFinish,lateCutover})=>{
@@ -232,6 +295,11 @@ test.each([{start:'2026-01-01T00:00:00',end:null,omitSuccessor:false,dropPrimary
  await bundle.verify('reviewer',{inputId:grouped.inputId,inputDigest:grouped.digest,requestId:randomUUID(),reason:'TEST exact members and complete map independently accepted',policy:'TEST_POLICY_ONLY'});
  const requestId=randomUUID(),candidate=await bundle.plan('maker',{inputId:grouped.inputId,requestId});await bundle.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await bundle.approveApplyUnit('reviewer',candidate);
  const applied=await bundle.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(applied.status).toBe('COMMITTED');const after=await f.owner.history('maker',{id});expect(after.versions.slice(0,before.versions.length)).toEqual(before.versions);expect(await f.owner.read('maker',{id,businessAt:switchAt})).toMatchObject({state:'ENDED'});
+  if(applied.status!=='COMMITTED')throw new Error('TEST_COMMITTED_REQUIRED');const source=after.versions.at(-1)!;
+  const successorFacts=applied.facts.filter(f=>f.owner==='care-organization/ward-nursing-coverage'&&f.version==='1'),receipt={source:{id,versionId:source.id,version:source.number},cutover:handoverAt,status:'CONFIRMED_EFFECTIVE',successors:expect.arrayContaining(successorFacts.map(f=>expect.objectContaining({id:f.id,version:'1'}))),clinicalReadiness:'NOT_READY'};
+  const direct=await f.owner.handoverReceipt('maker',{id,businessAt:handoverAt,recordAsOf:applied.recordedAt});expect(direct).toMatchObject(receipt);expect(direct.successors).toHaveLength(successorFacts.length);
+  expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:handoverAt,recordAsOf:applied.recordedAt}))).toMatchObject(receipt);
+  expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:handoverAt,recordAsOf:before.versions.at(-1)!.recordedAt}))).toMatchObject({status:'NOT_COMPLETED',successors:[]});
  const current=await f.owner.readScopeDefinition('maker',{id:set.id});expect(current.version).toBe('2');expect(await f.owner.readScopeVersion('maker',{id:set.id,version:'1'})).toMatchObject({id:set.id,version:'1',validTo:T});expect(await f.owner.readScopeDefinition('maker',{id:set.id,recordAsOf:set.recordedAt})).toEqual(set);
  expect(await f.owner.evaluateWindow('maker',{applicability:{ward:a.ward,campus:a.campus,purpose:a.purpose},coverage:{kind:'PARTITIONS',scopeSetId:set.id,version:'2',partitionIds:current.partitions.filter((_,index)=>!single||index===0).map(p=>p.id)},validFrom:switchAt,validTo:remainingFinish,mode:'CURRENT_ADMISSION'})).toMatchObject({declaredCovered:true,primaryCovered:true,currentAdmissionCovered:true});
  if(!single&&start<T)for(const window of [{validFrom:'2026-12-01T00:00:00',validTo:T},{validFrom:'2026-12-01T00:00:00',validTo:'2027-02-01T00:00:00'}])expect(await f.owner.evaluateWindow('maker',{applicability:{ward:a.ward,campus:a.campus,purpose:a.purpose},coverage:{kind:'WHOLE_WARD'},...window,mode:'CURRENT_ADMISSION'})).toMatchObject({declaredCovered:true,primaryCovered:true,currentAdmissionCovered:true});
@@ -256,4 +324,19 @@ test.each([{finite:true,safeEnded:false},{finite:false,safeEnded:false},{finite:
  const end={...scheduled,target:{...scheduled.target,expectedHead},endAt:T},next=f.entry(b,{kind:'WHOLE_WARD'});next.row.valid_from=T;next.row.valid_to=finite?E:null;next.row.handover_rule_ref='TEST_SCHEDULED_END';const data=await f.input([end,next]),staged=await f.owner.stage('maker',data),verification=f.verification(data,staged);verification.rows[1]!.handover={kind:'CONFIRMED_HANDOVER',source:{owner:'care-organization/ward-nursing-coverage',id,expectedHead},successorSourceAlias:next.row.ward_nursing_rel_id,successorNursing:b.nursing,coverage:next.coverage,cutover:T,ruleReference:'TEST_SCHEDULED_END',ruleVersion:'TEST_POLICY_ONLY_1',evidenceId:f.artifact.artifactId,confirmed:true};
  if(!finite){await expect(f.confirmHandover(verification)).rejects.toThrow('HANDOVER_NOT_CONFIRMED');return;}
  await f.owner.verify('reviewer',await f.confirmHandover(verification));const root=await bundle.stage('maker',{requestId:randomUUID(),campus:'NORTH',policy:'TEST_POLICY_ONLY',kind:'HANDOVER',cutover:T,reason:'TEST preserve preexisting source terminal period',members:[{owner:'WARD_NURSING',...staged,contractVersionId:f.contract!.versionId}]});await bundle.verify('reviewer',{requestId:randomUUID(),inputId:root.inputId,inputDigest:root.digest,reason:'TEST exact previous terminal and complete remaining responsibility',policy:'TEST_POLICY_ONLY'});const requestId=randomUUID(),candidate=await bundle.plan('maker',{inputId:root.inputId,requestId});await bundle.readApplyCandidate('reviewer',{candidateId:candidate.candidateId});await bundle.approveApplyUnit('reviewer',candidate);const result=await bundle.applyUnit('maker',{candidateId:candidate.candidateId,requestId});expect(result.status).toBe('COMMITTED');if(result.status!=='COMMITTED')throw new Error('TEST_COMMITTED_REQUIRED');expect(await f.owner.read('maker',{id:result.facts[1]!.id,businessAt:E})).toMatchObject({state:'NOT_EFFECTIVE'});const history=await f.owner.history('maker',{id});expect(history.versions).toHaveLength(safeEnded?4:3);expect(history.versions.slice(0,before.versions.length)).toEqual(before.versions);expect(await f.owner.read('maker',{id,businessAt:T})).toMatchObject({state:'ENDED'});expect(await bundle.reconcileCommittedUnit('maker',{candidateId:candidate.candidateId,requestId})).toMatchObject({status:'MATCHED'});
+ const ended=history.versions.at(-1)!;
+ const effective={source:{id,versionId:ended.id,version:ended.number},cutover:T,status:'CONFIRMED_EFFECTIVE',successors:[{id:result.facts[1]!.id,version:'1'}],clinicalReadiness:'NOT_READY'};
+ expect(await f.owner.handoverReceipt('maker',{id,businessAt:T,recordAsOf:result.recordedAt})).toMatchObject(effective);
+ expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:T,recordAsOf:result.recordedAt}))).toMatchObject(effective);
+ expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:'2028-09-30T23:59:59.999999',recordAsOf:result.recordedAt}))).toMatchObject({...effective,status:'CONFIRMED_SCHEDULED'});
+ expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:T,recordAsOf:before.versions.at(-1)!.recordedAt}))).toMatchObject({status:'NOT_COMPLETED',successors:[]});
+  const later=await f.apply(await f.input([{...scheduled,target:{...scheduled.target,expectedHead:ended.number},endAt:T}]));
+  expect(httpSuccess(await coverageClient.handoverReceipt({id,businessAt:T,recordAsOf:later.recordedAt}))).toMatchObject(effective);
+  expect(httpSuccess(await coverageClient.query({id,businessAt:T,recordAsOf:later.recordedAt}))).toMatchObject({state:'ENDED',handoverStatus:'CONFIRMED_EFFECTIVE'});
+  expect(httpSuccess(await coverageClient.query({id,businessAt:T,recordAsOf:before.versions.at(-1)!.recordedAt}))).toMatchObject({handoverStatus:'NOT_COMPLETED'});
+  const listing=httpSuccess(await coverageClient.list({campus:'NORTH',campusId:a.campus.id,wardId:a.ward.id,businessAt:T,recordAsOf:later.recordedAt}));
+  expect(listing.items.find(item=>item.id===id)).toMatchObject({handoverStatus:'CONFIRMED_EFFECTIVE'});
+  expect(httpSuccess(await coverageClient.evaluate({applicability:{ward:a.ward,campus:a.campus,purpose:a.purpose},coverage:{kind:'WHOLE_WARD'},validFrom:T,validTo:E,mode:'HISTORICAL',recordAsOf:later.recordedAt})).handovers.find(item=>item.relationId===id)).toMatchObject({status:'CONFIRMED_EFFECTIVE'});
+  expect((await f.owner.history('maker',{id})).versions.slice(0,history.versions.length)).toEqual(history.versions);
+  expect(await bundle.reconcileCommittedUnit('maker',{candidateId:candidate.candidateId,requestId})).toMatchObject({status:'MATCHED'});
 });

@@ -95,7 +95,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;state.rowSnapshots=[];
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,...Array.from({length:45},(_,index)=>205+index)])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,...Array.from({length:47},(_,index)=>205+index)])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -173,7 +173,9 @@ test('both gates use the same exact ordered and checksummed release',()=>{
  expect(files.find(file=>file.id===workspaceMigration)?.id).toBe('0087_department_catalog_interfaces');
  expect(files[199]?.id).toBe('0200_nursing_owner_handover_confirmation');
   expect(files[204]?.id).toBe('0205_location_usage_type_evidence_campus');
-  expect(files.at(-1)?.id).toBe('0250_repartition_exact_cutover_successor_limit');
+  expect(files[249]?.id).toBe('0250_repartition_exact_cutover_successor_limit');
+  expect(files[250]?.id).toBe('0251_exact_nursing_handover_receipt_successors');
+  expect(files.at(-1)?.id).toBe('0252_nursing_suspend_at_open_cutover');
 });
 
 test('the original 200 migration bytes match the approved P3-05 Git tree',()=>{

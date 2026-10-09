@@ -322,6 +322,52 @@
           "reconcileCareLocationLifecycleOutcome",
           "getCareLocationLifecycleHistory"
         ]
+      },
+      {
+        "path": "packages/generated-api-client/src/ward-nursing-client.ts",
+        "operations": [
+          "stageWardNursingInput",
+          "readWardNursingScopeDefinition",
+          "readWardNursingScopeVersion",
+          "getWardNursingHandoverReceipt",
+          "readWardNursingInput",
+          "verifyWardNursingInput",
+          "previewWardNursingInput",
+          "planWardNursingInput",
+          "withdrawWardNursingInput",
+          "reviewWardNursingCandidate",
+          "approveWardNursingCandidate",
+          "applyWardNursingCandidate",
+          "resumeWardNursingOutcome",
+          "reconcileWardNursingOutcome",
+          "getWardNursingAsOf",
+          "getWardNursingHistory",
+          "getWardNursingVersion",
+          "diffWardNursingVersions",
+          "listWardNursingRelations",
+          "evaluateWardNursingWindow",
+          "evaluateWardNursingEndpointImpacts",
+          "receiveWardNursingFile"
+        ]
+      },
+      {
+        "path": "tooling/vnext/p3-11-db.test.ts",
+        "operations": [
+          "getWardNursingHandoverReceipt",
+          "evaluateWardNursingEndpointImpacts",
+          "getWardNursingAsOf",
+          "listWardNursingRelations",
+          "evaluateWardNursingWindow"
+        ]
+      },
+      {
+        "path": "tooling/vnext/p3-11-unit.test.ts",
+        "operations": [
+          "assessSpaceMove",
+          "getCareLocationLifecycleHistory",
+          "getWardNursingHandoverReceipt",
+          "evaluateWardNursingEndpointImpacts"
+        ]
       }
     ],
     "responseBasisProjection": {

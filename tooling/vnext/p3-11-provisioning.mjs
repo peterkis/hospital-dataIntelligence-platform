@@ -2,6 +2,7 @@ import {Pool} from 'pg';
 import {peer,identitySQL} from './lineage.mjs';
 export const lifecycleFunctions=['care_organization.lifecycle_record(text,text)','care_organization.lifecycle_dependencies(text,text,uuid,timestamp,timestamp,timestamp)','location_master.lifecycle_dependencies(text,text,uuid,timestamp,timestamp,timestamp)','care_organization.ward_nursing_scope_reserve(text,text)','care_organization.ward_nursing_scope_proposal_read(text,uuid)','care_organization.ward_nursing_scope_version_read(text,uuid,bigint,timestamp)'];
 lifecycleFunctions.push('care_organization.ward_nursing_scope_versions_for_ward(text,uuid,timestamp)');
+lifecycleFunctions.push('care_organization.ward_nursing_handover_successors_at(text,uuid,timestamp)');
 export function provisionCareLifecycle(receipt,role){
  if(!/^hdi_(?:validation|owner)_[a-f0-9]{16}$/.test(role))throw new Error('ROLE_INVALID');
  peer(receipt.name,identitySQL(receipt)+`GRANT USAGE ON SCHEMA care_organization,location_master TO ${role};GRANT EXECUTE ON FUNCTION ${lifecycleFunctions.join(',')} TO ${role};`);

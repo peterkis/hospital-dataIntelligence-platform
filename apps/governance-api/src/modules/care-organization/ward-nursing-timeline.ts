@@ -18,11 +18,27 @@ export function partialHandover(h:Extract<NursingHandover,{kind:'CONFIRMED_HANDO
 export const knownWardNursing=(h:WardNursingHistory,r?:string):WardNursingHistory=>({...h,versions:h.versions.filter(v=>!r||v.recordedAt<=localTime(r))});
 export const declaration=(h:WardNursingHistory)=>h.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE').at(-1)??null;
 export type WardNursingHandoverStatus='NOT_COMPLETED'|'NOT_REQUIRED'|'CONFIRMED_SCHEDULED'|'CONFIRMED_EFFECTIVE';
+export function confirmedWardNursingHandover(h:WardNursingHistory,peers:WardNursingHistory[]){
+ return h.versions.flatMap((end,index)=>{
+     const previous=h.versions[index-1];if(end.action!=='END'||!previous)return [];
+     const successors=peers.flatMap(p=>p.versions.flatMap(v=>{
+      const handover=v.facts.handover;
+      if(v.action!=='CREATE'||v.changeId!==end.changeId||handover.kind!=='CONFIRMED_HANDOVER'||!handover.confirmed||handover.source.id!==h.id||handover.source.expectedHead!==previous.number||localTime(handover.cutover)!==end.validFrom||v.validFrom!==end.validFrom||handover.successorNursing.id!==p.applicability.nursing.id||handover.successorSourceAlias!==v.facts.source.sourceAlias||!sameCoverage(handover.coverage,v.facts.coverageScope))return [];
+      return [{id:p.id,versionId:v.id,version:v.number,nursing:p.applicability.nursing,coverage:v.facts.coverageScope,sourceAlias:v.facts.source.sourceAlias,handover}];
+     }));
+     const plan=successors[0]?.handover;if(!plan)return [];
+     const complete=plan.partitionPlan
+      ?sameCoverage(plan.partitionPlan.sourceCoverage,end.facts.coverageScope)&&successors.length===plan.partitionPlan.successors.length&&successors.every(v=>canonicalPlan(v.handover.partitionPlan)===canonicalPlan(plan.partitionPlan))&&plan.partitionPlan.successors.every(expected=>successors.filter(v=>v.sourceAlias===expected.sourceAlias&&v.nursing.id===expected.nursing.id&&sameCoverage(v.coverage,expected.coverage)).length===1)
+      :successors.length===1&&sameCoverage(end.facts.coverageScope,plan.coverage);
+     return complete?[{end,successors}]:[];
+    }).at(-1);
+}
 export function wardNursingHandoverStatus(h:WardNursingHistory,b:string,peers:WardNursingHistory[]=[]):WardNursingHandoverStatus{
- const head=h.versions.at(-1),d=declaration(h);
- const confirmation=head?.action==='END'?peers.flatMap(p=>p.versions).find(v=>v.action==='CREATE'&&v.changeId===head.changeId&&v.facts.handover.kind==='CONFIRMED_HANDOVER'&&v.facts.handover.source.id===h.id&&localTime(v.facts.handover.cutover)===head.validFrom)?.facts.handover:d?.facts.handover;
- if(confirmation?.kind==='CONFIRMED_HANDOVER')return localTime(b)<localTime(confirmation.cutover)?'CONFIRMED_SCHEDULED':'CONFIRMED_EFFECTIVE';
- return head?.action==='END'?'NOT_COMPLETED':'NOT_REQUIRED';
+ const confirmed=confirmedWardNursingHandover(h,peers);
+ if(confirmed)return localTime(b)<confirmed.end.validFrom?'CONFIRMED_SCHEDULED':'CONFIRMED_EFFECTIVE';
+ if(h.versions.some(v=>v.action==='END'))return 'NOT_COMPLETED';
+ const confirmation=declaration(h)?.facts.handover;
+ return confirmation?.kind==='CONFIRMED_HANDOVER'?(localTime(b)<localTime(confirmation.cutover)?'CONFIRMED_SCHEDULED':'CONFIRMED_EFFECTIVE'):'NOT_REQUIRED';
 }
 export const wardNursingEnd=(h:WardNursingHistory)=>h.versions.filter(v=>v.action==='END').map(v=>v.validFrom).sort()[0]??null;
 export function wardNursingHandoverEnd(h:WardNursingHistory,cutover:string){

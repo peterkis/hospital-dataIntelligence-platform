@@ -71,4 +71,20 @@ npm.cmd run prototype:db:with -- vnext:p3-11:deploy
 
 升级入口从准确0205源码及原 Owner 建立 populated 前驱，并通过该源码准备所需原 Owner 的测试角色权限后冻结基线，保存旧行多重集、重复数量、列、账本、密钥摘要、ACL、历史和原结果。前驱的通用传输契约不能冒充许可契约；许可测试按完整定义复用准确已发布契约，或经原契约的独立审批追加版本。部署入口只接受原研发库 receipt、名称 `hdi_mc_vnext_a7049c9e5c2a4364` 及 OID206108，前向追加迁移并保存保全证据。已安装迁移不可改写。
 
-准确命令、RED/GREEN、候选审阅和最终 commit/tree 映射保存在 ignored `.runtime/vnext/p3-11/`。专门浏览器、完整重启、容量和正式医院验收保持各自原状态。本票本地交付后停止，不 fetch、push、建 PR、合并、清理分支或进入后票。
+准确命令、RED/GREEN、候选审阅和最终 commit/tree 映射保存在 ignored `.runtime/vnext/p3-11/`。专门浏览器、完整重启、容量和正式医院验收保持各自原状态。原本地停止线已由用户后续发布授权扩展为推送、PR37独立审查、修复复审、准确head合并、main快进及本票已合并分支/工作树清理；不进入后票。
+
+## PR37 读取契约修复
+
+`getWardNursingHandoverReceipt` 返回封闭的 `NOT_COMPLETED`、`CONFIRMED_SCHEDULED` 或 `CONFIRMED_EFFECTIVE` 分支。未完成分支携带准确源头、nullable切换点、空后继和`NOT_READY`；确认分支携带已接受END的版本ID/序号、确认中的准确源期待头、切换点及全部后继的ID、版本、护理typed reference和覆盖范围。独立安全END不成为完成交接的凭据。
+
+同点已独立END后建立的合法后继、原有未来END上界内的提前交接和跨院区重划均按准确确认事件关联。0251只增加护理覆盖Owner的有限读取函数，跨院区读取仍检查每个后继当前权限。0001–0250保持已安装原字节，既有责任占位、确认和outcome不重写。
+
+query、list及窗口交接状态使用同一准确确认解析。后续无关END不遮蔽已接受的交接，旧R仍只显示当时已知确认。历史查询也不绕过当前源/后继读取权限。服务端输出不符合这两个封闭读取响应时返回`OWNER_RESPONSE_INVALID`（HTTP500），不将服务器输出错误归为申请人错误。
+
+0252前向修复Nursing有限RESUME后再次SUSPEND的准入：切换点处必须开放，暂停结束时间仍为null；当前头、属性不变、审批和权限检查保留。恢复、修订和重绑定仍检查完整申请期间，不以切换点核验代替扩张准入。
+
+`evaluateWardNursingEndpointImpacts` 的生命周期响应包括`SUSPEND / RESUME / CLOSE`，结束时间使用nullable微秒本地时间。R仅限制记录认知；未显式提供B时按当前业务时间解释。官方TypeBox、OpenAPI、生成客户端和当前调用方应一起更新。
+
+专项选择器为`npm.cmd run prototype:db:with -- vnext:p3-11:validate --receipt-contracts`。选择器SKIP只说明范围选择；完整fresh、准确0205升级及受影响回归仍以各自完整终态证据为准。
+
+窗口`handovers[].confirmation`保留关系CREATE/REVISE中原接受的incoming交接声明，作为原接受依据。未END时`status`评价该接收声明；已END时`status`评价准确outgoing交接是否完成。该原声明不充当后来交出的证明；准确已接受END、切换点和全部后继通过`getWardNursingHandoverReceipt`读取。两个字段分工由公开TypeBox描述明确，原事实不改写。

@@ -200,6 +200,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=221)for(const name of ['nursing_repartition_reference','nursing_repartition_mapping'])allowedRoutines.add('care_organization.'+name);
     if(ledger.length>=222)allowedRoutines.add('care_organization.lifecycle_record_time_guard');
     if(ledger.length>=223)allowedRoutines.add('care_organization.ward_nursing_scope_versions_for_ward');
+    if(ledger.length>=251)allowedRoutines.add('care_organization.ward_nursing_handover_successors_at');
     if(ledger.length>=217)allowedRoutines.add('care_organization.lifecycle_approval_guard');
     if(ledger.length>=215)allowedRoutines.add('care_organization.nursing_partial_plan');
     if(ledger.length>=212)for(const n of ['care_organization.lifecycle_dependencies','location_master.lifecycle_dependencies'])allowedRoutines.add(n);

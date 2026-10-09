@@ -167,6 +167,8 @@ const postWorkspaceMigrations = [
   '0248_nursing_department_activity_and_suspension_receipts',
   '0249_exact_cutover_handover_successor_limit',
   '0250_repartition_exact_cutover_successor_limit',
+  '0251_exact_nursing_handover_receipt_successors',
+  '0252_nursing_suspend_at_open_cutover',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

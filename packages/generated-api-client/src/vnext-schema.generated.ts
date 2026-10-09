@@ -77894,7 +77894,104 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": {
+                        source: {
+                            id: string;
+                            head: string;
+                        };
+                        cutover: string | null;
+                        /** @enum {string} */
+                        status: "NOT_COMPLETED";
+                        successors: {
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            nursing: {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            coverage: {
+                                /** @enum {string} */
+                                kind: "WHOLE_WARD";
+                            } | {
+                                /** @enum {string} */
+                                kind: "PARTITIONS";
+                                scopeSetId: string;
+                                version: string;
+                                partitionIds: string[];
+                            };
+                            sourceAlias: string;
+                        }[];
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    } | {
+                        source: {
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            expectedHead: string;
+                        };
+                        cutover: string;
+                        successors: {
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            nursing: {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            coverage: {
+                                /** @enum {string} */
+                                kind: "WHOLE_WARD";
+                            } | {
+                                /** @enum {string} */
+                                kind: "PARTITIONS";
+                                scopeSetId: string;
+                                version: string;
+                                partitionIds: string[];
+                            };
+                            sourceAlias: string;
+                        }[];
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                        /** @enum {string} */
+                        status: "CONFIRMED_SCHEDULED";
+                    } | {
+                        source: {
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            expectedHead: string;
+                        };
+                        cutover: string;
+                        successors: {
+                            id: string;
+                            versionId: string;
+                            version: string;
+                            nursing: {
+                                /** @enum {string} */
+                                owner: "care-organization/nursing";
+                                id: string;
+                            };
+                            coverage: {
+                                /** @enum {string} */
+                                kind: "WHOLE_WARD";
+                            } | {
+                                /** @enum {string} */
+                                kind: "PARTITIONS";
+                                scopeSetId: string;
+                                version: string;
+                                partitionIds: string[];
+                            };
+                            sourceAlias: string;
+                        }[];
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                        /** @enum {string} */
+                        status: "CONFIRMED_EFFECTIVE";
+                    };
                 };
             };
             /** @description Default Response */
@@ -79630,6 +79727,7 @@ export interface operations {
                             businessAt: string;
                             /** @enum {unknown} */
                             status: "NOT_COMPLETED" | "NOT_REQUIRED" | "CONFIRMED_SCHEDULED" | "CONFIRMED_EFFECTIVE";
+                            /** @description Original accepted incoming handover declaration from the relation CREATE/REVISE. This is distinct from outgoing handover status after END; use getWardNursingHandoverReceipt for the exact accepted outgoing END and successors. */
                             confirmation: {
                                 /** @enum {string} */
                                 kind: "NO_HANDOVER_REQUIRED";
@@ -79949,9 +80047,9 @@ export interface operations {
                             lifecycle: {
                                 versionId: string;
                                 /** @enum {unknown} */
-                                action: "SUSPEND" | "CLOSE";
+                                action: "SUSPEND" | "RESUME" | "CLOSE";
                                 from: string;
-                                to: null;
+                                to: string | null;
                             }[];
                             /** @enum {unknown} */
                             constraint: "SATISFIED" | "UNSATISFIED";

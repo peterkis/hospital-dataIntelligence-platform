@@ -6,6 +6,7 @@ import type {CareLocationLifecycleInput} from '../../packages/generated-api-clie
 import {LifecycleStageSchema} from '../../apps/governance-api/src/modules/care-organization/lifecycle-contracts.js';
 import {LifecycleAssessmentResultSchema,LifecycleHistoryResultSchema,LifecycleReviewResultSchema} from '../../apps/governance-api/src/modules/care-organization/lifecycle-response-contracts.js';
 import type {operations} from '../../packages/generated-api-client/src/vnext-schema.generated.js';
+import {wardNursingCheck} from '../../apps/governance-api/src/modules/care-organization/ward-nursing-contracts.js';
 const app=await buildCatalogServer();await app.listen({host:'127.0.0.1',port:0});afterAll(()=>app.close());
 const input=():CareLocationLifecycleInput=>({requestId:randomUUID(),campus:'NORTH',kind:'MOVE',policy:'TEST_POLICY_ONLY',cutover:'2027-01-01T00:00:00.000001',reason:'TEST closed exact Owner references',members:[{owner:'LOCATION_USE',inputId:randomUUID(),revisionId:randomUUID(),digest:'a'.repeat(64),contractVersionId:randomUUID()}]});
 const send=(body:unknown)=>fetch(app.listeningOrigin+'/api/vnext/care-location-lifecycle/schedule-unit-move',{method:'POST',headers:{'content-type':'application/json','x-catalog-actor':'maker'},body:JSON.stringify(body)});
@@ -31,3 +32,26 @@ const invalidResponseStatus:Assessment['unavailable'][number]['status']='SATISFI
 // @ts-expect-error - success must carry a complete current B/R review envelope.
 const missingCurrentRecord:History['currentDependencyReview']={businessAt:'2028-01-01T00:00:00.000001',items:[]};
 void invalidResponseOwner;void invalidResponseStatus;void missingCurrentRecord;
+const publishedResponse=(path:string)=>{const response=app.swagger().paths?.[path]?.post?.responses?.['200'];if(!response||!('content' in response))throw new Error('RESPONSE_SCHEMA_REQUIRED');const schema=response.content?.['application/json']?.schema;if(!schema)throw new Error('RESPONSE_SCHEMA_REQUIRED');return schema;};
+test('the published nursing impact response admits RESUME with exact finite and unbounded periods',()=>{
+ const id=randomUUID(),period={from:'2028-01-01T00:00:00.000001',to:null},scope={ward:{owner:'care-organization/ward',id},nursing:{owner:'care-organization/nursing',id},campus:{owner:'organization-master/campus',id},purpose:'NURSING_COVERAGE'},coverage={kind:'WHOLE_WARD'};
+ const item={id,applicability:scope,original:{versionId:id,version:'1',period,coverage,digest:'a'.repeat(64),dependencies:{}},current:{versionId:id,version:'1',action:'CREATE',period,coverage},active:true,outstanding:true,affectedSpans:[period],lifecycle:[],constraint:'SATISFIED'};
+ const value={owner:'WARD_NURSING_COVERAGE',endpoint:{kind:'NURSING',id},validFrom:period.from,validTo:null,recordAsOf:period.from,status:'EVALUATED',clinicalReadiness:'NOT_READY',items:[item]},schema=publishedResponse('/api/vnext/ward-nursing-coverages/impacts');
+ for(const to of [null,'2029-01-01T00:00:00.999999'])expect(()=>wardNursingCheck(schema,{...value,items:[{...item,lifecycle:[{versionId:id,action:'RESUME',from:period.from,to}]}]})).not.toThrow();
+});
+test('the published handover receipt rejects undeclared fields and incoherent status branches',()=>{
+ const schema=publishedResponse('/api/vnext/ward-nursing-coverages/handover-receipt'),id=randomUUID(),incomplete={source:{id,head:'1'},cutover:null,status:'NOT_COMPLETED',successors:[],clinicalReadiness:'NOT_READY'};
+ expect(()=>wardNursingCheck(schema,incomplete)).not.toThrow();
+ for(const bad of [{...incomplete,clinicalReadiness:undefined},{...incomplete,unrestrictedMaterial:'not part of receipt'},{...incomplete,status:'CONFIRMED_EFFECTIVE'},{...incomplete,successors:[{id}]},{...incomplete,source:{id,head:'9223372036854775808'}}])expect(()=>wardNursingCheck(schema,bad)).toThrow();
+});
+type Receipt=operations['getWardNursingHandoverReceipt']['responses'][200]['content']['application/json'];
+type ImpactLifecycle=operations['evaluateWardNursingEndpointImpacts']['responses'][200]['content']['application/json']['items'][number]['lifecycle'][number];
+const typedIncomplete:Extract<Receipt,{status:'NOT_COMPLETED'}>={source:{id:randomUUID(),head:'1'},cutover:null,status:'NOT_COMPLETED',successors:[],clinicalReadiness:'NOT_READY'};
+const typedResume:ImpactLifecycle={versionId:randomUUID(),action:'RESUME',from:'2028-01-01T00:00:00.000001',to:'2029-01-01T00:00:00.999999'};
+// @ts-expect-error - a confirmed receipt identifies the accepted END and its exact expected source head.
+const unversionedConfirmation:Extract<Receipt,{status:'CONFIRMED_EFFECTIVE'}>['source']={id:randomUUID(),head:'1'};
+// @ts-expect-error - the official lifecycle response cannot invent an unimplemented action.
+const invalidLifecycleAction:ImpactLifecycle['action']='REOPEN';
+// @ts-expect-error - an incomplete receipt cannot masquerade as a confirmed scheduled branch.
+const invalidConfirmedReceipt:Extract<Receipt,{status:'CONFIRMED_SCHEDULED'}>={...typedIncomplete,status:'CONFIRMED_SCHEDULED'};
+void typedIncomplete;void typedResume;void unversionedConfirmation;void invalidLifecycleAction;void invalidConfirmedReceipt;
