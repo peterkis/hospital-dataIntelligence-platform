@@ -25,7 +25,7 @@ test('every P3-07 request and response object is closed and declares actual erro
 
 test('official current-contract caller registration rejects missing callers or undeclared operations',()=>{
  const api=app.swagger(),registry=JSON.parse(readFileSync('docs/vnext/current-callers.json','utf8'));
- expect(verifyVNextCallerRegistration(api,registry,existsSync)).toMatchObject({status:'PASS',ticket:'P3-11',callers:14});
+ expect(verifyVNextCallerRegistration(api,registry,existsSync)).toMatchObject({status:'PASS',ticket:'P3-11',callers:17});
  expect(()=>verifyVNextCallerRegistration(api,registry,()=>false)).toThrow('CURRENT_CALLER_PATH_INVALID');
  const stale=structuredClone(registry);stale.vNextCurrentCallers.callers[0].operations.push('missingPurposeOperation');expect(()=>verifyVNextCallerRegistration(api,stale,existsSync)).toThrow('CURRENT_CALLER_OPERATION_INVALID');
 });
