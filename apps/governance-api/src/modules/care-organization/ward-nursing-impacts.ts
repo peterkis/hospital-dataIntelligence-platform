@@ -14,7 +14,7 @@ export interface WardNursingEndpointImpact {
   original:{versionId:string;version:string;period:{from:string;to:string|null};coverage:CoverageScope;digest:string;dependencies:WardNursingFacts['dependencies']};
   current:{versionId:string;version:string;action:'CREATE'|'REVISE'|'END';period:{from:string;to:string|null};coverage:CoverageScope};
   active:boolean;outstanding:boolean;affectedSpans:Array<{from:string;to:string|null}>;
-  lifecycle:Array<{versionId:string;action:'SUSPEND'|'CLOSE';from:string;to:null}>;
+  lifecycle:Array<{versionId:string;action:'SUSPEND'|'RESUME'|'CLOSE';from:string;to:string|null}>;
   constraint:'SATISFIED'|'UNSATISFIED';
  }>;
 }

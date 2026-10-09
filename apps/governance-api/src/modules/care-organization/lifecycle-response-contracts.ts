@@ -1,0 +1,28 @@
+import {Type} from 'typebox';
+import {PlanOwnerUnitSchema} from '../governance-catalog/index.js';
+import {UnitTime} from './contracts.js';
+import {LifecycleInputSchema,LifecycleStageSchema,LifecycleVerifySchema,LifecycleOwnerSchema,LifecycleTargetSchema} from './lifecycle-contracts.js';
+
+const closed={additionalProperties:false} as const,Id=LifecycleInputSchema.properties.inputId,Text=Type.String(),Digest=Type.String({pattern:'^[a-f0-9]{64}$'}),End=Type.Union([UnitTime,Type.Null()]),Head=Type.String({pattern:'^[1-9][0-9]*$'});
+export const LifecycleOpaqueBasisSchema=Type.Object({format:Type.Literal('OWNER_BASIS_JSON_V1'),canonicalJson:Type.String({maxLength:524288})},closed);
+const Policy=Type.Literal('TEST_POLICY_ONLY'),Clinical=Type.Literal('NOT_READY');
+const Unavailable=Type.Object({owner:Type.Enum(['LOCATION_REFERENCES','PERSONNEL_ASSIGNMENT','BED_RESOURCE','BED_SNAPSHOT','PATIENT_BUSINESS','EXTERNAL_CONSUMERS']),status:Type.Literal('NOT_EVALUABLE')},closed);
+export const LifecycleDependencySchema=Type.Object({owner:LifecycleOwnerSchema,id:Id,head:Head,referenceId:Id,referenceVersionId:Id,from:UnitTime,to:End,campusId:Id,disposition:Type.Literal('OPEN')},closed);
+const Report={items:Type.Array(LifecycleDependencySchema),unavailable:Type.Array(Unavailable)};
+export const LifecycleAssessmentResultSchema=Type.Object({target:LifecycleTargetSchema,recordAsOf:UnitTime,...Report,dispositionStatus:Type.Enum(['OPEN','NO_IMPLEMENTED_REFERENCE']),clinicalReadiness:Clinical},closed);
+const Impact=Type.Object({target:LifecycleTargetSchema,validFrom:UnitTime,validTo:End,items:Type.Array(Type.Object({...LifecycleDependencySchema.properties,included:Type.Boolean()},closed)),unavailable:Type.Array(Unavailable)},closed);
+const Change=Type.Object({owner:LifecycleOwnerSchema,change:LifecycleOpaqueBasisSchema},closed);
+export const LifecyclePreviewResultSchema=Type.Object({dependencies:Type.Array(Impact),decision:Type.Enum(['PASS','STALE']),changes:Type.Array(Change),policy:Policy,clinicalReadiness:Clinical},closed);
+const Verification=Type.Object({id:Id,recordedAt:UnitTime,actor:Text,identity:Text,digest:Digest,observationDigest:Digest},closed);
+const NullableVerification=Type.Union([Verification,Type.Null()]);
+const OriginalVerification=Type.Object({...Verification.properties,basis:Type.Union([LifecycleVerifySchema,Type.Null()])},closed);
+const CurrentReview=Type.Object({target:LifecycleTargetSchema,lifecycle:Type.Object({id:Id,state:Type.Enum(['ACTIVE','SUSPENDED','CLOSED','NOT_EFFECTIVE','NOT_EVALUABLE']),head:Type.Union([Head,Type.Null()])},closed),...Report,dispositionStatus:Type.Enum(['OPEN','IMPLEMENTED_REFERENCES_CLOSED']),overallDisposition:Type.Literal('NOT_EVALUABLE')},closed);
+export const LifecycleHistoryResultSchema=Type.Object({input:LifecycleStageSchema,originalAcceptedBasis:Type.Object({inputDigest:Digest,observationDigest:Digest,verification:Type.Union([OriginalVerification,Type.Null()])},closed),currentDependencyReview:Type.Object({businessAt:UnitTime,recordAsOf:UnitTime,items:Type.Array(CurrentReview)},closed),policy:Policy,clinicalReadiness:Clinical},closed);
+export const LifecycleFactOwnerSchema=Type.Enum(['care-organization/unit','care-organization/nursing','care-organization/ward','care-organization/unit-ward-relation','care-organization/ward-nursing-coverage','care-organization/ward-nursing-scope','care-organization/unit-capability','care-organization/subject-permission','location-master','location-master/location-use']);
+const Reference=Type.Object({inputId:Id,revisionId:Id,digest:Digest,contractVersionId:Id,makerIdentity:Text,campus:Type.Enum(['NORTH','SOUTH'])},closed);
+const Member=Type.Object({owner:LifecycleOwnerSchema,reference:Reference,unit:LifecycleOpaqueBasisSchema},closed);
+const Target=Type.Object({owner:LifecycleFactOwnerSchema,id:Id,version:Head},closed);
+const Command=Type.Object({owner:LifecycleFactOwnerSchema,row:Type.Integer({minimum:1,maximum:100}),intent:Type.Enum(['CREATE','REVISE']),target:Type.Union([Target,Type.Null()]),aliases:Type.Array(Type.Integer({minimum:1})),value:Type.Object({member:Type.String({pattern:'^(0|[1-9][0-9]*)$'}),nativeRow:Head},closed)},closed);
+const Unit=Type.Object({input:PlanOwnerUnitSchema,atomicRule:Type.Literal('CARE_LOCATION_LIFECYCLE_V1'),basis:Type.Object({input:LifecycleStageSchema,inputDigest:Digest,verification:NullableVerification,members:Type.Array(Member),dependencies:Type.Array(Impact)},closed),commands:Type.Array(Command),diff:Type.Array(Change)},closed);
+export const LifecycleReviewResultSchema=Type.Object({candidateId:Id,digest:Digest,unit:Unit,approvedBy:Type.Union([Text,Type.Null()])},closed);
+export const LifecycleApprovalResultSchema=Type.Object({candidateId:Id,approvedBy:Text},closed);

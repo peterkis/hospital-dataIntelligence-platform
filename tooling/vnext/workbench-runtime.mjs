@@ -1,4 +1,6 @@
 import {assertWardNursingProvisioned} from './p3-05-provisioning.mjs';
+import {assertCareLifecycleProvisioned} from './p3-11-provisioning.mjs';
+import {openCareLocationLifecycle} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {wardNursingUpstreamPorts} from '../../apps/governance-api/src/composition/ward-nursing-dependencies.ts';
 import {assertUnitWardProvisioned} from './p3-04-provisioning.mjs';
 import {unitWardUpstreamPorts} from '../../apps/governance-api/src/composition/unit-ward-dependencies.ts';
@@ -84,10 +86,11 @@ export async function startWorkbench({
   }
   let unitWard;
   let wardNursing;
-  let locationUsageTypes,locationUse;
+  let locationUsageTypes,locationUse,careLifecycle;
   let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit, nursingUnit, ward, parameterValues, unitCapabilities, subjectCodes, subjectPermissions;
   const close = async () => {
     await app?.close();
+    await careLifecycle?.close();
     await locationUse?.close();
     await locationUsageTypes?.close();
     await organization?.close();
@@ -192,6 +195,7 @@ export async function startWorkbench({
     if(persistent&&persistentPrefix>=201){locationUsageTypes=openLocationUsageTypes(connection,provider);}
     if(persistent&&persistentPrefix>=203){if(!location||!departmentLifecycle||!businessUnit||!ward||!nursingUnit||!locationUsageTypes)throw new Error('BLOCKED_DEPENDENCY');locationUse=openLocationUse(connection,provider,locationUseUpstreamPorts(location,departmentLifecycle,businessUnit,ward,nursingUnit),locationUsageTypes);}
     if(persistent&&persistentPrefix>=178){subjectCodes=openSubjectCodes(connection,provider);subjectPermissions=openSubjectPermissions(connection,provider,{operatingWindow:operating.evaluateOperatingWindowInTransaction});}
+    if(persistent&&persistentPrefix>=220){await assertCareLifecycleProvisioned(connection);careLifecycle=openCareLocationLifecycle(connection,provider,{UNIT:businessUnit,NURSING:nursingUnit,WARD:ward,UNIT_WARD:unitWard,WARD_NURSING:wardNursing,CAPABILITY:unitCapabilities,PERMISSION:subjectPermissions,LOCATION:location,LOCATION_USE:locationUse});}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -265,6 +269,7 @@ export async function startWorkbench({
       unitWard?{owner:unitWard,actor:r=>syntheticActor(r.headers)}:undefined,
       wardNursing?{owner:wardNursing,actor:r=>syntheticActor(r.headers)}:undefined,
       validationContext?.locationUse??(locationUsageTypes?{owner:locationUse,usageTypes:locationUsageTypes,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.careLifecycle??(careLifecycle?{owner:careLifecycle,actor:r=>syntheticActor(r.headers)}:undefined),
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),

@@ -7,7 +7,9 @@ import {parseStrictJson} from '../../platform/fastify/strict-json.js';
 const closed={additionalProperties:false} as const;
 export const WardNursingId=Type.String({pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'});
 export const WardNursingTime=Type.String({pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?$'});
-export const WardNursingHead=Type.String({pattern:'^[1-9][0-9]{0,18}$',maxLength:19});
+const maximumHead='9223372036854775807';
+const headAlternatives=[...maximumHead].flatMap((digit,index)=>{const lower=index===0?1:0,upper=Number(digit)-1;if(upper<lower)return [];return [maximumHead.slice(0,index)+(lower===upper?String(lower):`[${lower}-${upper}]`)+`[0-9]{${maximumHead.length-index-1}}`];});
+export const WardNursingHead=Type.String({pattern:`^(?:[1-9][0-9]{0,17}|${headAlternatives.join('|')}|${maximumHead})$`,maxLength:19});
 const End=Type.Union([WardNursingTime,Type.Null()]),Text=Type.String({minLength:1,maxLength:2000,pattern:'\\S'}),OptionalText=Type.Union([Type.String({maxLength:2000}),Type.Null()]),Digest=Type.String({pattern:'^[a-f0-9]{64}$'});
 const ref=<O extends string>(owner:O)=>Type.Object({owner:Type.Literal(owner),id:WardNursingId},closed);
 export const CoverageScopeSchema=Type.Union([
@@ -40,18 +42,25 @@ export type WardNursingEntry=Static<typeof WardNursingEntrySchema>;
 export const ScopeDefinitionSchema=Type.Object({sourceAlias:Type.String({minLength:1,maxLength:64}),applicability:WardScopeAnchorSchema,partitions:Type.Array(Type.Object({sourceAlias:Type.String({minLength:1,maxLength:64}),name:Text,boundary:Text},closed),{minItems:2,maxItems:100}),validFrom:WardNursingTime,validTo:End,sourceSystemId:WardNursingId,sourceRecordedAt:WardNursingTime,approvalReference:Text,evidenceId:WardNursingId,reason:Text},closed);
 export type ScopeDefinition=Static<typeof ScopeDefinitionSchema>;
 const StageCommon={requestId:WardNursingId,jobId:WardNursingId,revisionId:WardNursingId,campus:Type.Enum(['NORTH','SOUTH']),profile:Type.Enum(['CORE','FULL']),timePolicy:Type.Literal('LOCAL')};
+export const ScopeRevisionSchema=Type.Object({...StageCommon,kind:Type.Literal('SCOPE_REVISION'),target:Type.Object({id:WardNursingId,expectedHead:WardNursingHead},closed),definition:ScopeDefinitionSchema,mapping:Type.Array(Type.Object({version:WardNursingHead,partitionId:WardNursingId,toAliases:Type.Array(Type.String({minLength:1,maxLength:64}),{minItems:1,maxItems:100,uniqueItems:true})},closed),{minItems:2,maxItems:100})},closed);
+export const ScopeRevisionProposalSchema=Type.Object({scopeSetId:WardNursingId,version:WardNursingHead,status:Type.Literal('RESERVED_INPUT'),partitions:Type.Array(Type.Object({id:WardNursingId,sourceAlias:Type.String({minLength:1,maxLength:64})},closed),{minItems:2,maxItems:100})},closed);
+export type ScopeRevisionProposal=Static<typeof ScopeRevisionProposalSchema>;
 export const WardNursingStageSchema=Type.Union([
  Type.Object({...StageCommon,kind:Type.Literal('COVERAGE'),entries:Type.Array(WardNursingEntrySchema,{minItems:1,maxItems:100})},closed),
  Type.Object({...StageCommon,kind:Type.Literal('SCOPE_DEFINITION'),definition:ScopeDefinitionSchema},closed),
+ ScopeRevisionSchema,
 ]);
 export type WardNursingStage=Static<typeof WardNursingStageSchema>;
 export const WardNursingDirectStageSchema=Type.Union([
  Type.Object({...StageCommon,kind:Type.Literal('COVERAGE'),entries:Type.Array(Type.Union(WardNursingEntrySchema.anyOf.map(s=>Type.Object({...s.properties,row:WardNursingDirectRowSchema},closed))),{minItems:1,maxItems:100})},closed),
  WardNursingStageSchema.anyOf[1],
+ ScopeRevisionSchema,
 ]);
 export const WardNursingStoredStageSchema=Type.Union(WardNursingStageSchema.anyOf.map(s=>Type.Object({...s.properties,sourceArtifactId:Type.Optional(WardNursingId),sourceRows:Type.Optional(Type.Array(Type.Integer({minimum:1,maximum:1048576}),{minItems:1,maxItems:100}))},closed)));
 export type WardNursingStoredStage=WardNursingStage&{sourceArtifactId?:string;sourceRows?:number[]};
-export const NursingConfirmedHandoverSchema=Type.Object({kind:Type.Literal('CONFIRMED_HANDOVER'),source:WardNursingTargetSchema,successorSourceAlias:Text,successorNursing:ref('care-organization/nursing'),coverage:CoverageScopeSchema,cutover:WardNursingTime,ruleReference:Text,ruleVersion:Text,evidenceId:WardNursingId,confirmed:Type.Boolean(),nursingConfirmation:Type.Optional(Type.Object({id:WardNursingId,digest:Digest},closed))},closed);
+export const ScopeRevisionReferenceSchema=Type.Object({inputId:WardNursingId,revisionId:WardNursingId,digest:Digest,contractVersionId:WardNursingId},closed);
+export const NursingPartitionHandoverSchema=Type.Object({sourceCoverage:CoverageScopeSchema,repartition:Type.Optional(ScopeRevisionReferenceSchema),successors:Type.Array(Type.Object({sourceAlias:Type.String({minLength:1,maxLength:64}),nursing:ref('care-organization/nursing'),coverage:CoverageScopeSchema},closed),{minItems:1,maxItems:100})},closed);
+export const NursingConfirmedHandoverSchema=Type.Object({kind:Type.Literal('CONFIRMED_HANDOVER'),source:WardNursingTargetSchema,successorSourceAlias:Text,successorNursing:ref('care-organization/nursing'),coverage:CoverageScopeSchema,cutover:WardNursingTime,ruleReference:Text,ruleVersion:Text,evidenceId:WardNursingId,confirmed:Type.Boolean(),partitionPlan:Type.Optional(NursingPartitionHandoverSchema),nursingConfirmation:Type.Optional(Type.Object({id:WardNursingId,digest:Digest},closed))},closed);
 const Handover=Type.Union([
  Type.Object({kind:Type.Literal('NO_HANDOVER_REQUIRED'),confirmed:Type.Boolean()},closed),
  NursingConfirmedHandoverSchema,
@@ -71,11 +80,12 @@ export const WardNursingWindowSchema=Type.Object({applicability:Type.Object({...
 export type WardNursingWindow=Static<typeof WardNursingWindowSchema>;
 export const WardNursingReceiveSchema=Type.Object({requestId:WardNursingId,fileRequestId:WardNursingId,job:ImportJobCommandSchema,campus:StageCommon.campus,timePolicy:StageCommon.timePolicy,retentionSeconds:Type.Integer({minimum:1,maximum:2592000}),operations:Type.Array(Type.Union([Type.Omit(WardNursingEntrySchema.anyOf[0],['row'],closed),Type.Omit(WardNursingEntrySchema.anyOf[1],['row'],closed),Type.Omit(WardNursingEntrySchema.anyOf[2],['row'],closed)]),{minItems:1,maxItems:100})},closed);
 export type WardNursingReceive=Static<typeof WardNursingReceiveSchema>;
-export interface ApprovedScopeSet {id:string;version:'1';scope:'NORTH'|'SOUTH';applicability:WardScopeAnchor;partitions:Array<{id:string;sourceAlias:string;name:string;boundary:string}>;validFrom:string;validTo:string|null;recordedAt:string;sourceAlias:string;verificationBasis:unknown;changeId:string}
+export interface ApprovedScopeSet {id:string;version:string;scope:'NORTH'|'SOUTH';applicability:WardScopeAnchor;partitions:Array<{id:string;sourceAlias:string;name:string;boundary:string}>;validFrom:string;validTo:string|null;recordedAt:string;sourceAlias:string;verificationBasis:unknown;changeId:string;inputId?:string;inputDigest?:string}
+export interface ScopeRevisionProjection {basis:{scopeSetId:string;version:string;inputId:string;inputDigest:string;partitions:ApprovedScopeSet['partitions'];validFrom:string;validTo:string|null};applicability:WardScopeAnchor;mapping:Static<typeof ScopeRevisionSchema>['mapping'];affected:WardNursingHistory[]}
 export interface WardNursingFacts {coverageScope:CoverageScope;coverageSource:string;isPrimary:boolean;handoverRuleReference:string|null;rule:WardNursingRule;handover:NursingHandover;contractVersionId:string;verificationBasis:{id:string;version:string;digest:string};dependencies:unknown;source:{sourceAlias:string;sourceVersion:string;sourceSystemId:string;sourceRecordedAt:string;recordLocatorEvidence:{inputId:string;row:number};recordStatus:string;approvalReference:string}}
 export interface WardNursingVersion {id:string;number:string;action:'CREATE'|'REVISE'|'END';validFrom:string;validTo:string|null;recordedAt:string;facts:WardNursingFacts;reason:string;changeId:string}
 export interface WardNursingHistory {id:string;scope:'NORTH'|'SOUTH';applicability:WardNursingScope;versions:WardNursingVersion[]}
-export interface WardNursingWrite {key:string;targetId:string|null;expectedHead:string|null;action:'CREATE'|'REVISE'|'END'|'REGISTER_SCOPE';validFrom:string;validTo:string|null;applicability:WardNursingScope|WardScopeAnchor;facts:WardNursingFacts|Record<string,unknown>;reason:string;sourceRow:number;scope:'NORTH'|'SOUTH'}
+export interface WardNursingWrite {key:string;targetId:string|null;expectedHead:string|null;action:'CREATE'|'REVISE'|'END'|'REGISTER_SCOPE'|'REVISE_SCOPE';validFrom:string;validTo:string|null;applicability:WardNursingScope|WardScopeAnchor;facts:WardNursingFacts|Record<string,unknown>;reason:string;sourceRow:number;scope:'NORTH'|'SOUTH'}
 export interface WardNursingIssue {row:number;field:string;code:string;status:'FAIL'|'BLOCKED'}
 export interface WardNursingUpstreamPorts {referenceAccess(s:CatalogTransactionScope,actor:string,scope:WardNursingScope|WardScopeAnchor):Promise<{scope:'NORTH'|'SOUTH'}>;confirmation(s:CatalogTransactionScope,actor:string,basis:{id:string;digest:string},expected:{inputId:string;inputDigest:string;row:number;handover:Omit<Static<typeof NursingConfirmedHandoverSchema>,'nursingConfirmation'>&{confirmed:true}}):Promise<{id:string;digest:string;recordedAt:string;materialDigest:string}>;boundaries(s:CatalogTransactionScope,actor:string,scope:WardNursingScope,from:string,to:string|null,r:string,rule:WardNursingRule):Promise<string[]>;admit(s:CatalogTransactionScope,actor:string,scope:WardNursingScope,from:string,to:string|null,r:string,rule:WardNursingRule):Promise<unknown>;admitWard(s:CatalogTransactionScope,actor:string,scope:WardScopeAnchor,from:string,to:string|null,r:string):Promise<unknown>}
 export function wardNursingCheck(schema:unknown,value:unknown):void{if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');}
