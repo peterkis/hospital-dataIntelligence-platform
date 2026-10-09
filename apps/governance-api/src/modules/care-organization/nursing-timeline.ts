@@ -1,8 +1,21 @@
 import {localTime,subtract,intersect} from '../organization-master/index.js';
 import type {NursingHistory,NursingVersion,NursingBindingHistory} from './nursing-contracts.js';
+import {careUnavailable,careState} from './care-lifecycle-time.js';
 export const knownNursing=(h:NursingHistory,asOf?:string):NursingHistory=>({...h,versions:h.versions.filter(v=>!asOf||v.recordedAt<=localTime(asOf)),bindings:h.bindings.map(b=>({...b,versions:b.versions.filter(v=>!asOf||v.recordedAt<=localTime(asOf))})).filter(b=>b.versions.length>0)});
-export function nursingAt(h:NursingHistory,at:string):NursingVersion|null{at=localTime(at);if(h.versions.some(v=>v.action==='SUSPEND'&&v.validFrom<=at))return null;return h.versions.filter(v=>v.action!=='SUSPEND'&&v.action!=='REBIND'&&v.validFrom<=at&&(v.validTo===null||at<v.validTo)).at(-1)??null;}
-export function nursingPeriods(h:NursingHistory){const close=h.versions.find(v=>v.action==='SUSPEND');return h.versions.filter(v=>v.action!=='SUSPEND'&&v.action!=='REBIND').flatMap(v=>subtract({from:v.validFrom,to:v.validTo},h.versions.filter(l=>l.action!=='REBIND'&&BigInt(l.number)>BigInt(v.number)).map(l=>({from:l.validFrom,to:l.validTo}))).flatMap(p=>close?intersect(p,{from:h.versions[0]!.validFrom,to:close.validFrom}):[p]).map(p=>({...p,version:v})));}
+export function nursingContentAt(h:NursingHistory,at:string):NursingVersion|null{at=localTime(at);return h.versions.filter(v=>(v.action==='CREATE'||v.action==='REVISE')&&v.validFrom<=at&&(v.validTo===null||at<v.validTo)).at(-1)??null;}
+export function nursingClosureBasis(h:NursingHistory,at:string){
+ at=localTime(at);
+ // CLOSE may seal an accepted interval at its exact exclusive end. This is
+ // evidence selection only; ordinary reads, SUSPEND and RESUME stay half-open.
+ const version=h.versions.filter(v=>(v.action==='CREATE'||v.action==='REVISE')&&v.validFrom<=at&&(v.validTo===null||at<=v.validTo)).at(-1)??null;
+ const current=h.bindings.filter(b=>{const v=bindingHead(b);return v.validFrom<=at&&(v.validTo===null||at<v.validTo);});
+ const bindings=current.length?current:h.bindings.filter(b=>{const v=bindingHead(b);return v.validFrom<=at&&v.validTo===at;});
+ if(bindings.length>1)throw new Error('NURSING_BINDING_CONFLICT');
+ return {version,binding:bindings[0]??null};
+}
+export function nursingAt(h:NursingHistory,at:string):NursingVersion|null{return careState(h.versions,at)==='ACTIVE'?nursingContentAt(h,at):null;}
+export function nursingPeriods(h:NursingHistory){return h.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE').flatMap(v=>subtract({from:v.validFrom,to:v.validTo},[...h.versions.filter(l=>(l.action==='CREATE'||l.action==='REVISE')&&BigInt(l.number)>BigInt(v.number)).map(l=>({from:l.validFrom,to:l.validTo})),...careUnavailable(h.versions)]).map(p=>({...p,version:v})));}
 export const bindingHead=(b:NursingBindingHistory)=>b.versions.at(-1)!;
 export function bindingPeriods(h:NursingHistory){const core=nursingPeriods(h);return h.bindings.flatMap(binding=>{const v=bindingHead(binding);return core.flatMap(p=>intersect({from:v.validFrom,to:v.validTo},p).map(span=>({...span,binding})));});}
+export function declaredBindingAt(h:NursingHistory,at:string){at=localTime(at);if(careState(h.versions,at)==='CLOSED')return null;const found=h.bindings.filter(b=>{const v=bindingHead(b);return v.validFrom<=at&&(v.validTo===null||at<v.validTo);});if(found.length>1)throw new Error('NURSING_BINDING_CONFLICT');return found[0]??null;}
 export function bindingAt(h:NursingHistory,at:string){at=localTime(at);const found=bindingPeriods(h).filter(p=>p.from<=at&&(p.to===null||at<p.to)).map(p=>p.binding);if(found.length>1)throw new Error('NURSING_BINDING_CONFLICT');return found[0]??null;}

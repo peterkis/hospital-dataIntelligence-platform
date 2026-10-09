@@ -1,10 +1,12 @@
+import {wardNursingHandoverEnd} from './ward-nursing-timeline.js';
 import {createDecipheriv,createHmac} from 'node:crypto';
 import {sql} from 'kysely';
 import {authenticateRegistrationEvidence,canonicalPlan,planBinding,type CatalogTransactionScope,type ImportJob,type KeyProviderPort} from '../governance-catalog/index.js';
 import {localTime} from '../organization-master/index.js';
 import {nursingCheck} from './nursing-contracts.js';
 import {WardNursingStoredStageSchema,type WardNursingHistory,type WardNursingStoredStage} from './ward-nursing-contracts.js';
-import {sameCoverage,wardNursingEnd} from './ward-nursing-timeline.js';
+import {validateScopeRepartition} from './scope-repartition.js';
+import {sameCoverage,wardNursingEnd,partialHandover} from './ward-nursing-timeline.js';
 import {NursingHandoverBindingSchema,NursingHandoverConfirmSchema,NursingHandoverConfirmationBasisSchema,type NursingHandoverBinding,type NursingHandoverConfirm,type NursingHandoverConfirmation,type NursingHandoverConfirmationBasis,type NursingHandoverConfirmedBasis} from './nursing-handover-contracts.js';
 
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
@@ -37,14 +39,28 @@ export function nursingHandover(provider:KeyProviderPort){
    const source=(await sql<{r:WardNursingHistory}>`select care_organization.ward_nursing_snapshot(${actor},${handover.source.id}::uuid) r`.execute(s)).rows[0]!.r;
    const head=source.versions.at(-1),declaration=source.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE').at(-1);
    if(!head||head.number!==handover.source.expectedHead||!declaration)throw new Error('STALE_HEAD');
+   let targetCampus=source.applicability.campus.id;
+   if(handover.partitionPlan?.repartition){const ref=handover.partitionPlan.repartition,producer=(await sql<{r:InputRecord&{revision:string;job_revision:string;id:string}}>`select care_organization.ward_nursing_input_read(${actor},${ref.inputId}::uuid,'READ_RESTRICTED') r`.execute(s)).rows[0]!.r;
+    const request=unseal(producer),job=(await sql<{r:ImportJob}>`select care_organization.ward_nursing_job_read(${actor},${ref.inputId}::uuid) r`.execute(s)).rows[0]!.r;
+    if(request.kind!=='SCOPE_REVISION'||producer.withdrawn||producer.digest!==ref.digest||producer.revision!==ref.revisionId||job.contract.versionId!==ref.contractVersionId||job.currentRevisionId!==producer.job_revision)throw new Error('STALE_VALIDATION');
+    if(request.definition.applicability.ward.id!==source.applicability.ward.id||request.definition.applicability.purpose!==source.applicability.purpose)throw new Error('HANDOVER_NOT_CONFIRMED');
+    targetCampus=request.definition.applicability.campus.id;
+    const slots=(await sql<{r:{scopeSetId:string;version:string;partitions:Array<{id:string;sourceAlias:string}>}}>`select care_organization.ward_nursing_scope_proposal_read(${actor},${ref.inputId}::uuid) r`.execute(s)).rows[0]!.r;
+    await validateScopeRepartition(s,actor,handover,declaration.facts.coverageScope,{basis:{scopeSetId:slots.scopeSetId,version:slots.version,inputId:producer.id,inputDigest:producer.digest,partitions:request.definition.partitions.map(p=>({...p,id:slots.partitions.find(q=>q.sourceAlias===p.sourceAlias)!.id})),validFrom:localTime(request.definition.validFrom),validTo:request.definition.validTo===null?null:localTime(request.definition.validTo)},mapping:request.mapping,applicability:request.definition.applicability,affected:[]});
+   }
+   const partial=partialHandover(handover,declaration.facts.coverageScope);
+   if(entry?.action==='CREATE'){if((entry.row.is_primary==='Y')!==declaration.facts.isPrimary)throw new Error('HANDOVER_PRIMARY_DISCONTINUITY');if((entry.row.valid_to===null?null:localTime(entry.row.valid_to))!==wardNursingHandoverEnd(source,handover.cutover))throw new Error('HANDOVER_NOT_CONFIRMED');}
+   if(partial)for(const successor of handover.partitionPlan!.successors){const matches=value.entries.filter(e=>e.action==='CREATE'&&e.row.ward_nursing_rel_id===successor.sourceAlias&&e.applicability.nursing.id===successor.nursing.id&&sameCoverage(e.coverage,successor.coverage));if(matches.length===1&&(matches[0]!.row.is_primary==='Y')!==declaration.facts.isPrimary)throw new Error('HANDOVER_PRIMARY_DISCONTINUITY');if(matches.length!==1||localTime(matches[0]!.row.valid_from)!==handover.cutover||(matches[0]!.row.valid_to===null?null:localTime(matches[0]!.row.valid_to))!==wardNursingHandoverEnd(source,handover.cutover))throw new Error('HANDOVER_NOT_CONFIRMED');}
    const terminal=wardNursingEnd(source);
    if(handover.cutover<localTime(declaration.validFrom)||(declaration.validTo!==null&&handover.cutover>localTime(declaration.validTo))||(terminal!==null&&handover.cutover>localTime(terminal)))throw new Error('HANDOVER_NOT_CONFIRMED');
    if(!entry||entry.action!=='CREATE'||entry.row.ward_nursing_rel_id!==handover.successorSourceAlias||entry.applicability.nursing.id!==handover.successorNursing.id||entry.row.nursing_unit_id!==handover.successorNursing.id
-    ||entry.applicability.ward.id!==source.applicability.ward.id||entry.row.ward_id!==source.applicability.ward.id||entry.applicability.campus.id!==source.applicability.campus.id||entry.applicability.purpose!==source.applicability.purpose
-    ||source.applicability.nursing.id===entry.applicability.nursing.id||localTime(entry.row.valid_from)!==handover.cutover||entry.row.handover_rule_ref!==handover.ruleReference
-    ||!sameCoverage(entry.coverage,handover.coverage)||!sameCoverage(declaration.facts.coverageScope,handover.coverage)
+    ||entry.applicability.ward.id!==source.applicability.ward.id||entry.row.ward_id!==source.applicability.ward.id||entry.applicability.campus.id!==targetCampus||entry.applicability.purpose!==source.applicability.purpose
+    ||(!partial&&source.applicability.nursing.id===entry.applicability.nursing.id)||localTime(entry.row.valid_from)!==handover.cutover||entry.row.handover_rule_ref!==handover.ruleReference
+    ||!sameCoverage(entry.coverage,handover.coverage)||(!partial&&!sameCoverage(declaration.facts.coverageScope,handover.coverage))
     ||!value.entries.some(e=>e.action==='END'&&e.target.id===handover.source.id&&e.target.expectedHead===handover.source.expectedHead&&localTime(e.endAt)===handover.cutover))throw new Error('HANDOVER_NOT_CONFIRMED');
    const identity=(await sql<{r:string}>`select care_organization.nursing_authorize(${actor},${source.applicability.campus.id}::uuid,'REVIEW') r`.execute(s)).rows[0]!.r;
+   const targetIdentity=(await sql<{r:string}>`select care_organization.nursing_authorize(${actor},${targetCampus}::uuid,'REVIEW') r`.execute(s)).rows[0]!.r;
+   if(identity!==targetIdentity)throw new Error('STALE_VALIDATION');
    if(identity===record.identity_code)throw new Error('MAKER_CHECKER_REQUIRED');
    await sql`select care_organization.nursing_snapshot(${actor},${source.applicability.nursing.id}::uuid)`.execute(s);
    await sql`select care_organization.nursing_snapshot(${actor},${handover.successorNursing.id}::uuid)`.execute(s);

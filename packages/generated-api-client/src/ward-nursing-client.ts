@@ -5,6 +5,8 @@ export function createWardNursingCoverageClient(baseUrl:string,actor:string){
  const client=createClient<paths>({baseUrl,headers:{'x-catalog-actor':actor}});
  return {
   scopeDefinition:(body:operations['readWardNursingScopeDefinition']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/ward-nursing-coverages/scope-definitions/read',{body}),
+  scopeVersion:(body:operations['readWardNursingScopeVersion']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/ward-nursing-coverages/scope-definitions/exact',{body}),
+  handoverReceipt:(body:operations['getWardNursingHandoverReceipt']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/ward-nursing-coverages/handover-receipt',{body}),
   stage:(body:WardNursingInput)=>client.POST('/api/vnext/ward-nursing-coverages/inputs',{body}),
   readInput:(body:operations['readWardNursingInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/ward-nursing-coverages/inputs/read',{body}),
   verify:(body:operations['verifyWardNursingInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/ward-nursing-coverages/verify',{body}),

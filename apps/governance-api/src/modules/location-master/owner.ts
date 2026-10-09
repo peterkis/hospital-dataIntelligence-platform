@@ -1,3 +1,5 @@
+import {withLifecycleLocationInputs,registerLifecycleLocationInputs,lifecycleLocationInput} from './lifecycle-location-inputs.js';
+import type {LifecycleDependencyInput,LifecycleDependency} from '../care-organization/index.js';
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {vnextPool} from '../../platform/database/vnext-pool.js';
@@ -131,8 +133,14 @@ export function openLocation(connection:string,provider:KeyProviderPort,campuses
  const coordinator=applyCoordinator(db,provider,port),files=fileIntake(db,provider);
  const historyIn=async(s:Scope,actor:string,id:string,recordAsOf?:string)=>{const h=await snapshot(s,actor,id);if(recordAsOf){h.versions=h.versions.filter(v=>v.recordedAt<=localTime(recordAsOf));h.codes=[...new Set(h.versions.map(v=>v.facts.locationCode))];}if(!h.versions.length)throw new Error('NOT_FOUND');return h;};
  return {
+  lifecyclePort:port,
+  lifecycleWithInputsInTransaction:withLifecycleLocationInputs,
+  lifecycleRegisterInputsInTransaction:registerLifecycleLocationInputs,
+  async lifecycleStateInTransaction(s:Scope,actor:string,input:{id:string;businessAt?:string;recordAsOf?:string}){const h=await historyIn(s,actor,input.id,input.recordAsOf),at=input.businessAt?localTime(input.businessAt):await clock(s);return {id:h.id,head:h.versions.at(-1)!.number,state:locationAt(h,at)?'ACTIVE':h.versions.some(v=>v.action==='CLOSE'&&v.validFrom<=at)?'CLOSED':'NOT_EFFECTIVE'};},
+  async readLifecycleDependenciesInTransaction(s:Scope,actor:string,input:LifecycleDependencyInput){return (await sql<{r:LifecycleDependency[]}>`select location_master.lifecycle_dependencies(${actor},${input.kind},${input.id}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;},
+  async lifecycleReferenceInTransaction(s:Scope,actor:string,inputId:string){const r=await record(s,actor,inputId);const j=await inputJob(s,actor,inputId);return {inputId:r.id,revisionId:r.revision,digest:r.digest,contractVersionId:j.contract.versionId,makerIdentity:r.identity_code,campus:r.scope};},
   async authorizeUseReferenceInTransaction(s:Scope,actor:string,input:{id:string;campusId:string}){const h=await snapshot(s,actor,input.id);return {scope:h.scope};},
-  async evaluateUseWindowInTransaction(s:Scope,actor:string,input:{id:string;campusId:string;validFrom:string;validTo:string|null;recordAsOf:string}){return (await sql<{r:unknown}>`select location_master.use_location_window(${actor},${input.id}::uuid,${input.campusId}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;},
+  async evaluateUseWindowInTransaction(s:Scope,actor:string,input:{id:string;campusId:string;validFrom:string;validTo:string|null;recordAsOf:string}){const accepted=(await sql<{r:unknown}>`select location_master.use_location_window(${actor},${input.id}::uuid,${input.campusId}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;return lifecycleLocationInput(s,input,accepted)??accepted;},
   async readUseBoundariesInTransaction(s:Scope,actor:string,input:{id:string;campusId:string;validFrom:string;validTo:string|null;recordAsOf:string}){return (await sql<{r:string[]}>`select location_master.use_location_boundaries(${actor},${input.id}::uuid,${input.campusId}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${localTime(input.recordAsOf)}::timestamp) r`.execute(s)).rows[0]!.r;},
   async stage(actor:string,input:LocationStage){locationCheck(LocationStageSchema,input);input=structuredClone(input);return root(s=>stageIn(s,actor,input));},
   async readInput(actor:string,input:{inputId:string}){locationCheck(LocationInputSchema,input);return root(async s=>{const value=unseal<LocationStoredStage>('LOCATION_INPUT_V1',await record(s,actor,input.inputId),LocationStoredStageSchema),context=await inputJob(s,actor,input.inputId);await historicalAccess(s,actor,value,context.contract);return value;});},

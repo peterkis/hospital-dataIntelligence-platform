@@ -13,7 +13,7 @@ export function resolveTarget(receipt, env = process.env) {
   if (!/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name) || !/^\d+$/u.test(receipt.oid) ||
       receipt.owner !== 'hdi_prototype' || receipt.lineage !== 'HDIP-MC-VNEXT' ||
       receipt.distro !== 'Anolis-8.9-HDI-POC' || receipt.port !== 55434 ||
-      !['P0-00', 'P0-01', 'P0-02', 'P0-03', 'P0-04', 'P0-05', 'P0-06', 'P0-07', 'P0-08', 'P0-09', 'P0-10', 'P0-11', 'P1-01', 'P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07'].includes(receipt.taskId) || !/^[a-f0-9-]{36}$/u.test(receipt.requestId)) throw new Error('RECEIPT_INVALID');
+      !['P0-00', 'P0-01', 'P0-02', 'P0-03', 'P0-04', 'P0-05', 'P0-06', 'P0-07', 'P0-08', 'P0-09', 'P0-10', 'P0-11', 'P1-01', 'P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11'].includes(receipt.taskId) || !/^[a-f0-9-]{36}$/u.test(receipt.requestId)) throw new Error('RECEIPT_INVALID');
   if (Object.keys(env).some(key => /^PG[A-Z_]*$/iu.test(key) && env[key])) throw new Error('OVERRIDE_FORBIDDEN');
   let url;
   try { url = localDatabaseUrl(env.DATABASE_URL); } catch { throw new Error('OVERRIDE_FORBIDDEN'); }
@@ -90,6 +90,8 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=171)for(const name of ['parameter_value','parameter_value_version','parameter_value_approval'])allowed.add('governance_catalog.'+name);
     if(ledger.length>=197)for(const name of ["vnext_control.ward_nursing_write_authority", "care_organization.ward_nursing_access", "care_organization.ward_nursing_input", "care_organization.ward_nursing_verification", "care_organization.ward_nursing", "care_organization.ward_nursing_change", "care_organization.ward_nursing_apply_binding", "care_organization.ward_nursing_version", "care_organization.ward_nursing_withdrawal", "care_organization.ward_nursing_scope_set"])allowed.add(name);
     if(ledger.length>=200)allowed.add('care_organization.nursing_handover_confirmation');
+    if(ledger.length>=218)for(const n of ['ward_nursing_scope_proposal','ward_nursing_scope_version'])allowed.add('care_organization.'+n);
+    if(ledger.length>=211)for(const n of ['lifecycle_input','lifecycle_verification','lifecycle_member'])allowed.add('care_organization.'+n);
     if(ledger.length>=202)for(const name of ['use_access','use_input','use_verification','use_relation','use_change','use_apply_binding','use_version','use_withdrawal'])allowed.add('location_master.'+name);
     if(ledger.length>=186){allowed.add('vnext_control.unit_ward_write_authority');allowed.add('care_organization.unit_ward');for(const name of ['access','input','verification','change','version','apply_binding','withdrawal'])allowed.add('care_organization.unit_ward_'+name);}
     if(ledger.length>=172){allowed.add('vnext_control.capability_write_authority');allowed.add('care_organization.capability');for(const name of ['access','input','verification','change','version','apply_binding','withdrawal'])allowed.add('care_organization.capability_'+name);}
@@ -193,6 +195,22 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=202){for(const name of ['use_department_version_reference','use_binding_reference_access'])allowedRoutines.add('department_master.'+name);for(const name of ['use_license_reference_access','use_operating_reference_access'])allowedRoutines.add('organization_master.'+name);for(const name of ['use_master_reference_access','use_unit_basis_access','use_ward_basis_access','use_nursing_basis_access'])allowedRoutines.add('care_organization.'+name);allowedRoutines.add('location_master.use_basis_access');}
     if(ledger.length>=202)allowedRoutines.add('location_master.use_ancestor_windows');
     if(ledger.length>=205)allowedRoutines.add('governance_catalog.usage_type_evidence_context');
+    if(ledger.length>=218)for(const n of ['ward_nursing_scope_reserve','ward_nursing_scope_proposal_read'])allowedRoutines.add('care_organization.'+n);
+    if(ledger.length>=220)allowedRoutines.add('care_organization.ward_nursing_scope_version_read');
+    if(ledger.length>=221)for(const name of ['nursing_repartition_reference','nursing_repartition_mapping'])allowedRoutines.add('care_organization.'+name);
+    if(ledger.length>=222)allowedRoutines.add('care_organization.lifecycle_record_time_guard');
+    if(ledger.length>=223)allowedRoutines.add('care_organization.ward_nursing_scope_versions_for_ward');
+    if(ledger.length>=251)allowedRoutines.add('care_organization.ward_nursing_handover_successors_at');
+    if(ledger.length>=217)allowedRoutines.add('care_organization.lifecycle_approval_guard');
+    if(ledger.length>=215)allowedRoutines.add('care_organization.nursing_partial_plan');
+    if(ledger.length>=212)for(const n of ['care_organization.lifecycle_dependencies','location_master.lifecycle_dependencies'])allowedRoutines.add(n);
+    if(ledger.length>=206)allowedRoutines.add('care_organization.care_unavailable');
+    if(ledger.length>=218)for(const n of ['ward_nursing_scope_proposal','ward_nursing_scope_version'])allowed.add('care_organization.'+n);
+    if(ledger.length>=226)allowedRoutines.add('care_organization.lifecycle_care_input_guard');
+    if(ledger.length>=241)allowedRoutines.add('location_master.lifecycle_location_input_guard');
+    if(ledger.length>=243)allowedRoutines.add('care_organization.lifecycle_location_member_candidate');
+    if(ledger.length>=244)allowedRoutines.add('care_organization.lifecycle_commit_guard');
+    if(ledger.length>=211)for(const n of ['lifecycle_attest','lifecycle_context','lifecycle_member_matches','lifecycle_record'])allowedRoutines.add('care_organization.'+n);
     if(routines.length!==allowedRoutines.size||routines.some(row=>!allowedRoutines.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const extraTypes=(await pool.query("select count(*) as count from pg_type t join pg_namespace n on n.oid=t.typnamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') and t.typrelid=0 and t.typelem=0")).rows[0].count;
     if(Number(extraTypes))throw new Error('UNKNOWN_SCHEMA_OBJECT');

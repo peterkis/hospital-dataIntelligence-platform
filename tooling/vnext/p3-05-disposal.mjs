@@ -2,7 +2,7 @@ import {existsSync,readdirSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {isDeepStrictEqual} from 'node:util';
 import {root,readReceipt,resolveTarget,peer,quote} from './lineage.mjs';
-import {dropTemporary} from './fresh.mjs';
+import {disposeOwnedValidationDatabase} from './owned-validation-disposal.mjs';
 import {dropValidationOwnerSession} from './validation-owner-session.mjs';
 import {removeValidationKeys} from './p3-05-validation-keys.mjs';
 
@@ -23,7 +23,7 @@ export function disposeWardNursingValidation(receipt){
  const keys=resolve(root,'.runtime/vnext/p3-05',receipt.name+'.secret.json');
  if(existsSync(keys)){const keyReceipt=JSON.parse(readFileSync(keys,'utf8'));if(keyReceipt.oid!==receipt.oid||keyReceipt.requestId!==receipt.requestId)throw new Error('KEY_RECEIPT_MISMATCH');}
  const database=peer('postgres',`SELECT oid::text FROM pg_database WHERE datname=${quote(receipt.name)} OR oid::text=${quote(receipt.oid)};`);
- if(database){if(database!==receipt.oid)throw new Error('RECEIPT_IDENTITY_MISMATCH');dropTemporary(receipt);}
+ if(database){if(database!==receipt.oid)throw new Error('RECEIPT_IDENTITY_MISMATCH');disposeOwnedValidationDatabase(receipt);}
  else{const disposed=readReceipt(resolve(directory,receipt.name+'.disposed.json'));if(disposed.name!==receipt.name||disposed.oid!==receipt.oid||disposed.disposed!==true)throw new Error('DISPOSAL_NOT_AUTHORIZED');}
  for(const session of sessions)dropValidationOwnerSession(session);
  removeValidationKeys(receipt);

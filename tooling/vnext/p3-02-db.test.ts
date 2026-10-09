@@ -56,7 +56,7 @@ test('a draft or missing managing Unit, wrong campus and mid-period gap cannot p
 });
 test('same-campus rebind preserves Ward identity and a rejected target leaves old management',async()=>{
  const a=await populated(),b=await f.sameCampus(a.binding),bad=await f.endpoint(),from='2026-03-01T00:00:00',target={owner:'care-organization/ward' as const,id:a.h.id,expectedHead:'1'};
- await expect(f.prepare(await f.input([{action:'REBIND',target,binding:bad,row:{...a.entry.row,campus_id:bad.campus.id,managing_unit_id:bad.unit.id,valid_from:from},reason:'TEST unsupported campus move',evidenceId:f.artifact.artifactId}]))).rejects.toThrow('WARD_REBIND_INVALID');
+ await expect(f.prepare(await f.input([{action:'REBIND',target,binding:bad,row:{...a.entry.row,campus_id:bad.campus.id,managing_unit_id:bad.unit.id,valid_from:from},reason:'TEST campus move requires lifecycle bundle',evidenceId:f.artifact.artifactId}]))).rejects.toThrow('WARD_CAMPUS_CHANGE_REQUIRES_LIFECYCLE');
  expect((await f.owner.read('maker',{id:a.h.id,businessAt:from})).binding?.binding.unit.id).toBe(a.binding.unit.id);
  const result=await f.apply(await f.input([{action:'REBIND',target,binding:b,row:{...a.entry.row,managing_unit_id:b.unit.id,valid_from:from},reason:'TEST explicit manager change',evidenceId:f.artifact.artifactId}]));expect(result.facts[0]!.id).toBe(a.h.id);
  expect((await f.owner.read('maker',{id:a.h.id,businessAt:'2026-02-28T23:59:59.999999'})).binding?.binding.unit.id).toBe(a.binding.unit.id);
@@ -69,6 +69,8 @@ test('permanent closure retains history and masks an already-approved future man
  const before=await f.owner.history('maker',{id:a.h.id});a.h=before;await f.apply(await f.input([revise(a,'CLOSE','2026-03-01T00:00:00')]));
  expect(await f.owner.read('maker',{id:a.h.id,businessAt:'2026-04-01T00:00:00'})).toMatchObject({state:'CLOSED',binding:null,version:null});
  expect((await f.owner.history('maker',{id:a.h.id,recordAsOf:before.versions.at(-1)!.recordedAt})).bindings).toEqual(before.bindings);
+ expect((await f.owner.list('maker',{campus:'NORTH',managingUnitId:b.unit.id,businessAt:'2026-04-01T00:00:00'})).items).not.toContainEqual(expect.objectContaining({id:a.h.id}));
+ expect((await f.owner.list('maker',{campus:'NORTH',managingUnitId:b.unit.id,businessAt:'2026-04-01T00:00:00',recordAsOf:before.versions.at(-1)!.recordedAt})).items).toContainEqual(expect.objectContaining({id:a.h.id}));
  expect((await f.owner.read('maker',{id:a.h.id,businessAt:'2026-02-01T00:00:00'})).state).toBe('ACTIVE');
  const pool=new Pool({connectionString:connection,max:1});try{const refs=(await pool.query('select care_organization.ward_department_references($1,$2,$3) r',['maker',JSON.stringify([a.d]),'NORTH'])).rows[0].r;expect(refs.filter((r:{id:string})=>r.id===a.h.id)).toContainEqual(expect.objectContaining({current:false,currentPeriod:{from:'2026-04-01T00:00:00.000000',to:'2026-04-01T00:00:00.000000'},originalPeriod:{from:'2026-04-01T00:00:00.000000',to:null}}));}finally{await pool.end();}
  const h=await f.owner.history('maker',{id:a.h.id});a.h=h;await expect(f.prepare(await f.input([revise(a,'REVISE','2026-05-01T00:00:00')]))).rejects.toThrow('WARD_CLOSED');

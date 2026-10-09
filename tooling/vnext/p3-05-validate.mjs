@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {createTemporary,dropTemporary} from './fresh.mjs';
+import {createTemporary} from './fresh.mjs';
+import {disposeOwnedValidationDatabase} from './owned-validation-disposal.mjs';
 import {createValidationOwnerSession,dropValidationOwnerSession} from './validation-owner-session.mjs';
 import {migrate,migrationFiles,inspect,peer,quote,identitySQL} from './lineage.mjs';
 import {predecessorTables,predecessorDigest} from './p1-02-preservation.mjs';
@@ -48,4 +49,4 @@ try{
  }
  process.exitCode??=0;
  console.log(JSON.stringify({gate:'P3-05',mode:before?'0196_TO_CURRENT':'FRESH',suites:args.includes('--handover')?'HANDOVER_FOCUSED':'CORE_EXTENDED_HANDOVER',migrations:(await inspect(owned.receipt)).ledger.length,exit:process.exitCode}));
-}catch(error){session??=error.ownerSession;throw error;}finally{dropTemporary(owned.receipt);if(session)dropValidationOwnerSession(session);removeValidationKeys(owned.receipt);}
+}catch(error){session??=error.ownerSession;throw error;}finally{disposeOwnedValidationDatabase(owned.receipt);if(session)dropValidationOwnerSession(session);removeValidationKeys(owned.receipt);}

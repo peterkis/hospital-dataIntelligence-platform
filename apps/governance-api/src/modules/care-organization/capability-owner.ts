@@ -7,6 +7,7 @@ import {localTime,covered,intersect,subtract} from '../organization-master/index
 import {CapabilityId,CapabilityStoredStageSchema,CapabilityStageSchema,CapabilityInputSchema,CapabilityPlanSchema,CapabilityVerifySchema,CapabilityReceiveSchema,CapabilityHistorySchema,CapabilityReadSchema,CapabilityListSchema,CapabilityExactSchema,CapabilityWindowSchema,CapabilityDiffSchema,ORG16_FIELDS,capabilityCheck,normalizeCapabilityRow,type CapabilityStage,type CapabilityStoredStage,type CapabilityVerification,type CapabilityReceive,type CapabilityHistory,type CapabilityFacts,type CapabilityWrite,type CapabilityIssue,type CapabilityUpstreamPorts,type CapabilityWindow,type CapabilityRule} from './capability-contracts.js';
 import {knownCapability,declaration,capabilityEnd,capabilityState,capabilityReserved,capabilityPieces} from './capability-timeline.js';
 import type {ImpactReference} from '../department-master/index.js';
+import {lifecycleCareInputReferences,lifecycleUnitBinding} from './lifecycle-care-inputs.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 interface InputRecord {id:string;revision:string;job_id:string;job_revision:string;identity_code:string;withdrawn?:boolean;digest:string;campus_ids:string[];scope:'NORTH'|'SOUTH';envelope:Envelope;verification:null|{id:string;number:string;actor:string;identity_code:string;digest:string;envelope:Envelope}}
@@ -40,6 +41,7 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
  const stageIn=async(s:Scope,actor:string,input:CapabilityStoredStage)=>mutate<Staged>(s,actor,{operation:'STAGE',requestId:input.requestId,jobId:input.jobId,revisionId:input.revisionId,campus:input.campus,campusIds:[...new Set(input.entries.map(e=>e.applicability.campus.id))].sort(),...sealed('CAPABILITY_INPUT_V1',input)});
  const admission=async(s:Scope,actor:string,applicability:CapabilityWindow['applicability'],rule:CapabilityRule,from:string,to:string|null,r:string)=>{
   const unit=await ports.unitWindow(s,actor,applicability,from,to,r);
+  if('kind' in unit){const binding=lifecycleUnitBinding(s,applicability.unit.id);if(!binding||binding.subject.id!==applicability.subject.id||applicability.services.some(code=>!binding.services.includes(code)))throw new Error('CAPABILITY_SCOPE_NOT_COVERED');}
   if(rule.kind==='NO_ADDITIONAL_RULE')return {unit,parameter:null};
   const pin=rule.parameter,value=await ports.parameters.evaluateWindowInTransaction(s,actor,{id:pin.valueId,versionId:pin.versionId,validFrom:from,validTo:to,recordAsOf:r}),item=value.item;
   if(!value.covered)throw new Error(value.reason);
@@ -117,6 +119,11 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
   async exactRead(s,actor,_input,fact){if(fact.owner!=='care-organization/unit-capability')return null;return (await snapshotVersion(s,actor,fact.id,fact.version)).versions.some(v=>v.number===fact.version)?fact:null;},
  };
  const coordinator=applyCoordinator(db,provider,port),files=fileIntake(db,provider);
+ const applyAt=async(s:Scope,actor:string,c:Parameters<ApplyOwnerPort['apply']>[2],a:Parameters<ApplyOwnerPort['apply']>[4],r:string):ReturnType<ApplyOwnerPort['apply']>=>{
+  const writes:CapabilityWrite[]=JSON.parse(c.value['writes']??'[]'),resolutions:Array<{row:number;basis:unknown}>=[];
+  for(const [row,w] of writes.entries())if(lifecycleCareInputReferences(w.facts.dependencies).length)resolutions.push({row:row+1,basis:await admission(s,actor,w.applicability,w.facts.rule,w.validFrom,w.validTo,r)});
+  return {ok:true,fact:await mutate<OwnerFact>(s,actor,{operation:'APPLY',inputId:c.value['inputId'],writes,writeIndex:Number(c.value['writeIndex']),writesDigest:c.value['writesDigest'],...a,resolutions})};
+ };
 
  const historyIn=async(s:Scope,actor:string,id:string,asOf?:string)=>{const h=knownCapability(await snapshot(s,actor,id,asOf),asOf);if(!h.versions.length)throw new Error('NOT_FOUND');return h;};
  const readIn=async(s:Scope,actor:string,input:{id:string;businessAt?:string;recordAsOf?:string})=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),at=input.businessAt?localTime(input.businessAt):await clock(s);return {id:h.id,applicability:h.applicability,head:h.versions.at(-1)!.number,state:capabilityState(h,at),version:declaration(h),clinicalReadiness:'NOT_READY' as const};};
@@ -135,6 +142,9 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
   return {mode:input.mode,recordAsOf:r,status:checks.every(c=>c.status==='SATISFIED')?'SATISFIED' as const:'NOT_SATISFIED' as const,checks,clinicalReadiness:'NOT_READY' as const};
  };
  return {
+  lifecyclePort:port,
+  lifecycleApplyAtInTransaction:(s:Scope,actor:string,c:Parameters<ApplyOwnerPort['apply']>[2],_resolved:Parameters<ApplyOwnerPort['apply']>[3],a:Parameters<ApplyOwnerPort['apply']>[4],r:string)=>applyAt(s,actor,c,a,r),
+  async lifecycleReferenceInTransaction(s:Scope,actor:string,inputId:string){const r=await record(s,actor,inputId);const j=await inputJob(s,actor,inputId);return {inputId:r.id,revisionId:r.revision,digest:r.digest,contractVersionId:j.contract.versionId,makerIdentity:r.identity_code,campus:r.scope};},
   async readDepartmentReferencesInTransaction(s:Scope,actor:string,ids:string[],campus:string){return (await sql<{r:ImpactReference[]}>`select care_organization.capability_department_references(${actor},${JSON.stringify(ids)}::jsonb,${campus}) r`.execute(s)).rows[0]!.r;},
   async authorizeReferenceInTransaction(s:Scope,actor:string,ref:ImpactReference){await sql`select care_organization.capability_reference_access(${actor},${JSON.stringify(ref)}::jsonb,'READ')`.execute(s);},
   async readCampusDependenciesInTransaction(s:Scope,actor:string,input:{id:string;validFrom:string;validTo:string|null;asOf?:string}){return (await sql<{r:Array<{owner:'UNIT_CAPABILITY';id:string;version:string;active:boolean;outstanding:boolean}>}>`select care_organization.capability_campus_dependencies(${actor},${input.id}::uuid,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${input.asOf?localTime(input.asOf):null}::timestamp) r`.execute(s)).rows[0]!.r;},

@@ -161,6 +161,44 @@ export interface CareOrganizationInput {
   scope: string;
 }
 
+export interface CareOrganizationLifecycleInput {
+  campus: string;
+  digest: string;
+  envelope: Json;
+  id: Generated<string>;
+  identity_code: string;
+  maker: string;
+  members: Json;
+  observation_digest: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+  revision: Generated<string>;
+  targets: Generated<Json>;
+}
+
+export interface CareOrganizationLifecycleMember {
+  candidate_id: string;
+  contract_version_id: string;
+  digest: string;
+  identity_code: string;
+  input_id: string;
+  member_id: string;
+  owner: string;
+  revision: string;
+}
+
+export interface CareOrganizationLifecycleVerification {
+  actor: string;
+  digest: string;
+  envelope: Json | null;
+  id: Generated<string>;
+  identity_code: string;
+  input_id: string;
+  observation_digest: string;
+  recorded_at: Generated<string>;
+  request_id: string;
+}
+
 export interface CareOrganizationNursingAccess {
   actor: string;
   campus_id: string;
@@ -613,6 +651,14 @@ export interface CareOrganizationWardNursingInput {
   scope: string;
 }
 
+export interface CareOrganizationWardNursingScopeProposal {
+  expected_head: Int8;
+  input_id: string;
+  partitions: Json;
+  recorded_at: Generated<string>;
+  scope_set_id: string;
+}
+
 export interface CareOrganizationWardNursingScopeSet {
   campus_id: string;
   change_id: string;
@@ -625,6 +671,19 @@ export interface CareOrganizationWardNursingScopeSet {
   valid_to: string | null;
   verification_basis: Json;
   ward_id: string;
+}
+
+export interface CareOrganizationWardNursingScopeVersion {
+  change_id: string;
+  definition: Json;
+  input_id: string;
+  number: Int8;
+  partitions: Json;
+  recorded_at: string;
+  scope_set_id: string;
+  valid_from: string;
+  valid_to: string | null;
+  verification_basis: Json;
 }
 
 export interface CareOrganizationWardNursingVerification {
@@ -2183,6 +2242,9 @@ export interface DB {
   "care_organization.change": CareOrganizationChange;
   "care_organization.code": CareOrganizationCode;
   "care_organization.input": CareOrganizationInput;
+  "care_organization.lifecycle_input": CareOrganizationLifecycleInput;
+  "care_organization.lifecycle_member": CareOrganizationLifecycleMember;
+  "care_organization.lifecycle_verification": CareOrganizationLifecycleVerification;
   "care_organization.nursing_access": CareOrganizationNursingAccess;
   "care_organization.nursing_apply_binding": CareOrganizationNursingApplyBinding;
   "care_organization.nursing_binding_version": CareOrganizationNursingBindingVersion;
@@ -2228,7 +2290,9 @@ export interface DB {
   "care_organization.ward_nursing_apply_binding": CareOrganizationWardNursingApplyBinding;
   "care_organization.ward_nursing_change": CareOrganizationWardNursingChange;
   "care_organization.ward_nursing_input": CareOrganizationWardNursingInput;
+  "care_organization.ward_nursing_scope_proposal": CareOrganizationWardNursingScopeProposal;
   "care_organization.ward_nursing_scope_set": CareOrganizationWardNursingScopeSet;
+  "care_organization.ward_nursing_scope_version": CareOrganizationWardNursingScopeVersion;
   "care_organization.ward_nursing_verification": CareOrganizationWardNursingVerification;
   "care_organization.ward_nursing_version": CareOrganizationWardNursingVersion;
   "care_organization.ward_nursing_withdrawal": CareOrganizationWardNursingWithdrawal;
