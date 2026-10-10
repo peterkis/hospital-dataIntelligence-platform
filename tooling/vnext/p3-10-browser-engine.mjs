@@ -1,0 +1,15 @@
+import {readFileSync,existsSync,writeFileSync,renameSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {readReceipt} from './lineage.mjs';
+import {validationKeys} from './p3-10-validation-keys.mjs';
+import {startWorkbench} from './workbench-runtime.mjs';
+import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.ts';
+if(process.argv.length!==2||!process.send)throw new Error('OWNED_BROWSER_CHILD_REQUIRED');
+const receipt=readReceipt(process.env.VNEXT_TEST_RECEIPT),connection=process.env.VNEXT_VALIDATION_OWNER_URL,provider=validationKeys(receipt),armFile=process.env.VNEXT_P3_10_ARM,port=Number(process.env.VNEXT_P3_10_PORT??0);let server;
+const beforeListen=async app=>{app.addHook('onSend',async(request,reply,payload)=>{
+ if(reply.statusCode!==200||!existsSync(armFile))return payload;const arm=JSON.parse(readFileSync(armFile,'utf8'));if(!arm||Object.keys(arm).some(k=>!['armId','route','actor','draftId','candidateId','kind'].includes(k))||!/^[a-f0-9-]{36}$/.test(arm.armId)||!['maker','maker-alias','reviewer'].includes(arm.actor)||!/^\/api\/vnext\/(care-workspace\/(?:drafts\/(save|submit)|files\/receive|basis\/save)|(?:parameter-values\/commands|subject-codes\/command)|(?:business-units|nursing-units|wards|locations|location-uses|unit-ward-relations|ward-nursing-coverages|unit-capabilities|subject-permissions|care-location-lifecycle)\/apply)$/.test(arm.route))throw new Error('CLOSED_BROWSER_ARM_REQUIRED');const body=request.body;
+ if(request.routeOptions.url!==arm.route||actor(request.headers)!==arm.actor||arm.draftId&&body?.id!==arm.draftId||arm.candidateId&&body?.candidateId!==arm.candidateId||arm.kind&&body?.kind!==arm.kind)return payload;
+ if(!body||!/^[a-f0-9-]{36}$/.test(body.requestId))throw new Error('ORIGINAL_REQUEST_REQUIRED');const raw=typeof payload==='string'?payload:Buffer.isBuffer(payload)?payload.toString('utf8'):null;if(!raw)throw new Error('BROWSER_JSON_RESPONSE_REQUIRED');const result=JSON.parse(raw),capture=armFile+'.'+arm.armId+'.captured.json',delivered=raw.slice(0,Math.max(1,Math.floor(raw.length/2)));renameSync(armFile,armFile+'.'+arm.armId+'.consumed.json');writeFileSync(capture,JSON.stringify({armId:arm.armId,route:arm.route,requestId:body.requestId,candidateId:body.candidateId??null,draftId:result.id??body.id??null,resultDigest:createHash('sha256').update(raw).digest('hex'),result,committedResponseStatus:200,delivery:'TRUNCATED_JSON',originalLength:Buffer.byteLength(raw),deliveredLength:Buffer.byteLength(delivered),pid:process.pid},null,2),{flag:'wx'});console.log(JSON.stringify({event:'P3_10_BROWSER_ACK_CAPTURED',capture,requestId:body.requestId,pid:process.pid}));return delivered;
+ });};
+try{server=await startWorkbench({port,validationContext:{receipt,connection,provider,completeOwners:true,beforeListen}});process.send({event:'READY',url:server.url,pid:process.pid});await new Promise(resolve=>process.once('message',message=>{if(message?.action!=='STOP')throw new Error('CLOSED_BROWSER_CONTROL_REQUIRED');resolve();}));}
+finally{await server?.close();process.disconnect();}

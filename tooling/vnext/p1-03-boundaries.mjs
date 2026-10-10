@@ -5,13 +5,36 @@ const forbidden=['/platform/campus/campus-reference-reader.', '/platform/databas
 /** Check reachable source imports, not unrelated dormant files elsewhere in the repo. */
 export function verifyCampusBoundaries(entries,root=process.cwd()){
  const seen=new Set();
+ const exportedNames=file=>{const source=readFileSync(file,'utf8');return [...source.matchAll(/\bexport\s+(?:(?:declare|async)\s+)?(?:const|let|var|function|type|interface|class|enum)\s+([A-Za-z_$][\w$]*)/gu)].map(match=>match[1]).concat([...source.matchAll(/\bexport\s+(?:type\s+)?\{([^}]+)\}/gu)].flatMap(match=>match[1].split(',').map(part=>part.trim().replace(/^type\s+/u,'').split(/\s+as\s+/u).at(-1))));};
+ const names=clause=>clause.split(',').map(part=>part.trim().replace(/^type\s+/u,'').split(/\s+as\s+/u)).filter(parts=>/^[A-Za-z_$][\w$]*$/u.test(parts[0]??''));
+ const localTarget=(file,value)=>{const base=resolve(dirname(file),value);return [base,base.replace(/\.js$/u,'.ts'),base.replace(/\.js$/u,'.tsx'),base+'.ts',resolve(base,'index.ts')].find(p=>existsSync(p));};
+ // The public Department barrel also contains the dormant legacy API. Follow
+ // only a named, explicitly delegated current export; importing a legacy name,
+ // namespace or side-effect still fails the original authority fence.
+ const currentDepartmentExport=(file,names)=>{
+  if(!names?.length)throw new Error('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY:'+file);
+  const remaining=new Set(names);
+  for(const match of readFileSync(file,'utf8').matchAll(/\bexport\s+(?:type\s+)?(\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/gu)){
+   if(!match[2].startsWith('./vnext/'))continue;
+   const target=localTarget(file,match[2]);if(!target)throw new Error('UNRESOLVED_CURRENT_IMPORT:'+file);
+   const exports=match[1]==='*'?exportedNames(target):match[1].slice(1,-1).split(',').map(part=>part.trim().replace(/^type\s+/u,'').split(/\s+as\s+/u).at(-1));
+   if(exports.some(name=>remaining.has(name))){visit(target);for(const name of exports)remaining.delete(name);}
+  }
+  if(remaining.size)throw new Error('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY:'+file+':'+[...remaining].join(','));
+ };
  function visit(file){
   file=resolve(file);const name='/'+relative(root,file).replaceAll('\\','/');
-  if(forbidden.some(part=>name.includes(part)))throw new Error('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY:'+name);
+  if(forbidden.some(part=>name.includes(part)&&(part!=='/modules/department-master/'||!name.includes('/modules/department-master/vnext/'))))throw new Error('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY:'+name);
   if(seen.has(file))return;seen.add(file);
   if(file.endsWith('.json'))return;
   const source=readFileSync(file,'utf8');
   if(/\bplatform\s*\.\s*campus\b/u.test(source))throw new Error('LEGACY_CAMPUS_AUTHORITY_SQL:'+name);
+  const namedImports=new Map(),wholeImports=new Set();
+  for(const match of source.matchAll(/\b(?:import|export)\s+(?:type\s+)?([^;]+?)\s+from\s+['"]([^'"]+)['"]/gu)){if(!/^\{[^}]+\}$/u.test(match[1].trim()))wholeImports.add(match[2]);}
+  for(const match of source.matchAll(/\b(?:import|require)\s*(?:\(\s*)?['"]([^'"]+)['"]/gu))wholeImports.add(match[1]);
+  for(const match of source.matchAll(/\b(?:import|export)\s+(?:type\s+)?\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/gu)){
+   const selected=names(match[1]).map(parts=>parts[0]);namedImports.set(match[2],[...(namedImports.get(match[2])??[]),...selected]);
+  }
   const follow=value=>{
    if(value.startsWith('file:')||isAbsolute(value)||/^[a-zA-Z]:/u.test(value))throw new Error('UNRESOLVED_LOCAL_IMPORT:'+value);
    if(value.startsWith('@hospital-data-intelligence/')){const entry=resolve(root,'packages',value.slice('@hospital-data-intelligence/'.length),'src/index.ts');if(!existsSync(entry))throw new Error('UNRESOLVED_WORKSPACE_IMPORT:'+value);visit(entry);return;}
@@ -19,6 +42,7 @@ export function verifyCampusBoundaries(entries,root=process.cwd()){
    if(!value.startsWith('.'))return; // Third-party packages are not local database authorities.
    const base=resolve(dirname(file),value),candidates=[base,base.replace(/\.js$/u,'.ts'),base.replace(/\.js$/u,'.tsx'),base+'.ts',resolve(base,'index.ts')];
    const target=candidates.find(p=>existsSync(p));if(!target)throw new Error('UNRESOLVED_CURRENT_IMPORT:'+name+':'+value);
+   if(relative(root,target).replaceAll('\\','/').endsWith('/modules/department-master/index.ts')){currentDepartmentExport(target,wholeImports.has(value)?null:namedImports.get(value));return;}
    visit(target);
   };
   // Same literal-import boundary used by the repository's module gate; include

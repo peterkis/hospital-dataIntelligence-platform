@@ -7,7 +7,7 @@ import { peer, quote, root, identitySQL, migrate, migrationFiles, inspect,resolv
 import { seed } from './catalog-seed.mjs';
 
 export function createTemporary(taskId='P0-01') {
-  if(!['P0-01','P0-02','P0-03','P0-04','P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11','P0-11'].includes(taskId))throw new Error('TEMPORARY_TASK_INVALID');
+  if(!['P0-01','P0-02','P0-03','P0-04','P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11','P3-10','P0-11'].includes(taskId))throw new Error('TEMPORARY_TASK_INVALID');
   const name = 'hdi_mc_vnext_' + randomUUID().replaceAll('-', '').slice(0, 16);
   const receiptPath = resolve(root, '.runtime/vnext/fresh', name + '.json');
   const intent = { taskId, purpose:'TEMPORARY_VALIDATION', lineage:'HDIP-MC-VNEXT', name, owner:'hdi_prototype', distro:'Anolis-8.9-HDI-POC', port:55434, requestId:randomUUID(), recordedAt:localReceiptTime() };
@@ -21,7 +21,7 @@ export function createTemporary(taskId='P0-01') {
 export function dropTemporary(receipt,transport={}) {
   const resolveReceipt=transport.resolveTarget??resolveTarget,execute=transport.peer??peer;
   resolveReceipt(receipt);
-  if (!['P0-01','P0-02','P0-03','P0-04','P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11','P0-11'].includes(receipt.taskId) || receipt.purpose!=='TEMPORARY_VALIDATION' || !/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name)) throw new Error('DISPOSAL_NOT_AUTHORIZED');
+  if (!['P0-01','P0-02','P0-03','P0-04','P0-05','P0-06','P0-07','P0-08','P0-09','P0-10','P1-01','P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11','P3-10','P0-11'].includes(receipt.taskId) || receipt.purpose!=='TEMPORARY_VALIDATION' || !/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name)) throw new Error('DISPOSAL_NOT_AUTHORIZED');
   const path=resolve(root,'.runtime/vnext/fresh',receipt.name+'.json');
   const persisted=JSON.parse(readFileSync(path,'utf8'));
   const intent=JSON.parse(readFileSync(path+'.intent','utf8'));

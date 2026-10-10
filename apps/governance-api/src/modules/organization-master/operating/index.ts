@@ -1,4 +1,5 @@
 import {createHmac} from 'node:crypto';
+import {Type} from 'typebox';
 import {licensedServices as medical} from './service-policy.js';
 import {sql} from 'kysely';
 import {applyCoordinator,canonicalPlan,planBinding,authenticateRegistrationEvidence,type ApplyOwnerPort,type OwnerFact,type KeyProviderPort} from '../../governance-catalog/index.js';
@@ -6,10 +7,11 @@ import {createCampusReader,type CampusSnapshot} from '../campus/reader.js';
 import {check} from '../campus/input.js';
 import {createRegistrationReader,registrationSpan,registrationStamp} from '../registration.js';
 import {localTime,subtract,intersect,covered,type Span} from '../time.js';
-import {InputSchema,Id} from '../contracts.js';
+import {InputSchema,Id,Time} from '../contracts.js';
 import {operatingInput,type Scope} from './input.js';
 import {OperatingStageSchema,OperatingCommandSchema,OperatingReadSchema,EvaluateOperatingSchema,kindOf,ownerOf,isClosing,type OperatingCommand,type OperatingRead,type EvaluateOperatingInput,type ScopeFactsValue,type RelationFactsValue,type CatalogReference} from './contracts.js';
 export * from './contracts.js';
+const ProfileBoundariesSchema=Type.Object({subject:EvaluateOperatingSchema.properties.subject,campus:EvaluateOperatingSchema.properties.campus,validFrom:Time,validTo:Type.Union([Time,Type.Null()]),recordAsOf:Time},{additionalProperties:false});
 interface Version {id:string;number:number;action:OperatingCommand['action'];valid_from:string;valid_to:string|null;recorded_at:string;facts:ScopeFactsValue|RelationFactsValue|null;basis:Basis;reviewer:string}
 interface Snapshot {id:string;kind:'RELATION'|'SCOPE';subject_id:string;campus_id:string;scope:string;versions:Version[]}
 export interface ScopeDependency {reference:{owner:'organization-master/license-scope';id:string;version:string;versionId:string};license:ScopeFactsValue['license'];catalog:CatalogReference}
@@ -183,7 +185,9 @@ export function openOperatingRelations(connectionString:string,provider?:KeyProv
   })();
  };
  const evaluateOperatingWindow=(actor:string,input:EvaluateOperatingInput)=>root(scope=>evaluateOperatingWindowInTransaction(scope,actor,input));
- return {evaluateOperatingWindowInTransaction,commandsInTransaction:(scope:Scope)=>({stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stageInTransaction(scope,actor,input);},port}),stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stage(actor,input);},
+ return {evaluateOperatingWindowInTransaction,
+  async readSubjectProfileBoundariesInTransaction(scope:Scope,actor:string,input:{subject:EvaluateOperatingInput['subject'];campus:EvaluateOperatingInput['campus'];validFrom:string;validTo:string|null;recordAsOf:string}){check(ProfileBoundariesSchema,input);return (await sql<{r:string[]}>`select organization_master.subject_profile_boundaries(${actor},${JSON.stringify({subject:input.subject,campus:input.campus})}::jsonb,${localTime(input.validFrom)}::timestamp,${input.validTo===null?null:localTime(input.validTo)}::timestamp,${localTime(input.recordAsOf)}::timestamp) r`.execute(scope)).rows[0]!.r;},
+  commandsInTransaction:(scope:Scope)=>({stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stageInTransaction(scope,actor,input);},port}),stage:async(actor:string,input:Parameters<typeof store.stage>[1])=>{check(OperatingStageSchema,input);normalize(input.command);return store.stage(actor,input);},
   async plan(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);const r=await root(async scope=>(await sql<{r:Awaited<ReturnType<typeof record>>}>`select organization_master.operating_plan(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);return coordinator.planOwnerUnit(actor,{requestId:input.requestId,jobId:r.id,revisionId:r.revision,scope:'SYNTHETIC',campus:r.campus,purpose:'IDENTITY_VERIFY'});},
   async withdraw(actor:string,input:{inputId:string;requestId:string}){check(InputSchema,input);return root(async scope=>(await sql<{r:{inputId:string;status:'WITHDRAWN'}}>`select organization_master.operating_withdraw(${actor},${input.inputId}::uuid,${input.requestId}::uuid) r`.execute(scope)).rows[0]!.r);},
   readApplyCandidate:coordinator.readApplyCandidate,approveApplyUnit:coordinator.approveApplyUnit,applyUnit:coordinator.applyUnit,resumeOutcome:coordinator.resumeOutcome,reconcileCommittedUnit:coordinator.reconcileCommittedUnit,

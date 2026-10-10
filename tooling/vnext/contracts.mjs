@@ -6,6 +6,7 @@ import { dirname, resolve } from "node:path";
 import { buildCatalogServer } from "../../apps/governance-api/src/composition/build-vnext-catalog.ts";
 import { verifyCurrentContract,verifyVNextCallerRegistration } from "./current-contract.mjs";
 import { departmentUiContract } from "./department-ui-contract.mjs";
+import { careUiContract,careOperationClient } from './care-ui-contract.mjs';
 const args = process.argv.slice(2);
 if (args.length > 1 || (args.length === 1 && args[0] !== "--check"))
   throw new Error("CLOSED_COMMAND_REQUIRED");
@@ -21,6 +22,10 @@ if (verify) {
   if (!existsSync(uiPath) || readFileSync(uiPath, "utf8") !== ui)
     throw new Error("CURRENT_UI_CONTRACT_DRIFT");
 } else writeFileSync(uiPath, ui);
+const careUiPath='apps/admin-web/src/vnext/care-forms.generated.ts',careUi=careUiContract(current);
+if(verify){if(!existsSync(careUiPath)||readFileSync(careUiPath,'utf8')!==careUi)throw new Error('CURRENT_CARE_UI_CONTRACT_DRIFT');}else writeFileSync(careUiPath,careUi);
+const careClientPath='packages/generated-api-client/src/care-operation-client.generated.ts',careClient=careOperationClient(current);
+if(verify){if(!existsSync(careClientPath)||readFileSync(careClientPath,'utf8')!==careClient)throw new Error('CURRENT_CARE_OPERATION_CLIENT_DRIFT');}else writeFileSync(careClientPath,careClient);
 if (verify) mkdirSync(directory, { recursive: true });
 const apiPath = verify
   ? resolve(directory, "openapi.json")

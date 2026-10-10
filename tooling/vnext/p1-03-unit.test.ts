@@ -19,5 +19,10 @@ test('AC01 the dependency gate rejects indirect legacy authority and unresolved 
   write('barrel.ts',"import '/tmp/platform/campus/campus-reference-reader.js';");expect(()=>verifyCampusBoundaries(['entry.ts'],root)).toThrow('UNRESOLVED_LOCAL_IMPORT');
   write('barrel.ts',"const sql='select * from platform.campus';");expect(()=>verifyCampusBoundaries(['entry.ts'],root)).toThrow('LEGACY_CAMPUS_AUTHORITY_SQL');
   write('barrel.ts','const path="x"; import(path);');expect(()=>verifyCampusBoundaries(['entry.ts'],root)).toThrow('UNRESOLVED_DYNAMIC_IMPORT');
+  write('apps/api/src/modules/department-master/index.ts',"export const legacy=true; export {current} from './vnext/owner.js';");write('apps/api/src/modules/department-master/vnext/owner.ts','export const current=true;');
+  write('barrel.ts',"import {current} from './apps/api/src/modules/department-master/index.js'; export {current};");expect(verifyCampusBoundaries(['entry.ts'],root).status).toBe('PASS');
+  for(const clause of ['{legacy}','* as all']){write('barrel.ts',`import ${clause} from './apps/api/src/modules/department-master/index.js';`);expect(()=>verifyCampusBoundaries(['entry.ts'],root)).toThrow('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY');}
+  write('barrel.ts',"import {current} from './apps/api/src/modules/department-master/index.js'; import * as all from './apps/api/src/modules/department-master/index.js';");expect(()=>verifyCampusBoundaries(['entry.ts'],root)).toThrow('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY');
+  write('barrel.ts',"import './apps/api/src/modules/department-master/index.js';");expect(()=>verifyCampusBoundaries(['entry.ts'],root)).toThrow('LEGACY_CAMPUS_AUTHORITY_DEPENDENCY');
  }finally{if(!root.startsWith(resolve(tmpdir(),'p1-03-boundary-')))throw new Error('TEMP_OWNERSHIP_REQUIRED');rmSync(root,{recursive:true});}
 });

@@ -17,6 +17,7 @@ import {
   WorkbenchAccessSchema,
   WorkbenchAccessInputSchema,
   textWorkbook,
+  textSheetsWorkbook,
 } from "../../modules/governance-catalog/index.js";
 import { actor } from "./vnext-catalog-routes.js";
 const closed = { additionalProperties: false } as const;
@@ -100,6 +101,11 @@ const ApprovedResult = Type.Object(
   { status: Type.Literal("APPROVED"), candidateId: Id },
   closed,
 );
+const careTemplateParsers = {
+  ORG07: "STRICT_UNIT_V1", ORG08: "STRICT_WARD_V1", ORG09: "STRICT_NURSING_V1",
+  ORG10: "STRICT_UNIT_WARD_V1", ORG11: "STRICT_WARD_NURSING_V1", ORG12: "STRICT_LOCATION_V1",
+  ORG13: "STRICT_LOCATION_USE_V1", ORG16: "STRICT_CAPABILITY_V1", ORG17: "STRICT_SUBJECT_PERMISSION_V1",
+} as const;
 const TemplateResult = Type.Object(
   {
     status: Type.Literal("EXACT_TEMPLATE"),
@@ -110,7 +116,7 @@ const TemplateResult = Type.Object(
     profile: Type.Enum(["CORE", "FULL"]),
     contractVersionId: Id,
     templateVersion: Text,
-    parserPolicy: Type.Literal("STRICT_V2"),
+    parserPolicy: Type.Enum(["STRICT_V2", ...Object.values(careTemplateParsers)]),
   },
   closed,
 );
@@ -265,9 +271,12 @@ export async function registerWorkbenchRoutes(
       if (!c || c.versionId !== input.versionId || c.status !== "PUBLISHED")
         throw new Error("EXACT_CONTRACT_UNAVAILABLE");
       const fields = c.definition.fields.map((f) => f.code);
+      const parserPolicy = Object.hasOwn(careTemplateParsers, c.dataset)
+        ? careTemplateParsers[c.dataset as keyof typeof careTemplateParsers]
+        : "STRICT_V2";
       const bytes =
         input.format === "XLSX"
-          ? textWorkbook([fields])
+          ? (/^ORG(?:07|08|09|10|11|12|13|16|17)$/.test(c.dataset)?textSheetsWorkbook({[c.dataset]:[fields]}):textWorkbook([fields]))
           : Buffer.from(
               input.format === "JSON"
                 ? JSON.stringify(
@@ -286,14 +295,14 @@ export async function registerWorkbenchRoutes(
           profile: c.profile,
           contractVersionId: c.versionId,
           templateVersion: c.definition.templateVersion,
-          parserPolicy: "STRICT_V2",
+          parserPolicy,
           xlsxSupport: "TEXT_SUBSET_ONLY_NO_OFFICE_ROUNDTRIP_CLAIM",
         }),
         dataset: c.dataset,
         profile: c.profile,
         contractVersionId: c.versionId,
         templateVersion: c.definition.templateVersion,
-        parserPolicy: "STRICT_V2" as const,
+        parserPolicy,
       };
     },
   );

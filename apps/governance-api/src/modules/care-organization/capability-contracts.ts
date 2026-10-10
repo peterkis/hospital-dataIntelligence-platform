@@ -44,7 +44,8 @@ export interface CapabilityIssue {row:number;field:string;code:string;status:'FA
 export interface CapabilityUpstreamPorts {
  referenceAccess(s:CatalogTransactionScope,actor:string,scope:CapabilityScope):Promise<{scope:'NORTH'|'SOUTH'}>;
  unitWindow(s:CatalogTransactionScope,actor:string,scope:CapabilityScope,from:string,to:string|null,r:string):ReturnType<BusinessUnitOwner['evaluateManagementWindowInTransaction']>;
- parameters:Pick<ParameterValueOwner,'authorizeReferenceInTransaction'|'evaluateWindowInTransaction'>;
+ boundaries(s:CatalogTransactionScope,actor:string,scope:CapabilityScope,rule:CapabilityRule,from:string,to:string|null,r:string):Promise<string[]>;
+ parameters:Pick<ParameterValueOwner,'authorizeReferenceInTransaction'|'evaluateWindowInTransaction'|'readSourceWindowBoundariesInTransaction'>;
 }
 export function capabilityCheck(schema:unknown,value:unknown){if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');}
 export function normalizeCapabilityRow(value:unknown,policy:CapabilityStage['timePolicy']){capabilityCheck(CapabilityRowSchema,value);const row=structuredClone(value) as CapabilityRow;if(BigInt(row.version_no)>2147483647n)throw new Error('CLOSED_INPUT_REQUIRED');const time=(v:string)=>{if(policy==='SOURCE_PLUS08_TO_LOCAL'){if(!v.endsWith('+08:00'))throw new Error('LOCAL_TIME_REQUIRED');v=v.slice(0,-6);}return localTime(v);};const from=time(row.valid_from),to=row.valid_to===null?null:time(row.valid_to);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');return {row,from,to,sourceRecordedAt:time(row.recorded_at)};}

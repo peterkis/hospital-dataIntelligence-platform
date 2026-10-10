@@ -14,7 +14,7 @@ export const ContractDefinitionSchema=Type.Object({
   codeSets:Type.Array(Type.Object({field:Type.String(),codeSystem:Token,version:Token,status:values('CANDIDATE','SYNTHETIC_ADOPTED'),codes:Type.Array(Type.String({minLength:1,maxLength:256}),{minItems:1,uniqueItems:true}),validFrom:Time,validTo:End,sourceVersionId:Id},{additionalProperties:false})),
   rules:Type.Array(Type.Object({id:Token,field:Type.String(),text:Type.String({minLength:1,maxLength:2000}),status:values('UNRESOLVED','MACHINE','MANUAL_EVIDENCE'),version:Token},{additionalProperties:false}),{maxItems:100}),
   references:Type.Array(Type.Union([
-    Type.Object({field:Type.String(),target:Type.String(),status:Type.Enum(['UNIT_CORE','CAPABILITY_CORE'])},{additionalProperties:false}),
+    Type.Object({field:Type.String(),target:Type.String(),status:Type.Enum(['UNIT_CORE','NURSING_CORE','WARD_CORE','UNIT_WARD_CORE','WARD_NURSING_CORE','CAPABILITY_CORE','SUBJECT_CORE'])},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Enum(['LOCATION_CORE','LOCATION_USE_CORE'])},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('ORGANIZATION_EVOLUTION_CORE')},{additionalProperties:false}),
     Type.Object({field:Type.String(),target:Type.String(),status:Type.Literal('ORGANIZATION_MAPPING_CORE')},{additionalProperties:false}),

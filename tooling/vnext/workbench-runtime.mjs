@@ -1,5 +1,7 @@
 import {assertWardNursingProvisioned} from './p3-05-provisioning.mjs';
 import {assertCareLifecycleProvisioned} from './p3-11-provisioning.mjs';
+import {assertCareWorkspaceProvisioned} from './p3-10-provisioning.mjs';
+import {openCareValidation,openCareWorkspace} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {openCareLocationLifecycle} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {wardNursingUpstreamPorts} from '../../apps/governance-api/src/composition/ward-nursing-dependencies.ts';
 import {assertUnitWardProvisioned} from './p3-04-provisioning.mjs';
@@ -8,6 +10,7 @@ import {unitCapabilityUpstreamPorts} from '../../apps/governance-api/src/composi
 import {assertUnitCapabilityProvisioned} from './p3-08-provisioning.mjs';
 import {assertSubjectsProvisioned} from './p3-09-provisioning.mjs';
 import {openSubjectCodes} from '../../apps/governance-api/src/modules/governance-catalog/index.ts';
+import {subjectPermissionUpstreamPorts} from '../../apps/governance-api/src/composition/subject-permission-dependencies.ts';
 import {openSubjectPermissions} from '../../apps/governance-api/src/modules/care-organization/index.ts';
 import {wardUpstreamPorts} from '../../apps/governance-api/src/composition/ward-dependencies.ts';
 import {assertWardProvisioned} from './p3-02-provisioning.mjs';
@@ -86,10 +89,12 @@ export async function startWorkbench({
   }
   let unitWard;
   let wardNursing;
-  let locationUsageTypes,locationUse,careLifecycle;
+  let locationUsageTypes,locationUse,careLifecycle,careValidation,careWorkspace;
   let session, catalog, app, organization, campus, operating, organizationImport, organizationWorkspace, department, hierarchy, mapping, identifiers, evolutions, departmentLifecycle, departmentWorkspace, location, businessUnit, nursingUnit, ward, parameterValues, unitCapabilities, subjectCodes, subjectPermissions;
   const close = async () => {
     await app?.close();
+    await careValidation?.close();
+    await careWorkspace?.close();
     await careLifecycle?.close();
     await locationUse?.close();
     await locationUsageTypes?.close();
@@ -159,43 +164,45 @@ export async function startWorkbench({
       ? session.connectionString
       : await ownerServiceConnection());
     // An installed persistent Owner must never silently fall back to fresh keys.
-    const organizationReady=persistent;
+    const ownerReady=persistent||Boolean(validationContext?.completeOwners);
+    const organizationReady=ownerReady;
     const provider = validationContext?.provider??(organizationReady?organizationKeys(receipt):new LocalSyntheticKeyProvider());
     if(validationContext){
       const connectionCheck=new pg.Pool({connectionString:connection,max:1});
       try{await connectionCheck.query(identitySQL(receipt));assert.deepEqual((await connectionCheck.query('select id,sha256 from vnext_control.migration order by id')).rows,suppliedInspection.ledger);}
       finally{await connectionCheck.end();}
       await assertLocationUseProvisioned(connection,provider);
-      if(!validationContext.locationUse?.usageTypes)throw new Error('BLOCKED_DEPENDENCY');
+      if(!validationContext.locationUse?.usageTypes&&!validationContext.completeOwners)throw new Error('BLOCKED_DEPENDENCY');
     }
-    if(persistent&&persistentPrefix>=174)await assertUnitCapabilityProvisioned(connection,provider);
-    if(persistent&&persistentPrefix>=188)await assertUnitWardProvisioned(connection,provider);
-    if(persistent&&persistentPrefix>=198)await assertWardNursingProvisioned(connection,provider);
-    if(persistent&&persistentPrefix>=201)await assertLocationUseProvisioned(connection,provider);
-    if(persistent&&persistentPrefix>=178)await assertSubjectsProvisioned(connection,provider);
-    if(persistent&&persistentPrefix>=167)await assertWardProvisioned(connection,provider);
+    if(ownerReady&&persistentPrefix>=174)await assertUnitCapabilityProvisioned(connection,provider);
+    if(ownerReady&&persistentPrefix>=188)await assertUnitWardProvisioned(connection,provider);
+    if(ownerReady&&persistentPrefix>=198)await assertWardNursingProvisioned(connection,provider);
+    if(ownerReady&&persistentPrefix>=201)await assertLocationUseProvisioned(connection,provider);
+    if(ownerReady&&persistentPrefix>=178)await assertSubjectsProvisioned(connection,provider);
+    if(ownerReady&&persistentPrefix>=167)await assertWardProvisioned(connection,provider);
     if(organizationReady){organization=openOrganization(connection,provider);campus=openCampus(connection,provider,{owners:['BUSINESS_UNIT','NURSING_UNIT','WARD','UNIT_CAPABILITY','UNIT_WARD_RELATION','WARD_NURSING_COVERAGE'],readInTransaction:(s,a,i)=>{if(!businessUnit)throw new Error('BLOCKED_DEPENDENCY');return Promise.all([businessUnit.readCampusDependenciesInTransaction(s,a,i),nursingUnit?.readCampusDependenciesInTransaction(s,a,i)??[],ward?.readCampusDependenciesInTransaction(s,a,i)??[],unitCapabilities?.readCampusDependenciesInTransaction(s,a,i)??[],unitWard?.readCampusDependenciesInTransaction(s,a,i)??[],wardNursing?.readCampusDependenciesInTransaction(s,a,i)??[]]).then(parts=>parts.flat());;}});operating=openOperatingRelations(connection,provider);}
     if(persistent&&persistentPrefix>=69)organizationImport=openOrganizationImport(connection,provider);
     if(persistent&&persistentPrefix>=71)organizationWorkspace=openOrganizationWorkspace(connection,provider);
     if(persistent&&persistentPrefix>=144)departmentWorkspace=openDepartmentWorkspace(connection,provider);
-    if(persistent&&persistentPrefix>=87){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
+    if(ownerReady&&persistentPrefix>=87){await assertDepartmentProvisioned(connection,provider);department=openDepartment(connection,provider);}
     if(owned||persistentPrefix>=109){await assertHierarchyProvisioned(connection);hierarchy=openHierarchy(connection,provider);}
     if(persistent&&persistentPrefix>=112){await assertOrganizationMappingsProvisioned(connection,provider);mapping=openOrganizationMappings(connection,provider);}
     if(persistent&&persistentPrefix>=116){await assertOrganizationIdentifiersProvisioned(connection,provider);identifiers=openOrganizationIdentifiers(connection,provider);}
     if(persistent&&persistentPrefix>=122)await assertDepartmentImpactsProvisioned(connection);
     if(persistent&&persistentPrefix>=118){await assertOrganizationEvolutionsProvisioned(connection,provider);evolutions=openOrganizationEvolutions(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities,()=>unitWard,()=>wardNursing));}
-    if(persistent&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities,()=>unitWard,()=>wardNursing));}
-    if(persistent&&persistentPrefix>=150){await assertLocationProvisioned(connection,provider);location=openLocation(connection,provider,campus.references);}
-    if(persistent&&persistentPrefix>=154){await assertBusinessUnitProvisioned(connection,provider);businessUnit=openBusinessUnit(connection,provider,{departmentCoverage:departmentLifecycle.readUnitBindingCoverageInTransaction,departmentBoundaries:departmentLifecycle.readUnitBindingBoundariesInTransaction,referenceAccess:departmentLifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction});}
-    if(persistent&&persistentPrefix>=163){await assertNursingUnitProvisioned(connection,provider);nursingUnit=openNursingUnit(connection,provider,nursingUpstreamPorts,{wardNursingCoveragesAvailable:()=>!!wardNursing});}
-    if(persistent&&persistentPrefix>=167){ward=openWard(connection,provider,wardUpstreamPorts(businessUnit),{wardNursingCoveragesAvailable:()=>!!wardNursing});}
-    if(persistent&&persistentPrefix>=174){parameterValues=openParameterValues(connection);unitCapabilities=openUnitCapabilities(connection,provider,unitCapabilityUpstreamPorts(businessUnit,parameterValues));}
-    if(persistent&&persistentPrefix>=188){unitWard=openUnitWardRelations(connection,provider,unitWardUpstreamPorts(businessUnit,ward));}
-    if(persistent&&persistentPrefix>=198){wardNursing=openWardNursingCoverage(connection,provider,wardNursingUpstreamPorts(ward,nursingUnit,businessUnit));}
-    if(persistent&&persistentPrefix>=201){locationUsageTypes=openLocationUsageTypes(connection,provider);}
-    if(persistent&&persistentPrefix>=203){if(!location||!departmentLifecycle||!businessUnit||!ward||!nursingUnit||!locationUsageTypes)throw new Error('BLOCKED_DEPENDENCY');locationUse=openLocationUse(connection,provider,locationUseUpstreamPorts(location,departmentLifecycle,businessUnit,ward,nursingUnit),locationUsageTypes);}
-    if(persistent&&persistentPrefix>=178){subjectCodes=openSubjectCodes(connection,provider);subjectPermissions=openSubjectPermissions(connection,provider,{operatingWindow:operating.evaluateOperatingWindowInTransaction});}
-    if(persistent&&persistentPrefix>=220){await assertCareLifecycleProvisioned(connection);careLifecycle=openCareLocationLifecycle(connection,provider,{UNIT:businessUnit,NURSING:nursingUnit,WARD:ward,UNIT_WARD:unitWard,WARD_NURSING:wardNursing,CAPABILITY:unitCapabilities,PERMISSION:subjectPermissions,LOCATION:location,LOCATION_USE:locationUse});}
+    if(ownerReady&&persistentPrefix>=139){await assertDepartmentLifecycleProvisioned(connection);departmentLifecycle=openDepartmentLifecycle(connection,provider,withCareOrganizationImpacts(()=>businessUnit,()=>nursingUnit,()=>ward,()=>unitCapabilities,()=>unitWard,()=>wardNursing));}
+    if(ownerReady&&persistentPrefix>=150){await assertLocationProvisioned(connection,provider);location=openLocation(connection,provider,campus.references);}
+    if(ownerReady&&persistentPrefix>=154){await assertBusinessUnitProvisioned(connection,provider);businessUnit=openBusinessUnit(connection,provider,{departmentCoverage:departmentLifecycle.readUnitBindingCoverageInTransaction,departmentBoundaries:departmentLifecycle.readUnitBindingBoundariesInTransaction,referenceAccess:departmentLifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction});}
+    if(ownerReady&&persistentPrefix>=163){await assertNursingUnitProvisioned(connection,provider);nursingUnit=openNursingUnit(connection,provider,nursingUpstreamPorts,{wardNursingCoveragesAvailable:()=>!!wardNursing});}
+    if(ownerReady&&persistentPrefix>=167){ward=openWard(connection,provider,wardUpstreamPorts(businessUnit),{wardNursingCoveragesAvailable:()=>!!wardNursing});}
+    if(ownerReady&&persistentPrefix>=174){parameterValues=openParameterValues(connection);unitCapabilities=openUnitCapabilities(connection,provider,unitCapabilityUpstreamPorts(businessUnit,parameterValues));}
+    if(ownerReady&&persistentPrefix>=188){unitWard=openUnitWardRelations(connection,provider,unitWardUpstreamPorts(businessUnit,ward));}
+    if(ownerReady&&persistentPrefix>=198){wardNursing=openWardNursingCoverage(connection,provider,wardNursingUpstreamPorts(ward,nursingUnit,businessUnit,parameterValues));}
+    if(ownerReady&&persistentPrefix>=201){locationUsageTypes=openLocationUsageTypes(connection,provider);}
+    if(ownerReady&&persistentPrefix>=203){if(!location||!departmentLifecycle||!businessUnit||!ward||!nursingUnit||!locationUsageTypes)throw new Error('BLOCKED_DEPENDENCY');locationUse=openLocationUse(connection,provider,locationUseUpstreamPorts(location,departmentLifecycle,businessUnit,ward,nursingUnit),locationUsageTypes);}
+    if(ownerReady&&persistentPrefix>=178){subjectCodes=openSubjectCodes(connection,provider);subjectPermissions=openSubjectPermissions(connection,provider,persistentPrefix>=259?subjectPermissionUpstreamPorts(businessUnit,departmentLifecycle,operating):{operatingWindow:operating.evaluateOperatingWindowInTransaction});}
+    if(ownerReady&&persistentPrefix>=220){await assertCareLifecycleProvisioned(connection);careLifecycle=openCareLocationLifecycle(connection,provider,{UNIT:businessUnit,NURSING:nursingUnit,WARD:ward,UNIT_WARD:unitWard,WARD_NURSING:wardNursing,CAPABILITY:unitCapabilities,PERMISSION:subjectPermissions,LOCATION:location,LOCATION_USE:locationUse});}
+    if(ownerReady&&persistentPrefix>=253){await assertCareWorkspaceProvisioned(connection);const ports={UNIT:businessUnit,NURSING:nursingUnit,WARD:ward,UNIT_WARD:unitWard,WARD_NURSING:wardNursing,CAPABILITY:unitCapabilities,PERMISSION:subjectPermissions,LOCATION:location,LOCATION_USE:locationUse,lifecycle:careLifecycle,departmentLifecycle};careValidation=openCareValidation(connection,ports);careWorkspace=openCareWorkspace(connection,provider,ports);}
     catalog = await openCatalog(connection, provider);
     let setup;
     if (owned) {
@@ -246,30 +253,32 @@ export async function startWorkbench({
     app = await buildCatalogServer(
       catalog,
       finite ? "FINITE_E2E" : "CONTROL_PLANE",
-      organization?{owner:organization,actor:r=>syntheticActor(r.headers)}:undefined,
-      campus?{owner:campus,references:campus.references,actor:r=>syntheticActor(r.headers)}:undefined,
-      operating?{owner:operating,actor:r=>syntheticActor(r.headers)}:undefined,
+      validationContext?.organization??(organization?{owner:organization,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.campus??(campus?{owner:campus,references:campus.references,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.operating??(operating?{owner:operating,actor:r=>syntheticActor(r.headers)}:undefined),
       organizationImport?{owner:organizationImport,actor:r=>syntheticActor(r.headers)}:undefined,
       organizationWorkspace?{owner:organizationWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
-      department?{owner:department,actor:r=>syntheticActor(r.headers)}:undefined,
+      validationContext?.department??(department?{owner:department,actor:r=>syntheticActor(r.headers)}:undefined),
       hierarchy?{owner:hierarchy,actor:r=>syntheticActor(r.headers)}:undefined,
       mapping?{owner:mapping,actor:r=>syntheticActor(r.headers)}:undefined,
       identifiers?{owner:identifiers,actor:r=>syntheticActor(r.headers)}:undefined,
       evolutions?{owner:evolutions,actor:r=>syntheticActor(r.headers)}:undefined,
-      departmentLifecycle?{owner:departmentLifecycle,actor:r=>syntheticActor(r.headers)}:undefined,
+      validationContext?.departmentLifecycle??(departmentLifecycle?{owner:departmentLifecycle,actor:r=>syntheticActor(r.headers)}:undefined),
       departmentWorkspace?{owner:departmentWorkspace,actor:r=>syntheticActor(r.headers)}:undefined,
-      location?{owner:location,actor:r=>syntheticActor(r.headers)}:undefined,
-      businessUnit?{owner:businessUnit,actor:r=>syntheticActor(r.headers)}:undefined,
-      nursingUnit?{owner:nursingUnit,actor:r=>syntheticActor(r.headers)}:undefined,
-      ward?{owner:ward,actor:r=>syntheticActor(r.headers)}:undefined,
-      parameterValues?{owner:parameterValues,actor:r=>syntheticActor(r.headers)}:undefined,
-      unitCapabilities?{owner:unitCapabilities,actor:r=>syntheticActor(r.headers)}:undefined,
-      subjectCodes?{owner:subjectCodes,actor:r=>syntheticActor(r.headers)}:undefined,
-      subjectPermissions?{owner:subjectPermissions,actor:r=>syntheticActor(r.headers)}:undefined,
-      unitWard?{owner:unitWard,actor:r=>syntheticActor(r.headers)}:undefined,
-      wardNursing?{owner:wardNursing,actor:r=>syntheticActor(r.headers)}:undefined,
+      validationContext?.location??(location?{owner:location,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.businessUnit??(businessUnit?{owner:businessUnit,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.nursingUnit??(nursingUnit?{owner:nursingUnit,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.ward??(ward?{owner:ward,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.parameterValues??(parameterValues?{owner:parameterValues,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.unitCapabilities??(unitCapabilities?{owner:unitCapabilities,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.subjectCodes??(subjectCodes?{owner:subjectCodes,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.subjectPermissions??(subjectPermissions?{owner:subjectPermissions,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.unitWard??(unitWard?{owner:unitWard,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.wardNursing??(wardNursing?{owner:wardNursing,actor:r=>syntheticActor(r.headers)}:undefined),
       validationContext?.locationUse??(locationUsageTypes?{owner:locationUse,usageTypes:locationUsageTypes,actor:r=>syntheticActor(r.headers)}:undefined),
       validationContext?.careLifecycle??(careLifecycle?{owner:careLifecycle,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.careValidation??(careValidation?{owner:careValidation,actor:r=>syntheticActor(r.headers)}:undefined),
+      validationContext?.careWorkspace??(careWorkspace?{owner:careWorkspace,actor:r=>syntheticActor(r.headers)}:undefined),
     );
     await app.register(staticPlugin, {
       root: resolve(root, "apps/admin-web/dist-vnext"),
@@ -283,6 +292,7 @@ export async function startWorkbench({
       "organizations",
       "departments",
       "location-usage-types",
+      "care-space",
     ])
       app.get("/admin/vnext/" + path, (_req, reply) =>
         reply.sendFile("vnext.html"),

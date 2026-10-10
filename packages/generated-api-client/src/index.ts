@@ -58,3 +58,5 @@ export {createWardNursingCoverageClient} from './ward-nursing-client.js';
 export * from './location-use-client.js';
 
 export * from './care-location-lifecycle-client.js';
+export * from './care-workspace-client.js';
+export * from './care-operation-client.generated.js';

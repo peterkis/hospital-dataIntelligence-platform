@@ -41,6 +41,7 @@ vi.mock('./p3-04-provisioning.mjs',()=>({assertUnitWardProvisioned:vi.fn(async()
 vi.mock('./p3-05-provisioning.mjs',()=>({provisionWardNursing:vi.fn(()=>{state.events.push('ward-nursing-provision');}),assertWardNursingProvisioned:vi.fn(async()=>{state.events.push('ward-nursing-provisioned');})}));
 vi.mock('./p3-07-provisioning.mjs',()=>({assertLocationUseProvisioned:vi.fn(async()=>{state.events.push('location-use-provisioned');})}));
 vi.mock('./p3-11-provisioning.mjs',()=>({assertCareLifecycleProvisioned:vi.fn(async()=>{state.events.push('care-lifecycle-provisioned');})}));
+vi.mock('./p3-10-provisioning.mjs',()=>({assertCareWorkspaceProvisioned:vi.fn(async()=>{state.events.push('care-workspace-provisioned');})}));
 vi.mock('../../apps/governance-api/src/modules/location-master/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/location-master/index.ts')>();const owner=(name:string)=>vi.fn(()=>{state.events.push(name);return {close:async()=>{state.events.push('close-'+name);}};});return {...real,openLocation:owner('location'),openLocationUsageTypes:owner('usage-types'),openLocationUse:owner('location-use')};});
 vi.mock('./p3-02-provisioning.mjs',()=>({assertWardProvisioned:vi.fn(async()=>{state.events.push('ward-provisioned');})}));
 vi.mock('../../apps/governance-api/src/modules/care-organization/index.ts',async importOriginal=>{const real=await importOriginal<typeof import('../../apps/governance-api/src/modules/care-organization/index.ts')>();return {...real,openCareLocationLifecycle:vi.fn(()=>{state.events.push('care-lifecycle');return {close:async()=>{state.events.push('close-care-lifecycle');}};}),openWardNursingCoverage:vi.fn(()=>{state.events.push('ward-nursing');return {close:async()=>{}};}),openUnitWardRelations:vi.fn(()=>{state.events.push('unit-ward');return {close:async()=>{}};}),openBusinessUnit:vi.fn(()=>{state.events.push('business-unit');return {close:async()=>{}};}),openNursingUnit:vi.fn(()=>{state.events.push('nursing-unit');return {close:async()=>{}};}),openUnitCapabilities:vi.fn(()=>{state.events.push('unit-capability');return {close:async()=>{}};}),openWard:vi.fn(()=>{state.events.push('ward');return {close:async()=>{}};})};});
@@ -95,7 +96,7 @@ beforeEach(()=>{
  vi.clearAllMocks();state.ledger=ledger();state.files=undefined;state.events=[];state.writes=[];state.sql=[];state.stopAt=undefined;state.typesStatus=0;state.ownerDatabase=state.receipt.name;state.rowSnapshots=[];
 });
 
-for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,...Array.from({length:47},(_,index)=>205+index)])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
+for(const prefix of [71,72,73,74,75,76,77,78,79,80,81,87,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,...Array.from({length:58},(_,index)=>205+index)])test(`persistent startup rejects prefix ${prefix} before credentials, keys, Owners or listen`,async()=>{
  state.ledger=ledger(prefix);await expect(startWorkbench({persistent:true})).rejects.toThrow('WORKSPACE_MIGRATION_REQUIRED');
  expect(state.events).toEqual(['inspect']);expect(state.sql).toEqual([]);expect(state.writes).toEqual([]);
 });
@@ -175,7 +176,8 @@ test('both gates use the same exact ordered and checksummed release',()=>{
   expect(files[204]?.id).toBe('0205_location_usage_type_evidence_campus');
   expect(files[249]?.id).toBe('0250_repartition_exact_cutover_successor_limit');
   expect(files[250]?.id).toBe('0251_exact_nursing_handover_receipt_successors');
-  expect(files.at(-1)?.id).toBe('0252_nursing_suspend_at_open_cutover');
+  expect(files[251]?.id).toBe('0252_nursing_suspend_at_open_cutover');
+  expect(files.at(-1)?.id).toBe('0263_care_private_draft_list_filter');
 });
 
 test('the original 200 migration bytes match the approved P3-05 Git tree',()=>{
@@ -253,6 +255,11 @@ test('missing Location use authority prevents Owner construction and listening',
 test('missing care lifecycle authority prevents coordinator construction and listening',async()=>{
  const {assertCareLifecycleProvisioned}=await import('./p3-11-provisioning.mjs');vi.mocked(assertCareLifecycleProvisioned).mockRejectedValueOnce(new Error('CARE_LIFECYCLE_OWNER_NOT_PROVISIONED'));
  await expect(startWorkbench({persistent:true})).rejects.toThrow('CARE_LIFECYCLE_OWNER_NOT_PROVISIONED');expect(state.events).not.toContain('care-lifecycle');expect(state.events).not.toContain('listen');
+});
+
+test('missing care workspace authority prevents listening before the new workspace is constructed',async()=>{
+ const {assertCareWorkspaceProvisioned}=await import('./p3-10-provisioning.mjs');vi.mocked(assertCareWorkspaceProvisioned).mockRejectedValueOnce(new Error('CARE_WORKSPACE_OWNER_NOT_PROVISIONED'));
+ await expect(startWorkbench({persistent:true})).rejects.toThrow('CARE_WORKSPACE_OWNER_NOT_PROVISIONED');expect(state.events).not.toContain('listen');
 });
 
 test('care lifecycle is provisioned before construction and closes before its member Owners',async()=>{

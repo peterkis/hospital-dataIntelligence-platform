@@ -3,6 +3,7 @@ import {Check} from 'typebox/value';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {vnextPool} from '../../platform/database/vnext-pool.js';
 import type {DB} from '../../platform/database/vnext-types.generated.js';
+import {readScopedSource,deferExactReadAuthority} from './source-read-authority.js';
 import {CatalogTransactionScope} from './transaction-scope.js';
 
 const closed={additionalProperties:false} as const;
@@ -29,6 +30,7 @@ export const ParameterValueReadSchema=Type.Object({id:Id,versionId:Type.Optional
 export const ParameterValueWindowSchema=Type.Object({...ParameterValueReadSchema.properties,validFrom:Time,validTo:End},closed);
 export const ParameterValueItemSchema=Type.Object({id:Id,parameterId:Id,versionId:Id,head:Type.String(),definitionVersionId:Id,definitionDigest:Digest,applicability:CapabilityScopeSchema,value:ParameterValueSchema,purpose:Type.Enum(['METADATA','BOOLEAN_GATE_V1']),validFrom:Time,validTo:End,evidenceId:Id,recordedAt:Time,approvedAt:End,status:Type.Enum(['DRAFT','APPROVED']),reviewDigest:Digest},closed);
 export type ParameterValueItem=Static<typeof ParameterValueItemSchema>;
+export const ParameterValueListSchema=Type.Object({campus:Type.Enum(['NORTH','SOUTH']),after:Type.Optional(Id),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(Time)},closed);
 export const ParameterValueWindowResultSchema=Type.Object({item:Type.Union([ParameterValueItemSchema,Type.Null()]),covered:Type.Boolean(),currentDefinitionVersionId:Type.Union([Id,Type.Null()]),reason:Type.Enum(['SATISFIED','PARAMETER_NOT_APPROVED','PARAMETER_PERIOD_NOT_COVERED','PARAMETER_ADOPTION_CHANGED'])},closed);
 export type ParameterValueWindowResult=Static<typeof ParameterValueWindowResultSchema>;
 const check=(schema:unknown,value:unknown)=>{if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');};
@@ -39,12 +41,19 @@ export function openParameterValues(connection:string){
  const read=(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueReadSchema>,history=false)=>(sql<{r:ParameterValueItem[]}>`select governance_catalog.parameter_value_read(${actor},${JSON.stringify(input)}::jsonb,${history}) r`.execute(s)).then(r=>r.rows[0]!.r);
  const evaluate=(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueWindowSchema>)=>(sql<{r:ParameterValueWindowResult}>`select governance_catalog.parameter_value_evaluate(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s)).then(r=>r.rows[0]!.r);
  return {
+  async list(actor:string,input:Static<typeof ParameterValueListSchema>){check(ParameterValueListSchema,input);return root(async s=>(await sql<{r:{items:ParameterValueItem[];nextAfterId:string|null}}>`select governance_catalog.parameter_value_list(${actor},${input.campus},${input.after??null}::uuid,${input.limit??50},coalesce(${input.recordAsOf??null}::timestamp,timezone('Asia/Shanghai',clock_timestamp()))) r`.execute(s)).rows[0]!.r);},
   async command(actor:string,input:ParameterValueCommand){check(ParameterValueCommandSchema,input);return root(async s=>(await sql<{r:ParameterValueItem}>`select governance_catalog.parameter_value_command(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s)).rows[0]!.r);},
   async read(actor:string,input:Static<typeof ParameterValueReadSchema>){check(ParameterValueReadSchema,input);return root(async s=>{const rows=await read(s,actor,input);if(!rows.length)throw new Error('NOT_FOUND');return rows[0]!;});},
   async history(actor:string,input:Static<typeof ParameterValueReadSchema>){check(ParameterValueReadSchema,input);return root(s=>read(s,actor,input,true));},
   async evaluateWindow(actor:string,input:Static<typeof ParameterValueWindowSchema>){check(ParameterValueWindowSchema,input);return root(s=>evaluate(s,actor,input));},
   async authorizeReferenceInTransaction(s:CatalogTransactionScope,actor:string,id:string,versionId:string){check(Id,id);check(Id,versionId);await read(s,actor,{id,versionId});},
   async evaluateWindowInTransaction(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueWindowSchema>){check(ParameterValueWindowSchema,input);return evaluate(s,actor,input);},
+  async readWindowBoundariesInTransaction(s:CatalogTransactionScope,actor:string,input:Static<typeof ParameterValueWindowSchema>&{recordAsOf:string}){check(ParameterValueWindowSchema,input);input=structuredClone(input);const points=(await sql<{r:string[]}>`select governance_catalog.parameter_value_boundaries(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s)).rows[0]!.r;if(s.recordAsOf){const references=(await sql<{r:unknown}>`select governance_catalog.care_parameter_boundary_references(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s)).rows[0]!.r;deferExactReadAuthority(s,actor,references,root);}return points;},
+  async readSourceWindowBoundariesInTransaction(s:CatalogTransactionScope,actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf:string;sourceKind?:'UNIT_WARD'|'WARD_NURSING'}){
+   check(Type.Object({id:Id,validFrom:Time,validTo:End,recordAsOf:Time,sourceKind:Type.Optional(Type.Enum(['UNIT_WARD','WARD_NURSING']))},closed),input);input=structuredClone(input);
+   const operation=input.sourceKind==='WARD_NURSING'?'ward_nursing_source_windows':'unit_ward_source_windows',parts=(await readScopedSource(s,actor,{operation,id:input.id,validFrom:input.validFrom,validTo:input.validTo,recordAsOf:input.recordAsOf},root,scope=>(input.sourceKind==='WARD_NURSING'?sql<{r:Array<{from:string;to:string|null}>}>`select governance_catalog.ward_nursing_source_windows(${actor},${input.id}::uuid,${input.validFrom}::timestamp,${input.validTo}::timestamp,${input.recordAsOf}::timestamp) r`:sql<{r:Array<{from:string;to:string|null}>}>`select governance_catalog.unit_ward_source_windows(${actor},${input.id}::uuid,${input.validFrom}::timestamp,${input.validTo}::timestamp,${input.recordAsOf}::timestamp) r`).execute(scope))).rows[0]!.r;
+   return parts.flatMap(p=>p.to===null?[p.from]:[p.from,p.to]);
+  },
   async close(){await db.destroy();},
  };
 }

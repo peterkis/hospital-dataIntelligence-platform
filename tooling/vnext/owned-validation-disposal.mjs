@@ -4,7 +4,7 @@ import {dropTemporary} from './fresh.mjs';
 import {saveExclusiveReceipt} from './receipt.mjs';
 
 export function disposeOwnedValidationDatabase(receipt){
- if(!['P3-02','P3-05','P3-07','P3-11'].includes(receipt.taskId)||receipt.purpose!=='TEMPORARY_VALIDATION')throw new Error('DISPOSAL_NOT_AUTHORIZED');
+ if(!['P3-02','P3-05','P3-07','P3-11','P3-10'].includes(receipt.taskId)||receipt.purpose!=='TEMPORARY_VALIDATION')throw new Error('DISPOSAL_NOT_AUTHORIZED');
  const tag=receipt.taskId.toLowerCase(),gate=receipt.taskId.replaceAll('-','_');
  const applicationName=tag+'-drop:'+receipt.requestId,identity=identitySQL(receipt),countSql=`SELECT count(*) FROM pg_stat_activity WHERE datname=${quote(receipt.name)};`;
  const lastJson=output=>JSON.parse(output.trim().split(/\r?\n/).at(-1));

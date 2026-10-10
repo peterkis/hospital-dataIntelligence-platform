@@ -1,3 +1,7 @@
+import {readScopedSource} from '../governance-catalog/index.js';
+import {trackStagedWindow,diagnoseStagedWindows,checkStagedWindowRequest,type StagedWindowFailure,type StagedWindowRequest} from '../governance-catalog/index.js';
+import {readScopedProtectedInput} from '../governance-catalog/index.js';
+import {ownerSourceLocation} from '../governance-catalog/index.js';
 import {randomUUID} from 'node:crypto';
 import {sql} from 'kysely';
 import {parseExactSafeInteger} from '../../platform/serialization/exact-json-integer.js';
@@ -18,7 +22,8 @@ const verificationCovers=(rows:LocationUseVerification['rows'],count:number)=>ro
 /** The Location Owner publishes declarations; upstream references never imply ownership. */
 export function openLocationUse(connection:string,provider:KeyProviderPort,ports:LocationUseUpstreamPorts,dictionary:LocationUsageTypeOwner){
  const runtime=useRuntime(connection,provider),{db,root,seal,unseal,material,recoverable}=runtime;
- const clock=async(s:Scope)=>(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(s)).rows[0]!.v;
+ const currentReadRoot=root;
+ const clock=async(s:Scope)=>s.recordAsOf??(await sql<{v:string}>`select to_char(timezone('Asia/Shanghai',clock_timestamp()),'YYYY-MM-DD"T"HH24:MI:SS.US') v`.execute(s)).rows[0]!.v;
  const times=new WeakMap<Scope,{recordAt:string;recordAtProof:string}>();
  const publicationTime=async(s:Scope)=>{let point=times.get(s);if(!point){point=(await sql<{r:{recordAt:string;recordAtProof:string}}>`select location_master.use_record_time() r`.execute(s)).rows[0]!.r;times.set(s,point);}return point;};
  const mutate=<T>(s:Scope,actor:string,value:Record<string,unknown>)=>runtime.signed<T>(s,actor,'use_mutate',value);
@@ -26,13 +31,13 @@ export function openLocationUse(connection:string,provider:KeyProviderPort,ports
  const exactSnapshot=async(s:Scope,actor:string,id:string,version:string)=>(await sql<{r:LocationUseHistory}>`select location_master.use_snapshot_version(${actor},${id}::uuid,${version}) r`.execute(s)).rows[0]!.r;
  const histories=async(s:Scope,actor:string,campus:string,r?:string)=>(await (r?sql<{r:LocationUseHistory[]}>`select location_master.use_list_at(${actor},${campus},${localTime(r)}::timestamp) r`:sql<{r:LocationUseHistory[]}>`select location_master.use_list(${actor},${campus}) r`).execute(s)).rows[0]!.r;
  const scopedHistories=async(s:Scope,actor:string,a:LocationUseHistory['applicability'],r:string)=>(await sql<{r:LocationUseHistory[]}>`select location_master.use_scope_histories(${actor},${JSON.stringify(a)}::jsonb,${r}::timestamp) r`.execute(s)).rows[0]!.r;
- const record=async(s:Scope,actor:string,id:string,p='READ_RESTRICTED')=>(await sql<{r:InputRecord}>`select location_master.use_input_read(${actor},${id}::uuid,${p}) r`.execute(s)).rows[0]!.r;
- const inputJob=async(s:Scope,actor:string,id:string)=>(await sql<{r:ImportJob}>`select location_master.use_job_read(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;
+ const record=async(s:Scope,actor:string,id:string,p='READ_RESTRICTED')=>readScopedProtectedInput(s,p,JSON.stringify(['LOCATION_USE',actor,id]),async permission=>(await sql<{r:InputRecord}>`select location_master.use_input_read(${actor},${id}::uuid,${permission}) r`.execute(s)).rows[0]!.r,async r=>{for(const campus of r.campus_ids)await authorize(s,actor,campus,'READ_RESTRICTED');},async()=>{await root(async current=>{await sql`select location_master.use_input_read(${actor},${id}::uuid,'READ_RESTRICTED')`.execute(current);});await root(current=>api(work=>work(current)).readInput(actor,{inputId:id}));});
+ const inputJob=async(s:Scope,actor:string,id:string)=>{if(!s.recordAsOf)return (await sql<{r:ImportJob}>`select location_master.use_job_read(${actor},${id}::uuid) r`.execute(s)).rows[0]!.r;const r=await record(s,actor,id);return (await sql<{r:ImportJob}>`select governance_catalog.import_job_context(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:r.job_id})}::jsonb) r`.execute(s)).rows[0]!.r;};
  const job=async(s:Scope,actor:string,id:string)=>(await sql<{r:ImportJob}>`select governance_catalog.import_job_read(${actor},${JSON.stringify({scope:'SYNTHETIC',jobId:id})}::jsonb) r`.execute(s)).rows[0]!.r;
  const authorize=async(s:Scope,actor:string,id:string,p:string)=>(await sql<{r:string}>`select location_master.use_authorize(${actor},${id}::uuid,${p}) r`.execute(s)).rows[0]!.r;
  const evidence=(s:Scope,actor:string,id:string,c:ImportContractItem,campus:string)=>{if(!c.definition.sourceVersionId)throw new Error('BLOCKED_DEPENDENCY');return material(s,actor,id,c.definition.sourceVersionId,campus);};
- const sourceCoverage=async(s:Scope,actor:string,id:string,from:string,to:string|null,r:string)=>(await sql<{r:unknown}>`select governance_catalog.use_source_coverage(${actor},${id}::uuid,${from}::timestamp,${to}::timestamp,${r}::timestamp) r`.execute(s)).rows[0]!.r;
- const sourceWindows=async(s:Scope,actor:string,id:string,from:string,to:string|null,r:string)=>(await sql<{r:Array<{from:string;to:string|null}>}>`select governance_catalog.use_source_windows(${actor},${id}::uuid,${from}::timestamp,${to}::timestamp,${r}::timestamp) r`.execute(s)).rows[0]!.r;
+ const sourceCoverage=async(s:Scope,actor:string,id:string,from:string,to:string|null,r:string)=>(await readScopedSource(s,actor,{operation:'use_source_coverage',id:id,validFrom:from,validTo:to,recordAsOf:r},currentReadRoot,scope=>sql<{r:unknown}>`select governance_catalog.use_source_coverage(${actor},${id}::uuid,${from}::timestamp,${to}::timestamp,${r}::timestamp) r`.execute(scope))).rows[0]!.r;
+ const sourceWindows=async(s:Scope,actor:string,id:string,from:string,to:string|null,r:string)=>(await readScopedSource(s,actor,{operation:'use_source_windows',id:id,validFrom:from,validTo:to,recordAsOf:r},currentReadRoot,scope=>sql<{r:Array<{from:string;to:string|null}>}>`select governance_catalog.use_source_windows(${actor},${id}::uuid,${from}::timestamp,${to}::timestamp,${r}::timestamp) r`.execute(scope))).rows[0]!.r;
  const referenceAccess=async(s:Scope,actor:string,input:LocationUseStoredStage,c:ImportContractItem,extra:readonly string[]=[])=>{
   for(const e of input.entries){await ports.referenceAccess(s,actor,e.applicability);await dictionary.referenceInTransaction(s,actor,e.usageType);if('target' in e)await exactSnapshot(s,actor,e.target.id,e.target.expectedHead);}
   for(const id of new Set(input.entries.map(e=>e.row.source_system_id)))await sql`select governance_catalog.use_source_reference(${actor},${id}::uuid,${c.definition.sourceVersionId}::uuid)`.execute(s);
@@ -48,7 +53,8 @@ export function openLocationUse(connection:string,provider:KeyProviderPort,ports
   ...await ports.admit(s,actor,a,from,to,r),source:await sourceCoverage(s,actor,facts.source.sourceSystemId,from,to,r),usageType:await dictionary.evaluateReferenceWindowInTransaction(s,actor,facts.usageType,{validFrom:from,validTo:to,recordAsOf:r}),
  });
  const inspectInput=async(s:Scope,actor:string,id:string)=>{
-  const r=await record(s,actor,id),input=unseal<LocationUseStoredStage>('LOCATION_USE_INPUT_V1',r,LocationUseStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract,now=(await publicationTime(s)).recordAt,issues:LocationUseIssue[]=[],writes:LocationUseWrite[]=[],materials:Array<{id:string;digest:string}>=[],dependencies:unknown[]=[],original:LocationUseHistory[]=[];
+  const temporalFailures:StagedWindowFailure[]=[];
+  const r=await record(s,actor,id),input=unseal<LocationUseStoredStage>('LOCATION_USE_INPUT_V1',r,LocationUseStoredStageSchema),j=await inputJob(s,actor,id),c=j.contract,now=(s.recordAsOf??(await publicationTime(s)).recordAt),issues:LocationUseIssue[]=[],writes:LocationUseWrite[]=[],materials:Array<{id:string;digest:string}>=[],dependencies:unknown[]=[],original:LocationUseHistory[]=[];
   const issue=(row:number,field:string,code:string,status:LocationUseIssue['status']='FAIL')=>issues.push({row,field,code,status});
   if(r.withdrawn)throw new Error('INPUT_WITHDRAWN');if(j.currentRevisionId!==r.job_revision||j.status==='REJECTED')throw new Error('STALE_REVISION');await referenceAccess(s,actor,input,c);
   if(c.dataset!=='ORG13'||c.definition.templateVersion!=='ORG13_CORE_V1')throw new Error('BLOCKED_DEPENDENCY');
@@ -78,15 +84,15 @@ export function openLocationUse(connection:string,provider:KeyProviderPort,ports
    }else{
     if(e.row.record_status!=='ACTIVE'||entry.action==='REVISE'&&e.from!==d?.validFrom)throw new Error('LOCATION_USE_REVISE_INVALID');
     reduction=entry.action==='REVISE'&&unchanged&&to!==null&&(d!.validTo===null||to<d!.validTo);
-    if(!reduction){expanding=true;await dictionary.requireEnabledInTransaction(s,actor,entry.usageType,now);if(!covered([{from:c.validFrom,to:c.validTo}],from,to))throw new Error('BLOCKED_DEPENDENCY');for(const field of ['target_type','is_primary','record_status'] as const){const codes=c.definition.codeSets.find(x=>x.field===field);if(!codes||codes.status!=='SYNTHETIC_ADOPTED'||!codes.codes.includes(e.row[field])||!covered([{from:codes.validFrom,to:codes.validTo}],from,to))throw new Error('BLOCKED_DEPENDENCY');}facts.dependencies=await currentBasis(s,actor,a,facts,from,to,now);dependencies.push(facts.dependencies);}
+    if(!reduction){expanding=true;await dictionary.requireEnabledInTransaction(s,actor,entry.usageType,now);if(!covered([{from:c.validFrom,to:c.validTo}],from,to))throw new Error('BLOCKED_DEPENDENCY');for(const field of ['target_type','is_primary','record_status'] as const){const codes=c.definition.codeSets.find(x=>x.field===field);if(!codes||codes.status!=='SYNTHETIC_ADOPTED'||!codes.codes.includes(e.row[field])||!covered([{from:codes.validFrom,to:codes.validTo}],from,to))throw new Error('BLOCKED_DEPENDENCY');}facts.dependencies=await trackStagedWindow(temporalFailures,{row:n,field:'applicability',from,to,boundaries:()=>recoverable(s,async()=>[...await ports.boundaries(s,actor,a,from,to,now),...await dictionary.readReferenceBoundariesInTransaction(s,actor,facts.usageType,{validFrom:from,validTo:to,recordAsOf:now}),...(await sourceWindows(s,actor,facts.source.sourceSystemId,from,to,now)).flatMap(p=>p.to===null?[p.from]:[p.from,p.to])].map(localTime)),evaluate:p=>recoverable(s,()=>currentBasis(s,actor,a,facts,p.from,p.to,now))});dependencies.push(facts.dependencies);}
    }
    writes.push({key:target?.id??'alias:'+e.row.source_system_id+':'+e.row.object_location_rel_id,targetId:target?.id??null,expectedHead:target?.expectedHead??null,action:entry.action,validFrom:from,validTo:to,applicability:a,facts,reason:entry.reason,sourceRow:input.sourceRows?.[index]??n,verificationRow:n,scope:r.scope,reduction});
   });}catch(error){if(error instanceof Error&&['ACCESS_DENIED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE'].includes(error.message))throw error;issue(index+1,'',error instanceof Error?error.message:'CLOSED_INPUT_REQUIRED',error instanceof Error&&['LEGAL_REVIEW_REQUIRED','LOCATION_USE_REVIEW_REQUIRED','BLOCKED_DEPENDENCY','CROSS_CAMPUS_POLICY_REQUIRED'].includes(error.message)?'BLOCKED':'FAIL');}
   const existing=(await Promise.all(input.entries.map(e=>scopedHistories(s,actor,e.applicability,now)))).flat(),projected=new Map(existing.map(h=>[h.id,h]));dependencies.push({reservations:[...projected.values()]});
-  for(const w of writes){const h=w.targetId?projected.get(w.targetId):undefined;projected.set(w.key,{id:w.key,scope:w.scope,applicability:w.applicability,versions:[...(h?.versions??[]),{id:'proposed',number:String(BigInt(h?.versions.at(-1)?.number??'0')+1n),action:w.action,validFrom:w.validFrom,validTo:w.validTo,recordedAt:now,facts:w.facts,reason:w.reason,changeId:'proposed'}]});}
+  for(const w of [...s.readCareCandidatePeerWrites('LOCATION_USE',id).flatMap(value=>JSON.parse(value) as LocationUseWrite[]),...writes]){const h=w.targetId?projected.get(w.targetId):undefined;projected.set(w.key,{id:w.key,scope:w.scope,applicability:w.applicability,versions:[...(h?.versions??[]),{id:'proposed',number:String(BigInt(h?.versions.at(-1)?.number??'0')+1n),action:w.action,validFrom:w.validFrom,validTo:w.validTo,recordedAt:now,facts:w.facts,reason:w.reason,changeId:'proposed'}]});}
   for(const code of useConflicts([...projected.values()]))issue(0,'policy',code);
   if(expanding){const active=(await sql<{r:ImportContractItem[]}>`select governance_catalog.contract_read(${actor},${JSON.stringify({scope:'SYNTHETIC',mode:'EFFECTIVE',target:c.id,businessAt:now})}::jsonb) r`.execute(s)).rows[0]!.r;if(active[0]?.versionId!==c.versionId)issue(0,'contract','STALE_VALIDATION','BLOCKED');}
-  writes.sort((a,b)=>Number(a.action!=='END')-Number(b.action!=='END'));return {r,input,contract:c,verification,issues,writes,materials,dependencies,original};
+  writes.sort((a,b)=>Number(a.action!=='END')-Number(b.action!=='END'));return {r,input,contract:c,verification,issues,writes,materials,dependencies,original,temporalFailures};
  };
  const port:ApplyOwnerPort={
   async authorize(s,actor,input,p){const r=await record(s,actor,input.jobId,p);if(r.revision!==input.revisionId||r.scope!==input.campus||input.purpose!=='IDENTITY_VERIFY')throw new Error('ACCESS_DENIED');},
@@ -118,9 +124,17 @@ export function openLocationUse(connection:string,provider:KeyProviderPort,ports
   for(const read of reads)try{const value=await recoverable(s,read.read);basis[read.key]=value;result.push({owner:read.owner,status:'SATISFIED',reason:'SATISFIED',basisChanged:!same(accepted[read.key]??null,value),basis:value});}catch(error){if(error instanceof Error&&['ACCESS_DENIED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE'].includes(error.message))throw error;result.push({owner:read.owner,status:'NOT_SATISFIED',reason:error instanceof Error?error.message:'BLOCKED_DEPENDENCY',basisChanged:true,basis:null});}
   const failed=result.find(c=>c.status==='NOT_SATISFIED');return {status:failed?'NOT_SATISFIED' as const:'SATISFIED' as const,reason:failed?.reason??'SATISFIED',basis,dependencyChecks:result};
  };
+ const candidateHistoriesIn=async(s:Scope,actor:string,inputId:string)=>{
+   const v=await inspectInput(s,actor,inputId);if(v.issues.length)throw new Error(v.issues[0]!.code);
+   return Promise.all(v.writes.map(async w=>{const h:LocationUseHistory=w.targetId?await historyIn(s,actor,w.targetId,s.recordAsOf):{id:w.key,scope:w.scope,applicability:w.applicability,versions:[]};
+    if(w.targetId&&h.versions.at(-1)?.number!==w.expectedHead)throw new Error('STALE_VALIDATION');
+    const projected:LocationUseHistory={...h,versions:[...h.versions,{id:'candidate:'+inputId,number:String(BigInt(h.versions.at(-1)?.number??'0')+1n),action:w.action,validFrom:w.validFrom,validTo:w.validTo,recordedAt:s.recordAsOf??await clock(s),facts:w.facts,reason:w.reason,changeId:'candidate'}]};
+    return projected;}));
+ };
+ const candidateHistoryIn=async(s:Scope,actor:string,id:string,r:string)=>{for(const inputId of s.readCareCandidateInputIds('LOCATION_USE')){const h=(await candidateHistoriesIn(s,actor,inputId)).find(h=>h.id===id);if(h)return h;}return historyIn(s,actor,id,r);};
  const evaluateIn=async(s:Scope,actor:string,input:LocationUseWindow)=>{
-  const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');if(input.mode==='CURRENT_ADMISSION'&&input.recordAsOf)throw new Error('CURRENT_RECORD_TIME_REQUIRED');
-  const r=input.mode==='HISTORICAL'&&input.recordAsOf?localTime(input.recordAsOf):(await publicationTime(s)).recordAt,h=await historyIn(s,actor,input.id,r),d=useDeclaration(h),declared=useReserved(h).flatMap(p=>intersect(p,{from,to})),checks:Array<{from:string;to:string|null;status:'SATISFIED'|'NOT_SATISFIED';reason:string;acceptedBasis:unknown;basis:unknown;dependencyChecks:DependencyCheck[]}>=[],successful:Array<{from:string;to:string|null}>=[],aggregateGaps:Array<{from:string;to:string|null}>=[];
+  const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');if(input.mode==='CURRENT_ADMISSION'&&input.recordAsOf&&input.recordAsOf!==s.recordAsOf)throw new Error('CURRENT_RECORD_TIME_REQUIRED');
+  const r=input.mode==='HISTORICAL'&&input.recordAsOf?localTime(input.recordAsOf):(s.recordAsOf??(await publicationTime(s)).recordAt),h=await candidateHistoryIn(s,actor,input.id,r),d=useDeclaration(h),declared=useReserved(h).flatMap(p=>intersect(p,{from,to})),checks:Array<{from:string;to:string|null;status:'SATISFIED'|'NOT_SATISFIED';reason:string;acceptedBasis:unknown;basis:unknown;dependencyChecks:DependencyCheck[]}>=[],successful:Array<{from:string;to:string|null}>=[],aggregateGaps:Array<{from:string;to:string|null}>=[];
   if(d)for(const span of declared){
    const boundaryRead=async<T>(work:()=>Promise<T>,fallback:T)=>{try{return await recoverable(s,work);}catch(error){if(error instanceof Error&&['ACCESS_DENIED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE'].includes(error.message))throw error;return fallback;}};
    const points=await boundaryRead(()=>ports.boundaries(s,actor,h.applicability,span.from,span.to,r),[]),dict=await boundaryRead(()=>dictionary.readReferenceBoundariesInTransaction(s,actor,d.facts.usageType,{validFrom:span.from,validTo:span.to,recordAsOf:r}),[]),sources=await boundaryRead(()=>sourceWindows(s,actor,d.facts.source.sourceSystemId,span.from,span.to,r),[]);
@@ -132,8 +146,13 @@ export function openLocationUse(connection:string,provider:KeyProviderPort,ports
   const declarationGaps=subtract({from,to},declared),primaryGaps=subtract({from,to},d?.facts.isPrimary?declared:[]),currentGaps=[...subtract({from,to},successful),...aggregateGaps];for(const gap of declarationGaps)checks.push({...gap,status:'NOT_SATISFIED',reason:'LOCATION_USE_WINDOW_GAP',acceptedBasis:null,basis:null,dependencyChecks:[]});
   return {id:h.id,mode:input.mode,recordAsOf:r,declarationCovered:covered(declared,from,to),primaryCovered:covered(d?.facts.isPrimary?declared:[],from,to),currentAdmissionCovered:aggregateGaps.length===0&&covered(successful,from,to),declarationGaps,primaryGaps,currentGaps,checks,clinicalReadiness:'NOT_READY' as const,moving:'NOT_EVALUABLE' as const};
  };
- return {
+ type Root=typeof root;
+ const api=(root:Root)=>({
+  async diagnoseStagedWindowInTransaction(s:Scope,actor:string,input:StagedWindowRequest){checkStagedWindowRequest(input);if(!s.recordAsOf)throw new Error('READ_CONTEXT_REQUIRED');const v=await inspectInput(s,actor,input.inputId);if(v.r.revision!==input.revisionId||v.r.digest!==input.digest||v.contract.versionId!==input.contractVersionId)throw new Error('STALE_VALIDATION');return diagnoseStagedWindows(v.temporalFailures,v.issues,{from:localTime(input.validFrom),to:input.validTo===null?null:localTime(input.validTo)});},
   lifecyclePort:port,
+  async candidatePeriodsInTransaction(s:Scope,actor:string,inputId:string){
+   return (await candidateHistoriesIn(s,actor,inputId)).map(h=>({parts:useReserved(h).map(p=>({from:p.from,to:p.to}))}));
+  },
   lifecycleApplyAtInTransaction:(s:Scope,actor:string,command:Parameters<ApplyOwnerPort['apply']>[2],_resolved:Parameters<ApplyOwnerPort['apply']>[3],approval:Parameters<ApplyOwnerPort['apply']>[4],recordAt:string)=>applyAt(s,actor,command,approval,recordAt),
   async lifecycleReferenceInTransaction(s:Scope,actor:string,inputId:string){const r=await record(s,actor,inputId);const j=await inputJob(s,actor,inputId);return {inputId:r.id,revisionId:r.revision,digest:r.digest,contractVersionId:j.contract.versionId,makerIdentity:r.identity_code,campus:r.scope};},
   async stage(actor:string,input:LocationUseStage){useCheck(LocationUseDirectStageSchema,input);input=structuredClone(input);for(const e of input.entries)if(typeof e.row.version_no!=='number')throw new Error('CLOSED_INPUT_REQUIRED');return root(async s=>{const j=await job(s,actor,input.jobId);if(j.revisions.at(-1)?.input.kind!=='METADATA_ONLY')throw new Error('FILE_REVISION_REQUIRED');return stageIn(s,actor,input);});},
@@ -166,6 +185,7 @@ export function openLocationUse(connection:string,provider:KeyProviderPort,ports
    });}finally{privateBytes.fill(0);}
   },
   close:runtime.close,
- };
+ });
+ return {...api(root),async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG13',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,evaluateWindow:scoped.evaluateWindow,exact:scoped.exact,diff:scoped.diff};}};
 }
 export type LocationUseOwner=ReturnType<typeof openLocationUse>;

@@ -24,6 +24,7 @@ export type SubjectCodeCommand=Static<typeof SubjectCodeCommandSchema>;
 export const SubjectCodeReadSchema=Type.Object({id:SubjectId,versionId:Type.Optional(SubjectId),recordAsOf:Type.Optional(SubjectTime),history:Type.Optional(Type.Boolean())},closed);
 export const SubjectCodeItemSchema=Type.Object({id:SubjectId,versionId:SubjectId,head:SubjectHead,systemCode:Type.String(),status:Type.Enum(['DRAFT','REVIEW','APPROVED']),reviewDigest:SubjectDigest,recordedAt:SubjectTime,approvedAt:SubjectEnd,sourceVerification:Type.Union([Type.Object({id:SubjectId,actor:Type.String(),evidenceId:SubjectId,sourceReviewed:Type.Boolean(),recordedAt:SubjectTime},closed),Type.Null()]),...SubjectSnapshotFields},closed);
 export type SubjectCodeItem=Static<typeof SubjectCodeItemSchema>;
+export const SubjectCodeListSchema=Type.Object({after:Type.Optional(SubjectId),limit:Type.Optional(Type.Integer({minimum:1,maximum:100})),recordAsOf:Type.Optional(SubjectTime)},closed);
 export function subjectCheck(schema:unknown,value:unknown){if(!Check(schema as never,value))throw new Error('CLOSED_INPUT_REQUIRED');}
 
 export function openSubjectCodes(connection:string,provider:KeyProviderPort){
@@ -31,6 +32,7 @@ export function openSubjectCodes(connection:string,provider:KeyProviderPort){
  const root=<T>(work:(s:CatalogTransactionScope)=>Promise<T>)=>db.transaction().execute(async trx=>{await sql`select pg_advisory_xact_lock(901002)`.execute(trx);return work(CatalogTransactionScope.from(trx));});
  const read=(s:CatalogTransactionScope,actor:string,input:Static<typeof SubjectCodeReadSchema>)=>sql<{r:SubjectCodeItem[]}>`select governance_catalog.subject_code_read(${actor},${JSON.stringify(input)}::jsonb) r`.execute(s).then(r=>r.rows[0]!.r);
  return {
+  async list(actor:string,input:Static<typeof SubjectCodeListSchema>){subjectCheck(SubjectCodeListSchema,input);return root(async s=>(await sql<{r:{items:SubjectCodeItem[];nextAfterId:string|null}}>`select governance_catalog.subject_code_list(${actor},${input.after??null}::uuid,${input.limit??50},coalesce(${input.recordAsOf??null}::timestamp,timezone('Asia/Shanghai',clock_timestamp()))) r`.execute(s)).rows[0]!.r);},
   async command(actor:string,input:SubjectCodeCommand){subjectCheck(SubjectCodeCommandSchema,input);input=structuredClone(input);if(input.action==='CREATE'||input.action==='REVISE'){parseLocalDateTime(input.adoptedOn+'T00:00:00');parseLocalDateTime(input.validFrom);if(input.validTo!==null)parseLocalDateTime(input.validTo);}return root(async s=>{
    const source=input.action==='CREATE'||input.action==='REVISE'?input:(await read(s,actor,{id:input.target,versionId:input.versionId}))[0];if(!source)throw new Error('NOT_FOUND');
    const evidenceIds=[source.evidenceId,...(input.action==='VERIFY'?[input.evidenceId]:input.action==='APPROVE'&&'sourceVerification' in source&&source.sourceVerification?[source.sourceVerification.evidenceId]:[])],materials=[];
