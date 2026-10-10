@@ -13,7 +13,7 @@ import {unitAt,unitContentAt,unitPeriods,knownUnit,bindingAt,declaredBindingAt,b
 import type {ImpactReference} from '../department-master/index.js';
 import {lifecycleCareReadInput} from './lifecycle-care-inputs.js';
 import {careState,careWindowOpen} from './care-lifecycle-time.js';
-import {ownerSourceLocation} from '../governance-catalog/index.js';
+import {ownerSourceLocation,type OwnerWindowSourceRequest,type OwnerWindowSource} from '../governance-catalog/index.js';
 type Scope=CatalogTransactionScope;
 interface Envelope {keyId:string;nonce:string;tag:string;ciphertext:string}
 interface InputRecord {id:string;revision:string;job_id:string;job_revision:string;identity_code:string;withdrawn?:boolean;digest:string;campus_ids:string[];scope:'NORTH'|'SOUTH';envelope:Envelope;verification:null|{id:string;number:string;actor:string;identity_code:string;digest:string;envelope:Envelope}}
@@ -225,6 +225,6 @@ export function openBusinessUnit(connection:string,provider:KeyProviderPort,port
   },
   async close(){await db.destroy();},
  });
- return {...api(root),async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG07',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,coverage:scoped.coverage,evaluateWindow:scoped.evaluateWindow};}};
+ return {...api(root),async readValidationSourcesInTransaction(s:Scope,actor:string,input:OwnerWindowSourceRequest):Promise<OwnerWindowSource[]>{const h=await candidateHistoryIn(s,actor,input.id,input.recordAsOf),window={from:localTime(input.validFrom),to:input.validTo===null?null:localTime(input.validTo)};return unitPeriods(h).flatMap(p=>intersect(p,window).map(part=>({...part,versionId:p.version.id,version:p.version.number,...p.version.facts.source.recordLocatorEvidence})));},async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG07',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,coverage:scoped.coverage,evaluateWindow:scoped.evaluateWindow};}};
 }
 export type BusinessUnitOwner=ReturnType<typeof openBusinessUnit>;

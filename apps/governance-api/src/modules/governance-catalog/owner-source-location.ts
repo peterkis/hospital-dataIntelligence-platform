@@ -1,5 +1,7 @@
 import type {ImportJob} from './import-job.js';
 export interface OwnerSourceLocation {origin:'PAGE'|'FILE';sourceArtifactId:string|null;sourceRow:number|null;worksheet:string|null}
+export interface OwnerWindowSourceRequest {id:string;validFrom:string;validTo:string|null;recordAsOf:string}
+export interface OwnerWindowSource {from:string;to:string|null;versionId:string;version:string;inputId:string;row:number}
 /** The Owner parser already enforces one named worksheet for each P3 contract. */
 export function ownerSourceLocation(input:{revisionId:string;sourceRows?:number[];sourceArtifactId?:string},job:ImportJob,row:number|null,dataset:string,physical=false):OwnerSourceLocation{
  const revision=job.revisions.find(r=>r.id===input.revisionId);if(!revision)throw new Error('STALE_REVISION');

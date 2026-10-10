@@ -2,7 +2,7 @@ import {careCandidateInputIds} from './candidate-peers.js';
 import {readScopedSource,deferNativeSourceReadAuthority} from '../governance-catalog/index.js';
 import {trackStagedWindow,diagnoseStagedWindows,checkStagedWindowRequest,type StagedWindowFailure,type StagedWindowRequest} from '../governance-catalog/index.js';
 import {readScopedProtectedInput} from '../governance-catalog/index.js';
-import {ownerSourceLocation} from '../governance-catalog/index.js';
+import {ownerSourceLocation,type OwnerWindowSourceRequest,type OwnerWindowSource} from '../governance-catalog/index.js';
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
 import {lifecycleCareReadInput,lifecycleCareBinding} from './lifecycle-care-inputs.js';
 import {Kysely,PostgresDialect,sql} from 'kysely';
@@ -227,6 +227,6 @@ export function openNursingUnit(connection:string,provider:KeyProviderPort,ports
   },
   async close(){await db.destroy();},
  });
- return {...api(root),async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG09',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,coverage:scoped.coverage,evaluateWindow:scoped.evaluateWindow,exact:scoped.exact,diff:scoped.diff};}};
+ return {...api(root),async readValidationSourcesInTransaction(s:Scope,actor:string,input:OwnerWindowSourceRequest):Promise<OwnerWindowSource[]>{const h=await candidateHistoryIn(s,actor,input.id,input.recordAsOf),window={from:localTime(input.validFrom),to:input.validTo===null?null:localTime(input.validTo)};return nursingPeriods(h).flatMap(p=>intersect(p,window).map(part=>({...part,versionId:p.version.id,version:p.version.number,...p.version.facts.source.recordLocatorEvidence})));},async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG09',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,coverage:scoped.coverage,evaluateWindow:scoped.evaluateWindow,exact:scoped.exact,diff:scoped.diff};}};
 }
 export type NursingUnitOwner=ReturnType<typeof openNursingUnit>;

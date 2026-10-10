@@ -180,6 +180,7 @@ const postWorkspaceMigrations = [
   '0261_care_embedded_source_authority',
   '0262_care_basis_request_recovery',
   '0263_care_private_draft_list_filter',
+  '0264_subject_window_contributors',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

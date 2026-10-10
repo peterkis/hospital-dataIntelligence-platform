@@ -237,6 +237,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=262){for(const name of ['workspace_basis_metadata','workspace_basis_authorize'])allowedRoutines.add('governance_catalog.'+name);allowedRoutines.add('care_organization.workspace_basis_record');}
     if(ledger.length>=261)allowedRoutines.add('location_master.care_boundary_source_references');
     if(ledger.length>=260)for(const name of ['care_source_window_references','care_parameter_boundary_references','care_subject_boundary_references','care_read_reference_authority'])allowedRoutines.add('governance_catalog.'+name);
+    if(ledger.length>=264)allowedRoutines.add('governance_catalog.subject_code_window_contributors');
     if(routines.length!==allowedRoutines.size||routines.some(row=>!allowedRoutines.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const extraTypes=(await pool.query("select count(*) as count from pg_type t join pg_namespace n on n.oid=t.typnamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') and t.typrelid=0 and t.typelem=0")).rows[0].count;
     if(Number(extraTypes))throw new Error('UNKNOWN_SCHEMA_OBJECT');

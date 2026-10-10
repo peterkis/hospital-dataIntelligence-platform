@@ -23,8 +23,8 @@ import {registerLifecycleCareInputs} from './lifecycle-care-inputs.js';
 export interface CareValidationPorts extends LifecyclePorts {UNIT?:BusinessUnitOwner;NURSING?:NursingUnitOwner;WARD?:WardOwner;UNIT_WARD?:UnitWardOwner;WARD_NURSING?:WardNursingOwner;CAPABILITY?:CapabilityOwner;PERMISSION?:SubjectPermissionOwner;LOCATION?:ReturnType<typeof openLocation>;LOCATION_USE?:LocationUseOwner;lifecycle?:CareLocationLifecycleOwner;departmentLifecycle?:ReturnType<typeof openDepartmentLifecycle>}
 const unavailable=['PERSONNEL_ASSIGNMENT','BED_RESOURCE','BED_SNAPSHOT','PATIENT_BUSINESS','EXTERNAL_CONSUMERS'] as const;
 const datasets={UNIT:'ORG07',NURSING:'ORG09',WARD:'ORG08',UNIT_WARD:'ORG10',WARD_NURSING:'ORG11',CAPABILITY:'ORG16',PERMISSION:'ORG17',LOCATION:'ORG12',LOCATION_USE:'ORG13'} as const;
-interface NativeCheck {from:string;to:string|null;status:'SATISFIED'|'NOT_SATISFIED'|'REVIEW_REQUIRED';reason?:string;basis?:unknown;acceptedBasis?:unknown;versionId?:string|null;relationId?:string|null;capabilityId?:string|null;permissionId?:string|null;service?:string;partitionId?:string|null}
-interface NativeWindow {status?:'SATISFIED'|'NOT_SATISFIED'|'REVIEW_REQUIRED';coreCovered?:boolean;covered?:boolean;checks?:NativeCheck[];parts?:Array<{from:string;to:string|null}>}
+interface NativeCheck {from:string;to:string|null;status:'SATISFIED'|'NOT_SATISFIED'|'REVIEW_REQUIRED';reason?:string;basis?:unknown;acceptedBasis?:unknown;versionId?:string|null;version?:string|null;relationId?:string|null;capabilityId?:string|null;permissionId?:string|null;service?:string;partitionId?:string|null}
+interface NativeWindow {status?:'SATISFIED'|'NOT_SATISFIED'|'REVIEW_REQUIRED';coreCovered?:boolean;covered?:boolean;checks?:NativeCheck[];parts?:Array<{from:string;to:string|null;versionId?:string;version?:string}>}
 const unknownReason=(reason:string)=>['BLOCKED_DEPENDENCY','NOT_FOUND','STALE_VALIDATION','STALE_HEAD','LEGAL_REVIEW_REQUIRED','SCOPE_REVIEW_REQUIRED','SHARING_REVIEW_REQUIRED','HANDOVER_NOT_CONFIRMED'].includes(reason);
 const check=(input:unknown)=>{if(!Check(CareValidationSchema,input))throw new Error('CLOSED_INPUT_REQUIRED');};
 export function openCareValidation(connection:string,ports:CareValidationPorts){
@@ -35,34 +35,32 @@ export function openCareValidation(connection:string,ports:CareValidationPorts){
  const targetPiece=async(s:CatalogTransactionScope,actor:string,t:CareValidationTarget,input:CareValidation,r:string):Promise<CareValidationItem[]>=>{
   const value=item(t,input),port=ports[t.owner];if(!port)return [{...value,status:'UNKNOWN',reason:'BLOCKED_DEPENDENCY',basis:'null'}];
   const window={id:t.id,validFrom:value.from,validTo:value.to,recordAsOf:r};
-  let evaluated:NativeWindow,source:{inputId:string;row:number}|undefined;
+  let evaluated:NativeWindow;
   if(t.owner==='UNIT'||t.owner==='NURSING'||t.owner==='WARD'){
    const owner=(t.owner==='UNIT'?ports.UNIT!:t.owner==='NURSING'?ports.NURSING!:ports.WARD!).inTransaction(s);
    const history=await owner.history(actor,{id:t.id,recordAsOf:r});
    const current=await owner.read(actor,{id:t.id,businessAt:value.from,recordAsOf:r});
-   source=(current.version??history.versions.filter(v=>v.validFrom<=value.from).at(-1))?.facts.source.recordLocatorEvidence;
    const proposed=await (t.owner==='UNIT'?ports.UNIT!:t.owner==='NURSING'?ports.NURSING!:ports.WARD!).readCandidateTargetWindowInTransaction(s,actor,{...window,campusId:t.campusId,mode:input.mode});
    if(proposed?.campusConflict||!proposed&&current.binding&&current.binding.binding.campus.id!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];
    evaluated=proposed&&!proposed.campusConflict?proposed.evaluated:input.mode==='HISTORICAL'?await owner.coverage(actor,window):await owner.evaluateWindow(actor,window);
   }else if(t.owner==='LOCATION'){
    const owner=ports.LOCATION!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});if(history.campusId!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];
-   source=(await owner.read(actor,{id:t.id,businessAt:value.from,recordAsOf:r})).version?.facts.source.recordLocatorEvidence;
    evaluated=await owner.coverage(actor,window);
-   if(input.mode==='CURRENT_ADMISSION'&&evaluated.covered){const basis=await ports.LOCATION!.evaluateUseWindowInTransaction(s,actor,{...window,campusId:t.campusId});evaluated={...evaluated,checks:[{from:value.from,to:value.to,status:'SATISFIED',basis}]};}
+   if(input.mode==='CURRENT_ADMISSION'&&evaluated.covered){const basis=await ports.LOCATION!.evaluateUseWindowInTransaction(s,actor,{...window,campusId:t.campusId});evaluated={...evaluated,checks:(evaluated.parts??[]).map(part=>({...part,status:'SATISFIED' as const,basis}))};}
   }else if(t.owner==='LOCATION_USE'){
-   const owner=ports.LOCATION_USE!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});source=history.versions.at(-1)?.facts.source.recordLocatorEvidence;
+   const owner=ports.LOCATION_USE!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});
    if(history.applicability.campus.id!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];evaluated=await owner.evaluateWindow(actor,{...window,mode:input.mode});
   }else if(t.owner==='UNIT_WARD'){
-   const owner=ports.UNIT_WARD!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});source=history.versions.at(-1)?.facts.source.recordLocatorEvidence;
+   const owner=ports.UNIT_WARD!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});
    if(history.applicability.campus.id!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];evaluated=await owner.evaluateWindow(actor,{applicability:history.applicability,validFrom:value.from,validTo:value.to,recordAsOf:r,mode:input.mode});
   }else if(t.owner==='WARD_NURSING'){
-   const owner=ports.WARD_NURSING!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r}),declaration=history.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE').at(-1);source=declaration?.facts.source.recordLocatorEvidence;
+   const owner=ports.WARD_NURSING!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r}),declaration=history.versions.filter(v=>v.action==='CREATE'||v.action==='REVISE').at(-1);
    if(!declaration)return [{...value,status:'UNKNOWN',reason:'NOT_FOUND',basis:'null'}];if(history.applicability.campus.id!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];evaluated=await owner.evaluateWindow(actor,{applicability:history.applicability,coverage:declaration.facts.coverageScope,validFrom:value.from,validTo:value.to,recordAsOf:r,mode:input.mode});
   }else if(t.owner==='CAPABILITY'){
-   const owner=ports.CAPABILITY!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});source=history.versions.at(-1)?.facts.source.recordLocatorEvidence;
+   const owner=ports.CAPABILITY!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r});
    if(history.applicability.campus.id!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];evaluated=await owner.evaluateWindow(actor,{applicability:history.applicability,validFrom:value.from,validTo:value.to,recordAsOf:r,mode:input.mode});
   }else{
-   const owner=ports.PERMISSION!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r}),declaration=history.versions.filter(v=>v.action!=='RETIRE').at(-1);source=declaration?.facts.source.recordLocatorEvidence;
+   const owner=ports.PERMISSION!.inTransaction(s),history=await owner.history(actor,{id:t.id,recordAsOf:r}),declaration=history.versions.filter(v=>v.action!=='RETIRE').at(-1);
    if(!declaration)return [{...value,status:'UNKNOWN',reason:'NOT_FOUND',basis:'null'}];if(history.scope.campus.id!==t.campusId)return [{...value,status:'NOT_SATISFIED',reason:'CAMPUS_REFERENCE_CONFLICT',basis:'null'}];evaluated=await ports.PERMISSION!.evaluateExactWindowInTransaction(s,actor,{id:t.id,validFrom:value.from,validTo:value.to,recordAsOf:r,mode:input.mode});
   }
   // Native scope evaluators intentionally accept any legal successor in that
@@ -72,15 +70,27 @@ export function openCareValidation(connection:string,ports:CareValidationPorts){
   if(exactKey){
    const native=evaluated.checks??[],own=native.filter(check=>check[exactKey]===t.id||check[exactKey]===null&&check.status!=='SATISFIED'),group=t.owner==='CAPABILITY'||t.owner==='PERMISSION'?'service':t.owner==='WARD_NURSING'?'partitionId':null;
    const namedGroups=group?[...new Set(native.map(check=>check[group]).filter(part=>part!==null&&part!==undefined))]:[],groups=namedGroups.length?namedGroups:[null];
-   const gaps=groups.flatMap(part=>subtract({from:value.from,to:value.to},own.filter(check=>!group||check[group]===part||check[group]===null)).map(gap=>({...gap,status:'NOT_SATISFIED' as const,reason:t.owner+'_EXACT_REFERENCE_WINDOW_GAP'})));
+   const gaps=groups.flatMap(part=>subtract({from:value.from,to:value.to},own.filter(check=>!group||check[group]===part||check[group]===null)).map(gap=>({...gap,...(group?{[group]:part}:{}),versionId:null,status:'NOT_SATISFIED' as const,reason:t.owner+'_EXACT_REFERENCE_WINDOW_GAP'})));
    evaluated={...evaluated,checks:[...own,...gaps]};
   }
-  const located={...value,inputId:source?.inputId??null,row:source?.row??null,source:source?await port.sourceLocationInTransaction(s,actor,{...source,physical:true}):null};
   const checks:NativeCheck[]=evaluated.checks??evaluated.parts?.map(p=>({...p,status:'SATISFIED' as const}))??[];
-  const items:CareValidationItem[]=checks.map(c=>({...located,from:c.from,to:c.to,status:c.status==='REVIEW_REQUIRED'||unknownReason(c.reason??'')?'UNKNOWN':c.status,reason:c.reason??'SATISFIED',basis:canonicalPlan({accepted:'acceptedBasis' in c?c.acceptedBasis:null,current:'basis' in c?c.basis:null})}));
-  if(evaluated.coreCovered===false||evaluated.covered===false)for(const gap of subtract({from:value.from,to:value.to},checks))items.push({...located,...gap,status:'NOT_SATISFIED',reason:t.owner+'_WINDOW_NOT_COVERED',basis:'null'});
-  if(evaluated.status==='NOT_SATISFIED'&&!items.some(i=>i.status!=='SATISFIED'))items.push({...located,status:'NOT_SATISFIED',reason:t.owner+'_WINDOW_NOT_COVERED',basis:'null'});
-  if(!items.length)items.push({...located,status:'UNKNOWN',reason:'BLOCKED_DEPENDENCY',basis:'null'});
+  // Ask each native Owner for its contributing periods in this same sealed
+  // candidate graph and R. A gap has no input; never fall back to a history head.
+  const sources=checks.length?await port.readValidationSourcesInTransaction(s,actor,window):[];
+  const items:CareValidationItem[]=[],locations=new Map<string,CareValidationItem['source']>();
+  for(const c of checks){
+   const noVersion=c.versionId===null||c.version===null||exactKey!==null&&c[exactKey]===null;
+   const contributions=noVersion?[]:sources.filter(p=>(c.versionId===undefined||p.versionId===c.versionId)&&(c.version===undefined||p.version===c.version)).flatMap(p=>intersect(c,p).map(span=>({...p,...span})));
+   const result={...value,status:c.status==='REVIEW_REQUIRED'||unknownReason(c.reason??'')?'UNKNOWN' as const:c.status,reason:c.reason??'SATISFIED',basis:canonicalPlan({accepted:'acceptedBasis' in c?c.acceptedBasis:null,current:'basis' in c?c.basis:null})};
+   for(const p of contributions){const key=p.inputId+'/'+p.row;if(!locations.has(key))locations.set(key,await port.sourceLocationInTransaction(s,actor,{inputId:p.inputId,row:p.row,physical:true}));items.push({...result,from:p.from,to:p.to,inputId:p.inputId,row:p.row,source:locations.get(key)!});}
+   for(const gap of subtract({from:c.from,to:c.to},contributions)){
+    const missing=!noVersion&&(c.versionId!==undefined||c.version!==undefined||c.status==='SATISFIED'&&evaluated.coreCovered!==false&&evaluated.covered!==false);
+    items.push({...result,...gap,...(missing?{status:'UNKNOWN' as const,reason:'BLOCKED_DEPENDENCY'}:c.status==='SATISFIED'?{status:'NOT_SATISFIED' as const,reason:t.owner+'_WINDOW_NOT_COVERED'}:{})});
+   }
+  }
+  if(evaluated.coreCovered===false||evaluated.covered===false)for(const gap of subtract({from:value.from,to:value.to},checks))items.push({...value,...gap,status:'NOT_SATISFIED',reason:t.owner+'_WINDOW_NOT_COVERED',basis:'null'});
+  if(evaluated.status==='NOT_SATISFIED'&&!items.some(i=>i.status!=='SATISFIED'))items.push({...value,status:'NOT_SATISFIED',reason:t.owner+'_WINDOW_NOT_COVERED',basis:'null'});
+  if(!items.length)items.push({...value,status:'UNKNOWN',reason:'BLOCKED_DEPENDENCY',basis:'null'});
   return items;
  };
  const semanticError=(error:unknown)=>{const code=error instanceof Error?error.message:'';if(!/^[A-Z][A-Z0-9_]+$/.test(code)||['ACCESS_DENIED','KEY_UNAVAILABLE','PAYLOAD_UNAVAILABLE'].includes(code))throw error;return code;};

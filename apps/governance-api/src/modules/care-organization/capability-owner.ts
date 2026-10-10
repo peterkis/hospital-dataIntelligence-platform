@@ -2,7 +2,7 @@ import {readScopedSource} from '../governance-catalog/index.js';
 import {careCandidatePeerWrites,careCandidateInputIds} from './candidate-peers.js';
 import {readScopedProtectedInput} from '../governance-catalog/index.js';
 import {trackStagedWindow,diagnoseStagedWindows,checkStagedWindowRequest,type StagedWindowFailure,type StagedWindowRequest} from '../governance-catalog/index.js';
-import {ownerSourceLocation} from '../governance-catalog/index.js';
+import {ownerSourceLocation,type OwnerWindowSourceRequest,type OwnerWindowSource} from '../governance-catalog/index.js';
 import {createCipheriv,createDecipheriv,createHmac,randomBytes,randomUUID} from 'node:crypto';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import {vnextPool} from '../../platform/database/vnext-pool.js';
@@ -142,6 +142,7 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
     const projected:CapabilityHistory={...h,versions:[...h.versions,{id:'candidate:'+inputId,number:String(BigInt(h.versions.at(-1)?.number??'0')+1n),action:w.action,validFrom:w.validFrom,validTo:w.validTo,recordedAt:s.recordAsOf??await clock(s),facts:w.facts,reason:w.reason,changeId:'candidate'}]};
     return projected;}));
  };
+ const candidateHistoryIn=async(s:Scope,actor:string,id:string,r:string)=>{for(const inputId of careCandidateInputIds(s,'CAPABILITY'))for(const candidate of await candidateHistoriesIn(s,actor,inputId)){const h=candidate;if(h.id===id)return h;}return historyIn(s,actor,id,r);};
  const evaluateIn=async(s:Scope,actor:string,input:CapabilityWindow)=>{
   const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');if(input.mode==='CURRENT_ADMISSION'&&input.recordAsOf&&input.recordAsOf!==s.recordAsOf)throw new Error('CURRENT_RECORD_TIME_REQUIRED');
   const r=input.mode==='HISTORICAL'&&input.recordAsOf?localTime(input.recordAsOf):(s.recordAsOf??(await publicationTime(s)).recordAt),applicability=structuredClone(input.applicability);applicability.services.sort();const access=await ports.referenceAccess(s,actor,applicability);let all=(await scopedHistories(s,actor,applicability,r)).map(h=>knownCapability(h,r)).filter(h=>h.applicability.unit.id===applicability.unit.id&&h.applicability.campus.id===applicability.campus.id&&h.applicability.subject.id===applicability.subject.id&&h.applicability.capabilityType===applicability.capabilityType&&h.applicability.careSetting===applicability.careSetting);
@@ -195,6 +196,6 @@ export function openUnitCapabilities(connection:string,provider:KeyProviderPort,
   },
   async close(){await db.destroy();},
  });
- return {...api(root),async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG16',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,evaluateWindow:scoped.evaluateWindow,exact:scoped.exact,diff:scoped.diff};}};
+ return {...api(root),async readValidationSourcesInTransaction(s:Scope,actor:string,input:OwnerWindowSourceRequest):Promise<OwnerWindowSource[]>{const h=await candidateHistoryIn(s,actor,input.id,input.recordAsOf),window={from:localTime(input.validFrom),to:input.validTo===null?null:localTime(input.validTo)};return capabilityPieces(h,window).flatMap(p=>intersect(p,window).map(part=>({...part,versionId:p.version.id,version:p.version.number,...p.version.facts.source.recordLocatorEvidence})));},async sourceLocationInTransaction(s:Scope,actor:string,input:{inputId:string;row:number|null;physical?:boolean}){const value=await api(work=>work(s)).readInput(actor,{inputId:input.inputId});return ownerSourceLocation(value,await inputJob(s,actor,input.inputId),input.row,'ORG16',input.physical);},inTransaction(s:Scope){const scoped=api(work=>work(s));return {stage:(...args:Parameters<typeof scoped.stage>)=>{if(s.recordAsOf)throw new Error('READ_CONTEXT_WRITE_FORBIDDEN');return scoped.stage(...args);},readInput:scoped.readInput,preview:scoped.preview,history:scoped.history,read:scoped.read,list:scoped.list,evaluateWindow:scoped.evaluateWindow,exact:scoped.exact,diff:scoped.diff};}};
 }
 export type CapabilityOwner=ReturnType<typeof openUnitCapabilities>;

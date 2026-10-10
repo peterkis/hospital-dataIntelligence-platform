@@ -18,7 +18,7 @@ export type {ApplyOwnerPort,ObservedOwnerUnit,OwnerFact} from './apply-coordinat
 export {CatalogTransactionScope,type CareCandidateOwner} from './transaction-scope.js';
 export {canonicalPlan,planBinding} from './plan-binding.js';
 export {authenticateRegistrationEvidence,sealProtectedPayload} from './protected-artifact.js';
-export {ownerSourceLocation,type OwnerSourceLocation} from './owner-source-location.js';
+export {ownerSourceLocation,type OwnerSourceLocation,type OwnerWindowSourceRequest,type OwnerWindowSource} from './owner-source-location.js';
 export type {PlanOwnerUnitInput,ApplyUnitInput,UnitOutcome} from './apply-coordinator.js';
 import {dryRun} from './dry-run.js';
 export {BuildDryRunSchema,ApprovalCandidateSchema} from './dry-run.js';
