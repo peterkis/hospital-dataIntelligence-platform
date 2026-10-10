@@ -168,6 +168,14 @@ export async function recordOwnerFileValidation(scope:CatalogTransactionScope,pr
   const saved=await store.storeProtectedArtifact(actor,{...dimensions,requestId:input.parseRequestId,jobId:input.jobId,revisionId:input.revisionId,kind:'RAW_CELL',retentionSeconds:3600},parsedBytes);parsedId=saved.artifactId;
   await sql`select governance_catalog.register_parse(${actor},${parsedId}::uuid,${input.sourceArtifactId}::uuid,${parseSignature(provider,parsedId,input.jobId,input.revisionId,input.contractVersionId,parsedBytes)},${input.structuralStatus})`.execute(scope);
  }finally{parsedBytes.fill(0);}
+ // A rejected parse has no semantic validation eligibility. Preserve its
+ // authenticated original parser evidence and problem report without asking
+ // accept_validation to treat malformed source rows as a parsed revision.
+ if(input.structuralStatus==='REJECTED'){
+  if(input.evaluation.decision!=='FAIL'||input.evaluation.layers.some(layer=>layer.layer===1&&layer.status!=='FAIL'))throw new Error('VALIDATION_PROVENANCE_REQUIRED');
+  const payload=Buffer.from(JSON.stringify(input.evaluation));
+  try{if(payload.length>1048576)throw new Error('VALIDATION_RESULT_LIMIT');const report=await store.storeProtectedArtifact(actor,{...dimensions,requestId:input.outputRequestId,jobId:input.jobId,revisionId:input.revisionId,kind:'ERROR_REPORT',retentionSeconds:3600},payload);return {status:'STRUCTURAL_REJECTED' as const,semanticValidation:'NOT_RUN' as const,sourceArtifactId:input.sourceArtifactId,parseArtifactId:parsedId,resultArtifactId:report.artifactId,evaluation:input.evaluation};}finally{payload.fill(0);}
+ }
  const request={...dimensions,requestId:input.requestId,outputRequestId:input.outputRequestId,retentionSeconds:3600,jobId:input.jobId,revisionId:input.revisionId,artifactId:parsedId};
  const prior=(await sql<{r:SignedRun|null}>`select governance_catalog.validation_prior(${actor},${JSON.stringify(request)}::jsonb) r`.execute(scope)).rows[0]!.r;
  if(prior){const evaluation=await createValidationEvidenceReader(provider).readEvaluation(scope,actor,{...dimensions,runId:prior.runId},prior);const {signature:_,...run}=prior;return {run,evaluation};}

@@ -2,6 +2,7 @@ import type {CatalogTransactionScope,ApplyOwnerPort} from '../governance-catalog
 import {covered,localTime} from '../organization-master/index.js';
 import type {LifecycleReference} from './lifecycle-contracts.js';
 import type {UnitBindingInput} from './contracts.js';
+import {careCandidateInputIds} from './candidate-peers.js';
 
 export interface LifecycleCareInputBasis {
  kind:'LIFECYCLE_CARE_INPUT';owner:'UNIT'|'NURSING'|'WARD';inputId:string;revisionId:string;digest:string;contractVersionId:string;
@@ -20,6 +21,14 @@ export function registerLifecycleCareInputs(s:CatalogTransactionScope,owner:Life
  }
 }
 export function lifecycleCareBinding(s:CatalogTransactionScope,owner:LifecycleCareInputBasis['owner'],id:string){return bindings.get(s)?.get(owner+'/'+id)??null;}
+export function lifecycleCareProposal(s:CatalogTransactionScope,owner:LifecycleCareInputBasis['owner'],id:string){return inputs.get(s)?.get(owner+'/'+id)??null;}
+/** Aggregate cells strictly before a proposal retain the original published basis.
+ * P3-11 still uses its original whole-window capability below. */
+export function lifecycleCareReadInput(s:CatalogTransactionScope,owner:LifecycleCareInputBasis['owner'],input:{id:string;campusId:string;validFrom:string;validTo:string|null}){
+ const value=lifecycleCareProposal(s,owner,input.id);
+ if(value&&careCandidateInputIds(s,owner).includes(value.inputId)&&input.validTo!==null&&localTime(input.validTo)<=localTime(value.producerValidFrom))return null;
+ return lifecycleCareInput(s,owner,input);
+}
 export function lifecycleUnitBinding(s:CatalogTransactionScope,id:string){return lifecycleCareBinding(s,'UNIT',id) as UnitBindingInput|null;}
 export function lifecycleCareInputReferences(value:unknown):LifecycleCareInputBasis[]{
  if(!value||typeof value!=='object')return [];

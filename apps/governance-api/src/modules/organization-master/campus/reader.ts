@@ -37,10 +37,11 @@ export function createCampusReader(root:Root,snapshot:(scope:Scope,actor:string,
    if(!e)throw new Error('NOT_FOUND');return {...publicEvent(e),facts:e.facts!};
   };
   return {
+   async readLocationCampusBoundaries(actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf:string}){check(Id,input.id);const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo),r=localTime(input.recordAsOf);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');return run(actor,async scope=>(await sql<{r:string[]}>`select organization_master.use_location_boundaries(${actor},${input.id}::uuid,${from}::timestamp,${to}::timestamp,${r}::timestamp) r`.execute(scope)).rows[0]!.r);},
    async readLocationCampusCoverage(actor:string,input:{id:string;validFrom:string;validTo:string|null}){
     check(Id,input.id);const from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);
     if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');
-    return run(actor,async scope=>(await sql<{r:LocationCampusCoverage}>`select organization_master.location_coverage(${actor},${input.id}::uuid,${from}::timestamp,${to}::timestamp) r`.execute(scope)).rows[0]!.r);
+    return run(actor,async scope=>(await (scope.recordAsOf?sql<{r:LocationCampusCoverage}>`select organization_master.location_coverage_at(${actor},${input.id}::uuid,${from}::timestamp,${to}::timestamp,${scope.recordAsOf}::timestamp) r`:sql<{r:LocationCampusCoverage}>`select organization_master.location_coverage(${actor},${input.id}::uuid,${from}::timestamp,${to}::timestamp) r`).execute(scope)).rows[0]!.r);
    },
    async resolveCampusReference(actor:string,input:CampusResolveInput){
     check(CampusResolveSchema,input);input=structuredClone(input);unique(input.references);

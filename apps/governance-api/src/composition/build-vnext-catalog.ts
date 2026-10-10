@@ -1,3 +1,5 @@
+import {registerCareWorkspaceRoutes,type CareWorkspaceHttpContext} from '../platform/fastify/vnext-care-workspace-routes.js';
+import {registerCareValidationRoutes,type CareValidationHttpContext} from '../platform/fastify/vnext-care-validation-routes.js';
 import {registerCareLocationLifecycleRoutes,type CareLocationLifecycleHttpContext} from '../platform/fastify/vnext-care-location-lifecycle-routes.js';
 import {registerWardNursingRoutes,type WardNursingHttpContext} from '../platform/fastify/vnext-ward-nursing-routes.js';
 import {registerUnitWardRoutes,type UnitWardHttpContext} from '../platform/fastify/vnext-unit-ward-routes.js';
@@ -62,7 +64,7 @@ async function discardRejectedUpload(request:IncomingMessage):Promise<void> {
   });
 }
 
-export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext,identifiers?:OrganizationIdentifierHttpContext,evolution?:OrganizationEvolutionHttpContext,lifecycle?:DepartmentLifecycleHttpContext,departmentWorkspace?:DepartmentWorkspaceHttpContext,location?:LocationHttpContext,businessUnit?:BusinessUnitHttpContext,nursingUnit?:NursingUnitHttpContext,ward?:WardHttpContext,parameterValues?:ParameterValueHttpContext,unitCapability?:CapabilityHttpContext,subjectCodes?:SubjectCodeHttpContext,subjectPermissions?:SubjectPermissionHttpContext,unitWard?:UnitWardHttpContext,wardNursing?:WardNursingHttpContext,locationUse?:LocationUseHttpContext,careLocationLifecycle?:CareLocationLifecycleHttpContext) {
+export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL_PLANE'|'FINITE_E2E'='CONTROL_PLANE',organization?:OrganizationHttpContext,campus?:CampusHttpContext,operating?:OperatingHttpContext,organizationImport?:OrganizationImportHttpContext,workspace?:OrganizationWorkspaceHttpContext,department?:DepartmentHttpContext,hierarchy?:HierarchyHttpContext,mapping?:OrganizationMappingHttpContext,identifiers?:OrganizationIdentifierHttpContext,evolution?:OrganizationEvolutionHttpContext,lifecycle?:DepartmentLifecycleHttpContext,departmentWorkspace?:DepartmentWorkspaceHttpContext,location?:LocationHttpContext,businessUnit?:BusinessUnitHttpContext,nursingUnit?:NursingUnitHttpContext,ward?:WardHttpContext,parameterValues?:ParameterValueHttpContext,unitCapability?:CapabilityHttpContext,subjectCodes?:SubjectCodeHttpContext,subjectPermissions?:SubjectPermissionHttpContext,unitWard?:UnitWardHttpContext,wardNursing?:WardNursingHttpContext,locationUse?:LocationUseHttpContext,careLocationLifecycle?:CareLocationLifecycleHttpContext,careValidation?:CareValidationHttpContext,careWorkspace?:CareWorkspaceHttpContext) {
   const app=Fastify({logger:false,genReqId:()=>randomUUID(),requestIdHeader:false,bodyLimit:300000,ajv:{customOptions:{removeAdditional:false}}});
   const started=new WeakMap<object,number>();
   app.addHook('onRequest',async(request,reply)=>{if(request.url.startsWith('/api/vnext/'))reply.header('Cache-Control','no-store');if(request.method==='GET')started.set(request,performance.now());});
@@ -134,5 +136,7 @@ export async function buildCatalogServer(catalog?:Catalog,workbenchMode:'CONTROL
   registerWardNursingRoutes(app,wardNursing);
   registerLocationUseRoutes(app,locationUse);
   registerCareLocationLifecycleRoutes(app,careLocationLifecycle);
+  registerCareValidationRoutes(app,careValidation);
+  registerCareWorkspaceRoutes(app,careWorkspace);
   return app;
 }

@@ -7,15 +7,15 @@ import { actor } from './vnext-catalog-routes.js';
 const ErrorSchema=Type.Object({code:Type.String(),message:Type.String(),field:Type.Optional(Type.String())});
 const errors={400:ErrorSchema,403:ErrorSchema,404:ErrorSchema,409:ErrorSchema,500:ErrorSchema};
 const ReadQuery={scope:ContractScopeSchema,asOf:Type.Optional(ContractTimeSchema),page:Type.Optional(Type.Integer({minimum:1}))};
-const CurrentQuery=Type.Object({...ReadQuery,target:Type.Optional(Type.String({format:'uuid'}))},{additionalProperties:false});
+const CurrentQuery=Type.Object({...ReadQuery,target:Type.Optional(Type.String({format:'uuid'})),dataset:Type.Optional(Type.Enum(['ORG07','ORG08','ORG09','ORG10','ORG11','ORG12','ORG13','ORG16','ORG17'])),profile:Type.Optional(Type.Enum(['CORE','FULL']))},{additionalProperties:false});
 const HistoryQuery=Type.Object({...ReadQuery,target:Type.String({format:'uuid'})},{additionalProperties:false});
 const EffectiveQuery=Type.Object({...ReadQuery,target:Type.Optional(Type.String({format:'uuid'})),businessAt:ContractTimeSchema},{additionalProperties:false});
 const ReadResponse={200:Type.Object({items:Type.Array(ContractItemSchema),total:Type.Integer(),page:Type.Integer()}),...errors};
 export async function registerContractRoutes(app:FastifyInstance,catalog?:Catalog) {
   const owner=()=>{if(!catalog)throw new Error('CATALOG_RUNTIME_REQUIRED');return catalog;};
   app.get<{Querystring:Static<typeof CurrentQuery>}>('/api/vnext/contracts/current',{schema:{operationId:'listImportContracts',querystring:CurrentQuery,response:ReadResponse}},async request=>{
-    const {page=1,...query}=request.query;
-    const items=await owner().contractRead(actor(request.headers),{...query,mode:'CURRENT'});
+    const {page=1,dataset,profile,...query}=request.query;
+    const items=(await owner().contractRead(actor(request.headers),{...query,mode:'CURRENT'})).filter(item=>(!dataset||item.dataset===dataset)&&(!profile||item.profile===profile));
     return {items:items.slice((page-1)*10,page*10),total:items.length,page};
   });
   app.get<{Querystring:Static<typeof HistoryQuery>}>('/api/vnext/contracts/history',{schema:{operationId:'getImportContractHistory',querystring:HistoryQuery,response:ReadResponse}},async request=>{

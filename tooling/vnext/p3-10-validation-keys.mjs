@@ -1,0 +1,7 @@
+import {readFileSync,writeFileSync,existsSync,mkdirSync,unlinkSync} from 'node:fs';
+import {createSecretKey,randomBytes} from 'node:crypto';
+// One receipt-bound provider survives the prefix fixture process and Vitest.
+// Never reuse the retained workspace's secret store for a temporary database.
+function path(receipt){if(receipt.taskId!=='P3-10'||receipt.purpose!=='TEMPORARY_VALIDATION'||!/^hdi_mc_vnext_[a-f0-9]{16}$/.test(receipt.name))throw new Error('TEMPORARY_VALIDATION_REQUIRED');return '.runtime/vnext/p3-10/'+receipt.name+'.secret.json';}
+export function validationKeys(receipt){const file=path(receipt);if(!existsSync(file)){mkdirSync('.runtime/vnext/p3-10',{recursive:true});writeFileSync(file,JSON.stringify({oid:receipt.oid,requestId:receipt.requestId,payload:randomBytes(32).toString('hex'),lookup:randomBytes(32).toString('hex')}),{flag:'wx',mode:0o600});}const value=JSON.parse(readFileSync(file,'utf8'));if(value.oid!==receipt.oid||value.requestId!==receipt.requestId||!['payload','lookup'].every(k=>/^[a-f0-9]{64}$/.test(value[k])))throw new Error('KEY_RECEIPT_MISMATCH');const payload=createSecretKey(Buffer.from(value.payload,'hex')),lookup=createSecretKey(Buffer.from(value.lookup,'hex'));return {current:()=>({id:'LOCAL_1',key:payload}),payload:id=>{if(id!=='LOCAL_1')throw new Error('KEY_UNAVAILABLE');return payload;},lookup:()=>lookup};}
+export function removeValidationKeys(receipt){const file=path(receipt);if(existsSync(file))unlinkSync(file);}

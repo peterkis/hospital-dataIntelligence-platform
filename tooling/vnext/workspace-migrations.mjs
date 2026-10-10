@@ -169,6 +169,18 @@ const postWorkspaceMigrations = [
   '0250_repartition_exact_cutover_successor_limit',
   '0251_exact_nursing_handover_receipt_successors',
   '0252_nursing_suspend_at_open_cutover',
+  '0253_care_workspace_private_drafts',
+  '0254_care_workspace_exact_recovery',
+  '0255_care_workspace_file_request_recovery',
+  '0256_subject_relation_bounded_list',
+  '0257_care_basis_bounded_lists',
+  '0258_parameter_value_window_boundaries',
+  '0259_care_record_time_read_ports',
+  '0260_care_exact_read_authority',
+  '0261_care_embedded_source_authority',
+  '0262_care_basis_request_recovery',
+  '0263_care_private_draft_list_filter',
+  '0264_subject_window_contributors',
 ];
 export function workspaceReleaseFiles(files=migrationFiles()) {
  checkPrefix(files,[]);

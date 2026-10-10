@@ -1,3 +1,4 @@
+export {readScopedSource,deferExactReadAuthority,deferNativeSourceReadAuthority} from './source-read-authority.js';
 import { Kysely, PostgresDialect, sql } from 'kysely';
 export * from './parameter-values.js';
 import {vnextPool} from '../../platform/database/vnext-pool.js';
@@ -14,9 +15,10 @@ export {PlanOwnerUnitSchema,ApproveApplyUnitSchema,ApplyUnitSchema} from './appl
 // In-process Owner composition seam; these capabilities are never serialized to clients.
 export {applyCoordinator} from './apply-coordinator.js';
 export type {ApplyOwnerPort,ObservedOwnerUnit,OwnerFact} from './apply-coordinator.js';
-export {CatalogTransactionScope} from './transaction-scope.js';
+export {CatalogTransactionScope,type CareCandidateOwner} from './transaction-scope.js';
 export {canonicalPlan,planBinding} from './plan-binding.js';
 export {authenticateRegistrationEvidence,sealProtectedPayload} from './protected-artifact.js';
+export {ownerSourceLocation,type OwnerSourceLocation,type OwnerWindowSourceRequest,type OwnerWindowSource} from './owner-source-location.js';
 export type {PlanOwnerUnitInput,ApplyUnitInput,UnitOutcome} from './apply-coordinator.js';
 import {dryRun} from './dry-run.js';
 export {BuildDryRunSchema,ApprovalCandidateSchema} from './dry-run.js';
@@ -163,3 +165,5 @@ export {recordOwnerFileValidation} from './validation.js';
 export {fileIntake,boundedParse} from './file-intake.js';
 export {recordDepartmentImpact} from './department-impact-store.js';
 export * from './subject-codes.js';
+export {readScopedProtectedInput} from './scoped-protected-input.js';
+export {trackStagedWindow,diagnoseStagedWindows,checkStagedWindowRequest,type StagedWindowRequest,type StagedWindowFailure,type StagedWindowDiagnostic} from './staged-window-diagnostics.js';

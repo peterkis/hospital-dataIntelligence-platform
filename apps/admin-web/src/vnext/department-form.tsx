@@ -349,6 +349,7 @@ export const human = (value: unknown): string =>
       ? "无"
       : String(value);
 export function initialForm(schema: FormSchema): unknown {
+  if(schema.type==='boolean')return false;
   if (schema.const !== undefined) return schema.const;
   if (schema.enum) return schema.enum[0];
   if (schema.anyOf) {
@@ -367,13 +368,13 @@ export function initialForm(schema: FormSchema): unknown {
     return Array.from({ length: schema.minItems ?? 0 }, () =>
       initialForm(schema.items!),
     ).filter((value) => value !== undefined);
-  if (schema.type === "boolean") return false;
   if (schema.type === "integer" || schema.type === "number")
     return schema.minimum ?? 0;
   return schema.minLength || schema.pattern ? undefined : "";
 }
 /** Restore fixed vocabulary omitted by an incomplete draft; never infer a union discriminator. */
 export function fixedForm(schema: FormSchema, value: unknown): unknown {
+  if(schema.type==='boolean')return value;
   if (schema.const !== undefined) return schema.const;
   if (schema.enum?.length === 1) return schema.enum[0];
   if (schema.anyOf) {
@@ -423,6 +424,10 @@ export function DepartmentForm({
   label = "维护内容",
   field = "",
   root = value,
+  preserveTimePrecision=false,
+  labels={},
+  resolveReferenceChoices,
+  bindReferenceSelection,
 }: {
   schema: FormSchema;
   value: unknown;
@@ -432,6 +437,10 @@ export function DepartmentForm({
   label?: string;
   field?: string;
   root?: unknown;
+  preserveTimePrecision?:boolean;
+  labels?:Readonly<Record<string,string>>;
+  resolveReferenceChoices?:((field:string,root:Readonly<Record<string,unknown>>)=>readonly ReferenceChoice[]|undefined)|undefined;
+  bindReferenceSelection?:((schema:FormSchema,field:string,value:Readonly<Record<string,unknown>>)=>Readonly<Record<string,unknown>>)|undefined;
 }) {
   const child = (
     childSchema: FormSchema,
@@ -445,9 +454,13 @@ export function DepartmentForm({
       onChange={change}
       choices={choices}
       disabled={disabled}
-      label={fieldLabels[key] ?? key}
+      label={labels[key]??fieldLabels[key] ?? key}
       field={key}
       root={root}
+      preserveTimePrecision={preserveTimePrecision}
+      labels={labels}
+      resolveReferenceChoices={resolveReferenceChoices}
+      bindReferenceSelection={bindReferenceSelection}
     />
   );
   if (schema.anyOf) {
@@ -537,15 +550,17 @@ export function DepartmentForm({
     );
   }
   if (schema.properties) {
-    const data = object(value);
+    const data = {...object(value)};
+    const ownerSchema=schema.properties['owner'],fixedOwner=ownerSchema?.const??(ownerSchema?.enum?.length===1?ownerSchema.enum[0]:undefined);
+    if(typeof fixedOwner==='string'&&data['owner']===undefined)data['owner']=fixedOwner;
     return (
       <fieldset className="form-object">
         <legend>{label}</legend>
         <div className="workspace-form">
           {Object.entries(schema.properties)
-            .filter(([key]) => !["requestId", "fileRequestId"].includes(key))
+            .filter(([key]) => !["requestId", "fileRequestId"].includes(key)&&!(key==='owner'&&typeof fixedOwner==='string'))
             .map(([key, item]) => (
-              <div className="form-field" key={key}>
+              <div className="form-field" key={key} data-field={key}>
                 <DepartmentForm
                   schema={item}
                   value={data[key]}
@@ -558,7 +573,7 @@ export function DepartmentForm({
                       typeof next === "string" &&
                       typeof data["owner"] === "string"
                     ) {
-                      const ref = choices[data["owner"]]?.find(
+                      const ref = choices[data["owner"]]?.findLast(
                         (option) => option.value === next,
                       );
                       if (
@@ -566,19 +581,26 @@ export function DepartmentForm({
                         schema.properties?.["expectedVersion"]
                       )
                         updated["expectedVersion"] = ref.version;
+                      if(ref?.version&&schema.properties?.['expectedHead'])updated['expectedHead']=ref.version;
+                      if(ref?.version&&schema.properties?.['version'])updated['version']=ref.version;
+                      if(ref?.versionId&&schema.properties?.['versionId'])updated['versionId']=ref.versionId;
                     }
-                    onChange(updated);
+                    onChange(bindReferenceSelection?.(schema,key,updated)??updated);
                   }}
                   choices={choices}
+                  resolveReferenceChoices={resolveReferenceChoices}
+                  bindReferenceSelection={bindReferenceSelection}
                   disabled={disabled}
                   label={
                     key === "recordedAt" &&
                     schema.properties?.["sourceSystemId"]
                       ? "来源记录时间"
-                      : (fieldLabels[key] ?? key)
+                      : (labels[key]??fieldLabels[key] ?? key)
                   }
                   field={key}
                   root={data}
+                  preserveTimePrecision={preserveTimePrecision}
+                  labels={labels}
                 />
               </div>
             ))}
@@ -592,7 +614,7 @@ export function DepartmentForm({
       <fieldset className="form-array">
         <legend>{label}</legend>
         {data.map((item, index) => (
-          <section className="form-row" key={index}>
+          <section className="form-row" key={index} data-row={index+1} data-array-field={field}>
             <h4>
               {label} · {index + 1}
             </h4>
@@ -628,6 +650,8 @@ export function DepartmentForm({
         {label}：{human(schema.const)}
       </p>
     );
+  if (schema.type === "boolean")
+    return <label className="confirmation"><input type="checkbox" checked={value===true} disabled={disabled} onChange={event=>onChange(event.target.checked)}/>{label}</label>;
   if (schema.enum)
     return (
       <label>
@@ -651,19 +675,7 @@ export function DepartmentForm({
         </select>
       </label>
     );
-  if (schema.type === "boolean")
-    return (
-      <label className="confirmation">
-        <input
-          type="checkbox"
-          checked={value === true}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        {label}
-      </label>
-    );
-  if (field === "bytesBase64")
+  if (field === "bytesBase64"||field==='contentBase64')
     return (
       <DepartmentFileInput
         label={label}
@@ -676,6 +688,10 @@ export function DepartmentForm({
   if (field === "id") {
     const owner = object(root)["owner"];
     options = owner ? choices[String(owner)] : choices["objects"];
+  }
+  if((field==='version'||field==='versionId')&&typeof object(root)['owner']==='string'){
+    const data=object(root),available=choices[String(data['owner'])];
+    if(available)options=available.filter(choice=>choice.value===data['id']).map(choice=>({value:field==='versionId'?choice.versionId??'':choice.version??'',label:choice.label})).filter(choice=>choice.value);
   }
   if (field === "target_id") {
     const target = object(root)["target_type"];
@@ -695,6 +711,8 @@ export function DepartmentForm({
       "SYNTHETIC_FORMER_NAME",
       "SYNTHETIC_SEARCH_CODE",
     ].map((value) => ({ value, label: human(value) }));
+  const resolvedChoices=resolveReferenceChoices?.(field,object(root));
+  if(resolvedChoices!==undefined)options=resolvedChoices;
   if (options)
     return (
       <label>
@@ -712,7 +730,7 @@ export function DepartmentForm({
                 原准确引用 · {String(value)}
               </option>
             )}
-          {options.map((option) => (
+          {[...new Map(options.map(option=>[option.value,option])).values()].map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -738,7 +756,7 @@ export function DepartmentForm({
       }
       disabled={disabled}
       type={numeric ? "number" : "text"}
-      time={/^(validFrom|validTo|valid_from|valid_to|businessAt|recordAsOf|recordedAt|recorded_at|effectiveAt|effective_at|from|to)$/.test(
+      time={!preserveTimePrecision&&/^(validFrom|validTo|valid_from|valid_to|businessAt|recordAsOf|recordedAt|recorded_at|effectiveAt|effective_at|from|to)$/.test(
         field,
       )}
     />

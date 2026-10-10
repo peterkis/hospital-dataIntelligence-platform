@@ -770,6 +770,20 @@ export interface CareOrganizationWithdrawal {
   request_id: string;
 }
 
+export interface CareOrganizationWorkspaceDraftRevision {
+  digest: string;
+  envelope: Json;
+  id: string;
+  identity_code: string;
+  maker: string;
+  metadata: Json;
+  number: Int8;
+  recorded_at: Generated<string>;
+  request_id: string;
+  state: string;
+  submission: Json | null;
+}
+
 export interface DepartmentMasterAccess {
   actor: string;
   permission: string;
@@ -2302,6 +2316,7 @@ export interface DB {
   "care_organization.ward_version": CareOrganizationWardVersion;
   "care_organization.ward_withdrawal": CareOrganizationWardWithdrawal;
   "care_organization.withdrawal": CareOrganizationWithdrawal;
+  "care_organization.workspace_draft_revision": CareOrganizationWorkspaceDraftRevision;
   "department_master.access": DepartmentMasterAccess;
   "department_master.campus_relation": DepartmentMasterCampusRelation;
   "department_master.campus_relation_version": DepartmentMasterCampusRelationVersion;

@@ -1,0 +1,12 @@
+import {Type,type Static} from 'typebox';
+import {UnitId,UnitTime} from './contracts.js';
+import {LifecycleOwnerSchema,LifecycleMemberSchema} from './lifecycle-contracts.js';
+const closed={additionalProperties:false} as const,End=Type.Union([UnitTime,Type.Null()]);
+export const CareValidationTargetSchema=Type.Object({owner:LifecycleOwnerSchema,id:UnitId,campusId:UnitId},closed);
+export const CareValidationSchema=Type.Object({mode:Type.Enum(['CURRENT_ADMISSION','HISTORICAL']),profile:Type.Enum(['CORE','FULL']),validFrom:UnitTime,validTo:End,recordAsOf:Type.Optional(UnitTime),targets:Type.Array(CareValidationTargetSchema,{maxItems:100}),members:Type.Array(LifecycleMemberSchema,{maxItems:100})},closed);
+export type CareValidation=Static<typeof CareValidationSchema>;
+export type CareValidationTarget=Static<typeof CareValidationTargetSchema>;
+export const CareValidationItemSchema=Type.Object({owner:LifecycleOwnerSchema,id:UnitId,dataset:Type.String(),field:Type.String(),inputId:Type.Union([UnitId,Type.Null()]),row:Type.Union([Type.Integer({minimum:1}),Type.Null()]),source:Type.Union([Type.Object({origin:Type.Enum(['PAGE','FILE']),sourceArtifactId:Type.Union([UnitId,Type.Null()]),sourceRow:Type.Union([Type.Integer({minimum:1}),Type.Null()]),worksheet:Type.Union([Type.String(),Type.Null()])},closed),Type.Null()]),from:UnitTime,to:End,problemScope:Type.Optional(Type.Enum(['INTERVAL','ROW','BUNDLE'])),status:Type.Enum(['SATISFIED','NOT_SATISFIED','UNKNOWN']),reason:Type.String(),basis:Type.String()},closed);
+export type CareValidationItem=Static<typeof CareValidationItemSchema>;
+export const CareValidationResultSchema=Type.Object({mode:CareValidationSchema.properties.mode,profile:CareValidationSchema.properties.profile,recordAsOf:UnitTime,decision:Type.Enum(['PASS','FAIL','BLOCKED']),items:Type.Array(CareValidationItemSchema),unavailable:Type.Array(Type.Object({owner:Type.Enum(['PERSONNEL_ASSIGNMENT','BED_RESOURCE','BED_SNAPSHOT','PATIENT_BUSINESS','EXTERNAL_CONSUMERS']),status:Type.Literal('NOT_EVALUABLE')},closed)),policy:Type.Literal('TEST_POLICY_ONLY'),clinicalReadiness:Type.Literal('NOT_READY')},closed);
+export const CareUnitImpactSchema=Type.Object({id:UnitId,validFrom:UnitTime,validTo:End,recordAsOf:Type.Optional(UnitTime)},closed);

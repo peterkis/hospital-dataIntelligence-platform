@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  },
+  "include": [
+    "p3-10*.ts",
+    "../../apps/governance-api/src/modules/care-organization/**/*.ts",
+    "../../apps/governance-api/src/modules/location-master/**/*.ts"
+  ]
+}

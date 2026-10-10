@@ -7,7 +7,7 @@ import {Pool} from 'pg';
 import {validationKeys} from './p3-07-validation-keys.mjs';
 import {withP307Predecessor,p307PredecessorBaseline,p307PredecessorPrefix} from './p3-07-predecessor.mjs';
 import {migrationFiles,readReceipt} from './lineage.mjs';
-import {openCatalog,type UnitOutcome} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
+import {openCatalog,openParameterValues,type UnitOutcome} from '../../apps/governance-api/src/modules/governance-catalog/index.js';
 import {openCampus,openOperatingRelations} from '../../apps/governance-api/src/modules/organization-master/index.js';
 import {openDepartment,openDepartmentLifecycle} from '../../apps/governance-api/src/modules/department-master/index.js';
 import {openBusinessUnit,openWard,openNursingUnit,openWardNursingCoverage,type WardNursingEntry} from '../../apps/governance-api/src/modules/care-organization/index.js';
@@ -128,7 +128,7 @@ try{
   const prior=JSON.parse(readFileSync(evidencePath,'utf8')) as PredecessorEvidence;
   assert.equal(prior.gate,'P3_07_POPULATED_0200');assert.equal(prior.baseline,p307PredecessorBaseline);assert.equal(prior.prefix,p307PredecessorPrefix);assert.equal(prior.oid,receipt.oid);
   const catalog=await openCatalog(connection,provider),campus=openCampus(connection,provider),location=openLocation(connection,provider,campus.references),department=openDepartment(connection,provider),lifecycle=openDepartmentLifecycle(connection,provider),operating=openOperatingRelations(connection,provider);
-  const units=openBusinessUnit(connection,provider,{departmentCoverage:lifecycle.readUnitBindingCoverageInTransaction,departmentBoundaries:lifecycle.readUnitBindingBoundariesInTransaction,referenceAccess:lifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction}),ward=openWard(connection,provider,wardUpstreamPorts(units)),nursing=openNursingUnit(connection,provider,nursingUpstreamPorts),coverage=openWardNursingCoverage(connection,provider,wardNursingUpstreamPorts(ward,nursing,units));
+  const sourceWindows=openParameterValues(connection),units=openBusinessUnit(connection,provider,{departmentCoverage:lifecycle.readUnitBindingCoverageInTransaction,departmentBoundaries:lifecycle.readUnitBindingBoundariesInTransaction,referenceAccess:lifecycle.authorizeUnitReferenceInTransaction,operatingWindow:operating.evaluateOperatingWindowInTransaction}),ward=openWard(connection,provider,wardUpstreamPorts(units)),nursing=openNursingUnit(connection,provider,nursingUpstreamPorts),coverage=openWardNursingCoverage(connection,provider,wardNursingUpstreamPorts(ward,nursing,units,sourceWindows));
   try{
    await verifyCapture(location,prior.location);await verifyCapture(departmentReader(department),prior.department);await verifyCapture(units,prior.unit);await verifyCapture(ward,prior.ward);await verifyCapture(nursing,prior.nursing);await verifyCapture(coverage,prior.coverage);
    await verifyRecovery(location,prior.recoveries.location);await verifyRecovery(coverage,prior.recoveries.coverage);
@@ -137,6 +137,6 @@ try{
    const verifiedPath=receiptPath+'.p3-07-original0200-verification.json';
    writeFileSync(verifiedPath,JSON.stringify({gate:'P3_07_ORIGINAL_0200_RECOVERY',status:'PASS',baseline:p307PredecessorBaseline,oid:receipt.oid,currentPrefix:installed,restrictedApplicationRole:true,currentComposedPublicOwners:true,originalHistoriesPreserved:true,originalExactVersionsPreserved:true,originalBRQueriesPreserved:true,originalCatalogOutcomesPreserved:true,accurateReplay:true,resumePreserved:true,reconcile:'MATCHED',currentOutsiderDenied:true,noPostUpgradeFixtures:true,predecessorEvidence:evidencePath,policy:'TEST POLICY ONLY',hospitalPolicy:'NOT_ADOPTED',clinicalReadiness:'NOT_READY',formalAcceptance:'NOT_RUN'},null,2),{flag:'wx'});
    console.log(JSON.stringify({gate:'P3_07_ORIGINAL_0200_RECOVERY',status:'PASS',evidence:verifiedPath}));
-  }finally{await coverage.close();await nursing.close();await ward.close();await units.close();await operating.close();await lifecycle.close();await department.close();await location.close();await campus.close();await catalog.close();}
+  }finally{await sourceWindows.close();await coverage.close();await nursing.close();await ward.close();await units.close();await operating.close();await lifecycle.close();await department.close();await location.close();await campus.close();await catalog.close();}
  }
 }finally{await pool.end();}

@@ -192,7 +192,7 @@ export function openDepartment(connection:string,provider?:KeyProviderPort){
      const parsed=await boundedParse(bytes,meta.format,v.contract.definition.fields,'STRICT_DEPARTMENT_V1');
       const parserIssues:DepartmentIssue[]=parsed.issues.map(parsedIssue=>{const cell=parsed.cells.find(candidate=>candidate.sourceRow===parsedIssue.row&&(!parsedIssue.column||candidate.column===parsedIssue.column));return {row:parsedIssue.row,field:cell?.field??'',code:parsedIssue.code,status:'FAIL',sourceRow:parsedIssue.row};});
      validationIssues=[...v.issues,...parserIssues];
-     validationRunId=(await saveValidation(s,actor,j,v.r.campus,v.input.sourceArtifactId,parsed,validationIssues,new Map(v.input.entries.map((entry,index)=>[index+1,entry.sourceRow])))).run.runId;
+     validationRunId=(await saveValidation(s,actor,j,v.r.campus,v.input.sourceArtifactId,parsed,validationIssues,new Map(v.input.entries.map((entry,index)=>[index+1,entry.sourceRow])))).run?.runId??null;
     }finally{bytes.fill(0);}
    }
    const decision=validationIssues.some(i=>i.status==='FAIL')?'FAIL' as const:validationIssues.length?'BLOCKED' as const:'PASS' as const;

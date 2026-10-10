@@ -1,0 +1,26 @@
+import type {CareOperation} from '@hospital-data-intelligence/generated-api-client';
+import {careForms} from './care-forms.generated.js';
+import type {FormSchema} from './department-form.js';
+export type CareKind=keyof typeof careForms.drafts;
+export const careNames:Record<CareKind,string>={UNIT:'业务单元',NURSING:'护理单元',WARD:'病区',LOCATION:'物理地点',UNIT_WARD:'科室病区关系',WARD_NURSING:'护理覆盖与分区',LOCATION_USE:'地点使用',CAPABILITY:'业务能力',PERMISSION:'科目映射与许可',LIFECYCLE:'组合操作'};
+export type CareDataset='ORG07'|'ORG08'|'ORG09'|'ORG10'|'ORG11'|'ORG12'|'ORG13'|'ORG16'|'ORG17';
+export const careDatasets:Record<CareKind,CareDataset|''>={UNIT:'ORG07',NURSING:'ORG09',WARD:'ORG08',LOCATION:'ORG12',UNIT_WARD:'ORG10',WARD_NURSING:'ORG11',LOCATION_USE:'ORG13',CAPABILITY:'ORG16',PERMISSION:'ORG17',LIFECYCLE:''};
+export const careOwners:Record<Exclude<CareKind,'LIFECYCLE'>,string>={UNIT:'care-organization/unit',NURSING:'care-organization/nursing',WARD:'care-organization/ward',LOCATION:'location-master',UNIT_WARD:'care-organization/unit-ward-relation',WARD_NURSING:'care-organization/ward-nursing-coverage',LOCATION_USE:'location-master/location-use',CAPABILITY:'care-organization/unit-capability',PERMISSION:'care-organization/subject-permission'};
+interface Pipeline {read:CareOperation;preview:CareOperation;verify:CareOperation;plan:CareOperation;review:CareOperation;approve:CareOperation;apply:CareOperation;resume:CareOperation;reconcile:CareOperation;file?:CareOperation;list?:CareOperation;history?:CareOperation;query?:CareOperation;exact?:CareOperation;diff?:CareOperation;withdraw?:CareOperation}
+const pipeline=(stem:string):Pipeline=>{const operation=(prefix:string,suffix:string='Input')=>{const key=prefix+stem+suffix;if(!(key in careForms.operations))throw new Error('CARE_OPERATION_NOT_GENERATED');return key as CareOperation;};return {read:operation('read'),preview:operation('preview'),verify:operation('verify'),plan:operation('plan'),review:operation('review','Candidate'),approve:operation('approve','Candidate'),apply:operation('apply','Candidate'),resume:operation('resume','Outcome'),reconcile:operation('reconcile','Outcome'),file:operation('receive','File')};};
+export const carePipelines:Record<CareKind,Pipeline>={
+ UNIT:{...pipeline('BusinessUnit'),list:'listBusinessUnits',history:'getBusinessUnitHistory',query:'getBusinessUnitAsOf',exact:'getBusinessUnitVersion',diff:'diffBusinessUnitVersions',withdraw:'withdrawBusinessUnitInput'},
+ NURSING:{...pipeline('NursingUnit'),list:'listNursingUnits',history:'getNursingUnitHistory',query:'getNursingUnitAsOf',exact:'getNursingUnitVersion',diff:'diffNursingUnitVersions',withdraw:'withdrawNursingUnitInput'},
+ WARD:{...pipeline('Ward'),list:'listWards',history:'getWardHistory',query:'getWardAsOf',exact:'getWardVersion',diff:'diffWardVersions',withdraw:'withdrawWardInput'},
+ LOCATION:{...pipeline('Location'),list:'listLocations',history:'getLocationHistory',query:'getLocationAsOf',exact:'getLocationVersion',diff:'diffLocationVersions'},
+ UNIT_WARD:{...pipeline('UnitWard'),list:'listUnitWardRelations',history:'getUnitWardHistory',query:'getUnitWardAsOf',exact:'getUnitWardVersion',diff:'diffUnitWardVersions',withdraw:'withdrawUnitWardInput'},
+ WARD_NURSING:{...pipeline('WardNursing'),list:'listWardNursingRelations',history:'getWardNursingHistory',query:'getWardNursingAsOf',exact:'getWardNursingVersion',diff:'diffWardNursingVersions',withdraw:'withdrawWardNursingInput'},
+ LOCATION_USE:{...pipeline('LocationUse'),list:'listLocationUses',history:'getLocationUseHistory',query:'getLocationUseAsOf',exact:'getLocationUseVersion',diff:'diffLocationUseVersions',withdraw:'withdrawLocationUseInput'},
+ CAPABILITY:{...pipeline('UnitCapability'),list:'listUnitCapabilities',history:'getUnitCapabilityHistory',query:'getUnitCapabilityAsOf',exact:'getUnitCapabilityVersion',diff:'diffUnitCapabilityVersions',withdraw:'withdrawUnitCapabilityInput'},
+ PERMISSION:{...pipeline('SubjectPermission'),list:'listSubjectRelations',history:'historySubjectPermission',query:'querySubjectPermission',exact:'exactSubjectPermission',withdraw:'withdrawSubjectPermissionInput'},
+ LIFECYCLE:{read:'getCareLocationLifecycleHistory',preview:'previewCareLocationLifecycle',verify:'verifyCareLocationLifecycle',plan:'planCareLocationLifecycle',review:'reviewCareLocationLifecycle',approve:'approveCareLocationLifecycle',apply:'applyCareLocationLifecycle',resume:'resumeCareLocationLifecycleOutcome',reconcile:'reconcileCareLocationLifecycleOutcome',history:'getCareLocationLifecycleHistory'},
+};
+export function careSchema(operation:CareOperation):FormSchema{return careForms.operations[operation].schema;}
+export const record=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
+export const text=(value:unknown):string=>typeof value==='string'?value:typeof value==='number'?String(value):'';
+export const careStatus=(value:unknown):string=>({EDITING:'编辑中',SUBMITTED:'已暂存',DISCARDED:'已放弃',COMMITTED:'已提交，待核对',COMMIT_UNKNOWN:'提交结果未知，请恢复原请求',MATCHED:'事实核对一致',UNKNOWN:'未就绪，操作受阻',BLOCKED:'操作受阻',NOT_EVALUABLE:'尚不可评价',NOT_SATISFIED:'不满足',SATISFIED:'满足',ACTIVE:'有效',SUSPENDED:'已暂停',RETIRED:'永久结束',CLOSED:'永久结束',NOT_EFFECTIVE:'待生效',PASS:'检查通过',FAIL:'检查未通过'}[text(value)]??text(value));

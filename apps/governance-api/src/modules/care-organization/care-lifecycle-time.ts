@@ -1,6 +1,11 @@
 import {localTime,subtract,intersect} from '../organization-master/index.js';
 
 interface CareEvent {number:string;action:string;validFrom:string;validTo:string|null}
+/** ward_nursing_master_window declarations are permanently masked by later
+ * declarations, unlike the bounded property query's local revision mask. */
+export function careMasterDeclarationPeriods(versions:readonly CareEvent[],property:CareEvent){
+ return subtract({from:localTime(property.validFrom),to:property.validTo===null?null:localTime(property.validTo)},[...versions.filter(v=>(v.action==='CREATE'||v.action==='REVISE')&&BigInt(v.number)>BigInt(property.number)).map(v=>({from:localTime(v.validFrom),to:null})),...careUnavailable(versions)]);
+}
 export function careClosePoint(versions:readonly CareEvent[],at?:string):string|null{
  const point=at===undefined?undefined:localTime(at);
  return versions.filter(v=>v.action==='CLOSE').map(v=>localTime(v.validFrom)).filter(from=>point===undefined||from<=point).sort()[0]??null;

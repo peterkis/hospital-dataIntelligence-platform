@@ -1,3 +1,4 @@
+import {SubjectListSchema} from '../../modules/care-organization/index.js';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import {Type,type Static,type TSchema} from 'typebox';
 import {subjectCheck,SubjectId,SubjectTime,SubjectEnd,SubjectDigest,ApproveApplyUnitSchema,ApplyUnitSchema} from '../../modules/governance-catalog/index.js';
@@ -28,6 +29,7 @@ export function registerSubjectPermissionRoutes(app:FastifyInstance,context?:Sub
  route('reconcile','reconcileSubjectPermissionOutcome',ApplyUnitSchema,Type.Unknown(),(o,a,b)=>o.reconcileCommittedUnit(a,b));
  route('withdraw','withdrawSubjectPermissionInput',SubjectPlanSchema,Type.Object({inputId:SubjectId,status:Type.Literal('WITHDRAWN')},closed),(o,a,b)=>o.withdraw(a,b));
  route('query','querySubjectPermission',SubjectReadSchema,Type.Object({id:SubjectId,kind:Kind,scope:SubjectScopeSchema,head:Text,state:Type.Enum(['ACTIVE','RETIRED','NOT_EFFECTIVE']),version:Version,clinicalReadiness:Type.Literal('NOT_READY')},closed),(o,a,b)=>o.read(a,b));
+ route('list','listSubjectRelations',SubjectListSchema,Type.Object({items:Type.Array(Type.Object({id:SubjectId,kind:Kind,scope:SubjectScopeSchema,head:Text,state:Type.Enum(['ACTIVE','RETIRED','NOT_EFFECTIVE']),version:Version,clinicalReadiness:Type.Literal('NOT_READY')},closed)),nextAfterId:Type.Union([SubjectId,Type.Null()])},closed),(o,a,b)=>o.list(a,b));
  route('history','historySubjectPermission',SubjectHistorySchema,History,(o,a,b)=>o.history(a,b));
  route('exact','exactSubjectPermission',SubjectExactSchema,Version,(o,a,b)=>o.exact(a,b));
  route('recheck','recheckSubjectPermission',SubjectRecheckSchema,Type.Object({id:SubjectId,kind:Kind,status:Type.Enum(['SATISFIED','REVIEW_REQUIRED']),reason:Text,acceptedBasis:Type.Unknown(),basis:Type.Unknown(),cases:Type.Array(Type.Unknown()),clinicalReadiness:Type.Literal('NOT_READY')},closed),(o,a,b)=>o.recheck(a,b));

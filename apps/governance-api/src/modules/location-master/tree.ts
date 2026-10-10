@@ -15,8 +15,8 @@ export function locationPeriods(history:LocationHistory,recordAsOf?:string):Arra
  return known.filter(v=>v.action!=='CLOSE').flatMap(v=>subtract({from:v.validFrom,to:v.validTo},[...known.filter(later=>BigInt(later.number)>BigInt(v.number)&&later.action!=='CLOSE').map(later=>({from:later.validFrom,to:later.validTo})),...closed]).map(p=>({...p,version:v}))).sort((a,b)=>a.from.localeCompare(b.from));
 }
 /** Complete physical graph at every assertion boundary; no point-only admission. */
-export function validateLocationTree(histories:readonly LocationHistory[],recordAsOf?:string):void {
- const points=[...new Set(histories.flatMap(h=>h.versions.filter(v=>recordAsOf===undefined||v.recordedAt<=localTime(recordAsOf)).flatMap(v=>[v.validFrom,...(v.validTo?[v.validTo]:[])])))].sort();
+export function validateLocationTree(histories:readonly LocationHistory[],recordAsOf?:string,window?:{from:string;to:string|null}):void {
+ const points=[...new Set([...(window?[window.from]:[]),...histories.flatMap(h=>h.versions.filter(v=>recordAsOf===undefined||v.recordedAt<=localTime(recordAsOf)).flatMap(v=>[v.validFrom,...(v.validTo?[v.validTo]:[])]))])].filter(p=>!window||p>=window.from&&(window.to===null||p<window.to)).sort();
  for(const at of points){
   const active=new Map(histories.flatMap(h=>{const v=locationAt(h,at,recordAsOf);return v?[[h.id,{h,v}] as const]:[];}));
   const roots=new Set<string>();

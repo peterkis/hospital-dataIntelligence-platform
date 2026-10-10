@@ -195,7 +195,7 @@
     "vnext:catalog:validate": "node --import tsx tooling/vnext/run-catalog-tests.mjs",
     "vnext:catalog:serve:fresh": "node --import tsx tooling/vnext/serve.mjs --fresh",
     "vnext:catalog:adversarial": "node --import tsx tooling/vnext/adversarial.mjs",
-    "vnext:ui:build": "npm run build:vnext --workspace @hospital-data-intelligence/admin-web",
+    "vnext:ui:build": "npm run build --workspace @hospital-data-intelligence/generated-api-client && npm run build:vnext --workspace @hospital-data-intelligence/admin-web",
     "vnext:catalog:serve": "node --import tsx tooling/vnext/serve.mjs",
     "vnext:contract:generate": "node --import tsx tooling/vnext/contracts.mjs",
     "vnext:catalog:recovery:prepare": "node --import tsx tooling/vnext/recovery.mjs prepare",
@@ -407,7 +407,15 @@
     "vnext:p3-11:authority": "node --import tsx tooling/vnext/p3-11-authority.mjs",
     "vnext:p3-11:upgrade": "node --import tsx tooling/vnext/p3-11-validate.mjs --upgrade",
     "vnext:p3-11:regression": "node tooling/vnext/p3-11-regression.mjs",
-    "vnext:p3-11:deploy": "node --import tsx tooling/vnext/p3-11-deploy.mjs"
+    "vnext:p3-11:deploy": "node --import tsx tooling/vnext/p3-11-deploy.mjs",
+    "vnext:p3-10:validate": "node --import tsx tooling/vnext/p3-10-validate.mjs",
+    "vnext:p3-10:unit": "vitest run --config tooling/vnext/vitest.p3-10-unit.config.ts",
+    "vnext:p3-10:regression": "node tooling/vnext/p3-10-regression.mjs",
+    "vnext:p3-10:typecheck": "tsc -p tooling/vnext/tsconfig.p3-10.json",
+    "vnext:p3-10:browser": "node --import tsx tooling/vnext/p3-10-browser.mjs",
+    "vnext:p3-10:deploy": "node --import tsx tooling/vnext/p3-10-deploy.mjs",
+    "vnext:p3-10:retained-diagnostics": "node tooling/vnext/p3-10-retained-diagnostics.mjs",
+    "vnext:p3-10:validation-session": "node --import tsx tooling/vnext/p3-10-validation-session.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "2.46.0",

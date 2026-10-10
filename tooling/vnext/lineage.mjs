@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, lstatSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import pg from 'pg';
 import { localDatabaseUrl } from './connection.mjs';
 
@@ -13,7 +13,7 @@ export function resolveTarget(receipt, env = process.env) {
   if (!/^hdi_mc_vnext_[a-f0-9]{16}$/u.test(receipt.name) || !/^\d+$/u.test(receipt.oid) ||
       receipt.owner !== 'hdi_prototype' || receipt.lineage !== 'HDIP-MC-VNEXT' ||
       receipt.distro !== 'Anolis-8.9-HDI-POC' || receipt.port !== 55434 ||
-      !['P0-00', 'P0-01', 'P0-02', 'P0-03', 'P0-04', 'P0-05', 'P0-06', 'P0-07', 'P0-08', 'P0-09', 'P0-10', 'P0-11', 'P1-01', 'P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11'].includes(receipt.taskId) || !/^[a-f0-9-]{36}$/u.test(receipt.requestId)) throw new Error('RECEIPT_INVALID');
+      !['P0-00', 'P0-01', 'P0-02', 'P0-03', 'P0-04', 'P0-05', 'P0-06', 'P0-07', 'P0-08', 'P0-09', 'P0-10', 'P0-11', 'P1-01', 'P1-02','P1-03','P1-04','P1-05','P1-06','P1-07','P2-01','P2-02','P2-03','P2-04','P2-05','P2-06','P2-07','P2-08','P3-06','P3-01','P3-02','P3-03','P3-08','P3-09','P3-04','P3-05','P3-07','P3-11','P3-10'].includes(receipt.taskId) || !/^[a-f0-9-]{36}$/u.test(receipt.requestId)) throw new Error('RECEIPT_INVALID');
   if (Object.keys(env).some(key => /^PG[A-Z_]*$/iu.test(key) && env[key])) throw new Error('OVERRIDE_FORBIDDEN');
   let url;
   try { url = localDatabaseUrl(env.DATABASE_URL); } catch { throw new Error('OVERRIDE_FORBIDDEN'); }
@@ -65,6 +65,21 @@ export function peer(name, sql, {sensitive=false}={}) {
 export function identitySQL(receipt) {
   return `DO $identity$ BEGIN IF current_database()<>${quote(receipt.name)} OR NOT EXISTS (SELECT 1 FROM pg_database WHERE datname=current_database() AND oid::text=${quote(receipt.oid)} AND pg_get_userbyid(datdba)=${quote(receipt.owner)}) THEN RAISE EXCEPTION 'RECEIPT_IDENTITY_MISMATCH'; END IF; END $identity$;`;
 }
+// Asynchronous fixture grant edits must let in-flight Owner transactions send
+// COMMIT while PostgreSQL's original authorization triggers wait on audit locks.
+export async function peerAsync(receipt,statement){
+  resolveTarget(receipt);
+  const cleanPgEnvironment=['PGHOST','PGHOSTADDR','PGPORT','PGDATABASE','PGUSER','PGSERVICE','PGSERVICEFILE','PGOPTIONS','PGPASSFILE'].flatMap(key=>['-u',key]);
+  await new Promise((resolve,reject)=>{
+    const child=spawn('wsl.exe',['-d','Anolis-8.9-HDI-POC','-u','postgres','--','env',...cleanPgEnvironment,'psql','-X','-v','ON_ERROR_STOP=1','-p','55434','-d',receipt.name,'-At'],{windowsHide:true,stdio:['pipe','ignore','pipe']});
+    let errors='';const deadline=setTimeout(()=>{child.kill();reject(new Error('OWNED_PEER_TIMEOUT'));},45000);
+    child.once('error',error=>{clearTimeout(deadline);reject(error);});
+    child.stdin.once('error',error=>{clearTimeout(deadline);child.kill();reject(error);});
+    child.stderr.on('data',chunk=>{errors=(errors+chunk.toString('utf8')).slice(0,32768);});
+    child.once('close',code=>{clearTimeout(deadline);if(code===0)resolve();else reject(new Error(/ERROR:\s+([A-Z][A-Z0-9_]+)(?:\r?\n|$)/u.exec(errors)?.[1]??'VNEXT_ASYNC_ADMIN_COMMAND_FAILED'));});
+    child.stdin.end(identitySQL(receipt)+"SET lock_timeout='10s';SET statement_timeout='30s';"+statement);
+  });
+}
 export async function inspect(receipt, env = process.env) {
   const pool = new pg.Pool({ connectionString: resolveTarget(receipt, env), options: '-c default_transaction_read_only=on', max: 1 });
   try {
@@ -110,6 +125,7 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=129) allowed.add('department_master.impact_external_owner_access');
     if(ledger.length>=134)for(const name of ['lifecycle_input','lifecycle_verification','lifecycle_operation','lifecycle_version','campus_relation','campus_relation_version'])allowed.add('department_master.'+name);
     if(ledger.length>=144)allowed.add('department_master.workspace_draft_revision');
+    if(ledger.length>=253)allowed.add('care_organization.workspace_draft_revision');
     if(ledger.length>=201){allowed.add('vnext_control.location_use_write_authority');for(const name of ['usage_type','usage_type_access','usage_type_version','usage_type_verification','usage_type_approval','usage_type_action'])allowed.add('location_master.'+name);}
     if(relations.length!==allowed.size||relations.some(row=>!allowed.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const routines=(await pool.query("select n.nspname||'.'||p.proname as name from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') order by 1")).rows;
@@ -211,6 +227,17 @@ export async function inspect(receipt, env = process.env) {
     if(ledger.length>=243)allowedRoutines.add('care_organization.lifecycle_location_member_candidate');
     if(ledger.length>=244)allowedRoutines.add('care_organization.lifecycle_commit_guard');
     if(ledger.length>=211)for(const n of ['lifecycle_attest','lifecycle_context','lifecycle_member_matches','lifecycle_record'])allowedRoutines.add('care_organization.'+n);
+    if(ledger.length>=253){for(const name of ['workspace_authorize','workspace_record','workspace_campus_authorize','workspace_input_reference'])allowedRoutines.add('care_organization.'+name);allowedRoutines.add('location_master.workspace_draft_authorize');allowedRoutines.add('governance_catalog.owner_execution_context');}
+    if(ledger.length>=254){allowedRoutines.add('care_organization.workspace_application_context');allowedRoutines.add('governance_catalog.owner_exact_execution_context');}
+    if(ledger.length>=256)allowedRoutines.add('care_organization.subject_list');
+    if(ledger.length>=257)for(const name of ['governance_catalog.parameter_value_list','governance_catalog.subject_code_list','care_organization.ward_nursing_scope_list'])allowedRoutines.add(name);
+    if(ledger.length>=258)allowedRoutines.add('governance_catalog.parameter_value_boundaries');
+    if(ledger.length>=259)for(const name of ['organization_master.location_coverage_at','governance_catalog.location_source_at','governance_catalog.subject_code_boundaries','organization_master.subject_profile_boundaries'])allowedRoutines.add(name);
+    if(ledger.length>=263)allowedRoutines.add('care_organization.workspace_record_before_basis_list');
+    if(ledger.length>=262){for(const name of ['workspace_basis_metadata','workspace_basis_authorize'])allowedRoutines.add('governance_catalog.'+name);allowedRoutines.add('care_organization.workspace_basis_record');}
+    if(ledger.length>=261)allowedRoutines.add('location_master.care_boundary_source_references');
+    if(ledger.length>=260)for(const name of ['care_source_window_references','care_parameter_boundary_references','care_subject_boundary_references','care_read_reference_authority'])allowedRoutines.add('governance_catalog.'+name);
+    if(ledger.length>=264)allowedRoutines.add('governance_catalog.subject_code_window_contributors');
     if(routines.length!==allowedRoutines.size||routines.some(row=>!allowedRoutines.has(row.name)))throw new Error('UNKNOWN_SCHEMA_OBJECT');
     const extraTypes=(await pool.query("select count(*) as count from pg_type t join pg_namespace n on n.oid=t.typnamespace where n.nspname in ('vnext_control','governance_catalog','organization_master','department_master','location_master','care_organization') and t.typrelid=0 and t.typelem=0")).rows[0].count;
     if(Number(extraTypes))throw new Error('UNKNOWN_SCHEMA_OBJECT');

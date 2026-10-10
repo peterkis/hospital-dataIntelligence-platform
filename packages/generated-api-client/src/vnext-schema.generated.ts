@@ -4900,6 +4900,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/parameter-values/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listParameterValues"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/parameter-values/query": {
         parameters: {
             query?: never;
@@ -5236,6 +5252,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/subject-codes/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listSubjectCodeSnapshots"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/subject-codes/command": {
         parameters: {
             query?: never;
@@ -5454,6 +5486,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["querySubjectPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/subject-permissions/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listSubjectRelations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6148,6 +6196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/ward-nursing-coverages/scope-definitions/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listWardNursingScopeDefinitions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/ward-nursing-coverages/scope-definitions/exact": {
         parameters: {
             query?: never;
@@ -6782,6 +6846,326 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["getCareLocationLifecycleHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-organization/validate-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["validateCareOrganizationBundle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-organization/assess-unit-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assessUnitImpact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/basis/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["saveCareWorkspaceBasisRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/basis/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCareWorkspaceBasisRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/drafts/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["saveCareWorkspaceDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/drafts/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCareWorkspaceDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/drafts/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recoverCareWorkspaceDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/applications/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listCareWorkspaceApplications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["careWorkspacePermissions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/applications/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listCareWorkspaceExecutions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/applications/reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCareWorkspaceApplicationReference"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/materials/store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["storeCareWorkspaceMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/materials/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createCareWorkspaceMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/materials/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCareWorkspaceMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/drafts/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discardCareWorkspaceDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/drafts/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitCareWorkspaceDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/files/receive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["receiveCareWorkspaceDraftFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/files/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCareWorkspaceFileReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/files/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readCareWorkspaceSavedFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vnext/care-workspace/drafts/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["listCareWorkspaceDrafts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7954,6 +8338,8 @@ export interface operations {
                 asOf?: string;
                 page?: number;
                 target?: string;
+                dataset?: "ORG07" | "ORG08" | "ORG09" | "ORG10" | "ORG11" | "ORG12" | "ORG13" | "ORG16" | "ORG17";
+                profile?: "CORE" | "FULL";
             };
             header?: never;
             path?: never;
@@ -8027,7 +8413,7 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {unknown} */
-                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                    status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -8251,7 +8637,7 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {unknown} */
-                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                    status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -8476,7 +8862,7 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {unknown} */
-                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                    status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -8676,7 +9062,7 @@ export interface operations {
                             field: string;
                             target: string;
                             /** @enum {unknown} */
-                            status: "UNIT_CORE" | "CAPABILITY_CORE";
+                            status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                         } | {
                             field: string;
                             target: string;
@@ -8788,7 +9174,7 @@ export interface operations {
                             field: string;
                             target: string;
                             /** @enum {unknown} */
-                            status: "UNIT_CORE" | "CAPABILITY_CORE";
+                            status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                         } | {
                             field: string;
                             target: string;
@@ -10016,8 +10402,8 @@ export interface operations {
                         /** Format: uuid */
                         contractVersionId: string;
                         templateVersion: string;
-                        /** @enum {string} */
-                        parserPolicy: "STRICT_V2";
+                        /** @enum {unknown} */
+                        parserPolicy: "STRICT_V2" | "STRICT_UNIT_V1" | "STRICT_WARD_V1" | "STRICT_NURSING_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_V1" | "STRICT_LOCATION_USE_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1";
                     };
                 };
             };
@@ -40198,7 +40584,7 @@ export interface operations {
                                         field: string;
                                         target: string;
                                         /** @enum {unknown} */
-                                        status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                        status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                     } | {
                                         field: string;
                                         target: string;
@@ -42988,7 +43374,7 @@ export interface operations {
                                         field: string;
                                         target: string;
                                         /** @enum {unknown} */
-                                        status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                        status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                     } | {
                                         field: string;
                                         target: string;
@@ -47950,7 +48336,7 @@ export interface operations {
                                     field: string;
                                     target: string;
                                     /** @enum {unknown} */
-                                    status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                    status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                 } | {
                                     field: string;
                                     target: string;
@@ -65663,6 +66049,169 @@ export interface operations {
             };
         };
     };
+    listParameterValues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** Format: uuid */
+                    after?: string;
+                    limit?: number;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            parameterId: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            head: string;
+                            /** Format: uuid */
+                            definitionVersionId: string;
+                            definitionDigest: string;
+                            applicability: {
+                                unit: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                                /** @enum {unknown} */
+                                capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            value: {
+                                /** @enum {string} */
+                                type: "TEXT";
+                                value: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "INTEGER";
+                                value: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "DECIMAL";
+                                value: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "BOOLEAN";
+                                value: boolean;
+                            };
+                            /** @enum {unknown} */
+                            purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                            validFrom: string;
+                            validTo: string | null;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            recordedAt: string;
+                            approvedAt: string | null;
+                            /** @enum {unknown} */
+                            status: "DRAFT" | "APPROVED";
+                            reviewDigest: string;
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
     getParameterValue: {
         parameters: {
             query?: never;
@@ -69028,6 +69577,159 @@ export interface operations {
             };
         };
     };
+    listSubjectCodeSnapshots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    after?: string;
+                    limit?: number;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            versionId: string;
+                            head: string;
+                            systemCode: string;
+                            /** @enum {unknown} */
+                            status: "DRAFT" | "REVIEW" | "APPROVED";
+                            reviewDigest: string;
+                            recordedAt: string;
+                            approvedAt: string | null;
+                            sourceVerification: {
+                                /** Format: uuid */
+                                id: string;
+                                actor: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourceReviewed: boolean;
+                                recordedAt: string;
+                            } | null;
+                            reference: {
+                                /** @enum {string} */
+                                owner: "governance-catalog/subject-code";
+                                /** @enum {string} */
+                                dataset: "REF01";
+                                /** @enum {string} */
+                                namespace: "REF01.code_system_id";
+                                sourceAlias: string;
+                            };
+                            codeSystemName: string;
+                            namespaceUri: string;
+                            standardDocument: string;
+                            issuer: string;
+                            codeSystemVersion: string;
+                            /** Format: uuid */
+                            sourceId: string;
+                            /** Format: uuid */
+                            sourceVersionId: string;
+                            /** Format: uuid */
+                            evidenceId: string;
+                            sourcePage: string;
+                            sourceSummary: string;
+                            adoptedOn: string;
+                            /** @enum {string} */
+                            label: "TEST_POLICY_ONLY";
+                            validFrom: string;
+                            validTo: string | null;
+                            codes: {
+                                code: string;
+                                name: string;
+                                meaning: string;
+                                /** @enum {unknown} */
+                                status: "ACTIVE" | "RETIRED";
+                                replacement: string | null;
+                            }[];
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
     commandSubjectCodeSnapshot: {
         parameters: {
             query?: never;
@@ -71559,6 +72261,246 @@ export interface operations {
                         };
                         /** @enum {string} */
                         clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listSubjectRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    kind?: "MAPPING" | "PERMISSION";
+                    /** Format: uuid */
+                    campusId?: string;
+                    /** @enum {unknown} */
+                    targetType?: "LEGAL" | "ORG" | "UNIT";
+                    /** Format: uuid */
+                    after?: string;
+                    limit?: number;
+                    businessAt?: string;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {unknown} */
+                            kind: "MAPPING" | "PERMISSION";
+                            scope: {
+                                target: {
+                                    /** @enum {string} */
+                                    type: "LEGAL";
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "ORG";
+                                    /** @enum {string} */
+                                    owner: "department-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "UNIT";
+                                    /** @enum {string} */
+                                    owner: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                subject: {
+                                    /** @enum {string} */
+                                    owner: "organization-master";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id: string;
+                                };
+                                services: string[];
+                            };
+                            head: string;
+                            /** @enum {unknown} */
+                            state: "ACTIVE" | "RETIRED" | "NOT_EFFECTIVE";
+                            version: {
+                                /** Format: uuid */
+                                id: string;
+                                number: string;
+                                /** @enum {unknown} */
+                                action: "RECORD" | "REVISE" | "RETIRE";
+                                validFrom: string;
+                                validTo: string | null;
+                                recordedAt: string;
+                                facts: {
+                                    adoption: {
+                                        /** @enum {string} */
+                                        owner: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                        version: string;
+                                        code: string;
+                                    };
+                                    context: {
+                                        departmentRelation: {
+                                            /** @enum {string} */
+                                            owner: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id: string;
+                                            version: string;
+                                            /** Format: uuid */
+                                            versionId: string;
+                                        };
+                                    } | null;
+                                    semantic: ("EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED") | null;
+                                    license: {
+                                        /** @enum {string} */
+                                        owner: "organization-master/license";
+                                        /** Format: uuid */
+                                        id: string;
+                                        version: string;
+                                        /** Format: uuid */
+                                        versionId: string;
+                                    } | null;
+                                    limitations: ({
+                                        /** @enum {string} */
+                                        kind: "NO_ADDITIONAL_LIMITS";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "SERVICES_ONLY";
+                                        services: string[];
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "UNRESOLVED";
+                                    }) | null;
+                                    verifierRole: string;
+                                    /** Format: uuid */
+                                    contractVersionId: string;
+                                    verificationBasis: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        digest: string;
+                                    };
+                                    dependencies: unknown;
+                                    source: {
+                                        codeSystemId: string;
+                                        codeSystemVersion: string;
+                                        sourceAlias: string;
+                                        sourceVersion: string;
+                                        /** Format: uuid */
+                                        sourceSystemId: string;
+                                        sourceRecordedAt: string;
+                                        recordLocatorEvidence: {
+                                            /** Format: uuid */
+                                            inputId: string;
+                                            row: number;
+                                        };
+                                        recordStatus: string;
+                                        approvalReference: string;
+                                        licenseDocumentEvidence: {
+                                            /** Format: uuid */
+                                            inputId: string;
+                                            row: number;
+                                        };
+                                    };
+                                };
+                                reason: string;
+                                /** Format: uuid */
+                                changeId: string;
+                            };
+                            /** @enum {string} */
+                            clinicalReadiness: "NOT_READY";
+                        }[];
+                        nextAfterId: string | null;
                     };
                 };
             };
@@ -80301,6 +81243,163 @@ export interface operations {
             };
         };
     };
+    listWardNursingScopeDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    after?: string;
+                    limit?: number;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            version: string;
+                            /** @enum {unknown} */
+                            scope: "NORTH" | "SOUTH";
+                            applicability: {
+                                ward: {
+                                    /** @enum {string} */
+                                    owner: "care-organization/ward";
+                                    id: string;
+                                };
+                                campus: {
+                                    /** @enum {string} */
+                                    owner: "organization-master/campus";
+                                    id: string;
+                                };
+                                /** @enum {string} */
+                                purpose: "NURSING_COVERAGE";
+                            };
+                            partitions: {
+                                id: string;
+                                sourceAlias: string;
+                                name: string;
+                                boundary: string;
+                            }[];
+                            validFrom: string;
+                            validTo: string | null;
+                            recordedAt: string;
+                            sourceAlias: string;
+                            verificationBasis: unknown;
+                            changeId: string;
+                            inputId?: string;
+                            inputDigest?: string;
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
     readWardNursingScopeVersion: {
         parameters: {
             query?: never;
@@ -83903,7 +85002,7 @@ export interface operations {
                                             field: string;
                                             target: string;
                                             /** @enum {unknown} */
-                                            status: "UNIT_CORE" | "CAPABILITY_CORE";
+                                            status: "UNIT_CORE" | "NURSING_CORE" | "WARD_CORE" | "UNIT_WARD_CORE" | "WARD_NURSING_CORE" | "CAPABILITY_CORE" | "SUBJECT_CORE";
                                         } | {
                                             field: string;
                                             target: string;
@@ -86814,6 +87913,86 @@ export interface operations {
                                     duplicateOf: number;
                                 }[];
                             };
+                        } | {
+                            /** @enum {string} */
+                            status: "STRUCTURAL_REJECTED";
+                            /** @enum {string} */
+                            semanticValidation: "NOT_RUN";
+                            sourceArtifactId: string;
+                            parseArtifactId: string;
+                            resultArtifactId: string;
+                            evaluation: {
+                                /** @enum {string} */
+                                decision: "FAIL";
+                                issues: {
+                                    rule: string;
+                                    layer: number;
+                                    row: number;
+                                    field: string;
+                                    /** @enum {unknown} */
+                                    status: "PASS" | "FAIL" | "UNKNOWN" | "NOT_EVALUATED";
+                                    code: string;
+                                }[];
+                                layers: {
+                                    layer: number;
+                                    /** @enum {unknown} */
+                                    status: "PASS" | "FAIL" | "UNKNOWN" | "NOT_EVALUATED" | "NOT_RUN";
+                                }[];
+                                evidenceRequirements: {
+                                    rule: string;
+                                    requirementId: string;
+                                    row: number;
+                                    field: string;
+                                    /** @enum {string} */
+                                    status: "BLOCKED_DEPENDENCY";
+                                    details?: {
+                                        evidenceOwner: string;
+                                        requiredEvidence: string;
+                                        sourceDataset: string;
+                                        sourceField: string;
+                                        sourceText: string;
+                                        sourceVersion: string;
+                                        inputs: string[];
+                                        dispositionReason: string;
+                                        whenTrue: string;
+                                        whenFalse: string;
+                                        whenUnknown: string;
+                                    };
+                                }[];
+                                dependencies: {
+                                    target: string;
+                                    /** @enum {unknown} */
+                                    status: "NOT_READY" | "OBSERVED";
+                                    scope: string;
+                                    identity: string;
+                                    version: string | null;
+                                    periods: {
+                                        from: string;
+                                        to: string | null;
+                                    }[];
+                                }[];
+                                /** @enum {string} */
+                                interpretationPolicy: "EXACT_TEXT_V1";
+                                executionCoverage?: {
+                                    /** @enum {string} */
+                                    version: "RULE_EXECUTION_V1";
+                                    checks: {
+                                        rule: string;
+                                        layer: number;
+                                        field: string;
+                                        /** @enum {unknown} */
+                                        status: "PASS" | "FAIL" | "UNKNOWN" | "NOT_EVALUATED" | "NOT_RUN";
+                                        code: string;
+                                        rows: number[];
+                                    }[];
+                                };
+                                /** @enum {unknown} */
+                                deduplicationPolicy?: "EXACT_ROW_V1" | "DECLARED_KEY_V2";
+                                duplicates?: {
+                                    row: number;
+                                    duplicateOf: number;
+                                }[];
+                            };
                         };
                     };
                 };
@@ -88912,6 +90091,13436 @@ export interface operations {
                         policy: "TEST_POLICY_ONLY";
                         /** @enum {string} */
                         clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    validateCareOrganizationBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    validFrom: string;
+                    validTo: string | null;
+                    recordAsOf?: string;
+                    targets: {
+                        owner: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                        id: string;
+                        campusId: string;
+                    }[];
+                    members: {
+                        owner: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                        inputId: string;
+                        revisionId: string;
+                        digest: string;
+                        contractVersionId: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        mode: "CURRENT_ADMISSION" | "HISTORICAL";
+                        /** @enum {unknown} */
+                        profile: "CORE" | "FULL";
+                        recordAsOf: string;
+                        /** @enum {unknown} */
+                        decision: "PASS" | "FAIL" | "BLOCKED";
+                        items: {
+                            owner: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            id: string;
+                            dataset: string;
+                            field: string;
+                            inputId: string | null;
+                            row: number | null;
+                            source: {
+                                /** @enum {unknown} */
+                                origin: "PAGE" | "FILE";
+                                sourceArtifactId: string | null;
+                                sourceRow: number | null;
+                                worksheet: string | null;
+                            } | null;
+                            from: string;
+                            to: string | null;
+                            /** @enum {unknown} */
+                            problemScope?: "INTERVAL" | "ROW" | "BUNDLE";
+                            /** @enum {unknown} */
+                            status: "SATISFIED" | "NOT_SATISFIED" | "UNKNOWN";
+                            reason: string;
+                            basis: string;
+                        }[];
+                        unavailable: {
+                            /** @enum {unknown} */
+                            owner: "PERSONNEL_ASSIGNMENT" | "BED_RESOURCE" | "BED_SNAPSHOT" | "PATIENT_BUSINESS" | "EXTERNAL_CONSUMERS";
+                            /** @enum {string} */
+                            status: "NOT_EVALUABLE";
+                        }[];
+                        /** @enum {string} */
+                        policy: "TEST_POLICY_ONLY";
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    assessUnitImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    validFrom: string;
+                    validTo: string | null;
+                    recordAsOf?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        target: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "LOCATION";
+                            id: string;
+                        };
+                        recordAsOf: string;
+                        items: {
+                            owner: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            id: string;
+                            head: string;
+                            referenceId: string;
+                            referenceVersionId: string;
+                            from: string;
+                            to: string | null;
+                            campusId: string;
+                            /** @enum {string} */
+                            disposition: "OPEN";
+                        }[];
+                        unavailable: {
+                            /** @enum {unknown} */
+                            owner: "LOCATION_REFERENCES" | "PERSONNEL_ASSIGNMENT" | "BED_RESOURCE" | "BED_SNAPSHOT" | "PATIENT_BUSINESS" | "EXTERNAL_CONSUMERS";
+                            /** @enum {string} */
+                            status: "NOT_EVALUABLE";
+                        }[];
+                        /** @enum {unknown} */
+                        dispositionStatus: "OPEN" | "NO_IMPLEMENTED_REFERENCE";
+                        /** @enum {string} */
+                        clinicalReadiness: "NOT_READY";
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    saveCareWorkspaceBasisRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    operation: "commandParameterValue";
+                    command: {
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        /** Format: uuid */
+                        definitionVersionId: string;
+                        definitionDigest: string;
+                        value: {
+                            /** @enum {string} */
+                            type: "TEXT";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "INTEGER";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "DECIMAL";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "BOOLEAN";
+                            value: boolean;
+                        };
+                        /** @enum {unknown} */
+                        purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        action: "CREATE";
+                        applicability: {
+                            unit: {
+                                /** @enum {string} */
+                                owner: "care-organization/unit";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            campus: {
+                                /** @enum {string} */
+                                owner: "organization-master/campus";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            subject: {
+                                /** @enum {string} */
+                                owner: "organization-master";
+                                /** Format: uuid */
+                                id: string;
+                            };
+                            services: string[];
+                            /** @enum {unknown} */
+                            capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                            /** @enum {unknown} */
+                            careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                        };
+                    } | {
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        /** Format: uuid */
+                        definitionVersionId: string;
+                        definitionDigest: string;
+                        value: {
+                            /** @enum {string} */
+                            type: "TEXT";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "INTEGER";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "DECIMAL";
+                            value: string;
+                        } | {
+                            /** @enum {string} */
+                            type: "BOOLEAN";
+                            value: boolean;
+                        };
+                        /** @enum {unknown} */
+                        purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                        validFrom: string;
+                        validTo: string | null;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        /** @enum {string} */
+                        action: "REVISE";
+                        /** Format: uuid */
+                        target: string;
+                        expectedHead: string;
+                    } | {
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        /** @enum {string} */
+                        action: "APPROVE";
+                        /** Format: uuid */
+                        target: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        reviewDigest: string;
+                    };
+                    requestId: string;
+                } | {
+                    /** @enum {string} */
+                    operation: "commandSubjectCodeSnapshot";
+                    command: {
+                        /** @enum {string} */
+                        action: "CREATE";
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        systemCode: string;
+                        reference: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** @enum {string} */
+                            dataset: "REF01";
+                            /** @enum {string} */
+                            namespace: "REF01.code_system_id";
+                            sourceAlias: string;
+                        };
+                        codeSystemName: string;
+                        namespaceUri: string;
+                        standardDocument: string;
+                        issuer: string;
+                        codeSystemVersion: string;
+                        /** Format: uuid */
+                        sourceId: string;
+                        /** Format: uuid */
+                        sourceVersionId: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        sourcePage: string;
+                        sourceSummary: string;
+                        adoptedOn: string;
+                        /** @enum {string} */
+                        label: "TEST_POLICY_ONLY";
+                        validFrom: string;
+                        validTo: string | null;
+                        codes: {
+                            code: string;
+                            name: string;
+                            meaning: string;
+                            /** @enum {unknown} */
+                            status: "ACTIVE" | "RETIRED";
+                            replacement: string | null;
+                        }[];
+                    } | {
+                        /** @enum {string} */
+                        action: "REVISE";
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        /** Format: uuid */
+                        target: string;
+                        expectedHead: string;
+                        reference: {
+                            /** @enum {string} */
+                            owner: "governance-catalog/subject-code";
+                            /** @enum {string} */
+                            dataset: "REF01";
+                            /** @enum {string} */
+                            namespace: "REF01.code_system_id";
+                            sourceAlias: string;
+                        };
+                        codeSystemName: string;
+                        namespaceUri: string;
+                        standardDocument: string;
+                        issuer: string;
+                        codeSystemVersion: string;
+                        /** Format: uuid */
+                        sourceId: string;
+                        /** Format: uuid */
+                        sourceVersionId: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        sourcePage: string;
+                        sourceSummary: string;
+                        adoptedOn: string;
+                        /** @enum {string} */
+                        label: "TEST_POLICY_ONLY";
+                        validFrom: string;
+                        validTo: string | null;
+                        codes: {
+                            code: string;
+                            name: string;
+                            meaning: string;
+                            /** @enum {unknown} */
+                            status: "ACTIVE" | "RETIRED";
+                            replacement: string | null;
+                        }[];
+                    } | {
+                        /** @enum {string} */
+                        action: "APPROVE";
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        /** Format: uuid */
+                        target: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        reviewDigest: string;
+                    } | {
+                        /** @enum {string} */
+                        action: "VERIFY";
+                        /** Format: uuid */
+                        requestId: string;
+                        reason: string;
+                        /** Format: uuid */
+                        target: string;
+                        /** Format: uuid */
+                        versionId: string;
+                        reviewDigest: string;
+                        /** Format: uuid */
+                        evidenceId: string;
+                        sourceReviewed: boolean;
+                    };
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        id: string;
+                        recordedAt: string;
+                        content: {
+                            /** @enum {string} */
+                            operation: "commandParameterValue";
+                            command: {
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                value: {
+                                    /** @enum {string} */
+                                    type: "TEXT";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "INTEGER";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "DECIMAL";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "BOOLEAN";
+                                    value: boolean;
+                                };
+                                /** @enum {unknown} */
+                                purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                                validFrom: string;
+                                validTo: string | null;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                /** @enum {string} */
+                                action: "CREATE";
+                                applicability: {
+                                    unit: {
+                                        /** @enum {string} */
+                                        owner: "care-organization/unit";
+                                        /** Format: uuid */
+                                        id: string;
+                                    };
+                                    campus: {
+                                        /** @enum {string} */
+                                        owner: "organization-master/campus";
+                                        /** Format: uuid */
+                                        id: string;
+                                    };
+                                    subject: {
+                                        /** @enum {string} */
+                                        owner: "organization-master";
+                                        /** Format: uuid */
+                                        id: string;
+                                    };
+                                    services: string[];
+                                    /** @enum {unknown} */
+                                    capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                    /** @enum {unknown} */
+                                    careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                };
+                            } | {
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                value: {
+                                    /** @enum {string} */
+                                    type: "TEXT";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "INTEGER";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "DECIMAL";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "BOOLEAN";
+                                    value: boolean;
+                                };
+                                /** @enum {unknown} */
+                                purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                                validFrom: string;
+                                validTo: string | null;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                /** @enum {string} */
+                                action: "REVISE";
+                                /** Format: uuid */
+                                target: string;
+                                expectedHead: string;
+                            } | {
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** @enum {string} */
+                                action: "APPROVE";
+                                /** Format: uuid */
+                                target: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                reviewDigest: string;
+                            };
+                        } | {
+                            /** @enum {string} */
+                            operation: "commandSubjectCodeSnapshot";
+                            command: {
+                                /** @enum {string} */
+                                action: "CREATE";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                systemCode: string;
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/subject-code";
+                                    /** @enum {string} */
+                                    dataset: "REF01";
+                                    /** @enum {string} */
+                                    namespace: "REF01.code_system_id";
+                                    sourceAlias: string;
+                                };
+                                codeSystemName: string;
+                                namespaceUri: string;
+                                standardDocument: string;
+                                issuer: string;
+                                codeSystemVersion: string;
+                                /** Format: uuid */
+                                sourceId: string;
+                                /** Format: uuid */
+                                sourceVersionId: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourcePage: string;
+                                sourceSummary: string;
+                                adoptedOn: string;
+                                /** @enum {string} */
+                                label: "TEST_POLICY_ONLY";
+                                validFrom: string;
+                                validTo: string | null;
+                                codes: {
+                                    code: string;
+                                    name: string;
+                                    meaning: string;
+                                    /** @enum {unknown} */
+                                    status: "ACTIVE" | "RETIRED";
+                                    replacement: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                action: "REVISE";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                target: string;
+                                expectedHead: string;
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/subject-code";
+                                    /** @enum {string} */
+                                    dataset: "REF01";
+                                    /** @enum {string} */
+                                    namespace: "REF01.code_system_id";
+                                    sourceAlias: string;
+                                };
+                                codeSystemName: string;
+                                namespaceUri: string;
+                                standardDocument: string;
+                                issuer: string;
+                                codeSystemVersion: string;
+                                /** Format: uuid */
+                                sourceId: string;
+                                /** Format: uuid */
+                                sourceVersionId: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourcePage: string;
+                                sourceSummary: string;
+                                adoptedOn: string;
+                                /** @enum {string} */
+                                label: "TEST_POLICY_ONLY";
+                                validFrom: string;
+                                validTo: string | null;
+                                codes: {
+                                    code: string;
+                                    name: string;
+                                    meaning: string;
+                                    /** @enum {unknown} */
+                                    status: "ACTIVE" | "RETIRED";
+                                    replacement: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                action: "APPROVE";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                target: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                reviewDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                action: "VERIFY";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                target: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                reviewDigest: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourceReviewed: boolean;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCareWorkspaceBasisRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestId: string;
+                        id: string;
+                        recordedAt: string;
+                        content: {
+                            /** @enum {string} */
+                            operation: "commandParameterValue";
+                            command: {
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                value: {
+                                    /** @enum {string} */
+                                    type: "TEXT";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "INTEGER";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "DECIMAL";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "BOOLEAN";
+                                    value: boolean;
+                                };
+                                /** @enum {unknown} */
+                                purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                                validFrom: string;
+                                validTo: string | null;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                /** @enum {string} */
+                                action: "CREATE";
+                                applicability: {
+                                    unit: {
+                                        /** @enum {string} */
+                                        owner: "care-organization/unit";
+                                        /** Format: uuid */
+                                        id: string;
+                                    };
+                                    campus: {
+                                        /** @enum {string} */
+                                        owner: "organization-master/campus";
+                                        /** Format: uuid */
+                                        id: string;
+                                    };
+                                    subject: {
+                                        /** @enum {string} */
+                                        owner: "organization-master";
+                                        /** Format: uuid */
+                                        id: string;
+                                    };
+                                    services: string[];
+                                    /** @enum {unknown} */
+                                    capabilityType: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                    /** @enum {unknown} */
+                                    careSetting: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                };
+                            } | {
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                definitionVersionId: string;
+                                definitionDigest: string;
+                                value: {
+                                    /** @enum {string} */
+                                    type: "TEXT";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "INTEGER";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "DECIMAL";
+                                    value: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type: "BOOLEAN";
+                                    value: boolean;
+                                };
+                                /** @enum {unknown} */
+                                purpose: "METADATA" | "BOOLEAN_GATE_V1";
+                                validFrom: string;
+                                validTo: string | null;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                /** @enum {string} */
+                                action: "REVISE";
+                                /** Format: uuid */
+                                target: string;
+                                expectedHead: string;
+                            } | {
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** @enum {string} */
+                                action: "APPROVE";
+                                /** Format: uuid */
+                                target: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                reviewDigest: string;
+                            };
+                        } | {
+                            /** @enum {string} */
+                            operation: "commandSubjectCodeSnapshot";
+                            command: {
+                                /** @enum {string} */
+                                action: "CREATE";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                systemCode: string;
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/subject-code";
+                                    /** @enum {string} */
+                                    dataset: "REF01";
+                                    /** @enum {string} */
+                                    namespace: "REF01.code_system_id";
+                                    sourceAlias: string;
+                                };
+                                codeSystemName: string;
+                                namespaceUri: string;
+                                standardDocument: string;
+                                issuer: string;
+                                codeSystemVersion: string;
+                                /** Format: uuid */
+                                sourceId: string;
+                                /** Format: uuid */
+                                sourceVersionId: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourcePage: string;
+                                sourceSummary: string;
+                                adoptedOn: string;
+                                /** @enum {string} */
+                                label: "TEST_POLICY_ONLY";
+                                validFrom: string;
+                                validTo: string | null;
+                                codes: {
+                                    code: string;
+                                    name: string;
+                                    meaning: string;
+                                    /** @enum {unknown} */
+                                    status: "ACTIVE" | "RETIRED";
+                                    replacement: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                action: "REVISE";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                target: string;
+                                expectedHead: string;
+                                reference: {
+                                    /** @enum {string} */
+                                    owner: "governance-catalog/subject-code";
+                                    /** @enum {string} */
+                                    dataset: "REF01";
+                                    /** @enum {string} */
+                                    namespace: "REF01.code_system_id";
+                                    sourceAlias: string;
+                                };
+                                codeSystemName: string;
+                                namespaceUri: string;
+                                standardDocument: string;
+                                issuer: string;
+                                codeSystemVersion: string;
+                                /** Format: uuid */
+                                sourceId: string;
+                                /** Format: uuid */
+                                sourceVersionId: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourcePage: string;
+                                sourceSummary: string;
+                                adoptedOn: string;
+                                /** @enum {string} */
+                                label: "TEST_POLICY_ONLY";
+                                validFrom: string;
+                                validTo: string | null;
+                                codes: {
+                                    code: string;
+                                    name: string;
+                                    meaning: string;
+                                    /** @enum {unknown} */
+                                    status: "ACTIVE" | "RETIRED";
+                                    replacement: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                action: "APPROVE";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                target: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                reviewDigest: string;
+                            } | {
+                                /** @enum {string} */
+                                action: "VERIFY";
+                                /** Format: uuid */
+                                requestId: string;
+                                reason: string;
+                                /** Format: uuid */
+                                target: string;
+                                /** Format: uuid */
+                                versionId: string;
+                                reviewDigest: string;
+                                /** Format: uuid */
+                                evidenceId: string;
+                                sourceReviewed: boolean;
+                            };
+                        };
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    saveCareWorkspaceDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "UNIT";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {unknown} */
+                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries?: ({
+                            row?: {
+                                unit_id?: string;
+                                unit_code?: string;
+                                unit_name?: string;
+                                org_id?: string;
+                                campus_id?: string;
+                                legal_entity_id?: string;
+                                /** @enum {string} */
+                                unit_type?: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                public_phone?: string;
+                                service_description?: string;
+                                receiving_rule_ref?: string;
+                                business_owner_id?: string;
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                            binding?: {
+                                department?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                relation?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master/campus-relation";
+                                    id?: string;
+                                    version?: string;
+                                    versionId?: string;
+                                };
+                                services?: string[];
+                            };
+                        } | {
+                            row?: {
+                                unit_id?: string;
+                                unit_code?: string;
+                                unit_name?: string;
+                                org_id?: string;
+                                campus_id?: string;
+                                legal_entity_id?: string;
+                                /** @enum {string} */
+                                unit_type?: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                public_phone?: string;
+                                service_description?: string;
+                                receiving_rule_ref?: string;
+                                business_owner_id?: string;
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "REBIND";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/unit";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                            binding?: {
+                                department?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    id?: string;
+                                };
+                                relation?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master/campus-relation";
+                                    id?: string;
+                                    version?: string;
+                                    versionId?: string;
+                                };
+                                services?: string[];
+                            };
+                        } | {
+                            row?: {
+                                unit_id?: string;
+                                unit_code?: string;
+                                unit_name?: string;
+                                org_id?: string;
+                                campus_id?: string;
+                                legal_entity_id?: string;
+                                /** @enum {string} */
+                                unit_type?: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                public_phone?: string;
+                                service_description?: string;
+                                receiving_rule_ref?: string;
+                                business_owner_id?: string;
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {unknown} */
+                            action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/unit";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            id?: string;
+                                        };
+                                        relation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REBIND";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            id?: string;
+                                        };
+                                        relation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "NURSING";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {unknown} */
+                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries?: ({
+                            row?: {
+                                nursing_unit_id?: string;
+                                nursing_code?: string;
+                                nursing_name?: string;
+                                campus_id?: string;
+                                managing_org_id?: string;
+                                care_level?: string | null;
+                                office_phone?: string | null;
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                            binding?: {
+                                department?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                            };
+                        } | {
+                            row?: {
+                                nursing_unit_id?: string;
+                                nursing_code?: string;
+                                nursing_name?: string;
+                                campus_id?: string;
+                                managing_org_id?: string;
+                                care_level?: string | null;
+                                office_phone?: string | null;
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "REBIND";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/nursing";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                            binding?: {
+                                department?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                            };
+                        } | {
+                            row?: {
+                                nursing_unit_id?: string;
+                                nursing_code?: string;
+                                nursing_name?: string;
+                                campus_id?: string;
+                                managing_org_id?: string;
+                                care_level?: string | null;
+                                office_phone?: string | null;
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {unknown} */
+                            action?: "REVISE" | "SUSPEND" | "RESUME" | "CLOSE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/nursing";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REBIND";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/nursing";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "SUSPEND" | "RESUME" | "CLOSE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/nursing";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "WARD";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {unknown} */
+                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries?: ({
+                            row?: {
+                                ward_id?: string;
+                                ward_code?: string;
+                                ward_name?: string;
+                                campus_id?: string;
+                                managing_unit_id?: string | null | "";
+                                ward_type?: string;
+                                admission_rule_ref?: string | null;
+                                public_phone?: string | null;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                            binding?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                            };
+                        } | {
+                            row?: {
+                                ward_id?: string;
+                                ward_code?: string;
+                                ward_name?: string;
+                                campus_id?: string;
+                                managing_unit_id?: string | null | "";
+                                ward_type?: string;
+                                admission_rule_ref?: string | null;
+                                public_phone?: string | null;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "REBIND";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/ward";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                            binding?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                            };
+                        } | {
+                            row?: {
+                                ward_id?: string;
+                                ward_code?: string;
+                                ward_name?: string;
+                                campus_id?: string;
+                                managing_unit_id?: string | null | "";
+                                ward_type?: string;
+                                admission_rule_ref?: string | null;
+                                public_phone?: string | null;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {unknown} */
+                            action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/ward";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    binding?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REBIND";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    binding?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "UNIT_WARD";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {string} */
+                        timePolicy?: "LOCAL";
+                        entries?: ({
+                            row?: {
+                                unit_ward_rel_id?: string;
+                                unit_id?: string;
+                                ward_id?: string;
+                                /** @enum {unknown} */
+                                relation_type?: "收治" | "管理" | "共享";
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                sharing_rule?: string | null;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                };
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {unknown} */
+                                purpose?: "ADMISSION" | "MANAGEMENT";
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_SHARING_REQUIRED";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SHARED_BOUNDARY";
+                                ruleReference?: string;
+                                ruleVersion?: string;
+                                evidenceId?: string;
+                                participants?: string[];
+                                validFrom?: string;
+                                validTo?: string | null;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNKNOWN";
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                        } | {
+                            row?: {
+                                unit_ward_rel_id?: string;
+                                unit_id?: string;
+                                ward_id?: string;
+                                /** @enum {unknown} */
+                                relation_type?: "收治" | "管理" | "共享";
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                sharing_rule?: string | null;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                };
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {unknown} */
+                                purpose?: "ADMISSION" | "MANAGEMENT";
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_SHARING_REQUIRED";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SHARED_BOUNDARY";
+                                ruleReference?: string;
+                                ruleVersion?: string;
+                                evidenceId?: string;
+                                participants?: string[];
+                                validFrom?: string;
+                                validTo?: string | null;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNKNOWN";
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/unit-ward-relation";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        } | {
+                            row?: {
+                                unit_ward_rel_id?: string;
+                                unit_id?: string;
+                                ward_id?: string;
+                                /** @enum {unknown} */
+                                relation_type?: "收治" | "管理" | "共享";
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                sharing_rule?: string | null;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                };
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {unknown} */
+                                purpose?: "ADMISSION" | "MANAGEMENT";
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_SHARING_REQUIRED";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SHARED_BOUNDARY";
+                                ruleReference?: string;
+                                ruleVersion?: string;
+                                evidenceId?: string;
+                                participants?: string[];
+                                validFrom?: string;
+                                validTo?: string | null;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNKNOWN";
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "END";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/unit-ward-relation";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                            endAt?: string;
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        purpose?: "ADMISSION" | "MANAGEMENT";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        purpose?: "ADMISSION" | "MANAGEMENT";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit-ward-relation";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        purpose?: "ADMISSION" | "MANAGEMENT";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit-ward-relation";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    endAt?: string;
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "WARD_NURSING";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {string} */
+                        timePolicy?: "LOCAL";
+                        /** @enum {string} */
+                        kind?: "COVERAGE";
+                        entries?: ({
+                            row?: {
+                                ward_nursing_rel_id?: string;
+                                ward_id?: string;
+                                nursing_unit_id?: string;
+                                coverage_scope?: string;
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                handover_rule_ref?: string | null;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                nursing?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/nursing";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {string} */
+                                purpose?: "NURSING_COVERAGE";
+                            };
+                            coverage?: {
+                                /** @enum {string} */
+                                kind?: "WHOLE_WARD";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "PARTITIONS";
+                                scopeSetId?: string;
+                                version?: string;
+                                partitionIds?: string[];
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_SHARING_REQUIRED";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SHARED_BOUNDARY";
+                                ruleReference?: string;
+                                ruleVersion?: string;
+                                evidenceId?: string;
+                                participants?: string[];
+                                coverage?: {
+                                    /** @enum {string} */
+                                    kind?: "WHOLE_WARD";
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PARTITIONS";
+                                    scopeSetId?: string;
+                                    version?: string;
+                                    partitionIds?: string[];
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNKNOWN";
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                        } | {
+                            row?: {
+                                ward_nursing_rel_id?: string;
+                                ward_id?: string;
+                                nursing_unit_id?: string;
+                                coverage_scope?: string;
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                handover_rule_ref?: string | null;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                nursing?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/nursing";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {string} */
+                                purpose?: "NURSING_COVERAGE";
+                            };
+                            coverage?: {
+                                /** @enum {string} */
+                                kind?: "WHOLE_WARD";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "PARTITIONS";
+                                scopeSetId?: string;
+                                version?: string;
+                                partitionIds?: string[];
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_SHARING_REQUIRED";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SHARED_BOUNDARY";
+                                ruleReference?: string;
+                                ruleVersion?: string;
+                                evidenceId?: string;
+                                participants?: string[];
+                                coverage?: {
+                                    /** @enum {string} */
+                                    kind?: "WHOLE_WARD";
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PARTITIONS";
+                                    scopeSetId?: string;
+                                    version?: string;
+                                    partitionIds?: string[];
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNKNOWN";
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/ward-nursing-coverage";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        } | {
+                            row?: {
+                                ward_nursing_rel_id?: string;
+                                ward_id?: string;
+                                nursing_unit_id?: string;
+                                coverage_scope?: string;
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                handover_rule_ref?: string | null;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                nursing?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/nursing";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {string} */
+                                purpose?: "NURSING_COVERAGE";
+                            };
+                            coverage?: {
+                                /** @enum {string} */
+                                kind?: "WHOLE_WARD";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "PARTITIONS";
+                                scopeSetId?: string;
+                                version?: string;
+                                partitionIds?: string[];
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_SHARING_REQUIRED";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SHARED_BOUNDARY";
+                                ruleReference?: string;
+                                ruleVersion?: string;
+                                evidenceId?: string;
+                                participants?: string[];
+                                coverage?: {
+                                    /** @enum {string} */
+                                    kind?: "WHOLE_WARD";
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "PARTITIONS";
+                                    scopeSetId?: string;
+                                    version?: string;
+                                    partitionIds?: string[];
+                                };
+                                validFrom?: string;
+                                validTo?: string | null;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNKNOWN";
+                            };
+                            reason?: string;
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "END";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/ward-nursing-coverage";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                            endAt?: string;
+                        })[];
+                    } | {
+                        /** @enum {string} */
+                        timePolicy?: "LOCAL";
+                        /** @enum {string} */
+                        kind?: "SCOPE_DEFINITION";
+                        definition?: {
+                            sourceAlias?: string;
+                            applicability?: {
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {string} */
+                                purpose?: "NURSING_COVERAGE";
+                            };
+                            partitions?: {
+                                sourceAlias?: string;
+                                name?: string;
+                                boundary?: string;
+                            }[];
+                            validFrom?: string;
+                            validTo?: string | null;
+                            sourceSystemId?: string;
+                            sourceRecordedAt?: string;
+                            approvalReference?: string;
+                            evidenceId?: string;
+                            reason?: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        timePolicy?: "LOCAL";
+                        /** @enum {string} */
+                        kind?: "SCOPE_REVISION";
+                        target?: {
+                            id?: string;
+                            expectedHead?: string;
+                        };
+                        definition?: {
+                            sourceAlias?: string;
+                            applicability?: {
+                                ward?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                /** @enum {string} */
+                                purpose?: "NURSING_COVERAGE";
+                            };
+                            partitions?: {
+                                sourceAlias?: string;
+                                name?: string;
+                                boundary?: string;
+                            }[];
+                            validFrom?: string;
+                            validTo?: string | null;
+                            sourceSystemId?: string;
+                            sourceRecordedAt?: string;
+                            approvalReference?: string;
+                            evidenceId?: string;
+                            reason?: string;
+                        };
+                        mapping?: {
+                            version?: string;
+                            partitionId?: string;
+                            toAliases?: string[];
+                        }[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        nursing?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    coverage?: {
+                                        /** @enum {string} */
+                                        kind?: "WHOLE_WARD";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PARTITIONS";
+                                        scopeSetId?: string;
+                                        version?: string;
+                                        partitionIds?: string[];
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        nursing?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    coverage?: {
+                                        /** @enum {string} */
+                                        kind?: "WHOLE_WARD";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PARTITIONS";
+                                        scopeSetId?: string;
+                                        version?: string;
+                                        partitionIds?: string[];
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward-nursing-coverage";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        nursing?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    coverage?: {
+                                        /** @enum {string} */
+                                        kind?: "WHOLE_WARD";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PARTITIONS";
+                                        scopeSetId?: string;
+                                        version?: string;
+                                        partitionIds?: string[];
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward-nursing-coverage";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    endAt?: string;
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "CAPABILITY";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {unknown} */
+                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries?: ({
+                            row?: {
+                                capability_id?: string;
+                                /** Format: uuid */
+                                unit_id?: string;
+                                /** @enum {unknown} */
+                                capability_type?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                care_setting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                /** @enum {unknown} */
+                                enabled?: "Y" | "N";
+                                rule_ref?: string | null;
+                                approval_dept?: string;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                /** Format: uuid */
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                services?: string[];
+                                /** @enum {unknown} */
+                                capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "BOOLEAN_GATE_V1";
+                                parameter?: {
+                                    /** @enum {string} */
+                                    owner?: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId?: string;
+                                    /** Format: uuid */
+                                    valueId?: string;
+                                    /** Format: uuid */
+                                    versionId?: string;
+                                    /** Format: uuid */
+                                    definitionVersionId?: string;
+                                    definitionDigest?: string;
+                                    valueDigest?: string;
+                                };
+                            };
+                            reason?: string;
+                            /** Format: uuid */
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            action?: "GRANT";
+                        } | {
+                            row?: {
+                                capability_id?: string;
+                                /** Format: uuid */
+                                unit_id?: string;
+                                /** @enum {unknown} */
+                                capability_type?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                care_setting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                /** @enum {unknown} */
+                                enabled?: "Y" | "N";
+                                rule_ref?: string | null;
+                                approval_dept?: string;
+                                version_no?: string | number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                /** Format: uuid */
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                unit?: {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                services?: string[];
+                                /** @enum {unknown} */
+                                capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                /** @enum {unknown} */
+                                careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                            };
+                            rule?: {
+                                /** @enum {string} */
+                                kind?: "NO_ADDITIONAL_RULE";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "BOOLEAN_GATE_V1";
+                                parameter?: {
+                                    /** @enum {string} */
+                                    owner?: "governance-catalog/parameter-value";
+                                    /** Format: uuid */
+                                    parameterId?: string;
+                                    /** Format: uuid */
+                                    valueId?: string;
+                                    /** Format: uuid */
+                                    versionId?: string;
+                                    /** Format: uuid */
+                                    definitionVersionId?: string;
+                                    definitionDigest?: string;
+                                    valueDigest?: string;
+                                };
+                            };
+                            reason?: string;
+                            /** Format: uuid */
+                            evidenceId?: string;
+                            /** @enum {unknown} */
+                            action?: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "care-organization/unit-capability";
+                                /** Format: uuid */
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                /** Format: uuid */
+                                requestId?: string;
+                                /** Format: uuid */
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                        /** @enum {unknown} */
+                                        capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                        /** @enum {unknown} */
+                                        careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_RULE";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "BOOLEAN_GATE_V1";
+                                        parameter?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/parameter-value";
+                                            /** Format: uuid */
+                                            parameterId?: string;
+                                            /** Format: uuid */
+                                            valueId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            /** Format: uuid */
+                                            definitionVersionId?: string;
+                                            definitionDigest?: string;
+                                            valueDigest?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "GRANT";
+                                } | {
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                        /** @enum {unknown} */
+                                        capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                        /** @enum {unknown} */
+                                        careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_RULE";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "BOOLEAN_GATE_V1";
+                                        parameter?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/parameter-value";
+                                            /** Format: uuid */
+                                            parameterId?: string;
+                                            /** Format: uuid */
+                                            valueId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            /** Format: uuid */
+                                            definitionVersionId?: string;
+                                            definitionDigest?: string;
+                                            valueDigest?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit-capability";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "PERMISSION";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {string} */
+                        timePolicy?: "LOCAL";
+                        entries?: ({
+                            row?: {
+                                subject_license_id?: string;
+                                target_type?: string;
+                                target_id?: string;
+                                code_system_id?: string;
+                                code_system_version?: string;
+                                subject_code?: string;
+                                license_ref?: string;
+                                permitted_scope?: string | null;
+                                verifier?: string;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            scope?: {
+                                target?: {
+                                    /** @enum {string} */
+                                    type?: "LEGAL";
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "ORG";
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "UNIT";
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                services?: string[];
+                            };
+                            adoption?: {
+                                /** @enum {string} */
+                                owner?: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId?: string;
+                                /** Format: uuid */
+                                versionId?: string;
+                                version?: string;
+                                code?: string;
+                            };
+                            context?: {
+                                departmentRelation?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id?: string;
+                                    version?: string;
+                                    /** Format: uuid */
+                                    versionId?: string;
+                                };
+                            };
+                            reason?: string;
+                            /** Format: uuid */
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            kind?: "MAPPING";
+                            /** @enum {unknown} */
+                            semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                            /** @enum {string} */
+                            action?: "RECORD";
+                        } | {
+                            row?: {
+                                subject_license_id?: string;
+                                target_type?: string;
+                                target_id?: string;
+                                code_system_id?: string;
+                                code_system_version?: string;
+                                subject_code?: string;
+                                license_ref?: string;
+                                permitted_scope?: string | null;
+                                verifier?: string;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            scope?: {
+                                target?: {
+                                    /** @enum {string} */
+                                    type?: "LEGAL";
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "ORG";
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "UNIT";
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                services?: string[];
+                            };
+                            adoption?: {
+                                /** @enum {string} */
+                                owner?: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId?: string;
+                                /** Format: uuid */
+                                versionId?: string;
+                                version?: string;
+                                code?: string;
+                            };
+                            context?: {
+                                departmentRelation?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id?: string;
+                                    version?: string;
+                                    /** Format: uuid */
+                                    versionId?: string;
+                                };
+                            };
+                            reason?: string;
+                            /** Format: uuid */
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            kind?: "MAPPING";
+                            /** @enum {unknown} */
+                            semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                            /** @enum {unknown} */
+                            action?: "REVISE" | "RETIRE";
+                            target?: {
+                                /** @enum {unknown} */
+                                owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                /** Format: uuid */
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        } | {
+                            row?: {
+                                subject_license_id?: string;
+                                target_type?: string;
+                                target_id?: string;
+                                code_system_id?: string;
+                                code_system_version?: string;
+                                subject_code?: string;
+                                license_ref?: string;
+                                permitted_scope?: string | null;
+                                verifier?: string;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            scope?: {
+                                target?: {
+                                    /** @enum {string} */
+                                    type?: "LEGAL";
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "ORG";
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "UNIT";
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                services?: string[];
+                            };
+                            adoption?: {
+                                /** @enum {string} */
+                                owner?: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId?: string;
+                                /** Format: uuid */
+                                versionId?: string;
+                                version?: string;
+                                code?: string;
+                            };
+                            context?: {
+                                departmentRelation?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id?: string;
+                                    version?: string;
+                                    /** Format: uuid */
+                                    versionId?: string;
+                                };
+                            };
+                            reason?: string;
+                            /** Format: uuid */
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            kind?: "PERMISSION";
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                /** Format: uuid */
+                                id?: string;
+                                version?: string;
+                                /** Format: uuid */
+                                versionId?: string;
+                            };
+                            limitations?: {
+                                /** @enum {string} */
+                                kind?: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SERVICES_ONLY";
+                                services?: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNRESOLVED";
+                            };
+                            /** @enum {string} */
+                            action?: "RECORD";
+                        } | {
+                            row?: {
+                                subject_license_id?: string;
+                                target_type?: string;
+                                target_id?: string;
+                                code_system_id?: string;
+                                code_system_version?: string;
+                                subject_code?: string;
+                                license_ref?: string;
+                                permitted_scope?: string | null;
+                                verifier?: string;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            scope?: {
+                                target?: {
+                                    /** @enum {string} */
+                                    type?: "LEGAL";
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "ORG";
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    type?: "UNIT";
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                subject?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    /** Format: uuid */
+                                    id?: string;
+                                };
+                                services?: string[];
+                            };
+                            adoption?: {
+                                /** @enum {string} */
+                                owner?: "governance-catalog/subject-code";
+                                /** Format: uuid */
+                                systemId?: string;
+                                /** Format: uuid */
+                                versionId?: string;
+                                version?: string;
+                                code?: string;
+                            };
+                            context?: {
+                                departmentRelation?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master/campus-relation";
+                                    /** Format: uuid */
+                                    id?: string;
+                                    version?: string;
+                                    /** Format: uuid */
+                                    versionId?: string;
+                                };
+                            };
+                            reason?: string;
+                            /** Format: uuid */
+                            evidenceId?: string;
+                            /** @enum {string} */
+                            kind?: "PERMISSION";
+                            license?: {
+                                /** @enum {string} */
+                                owner?: "organization-master/license";
+                                /** Format: uuid */
+                                id?: string;
+                                version?: string;
+                                /** Format: uuid */
+                                versionId?: string;
+                            };
+                            limitations?: {
+                                /** @enum {string} */
+                                kind?: "NO_ADDITIONAL_LIMITS";
+                            } | {
+                                /** @enum {string} */
+                                kind?: "SERVICES_ONLY";
+                                services?: string[];
+                            } | {
+                                /** @enum {string} */
+                                kind?: "UNRESOLVED";
+                            };
+                            /** @enum {unknown} */
+                            action?: "REVISE" | "RETIRE";
+                            target?: {
+                                /** @enum {unknown} */
+                                owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                /** Format: uuid */
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                /** Format: uuid */
+                                requestId?: string;
+                                /** Format: uuid */
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "MAPPING";
+                                    /** @enum {unknown} */
+                                    semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                    /** @enum {string} */
+                                    action?: "RECORD";
+                                } | {
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "MAPPING";
+                                    /** @enum {unknown} */
+                                    semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "RETIRE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "PERMISSION";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        version?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                    };
+                                    limitations?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_LIMITS";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SERVICES_ONLY";
+                                        services?: string[];
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNRESOLVED";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "RECORD";
+                                } | {
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "PERMISSION";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        version?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                    };
+                                    limitations?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_LIMITS";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SERVICES_ONLY";
+                                        services?: string[];
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNRESOLVED";
+                                    };
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "RETIRE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "LOCATION";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        campusId?: string;
+                        /** @enum {unknown} */
+                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries?: ({
+                            reason?: string;
+                            evidenceId?: string;
+                            row?: {
+                                location_id?: string;
+                                location_code?: string;
+                                location_name?: string;
+                                campus_id?: string;
+                                parent_location_id?: string;
+                                /** @enum {string} */
+                                location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floor_label?: string;
+                                room_number?: string;
+                                address_detail?: string;
+                                /** @enum {string} */
+                                is_accessible?: "" | "Y" | "N";
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            /** @enum {string} */
+                            action?: "CREATE";
+                            parent?: {
+                                /** @enum {string} */
+                                kind?: "ALIAS";
+                                clientKey?: string;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "EXISTING";
+                                reference?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master";
+                                    id?: string;
+                                };
+                            } | null;
+                        } | {
+                            reason?: string;
+                            evidenceId?: string;
+                            row?: {
+                                location_id?: string;
+                                location_code?: string;
+                                location_name?: string;
+                                campus_id?: string;
+                                parent_location_id?: string;
+                                /** @enum {string} */
+                                location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floor_label?: string;
+                                room_number?: string;
+                                address_detail?: string;
+                                /** @enum {string} */
+                                is_accessible?: "" | "Y" | "N";
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "location-master";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                        } | {
+                            reason?: string;
+                            evidenceId?: string;
+                            row?: {
+                                location_id?: string;
+                                location_code?: string;
+                                location_name?: string;
+                                campus_id?: string;
+                                parent_location_id?: string;
+                                /** @enum {string} */
+                                location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floor_label?: string;
+                                room_number?: string;
+                                address_detail?: string;
+                                /** @enum {string} */
+                                is_accessible?: "" | "Y" | "N";
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            /** @enum {string} */
+                            action?: "MOVE_CONTAINMENT";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "location-master";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            parent?: {
+                                /** @enum {string} */
+                                kind?: "ALIAS";
+                                clientKey?: string;
+                            } | {
+                                /** @enum {string} */
+                                kind?: "EXISTING";
+                                reference?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master";
+                                    id?: string;
+                                };
+                            } | null;
+                        } | {
+                            reason?: string;
+                            evidenceId?: string;
+                            row?: {
+                                location_id?: string;
+                                location_code?: string;
+                                location_name?: string;
+                                campus_id?: string;
+                                parent_location_id?: string;
+                                /** @enum {string} */
+                                location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floor_label?: string;
+                                room_number?: string;
+                                address_detail?: string;
+                                /** @enum {string} */
+                                is_accessible?: "" | "Y" | "N";
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            /** @enum {string} */
+                            action?: "CLOSE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "location-master";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                        } | {
+                            reason?: string;
+                            evidenceId?: string;
+                            row?: {
+                                location_id?: string;
+                                location_code?: string;
+                                location_name?: string;
+                                campus_id?: string;
+                                parent_location_id?: string;
+                                /** @enum {string} */
+                                location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                floor_label?: string;
+                                room_number?: string;
+                                address_detail?: string;
+                                /** @enum {string} */
+                                is_accessible?: "" | "Y" | "N";
+                                version_no?: string;
+                                valid_from?: string;
+                                valid_to?: string;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string;
+                                recorded_at?: string;
+                            };
+                            /** @enum {string} */
+                            action?: "SPLIT";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "location-master";
+                                id?: string;
+                                expectedVersion?: string;
+                            };
+                            successors?: {
+                                row?: {
+                                    location_id?: string;
+                                    location_code?: string;
+                                    location_name?: string;
+                                    campus_id?: string;
+                                    parent_location_id?: string;
+                                    /** @enum {string} */
+                                    location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                    floor_label?: string;
+                                    room_number?: string;
+                                    address_detail?: string;
+                                    /** @enum {string} */
+                                    is_accessible?: "" | "Y" | "N";
+                                    version_no?: string;
+                                    valid_from?: string;
+                                    valid_to?: string;
+                                    /** @enum {string} */
+                                    record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                    source_system_id?: string;
+                                    source_record_id?: string;
+                                    approval_ref?: string;
+                                    recorded_at?: string;
+                                };
+                                parent?: {
+                                    /** @enum {string} */
+                                    kind?: "ALIAS";
+                                    clientKey?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind?: "EXISTING";
+                                    reference?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                    };
+                                } | null;
+                                evidenceId?: string;
+                            }[];
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                campusId?: string;
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    parent?: {
+                                        /** @enum {string} */
+                                        kind?: "ALIAS";
+                                        clientKey?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "EXISTING";
+                                        reference?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                    } | null;
+                                    reason?: string;
+                                    evidenceId?: string;
+                                } | {
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "CLOSE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    action?: "MOVE_CONTAINMENT";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    parent?: {
+                                        /** @enum {string} */
+                                        kind?: "ALIAS";
+                                        clientKey?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "EXISTING";
+                                        reference?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                    } | null;
+                                    reason?: string;
+                                    evidenceId?: string;
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "LOCATION_USE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {unknown} */
+                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                        entries?: ({
+                            row?: {
+                                object_location_rel_id?: string;
+                                /** @enum {unknown} */
+                                target_type?: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                target_id?: string;
+                                location_id?: string;
+                                usage_type?: string;
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                sharing_description?: string | null;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                /** @enum {unknown} */
+                                targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/nursing";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                location?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master";
+                                    id?: string;
+                                };
+                                usageType?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master/usage-type";
+                                    id?: string;
+                                };
+                            };
+                            usageType?: {
+                                /** @enum {string} */
+                                owner?: "location-master/usage-type";
+                                id?: string;
+                                versionId?: string;
+                                version?: string;
+                            };
+                            policy?: {
+                                /** @enum {unknown} */
+                                kind?: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version?: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId?: string;
+                            reason?: string;
+                            /** @enum {string} */
+                            action?: "CREATE";
+                        } | {
+                            row?: {
+                                object_location_rel_id?: string;
+                                /** @enum {unknown} */
+                                target_type?: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                target_id?: string;
+                                location_id?: string;
+                                usage_type?: string;
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                sharing_description?: string | null;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                /** @enum {unknown} */
+                                targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/nursing";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                location?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master";
+                                    id?: string;
+                                };
+                                usageType?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master/usage-type";
+                                    id?: string;
+                                };
+                            };
+                            usageType?: {
+                                /** @enum {string} */
+                                owner?: "location-master/usage-type";
+                                id?: string;
+                                versionId?: string;
+                                version?: string;
+                            };
+                            policy?: {
+                                /** @enum {unknown} */
+                                kind?: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version?: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId?: string;
+                            reason?: string;
+                            /** @enum {string} */
+                            action?: "REVISE";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "location-master/location-use";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                        } | {
+                            row?: {
+                                object_location_rel_id?: string;
+                                /** @enum {unknown} */
+                                target_type?: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                target_id?: string;
+                                location_id?: string;
+                                usage_type?: string;
+                                /** @enum {unknown} */
+                                is_primary?: "Y" | "N";
+                                sharing_description?: string | null;
+                                version_no?: number;
+                                valid_from?: string;
+                                valid_to?: string | null;
+                                /** @enum {string} */
+                                record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                source_system_id?: string;
+                                source_record_id?: string;
+                                approval_ref?: string | null;
+                                recorded_at?: string;
+                            };
+                            applicability?: {
+                                /** @enum {unknown} */
+                                targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                target?: {
+                                    /** @enum {string} */
+                                    owner?: "department-master";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/unit";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/ward";
+                                    id?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    owner?: "care-organization/nursing";
+                                    id?: string;
+                                };
+                                campus?: {
+                                    /** @enum {string} */
+                                    owner?: "organization-master/campus";
+                                    id?: string;
+                                };
+                                location?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master";
+                                    id?: string;
+                                };
+                                usageType?: {
+                                    /** @enum {string} */
+                                    owner?: "location-master/usage-type";
+                                    id?: string;
+                                };
+                            };
+                            usageType?: {
+                                /** @enum {string} */
+                                owner?: "location-master/usage-type";
+                                id?: string;
+                                versionId?: string;
+                                version?: string;
+                            };
+                            policy?: {
+                                /** @enum {unknown} */
+                                kind?: "SHARED" | "EXCLUSIVE";
+                                /** @enum {string} */
+                                version?: "WHOLE_LOCATION_V1";
+                            };
+                            evidenceId?: string;
+                            reason?: string;
+                            /** @enum {string} */
+                            action?: "END";
+                            target?: {
+                                /** @enum {string} */
+                                owner?: "location-master/location-use";
+                                id?: string;
+                                expectedHead?: string;
+                            };
+                            endAt?: string;
+                        })[];
+                    };
+                    file?: {
+                        requestId: string;
+                        body: {
+                            input: {
+                                requestId?: string;
+                                fileRequestId?: string;
+                                job?: {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    contractId?: string;
+                                    contractVersionId?: string;
+                                    profile?: "CORE" | "FULL";
+                                } | {
+                                    scope?: "BASELINE" | "SYNTHETIC";
+                                    requestId?: string;
+                                    reason?: string;
+                                    input?: {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        /** @enum {string} */
+                                        format?: "XLSX";
+                                        /** @enum {string} */
+                                        parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                        manifestDigest?: string;
+                                        contractsDigest?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "METADATA_ONLY";
+                                        declaredSha256?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "FILE";
+                                        format?: "CSV" | "JSON" | "XLSX";
+                                        parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    jobId?: string;
+                                    expectedCurrentRevision?: string;
+                                };
+                                /** @enum {unknown} */
+                                campus?: "NORTH" | "SOUTH";
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                retentionSeconds?: number;
+                                operations?: ({
+                                    applicability?: {
+                                        /** @enum {unknown} */
+                                        targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        location?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                        };
+                                    };
+                                    usageType?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/usage-type";
+                                        id?: string;
+                                        versionId?: string;
+                                        version?: string;
+                                    };
+                                    policy?: {
+                                        /** @enum {unknown} */
+                                        kind?: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version?: "WHOLE_LOCATION_V1";
+                                    };
+                                    evidenceId?: string;
+                                    reason?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    applicability?: {
+                                        /** @enum {unknown} */
+                                        targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        location?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                        };
+                                    };
+                                    usageType?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/usage-type";
+                                        id?: string;
+                                        versionId?: string;
+                                        version?: string;
+                                    };
+                                    policy?: {
+                                        /** @enum {unknown} */
+                                        kind?: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version?: "WHOLE_LOCATION_V1";
+                                    };
+                                    evidenceId?: string;
+                                    reason?: string;
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/location-use";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    applicability?: {
+                                        /** @enum {unknown} */
+                                        targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        location?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                        };
+                                    };
+                                    usageType?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/usage-type";
+                                        id?: string;
+                                        versionId?: string;
+                                        version?: string;
+                                    };
+                                    policy?: {
+                                        /** @enum {unknown} */
+                                        kind?: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version?: "WHOLE_LOCATION_V1";
+                                    };
+                                    evidenceId?: string;
+                                    reason?: string;
+                                    /** @enum {string} */
+                                    action?: "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/location-use";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    endAt?: string;
+                                })[];
+                            };
+                            contentBase64: string | "";
+                        };
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                } | {
+                    /** @enum {string} */
+                    kind: "LIFECYCLE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    /** @enum {unknown} */
+                    profile: "CORE" | "FULL";
+                    transport?: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    payload: {
+                        /** @enum {string} */
+                        policy?: "TEST_POLICY_ONLY";
+                        kind?: "MOVE" | "CLOSE" | "RESUME" | "HANDOVER" | "REPARTITION";
+                        cutover?: string;
+                        reason?: string;
+                        members?: {
+                            owner?: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId?: string;
+                            revisionId?: string;
+                            digest?: string;
+                            contractVersionId?: string;
+                        }[];
+                    };
+                    requestId: string;
+                    id?: string;
+                    expectedVersion?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        submission?: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                            contractVersionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCareWorkspaceDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        submission?: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                            contractVersionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        };
+                        content: {
+                            /** @enum {string} */
+                            kind: "UNIT";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        unit_id?: string;
+                                        unit_code?: string;
+                                        unit_name?: string;
+                                        org_id?: string;
+                                        campus_id?: string;
+                                        legal_entity_id?: string;
+                                        /** @enum {string} */
+                                        unit_type?: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                        public_phone?: string;
+                                        service_description?: string;
+                                        receiving_rule_ref?: string;
+                                        business_owner_id?: string;
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            id?: string;
+                                        };
+                                        relation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                } | {
+                                    row?: {
+                                        unit_id?: string;
+                                        unit_code?: string;
+                                        unit_name?: string;
+                                        org_id?: string;
+                                        campus_id?: string;
+                                        legal_entity_id?: string;
+                                        /** @enum {string} */
+                                        unit_type?: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                        public_phone?: string;
+                                        service_description?: string;
+                                        receiving_rule_ref?: string;
+                                        business_owner_id?: string;
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REBIND";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            id?: string;
+                                        };
+                                        relation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            id?: string;
+                                            version?: string;
+                                            versionId?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                } | {
+                                    row?: {
+                                        unit_id?: string;
+                                        unit_code?: string;
+                                        unit_name?: string;
+                                        org_id?: string;
+                                        campus_id?: string;
+                                        legal_entity_id?: string;
+                                        /** @enum {string} */
+                                        unit_type?: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                        public_phone?: string;
+                                        service_description?: string;
+                                        receiving_rule_ref?: string;
+                                        business_owner_id?: string;
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {unknown} */
+                                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            binding?: {
+                                                department?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    id?: string;
+                                                };
+                                                relation?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master/campus-relation";
+                                                    id?: string;
+                                                    version?: string;
+                                                    versionId?: string;
+                                                };
+                                                services?: string[];
+                                            };
+                                        } | {
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "REBIND";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                            binding?: {
+                                                department?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    id?: string;
+                                                };
+                                                relation?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master/campus-relation";
+                                                    id?: string;
+                                                    version?: string;
+                                                    versionId?: string;
+                                                };
+                                                services?: string[];
+                                            };
+                                        } | {
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "NURSING";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        nursing_unit_id?: string;
+                                        nursing_code?: string;
+                                        nursing_name?: string;
+                                        campus_id?: string;
+                                        managing_org_id?: string;
+                                        care_level?: string | null;
+                                        office_phone?: string | null;
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    row?: {
+                                        nursing_unit_id?: string;
+                                        nursing_code?: string;
+                                        nursing_name?: string;
+                                        campus_id?: string;
+                                        managing_org_id?: string;
+                                        care_level?: string | null;
+                                        office_phone?: string | null;
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REBIND";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/nursing";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    binding?: {
+                                        department?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    row?: {
+                                        nursing_unit_id?: string;
+                                        nursing_code?: string;
+                                        nursing_name?: string;
+                                        campus_id?: string;
+                                        managing_org_id?: string;
+                                        care_level?: string | null;
+                                        office_phone?: string | null;
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "SUSPEND" | "RESUME" | "CLOSE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/nursing";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {unknown} */
+                                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            binding?: {
+                                                department?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                            };
+                                        } | {
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "REBIND";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                            binding?: {
+                                                department?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                            };
+                                        } | {
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "SUSPEND" | "RESUME" | "CLOSE";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "WARD";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        ward_id?: string;
+                                        ward_code?: string;
+                                        ward_name?: string;
+                                        campus_id?: string;
+                                        managing_unit_id?: string | null | "";
+                                        ward_type?: string;
+                                        admission_rule_ref?: string | null;
+                                        public_phone?: string | null;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    binding?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    row?: {
+                                        ward_id?: string;
+                                        ward_code?: string;
+                                        ward_name?: string;
+                                        campus_id?: string;
+                                        managing_unit_id?: string | null | "";
+                                        ward_type?: string;
+                                        admission_rule_ref?: string | null;
+                                        public_phone?: string | null;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REBIND";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    binding?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                    };
+                                } | {
+                                    row?: {
+                                        ward_id?: string;
+                                        ward_code?: string;
+                                        ward_name?: string;
+                                        campus_id?: string;
+                                        managing_unit_id?: string | null | "";
+                                        ward_type?: string;
+                                        admission_rule_ref?: string | null;
+                                        public_phone?: string | null;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {unknown} */
+                                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            binding?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                            };
+                                        } | {
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "REBIND";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                            binding?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                            };
+                                        } | {
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "UNIT_WARD";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        unit_ward_rel_id?: string;
+                                        unit_id?: string;
+                                        ward_id?: string;
+                                        /** @enum {unknown} */
+                                        relation_type?: "收治" | "管理" | "共享";
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        sharing_rule?: string | null;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        purpose?: "ADMISSION" | "MANAGEMENT";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    row?: {
+                                        unit_ward_rel_id?: string;
+                                        unit_id?: string;
+                                        ward_id?: string;
+                                        /** @enum {unknown} */
+                                        relation_type?: "收治" | "管理" | "共享";
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        sharing_rule?: string | null;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        purpose?: "ADMISSION" | "MANAGEMENT";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit-ward-relation";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    row?: {
+                                        unit_ward_rel_id?: string;
+                                        unit_id?: string;
+                                        ward_id?: string;
+                                        /** @enum {unknown} */
+                                        relation_type?: "收治" | "管理" | "共享";
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        sharing_rule?: string | null;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        };
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        purpose?: "ADMISSION" | "MANAGEMENT";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit-ward-relation";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    endAt?: string;
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {string} */
+                                        timePolicy?: "LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            applicability?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                };
+                                                ward?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                /** @enum {unknown} */
+                                                purpose?: "ADMISSION" | "MANAGEMENT";
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_SHARING_REQUIRED";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SHARED_BOUNDARY";
+                                                ruleReference?: string;
+                                                ruleVersion?: string;
+                                                evidenceId?: string;
+                                                participants?: string[];
+                                                validFrom?: string;
+                                                validTo?: string | null;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNKNOWN";
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                        } | {
+                                            applicability?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                };
+                                                ward?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                /** @enum {unknown} */
+                                                purpose?: "ADMISSION" | "MANAGEMENT";
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_SHARING_REQUIRED";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SHARED_BOUNDARY";
+                                                ruleReference?: string;
+                                                ruleVersion?: string;
+                                                evidenceId?: string;
+                                                participants?: string[];
+                                                validFrom?: string;
+                                                validTo?: string | null;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNKNOWN";
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit-ward-relation";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        } | {
+                                            applicability?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                };
+                                                ward?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                /** @enum {unknown} */
+                                                purpose?: "ADMISSION" | "MANAGEMENT";
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_SHARING_REQUIRED";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SHARED_BOUNDARY";
+                                                ruleReference?: string;
+                                                ruleVersion?: string;
+                                                evidenceId?: string;
+                                                participants?: string[];
+                                                validFrom?: string;
+                                                validTo?: string | null;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNKNOWN";
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "END";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit-ward-relation";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                            endAt?: string;
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "WARD_NURSING";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                /** @enum {string} */
+                                kind?: "COVERAGE";
+                                entries?: ({
+                                    row?: {
+                                        ward_nursing_rel_id?: string;
+                                        ward_id?: string;
+                                        nursing_unit_id?: string;
+                                        coverage_scope?: string;
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        handover_rule_ref?: string | null;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        nursing?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    coverage?: {
+                                        /** @enum {string} */
+                                        kind?: "WHOLE_WARD";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PARTITIONS";
+                                        scopeSetId?: string;
+                                        version?: string;
+                                        partitionIds?: string[];
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    row?: {
+                                        ward_nursing_rel_id?: string;
+                                        ward_id?: string;
+                                        nursing_unit_id?: string;
+                                        coverage_scope?: string;
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        handover_rule_ref?: string | null;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        nursing?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    coverage?: {
+                                        /** @enum {string} */
+                                        kind?: "WHOLE_WARD";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PARTITIONS";
+                                        scopeSetId?: string;
+                                        version?: string;
+                                        partitionIds?: string[];
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward-nursing-coverage";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    row?: {
+                                        ward_nursing_rel_id?: string;
+                                        ward_id?: string;
+                                        nursing_unit_id?: string;
+                                        coverage_scope?: string;
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        handover_rule_ref?: string | null;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        nursing?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    coverage?: {
+                                        /** @enum {string} */
+                                        kind?: "WHOLE_WARD";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "PARTITIONS";
+                                        scopeSetId?: string;
+                                        version?: string;
+                                        partitionIds?: string[];
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_SHARING_REQUIRED";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SHARED_BOUNDARY";
+                                        ruleReference?: string;
+                                        ruleVersion?: string;
+                                        evidenceId?: string;
+                                        participants?: string[];
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        validFrom?: string;
+                                        validTo?: string | null;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNKNOWN";
+                                    };
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/ward-nursing-coverage";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    endAt?: string;
+                                })[];
+                            } | {
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                /** @enum {string} */
+                                kind?: "SCOPE_DEFINITION";
+                                definition?: {
+                                    sourceAlias?: string;
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    partitions?: {
+                                        sourceAlias?: string;
+                                        name?: string;
+                                        boundary?: string;
+                                    }[];
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    sourceSystemId?: string;
+                                    sourceRecordedAt?: string;
+                                    approvalReference?: string;
+                                    evidenceId?: string;
+                                    reason?: string;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                /** @enum {string} */
+                                kind?: "SCOPE_REVISION";
+                                target?: {
+                                    id?: string;
+                                    expectedHead?: string;
+                                };
+                                definition?: {
+                                    sourceAlias?: string;
+                                    applicability?: {
+                                        ward?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        /** @enum {string} */
+                                        purpose?: "NURSING_COVERAGE";
+                                    };
+                                    partitions?: {
+                                        sourceAlias?: string;
+                                        name?: string;
+                                        boundary?: string;
+                                    }[];
+                                    validFrom?: string;
+                                    validTo?: string | null;
+                                    sourceSystemId?: string;
+                                    sourceRecordedAt?: string;
+                                    approvalReference?: string;
+                                    evidenceId?: string;
+                                    reason?: string;
+                                };
+                                mapping?: {
+                                    version?: string;
+                                    partitionId?: string;
+                                    toAliases?: string[];
+                                }[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {string} */
+                                        timePolicy?: "LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            applicability?: {
+                                                ward?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                };
+                                                nursing?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/nursing";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                /** @enum {string} */
+                                                purpose?: "NURSING_COVERAGE";
+                                            };
+                                            coverage?: {
+                                                /** @enum {string} */
+                                                kind?: "WHOLE_WARD";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PARTITIONS";
+                                                scopeSetId?: string;
+                                                version?: string;
+                                                partitionIds?: string[];
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_SHARING_REQUIRED";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SHARED_BOUNDARY";
+                                                ruleReference?: string;
+                                                ruleVersion?: string;
+                                                evidenceId?: string;
+                                                participants?: string[];
+                                                coverage?: {
+                                                    /** @enum {string} */
+                                                    kind?: "WHOLE_WARD";
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind?: "PARTITIONS";
+                                                    scopeSetId?: string;
+                                                    version?: string;
+                                                    partitionIds?: string[];
+                                                };
+                                                validFrom?: string;
+                                                validTo?: string | null;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNKNOWN";
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                        } | {
+                                            applicability?: {
+                                                ward?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                };
+                                                nursing?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/nursing";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                /** @enum {string} */
+                                                purpose?: "NURSING_COVERAGE";
+                                            };
+                                            coverage?: {
+                                                /** @enum {string} */
+                                                kind?: "WHOLE_WARD";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PARTITIONS";
+                                                scopeSetId?: string;
+                                                version?: string;
+                                                partitionIds?: string[];
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_SHARING_REQUIRED";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SHARED_BOUNDARY";
+                                                ruleReference?: string;
+                                                ruleVersion?: string;
+                                                evidenceId?: string;
+                                                participants?: string[];
+                                                coverage?: {
+                                                    /** @enum {string} */
+                                                    kind?: "WHOLE_WARD";
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind?: "PARTITIONS";
+                                                    scopeSetId?: string;
+                                                    version?: string;
+                                                    partitionIds?: string[];
+                                                };
+                                                validFrom?: string;
+                                                validTo?: string | null;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNKNOWN";
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward-nursing-coverage";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        } | {
+                                            applicability?: {
+                                                ward?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                };
+                                                nursing?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/nursing";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                /** @enum {string} */
+                                                purpose?: "NURSING_COVERAGE";
+                                            };
+                                            coverage?: {
+                                                /** @enum {string} */
+                                                kind?: "WHOLE_WARD";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PARTITIONS";
+                                                scopeSetId?: string;
+                                                version?: string;
+                                                partitionIds?: string[];
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_SHARING_REQUIRED";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SHARED_BOUNDARY";
+                                                ruleReference?: string;
+                                                ruleVersion?: string;
+                                                evidenceId?: string;
+                                                participants?: string[];
+                                                coverage?: {
+                                                    /** @enum {string} */
+                                                    kind?: "WHOLE_WARD";
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind?: "PARTITIONS";
+                                                    scopeSetId?: string;
+                                                    version?: string;
+                                                    partitionIds?: string[];
+                                                };
+                                                validFrom?: string;
+                                                validTo?: string | null;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNKNOWN";
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "END";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward-nursing-coverage";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                            endAt?: string;
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "CAPABILITY";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        capability_id?: string;
+                                        /** Format: uuid */
+                                        unit_id?: string;
+                                        /** @enum {unknown} */
+                                        capability_type?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                        /** @enum {unknown} */
+                                        care_setting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                        /** @enum {unknown} */
+                                        enabled?: "Y" | "N";
+                                        rule_ref?: string | null;
+                                        approval_dept?: string;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        /** Format: uuid */
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                        /** @enum {unknown} */
+                                        capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                        /** @enum {unknown} */
+                                        careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_RULE";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "BOOLEAN_GATE_V1";
+                                        parameter?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/parameter-value";
+                                            /** Format: uuid */
+                                            parameterId?: string;
+                                            /** Format: uuid */
+                                            valueId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            /** Format: uuid */
+                                            definitionVersionId?: string;
+                                            definitionDigest?: string;
+                                            valueDigest?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    action?: "GRANT";
+                                } | {
+                                    row?: {
+                                        capability_id?: string;
+                                        /** Format: uuid */
+                                        unit_id?: string;
+                                        /** @enum {unknown} */
+                                        capability_type?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                        /** @enum {unknown} */
+                                        care_setting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                        /** @enum {unknown} */
+                                        enabled?: "Y" | "N";
+                                        rule_ref?: string | null;
+                                        approval_dept?: string;
+                                        version_no?: string | number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        /** Format: uuid */
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        unit?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                        /** @enum {unknown} */
+                                        capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                        /** @enum {unknown} */
+                                        careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                    };
+                                    rule?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_RULE";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "BOOLEAN_GATE_V1";
+                                        parameter?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/parameter-value";
+                                            /** Format: uuid */
+                                            parameterId?: string;
+                                            /** Format: uuid */
+                                            valueId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            /** Format: uuid */
+                                            definitionVersionId?: string;
+                                            definitionDigest?: string;
+                                            valueDigest?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "care-organization/unit-capability";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        /** Format: uuid */
+                                        requestId?: string;
+                                        /** Format: uuid */
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {unknown} */
+                                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            applicability?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                services?: string[];
+                                                /** @enum {unknown} */
+                                                capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                                /** @enum {unknown} */
+                                                careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_ADDITIONAL_RULE";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "BOOLEAN_GATE_V1";
+                                                parameter?: {
+                                                    /** @enum {string} */
+                                                    owner?: "governance-catalog/parameter-value";
+                                                    /** Format: uuid */
+                                                    parameterId?: string;
+                                                    /** Format: uuid */
+                                                    valueId?: string;
+                                                    /** Format: uuid */
+                                                    versionId?: string;
+                                                    /** Format: uuid */
+                                                    definitionVersionId?: string;
+                                                    definitionDigest?: string;
+                                                    valueDigest?: string;
+                                                };
+                                            };
+                                            reason?: string;
+                                            /** Format: uuid */
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            action?: "GRANT";
+                                        } | {
+                                            applicability?: {
+                                                unit?: {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                services?: string[];
+                                                /** @enum {unknown} */
+                                                capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                                /** @enum {unknown} */
+                                                careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                            };
+                                            rule?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_ADDITIONAL_RULE";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "BOOLEAN_GATE_V1";
+                                                parameter?: {
+                                                    /** @enum {string} */
+                                                    owner?: "governance-catalog/parameter-value";
+                                                    /** Format: uuid */
+                                                    parameterId?: string;
+                                                    /** Format: uuid */
+                                                    valueId?: string;
+                                                    /** Format: uuid */
+                                                    versionId?: string;
+                                                    /** Format: uuid */
+                                                    definitionVersionId?: string;
+                                                    definitionDigest?: string;
+                                                    valueDigest?: string;
+                                                };
+                                            };
+                                            reason?: string;
+                                            /** Format: uuid */
+                                            evidenceId?: string;
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit-capability";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "PERMISSION";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {string} */
+                                timePolicy?: "LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        subject_license_id?: string;
+                                        target_type?: string;
+                                        target_id?: string;
+                                        code_system_id?: string;
+                                        code_system_version?: string;
+                                        subject_code?: string;
+                                        license_ref?: string;
+                                        permitted_scope?: string | null;
+                                        verifier?: string;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "MAPPING";
+                                    /** @enum {unknown} */
+                                    semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                    /** @enum {string} */
+                                    action?: "RECORD";
+                                } | {
+                                    row?: {
+                                        subject_license_id?: string;
+                                        target_type?: string;
+                                        target_id?: string;
+                                        code_system_id?: string;
+                                        code_system_version?: string;
+                                        subject_code?: string;
+                                        license_ref?: string;
+                                        permitted_scope?: string | null;
+                                        verifier?: string;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "MAPPING";
+                                    /** @enum {unknown} */
+                                    semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "RETIRE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    row?: {
+                                        subject_license_id?: string;
+                                        target_type?: string;
+                                        target_id?: string;
+                                        code_system_id?: string;
+                                        code_system_version?: string;
+                                        subject_code?: string;
+                                        license_ref?: string;
+                                        permitted_scope?: string | null;
+                                        verifier?: string;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "PERMISSION";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        version?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                    };
+                                    limitations?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_LIMITS";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SERVICES_ONLY";
+                                        services?: string[];
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNRESOLVED";
+                                    };
+                                    /** @enum {string} */
+                                    action?: "RECORD";
+                                } | {
+                                    row?: {
+                                        subject_license_id?: string;
+                                        target_type?: string;
+                                        target_id?: string;
+                                        code_system_id?: string;
+                                        code_system_version?: string;
+                                        subject_code?: string;
+                                        license_ref?: string;
+                                        permitted_scope?: string | null;
+                                        verifier?: string;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    scope?: {
+                                        target?: {
+                                            /** @enum {string} */
+                                            type?: "LEGAL";
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "ORG";
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type?: "UNIT";
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        subject?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            /** Format: uuid */
+                                            id?: string;
+                                        };
+                                        services?: string[];
+                                    };
+                                    adoption?: {
+                                        /** @enum {string} */
+                                        owner?: "governance-catalog/subject-code";
+                                        /** Format: uuid */
+                                        systemId?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                        version?: string;
+                                        code?: string;
+                                    };
+                                    context?: {
+                                        departmentRelation?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master/campus-relation";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                    };
+                                    reason?: string;
+                                    /** Format: uuid */
+                                    evidenceId?: string;
+                                    /** @enum {string} */
+                                    kind?: "PERMISSION";
+                                    license?: {
+                                        /** @enum {string} */
+                                        owner?: "organization-master/license";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        version?: string;
+                                        /** Format: uuid */
+                                        versionId?: string;
+                                    };
+                                    limitations?: {
+                                        /** @enum {string} */
+                                        kind?: "NO_ADDITIONAL_LIMITS";
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "SERVICES_ONLY";
+                                        services?: string[];
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "UNRESOLVED";
+                                    };
+                                    /** @enum {unknown} */
+                                    action?: "REVISE" | "RETIRE";
+                                    target?: {
+                                        /** @enum {unknown} */
+                                        owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                        /** Format: uuid */
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        /** Format: uuid */
+                                        requestId?: string;
+                                        /** Format: uuid */
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {string} */
+                                        timePolicy?: "LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            scope?: {
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    type?: "LEGAL";
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "ORG";
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "UNIT";
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                services?: string[];
+                                            };
+                                            adoption?: {
+                                                /** @enum {string} */
+                                                owner?: "governance-catalog/subject-code";
+                                                /** Format: uuid */
+                                                systemId?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                                version?: string;
+                                                code?: string;
+                                            };
+                                            context?: {
+                                                departmentRelation?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master/campus-relation";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                    version?: string;
+                                                    /** Format: uuid */
+                                                    versionId?: string;
+                                                };
+                                            };
+                                            reason?: string;
+                                            /** Format: uuid */
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            kind?: "MAPPING";
+                                            /** @enum {unknown} */
+                                            semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                            /** @enum {string} */
+                                            action?: "RECORD";
+                                        } | {
+                                            scope?: {
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    type?: "LEGAL";
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "ORG";
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "UNIT";
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                services?: string[];
+                                            };
+                                            adoption?: {
+                                                /** @enum {string} */
+                                                owner?: "governance-catalog/subject-code";
+                                                /** Format: uuid */
+                                                systemId?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                                version?: string;
+                                                code?: string;
+                                            };
+                                            context?: {
+                                                departmentRelation?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master/campus-relation";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                    version?: string;
+                                                    /** Format: uuid */
+                                                    versionId?: string;
+                                                };
+                                            };
+                                            reason?: string;
+                                            /** Format: uuid */
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            kind?: "MAPPING";
+                                            /** @enum {unknown} */
+                                            semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "RETIRE";
+                                            target?: {
+                                                /** @enum {unknown} */
+                                                owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        } | {
+                                            scope?: {
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    type?: "LEGAL";
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "ORG";
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "UNIT";
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                services?: string[];
+                                            };
+                                            adoption?: {
+                                                /** @enum {string} */
+                                                owner?: "governance-catalog/subject-code";
+                                                /** Format: uuid */
+                                                systemId?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                                version?: string;
+                                                code?: string;
+                                            };
+                                            context?: {
+                                                departmentRelation?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master/campus-relation";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                    version?: string;
+                                                    /** Format: uuid */
+                                                    versionId?: string;
+                                                };
+                                            };
+                                            reason?: string;
+                                            /** Format: uuid */
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            kind?: "PERMISSION";
+                                            license?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/license";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                version?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                            };
+                                            limitations?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_ADDITIONAL_LIMITS";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SERVICES_ONLY";
+                                                services?: string[];
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNRESOLVED";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "RECORD";
+                                        } | {
+                                            scope?: {
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    type?: "LEGAL";
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "ORG";
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    type?: "UNIT";
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                subject?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                };
+                                                services?: string[];
+                                            };
+                                            adoption?: {
+                                                /** @enum {string} */
+                                                owner?: "governance-catalog/subject-code";
+                                                /** Format: uuid */
+                                                systemId?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                                version?: string;
+                                                code?: string;
+                                            };
+                                            context?: {
+                                                departmentRelation?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master/campus-relation";
+                                                    /** Format: uuid */
+                                                    id?: string;
+                                                    version?: string;
+                                                    /** Format: uuid */
+                                                    versionId?: string;
+                                                };
+                                            };
+                                            reason?: string;
+                                            /** Format: uuid */
+                                            evidenceId?: string;
+                                            /** @enum {string} */
+                                            kind?: "PERMISSION";
+                                            license?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/license";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                version?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                            };
+                                            limitations?: {
+                                                /** @enum {string} */
+                                                kind?: "NO_ADDITIONAL_LIMITS";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "SERVICES_ONLY";
+                                                services?: string[];
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "UNRESOLVED";
+                                            };
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "RETIRE";
+                                            target?: {
+                                                /** @enum {unknown} */
+                                                owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "LOCATION";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                campusId?: string;
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                entries?: ({
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    row?: {
+                                        location_id?: string;
+                                        location_code?: string;
+                                        location_name?: string;
+                                        campus_id?: string;
+                                        parent_location_id?: string;
+                                        /** @enum {string} */
+                                        location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                        floor_label?: string;
+                                        room_number?: string;
+                                        address_detail?: string;
+                                        /** @enum {string} */
+                                        is_accessible?: "" | "Y" | "N";
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                    parent?: {
+                                        /** @enum {string} */
+                                        kind?: "ALIAS";
+                                        clientKey?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "EXISTING";
+                                        reference?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                    } | null;
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    row?: {
+                                        location_id?: string;
+                                        location_code?: string;
+                                        location_name?: string;
+                                        campus_id?: string;
+                                        parent_location_id?: string;
+                                        /** @enum {string} */
+                                        location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                        floor_label?: string;
+                                        room_number?: string;
+                                        address_detail?: string;
+                                        /** @enum {string} */
+                                        is_accessible?: "" | "Y" | "N";
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    row?: {
+                                        location_id?: string;
+                                        location_code?: string;
+                                        location_name?: string;
+                                        campus_id?: string;
+                                        parent_location_id?: string;
+                                        /** @enum {string} */
+                                        location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                        floor_label?: string;
+                                        room_number?: string;
+                                        address_detail?: string;
+                                        /** @enum {string} */
+                                        is_accessible?: "" | "Y" | "N";
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    /** @enum {string} */
+                                    action?: "MOVE_CONTAINMENT";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    parent?: {
+                                        /** @enum {string} */
+                                        kind?: "ALIAS";
+                                        clientKey?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind?: "EXISTING";
+                                        reference?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                    } | null;
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    row?: {
+                                        location_id?: string;
+                                        location_code?: string;
+                                        location_name?: string;
+                                        campus_id?: string;
+                                        parent_location_id?: string;
+                                        /** @enum {string} */
+                                        location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                        floor_label?: string;
+                                        room_number?: string;
+                                        address_detail?: string;
+                                        /** @enum {string} */
+                                        is_accessible?: "" | "Y" | "N";
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    /** @enum {string} */
+                                    action?: "CLOSE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                } | {
+                                    reason?: string;
+                                    evidenceId?: string;
+                                    row?: {
+                                        location_id?: string;
+                                        location_code?: string;
+                                        location_name?: string;
+                                        campus_id?: string;
+                                        parent_location_id?: string;
+                                        /** @enum {string} */
+                                        location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                        floor_label?: string;
+                                        room_number?: string;
+                                        address_detail?: string;
+                                        /** @enum {string} */
+                                        is_accessible?: "" | "Y" | "N";
+                                        version_no?: string;
+                                        valid_from?: string;
+                                        valid_to?: string;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string;
+                                        recorded_at?: string;
+                                    };
+                                    /** @enum {string} */
+                                    action?: "SPLIT";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master";
+                                        id?: string;
+                                        expectedVersion?: string;
+                                    };
+                                    successors?: {
+                                        row?: {
+                                            location_id?: string;
+                                            location_code?: string;
+                                            location_name?: string;
+                                            campus_id?: string;
+                                            parent_location_id?: string;
+                                            /** @enum {string} */
+                                            location_type?: "CAMPUS" | "BUILDING" | "FLOOR" | "ROOM" | "CLINIC_ROOM" | "OPERATING_ROOM" | "DISPENSING_WINDOW" | "WAREHOUSE" | "OTHER";
+                                            floor_label?: string;
+                                            room_number?: string;
+                                            address_detail?: string;
+                                            /** @enum {string} */
+                                            is_accessible?: "" | "Y" | "N";
+                                            version_no?: string;
+                                            valid_from?: string;
+                                            valid_to?: string;
+                                            /** @enum {string} */
+                                            record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                            source_system_id?: string;
+                                            source_record_id?: string;
+                                            approval_ref?: string;
+                                            recorded_at?: string;
+                                        };
+                                        parent?: {
+                                            /** @enum {string} */
+                                            kind?: "ALIAS";
+                                            clientKey?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "EXISTING";
+                                            reference?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                            };
+                                        } | null;
+                                        evidenceId?: string;
+                                    }[];
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        campusId?: string;
+                                        /** @enum {unknown} */
+                                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            parent?: {
+                                                /** @enum {string} */
+                                                kind?: "ALIAS";
+                                                clientKey?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "EXISTING";
+                                                reference?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master";
+                                                    id?: string;
+                                                };
+                                            } | null;
+                                            reason?: string;
+                                            evidenceId?: string;
+                                        } | {
+                                            /** @enum {unknown} */
+                                            action?: "REVISE" | "CLOSE";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                                expectedVersion?: string;
+                                            };
+                                            reason?: string;
+                                            evidenceId?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            action?: "MOVE_CONTAINMENT";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                                expectedVersion?: string;
+                                            };
+                                            parent?: {
+                                                /** @enum {string} */
+                                                kind?: "ALIAS";
+                                                clientKey?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "EXISTING";
+                                                reference?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master";
+                                                    id?: string;
+                                                };
+                                            } | null;
+                                            reason?: string;
+                                            evidenceId?: string;
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "LOCATION_USE";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {unknown} */
+                                timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                entries?: ({
+                                    row?: {
+                                        object_location_rel_id?: string;
+                                        /** @enum {unknown} */
+                                        target_type?: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                        target_id?: string;
+                                        location_id?: string;
+                                        usage_type?: string;
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        sharing_description?: string | null;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        /** @enum {unknown} */
+                                        targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        location?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                        };
+                                    };
+                                    usageType?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/usage-type";
+                                        id?: string;
+                                        versionId?: string;
+                                        version?: string;
+                                    };
+                                    policy?: {
+                                        /** @enum {unknown} */
+                                        kind?: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version?: "WHOLE_LOCATION_V1";
+                                    };
+                                    evidenceId?: string;
+                                    reason?: string;
+                                    /** @enum {string} */
+                                    action?: "CREATE";
+                                } | {
+                                    row?: {
+                                        object_location_rel_id?: string;
+                                        /** @enum {unknown} */
+                                        target_type?: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                        target_id?: string;
+                                        location_id?: string;
+                                        usage_type?: string;
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        sharing_description?: string | null;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        /** @enum {unknown} */
+                                        targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        location?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                        };
+                                    };
+                                    usageType?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/usage-type";
+                                        id?: string;
+                                        versionId?: string;
+                                        version?: string;
+                                    };
+                                    policy?: {
+                                        /** @enum {unknown} */
+                                        kind?: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version?: "WHOLE_LOCATION_V1";
+                                    };
+                                    evidenceId?: string;
+                                    reason?: string;
+                                    /** @enum {string} */
+                                    action?: "REVISE";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/location-use";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                } | {
+                                    row?: {
+                                        object_location_rel_id?: string;
+                                        /** @enum {unknown} */
+                                        target_type?: "LEGAL" | "CAMPUS" | "ORG" | "UNIT" | "WARD" | "NURSING" | "TEAM" | "LOCATION" | "COST" | "BED";
+                                        target_id?: string;
+                                        location_id?: string;
+                                        usage_type?: string;
+                                        /** @enum {unknown} */
+                                        is_primary?: "Y" | "N";
+                                        sharing_description?: string | null;
+                                        version_no?: number;
+                                        valid_from?: string;
+                                        valid_to?: string | null;
+                                        /** @enum {string} */
+                                        record_status?: "DRAFT" | "REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+                                        source_system_id?: string;
+                                        source_record_id?: string;
+                                        approval_ref?: string | null;
+                                        recorded_at?: string;
+                                    };
+                                    applicability?: {
+                                        /** @enum {unknown} */
+                                        targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "department-master";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                        };
+                                        campus?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/campus";
+                                            id?: string;
+                                        };
+                                        location?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                        };
+                                    };
+                                    usageType?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/usage-type";
+                                        id?: string;
+                                        versionId?: string;
+                                        version?: string;
+                                    };
+                                    policy?: {
+                                        /** @enum {unknown} */
+                                        kind?: "SHARED" | "EXCLUSIVE";
+                                        /** @enum {string} */
+                                        version?: "WHOLE_LOCATION_V1";
+                                    };
+                                    evidenceId?: string;
+                                    reason?: string;
+                                    /** @enum {string} */
+                                    action?: "END";
+                                    target?: {
+                                        /** @enum {string} */
+                                        owner?: "location-master/location-use";
+                                        id?: string;
+                                        expectedHead?: string;
+                                    };
+                                    endAt?: string;
+                                })[];
+                            };
+                            file?: {
+                                requestId: string;
+                                body: {
+                                    input: {
+                                        requestId?: string;
+                                        fileRequestId?: string;
+                                        job?: {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                            contractId?: string;
+                                            contractVersionId?: string;
+                                            profile?: "CORE" | "FULL";
+                                        } | {
+                                            scope?: "BASELINE" | "SYNTHETIC";
+                                            requestId?: string;
+                                            reason?: string;
+                                            input?: {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                /** @enum {string} */
+                                                format?: "XLSX";
+                                                /** @enum {string} */
+                                                parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                                manifestDigest?: string;
+                                                contractsDigest?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "METADATA_ONLY";
+                                                declaredSha256?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "FILE";
+                                                format?: "CSV" | "JSON" | "XLSX";
+                                                parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                            };
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            jobId?: string;
+                                            expectedCurrentRevision?: string;
+                                        };
+                                        /** @enum {unknown} */
+                                        campus?: "NORTH" | "SOUTH";
+                                        /** @enum {unknown} */
+                                        timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                        retentionSeconds?: number;
+                                        operations?: ({
+                                            applicability?: {
+                                                /** @enum {unknown} */
+                                                targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/nursing";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                location?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master";
+                                                    id?: string;
+                                                };
+                                                usageType?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master/usage-type";
+                                                    id?: string;
+                                                };
+                                            };
+                                            usageType?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/usage-type";
+                                                id?: string;
+                                                versionId?: string;
+                                                version?: string;
+                                            };
+                                            policy?: {
+                                                /** @enum {unknown} */
+                                                kind?: "SHARED" | "EXCLUSIVE";
+                                                /** @enum {string} */
+                                                version?: "WHOLE_LOCATION_V1";
+                                            };
+                                            evidenceId?: string;
+                                            reason?: string;
+                                            /** @enum {string} */
+                                            action?: "CREATE";
+                                        } | {
+                                            applicability?: {
+                                                /** @enum {unknown} */
+                                                targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/nursing";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                location?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master";
+                                                    id?: string;
+                                                };
+                                                usageType?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master/usage-type";
+                                                    id?: string;
+                                                };
+                                            };
+                                            usageType?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/usage-type";
+                                                id?: string;
+                                                versionId?: string;
+                                                version?: string;
+                                            };
+                                            policy?: {
+                                                /** @enum {unknown} */
+                                                kind?: "SHARED" | "EXCLUSIVE";
+                                                /** @enum {string} */
+                                                version?: "WHOLE_LOCATION_V1";
+                                            };
+                                            evidenceId?: string;
+                                            reason?: string;
+                                            /** @enum {string} */
+                                            action?: "REVISE";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/location-use";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                        } | {
+                                            applicability?: {
+                                                /** @enum {unknown} */
+                                                targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                                target?: {
+                                                    /** @enum {string} */
+                                                    owner?: "department-master";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/unit";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/ward";
+                                                    id?: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    owner?: "care-organization/nursing";
+                                                    id?: string;
+                                                };
+                                                campus?: {
+                                                    /** @enum {string} */
+                                                    owner?: "organization-master/campus";
+                                                    id?: string;
+                                                };
+                                                location?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master";
+                                                    id?: string;
+                                                };
+                                                usageType?: {
+                                                    /** @enum {string} */
+                                                    owner?: "location-master/usage-type";
+                                                    id?: string;
+                                                };
+                                            };
+                                            usageType?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/usage-type";
+                                                id?: string;
+                                                versionId?: string;
+                                                version?: string;
+                                            };
+                                            policy?: {
+                                                /** @enum {unknown} */
+                                                kind?: "SHARED" | "EXCLUSIVE";
+                                                /** @enum {string} */
+                                                version?: "WHOLE_LOCATION_V1";
+                                            };
+                                            evidenceId?: string;
+                                            reason?: string;
+                                            /** @enum {string} */
+                                            action?: "END";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/location-use";
+                                                id?: string;
+                                                expectedHead?: string;
+                                            };
+                                            endAt?: string;
+                                        })[];
+                                    };
+                                    contentBase64: string | "";
+                                };
+                            };
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            /** @enum {unknown} */
+                            campus: "NORTH" | "SOUTH";
+                            /** @enum {unknown} */
+                            profile: "CORE" | "FULL";
+                            transport?: {
+                                contractId: string;
+                                contractVersionId: string;
+                            };
+                            payload: {
+                                /** @enum {string} */
+                                policy?: "TEST_POLICY_ONLY";
+                                kind?: "MOVE" | "CLOSE" | "RESUME" | "HANDOVER" | "REPARTITION";
+                                cutover?: string;
+                                reason?: string;
+                                members?: {
+                                    owner?: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                                    inputId?: string;
+                                    revisionId?: string;
+                                    digest?: string;
+                                    contractVersionId?: string;
+                                }[];
+                            };
+                        };
+                        maker: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    recoverCareWorkspaceDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        submission?: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                            contractVersionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        };
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listCareWorkspaceApplications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE" | "LIFECYCLE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    after?: string;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            maker: string;
+                            recordedAt: string;
+                            submission: {
+                                /** @enum {unknown} */
+                                kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                                inputId: string;
+                                revisionId: string;
+                                digest: string;
+                                contractVersionId: string;
+                                jobId: string;
+                                jobRevisionId: string;
+                            } | {
+                                /** @enum {string} */
+                                kind: "LIFECYCLE";
+                                inputId: string;
+                                revisionId: string;
+                                digest: string;
+                            };
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    careWorkspacePermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE" | "LIFECYCLE";
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    campusId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        read: boolean;
+                        write: boolean;
+                        readRestricted: boolean;
+                        verify: boolean;
+                        review: boolean;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listCareWorkspaceExecutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE" | "LIFECYCLE";
+                    inputId: string;
+                    candidateId?: string;
+                    requestId?: string;
+                    after?: string;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            candidateId: string;
+                            digest: string;
+                            requestId: string;
+                            recordedAt: string;
+                            approvedBy: string | null;
+                            committed: boolean;
+                        }[];
+                        nextAfterId: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCareWorkspaceApplicationReference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE" | "LIFECYCLE";
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        maker: string;
+                        recordedAt: string;
+                        submission: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                            contractVersionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        };
+                        source?: {
+                            /** @enum {unknown} */
+                            origin: "PAGE" | "FILE";
+                            sourceArtifactId: string | null;
+                            sourceRow: number | null;
+                            worksheet: string | null;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    storeCareWorkspaceMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    input: {
+                        /** @enum {string} */
+                        scope: "SYNTHETIC";
+                        campus: "NORTH" | "SOUTH";
+                        purpose: "IDENTITY_VERIFY" | "CONTACT_VERIFY" | "HR_RESTRICTED";
+                        requestId: string;
+                        jobId: string;
+                        revisionId: string;
+                        /** @enum {string} */
+                        kind: "RAW_CELL";
+                        retentionSeconds: number;
+                    };
+                    contentBase64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        artifactId: string;
+                        /** @enum {string} */
+                        status: "QUARANTINED";
+                        /** @enum {string} */
+                        masked: "[REDACTED]";
+                        purged: boolean;
+                        expiresAt: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    createCareWorkspaceMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    requestId: string;
+                    /** @enum {unknown} */
+                    campus: "NORTH" | "SOUTH";
+                    transport: {
+                        contractId: string;
+                        contractVersionId: string;
+                    };
+                    retentionSeconds: number;
+                    contentBase64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        artifactId: string;
+                        /** @enum {string} */
+                        status: "QUARANTINED";
+                        /** @enum {string} */
+                        masked: "[REDACTED]";
+                        purged: boolean;
+                        expiresAt: string;
+                        jobId: string;
+                        revisionId: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCareWorkspaceMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    access: "OWN";
+                    /** @enum {string} */
+                    scope: "SYNTHETIC";
+                    campus: "NORTH" | "SOUTH";
+                    purpose: "IDENTITY_VERIFY" | "CONTACT_VERIFY" | "HR_RESTRICTED";
+                    requestId: string;
+                    artifactId: string;
+                } | {
+                    /** @enum {string} */
+                    access: "INPUT";
+                    /** @enum {unknown} */
+                    kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                    inputId: string;
+                    artifactId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        artifactId: string;
+                        contentBase64: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    discardCareWorkspaceDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        submission?: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                            contractVersionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    submitCareWorkspaceDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {unknown} */
+                        state: "EDITING" | "DISCARDED" | "SUBMITTED";
+                        recordedAt: string;
+                        submission?: {
+                            /** @enum {unknown} */
+                            kind: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                            contractVersionId: string;
+                            jobId: string;
+                            jobRevisionId: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "LIFECYCLE";
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    receiveCareWorkspaceDraftFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        jobId: string;
+                        revisionId: string;
+                        sourceArtifactId: string;
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        input: {
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        } | null;
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        worksheet: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCareWorkspaceFileReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        jobId: string;
+                        revisionId: string;
+                        sourceArtifactId: string;
+                        /** @enum {unknown} */
+                        structuralStatus: "PARSED" | "REJECTED";
+                        input: {
+                            inputId: string;
+                            revisionId: string;
+                            digest: string;
+                        } | null;
+                        issues: {
+                            row: number;
+                            field: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            status: "FAIL" | "BLOCKED";
+                        }[];
+                        worksheet: string | null;
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    readCareWorkspaceSavedFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    expectedVersion: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "UNIT";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {unknown} */
+                                    timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        binding?: {
+                                            department?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                id?: string;
+                                            };
+                                            relation?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master/campus-relation";
+                                                id?: string;
+                                                version?: string;
+                                                versionId?: string;
+                                            };
+                                            services?: string[];
+                                        };
+                                    } | {
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "REBIND";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                        binding?: {
+                                            department?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                id?: string;
+                                            };
+                                            relation?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master/campus-relation";
+                                                id?: string;
+                                                version?: string;
+                                                versionId?: string;
+                                            };
+                                            services?: string[];
+                                        };
+                                    } | {
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "NURSING";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {unknown} */
+                                    timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        binding?: {
+                                            department?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                        };
+                                    } | {
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "REBIND";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                        binding?: {
+                                            department?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                        };
+                                    } | {
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "SUSPEND" | "RESUME" | "CLOSE";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/nursing";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "WARD";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {unknown} */
+                                    timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        binding?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                        };
+                                    } | {
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "REBIND";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                        binding?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                        };
+                                    } | {
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "CLOSE" | "SUSPEND" | "RESUME";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "UNIT_WARD";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {string} */
+                                    timePolicy?: "LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        applicability?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            };
+                                            ward?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            /** @enum {unknown} */
+                                            purpose?: "ADMISSION" | "MANAGEMENT";
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_SHARING_REQUIRED";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SHARED_BOUNDARY";
+                                            ruleReference?: string;
+                                            ruleVersion?: string;
+                                            evidenceId?: string;
+                                            participants?: string[];
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNKNOWN";
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                    } | {
+                                        applicability?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            };
+                                            ward?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            /** @enum {unknown} */
+                                            purpose?: "ADMISSION" | "MANAGEMENT";
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_SHARING_REQUIRED";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SHARED_BOUNDARY";
+                                            ruleReference?: string;
+                                            ruleVersion?: string;
+                                            evidenceId?: string;
+                                            participants?: string[];
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNKNOWN";
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit-ward-relation";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    } | {
+                                        applicability?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            };
+                                            ward?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            /** @enum {unknown} */
+                                            purpose?: "ADMISSION" | "MANAGEMENT";
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_SHARING_REQUIRED";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SHARED_BOUNDARY";
+                                            ruleReference?: string;
+                                            ruleVersion?: string;
+                                            evidenceId?: string;
+                                            participants?: string[];
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNKNOWN";
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "END";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit-ward-relation";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                        endAt?: string;
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "WARD_NURSING";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {string} */
+                                    timePolicy?: "LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        applicability?: {
+                                            ward?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            };
+                                            nursing?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            /** @enum {string} */
+                                            purpose?: "NURSING_COVERAGE";
+                                        };
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_SHARING_REQUIRED";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SHARED_BOUNDARY";
+                                            ruleReference?: string;
+                                            ruleVersion?: string;
+                                            evidenceId?: string;
+                                            participants?: string[];
+                                            coverage?: {
+                                                /** @enum {string} */
+                                                kind?: "WHOLE_WARD";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PARTITIONS";
+                                                scopeSetId?: string;
+                                                version?: string;
+                                                partitionIds?: string[];
+                                            };
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNKNOWN";
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                    } | {
+                                        applicability?: {
+                                            ward?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            };
+                                            nursing?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            /** @enum {string} */
+                                            purpose?: "NURSING_COVERAGE";
+                                        };
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_SHARING_REQUIRED";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SHARED_BOUNDARY";
+                                            ruleReference?: string;
+                                            ruleVersion?: string;
+                                            evidenceId?: string;
+                                            participants?: string[];
+                                            coverage?: {
+                                                /** @enum {string} */
+                                                kind?: "WHOLE_WARD";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PARTITIONS";
+                                                scopeSetId?: string;
+                                                version?: string;
+                                                partitionIds?: string[];
+                                            };
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNKNOWN";
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward-nursing-coverage";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    } | {
+                                        applicability?: {
+                                            ward?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            };
+                                            nursing?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            /** @enum {string} */
+                                            purpose?: "NURSING_COVERAGE";
+                                        };
+                                        coverage?: {
+                                            /** @enum {string} */
+                                            kind?: "WHOLE_WARD";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "PARTITIONS";
+                                            scopeSetId?: string;
+                                            version?: string;
+                                            partitionIds?: string[];
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_SHARING_REQUIRED";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SHARED_BOUNDARY";
+                                            ruleReference?: string;
+                                            ruleVersion?: string;
+                                            evidenceId?: string;
+                                            participants?: string[];
+                                            coverage?: {
+                                                /** @enum {string} */
+                                                kind?: "WHOLE_WARD";
+                                            } | {
+                                                /** @enum {string} */
+                                                kind?: "PARTITIONS";
+                                                scopeSetId?: string;
+                                                version?: string;
+                                                partitionIds?: string[];
+                                            };
+                                            validFrom?: string;
+                                            validTo?: string | null;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNKNOWN";
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "END";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/ward-nursing-coverage";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                        endAt?: string;
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "CAPABILITY";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    /** Format: uuid */
+                                    requestId?: string;
+                                    /** Format: uuid */
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {unknown} */
+                                    timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        applicability?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            services?: string[];
+                                            /** @enum {unknown} */
+                                            capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                            /** @enum {unknown} */
+                                            careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_ADDITIONAL_RULE";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "BOOLEAN_GATE_V1";
+                                            parameter?: {
+                                                /** @enum {string} */
+                                                owner?: "governance-catalog/parameter-value";
+                                                /** Format: uuid */
+                                                parameterId?: string;
+                                                /** Format: uuid */
+                                                valueId?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                                /** Format: uuid */
+                                                definitionVersionId?: string;
+                                                definitionDigest?: string;
+                                                valueDigest?: string;
+                                            };
+                                        };
+                                        reason?: string;
+                                        /** Format: uuid */
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        action?: "GRANT";
+                                    } | {
+                                        applicability?: {
+                                            unit?: {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            services?: string[];
+                                            /** @enum {unknown} */
+                                            capabilityType?: "REGISTER" | "ORDER" | "EXECUTE" | "CONSULT" | "ADMIT" | "DISPENSE" | "REPORT";
+                                            /** @enum {unknown} */
+                                            careSetting?: "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "EXAMINATION" | "DAYCARE" | "INTERNET";
+                                        };
+                                        rule?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_ADDITIONAL_RULE";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "BOOLEAN_GATE_V1";
+                                            parameter?: {
+                                                /** @enum {string} */
+                                                owner?: "governance-catalog/parameter-value";
+                                                /** Format: uuid */
+                                                parameterId?: string;
+                                                /** Format: uuid */
+                                                valueId?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                                /** Format: uuid */
+                                                definitionVersionId?: string;
+                                                definitionDigest?: string;
+                                                valueDigest?: string;
+                                            };
+                                        };
+                                        reason?: string;
+                                        /** Format: uuid */
+                                        evidenceId?: string;
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "ACTIVATE" | "SUSPEND" | "RESUME" | "END";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "care-organization/unit-capability";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "PERMISSION";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    /** Format: uuid */
+                                    requestId?: string;
+                                    /** Format: uuid */
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {string} */
+                                    timePolicy?: "LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        scope?: {
+                                            target?: {
+                                                /** @enum {string} */
+                                                type?: "LEGAL";
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "ORG";
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "UNIT";
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            services?: string[];
+                                        };
+                                        adoption?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/subject-code";
+                                            /** Format: uuid */
+                                            systemId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            version?: string;
+                                            code?: string;
+                                        };
+                                        context?: {
+                                            departmentRelation?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master/campus-relation";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                version?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                            };
+                                        };
+                                        reason?: string;
+                                        /** Format: uuid */
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        kind?: "MAPPING";
+                                        /** @enum {unknown} */
+                                        semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                        /** @enum {string} */
+                                        action?: "RECORD";
+                                    } | {
+                                        scope?: {
+                                            target?: {
+                                                /** @enum {string} */
+                                                type?: "LEGAL";
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "ORG";
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "UNIT";
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            services?: string[];
+                                        };
+                                        adoption?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/subject-code";
+                                            /** Format: uuid */
+                                            systemId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            version?: string;
+                                            code?: string;
+                                        };
+                                        context?: {
+                                            departmentRelation?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master/campus-relation";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                version?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                            };
+                                        };
+                                        reason?: string;
+                                        /** Format: uuid */
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        kind?: "MAPPING";
+                                        /** @enum {unknown} */
+                                        semantic?: "EQUIVALENT" | "NARROWER" | "BROADER" | "RELATED";
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "RETIRE";
+                                        target?: {
+                                            /** @enum {unknown} */
+                                            owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    } | {
+                                        scope?: {
+                                            target?: {
+                                                /** @enum {string} */
+                                                type?: "LEGAL";
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "ORG";
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "UNIT";
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            services?: string[];
+                                        };
+                                        adoption?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/subject-code";
+                                            /** Format: uuid */
+                                            systemId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            version?: string;
+                                            code?: string;
+                                        };
+                                        context?: {
+                                            departmentRelation?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master/campus-relation";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                version?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                            };
+                                        };
+                                        reason?: string;
+                                        /** Format: uuid */
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        kind?: "PERMISSION";
+                                        license?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/license";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                        limitations?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_ADDITIONAL_LIMITS";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SERVICES_ONLY";
+                                            services?: string[];
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNRESOLVED";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "RECORD";
+                                    } | {
+                                        scope?: {
+                                            target?: {
+                                                /** @enum {string} */
+                                                type?: "LEGAL";
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "ORG";
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                type?: "UNIT";
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            subject?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                /** Format: uuid */
+                                                id?: string;
+                                            };
+                                            services?: string[];
+                                        };
+                                        adoption?: {
+                                            /** @enum {string} */
+                                            owner?: "governance-catalog/subject-code";
+                                            /** Format: uuid */
+                                            systemId?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                            version?: string;
+                                            code?: string;
+                                        };
+                                        context?: {
+                                            departmentRelation?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master/campus-relation";
+                                                /** Format: uuid */
+                                                id?: string;
+                                                version?: string;
+                                                /** Format: uuid */
+                                                versionId?: string;
+                                            };
+                                        };
+                                        reason?: string;
+                                        /** Format: uuid */
+                                        evidenceId?: string;
+                                        /** @enum {string} */
+                                        kind?: "PERMISSION";
+                                        license?: {
+                                            /** @enum {string} */
+                                            owner?: "organization-master/license";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            version?: string;
+                                            /** Format: uuid */
+                                            versionId?: string;
+                                        };
+                                        limitations?: {
+                                            /** @enum {string} */
+                                            kind?: "NO_ADDITIONAL_LIMITS";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "SERVICES_ONLY";
+                                            services?: string[];
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "UNRESOLVED";
+                                        };
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "RETIRE";
+                                        target?: {
+                                            /** @enum {unknown} */
+                                            owner?: "care-organization/subject-permission" | "care-organization/subject-mapping";
+                                            /** Format: uuid */
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "LOCATION";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    campusId?: string;
+                                    /** @enum {unknown} */
+                                    timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        parent?: {
+                                            /** @enum {string} */
+                                            kind?: "ALIAS";
+                                            clientKey?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "EXISTING";
+                                            reference?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                            };
+                                        } | null;
+                                        reason?: string;
+                                        evidenceId?: string;
+                                    } | {
+                                        /** @enum {unknown} */
+                                        action?: "REVISE" | "CLOSE";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        reason?: string;
+                                        evidenceId?: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        action?: "MOVE_CONTAINMENT";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master";
+                                            id?: string;
+                                            expectedVersion?: string;
+                                        };
+                                        parent?: {
+                                            /** @enum {string} */
+                                            kind?: "ALIAS";
+                                            clientKey?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "EXISTING";
+                                            reference?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                            };
+                                        } | null;
+                                        reason?: string;
+                                        evidenceId?: string;
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    } | {
+                        id: string;
+                        version: string;
+                        /** @enum {string} */
+                        kind: "LOCATION_USE";
+                        /** @enum {unknown} */
+                        campus: "NORTH" | "SOUTH";
+                        file: {
+                            requestId: string;
+                            body: {
+                                input: {
+                                    requestId?: string;
+                                    fileRequestId?: string;
+                                    job?: {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                        contractId?: string;
+                                        contractVersionId?: string;
+                                        profile?: "CORE" | "FULL";
+                                    } | {
+                                        scope?: "BASELINE" | "SYNTHETIC";
+                                        requestId?: string;
+                                        reason?: string;
+                                        input?: {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORGANIZATION_EVOLUTION_V1";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            /** @enum {string} */
+                                            format?: "XLSX";
+                                            /** @enum {string} */
+                                            parserPolicy?: "STRICT_ORG_BUNDLE_V1";
+                                            manifestDigest?: string;
+                                            contractsDigest?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "METADATA_ONLY";
+                                            declaredSha256?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind?: "FILE";
+                                            format?: "CSV" | "JSON" | "XLSX";
+                                            parserPolicy?: "STRICT_V1" | "STRICT_V2" | "STRICT_DEPARTMENT_V1" | "STRICT_ORGANIZATION_MAPPING_V1" | "STRICT_ORGANIZATION_IDENTIFIER_V1" | "STRICT_LOCATION_V1" | "STRICT_UNIT_V1" | "STRICT_NURSING_V1" | "STRICT_WARD_V1" | "STRICT_CAPABILITY_V1" | "STRICT_SUBJECT_PERMISSION_V1" | "STRICT_UNIT_WARD_V1" | "STRICT_WARD_NURSING_V1" | "STRICT_LOCATION_USE_V1";
+                                        };
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        jobId?: string;
+                                        expectedCurrentRevision?: string;
+                                    };
+                                    /** @enum {unknown} */
+                                    campus?: "NORTH" | "SOUTH";
+                                    /** @enum {unknown} */
+                                    timePolicy?: "LOCAL" | "SOURCE_PLUS08_TO_LOCAL";
+                                    retentionSeconds?: number;
+                                    operations?: ({
+                                        applicability?: {
+                                            /** @enum {unknown} */
+                                            targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            location?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                            };
+                                            usageType?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/usage-type";
+                                                id?: string;
+                                            };
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                            versionId?: string;
+                                            version?: string;
+                                        };
+                                        policy?: {
+                                            /** @enum {unknown} */
+                                            kind?: "SHARED" | "EXCLUSIVE";
+                                            /** @enum {string} */
+                                            version?: "WHOLE_LOCATION_V1";
+                                        };
+                                        evidenceId?: string;
+                                        reason?: string;
+                                        /** @enum {string} */
+                                        action?: "CREATE";
+                                    } | {
+                                        applicability?: {
+                                            /** @enum {unknown} */
+                                            targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            location?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                            };
+                                            usageType?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/usage-type";
+                                                id?: string;
+                                            };
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                            versionId?: string;
+                                            version?: string;
+                                        };
+                                        policy?: {
+                                            /** @enum {unknown} */
+                                            kind?: "SHARED" | "EXCLUSIVE";
+                                            /** @enum {string} */
+                                            version?: "WHOLE_LOCATION_V1";
+                                        };
+                                        evidenceId?: string;
+                                        reason?: string;
+                                        /** @enum {string} */
+                                        action?: "REVISE";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/location-use";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                    } | {
+                                        applicability?: {
+                                            /** @enum {unknown} */
+                                            targetType?: "ORG" | "UNIT" | "WARD" | "NURSING";
+                                            target?: {
+                                                /** @enum {string} */
+                                                owner?: "department-master";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/unit";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/ward";
+                                                id?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                owner?: "care-organization/nursing";
+                                                id?: string;
+                                            };
+                                            campus?: {
+                                                /** @enum {string} */
+                                                owner?: "organization-master/campus";
+                                                id?: string;
+                                            };
+                                            location?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master";
+                                                id?: string;
+                                            };
+                                            usageType?: {
+                                                /** @enum {string} */
+                                                owner?: "location-master/usage-type";
+                                                id?: string;
+                                            };
+                                        };
+                                        usageType?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/usage-type";
+                                            id?: string;
+                                            versionId?: string;
+                                            version?: string;
+                                        };
+                                        policy?: {
+                                            /** @enum {unknown} */
+                                            kind?: "SHARED" | "EXCLUSIVE";
+                                            /** @enum {string} */
+                                            version?: "WHOLE_LOCATION_V1";
+                                        };
+                                        evidenceId?: string;
+                                        reason?: string;
+                                        /** @enum {string} */
+                                        action?: "END";
+                                        target?: {
+                                            /** @enum {string} */
+                                            owner?: "location-master/location-use";
+                                            id?: string;
+                                            expectedHead?: string;
+                                        };
+                                        endAt?: string;
+                                    })[];
+                                };
+                                contentBase64: string | "";
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        field?: string;
+                    };
+                };
+            };
+        };
+    };
+    listCareWorkspaceDrafts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {unknown} */
+                    kind?: "UNIT" | "NURSING" | "WARD" | "UNIT_WARD" | "WARD_NURSING" | "CAPABILITY" | "PERMISSION" | "LOCATION" | "LOCATION_USE" | "LIFECYCLE";
+                    /** @enum {unknown} */
+                    campus?: "NORTH" | "SOUTH";
+                    after?: string;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            version: string;
+                            kind: string;
+                            campus: string;
+                            state: string;
+                            recordedAt: string;
+                        }[];
+                        nextAfterId: string | null;
                     };
                 };
             };
