@@ -249,7 +249,7 @@ test.each(['ENDED','SHADOWED'] as const)('subject contributor authority excludes
  for(const required of [parentA.id,parentC.id]){const restore=await revoke(required);try{expect((await client.validateCareOrganizationBundle(query)).response.status).toBe(403);}finally{await restore();}}
  for(const [parent,allowed] of [[parentB.id,true],[parentA.id,false],[parentC.id,false]] as const){
   const native=ports.PERMISSION!;let restore:(()=>Promise<void>)|undefined;
-  ports.PERMISSION={...native,evaluateExactWindowInTransaction:async(...args:Parameters<typeof native.evaluateExactWindowInTransaction>)=>{const result=await native.evaluateExactWindowInTransaction(...args);restore=await revoke(parent);return result;}};
+  ports.PERMISSION={...native,evaluateExactWindowInTransaction:async(...args:Parameters<typeof native.evaluateExactWindowInTransaction>)=>{args[0].deferCurrentReadAudit('TEST_SUBJECT_REVOKE_'+parent,async()=>{restore=await revoke(parent);});return native.evaluateExactWindowInTransaction(...args);}};
   try{const result=await client.validateCareOrganizationBundle(query);expect(result.response.status,JSON.stringify(result.error)).toBe(allowed?200:403);if(allowed)expect(result.data?.decision,JSON.stringify(result.data?.items)).toBe('PASS');}
   finally{ports.PERMISSION=native;if(restore)await restore();}
  }

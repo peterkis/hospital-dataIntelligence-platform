@@ -177,7 +177,8 @@ test('both gates use the same exact ordered and checksummed release',()=>{
   expect(files[249]?.id).toBe('0250_repartition_exact_cutover_successor_limit');
   expect(files[250]?.id).toBe('0251_exact_nursing_handover_receipt_successors');
   expect(files[251]?.id).toBe('0252_nursing_suspend_at_open_cutover');
-  expect(files.at(-1)?.id).toBe('0263_care_private_draft_list_filter');
+  expect(files[262]?.id).toBe('0263_care_private_draft_list_filter');
+  expect(files.at(-1)?.id).toBe('0264_subject_window_contributors');
 });
 
 test('the original 200 migration bytes match the approved P3-05 Git tree',()=>{
