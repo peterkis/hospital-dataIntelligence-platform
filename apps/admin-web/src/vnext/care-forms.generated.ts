@@ -3440,6 +3440,22 @@ export const careForms = {
         "additionalProperties": false
       }
     },
+    "readBusinessUnitVerification": {
+      "path": "/api/vnext/business-units/inputs/verification/read",
+      "schema": {
+        "type": "object",
+        "required": [
+          "inputId"
+        ],
+        "properties": {
+          "inputId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "verifyBusinessUnitInput": {
       "path": "/api/vnext/business-units/verify",
       "schema": {
@@ -3880,6 +3896,18 @@ export const careForms = {
           "campus"
         ],
         "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "state": {
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "CLOSED",
+              "NOT_EFFECTIVE"
+            ]
+          },
           "campus": {
             "enum": [
               "NORTH",

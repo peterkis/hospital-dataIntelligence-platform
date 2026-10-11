@@ -4,10 +4,11 @@ import {carePipelines,careSchema,record,text,type CareKind} from './care-model.j
 import {CareFacts,CareOperationPanel} from './care-operation.js';
 import {initialForm,type ReferenceChoices} from './department-form.js';
 import {departmentValue} from './department-request.js';
-import {careExecute,careError,careLocator} from './care-request.js';
+import {careExecute,careError,useCareLocator} from './care-request.js';
 type Application=Operations['readCareWorkspaceApplicationReference']['responses'][200]['content']['application/json'];
 type Execution=Operations['listCareWorkspaceExecutions']['responses'][200]['content']['application/json']['items'][number];
 export function CareApplication({actor,kind,application,choices,permissions,onLock,onCorrect,issueLocator}:{actor:string;kind:CareKind;application:Application;choices:ReferenceChoices;permissions:{verify:boolean;review:boolean;write:boolean};onLock?:(locked:boolean)=>void;onCorrect?:(original:Record<string,unknown>,issue:Record<string,unknown>)=>Promise<boolean>;issueLocator?:{row:number|null;field:string;worksheet:string|null}}){
+ const careLocator=useCareLocator();
  const pipeline=carePipelines[kind],input=application.submission,workspace=createCareWorkspaceClient(location.origin,actor);
  const [candidate,setCandidate]=useState<Execution|null>(null),[executions,setExecutions]=useState<Execution[]>([]),[cursor,setCursor]=useState<string|null>(null),[native,setNative]=useState<unknown>(null),[error,setError]=useState(''),[outcome,setOutcome]=useState<unknown>(null),[matched,setMatched]=useState(false),[pending,setPending]=useState<CareOperation|null>(null);
  const [sourceOrigin,setSourceOrigin]=useState<Record<string,unknown>>({});

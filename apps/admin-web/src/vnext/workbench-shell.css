@@ -1,0 +1,115 @@
+/* Only theme + prefixed utilities: deliberately no global Tailwind Preflight.
+   Important utilities override the pre-existing, unlayered control styles only
+   on elements that explicitly opt into an hdi: class. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(hdi);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(hdi) important source("../");
+
+@theme inline {
+  --color-background: var(--surface, #fff);
+  --color-foreground: var(--text-primary, #292927);
+  --color-primary: var(--action-primary, #292927);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--surface-muted, #f5f5f4);
+  --color-secondary-foreground: var(--text-primary, #292927);
+  --color-muted: var(--surface-hover, #f0f0ee);
+  --color-muted-foreground: var(--text-secondary, #62625f);
+  --color-input: var(--border-control, #85857f);
+  --color-ring: var(--accent, #1d4ed8);
+  --color-link: var(--accent, #1d4ed8);
+  --color-accent: var(--accent-muted, #eff6ff);
+  --color-destructive: var(--danger, #b91c1c);
+  --color-danger-muted: var(--danger-muted, #fef2f2);
+  --color-success: var(--success, #166534);
+  --color-success-muted: var(--success-muted, #f0fdf4);
+  --color-warning: var(--warning, #92400e);
+  --color-warning-muted: var(--warning-muted, #fffbeb);
+}
+
+.workbench-shell {
+  --surface: #fff;
+  --surface-sidebar: #f7f7f5;
+  --surface-muted: #f5f5f4;
+  --surface-hover: #f0f0ee;
+  --text-primary: #292927;
+  --text-secondary: #62625f;
+  --text-disabled: #94948e;
+  --border-subtle: #e7e7e3;
+  --border-control: #85857f;
+  --action-primary: #292927;
+  --accent: #1d4ed8;
+  --accent-muted: #eff6ff;
+  --success: #166534;
+  --success-muted: #f0fdf4;
+  --warning: #92400e;
+  --warning-muted: #fffbeb;
+  --danger: #b91c1c;
+  --danger-muted: #fef2f2;
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  min-height: 100dvh;
+  width: 100%;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+}
+.workbench-shell, .workbench-shell * { box-sizing: border-box; }
+.workbench-shell [hidden] { display: none !important; }
+.workbench-shell :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.workbench-shell__skip { position: fixed; z-index: 100; top: 8px; left: 8px; padding: 8px 12px; color: var(--surface); background: var(--action-primary); transform: translateY(-160%); }
+.workbench-shell__skip:focus { transform: translateY(0); }
+.workbench-shell .workbench-shell__sidebar { position: sticky; top: 0; display: flex; flex-direction: column; height: 100dvh; min-width: 0; padding: 18px 12px 16px; overflow: auto; background: var(--surface-sidebar); color: var(--text-primary); border-right: 1px solid var(--border-subtle); }
+.workbench-shell__brand { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 6px; }
+.workbench-shell__mark { display: grid; place-items: center; flex: 0 0 28px; height: 28px; border: 1px solid #d5d5d0; border-radius: 6px; background: #eeeee9; color: #44443f; font-size: 17px; font-weight: 600; }
+.workbench-shell__brand strong { display: block; font-size: 14px; font-weight: 600; line-height: 20px; }
+.workbench-shell__brand .workbench-shell__nav-label > span { display: block; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.workbench-shell__collapse { align-self: flex-end; margin-top: 12px !important; }
+.workbench-shell__navigation { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.workbench-shell__group-label { margin: 12px 10px 6px; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.workbench-shell__nav-item { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 8px 10px; color: var(--text-secondary); border-radius: 6px; text-decoration: none; font-size: 14px; line-height: 20px; }
+.workbench-shell__nav-item > svg { flex: 0 0 18px; }
+.workbench-shell__nav-item:hover { background: var(--surface-hover); }
+.workbench-shell__nav-item[aria-current] { color: var(--text-primary); background: #eaeae7; font-weight: 600; }
+.workbench-shell__nav-label { min-width: 0; }
+.workbench-shell__unavailable-note { display: block; font-size: 12px; line-height: 18px; font-weight: 400; }
+.workbench-shell__nav-item--unavailable { cursor: default; }
+.workbench-shell__nav-item--unavailable:hover { background: transparent; }
+.workbench-shell a[aria-disabled="true"] { cursor: not-allowed; opacity: .65; }
+.workbench-shell__subnav { display: flex; flex-direction: column; margin: 0 8px 8px 18px; padding: 0 0 0 15px; border-left: 1px solid #d6d6d1; }
+.workbench-shell__subnav a { padding: 6px 0; font-size: 13px; line-height: 20px; color: var(--text-secondary); text-decoration: none; }
+.workbench-shell__subnav a:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 3px; }
+.workbench-shell__sidebar-footer { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: auto; padding: 24px 8px 0; color: var(--text-secondary); font-size: 12px; }
+.workbench-shell__canvas { min-width: 0; }
+.workbench-shell .workbench-shell__topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 14px 24px; border-bottom: 1px solid var(--border-subtle); }
+.workbench-shell__breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 13px; }
+.workbench-shell__breadcrumb > :last-child { color: var(--text-primary); }
+.workbench-shell .workbench-shell__actor { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; color: var(--text-secondary); font-size: 12px; }
+.workbench-shell__actor select { min-height: 32px; max-width: 100%; padding: 4px 26px 4px 8px; border: 1px solid var(--border-control); border-radius: 6px; background: var(--surface); color: var(--text-primary); font-size: 13px; line-height: 20px; }
+.workbench-shell__identity-note { margin: 0; padding: 8px 24px 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.workbench-shell__content { min-width: 0; width: 100%; padding: 24px; }
+.workbench-shell__content:focus { outline: none; }
+.workbench-shell[data-sidebar-collapsed="true"] { grid-template-columns: 64px minmax(0, 1fr); }
+.workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__sidebar { padding-inline: 10px; }
+.workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__brand { padding: 0; justify-content: center; }
+.workbench-shell[data-sidebar-collapsed="true"] :is(.workbench-shell__nav-label, .workbench-shell__subnav, .workbench-shell__group-label, .workbench-shell__sidebar-footer) { display: none; }
+.workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__collapse { align-self: center; }
+.workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__nav-item { justify-content: center; padding: 10px; }
+@media (max-width: 1280px) {
+  .workbench-shell__content { padding: 20px 16px; }
+  .workbench-shell .workbench-shell__topbar { padding-inline: 16px; }
+  .workbench-shell__identity-note { padding-inline: 16px; }
+}
+@media (max-width: 700px) {
+  .workbench-shell, .workbench-shell[data-sidebar-collapsed="true"] { display: block; }
+  .workbench-shell .workbench-shell__sidebar { position: static; display: grid; grid-template-columns: minmax(0, 1fr) 36px; gap: 4px; height: auto; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .workbench-shell .workbench-shell__collapse { margin: 0 !important; }
+  .workbench-shell__navigation { grid-column: 1 / -1; }
+  .workbench-shell__sidebar-footer { display: none; }
+  .workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__brand { justify-content: flex-start; }
+  .workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__brand .workbench-shell__nav-label { display: block; }
+  .workbench-shell[data-sidebar-collapsed="true"] .workbench-shell__navigation { display: none; }
+  .workbench-shell .workbench-shell__topbar { align-items: flex-start; }
+  .workbench-shell__content { padding-block: 18px; }
+}

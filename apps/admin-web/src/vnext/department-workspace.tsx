@@ -21,6 +21,10 @@ import {
   pendingDepartmentSubmission,
 } from "./department-request.js";
 import { DepartmentQueries } from "./department-queries.js";
+import {WorkbenchShell} from './workbench-shell.js';
+import {DepartmentRecords} from './department-records.js';
+import {useBlocker} from 'react-router';
+import './workbench-pages.css';
 
 type Draft = Extract<DepartmentWorkspaceDraft, { kind: "DEPARTMENT" }>;
 type Saved =
@@ -82,6 +86,7 @@ const blank = (): Draft => ({
 });
 export function DepartmentWorkspaceApp() {
   const panels = {
+    RECORDS: "记录列表",
     DEPARTMENT: "科室维护",
     HIERARCHY: "层级视图",
     MAPPING: "来源映射",
@@ -97,7 +102,7 @@ export function DepartmentWorkspaceApp() {
       const name = new URL(location.href).searchParams.get("panel");
       return name && name in panels
         ? (name as keyof typeof panels)
-        : "DEPARTMENT";
+        : new URL(location.href).searchParams.has('draft') || new URL(location.href).searchParams.has('input') ? "DEPARTMENT" : "RECORDS";
     }),
     [domainLock, setDomainLock] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -267,6 +272,10 @@ export function DepartmentWorkspaceApp() {
       panel === "DEPARTMENT" ? sessionStorage.getItem(recoveryKey) : null,
     );
     setMessage("");
+    if (panel === "RECORDS") {
+      void run(async()=>{await reload(generation);});
+      return;
+    }
     if (panel !== "DEPARTMENT") {
       setBusy(false);
       return;
@@ -497,43 +506,25 @@ export function DepartmentWorkspaceApp() {
     !!recoverId ||
     !!pendingSave.current ||
     !!pendingSubmit.current;
+  const navigationLocked=busy||dirty||!!recoverId||domainLock||!!pendingSave.current||!!pendingSubmit.current;
+  const pendingNavigation=busy||!!recoverId||domainLock||!!pendingSave.current||!!pendingSubmit.current;
+  const blocker=useBlocker(({currentLocation,nextLocation})=>navigationLocked&&currentLocation.pathname!==nextLocation.pathname);
+  useEffect(()=>{if(!navigationLocked)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[navigationLocked]);
+  const openEditor=()=>{
+    if(navigationLocked)return;
+    epoch.current++;setPanel('DEPARTMENT');setRefreshToken(0);
+    const url=new URL(location.href);url.searchParams.set('panel','DEPARTMENT');history.replaceState(null,'',url.pathname+url.search);
+  };
   return (
-    <div className="organization-workspace department-workspace">
+    <WorkbenchShell actor={actor} onActorChange={next=>{epoch.current++;const url=new URL(location.href);url.searchParams.set('actor',next);url.searchParams.delete('draft');url.searchParams.delete('input');history.replaceState(null,'',url.pathname+url.search);setActor(next);}} locked={navigationLocked} title="逻辑科室" reloadNavigation>
+    <div className="organization-workspace department-workspace workbench-page">
       <header className="workspace-header">
         <div>
-          <a href="/admin/vnext/catalog">治理目录</a>
-          <h1>科室主数据工作台</h1>
-          <p>合成数据开发环境 · 来源记录、核验申请和已发布事实分别维护</p>
+          <h1>逻辑科室</h1>
+          <p>查看院内科室记录、准确版本与维护申请。</p>
         </div>
-        <label>
-          当前身份
-          <select
-            value={actor}
-            disabled={
-              busy ||
-              dirty ||
-              !!recoverId ||
-              domainLock ||
-              !!pendingSave.current ||
-              !!pendingSubmit.current
-            }
-            onChange={(event) => {
-              epoch.current++;
-              const url = new URL(location.href);
-              url.searchParams.set("actor", event.target.value);
-              url.searchParams.delete("draft");
-              url.searchParams.delete("input");
-              history.replaceState(null, "", url.pathname + url.search);
-              setActor(event.target.value);
-            }}
-          >
-            <option value="maker">维护者</option>
-            <option value="maker-alias">维护者同人别名</option>
-            <option value="reviewer">独立审核者</option>
-            <option value="outsider">无权限身份</option>
-          </select>
-        </label>
       </header>
+      {blocker.state==='blocked'&&<section role="alertdialog" aria-label="离开科室维护"><p>{pendingNavigation?'当前请求或操作仍待确认，请先恢复结果。':'当前内容尚未保存。可以继续编辑或明确放弃本页输入后离开。'}</p><button onClick={()=>blocker.reset()}>继续编辑</button>{!pendingNavigation&&<button onClick={()=>blocker.proceed()}>放弃本页输入并离开</button>}</section>}
       <nav className="workspace-tabs">
         {Object.entries(panels).map(([key, label]) => (
           <button
@@ -561,12 +552,10 @@ export function DepartmentWorkspaceApp() {
             {label}
           </button>
         ))}
-        <a href="/admin/vnext/organizations">机构与院区</a>
-        <a href="/admin/vnext/imports">导入任务</a>
         <button
           onClick={() =>
             panel === "DEPARTMENT"
-              ? void run(async () => reload())
+              || panel === "RECORDS" ? void run(async () => reload())
               : setRefreshToken((value) => value + 1)
           }
           disabled={
@@ -611,7 +600,7 @@ export function DepartmentWorkspaceApp() {
           恢复提交状态
         </button>
       )}
-      {panel === "DEPARTMENT" ? (
+      {panel === "RECORDS" ? <DepartmentRecords key={actor} items={histories} busy={busy} onEditor={openEditor} onMore={departmentCursor?()=>void run(async()=>{const generation=epoch.current;const ids=await value(department().list({limit:100,after:departmentCursor}));const rows=await Promise.all(ids.map(id=>value(department().history({id}))));if(generation!==epoch.current)return;setHistories(previous=>[...new Map([...previous,...rows].map(item=>[item.id,item])).values()]);setDepartmentCursor(ids.length===100?ids.at(-1)!:null);}):undefined}/> : panel === "DEPARTMENT" ? (
         <div className="workspace-layout">
           <aside className="draft-list">
             <h2>私有草稿</h2>
@@ -1280,6 +1269,6 @@ export function DepartmentWorkspaceApp() {
           refreshToken={refreshToken}
         />
       )}
-    </div>
+    </div></WorkbenchShell>
   );
 }

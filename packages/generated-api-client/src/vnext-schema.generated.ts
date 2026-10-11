@@ -3988,6 +3988,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/business-units/inputs/verification/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readBusinessUnitVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/business-units/verify": {
         parameters: {
             query?: never;
@@ -58041,6 +58057,126 @@ export interface operations {
             };
         };
     };
+    readBusinessUnitVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        verificationId: string;
+                        verificationVersion: string;
+                        verification: {
+                            requestId: string;
+                            inputId: string;
+                            inputDigest: string;
+                            reason: string;
+                            /** @enum {string} */
+                            policyVersion: "ORG07_CORE_V1";
+                            rows: {
+                                row: number;
+                                evidenceId: string;
+                                classificationAccepted: boolean;
+                                receiving: {
+                                    /** @enum {string} */
+                                    kind: "NO_SPECIAL_RESTRICTION";
+                                    confirmed: boolean;
+                                    validFrom: string;
+                                    validTo: string | null;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "RESTRICTED_RULE_REFERENCE";
+                                    ruleReference: string;
+                                    sourceRuleVersion: string;
+                                    ruleEvidenceId: string;
+                                    validFrom: string;
+                                    validTo: string | null;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "UNKNOWN";
+                                };
+                            }[];
+                        };
+                    } | null;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
     verifyBusinessUnitInput: {
         parameters: {
             query?: never;
@@ -59122,6 +59258,17 @@ export interface operations {
                         head: string;
                         /** @enum {unknown} */
                         state: "ACTIVE" | "SUSPENDED" | "CLOSED" | "NOT_EFFECTIVE";
+                        display?: {
+                            name: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            type: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                            version: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {unknown} */
+                            mode: "CURRENT" | "REGISTERED";
+                        } | null;
                         version: {
                             id: string;
                             number: string;
@@ -59555,6 +59702,9 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    q?: string;
+                    /** @enum {unknown} */
+                    state?: "ACTIVE" | "SUSPENDED" | "CLOSED" | "NOT_EFFECTIVE";
                     /** @enum {unknown} */
                     campus: "NORTH" | "SOUTH";
                     campusId?: string;
@@ -59580,6 +59730,17 @@ export interface operations {
                             head: string;
                             /** @enum {unknown} */
                             state: "ACTIVE" | "SUSPENDED" | "CLOSED" | "NOT_EFFECTIVE";
+                            display?: {
+                                name: string;
+                                code: string;
+                                /** @enum {unknown} */
+                                type: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                version: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                /** @enum {unknown} */
+                                mode: "CURRENT" | "REGISTERED";
+                            } | null;
                             version: {
                                 id: string;
                                 number: string;

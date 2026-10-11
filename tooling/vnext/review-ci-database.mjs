@@ -32,6 +32,12 @@ export function peer(name,sql){
  if(result.status!==0)throw new Error(result.stderr||'REVIEW_CI_SQL_FAILED');
  if(created)allowed.add(created);if(dropped)allowed.delete(dropped);return result.stdout.trim();
 }
+export async function peerAsync(receipt,statement){
+ if(!allowed.has(receipt.name))throw new Error('REVIEW_CI_TARGET_DENIED');
+ const url=new URL(base);url.pathname='/'+receipt.name;
+ const client=new pg.Client({connectionString:url.href,connectionTimeoutMillis:10000});
+ try{await client.connect();await client.query(statement);}finally{await client.end();}
+}
 export function resolveTarget(receipt){if(!allowed.has(receipt.name))authorizeTemporary(receipt);const url=new URL(base);url.pathname='/'+receipt.name;return url.href;}
 export async function inspect(receipt){
  const pool=new pg.Pool({connectionString:resolveTarget(receipt)});

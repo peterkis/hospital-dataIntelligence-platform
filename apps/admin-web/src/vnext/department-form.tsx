@@ -426,6 +426,8 @@ export function DepartmentForm({
   root = value,
   preserveTimePrecision=false,
   labels={},
+  enumLabels={},
+  resolveBoundFields,
   resolveReferenceChoices,
   bindReferenceSelection,
 }: {
@@ -439,9 +441,12 @@ export function DepartmentForm({
   root?: unknown;
   preserveTimePrecision?:boolean;
   labels?:Readonly<Record<string,string>>;
+  enumLabels?:Readonly<Record<string,string>>;
+  resolveBoundFields?:((schema:FormSchema,value:Readonly<Record<string,unknown>>,choices:ReferenceChoices)=>readonly string[])|undefined;
   resolveReferenceChoices?:((field:string,root:Readonly<Record<string,unknown>>)=>readonly ReferenceChoice[]|undefined)|undefined;
   bindReferenceSelection?:((schema:FormSchema,field:string,value:Readonly<Record<string,unknown>>)=>Readonly<Record<string,unknown>>)|undefined;
 }) {
+  const optionLabel=(value:unknown,key=field)=>enumLabels[`${key}:${String(value)}`]??enumLabels[String(value)]??human(value);
   const child = (
     childSchema: FormSchema,
     item: unknown,
@@ -459,6 +464,8 @@ export function DepartmentForm({
       root={root}
       preserveTimePrecision={preserveTimePrecision}
       labels={labels}
+      enumLabels={enumLabels}
+      resolveBoundFields={resolveBoundFields}
       resolveReferenceChoices={resolveReferenceChoices}
       bindReferenceSelection={bindReferenceSelection}
     />
@@ -487,7 +494,7 @@ export function DepartmentForm({
             <option value="">请选择</option>
             {options.map((option) => (
               <option key={String(option)} value={String(option)}>
-                {human(option)}
+                {optionLabel(option)}
               </option>
             ))}
           </select>
@@ -534,12 +541,12 @@ export function DepartmentForm({
             }
           >
             {branches.map((branch, index) => {
-              const option = Object.values(branch.properties ?? {}).find(
-                (item) => item.const !== undefined || item.enum,
+              const option = Object.entries(branch.properties ?? {}).find(
+                ([, item]) => item.const !== undefined || item.enum,
               );
               return (
                 <option key={index} value={index}>
-                  {human(option?.const ?? option?.enum?.[0] ?? index + 1)}
+                  {optionLabel(option?.[1].const ?? option?.[1].enum?.[0] ?? index + 1,option?.[0])}
                 </option>
               );
             })}
@@ -553,12 +560,13 @@ export function DepartmentForm({
     const data = {...object(value)};
     const ownerSchema=schema.properties['owner'],fixedOwner=ownerSchema?.const??(ownerSchema?.enum?.length===1?ownerSchema.enum[0]:undefined);
     if(typeof fixedOwner==='string'&&data['owner']===undefined)data['owner']=fixedOwner;
+    const boundFields=resolveBoundFields?.(schema,data,choices)??[];
     return (
       <fieldset className="form-object">
         <legend>{label}</legend>
         <div className="workspace-form">
           {Object.entries(schema.properties)
-            .filter(([key]) => !["requestId", "fileRequestId"].includes(key)&&!(key==='owner'&&typeof fixedOwner==='string'))
+            .filter(([key]) => !["requestId", "fileRequestId"].includes(key)&&!(key==='owner'&&typeof fixedOwner==='string')&&!boundFields.includes(key))
             .map(([key, item]) => (
               <div className="form-field" key={key} data-field={key}>
                 <DepartmentForm
@@ -601,10 +609,17 @@ export function DepartmentForm({
                   root={data}
                   preserveTimePrecision={preserveTimePrecision}
                   labels={labels}
+                  enumLabels={enumLabels}
+                  resolveBoundFields={resolveBoundFields}
                 />
               </div>
             ))}
         </div>
+        {boundFields.length>0&&<details className="form-reference-details">
+          <summary>已绑定的版本信息（只读）</summary>
+          <p>随当前引用保留；更换引用时由选择器绑定，不需要手填。</p>
+          <dl>{boundFields.map(key=><div key={key} data-field={key}><dt>{labels[key]??fieldLabels[key]??key}</dt><dd>{String(data[key])}</dd></div>)}</dl>
+        </details>}
       </fieldset>
     );
   }
@@ -647,7 +662,7 @@ export function DepartmentForm({
   if (schema.const !== undefined)
     return (
       <p>
-        {label}：{human(schema.const)}
+        {label}：{optionLabel(schema.const)}
       </p>
     );
   if (schema.type === "boolean")
@@ -669,7 +684,7 @@ export function DepartmentForm({
           <option value="">请选择</option>
           {schema.enum.map((item) => (
             <option key={String(item)} value={String(item)}>
-              {human(item)}
+              {optionLabel(item)}
             </option>
           ))}
         </select>

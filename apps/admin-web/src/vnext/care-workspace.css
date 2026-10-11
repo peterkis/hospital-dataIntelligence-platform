@@ -8,3 +8,10 @@
 .care-object-table{overflow:auto;margin-top:20px}.care-object-table table{border-collapse:collapse;width:100%;text-align:left}.care-object-table caption{text-align:left;padding:12px 0;color:#526760}.care-object-table th,.care-object-table td{padding:12px;border-bottom:1px solid var(--care-line);vertical-align:top;overflow-wrap:anywhere}.care-object-table small{display:block;margin-top:5px}.care-object-table th{background:#edf2ee}
 
 .care-workspace .data-record .data-record dl>div{display:block}.care-workspace .data-record .data-record dt{width:auto}.care-workspace .data-record .data-record dd{margin:4px 0 12px}.care-workspace .data-record .data-record{padding-left:12px;margin-left:0}
+
+/* Shell wiring only; legacy pages retain their existing layout and controls. */
+.workbench-shell .care-workspace{padding:0;margin:0;min-height:0;max-width:none;background:var(--surface);color:var(--text-primary)}
+.care-workspace .workspace-layout.care-query-layout{display:block}
+.care-query-layout>.draft-list{display:none}
+.care-query-layout>.editor-card{border:0;border-radius:0;padding:0}
+.workbench-shell .care-workspace .record-detail{position:static;height:auto;background:var(--surface);color:var(--text-primary)}
