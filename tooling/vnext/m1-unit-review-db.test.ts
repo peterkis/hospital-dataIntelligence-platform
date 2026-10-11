@@ -7,6 +7,9 @@ import {businessUnitFixture} from './p3-01-fixture.js';
 import {grantDepartment} from './p2-01-validate.mjs';
 import {peer} from './lineage.mjs';
 import {assertFrozenUnitProperty,assertUnitPropertyInput,unitPropertyDeclaration,unitExpectedReceivingBasis,type UnitApprovalContext} from '../../apps/admin-web/src/vnext/unit-approval-model.js';
+import {requireUnitPropertyPeriod} from '../../apps/admin-web/src/vnext/unit-maintenance-model.js';
+import {buildCatalogServer} from '../../apps/governance-api/src/composition/build-vnext-catalog.js';
+import {actor} from '../../apps/governance-api/src/platform/fastify/vnext-catalog-routes.js';
 const connection=process.env['VNEXT_VALIDATION_OWNER_URL']!,receipt=JSON.parse(readFileSync(process.env['VNEXT_TEST_RECEIPT']!,'utf8')),provider=new LocalSyntheticKeyProvider();
 let catalog:Awaited<ReturnType<typeof openCatalog>>,fixture:Awaited<ReturnType<typeof businessUnitFixture>>;
 beforeAll(async()=>{
@@ -50,4 +53,15 @@ test('an external old-period revision cannot choose an earlier property declarat
  const context:UnitApprovalContext={input:await f.owner.readInput('reviewer',{inputId:input.inputId}),expectedHead:head.number,before:accepted.version!,binding:accepted.binding!.binding,producer,inputId:input.inputId};
  expect(()=>assertUnitPropertyInput(context)).toThrow('不能在属性修订页批准');
  expect((await f.owner.readApplyCandidate('reviewer',{candidateId:candidate.candidateId})).approvedBy).toBeNull();expect((await f.owner.history('maker',{id})).versions).toEqual(history.versions);
+});
+test('property admission refuses a suspended unit and a resumed unit whose original period still crosses suspension',async()=>{
+ const f=fixture,d=await f.newDepartment(),binding=await f.endpoint(d),create=await f.input([f.entry(binding)]),created=await f.apply(create),id=created.facts[0]!.id,row=create.entries[0]!.row;
+ await f.apply(await f.input([{action:'SUSPEND',target:{owner:'care-organization/unit',id,expectedHead:'1'},row:{...row,record_status:'SUSPENDED',valid_from:'2026-06-01T00:00:00'},reason:'TEST explicit suspension',evidenceId:f.artifact.artifactId}]));
+ const contexts:Parameters<typeof buildCatalogServer>=[catalog,'CONTROL_PLANE'];contexts[15]={owner:f.owner,actor:request=>actor(request.headers)};
+ const app=await buildCatalogServer(...contexts),previous=Reflect.get(globalThis,'location');
+ try{const base=await app.listen({host:'127.0.0.1',port:0});Reflect.set(globalThis,'location',{origin:base});
+  await expect(requireUnitPropertyPeriod('maker',id,'2026-01-01T00:00:00',null)).rejects.toThrow('生命周期流程恢复');
+  await f.apply(await f.input([{action:'RESUME',target:{owner:'care-organization/unit',id,expectedHead:'2'},row:{...row,valid_from:'2026-09-01T00:00:00'},reason:'TEST explicit resumption',evidenceId:f.artifact.artifactId}]));
+  await expect(requireUnitPropertyPeriod('maker',id,'2026-01-01T00:00:00',null)).rejects.toThrow('原属性期间');
+ }finally{if(previous===undefined)Reflect.deleteProperty(globalThis,'location');else Reflect.set(globalThis,'location',previous);await app.close();}
 });

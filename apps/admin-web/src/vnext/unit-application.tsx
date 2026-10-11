@@ -27,6 +27,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
   const [reference, setReference] = useState<Reference>(), [original, setOriginal] = useState<Original>(), [before, setBefore] = useState<Before>();
   const [approvalContext,setApprovalContext]=useState<UnitApprovalContext>();
   const [candidate, setCandidate] = useState<Candidate>(), [busy, setBusy] = useState(true), [error, setError] = useState('');
+  const [executionHistory,setExecutionHistory]=useState<Candidate[]>([]),[executionsLoaded,setExecutionsLoaded]=useState(false),[executionAfter,setExecutionAfter]=useState<string|null>(null);
   const [preview, setPreview] = useState<VNextOperations['previewBusinessUnitInput']['responses'][200]['content']['application/json']>();
   const [material, setMaterial] = useState(''), [materialRead, setMaterialRead] = useState(false), [classification, setClassification] = useState(false), [restriction, setRestriction] = useState(false), [verifyReason, setVerifyReason] = useState('');
   const [reviewed, setReviewed] = useState(false), [reviewConfirmed, setReviewConfirmed] = useState(false), [frozenFacts, setFrozenFacts] = useState<Record<string, unknown>>();
@@ -34,11 +35,14 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
   const pending = useRef<Pending | null>(null), generation = useRef(0);
   const entry = original?.entries[0];
   const locate = (values: Record<string, string | null>) => {const next = new URLSearchParams(locatorParams.current); for (const [key, value] of Object.entries(values)) value ? next.set(key, value) : next.delete(key); locatorParams.current = next; setParams(next, {replace: true, state: context});};
+  function selectExecution(value:Candidate){if(value.candidateId!==candidate?.candidateId){setReviewed(false);setReviewConfirmed(false);setFrozenFacts(undefined);setCompleted(false);}setCandidate(value);locate({candidate:value.candidateId,execution:value.requestId});}
+  async function readExecutionHistory(after?:string){setExecutionsLoaded(false);const result=await departmentValue(workspace.executions({kind:'UNIT',inputId,limit:20,...(after?{after}:{})}));setExecutionHistory(previous=>after?[...new Map([...previous,...result.items].map(value=>[value.candidateId,value])).values()]:result.items);setExecutionAfter(result.nextAfterId);setExecutionsLoaded(true);return result.items;}
   async function executions(requestId?: string) {
     const result = await departmentValue(workspace.executions({kind: 'UNIT', inputId, limit: 1,
-      ...(params.get('candidate') ? {candidateId: params.get('candidate')!} : {}), ...(requestId ? {requestId} : {})}));
-    const exact = result.items[0]; if (exact) {setCandidate(exact); locate({candidate: exact.candidateId, execution: exact.requestId});} return exact;
+      ...(locatorParams.current.get('candidate') ? {candidateId: locatorParams.current.get('candidate')!} : {}), ...(requestId ? {requestId} : {})}));
+    const exact = result.items[0]; if (exact) {setExecutionHistory(previous=>[exact,...previous.filter(value=>value.candidateId!==exact.candidateId)]);selectExecution(exact);} return exact;
   }
+  async function reloadExecutions(more=false){setBusy(true);setError('');try{const items=await readExecutionHistory(more?executionAfter??undefined:undefined);if(candidate)await executions(candidate.requestId);else if(items[0])selectExecution(items[0]);}catch(value){fail(value);}finally{setBusy(false);}}
   function fail(value: unknown) {setError(unitBusinessError(value)); if (value instanceof DepartmentResponseError && [401, 403].includes(value.status)) {setDenied(true); queryClient.clear();}}
   useEffect(() => {
     let active = true; const token = ++generation.current;
@@ -58,7 +62,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
         assertUnitPropertyInput(context);
         if (!active || token !== generation.current) return;
         setReference(ref); setOriginal(input); setBefore(previous);setApprovalContext(context);
-        const execution = params.get('execution'); if (execution || params.get('candidate')) await executions(execution ?? undefined);
+        const items=await readExecutionHistory(),execution=params.get('execution');if(execution||params.get('candidate'))await executions(execution??undefined);else if(items[0])selectExecution(items[0]);
         const unresolved = params.get('unitStage'); if (unresolved) {setUncertain(true); setError('存在待确认的原执行请求，请先恢复准确结果。');}
       } catch (value) {if (active) fail(value);} finally {if (active) setBusy(false);}
     })();
@@ -74,14 +78,14 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
     } catch (value) {fail(value);} finally {setBusy(false);}
   }
   async function dispatch(packet: Pending) {
-    if (busy || denied) return; pending.current = packet; setBusy(true); setError('');
+    if (busy || denied || pending.current || (packet.kind==='PLAN'&&(!executionsLoaded||!!candidate||executionHistory.length>0))) return; pending.current = packet; setBusy(true); setError('');
     locate(unitActionLocation(packet.kind,'requestId' in packet.body?packet.body.requestId:undefined));
     try {
       if (packet.kind === 'VERIFY') {await departmentValue(client.verify(packet.body)); setPreview(await departmentValue(client.preview({inputId}))); setMaterial('');}
       if (packet.kind === 'PLAN') {const result = await departmentValue(client.plan(packet.body));
         const exact = await departmentValue(workspace.executions({kind: 'UNIT', inputId, candidateId: result.candidateId, requestId: packet.body.requestId, limit: 1}));
         if (!exact.items[0] || exact.items[0].digest !== result.digest) throw new Error('冻结结果与服务器候选记录不一致，请核对原请求。');
-        setCandidate(exact.items[0]); locate({candidate: result.candidateId, execution: packet.body.requestId});}
+        setExecutionHistory(previous=>[exact.items[0]!,...previous.filter(value=>value.candidateId!==result.candidateId)]);selectExecution(exact.items[0]);}
       if (packet.kind === 'APPROVE') {await departmentValue(client.approve(packet.body)); await executions(candidate?.requestId);}
       if (packet.kind === 'APPLY') {const result = await departmentValue(client.apply(packet.body)); if (result.status !== 'COMMITTED') {setUncertain(true); return;} await confirmCommitted(packet.body);}
       pending.current = null; setUncertain(false); locate({unitStage: null,verificationRequest:null});
@@ -153,7 +157,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
         {!!entry.row.receiving_rule_ref && <p role="alert">当前记录有收治规则引用，须按准确规则版本核验，不能作为无限制提交。</p>}
         <Button disabled={!enabled || !permissions.verify || !classification || !restriction || !materialRead || !verifyReason.trim() || !!entry.row.receiving_rule_ref} onClick={verify}>提交独立核验</Button>
       </section>
-      <section><h3>3. 冻结本次候选</h3><Button disabled={!enabled || !permissions.write || !!candidate || preview?.decision !== 'PASS'} onClick={() => void dispatch({kind: 'PLAN', body: {inputId, requestId: crypto.randomUUID()}})}>冻结本次修订</Button></section>
+      <section><h3>3. 冻结本次候选</h3><Button disabled={!enabled || !permissions.write || !executionsLoaded || !!candidate || executionHistory.length>0 || preview?.decision !== 'PASS'} onClick={() => void dispatch({kind: 'PLAN', body: {inputId, requestId: crypto.randomUUID()}})}>冻结本次修订</Button><Button variant="outline" disabled={busy||uncertain} onClick={()=>void reloadExecutions()}>读取已有执行记录</Button>{executionHistory.length>0&&<><label htmlFor="unit-existing-execution">已有冻结候选</label><select id="unit-existing-execution" disabled={busy||uncertain} value={candidate?.candidateId??''} onChange={event=>{const selected=executionHistory.find(value=>value.candidateId===event.target.value);if(selected)selectExecution(selected);}}><option value="">请选择已有候选</option>{executionHistory.map((value,index)=><option key={value.candidateId} value={value.candidateId}>候选 {index+1} · {careTime(value.recordedAt)} · {value.committed?'已应用':value.approvedBy?'已批准':'待审批'}</option>)}</select></>}{executionAfter&&<Button variant="outline" disabled={busy||uncertain} onClick={()=>void reloadExecutions(true)}>读取更多执行记录</Button>}</section>
       {candidate && <section><h3>4. 独立审批</h3><Button variant="outline" disabled={!enabled || !permissions.review} onClick={() => void reviewCandidate()}>审阅冻结候选</Button>{reviewed && <><p role="status">已读取与本次记录和摘要匹配的冻结候选。</p><label><input type="checkbox" disabled={!enabled || !permissions.review} checked={reviewConfirmed} onChange={event => setReviewConfirmed(event.target.checked)}/>已审阅字段变化、生效期间与冻结依据，同意本次修订</label></>}<Button disabled={!enabled || !permissions.review || !reviewed || !reviewConfirmed || !!candidate.approvedBy} onClick={() => void dispatch({kind: 'APPROVE', body: {candidateId: candidate.candidateId, digest: candidate.digest}})}>批准本次修订</Button></section>}
       {candidate && <section><h3>5. 应用并回读</h3><Button disabled={!enabled || !permissions.write || !candidate.approvedBy || candidate.committed || completed} onClick={() => void dispatch({kind: 'APPLY', body: {candidateId: candidate.candidateId, requestId: candidate.requestId}})}>应用已批准修订</Button>{candidate.committed && !completed && <Button variant="outline" disabled={!enabled} onClick={() => {setBusy(true); void confirmCommitted({candidateId: candidate.candidateId, requestId: candidate.requestId}).catch(fail).finally(() => setBusy(false));}}>核对已发布内容</Button>}{completed && <p role="status">已发布：服务器提交、事实核对与本记录回读均确认，稳定身份保持不变，历史已追加。</p>}</section>}
       <details className="unit-technical"><summary>技术定位与冻结内容</summary><p>申请 {inputId}</p><p>候选 {candidate?.candidateId} · 原执行请求 {candidate?.requestId}</p>{frozenFacts && <pre>{JSON.stringify(frozenFacts, null, 2)}</pre>}</details>

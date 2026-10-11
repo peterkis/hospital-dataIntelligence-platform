@@ -45,6 +45,19 @@ export function validateUnitFields(fields: UnitFields): Partial<Record<keyof Uni
   if (fields.reason.length > 2000) errors.reason = '修订理由最多2000个字符。';
   return errors;
 }
+export async function requireUnitPropertyPeriod(actor:string,id:string,validFrom:string,validTo:string|null){
+ const client=createBusinessUnitClient(location.origin,actor),current=await departmentValue(client.query({id}));
+ if(current.state!=='ACTIVE')throw new Error('当前业务单元不是有效状态，不能提交属性修订。暂停单元须先按原生命周期流程恢复。');
+ const period=await departmentValue(client.coverage({id,validFrom,validTo}));
+ if(!period.covered)throw new Error('原属性期间包含暂停、结束或空档，不能通过属性修订覆盖。请先核对原生命周期流程。');
+ return current;
+}
+export async function requireUnitDraftPeriod(actor:string,id:string,draft:UnitDraft){
+ const entry=unitEntry(draft),from=entry.row.valid_from,to=entry.row.valid_to;
+ if(entry.target.id!==id||!from)throw new Error('草稿目标或属性期间不完整，不能提交。');
+ const time=(value:string)=>draft.payload.timePolicy==='SOURCE_PLUS08_TO_LOCAL'?value.replace(/\+08:00$/,''):value;
+ return requireUnitPropertyPeriod(actor,id,time(from),to?time(to):null);
+}
 /** Read both the latest accepted head and the protected producer row before editing. */
 export async function prepareUnitDraft(actor: string, id: string): Promise<{draft: UnitDraft; sourceInputId: string; contractVersionId: string}> {
   const client = createBusinessUnitClient(location.origin, actor), history = await departmentValue(client.history({id}));
@@ -52,6 +65,8 @@ export async function prepareUnitDraft(actor: string, id: string): Promise<{draf
   const latest = history.versions.reduce((head, version) => BigInt(version.number) > BigInt(head.number) ? version : head);
   if (latest.action === 'CLOSE') throw new Error('业务单元已永久结束，不能修订属性。');
   const declaration = unitPropertyDeclaration(history.versions,latest.number);
+  const current=await requireUnitPropertyPeriod(actor,id,declaration.validFrom,declaration.validTo);
+  if(current.head!==latest.number)throw new Error('读取期间服务器记录头已变化，请重新读取当前记录。');
   const locator = declaration.facts.source.recordLocatorEvidence, original = await departmentValue(client.readInput({inputId: locator.inputId}));
   const index = original.sourceRows ? original.sourceRows.indexOf(locator.row) : locator.row - 1, entry = original.entries[index];
   if (!entry) throw new Error('原来源行定位不匹配，不能准备修订。');

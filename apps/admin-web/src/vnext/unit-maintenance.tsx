@@ -10,7 +10,7 @@ import {loadCareContracts} from './care-contracts.js';
 import {loadUnitBrowserReferences} from './care-references.js';
 import {record, text} from './care-model.js';
 import {careTime, careUuid} from './care-record-view.js';
-import {editUnitDraft, mergeUnitDraftConflict, prepareUnitDraft, unitBusinessError, unitEntry, unitFields, unitFieldLabels, validateUnitFields, type UnitDraft, type UnitFields} from './unit-maintenance-model.js';
+import {editUnitDraft, mergeUnitDraftConflict, prepareUnitDraft, requireUnitDraftPeriod, unitBusinessError, unitEntry, unitFields, unitFieldLabels, validateUnitFields, type UnitDraft, type UnitFields} from './unit-maintenance-model.js';
 import {UnitApplication} from './unit-application.js';
 import type {ReferenceChoices} from './department-form.js';
 import './unit-maintenance.css';
@@ -115,7 +115,8 @@ export function UnitMaintenance({actor, id, onLock, onRecoveryLock}: {actor: str
     } finally {setBusy(false);}
   }
   async function submit() {
-    if (!saved || saved.state !== 'EDITING' || dirty || !materialReady || !editable) return;
+    if (!saved || !draft || saved.state !== 'EDITING' || dirty || !materialReady || !editable) return;
+    setBusy(true);try{await requireUnitDraftPeriod(actor,id,draft);}catch(error){fail(error);setBusy(false);return;}
     const packet: Pending = {kind: 'SUBMIT', body: {id: saved.id, expectedVersion: saved.version, requestId: crypto.randomUUID()}};
     pending.current = packet; setBusy(true); locate({request: packet.body.requestId, unitAction: 'SUBMIT'});
     let acknowledged = false;

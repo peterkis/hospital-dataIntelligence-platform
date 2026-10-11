@@ -277,7 +277,8 @@ export function UnitRecordBrowser({actor, campus, choices, canRead, canWrite, re
           <section className="unit-detail__section"><h3>业务关联</h3><p className="unit-help">病区、护理与地点关系独立维护，不是唯一行政父级。上方关联名称为当前可读取的登记标签。</p>
             <div className="unit-related-links"><Link to={'/care-space/UNIT_WARD?actor=' + encodeURIComponent(actor)}>科室与病区</Link><Link to={'/care-space/WARD_NURSING?actor=' + encodeURIComponent(actor)}>病区与护理</Link><Link to={'/care-space/LOCATION_USE?actor=' + encodeURIComponent(actor)}>地点使用</Link></div>
           </section>
-          {canWrite && current.state !== 'CLOSED' && <div className="unit-maintain"><Button disabled={maintaining || detail.isError} onClick={() => void maintain()}>{maintaining ? '正在准备…' : '修改此记录'}</Button><p className="unit-help">修订先保存私有草稿，再提交独立核验与审批。</p></div>}
+          {canWrite && !date && current.state === 'ACTIVE' && <div className="unit-maintain"><Button disabled={maintaining || detail.isError} onClick={() => void maintain()}>{maintaining ? '正在准备…' : '修改此记录'}</Button><p className="unit-help">修订先保存私有草稿，再提交独立核验与审批。</p></div>}
+          {canWrite && current.state === 'SUSPENDED' && <p className="unit-help">当前单元已暂停，不能提交属性修订。请先按原生命周期流程完成恢复。</p>}
           {operationError && <p role="alert">{operationError}</p>}
           <details className="unit-history" open={historyOpen} onToggle={event => setHistoryOpen(event.currentTarget.open)}><summary>变更历史</summary>
             {historyOpen && (history.isPending ? <p role="status">正在读取历史…</p> : history.isError ? <p role="alert">{readError(history.error)}</p> : <ol>{[...(history.data?.versions ?? [])].reverse().map(version => <li key={version.id}>

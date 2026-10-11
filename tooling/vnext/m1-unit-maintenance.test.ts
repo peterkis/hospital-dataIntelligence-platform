@@ -1,5 +1,5 @@
-import {expect, test} from 'vitest';
-import {editUnitDraft, mergeUnitDraftConflict, mergeUnitFields, unitEntry, unitFields, validateUnitFields, type UnitDraft} from '../../apps/admin-web/src/vnext/unit-maintenance-model.js';
+import {expect, test, vi} from 'vitest';
+import {requireUnitPropertyPeriod, editUnitDraft, mergeUnitDraftConflict, mergeUnitFields, unitEntry, unitFields, validateUnitFields, type UnitDraft} from '../../apps/admin-web/src/vnext/unit-maintenance-model.js';
 
 const draft: UnitDraft = {kind:'UNIT',campus:'NORTH',profile:'CORE',requestId:'11111111-1111-4111-8111-111111111111',transport:{contractId:'22222222-2222-4222-8222-222222222222',contractVersionId:'33333333-3333-4333-8333-333333333333'},payload:{timePolicy:'LOCAL',entries:[{action:'REVISE',target:{owner:'care-organization/unit',id:'44444444-4444-4444-8444-444444444444',expectedHead:'12'},evidenceId:'55555555-5555-4555-8555-555555555555',reason:'before',row:{unit_name:'TEST name',unit_code:'00123',org_id:'66666666-6666-4666-8666-666666666666',valid_from:'2026-01-01T00:00:00.000001',valid_to:'',service_description:'before',source_record_id:'TEST original row4'}}]}};
 test('property edit preserves the accepted target, precise period, immutable code and original protected provenance',()=>{
@@ -32,3 +32,5 @@ test('a conflict with a different record cannot repoint the property editor',()=
  const server=structuredClone(draft);unitEntry(server).target.id='88888888-8888-4888-8888-888888888888';
  expect(()=>mergeUnitDraftConflict(unitFields(draft),draft,unitFields(draft),server,true,true)).toThrow('目标身份');
 });
+
+test.each([{state:'SUSPENDED',covered:true},{state:'ACTIVE',covered:false}])('property admission refuses $state with covered=$covered before any mutation',async({state,covered})=>{const paths:string[]=[];vi.stubGlobal('location',{origin:'http://test.invalid'});vi.stubGlobal('fetch',async(input:RequestInfo|URL)=>{const path=new URL(input instanceof Request?input.url:String(input)).pathname;paths.push(path);return Response.json(path.endsWith('/coverage')?{covered}:{state,head:'12'});});try{await expect(requireUnitPropertyPeriod('maker','44444444-4444-4444-8444-444444444444','2026-01-01T00:00:00',null)).rejects.toThrow(state==='SUSPENDED'?'生命周期流程恢复':'原属性期间');expect(paths.every(path=>path.endsWith('/query')||path.endsWith('/coverage'))).toBe(true);}finally{vi.unstubAllGlobals();}});
