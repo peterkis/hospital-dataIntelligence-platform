@@ -1,6 +1,7 @@
 import {createBusinessUnitClient, type CareWorkspaceDraft} from '@hospital-data-intelligence/generated-api-client';
 import {departmentValue} from './department-request.js';
 import {record, text} from './care-model.js';
+import {unitPropertyDeclaration} from './unit-approval-model.js';
 
 export type UnitFields = {name: string; phone: string; description: string; reason: string};
 export const unitFieldLabels: Record<keyof UnitFields, string> = {name: '业务单元名称', phone: '公开电话', description: '服务说明', reason: '修订理由'};
@@ -50,8 +51,7 @@ export async function prepareUnitDraft(actor: string, id: string): Promise<{draf
   if (!history.versions.length) throw new Error('缺少已接受的业务单元版本。');
   const latest = history.versions.reduce((head, version) => BigInt(version.number) > BigInt(head.number) ? version : head);
   if (latest.action === 'CLOSE') throw new Error('业务单元已永久结束，不能修订属性。');
-  const declaration = history.versions.filter(version => ['CREATE', 'REVISE'].includes(version.action)).at(-1);
-  if (!declaration) throw new Error('缺少可读取的原属性版本。');
+  const declaration = unitPropertyDeclaration(history.versions,latest.number);
   const locator = declaration.facts.source.recordLocatorEvidence, original = await departmentValue(client.readInput({inputId: locator.inputId}));
   const index = original.sourceRows ? original.sourceRows.indexOf(locator.row) : locator.row - 1, entry = original.entries[index];
   if (!entry) throw new Error('原来源行定位不匹配，不能准备修订。');

@@ -8,7 +8,7 @@ import {careExecute} from './care-request.js';
 import {record, text} from './care-model.js';
 import {careTime} from './care-record-view.js';
 import {unitBusinessError} from './unit-maintenance-model.js';
-import {assertUnitPropertyInput,assertFrozenUnitProperty,unitExpectedReceivingBasis,unitActionLocation,type UnitApprovalContext} from './unit-approval-model.js';
+import {assertUnitPropertyInput,assertFrozenUnitProperty,unitPropertyDeclaration,unitExpectedReceivingBasis,unitActionLocation,type UnitApprovalContext} from './unit-approval-model.js';
 
 type Permissions = VNextOperations['careWorkspacePermissions']['responses'][200]['content']['application/json'];
 type Reference = VNextOperations['readCareWorkspaceApplicationReference']['responses'][200]['content']['application/json'];
@@ -50,9 +50,9 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
         const selected = input.entries[0];
         if (input.entries.length !== 1 || !selected || selected.action !== 'REVISE' || selected.target.id !== id) throw new Error('原申请不是当前业务单元的单条属性修订。');
         const head = await departmentValue(client.exact({id, version: selected.target.expectedHead}));
-        const businessAt=input.timePolicy==='SOURCE_PLUS08_TO_LOCAL'?selected.row.valid_from.replace(/\+08:00$/,''):selected.row.valid_from;
-        const accepted=await departmentValue(client.query({id,businessAt,recordAsOf:head.recordedAt})),previous=accepted.version;
-        if(!previous||!['CREATE','REVISE'].includes(previous.action)||!accepted.binding)throw new Error('准确接受属性版本和对应归属当前不可核对，不能批准。');
+        const history=await departmentValue(client.history({id,recordAsOf:head.recordedAt})),declaration=unitPropertyDeclaration(history.versions,head.number);
+        const accepted=await departmentValue(client.query({id,businessAt:declaration.validFrom,recordAsOf:head.recordedAt})),previous=accepted.version;
+        if(!previous||previous.id!==declaration.id||!accepted.binding)throw new Error('最新接受属性版本和对应归属当前不可核对，不能批准。');
         const producer=await departmentValue(client.readInput({inputId:previous.facts.source.recordLocatorEvidence.inputId}));
         const context:UnitApprovalContext={input,expectedHead:head.number,before:previous,binding:accepted.binding.binding,producer,inputId};
         assertUnitPropertyInput(context);

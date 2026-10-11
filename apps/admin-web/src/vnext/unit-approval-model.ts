@@ -8,6 +8,11 @@ type Input=Pick<UnitApprovalInput,'campus'|'profile'|'timePolicy'|'entries'|'sou
 export type UnitApprovalContext={input:Input;expectedHead:string;before:Pick<UnitApprovalVersion,'id'|'number'|'validFrom'|'validTo'|'facts'>;binding:NonNullable<UnitApprovalRead['binding']>['binding'];producer:Input;inputId:string};
 function stable(value: unknown): unknown {if(Array.isArray(value))return value.map(stable);if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,stable(item)]));return value;}
 const same=(left:unknown,right:unknown)=>JSON.stringify(stable(left))===JSON.stringify(stable(right));
+export function unitPropertyDeclaration<T extends Pick<UnitApprovalVersion,'id'|'number'|'action'>>(versions:readonly T[],expectedHead:string):T{
+ const properties=versions.filter(version=>['CREATE','REVISE'].includes(version.action)&&BigInt(version.number)<=BigInt(expectedHead));
+ if(!properties.length)throw new Error('缺少预期记录头下已接受的属性声明，不能批准。');
+ return properties.reduce((latest,version)=>BigInt(version.number)>BigInt(latest.number)?version:latest);
+}
 export function unitExpectedReceivingBasis(checked:UnitVerificationRead,context:UnitApprovalContext,inputDigest:string){
  const entry=context.input.entries[0],verification=checked?.verification;
  const time=(value:string)=>context.input.timePolicy==='SOURCE_PLUS08_TO_LOCAL'?value.replace(/\+08:00$/,''):value;
