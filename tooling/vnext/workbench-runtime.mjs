@@ -34,7 +34,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import assert from "node:assert/strict";
-import staticPlugin from "@fastify/static";
+import { registerWorkbenchStatic } from './workbench-static.mjs';
 import { createTemporary, dropTemporary } from "./fresh.mjs";
 import {
   createValidationOwnerSession,
@@ -280,23 +280,7 @@ export async function startWorkbench({
       validationContext?.careValidation??(careValidation?{owner:careValidation,actor:r=>syntheticActor(r.headers)}:undefined),
       validationContext?.careWorkspace??(careWorkspace?{owner:careWorkspace,actor:r=>syntheticActor(r.headers)}:undefined),
     );
-    await app.register(staticPlugin, {
-      root: resolve(root, "apps/admin-web/dist-vnext"),
-      prefix: "/admin/vnext/",
-    });
-    for (const path of [
-      "catalog",
-      "contracts",
-      "parameter-definitions",
-      "imports",
-      "organizations",
-      "departments",
-      "location-usage-types",
-      "care-space",
-    ])
-      app.get("/admin/vnext/" + path, (_req, reply) =>
-        reply.sendFile("vnext.html"),
-      );
+    await registerWorkbenchStatic(app, resolve(process.env.HDIP_MVP_VNEXT_DIST ?? resolve(root, 'apps/admin-web/dist-vnext')));
     if(validationContext?.beforeListen)await validationContext.beforeListen(app);
     const url=await app.listen({ host: "127.0.0.1", port });
     return {

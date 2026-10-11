@@ -59122,6 +59122,17 @@ export interface operations {
                         head: string;
                         /** @enum {unknown} */
                         state: "ACTIVE" | "SUSPENDED" | "CLOSED" | "NOT_EFFECTIVE";
+                        display?: {
+                            name: string;
+                            code: string;
+                            /** @enum {unknown} */
+                            type: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                            version: string;
+                            validFrom: string;
+                            validTo: string | null;
+                            /** @enum {unknown} */
+                            mode: "CURRENT" | "REGISTERED";
+                        } | null;
                         version: {
                             id: string;
                             number: string;
@@ -59555,6 +59566,9 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    q?: string;
+                    /** @enum {unknown} */
+                    state?: "ACTIVE" | "SUSPENDED" | "CLOSED" | "NOT_EFFECTIVE";
                     /** @enum {unknown} */
                     campus: "NORTH" | "SOUTH";
                     campusId?: string;
@@ -59580,6 +59594,17 @@ export interface operations {
                             head: string;
                             /** @enum {unknown} */
                             state: "ACTIVE" | "SUSPENDED" | "CLOSED" | "NOT_EFFECTIVE";
+                            display?: {
+                                name: string;
+                                code: string;
+                                /** @enum {unknown} */
+                                type: "OPD" | "IPD" | "ED" | "EXAM" | "LAB" | "PHARMACY" | "OR" | "OTHER";
+                                version: string;
+                                validFrom: string;
+                                validTo: string | null;
+                                /** @enum {unknown} */
+                                mode: "CURRENT" | "REGISTERED";
+                            } | null;
                             version: {
                                 id: string;
                                 number: string;

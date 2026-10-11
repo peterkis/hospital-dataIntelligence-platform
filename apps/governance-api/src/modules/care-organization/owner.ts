@@ -1,3 +1,4 @@
+import {unitDisplayAt,unitReadState,selectUnitPage,type UnitListFilter} from './unit-read-view.js';
 import {careCandidateInputIds} from './candidate-peers.js';
 import {readScopedSource} from '../governance-catalog/index.js';
 import {readScopedProtectedInput} from '../governance-catalog/index.js';
@@ -137,7 +138,7 @@ export function openBusinessUnit(connection:string,provider:KeyProviderPort,port
  };
  const coordinator=applyCoordinator(db,provider,port),files=fileIntake(db,provider);
  const historyIn=async(s:Scope,actor:string,id:string,asOf?:string)=>{const h=knownUnit(await snapshot(s,actor,id,asOf),asOf);if(!h.versions.length)throw new Error('NOT_FOUND');return h;};
- const readIn=async(s:Scope,actor:string,input:{id:string;businessAt?:string;recordAsOf?:string})=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),at=input.businessAt?localTime(input.businessAt):await clock(s),v=unitAt(h,at),binding=bindingAt(h,at);return {id:h.id,departmentId:h.departmentId,head:h.versions.at(-1)!.number,state:v?'ACTIVE' as const:careState(h.versions,at)==='CLOSED'?'CLOSED' as const:careState(h.versions,at)==='SUSPENDED'?'SUSPENDED' as const:'NOT_EFFECTIVE' as const,version:v,binding:v&&binding?bindingHead(binding):null,clinicalReadiness:'NOT_READY' as const,reasons:['RESPONSIBILITY_NOT_IMPLEMENTED','CLINICAL_CAPABILITY_NOT_IMPLEMENTED']};};
+ const readIn=async(s:Scope,actor:string,input:{id:string;businessAt?:string;recordAsOf?:string})=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),at=input.businessAt?localTime(input.businessAt):await clock(s),v=unitAt(h,at),binding=bindingAt(h,at);return {id:h.id,departmentId:h.departmentId,head:h.versions.at(-1)!.number,state:unitReadState(h,at),display:unitDisplayAt(h,at),version:v,binding:v&&binding?bindingHead(binding):null,clinicalReadiness:'NOT_READY' as const,reasons:['RESPONSIBILITY_NOT_IMPLEMENTED','CLINICAL_CAPABILITY_NOT_IMPLEMENTED']};};
  const candidateHistoriesIn=async(s:Scope,actor:string,inputId:string)=>{
    const v=await inspectInput(s,actor,inputId);if(v.issues.length)throw new Error(v.issues[0]!.code);
    return Promise.all(v.writes.map(async w=>{const h:UnitHistory=w.targetId?await historyIn(s,actor,w.targetId,s.recordAsOf):{id:w.key,departmentId:w.binding!.department.id,versions:[],bindings:[],codes:[]};
@@ -216,7 +217,14 @@ export function openBusinessUnit(connection:string,provider:KeyProviderPort,port
   async read(actor:string,input:{id:string;businessAt?:string;recordAsOf?:string}){unitCheck(UnitReadSchema,input);return root(s=>readIn(s,actor,input));},
   async exact(actor:string,input:{id:string;version:string;recordAsOf?:string}){unitCheck(UnitExactSchema,input);return root(async s=>{const h=await snapshotVersion(s,actor,input.id,input.version);if(input.recordAsOf&&h.versions.at(-1)!.recordedAt>localTime(input.recordAsOf))throw new Error('NOT_FOUND');const v=h.versions.find(v=>v.number===input.version);if(!v)throw new Error('NOT_FOUND');return v;});},
   async diff(actor:string,input:{id:string;fromVersion:string;toVersion:string}){unitCheck(UnitDiffSchema,input);return root(async s=>{const h=await historyIn(s,actor,input.id),before=h.versions.find(v=>v.number===input.fromVersion),after=h.versions.find(v=>v.number===input.toVersion);if(!before||!after)throw new Error('NOT_FOUND');return {id:h.id,before,after};});},
-  async list(actor:string,input:{campus:'NORTH'|'SOUTH';campusId?:string;departmentId?:string;after?:string;limit?:number;businessAt?:string;recordAsOf?:string}){unitCheck(UnitListSchema,input);return root(async s=>{const at=input.businessAt?localTime(input.businessAt):await clock(s),all=(await histories(s,actor,input.campus,input.recordAsOf)).map(h=>knownUnit(h,input.recordAsOf)).filter(h=>h.versions.length&&(!input.departmentId||h.departmentId===input.departmentId)&&(!input.after||h.id>input.after)&&(!input.campusId||declaredBindingAt(h,at)?.campusId===input.campusId)),page=all.slice(0,input.limit??50);return {items:await Promise.all(page.map(h=>readIn(s,actor,{id:h.id,businessAt:at,...(input.recordAsOf?{recordAsOf:input.recordAsOf}:{})}))),nextAfterId:all.length>page.length?page.at(-1)!.id:null};});},
+  async list(actor:string,input:UnitListFilter){
+   unitCheck(UnitListSchema,input);
+   return root(async s=>{
+    const at=input.businessAt?localTime(input.businessAt):await clock(s);
+    const {page,nextAfterId}=selectUnitPage(await histories(s,actor,input.campus,input.recordAsOf),input,at);
+    return {items:await Promise.all(page.map(h=>readIn(s,actor,{id:h.id,businessAt:at,...(input.recordAsOf?{recordAsOf:input.recordAsOf}:{})}))),nextAfterId};
+   });
+  },
   async coverage(actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf?:string}){unitCheck(UnitWindowSchema,input);return root(async s=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');const parts=unitPeriods(h).flatMap(p=>intersect(p,{from,to}).map(span=>({...span,version:p.version.number,versionId:p.version.id})));return {id:h.id,covered:covered(parts,from,to),parts,clinicalReadiness:'NOT_READY' as const};});},
   async evaluateWindow(actor:string,input:{id:string;validFrom:string;validTo:string|null;recordAsOf?:string}){unitCheck(UnitWindowSchema,input);return root(async s=>{const h=await historyIn(s,actor,input.id,input.recordAsOf),from=localTime(input.validFrom),to=input.validTo===null?null:localTime(input.validTo),asOf=input.recordAsOf?localTime(input.recordAsOf):await clock(s);if(to!==null&&to<=from)throw new Error('INVALID_BUSINESS_PERIOD');return evaluateHistoryWindowIn(s,actor,h,from,to,asOf);});},
   async receiveFile(actor:string,input:UnitReceive,bytes:Uint8Array){

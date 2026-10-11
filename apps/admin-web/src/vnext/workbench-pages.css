@@ -1,0 +1,82 @@
+/* Existing Owner flows share the confirmed workspace surfaces and controls. */
+.workbench-shell .workbench-page,
+.workbench-shell .unit-workbench {
+  --workspace-ink: var(--text-primary);
+  --workspace-accent: var(--action-primary);
+  --workspace-border: var(--border-subtle);
+  --care-line: var(--border-subtle);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.workbench-shell .workbench-page {max-width: none; margin: 0; padding: 0; min-width: 0;}
+.workbench-shell .workbench-page > main {padding: 0; margin: 0; max-width: none;}
+.workbench-shell :is(.workbench-page,.unit-workbench) .workspace-header {margin: 0 0 20px; padding: 0 0 18px; border-bottom: 1px solid var(--border-subtle);}
+.workbench-shell .workbench-page h1 {font-size: 26px; line-height: 36px; font-weight: 600; margin: 0 0 4px;}
+.workbench-shell .workbench-page h2 {font-size: 19px; line-height: 28px; margin: 0 0 12px; color: var(--text-primary); font-family: inherit;}
+.workbench-shell .workbench-page h3 {font-size: 15px; line-height: 24px; margin: 0 0 12px;}
+.workbench-shell .workbench-page header {margin: 0 0 16px; padding: 0 0 16px; gap: 16px;}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(.muted,header p,.section-heading span) {color: var(--text-secondary);}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(.workspace-tabs,.care-section-tabs) {display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 18px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(.workspace-tabs,.care-section-tabs) button {background: transparent; color: var(--text-secondary); border: 0; border-radius: 5px; padding: 7px 10px; font: inherit;}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(.workspace-tabs,.care-section-tabs) button:is([aria-current],[aria-pressed="true"]) {background: var(--surface-muted); color: var(--text-primary); font-weight: 600;}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(button,input,textarea,select) {font: inherit;}
+.workbench-shell :is(.workbench-page,.unit-workbench) button:not([class*="hdi:"]) {color: var(--text-primary); background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 7px 12px; cursor: pointer;}
+.workbench-shell :is(.workbench-page,.unit-workbench) button:not([class*="hdi:"]):hover:enabled {background: var(--surface-hover);}
+.workbench-shell :is(.workbench-page,.unit-workbench) button:disabled {opacity: .5; cursor: not-allowed;}
+.workbench-shell :is(.workbench-page,.unit-workbench) .action-bar button:not(.secondary):not([class*="hdi:"]) {background: var(--action-primary); color: var(--surface); border-color: var(--action-primary);}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(input,textarea,select) {color: var(--text-primary); background: var(--surface); border: 1px solid var(--border-control); border-radius: 5px; padding: 7px 10px; min-width: 0; max-width: 100%;}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(input,select) {min-height: 34px;}
+.workbench-shell :is(.workbench-page,.unit-workbench) input:is([type="checkbox"],[type="radio"]) {min-height: 0; width: auto;}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(input,textarea,select,button):focus-visible {outline: 2px solid var(--accent); outline-offset: 2px;}
+.workbench-shell :is(.workbench-page,.unit-workbench) :is(.draft-list,.draft-rail) {background: var(--surface-sidebar); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 14px; position: static;}
+.workbench-shell :is(.workbench-page,.unit-workbench) .draft-list h3 {color: var(--text-secondary); margin: 20px 0 8px;}
+.workbench-shell :is(.workbench-page,.unit-workbench) .draft-item {background: var(--surface) !important; color: var(--text-primary) !important; border-color: var(--border-subtle) !important; padding: 9px 10px;}
+.workbench-shell :is(.workbench-page,.unit-workbench) .draft-item span {color: var(--text-secondary);}
+.workbench-shell :is(.workbench-page,.unit-workbench) .editor-card {border: 0; border-radius: 0; padding: 0 0 0 20px; min-width: 0;}
+.workbench-shell .workbench-page :is(.workspace-layout,.workspace-columns) {grid-template-columns: 220px minmax(0,1fr); gap: 20px;}
+.workbench-shell .workbench-page .stage-label {background: var(--surface-muted); border-color: var(--border-subtle); color: var(--text-secondary); border-radius: 5px; padding: 4px 8px;}
+.workbench-shell .workbench-page :is(th,td) {border-color: var(--border-subtle); padding: 10px 12px;}
+.workbench-shell .workbench-page th {background: var(--surface-muted); font-weight: 500; font-size: 12px; color: var(--text-secondary);}
+.workbench-shell .workbench-page :is([role="status"],details) {margin: 12px 0; color: var(--text-secondary);}
+.workbench-shell .workbench-page .entity-workspace > header h2 {font-size: 16px;}
+.workbench-shell .workbench-page .entity-workspace .workspace-columns {grid-template-columns: minmax(0,1fr) minmax(320px,.9fr);}
+.workbench-shell .workbench-page .entity-workspace .draft-rail {background: var(--surface); padding: 0; border: 0;}
+.workbench-shell .workbench-page .entity-workspace .time-query {padding: 12px; background: var(--surface-muted); gap: 12px;}
+.workbench-shell .workbench-page .entity-workspace .workspace-form {gap: 16px;}
+.workbench-shell .workbench-shell__subnav a[aria-current] {color: var(--text-primary); font-weight: 600;}
+.workbench-shell .workbench-page .entity-time-disclosure {padding: 8px 0 16px;}
+.workbench-shell .workbench-page .entity-time-disclosure summary {cursor: pointer;}
+.workbench-shell .unit-create-heading {margin: 0 0 18px;}
+.workbench-shell .unit-create-heading h2 {font-size: 23px; margin: 18px 0 4px;}
+.workbench-shell .unit-create-heading p {margin: 0; color: var(--text-secondary);}
+.workbench-shell .unit-workbench .unit-create-layout {grid-template-columns: minmax(0,1fr) 220px; gap: 28px;}
+.workbench-shell .unit-create-layout > .draft-list {grid-column: 2; grid-row: 1; max-height: 620px; overflow: auto;}
+.workbench-shell .unit-create-layout > .editor-card {grid-column: 1; grid-row: 1; padding: 0;}
+.workbench-shell .unit-create-form > section {margin: 28px 0; padding-top: 20px; border-top: 1px solid var(--border-subtle);}
+.workbench-shell .unit-create-form h3 {margin-bottom: 12px; color: var(--text-primary);}
+.workbench-shell .unit-create-form .care-maintenance-hint {display: none;}
+.workbench-shell .reference-records__toolbar {display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;}
+.workbench-shell .reference-records__toolbar label {display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); width: min(340px,100%);}
+.workbench-shell .reference-records__layout {display: grid; min-width: 0; grid-template-columns: minmax(0,1fr);}
+.workbench-shell .reference-records__layout[data-peek="true"] {grid-template-columns: minmax(0,1fr) 360px; gap: 24px;}
+.workbench-shell .reference-records__table {min-width: 0; overflow: auto;}
+.workbench-shell .reference-records__table table {width: 100%; margin: 0 0 12px; border-collapse: collapse;}
+.workbench-shell .reference-records__table :is(th,td) {text-align: left; overflow-wrap: anywhere;}
+.workbench-shell .reference-records__table tr[aria-selected="true"] {background: var(--accent-muted);}
+.workbench-shell .reference-records__table button.reference-records__name {color: var(--accent); border: 0; padding: 0; background: transparent; text-align: left;}
+.workbench-shell .reference-records__peek {background: var(--surface); border-left: 1px solid var(--border-subtle); color: var(--text-primary); padding: 0 0 0 20px; min-width: 0;}
+.workbench-shell .reference-records__peek :is(h2,p,dd) {overflow-wrap: anywhere;}
+.workbench-shell .reference-records__peek dt {color: var(--text-secondary); font-size: 12px;}
+.workbench-shell .reference-records__peek dd {margin: 4px 0 16px;}
+.workbench-shell :is(.workbench-page,.unit-workbench) ::selection {background: var(--accent-muted); color: var(--text-primary);}
+@media(max-width:1100px) {
+  .workbench-shell .workbench-page :is(.workspace-layout,.workspace-columns),
+  .workbench-shell .workbench-page .entity-workspace .workspace-columns,
+  .workbench-shell .unit-workbench .unit-create-layout,
+  .workbench-shell .reference-records__layout[data-peek="true"] {grid-template-columns: minmax(0,1fr);}
+  .workbench-shell .unit-create-layout > .editor-card {grid-column: 1; grid-row: 1;}
+  .workbench-shell .unit-create-layout > .draft-list {grid-column: 1; grid-row: 2; max-height: 280px; overflow: auto;}
+  .workbench-shell :is(.workbench-page,.unit-workbench) .editor-card {padding: 0;}
+  .workbench-shell .reference-records__peek {padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--border-subtle);}
+}

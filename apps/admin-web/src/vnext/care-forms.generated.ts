@@ -3880,6 +3880,18 @@ export const careForms = {
           "campus"
         ],
         "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "state": {
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "CLOSED",
+              "NOT_EFFECTIVE"
+            ]
+          },
           "campus": {
             "enum": [
               "NORTH",

@@ -2,9 +2,10 @@ import {createCareOperationClient,type CareOperation,type CareOperationInput} fr
 import {departmentValue} from './department-request.js';
 import type {FormSchema} from './department-form.js';
 import {record} from './care-model.js';
+import {useNavigate} from 'react-router';
 /** Dynamic forms still dispatch only the finite generated operation vocabulary. */
 export const careExecute=(actor:string,operation:CareOperation,input:Record<string,unknown>)=>departmentValue(createCareOperationClient(location.origin,actor).call(operation,input as CareOperationInput<typeof operation>));
-export function careLocator(values:Record<string,string|null|undefined>){const url=new URL(location.href);for(const [key,value] of Object.entries(values))value?url.searchParams.set(key,value):url.searchParams.delete(key);history.replaceState(null,'',url.pathname+url.search);}
+export function useCareLocator(){const navigate=useNavigate();return (values:Record<string,string|null|undefined>)=>{const url=new URL(location.href);for(const [key,value] of Object.entries(values))value?url.searchParams.set(key,value):url.searchParams.delete(key);void navigate({pathname:url.pathname.replace(/^\/admin\/vnext(?=\/|$)/,''),search:url.search},{replace:true});};}
 export const careError=(error:unknown)=>error instanceof Error?error.message:'请求未完成，请恢复原请求。';
 export function careRequestIds(schema:FormSchema,value:unknown):unknown{
  if(value===null&&schema.anyOf?.some(branch=>branch.type==='null'))return null;

@@ -1,5 +1,6 @@
 import {DepartmentForm,type FormSchema,type ReferenceChoices} from './department-form.js';
 import {bindCareReferenceFields,careContextChoices} from './care-reference-fields.js';
+import {careBoundFields,careEnumLabels} from './care-form-adapter.js';
 export const careFieldLabels:Record<string,string>={
  classificationAccepted:'已独立确认对象分类',scopeAccepted:'已独立核对完整业务范围',ruleConfirmed:'已独立确认规则',confirmed:'已独立确认该依据',receiving:'接诊／接收依据',policyVersion:'核验规则版本',physicalFactsAccepted:'已独立核对物理地点事实',adoptionConfirmed:'已核对准确科目采纳',limitationsConfirmed:'已确认许可限制',sourceReviewed:'已独立审阅来源材料',materialsAccepted:'已核对全部材料',policyApproved:'已核对治理依据',policyAccepted:'已独立确认地点使用规则',scopeDefinition:'护理分区定义依据',completeAndDisjoint:'已确认分区完整且互不重叠',artifactId:'依据材料标识',
  unit_id:'来源业务单元键',unit_code:'业务单元代码',unit_name:'业务单元名称',unit_type:'业务单元类型',org_id:'归属科室',campus_id:'院区',legal_entity_id:'运营主体',public_phone:'公开电话',service_description:'服务说明',receiving_rule_ref:'接诊规则原文',business_owner_id:'业务责任人来源引用',
@@ -13,6 +14,9 @@ export const careFieldLabels:Record<string,string>={
  subject_license_id:'来源科目关系键',code_system_id:'科目编码体系来源键',code_system_version:'科目体系来源版本',subject_code:'诊疗科目代码',license_ref:'许可原文',permitted_scope:'许可范围原文',verifier:'来源核验人',semantic:'映射语义',limitations:'许可范围限制',license:'准确许可',subject:'运营主体',department:'科室',unit:'业务单元',relation:'科室院区关系',services:'准确服务集合',
  entries:'维护条目',row:'来源字段',action:'维护动作',binding:'归属关系',timePolicy:'来源时间解释',cutover:'组合生效时间',members:'准确已暂存成员',inputId:'原申请',inputDigest:'原申请摘要',contractVersionId:'准确契约版本',reason:'维护理由',mode:'评价方式',targets:'准确对象引用',field:'问题字段',sourceRow:'原始文件行',worksheet:'原始工作表',material:'依据材料',candidateId:'冻结候选',requestId:'原执行请求',sourceSystemId:'来源系统',sourceRecordedAt:'来源记录时间',approvalReference:'来源批准依据',contentBase64:'导入原文件',transport:'材料来源契约',
 };
-export function CareForm(props:{schema:FormSchema;value:unknown;onChange:(value:unknown)=>void;choices?:ReferenceChoices;disabled?:boolean;label?:string}){return <div data-care-form><DepartmentForm {...props} bindReferenceSelection={(schema,field,value)=>bindCareReferenceFields(schema,field,value,props.choices??{})} resolveReferenceChoices={(field,root)=>careContextChoices(props.choices??{},field,root)} labels={careFieldLabels} preserveTimePrecision/></div>;}
+export function CareForm(props:{schema:FormSchema;value:unknown;onChange:(value:unknown)=>void;choices?:ReferenceChoices;disabled?:boolean;label?:string}){return <div data-care-form>
+ <p className="care-maintenance-hint">按名称和业务编码选择关联记录，版本会随选择绑定。来源行键、批准依据和核验材料须与实际资料一致；保存草稿不表示已批准或发布。</p>
+ <DepartmentForm {...props} bindReferenceSelection={(schema,field,value)=>bindCareReferenceFields(schema,field,value,props.choices??{})} resolveReferenceChoices={(field,root)=>careContextChoices(props.choices??{},field,root)} labels={careFieldLabels} enumLabels={careEnumLabels} resolveBoundFields={careBoundFields} preserveTimePrecision/>
+ </div>;}
 /** Focus only an already rendered editor control; this never changes a value. */
 export function focusCareField(root:HTMLElement,row:number|null,field:string){const rows=[...root.querySelectorAll<HTMLElement>('[data-array-field="entries"][data-row]')],container=rows.find(element=>Number(element.dataset['row'])===row)??root,wrapper=[...container.querySelectorAll<HTMLElement>('[data-field]')].find(element=>element.dataset['field']===field),control=(wrapper??container).querySelector<HTMLElement>('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled])');(wrapper??container).scrollIntoView({block:'center'});control?.focus();}

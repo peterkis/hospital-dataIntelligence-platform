@@ -1,11 +1,12 @@
 import {useEffect,useRef,useState} from 'react';
 import type {ReferenceChoices} from './department-form.js';
 import {CareOperationPanel,CareFacts} from './care-operation.js';
-import {careExecute,careLocator,careError} from './care-request.js';
+import {careExecute,useCareLocator,careError} from './care-request.js';
 import {record,text} from './care-model.js';
 
 /** Persist the original native command before its first business write. */
 export function CareBasisOperation({actor,operation,label,choices,onPending,enabled}:{actor:string;operation:'commandParameterValue'|'commandSubjectCodeSnapshot';label:string;choices:ReferenceChoices;onPending:(pending:boolean)=>void;enabled:boolean}){
+ const careLocator=useCareLocator();
  const locator=new URL(location.href).searchParams,original=locator.get('basisOperation')===operation?locator.get('basisRequest'):null,request=useRef<string|null>(original),[restored,setRestored]=useState<Record<string,unknown>|null>(null),[loading,setLoading]=useState(!!original),[error,setError]=useState(''),[restoreFailed,setRestoreFailed]=useState(false),[completed,setCompleted]=useState<unknown>(null);
  useEffect(()=>{let active=true;if(!original)return;onPending(true);void careExecute(actor,'readCareWorkspaceBasisRequest',{requestId:original}).then(value=>{if(!active)return;if(value===null){careLocator({basisRequest:null,basisOperation:null});request.current=null;onPending(false);setError('原请求未保存，尚未执行领域命令。');}else{const content=record(record(value)['content']);if(content['operation']!==operation)throw new Error('REQUEST_CONFLICT');setRestored(record(content['command']));}}).catch(error=>{if(active){setRestoreFailed(true);setError(careError(error));}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
  async function persist(command:Record<string,unknown>){setCompleted(null);request.current??=crypto.randomUUID();careLocator({basisRequest:request.current,basisOperation:operation,application:null,candidate:null,execution:null,request:null});const saved=await careExecute(actor,'saveCareWorkspaceBasisRequest',{requestId:request.current,operation,command});if(text(record(saved)['requestId'])!==request.current)throw new Error('REQUEST_CONFLICT');}

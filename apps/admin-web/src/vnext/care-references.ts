@@ -44,3 +44,20 @@ function basisChoices(owner:string,items:unknown[]):CareReferenceChoice[]{return
  const fields=owner==='parameterValue'?{valueId:id,versionId,parameterId:row['parameterId'],definitionVersionId:row['definitionVersionId'],definitionDigest:row['definitionDigest'],valueDigest:row['reviewDigest']}:owner==='subjectAdoption'?{systemId:id,versionId,version,code:'',codes:Array.isArray(row['codes'])?row['codes'].filter(value=>record(value)['status']==='ACTIVE'):[]}:{scopeSetId:id,version,partitionIds:[],partitions:row['partitions']};
  const name=owner==='parameterValue'?`${text(row['purpose'])} · ${JSON.stringify(row['value'])} · 单元 ${text(record(scope['unit'])['id'])}`:owner==='subjectAdoption'?`${text(row['codeSystemName'])} · ${text(row['codeSystemVersion'])}`:`分区 ${text(row['sourceAlias'])} · 病区 ${text(record(scope['ward'])['id'])}`;
  return {value:id,version,versionId,label:`${name} · ${id.slice(-8)} · v${version} · ${text(row['validFrom'])} — ${text(row['validTo'])||'无界'}`,fields};});}
+
+/** Reading the unit list needs only display references, not every edit-time Owner.
+ * These are authorized registration labels, not a historical projection. */
+export async function loadUnitBrowserReferences(actor:string):Promise<{choices:ReferenceChoices;errors:string[];pages:CareReferencePage[]}>{
+ const choices:Record<string,ReferenceChoice[]>={},errors:string[]=[];
+ const attempt=async(label:string,read:()=>Promise<void>)=>{try{await read();}catch(error){errors.push(label+'：'+careError(error));}};
+ await Promise.all([
+  attempt('院区名称',async()=>{const rows=await departmentValue(createCampusClient(location.origin,actor).list({limit:100}));choices['organization-master/campus']=rows.map(row=>choice('organization-master/campus',row));}),
+  attempt('运营主体名称',async()=>{const rows=await departmentValue(createOrganizationClient(location.origin,actor).read({mode:'LIST',limit:100}));choices['organization-master']=rows.map(row=>choice('organization-master',row));}),
+  attempt('科室名称',async()=>{const client=createDepartmentClient(location.origin,actor),ids=await departmentValue(client.list({limit:100}));
+   const rows:ReferenceChoice[]=[];
+   for(const id of ids){try{const item=await departmentValue(client.history({id})),version=item.versions.at(-1);if(version)rows.push({value:item.id,owner:'department-master',version:version.number,versionId:version.id,label:version.facts.name+' · '+item.initialCode});}catch{ /* A display label must not bypass per-record authorization. */ }}
+   choices['department-master']=rows;
+  }),
+ ]);
+ return {choices,errors,pages:[]};
+}

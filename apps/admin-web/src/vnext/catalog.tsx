@@ -5,10 +5,13 @@ import {ImportApp} from './imports.js';
 import {LocationUsageTypesApp} from './location-usage-types.js';
 import React,{useEffect,useState,useRef} from 'react';
 import {createRoot} from 'react-dom/client';
+import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
+import {createBrowserRouter,RouterProvider,Navigate,useLocation} from 'react-router';
 import {createVNextCatalogClient,type VNextEntry,type VNextCommand,type VNextOutcome,type VNextHistory,type VNextSourceImpact} from '@hospital-data-intelligence/generated-api-client';
 import './catalog.css';
 import {ContractApp} from './contracts.js';
 import {ParameterApp} from './parameters.js';
+import {WorkbenchShell,type WorkbenchSection} from './workbench-shell.js';
 type ResponsibilityValues=Extract<VNextCommand,{action:'CREATE';kind:'RESPONSIBILITY'}>['values'];
 type Impact=VNextSourceImpact;
 const choices={authorityScope:['ALL','NORTH','SOUTH'],fieldGroup:['ALL','IDENTITY','CONTACT'],role:['OWNER','STEWARD','COLLABORATOR'],assigneeRole:['SYNTHETIC_OWNER_A','SYNTHETIC_OWNER_B','SYNTHETIC_STEWARD']} as const;
@@ -123,4 +126,20 @@ function CatalogApp(){
  {tab==='fields'?<div className="field-table"><table><thead><tr><th>字段 / 来源定位</th><th>类型 / 必填</th><th>原始定义</th></tr></thead><tbody>{selected.payload.fields?.map((f,i)=><tr key={i}><td><b>{String(f.original['label'])}</b><code>{String(f.original['code'])}</code><small>{f.pointer}</small></td><td>{String(f.original['type'])}<br/>{String(f.original['required'])}<br/>{String(f.original['privacy'])}<br/>格式：{String(f.original['max_length_or_format'])}<br/>引用：{String(f.original['ref']||'无')}</td><td>{String(f.original['definition'])}<br/><small>{String(f.original['conditional_requirement'])}<br/>{String(f.original['source_trace'])}</small></td></tr>)}</tbody></table></div>:tab==='dependencies'?<pre>{JSON.stringify(selected.payload.dependencies??selected.payload,null,2)}</pre>:<div>{historyUnavailable&&<p role="alert">版本历史不可用：当前身份未获得完整历史维度的读取权限或请求失败。无法展示完整历史差异。</p>}{history.map((h,i)=><article className="history" key={i}><b>v{h.version} · {h.status}</b><time>{h.recordedAt} · B {h.validFrom} → {h.validTo??'无界'}</time><p>{h.payload.adopted?.name??h.payload.name} · {h.payload.adopted?.explanation}</p><button onClick={async()=>{const requestVersion=++detailRequest.current;const r=await client().GET('/api/vnext/catalog/{id}',{params:{path:{id:selected.id},query:{scope:selected.scope,asOf:h.recordedAt}}});if(requestVersion===detailRequest.current&&r.data){setSelected(r.data);setMessage('正在读取历史认知，写入时仍校验当前 head。');}}}>读取此时认知</button></article>)}</div>}</>:<div className="empty"><h3>选择一项，开始核对</h3><p>原始来源、采用解释与发布历史在这里分开呈现。</p></div>}</section></div>
  </main></div>;
 }
-createRoot(document.getElementById('root')!).render(window.location.pathname.endsWith('/care-space')?<CareWorkspaceApp/>:window.location.pathname.endsWith('/location-usage-types')?<LocationUsageTypesApp/>:window.location.pathname.endsWith('/departments')?<DepartmentWorkspaceApp/>:window.location.pathname.endsWith('/organizations')?<OrganizationWorkspaceApp/>:window.location.pathname.endsWith('/imports')?<ImportApp/>:window.location.pathname.endsWith('/parameter-definitions')?<ParameterApp/>:window.location.pathname.endsWith('/contracts')?<ContractApp/>:<CatalogApp/>);
+function WorkbenchEntry(){const {search}=useLocation();return <Navigate to={'/care-space'+search} replace/>;}
+function ExistingPage({children,title,active='organization'}:{children:React.ReactNode;title:string;active?:WorkbenchSection}){const {search}=useLocation();return <WorkbenchShell actor={new URLSearchParams(search).get('actor')??'maker'} onActorChange={()=>{}} title={title} active={active} showActor={false} reloadNavigation>{children}</WorkbenchShell>;}
+const queryClient=new QueryClient();
+const router=createBrowserRouter([
+ {index:true,element:<WorkbenchEntry/>},
+ {path:'vnext.html',element:<WorkbenchEntry/>},
+ {path:'care-space/:kind?/:recordId?',element:<CareWorkspaceApp/>},
+ {path:'organizations',element:<OrganizationWorkspaceApp/>},
+ {path:'departments',element:<DepartmentWorkspaceApp/>},
+ {path:'location-usage-types',element:<ExistingPage title="地点用途字典" active="dictionary"><LocationUsageTypesApp/></ExistingPage>},
+ {path:'imports',element:<ExistingPage title="导入任务" active="imports"><ImportApp/></ExistingPage>},
+ {path:'parameter-definitions',element:<ExistingPage title="参数定义" active="dictionary"><ParameterApp/></ExistingPage>},
+ {path:'contracts',element:<ExistingPage title="契约注册表" active="dictionary"><ContractApp/></ExistingPage>},
+ {path:'catalog',element:<ExistingPage title="治理目录" active="dictionary"><CatalogApp/></ExistingPage>},
+ {path:'*',element:<main><h1>页面不存在</h1><a href="/admin/vnext/">返回工作台</a></main>},
+],{basename:'/admin/vnext'});
+createRoot(document.getElementById('root')!).render(<QueryClientProvider client={queryClient}><RouterProvider router={router}/></QueryClientProvider>);
