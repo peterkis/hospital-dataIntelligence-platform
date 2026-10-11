@@ -49,10 +49,12 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
         const [ref, input] = await Promise.all([departmentValue(workspace.applicationReference({kind: 'UNIT', inputId})), departmentValue(client.readInput({inputId}))]);
         const selected = input.entries[0];
         if (input.entries.length !== 1 || !selected || selected.action !== 'REVISE' || selected.target.id !== id) throw new Error('原申请不是当前业务单元的单条属性修订。');
-        const previous = await departmentValue(client.exact({id, version: selected.target.expectedHead}));
-        const [producer,accepted]=await Promise.all([departmentValue(client.readInput({inputId:previous.facts.source.recordLocatorEvidence.inputId})),departmentValue(client.query({id,businessAt:previous.validFrom,recordAsOf:previous.recordedAt}))]);
-        if(accepted.version?.id!==previous.id||!accepted.binding)throw new Error('准确接受版本的归属当前不可核对，不能批准。');
-        const context:UnitApprovalContext={input,before:previous,binding:accepted.binding.binding,producer,inputId};
+        const head = await departmentValue(client.exact({id, version: selected.target.expectedHead}));
+        const businessAt=input.timePolicy==='SOURCE_PLUS08_TO_LOCAL'?selected.row.valid_from.replace(/\+08:00$/,''):selected.row.valid_from;
+        const accepted=await departmentValue(client.query({id,businessAt,recordAsOf:head.recordedAt})),previous=accepted.version;
+        if(!previous||!['CREATE','REVISE'].includes(previous.action)||!accepted.binding)throw new Error('准确接受属性版本和对应归属当前不可核对，不能批准。');
+        const producer=await departmentValue(client.readInput({inputId:previous.facts.source.recordLocatorEvidence.inputId}));
+        const context:UnitApprovalContext={input,expectedHead:head.number,before:previous,binding:accepted.binding.binding,producer,inputId};
         assertUnitPropertyInput(context);
         if (!active || token !== generation.current) return;
         setReference(ref); setOriginal(input); setBefore(previous);setApprovalContext(context);
@@ -117,7 +119,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
       const result = record(await departmentValue(client.review({candidateId: candidate.candidateId}))), unit = record(result['unit']);
       if (result['digest'] !== candidate.digest || !Array.isArray(unit['commands']) || unit['commands'].length !== 1) throw new Error('候选摘要或命令范围不匹配。');
       const command = record(unit['commands'][0]), target = record(command['target']), value = record(command['value']);
-      if (target['id'] !== id||target['owner']!=='care-organization/unit'||target['version']!==before?.number||command['owner']!=='care-organization/unit'||command['intent']!=='REVISE'||value['inputId']!==inputId) throw new Error('候选目标或预期头与当前申请不匹配。');
+      if (target['id'] !== id||target['owner']!=='care-organization/unit'||target['version']!==approvalContext.expectedHead||command['owner']!=='care-organization/unit'||command['intent']!=='REVISE'||value['inputId']!==inputId) throw new Error('候选目标或预期头与当前申请不匹配。');
       const writes: unknown = JSON.parse(text(value['writes']));
       if (!Array.isArray(writes) || writes.length !== 1) throw new Error('冻结修订范围与单记录编辑不匹配。');
       const write = record(writes[0]), facts = record(write['facts']);

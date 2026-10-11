@@ -4,7 +4,7 @@ import {vi,afterAll} from 'vitest';
 vi.mock('./lineage.mjs',async importOriginal=>{
  const original=await importOriginal<typeof import('./lineage.mjs')>();
  const ci=await import('./review-ci-database.mjs');
- return {...original,peer:ci.peer,inspect:ci.inspect,resolveTarget:ci.resolveTarget};
+ return {...original,peer:ci.peer,peerAsync:async(receipt:{name:string},statement:string)=>{ci.peer(receipt.name,original.identitySQL(receipt)+"SET lock_timeout='10s';SET statement_timeout='30s';"+statement);},inspect:ci.inspect,resolveTarget:ci.resolveTarget};
 });
 const {provision,peer}=await import('./review-ci-database.mjs');
 const database=await provision();
