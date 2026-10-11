@@ -6,6 +6,7 @@ export function createBusinessUnitClient(baseUrl:string,actor:string){
  return {
   stage:(body:operations['stageBusinessUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/business-units/inputs',{body}),
   readInput:(body:operations['readBusinessUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/business-units/inputs/read',{body}),
+  readVerification:(body:operations['readBusinessUnitVerification']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/business-units/inputs/verification/read',{body}),
   verify:(body:operations['verifyBusinessUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/business-units/verify',{body}),
   preview:(body:operations['previewBusinessUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/business-units/preview',{body}),
   plan:(body:operations['planBusinessUnitInput']['requestBody']['content']['application/json'])=>client.POST('/api/vnext/business-units/plan',{body}),

@@ -3988,6 +3988,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vnext/business-units/inputs/verification/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["readBusinessUnitVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vnext/business-units/verify": {
         parameters: {
             query?: never;
@@ -57977,6 +57993,126 @@ export interface operations {
                         sourceArtifactId?: string;
                         sourceRows?: number[];
                     };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    readBusinessUnitVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    inputId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        verificationId: string;
+                        verificationVersion: string;
+                        verification: {
+                            requestId: string;
+                            inputId: string;
+                            inputDigest: string;
+                            reason: string;
+                            /** @enum {string} */
+                            policyVersion: "ORG07_CORE_V1";
+                            rows: {
+                                row: number;
+                                evidenceId: string;
+                                classificationAccepted: boolean;
+                                receiving: {
+                                    /** @enum {string} */
+                                    kind: "NO_SPECIAL_RESTRICTION";
+                                    confirmed: boolean;
+                                    validFrom: string;
+                                    validTo: string | null;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "RESTRICTED_RULE_REFERENCE";
+                                    ruleReference: string;
+                                    sourceRuleVersion: string;
+                                    ruleEvidenceId: string;
+                                    validFrom: string;
+                                    validTo: string | null;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "UNKNOWN";
+                                };
+                            }[];
+                        };
+                    } | null;
                 };
             };
             /** @description Default Response */

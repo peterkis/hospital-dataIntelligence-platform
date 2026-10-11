@@ -8,7 +8,7 @@ import {careExecute} from './care-request.js';
 import {record, text} from './care-model.js';
 import {careTime} from './care-record-view.js';
 import {unitBusinessError} from './unit-maintenance-model.js';
-import {assertUnitPropertyInput,assertFrozenUnitProperty,unitActionLocation,type UnitApprovalContext} from './unit-approval-model.js';
+import {assertUnitPropertyInput,assertFrozenUnitProperty,unitExpectedReceivingBasis,unitActionLocation,type UnitApprovalContext} from './unit-approval-model.js';
 
 type Permissions = VNextOperations['careWorkspacePermissions']['responses'][200]['content']['application/json'];
 type Reference = VNextOperations['readCareWorkspaceApplicationReference']['responses'][200]['content']['application/json'];
@@ -112,15 +112,16 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
     } catch (value) {fail(value);} finally {setBusy(false);}
   }
   async function reviewCandidate() {
-    if (!candidate||!approvalContext) return; setBusy(true); setError('');setReviewed(false);setReviewConfirmed(false);setFrozenFacts(undefined);
-    try {const result = record(await departmentValue(client.review({candidateId: candidate.candidateId}))), unit = record(result['unit']);
+    if (!candidate||!approvalContext||!reference) return; setBusy(true); setError('');setReviewed(false);setReviewConfirmed(false);setFrozenFacts(undefined);
+    try {const verified=await departmentValue(client.readVerification({inputId})),basis=unitExpectedReceivingBasis(verified,approvalContext,reference.submission.digest);
+      const result = record(await departmentValue(client.review({candidateId: candidate.candidateId}))), unit = record(result['unit']);
       if (result['digest'] !== candidate.digest || !Array.isArray(unit['commands']) || unit['commands'].length !== 1) throw new Error('候选摘要或命令范围不匹配。');
       const command = record(unit['commands'][0]), target = record(command['target']), value = record(command['value']);
       if (target['id'] !== id||target['owner']!=='care-organization/unit'||target['version']!==before?.number||command['owner']!=='care-organization/unit'||command['intent']!=='REVISE'||value['inputId']!==inputId) throw new Error('候选目标或预期头与当前申请不匹配。');
       const writes: unknown = JSON.parse(text(value['writes']));
       if (!Array.isArray(writes) || writes.length !== 1) throw new Error('冻结修订范围与单记录编辑不匹配。');
       const write = record(writes[0]), facts = record(write['facts']);
-      assertFrozenUnitProperty(write,approvalContext);
+      assertFrozenUnitProperty(write,approvalContext,basis);
       setFrozenFacts(facts); setReviewed(true); setReviewConfirmed(false);
     } catch (value) {fail(value);} finally {setBusy(false);}
   }
