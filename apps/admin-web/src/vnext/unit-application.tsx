@@ -8,6 +8,7 @@ import {careExecute} from './care-request.js';
 import {record, text} from './care-model.js';
 import {careTime} from './care-record-view.js';
 import {unitBusinessError} from './unit-maintenance-model.js';
+import {assertUnitPropertyInput,assertFrozenUnitProperty,unitActionLocation,type UnitApprovalContext} from './unit-approval-model.js';
 
 type Permissions = VNextOperations['careWorkspacePermissions']['responses'][200]['content']['application/json'];
 type Reference = VNextOperations['readCareWorkspaceApplicationReference']['responses'][200]['content']['application/json'];
@@ -24,6 +25,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
   const locatorParams = useRef(new URLSearchParams(params));
   useEffect(() => {locatorParams.current = new URLSearchParams(params);}, [params]);
   const [reference, setReference] = useState<Reference>(), [original, setOriginal] = useState<Original>(), [before, setBefore] = useState<Before>();
+  const [approvalContext,setApprovalContext]=useState<UnitApprovalContext>();
   const [candidate, setCandidate] = useState<Candidate>(), [busy, setBusy] = useState(true), [error, setError] = useState('');
   const [preview, setPreview] = useState<VNextOperations['previewBusinessUnitInput']['responses'][200]['content']['application/json']>();
   const [material, setMaterial] = useState(''), [materialRead, setMaterialRead] = useState(false), [classification, setClassification] = useState(false), [restriction, setRestriction] = useState(false), [verifyReason, setVerifyReason] = useState('');
@@ -42,13 +44,18 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
     let active = true; const token = ++generation.current;
     void (async () => {
       setBusy(true);
+      if(params.has('unitStage'))setUncertain(true);
       try {
         const [ref, input] = await Promise.all([departmentValue(workspace.applicationReference({kind: 'UNIT', inputId})), departmentValue(client.readInput({inputId}))]);
         const selected = input.entries[0];
         if (input.entries.length !== 1 || !selected || selected.action !== 'REVISE' || selected.target.id !== id) throw new Error('原申请不是当前业务单元的单条属性修订。');
         const previous = await departmentValue(client.exact({id, version: selected.target.expectedHead}));
+        const [producer,accepted]=await Promise.all([departmentValue(client.readInput({inputId:previous.facts.source.recordLocatorEvidence.inputId})),departmentValue(client.query({id,businessAt:previous.validFrom,recordAsOf:previous.recordedAt}))]);
+        if(accepted.version?.id!==previous.id||!accepted.binding)throw new Error('准确接受版本的归属当前不可核对，不能批准。');
+        const context:UnitApprovalContext={input,before:previous,binding:accepted.binding.binding,producer,inputId};
+        assertUnitPropertyInput(context);
         if (!active || token !== generation.current) return;
-        setReference(ref); setOriginal(input); setBefore(previous);
+        setReference(ref); setOriginal(input); setBefore(previous);setApprovalContext(context);
         const execution = params.get('execution'); if (execution || params.get('candidate')) await executions(execution ?? undefined);
         const unresolved = params.get('unitStage'); if (unresolved) {setUncertain(true); setError('存在待确认的原执行请求，请先恢复准确结果。');}
       } catch (value) {if (active) fail(value);} finally {if (active) setBusy(false);}
@@ -66,7 +73,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
   }
   async function dispatch(packet: Pending) {
     if (busy || denied) return; pending.current = packet; setBusy(true); setError('');
-    locate({unitStage: packet.kind, ...(packet.kind === 'PLAN' ? {execution: packet.body.requestId} : {})});
+    locate(unitActionLocation(packet.kind,'requestId' in packet.body?packet.body.requestId:undefined));
     try {
       if (packet.kind === 'VERIFY') {await departmentValue(client.verify(packet.body)); setPreview(await departmentValue(client.preview({inputId}))); setMaterial('');}
       if (packet.kind === 'PLAN') {const result = await departmentValue(client.plan(packet.body));
@@ -75,8 +82,8 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
         setCandidate(exact.items[0]); locate({candidate: result.candidateId, execution: packet.body.requestId});}
       if (packet.kind === 'APPROVE') {await departmentValue(client.approve(packet.body)); await executions(candidate?.requestId);}
       if (packet.kind === 'APPLY') {const result = await departmentValue(client.apply(packet.body)); if (result.status !== 'COMMITTED') {setUncertain(true); return;} await confirmCommitted(packet.body);}
-      pending.current = null; setUncertain(false); locate({unitStage: null});
-    } catch (value) {if (definiteFailure(value)) {pending.current = null; setUncertain(false); locate({unitStage: null});} else setUncertain(true); fail(value);}
+      pending.current = null; setUncertain(false); locate({unitStage: null,verificationRequest:null});
+    } catch (value) {if (definiteFailure(value)) {pending.current = null; setUncertain(false); locate({unitStage: null,verificationRequest:null});} else setUncertain(true); fail(value);}
     finally {setBusy(false);}
   }
   async function confirmCommitted(body: {candidateId: string; requestId: string}) {
@@ -101,20 +108,19 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
         if (outcome?.status !== 'COMMITTED') throw new Error('原请求结果仍未确认，不生成新执行请求。'); await confirmCommitted(body);}
       else if (stage === 'VERIFY' && pending.current?.kind === 'VERIFY') {await departmentValue(client.preview({inputId})); await departmentValue(client.verify(pending.current.body)); setPreview(await departmentValue(client.preview({inputId})));}
       else throw new Error('原操作内容当前不在内存，不能自动重建。请按原申请与执行标识核对服务端记录。');
-      pending.current = null; setUncertain(false); locate({unitStage: null});
+      pending.current = null; setUncertain(false); locate({unitStage: null,verificationRequest:null});
     } catch (value) {fail(value);} finally {setBusy(false);}
   }
   async function reviewCandidate() {
-    if (!candidate) return; setBusy(true); setError('');
+    if (!candidate||!approvalContext) return; setBusy(true); setError('');setReviewed(false);setReviewConfirmed(false);setFrozenFacts(undefined);
     try {const result = record(await departmentValue(client.review({candidateId: candidate.candidateId}))), unit = record(result['unit']);
       if (result['digest'] !== candidate.digest || !Array.isArray(unit['commands']) || unit['commands'].length !== 1) throw new Error('候选摘要或命令范围不匹配。');
       const command = record(unit['commands'][0]), target = record(command['target']), value = record(command['value']);
-      if (target['id'] !== id) throw new Error('候选目标与当前记录不匹配。');
+      if (target['id'] !== id||target['owner']!=='care-organization/unit'||target['version']!==before?.number||command['owner']!=='care-organization/unit'||command['intent']!=='REVISE'||value['inputId']!==inputId) throw new Error('候选目标或预期头与当前申请不匹配。');
       const writes: unknown = JSON.parse(text(value['writes']));
       if (!Array.isArray(writes) || writes.length !== 1) throw new Error('冻结修订范围与单记录编辑不匹配。');
       const write = record(writes[0]), facts = record(write['facts']);
-      if (!entry || write['targetId'] !== id || write['action'] !== 'REVISE' || facts['unitName'] !== entry.row.unit_name
-        || facts['serviceDescription'] !== (entry.row.service_description || null) || facts['publicPhone'] !== (entry.row.public_phone || null)) throw new Error('冻结字段与本次申请不匹配，不能批准。');
+      assertFrozenUnitProperty(write,approvalContext);
       setFrozenFacts(facts); setReviewed(true); setReviewConfirmed(false);
     } catch (value) {fail(value);} finally {setBusy(false);}
   }
@@ -133,7 +139,7 @@ export function UnitApplication({actor, id, inputId, permissions, onLock, onReco
     <div className="unit-maintenance__toolbar"><Button variant="ghost" disabled={busy} onClick={() => void navigate(returnUrl, {state: context})}>返回列表</Button><span>{completed ? '已发布并回读确认' : candidate?.committed ? '已应用，待回读确认' : candidate?.approvedBy ? '已批准，待应用' : candidate ? '候选待审批' : '已提交，待独立核验'}</span></div>
     <h2>{denied ? '申请当前不可读取' : entry?.row.unit_name ?? '业务单元修订申请'}</h2>
     {error && <p role="alert">{error}</p>}{busy && !original && <p role="status">正在读取原申请…</p>}
-    {uncertain && <div className="unit-edit-alert" role="alert"><h3>结果待确认</h3><p>绑定原申请和原执行请求，不另发新请求。</p><Button disabled={busy} onClick={() => void recover()}>恢复原执行结果</Button></div>}
+    {uncertain && <div className="unit-edit-alert" role="alert"><h3>结果待确认</h3><p>绑定原申请和原执行请求，不另发新请求。{params.get('unitStage')==='VERIFY'&&params.get('verificationRequest')&&<>原核验请求：{params.get('verificationRequest')}。刷新后仅保留定位，原核验内容不在内存时需核对服务端记录。</>}</p><Button disabled={busy} onClick={() => void recover()}>恢复原执行结果</Button></div>}
     {original && entry && !denied && <>
       <p>原提交人：{reference?.maker} · {original.profile === 'CORE' ? '合成核心维护' : '完整依赖维护'} · 临床就绪仍须另行核验</p>
       <p>本次生效：{careTime(entry.row.valid_from)} 至 {entry.row.valid_to ? careTime(entry.row.valid_to) : '无固定结束时间'}</p><p>修订理由：{entry.reason}</p>

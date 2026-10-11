@@ -24,7 +24,7 @@ async function evaluate(chrome:Chrome,session:string,expression:string){
 async function chooseEntity(input:{kind:'ORGANIZATION'|'CAMPUS';id:string}){
  const wait=async<T>(read:()=>T,label:string):Promise<NonNullable<T>>=>{const until=Date.now()+15000;while(Date.now()<until){const v=read();if(v)return v as NonNullable<T>;await new Promise(r=>setTimeout(r,25));}throw new Error(label+' | '+document.body.innerText.slice(-2000));};
  const tab=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.workspace-tabs button')).find(b=>b.textContent===(input.kind==='CAMPUS'?'院区':'机构主体')&&!b.disabled),'tab');tab.click();
- const row=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace .draft-item')).find(b=>b.textContent?.includes(input.id.slice(-8))&&!b.disabled),'row');row.click();
+ const row=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace [data-entity-id]')).find(b=>b.dataset['entityId']===input.id&&!b.disabled),'row');row.click();
  await wait(()=>document.querySelectorAll('.version-comparison select option').length===8,'three versions');
 }
 function selectPair(from:string,to:string){

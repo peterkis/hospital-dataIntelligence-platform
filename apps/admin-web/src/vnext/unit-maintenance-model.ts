@@ -27,6 +27,13 @@ export function editUnitDraft(draft: UnitDraft, fields: UnitFields): UnitDraft {
 export function mergeUnitFields(base: UnitFields, mine: UnitFields, server: UnitFields): UnitFields {
   return Object.fromEntries((Object.keys(base) as (keyof UnitFields)[]).map(field => [field, mine[field] !== base[field] ? mine[field] : server[field]])) as UnitFields;
 }
+export function mergeUnitDraftConflict(base:UnitFields,mine:UnitDraft,fields:UnitFields,server:UnitDraft,keepMine:boolean,materialChanged:boolean):{draft:UnitDraft;fields:UnitFields;materialDirty:boolean}{
+ const local=unitEntry(mine),remote=unitEntry(server);
+ if(local.target.id!==remote.target.id||local.target.owner!==remote.target.owner)throw new Error('服务器草稿改变了目标身份，请在完整维护入口核对。');
+ const evidenceId=keepMine&&materialChanged?local.evidenceId:remote.evidenceId;
+ const entry={...remote};if(evidenceId===undefined)delete entry.evidenceId;else entry.evidenceId=evidenceId;
+ return {draft:{...server,payload:{...server.payload,entries:[entry]}},fields:keepMine?mergeUnitFields(base,fields,unitFields(server)):unitFields(server),materialDirty:evidenceId!==remote.evidenceId};
+}
 export function validateUnitFields(fields: UnitFields): Partial<Record<keyof UnitFields, string>> {
   const errors: Partial<Record<keyof UnitFields, string>> = {};
   if (!fields.name.trim()) errors.name = '请填写业务单元名称。';

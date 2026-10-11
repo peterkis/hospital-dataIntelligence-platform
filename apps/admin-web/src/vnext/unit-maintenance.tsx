@@ -10,7 +10,7 @@ import {loadCareContracts} from './care-contracts.js';
 import {loadUnitBrowserReferences} from './care-references.js';
 import {record, text} from './care-model.js';
 import {careTime, careUuid} from './care-record-view.js';
-import {editUnitDraft, mergeUnitFields, prepareUnitDraft, unitBusinessError, unitEntry, unitFields, unitFieldLabels, validateUnitFields, type UnitDraft, type UnitFields} from './unit-maintenance-model.js';
+import {editUnitDraft, mergeUnitDraftConflict, prepareUnitDraft, unitBusinessError, unitEntry, unitFields, unitFieldLabels, validateUnitFields, type UnitDraft, type UnitFields} from './unit-maintenance-model.js';
 import {UnitApplication} from './unit-application.js';
 import type {ReferenceChoices} from './department-form.js';
 import './unit-maintenance.css';
@@ -36,10 +36,17 @@ export function UnitMaintenance({actor, id, onLock, onRecoveryLock}: {actor: str
   const [conflict, setConflict] = useState<Saved>(), [uncertain, setUncertain] = useState(false), [materialName, setMaterialName] = useState('沿用原来源依据');
   const [materialReady, setMaterialReady] = useState(false), [materialDirty, setMaterialDirty] = useState(false);
   const pending = useRef<Pending | null>(null), generation = useRef(0);
+  const materialReadGeneration=useRef(0);
   const dirty = ready && (JSON.stringify(fields) !== JSON.stringify(base) || materialDirty);
   const editable = permissions.write && permissions.readRestricted && !busy && !uncertain && !conflict;
   const locate = (values: Record<string, string | null>) => {const next = new URLSearchParams(locatorParams.current); for (const [key, value] of Object.entries(values)) value ? next.set(key, value) : next.delete(key); locatorParams.current = next; setParams(next, {replace: true, state: locationState.state});};
-  const returnUrl = () => {const next = new URLSearchParams(params); for (const key of ['view', 'draft', 'application', 'request', 'unitAction', 'candidate', 'execution']) next.delete(key); return '/care-space/UNIT?' + next.toString();};
+  const returnUrl = () => {const next = new URLSearchParams(params); for (const key of ['view', 'draft', 'application', 'request', 'unitAction', 'unitStage','verificationRequest','candidate', 'execution']) next.delete(key); return '/care-space/UNIT?' + next.toString();};
+  function checkDraftMaterial(next:UnitDraft){
+    const session=generation.current,token=++materialReadGeneration.current;setMaterialReady(false);
+    void careExecute(actor,'readCareWorkspaceMaterial',{access:'OWN',scope:'SYNTHETIC',campus:next.campus,purpose:'IDENTITY_VERIFY',requestId:crypto.randomUUID(),artifactId:unitEntry(next).evidenceId})
+      .then(()=>{if(generation.current===session&&materialReadGeneration.current===token)setMaterialReady(true);})
+      .catch(()=>{if(generation.current===session&&materialReadGeneration.current===token){setMaterialReady(false);setMessage('草稿依据当前不可读取，请补齐当前可读取的合成依据。');}});
+  }
   function accept(value: Saved) {
     if (value.content.kind !== 'UNIT') throw new Error('服务器草稿类型与当前业务单元不匹配。');
     const next: UnitDraft = {...value.content, id: value.id, expectedVersion: value.version, requestId: crypto.randomUUID()};
@@ -48,10 +55,7 @@ export function UnitMaintenance({actor, id, onLock, onRecoveryLock}: {actor: str
     setMaterialDirty(false);
     pending.current = null; setUncertain(false);
     locate({draft: value.id, request: null, unitAction: null, application: value.submission?.inputId ?? null});
-    const token = generation.current; setMaterialReady(false);
-    void careExecute(actor, 'readCareWorkspaceMaterial', {access: 'OWN', scope: 'SYNTHETIC', campus: next.campus, purpose: 'IDENTITY_VERIFY', requestId: crypto.randomUUID(), artifactId: unitEntry(next).evidenceId})
-      .then(() => {if (generation.current === token) setMaterialReady(true);})
-      .catch(() => {if (generation.current === token) {setMaterialReady(false); setMessage('草稿依据当前不可读取，请补齐当前可读取的合成依据。');}});
+    checkDraftMaterial(next);
   }
   function fail(error: unknown) {
     setMessage(unitBusinessError(error));
@@ -132,7 +136,7 @@ export function UnitMaintenance({actor, id, onLock, onRecoveryLock}: {actor: str
   }
   async function upload(file: File | undefined) {
     if (!draft?.transport || (!editable && !pending.current)) return;
-    setBusy(true); setMessage('');
+    setBusy(true); setMessage('');materialReadGeneration.current++;
     try {
       let packet = pending.current;
       if (!packet) {
@@ -150,10 +154,13 @@ export function UnitMaintenance({actor, id, onLock, onRecoveryLock}: {actor: str
     finally {setBusy(false);}
   }
   function merge(keepMine: boolean) {
-    if (!conflict?.content || conflict.content.kind !== 'UNIT' || conflict.state !== 'EDITING') return;
+    if (!draft||!conflict?.content || conflict.content.kind !== 'UNIT' || conflict.state !== 'EDITING') return;
     const next: UnitDraft = {...conflict.content, id: conflict.id, expectedVersion: conflict.version, requestId: crypto.randomUUID()}, server = unitFields(next);
-    const merged = keepMine ? mergeUnitFields(base, fields, server) : server;
-    setSaved(conflict); setDraft(next); setBase(server); setFields(merged); setConflict(undefined); setMessage(keepMine ? '已保留你的改动并更新草稿基准，请再次核对后保存。' : '已采用服务器草稿。');
+    try{const merged=mergeUnitDraftConflict(base,draft,fields,next,keepMine,materialDirty);
+      setSaved(conflict);setDraft(merged.draft);setBase(server);setFields(merged.fields);setConflict(undefined);setMaterialDirty(merged.materialDirty);
+      if(!merged.materialDirty)setMaterialName('采用服务器草稿中绑定的依据');
+      checkDraftMaterial(merged.draft);setMessage(keepMine?'已保留你的字段和材料改动并更新草稿基准，请核对后保存。':'已采用服务器字段和材料，请等待依据读取确认。');
+    }catch(error){fail(error);}
   }
   async function reloadSaved() {if (!saved || busy || uncertain) return; setBusy(true); try {accept(await departmentValue(workspace.read(saved.id))); setMessage('已恢复服务器草稿；未保存内容不会被声称已恢复。');} catch (error) {fail(error);} finally {setBusy(false);}}
   if (applicationId) return <UnitApplication actor={actor} id={id} inputId={applicationId} permissions={permissions} onLock={onLock} onRecoveryLock={onRecoveryLock} returnUrl={returnUrl()} context={locationState.state}/>;
@@ -177,7 +184,7 @@ export function UnitMaintenance({actor, id, onLock, onRecoveryLock}: {actor: str
         <section className="unit-edit-material"><h3>本次依据</h3><p>{materialName} · {materialReady ? '已绑定，待独立核验' : '内容不可读取，尚不能提交'}</p><label>上传本次合成依据<input type="file" disabled={!editable || !draft.transport} onChange={(event: ChangeEvent<HTMLInputElement>) => {const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = '';}}/></label><p className="unit-help">依据保存在受保护服务端存储；上传不等于批准。</p></section>
         <div className="unit-edit-actions"><Button type="submit" disabled={!editable || saved?.state === 'SUBMITTED'}>保存私有草稿</Button><Button variant="outline" type="button" disabled={!editable || !saved || dirty || !materialReady || !draft.transport || saved.state !== 'EDITING'} onClick={() => void submit()}>提交申请</Button>{saved && <Button variant="ghost" type="button" disabled={busy || uncertain || dirty} onClick={() => void reloadSaved()}>从服务器恢复草稿</Button>}</div>
       </form>
-      {conflict?.content.kind === 'UNIT' && <section role="alert" className="unit-edit-conflict"><h3>服务器已有较新草稿</h3><p>你的输入未被覆盖。比较后明确选择，再基于最新版本保存。</p><table><thead><tr><th>字段</th><th>原基准</th><th>服务器最新</th><th>我的输入</th></tr></thead><tbody>{(Object.keys(fields) as (keyof UnitFields)[]).map(field => <tr key={field}><th>{unitFieldLabels[field]}</th><td>{base[field] || '未填写'}</td><td>{unitFields({...conflict.content as UnitDraft, requestId: draft.requestId})[field] || '未填写'}</td><td>{fields[field] || '未填写'}</td></tr>)}</tbody></table><Button onClick={() => merge(true)}>保留我的改动并更新基准</Button><Button variant="outline" onClick={() => merge(false)}>采用服务器草稿</Button></section>}
+      {conflict?.content.kind === 'UNIT' && <section role="alert" className="unit-edit-conflict"><h3>服务器已有较新草稿</h3><p>你的输入未被覆盖。比较后明确选择，再基于最新版本保存。</p><table><thead><tr><th>字段</th><th>原基准</th><th>服务器最新</th><th>我的输入</th></tr></thead><tbody>{(Object.keys(fields) as (keyof UnitFields)[]).map(field => <tr key={field}><th>{unitFieldLabels[field]}</th><td>{base[field] || '未填写'}</td><td>{unitFields({...conflict.content as UnitDraft, requestId: draft.requestId})[field] || '未填写'}</td><td>{fields[field] || '未填写'}</td></tr>)}<tr><th>依据材料</th><td>原草稿绑定的材料</td><td>服务器最新草稿绑定的材料</td><td>{materialDirty?materialName:'沿用原材料'}</td></tr></tbody></table><Button onClick={() => merge(true)}>保留我的字段和材料并更新基准</Button><Button variant="outline" onClick={() => merge(false)}>采用服务器草稿</Button></section>}
       <details className="unit-technical"><summary>技术信息与来源定位</summary><p>稳定身份 {id} · 绑定记录头 {entry.target.expectedHead}</p><p>依据标识 {entry.evidenceId}</p></details>
     </>}
   </section>;

@@ -1,4 +1,4 @@
-﻿import {beforeAll,afterAll,test,expect} from 'vitest';
+import {beforeAll,afterAll,test,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import staticPlugin from '@fastify/static';
@@ -19,7 +19,7 @@ async function evaluate(chrome:Chrome,session:string,expression:string){const re
 async function inspectCampus(input:{id:string;retired:boolean|null;click?:string;completed?:boolean}){
  const wait=async<T>(read:()=>T,label:string):Promise<NonNullable<T>>=>{const until=Date.now()+15000;while(Date.now()<until){const v=read();if(v)return v as NonNullable<T>;await new Promise(r=>setTimeout(r,25));}throw new Error(label+' | '+document.body.innerText.slice(-1600));};
  const tab=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.workspace-tabs button')).find(b=>b.textContent==='院区'&&!b.disabled),'campus tab');tab.click();
- const row=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace .draft-item')).find(b=>b.textContent?.includes(input.id.slice(-8))&&!b.disabled),'exact campus row');row.click();
+ const row=await wait(()=>Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace [data-entity-id]')).find(b=>b.dataset['entityId']===input.id&&!b.disabled),'exact campus row');row.click();
  await wait(()=>document.querySelector('.entity-workspace article.history')&&Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button')).some(b=>b.textContent==='读取当前资料'&&!b.disabled),'campus inspection complete');
   let buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('.entity-workspace button'));
  let labels=buttons.map(b=>b.textContent);
