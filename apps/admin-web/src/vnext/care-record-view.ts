@@ -1,7 +1,7 @@
 import type {ReferenceChoices} from './department-form.js';
 import {careNames,record,text,type CareKind} from './care-model.js';
 
-const labels:Record<string,string>={ACTIVE:'有效',SUSPENDED:'已暂停',RETIRED:'永久结束',CLOSED:'永久结束',NOT_EFFECTIVE:'待生效',CREATE:'建立',REVISE:'修订',REBIND:'调整归属',SUSPEND:'暂停',RESUME:'恢复',CLOSE:'永久结束',END:'结束关系',GRANT:'登记许可',RECORD:'登记',OPD:'门诊',IPD:'住院',ED:'急诊',EXAM:'体检',LAB:'检验',PHARMACY:'药房',OR:'手术',OTHER:'其他',ADMISSION:'收治',MANAGEMENT:'管理',PRIMARY:'主要',SECONDARY:'协作',BUILDING:'楼栋',FLOOR:'楼层',ROOM:'房间',AREA:'区域',SITE:'场地',MAPPING:'科目映射',PERMISSION:'科目许可',NORTH:'北院区',SOUTH:'南院区'};
+const labels:Record<string,string>={ACTIVE:'有效',SUSPENDED:'已暂停',RETIRED:'永久结束',CLOSED:'永久结束',NOT_EFFECTIVE:'当前未生效',CREATE:'建立',REVISE:'修订',REBIND:'调整归属',SUSPEND:'暂停',RESUME:'恢复',CLOSE:'永久结束',END:'结束关系',GRANT:'登记许可',RECORD:'登记',OPD:'门诊',IPD:'住院',ED:'急诊',EXAM:'体检',LAB:'检验',PHARMACY:'药房',OR:'手术',OTHER:'其他',ADMISSION:'收治',MANAGEMENT:'管理',PRIMARY:'主要',SECONDARY:'协作',BUILDING:'楼栋',FLOOR:'楼层',ROOM:'房间',AREA:'区域',SITE:'场地',MAPPING:'科目映射',PERMISSION:'科目许可',NORTH:'北院区',SOUTH:'南院区'};
 export const careDisplay=(value:unknown)=>labels[text(value)]??'状态暂不可识别';
 export const careTime=(value:unknown)=>text(value).replace('T',' ')||'未填写';
 export function referenceName(choices:ReferenceChoices,owner:string,id:unknown){

@@ -71,3 +71,5 @@ test('request allocation selects the exact discriminator and preserves supplied 
  const schema={anyOf:[{properties:{kind:{enum:['A']},requestId:{type:'string'}}},{properties:{kind:{enum:['B']},fileRequestId:{type:'string'}}}]};
  const result=careRequestIds(schema,{kind:'B',fileRequestId:'exact-original'});expect(result).toEqual({kind:'B',fileRequestId:'exact-original'});
 });
+
+test('an expired nursing declaration and a future declaration both retain a neutral not-effective label',async()=>{const {careRecordView}=await import('../../apps/admin-web/src/vnext/care-record-view.js');for(const [validFrom,validTo] of [['2026-01-01T00:00:00','2026-09-01T00:00:00'],['2027-01-01T00:00:00',null]]){expect(careRecordView({id:'TEST declaration',state:'NOT_EFFECTIVE',version:{number:'1',validFrom,validTo,facts:{nursingName:'TEST declaration'}}},'NURSING',{})).toMatchObject({state:'NOT_EFFECTIVE',stateLabel:'当前未生效'});}});
